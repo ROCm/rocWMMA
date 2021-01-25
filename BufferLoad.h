@@ -4,6 +4,7 @@
 #include <hip/hip_runtime.h>
 
 #include "BufferDescriptor.h"
+#include "Constants.h"
 #include "Types.h"
 #include "Utils.h"
 
@@ -43,14 +44,13 @@ struct amdgcn_buffer_load_dword_traits<BlockDim, BlockK, float32_t>
     using Loader = amdgcn_buffer_load<DataT, 1>; // Load DWORD, one float per thread
     using LoadT  = typename Loader::LoadT; // Output register type per load
 
-    enum
+    enum : uint32_t
     {
-        StridesPerLoad = 64 / BlockDim
-    }; // Number of consecutive strides of BlockDim per load
-    enum
-    {
-        LoadCount = ceilDiv(BlockDim * BlockK, 64)
-    }; // Number of loads required for BlockDim * BlockK
+        StridesPerLoad
+        = AMDGCN_WAVE_SIZE / BlockDim, // Number of consecutive strides of BlockDim per load
+        LoadCount = ceilDiv(BlockDim * BlockK,
+                            AMDGCN_WAVE_SIZE) // Number of loads required for BlockDim * BlockK
+    };
 
     using ResultT = VecT<DataT, LoadCount>; // Collection of registers for total load
 };
@@ -79,6 +79,7 @@ struct amdgcn_buffer_load_dword_DxK<matrix_a, BlockDim, BlockK, float32_t, row_m
 
         // Loop over loads to fill BlockM * BlockK for each wave.
         ResultT result;
+#pragma unroll
         for(unsigned i = 0; i < Traits::LoadCount; i++)
         {
             LoadT loadResult = Loader::exec(*(srd), // SRD regs
@@ -111,8 +112,9 @@ struct amdgcn_buffer_load_dword_DxK<matrix_a, BlockDim, BlockK, float32_t, col_m
         uint32_t rowOffset = (threadIdx.x % BlockDim);
         uint32_t colOffset = (threadIdx.x / BlockDim) % Traits::StridesPerLoad * ldm; // K Id
 
-        // Loop over loads to fill BlockM * BlockK for each wave.
+        // Loop over loads to fill BlockDim * BlockK for each wave.
         ResultT result;
+#pragma unroll
         for(unsigned i = 0; i < Traits::LoadCount; i++)
         {
             LoadT loadResult

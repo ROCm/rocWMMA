@@ -39,15 +39,6 @@ struct TestParams
     using TYPE   = float32_t;
 };
 
-template <typename Matrix,
-          uint32_t BlockM,
-          uint32_t BlockN,
-          uint32_t BlockK,
-          typename Layout = void>
-struct fragment
-{
-};
-
 __global__ void loadTest(const float32_t* mat, float32_t* result, uint32_t ldm, uint32_t ldr)
 {
     using Params = TestParams;
@@ -59,10 +50,11 @@ __global__ void loadTest(const float32_t* mat, float32_t* result, uint32_t ldm, 
 
     using Traits = typename Loader::Traits;
 
+    using MappingUtil = MappingUtil<Params::TYPE, Params::BLOCK_M, Params::BLOCK_N, Params::LAYOUT>;
+
     // Move the data origin to the start of the block data.
-    auto* blockAddr = MatrixUtil<Params::LAYOUT>::
-        template mapWaveToWMMABlock<Params::TYPE, Params::BLOCK_M, Params::BLOCK_N>(mat, ldm);
-    auto loadedA = Loader::exec(blockAddr, ldm);
+    auto* blockAddr = MappingUtil::dataCoord(mat, ldm);
+    auto  loadedA   = Loader::exec(blockAddr, ldm);
 
     uint32_t startOffsetC = (blockIdx.x + blockIdx.y * gridDim.x) * // Initial index
                             loadedA.size() * blockDim.y * // Number of regs
