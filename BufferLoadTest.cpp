@@ -43,7 +43,7 @@ __global__ void loadTest(const float32_t* mat, float32_t* result, uint32_t ldm, 
 {
     using Params = TestParams;
     using Loader = amdgcn_buffer_load_dword_DxK<matrix_b,
-                                                Params::BLOCK_M,
+                                                Params::BLOCK_N,
                                                 Params::BLOCK_K,
                                                 Params::TYPE,
                                                 Params::LAYOUT>;
