@@ -6,8 +6,7 @@
 #include "Types.h"
 #include "Utils.h"
 
-// Remove later
-#include "BufferDescriptor.h"
+#include "WMMA.h"
 
 struct TestParams
 {
@@ -37,12 +36,13 @@ struct TestParams
 
     using LAYOUT = row_major;
     using TYPE   = float32_t;
+    using MATRIX = accumulator;
 };
 
 __global__ void loadTest(const float32_t* mat, float32_t* result, uint32_t ldm, uint32_t ldr)
 {
     using Params = TestParams;
-    using Loader = amdgcn_buffer_load_dword_DxK<matrix_b,
+    using Loader = amdgcn_buffer_load_dword_DxK<accumulator,
                                                 Params::BLOCK_N,
                                                 Params::BLOCK_K,
                                                 Params::TYPE,
@@ -53,26 +53,50 @@ __global__ void loadTest(const float32_t* mat, float32_t* result, uint32_t ldm, 
     using MappingUtil = MappingUtil<Params::TYPE, Params::BLOCK_M, Params::BLOCK_N, Params::LAYOUT>;
 
     // Move the data origin to the start of the block data.
-    auto* blockAddr = MappingUtil::dataCoord(mat, ldm);
-    auto  loadedA   = Loader::exec(blockAddr, ldm);
+    auto* blockAData = MappingUtil::dataCoordN0(mat, ldm);
+    auto* blockBData = MappingUtil::dataCoordM0(mat, ldm);
+    auto* blockCData = MappingUtil::dataCoord(mat, ldm);
 
-    uint32_t startOffsetC = (blockIdx.x + blockIdx.y * gridDim.x) * // Initial index
-                            loadedA.size() * blockDim.y * // Number of regs
-                            (blockDim.x / Params::WAVE_SIZE) * // Blocks per wave
-                            ldr; // Register size of 64 elements
+    auto fragA = wmma::fragment<matrix_a,
+                                Params::BLOCK_M,
+                                Params::BLOCK_N,
+                                Params::BLOCK_K,
+                                Params::TYPE,
+                                row_major>();
 
-    BufferDescriptor<float> srd(result + startOffsetC, ldr); // Register file
+    auto fragB = wmma::fragment<matrix_b,
+                                Params::BLOCK_M,
+                                Params::BLOCK_N,
+                                Params::BLOCK_K,
+                                Params::TYPE,
+                                row_major>();
 
-    for(uint32_t i = 0; i < Traits::LoadCount; i++) // Write my registers
-    {
-        __llvm_amdgcn_buffer_store_f32(
-            loadedA[i],
-            *srd,
-            ((threadIdx.x + threadIdx.y * blockDim.x) / ldr) * Traits::LoadCount,
-            (i * ldr + ((threadIdx.x + threadIdx.y * blockDim.x) % ldr)) * sizeof(float),
-            false,
-            false);
-    }
+    auto fragC = wmma::
+        fragment<accumulator, Params::BLOCK_M, Params::BLOCK_N, Params::BLOCK_K, Params::TYPE>();
+
+    wmma::load_matrix_sync(fragA, blockAData, ldm);
+    wmma::load_matrix_sync(fragB, blockBData, ldm);
+
+    wmma::mma_sync(fragC, fragA, fragB, fragC);
+    //Loader::exec(blockAddr, ldm);
+
+    // uint32_t startOffsetC = (blockIdx.x + blockIdx.y * gridDim.x) * // Initial index
+    //                         (*fragA).size() * blockDim.y * // Number of regs
+    //                         (blockDim.x / Params::WAVE_SIZE) * // Blocks per wave
+    //                         ldr; // Register size of 64 elements
+
+    // BufferDescriptor<float> srd(result + startOffsetC, ldr); // Register file
+
+    // for(uint32_t i = 0; i < Traits::LoadCount; i++) // Write my registers
+    // {
+    //     __llvm_amdgcn_buffer_store_f32(
+    //         (*fragA)[i],
+    //         *srd,
+    //         ((threadIdx.x + threadIdx.y * blockDim.x) / ldr) * Traits::LoadCount,
+    //         (i * ldr + ((threadIdx.x + threadIdx.y * blockDim.x) % ldr)) * sizeof(float),
+    //         false,
+    //         false);
+    // }
 }
 
 template <typename T,
@@ -142,7 +166,7 @@ int main()
 
     assert(hipMemcpy(result.data(), d_r, valbytes, hipMemcpyDeviceToHost) == hipSuccess);
 
-    MatrixUtil<row_major>::print(result, 64, 32);
+    MatrixUtil<row_major>::print(result, 64, 64);
 
     // Release device memory
     assert(hipFree(d_a) == hipSuccess);
