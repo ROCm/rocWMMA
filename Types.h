@@ -77,6 +77,26 @@ struct __align__(4) VecT
         return (*this)[index];
     }
 
+    __device__ T const& operator[](uint32_t index) const
+    {
+        return mData.e[index];
+    }
+
+    __device__ VecType const& operator*() const
+    {
+        return mData.v;
+    }
+
+    __device__ VecType const& v() const
+    {
+        return *(*this);
+    }
+
+    __device__ T const& e(uint32_t index) const
+    {
+        return (*this)[index];
+    }
+
     __device__ constexpr uint32_t size() const
     {
         return VecSize;
@@ -109,5 +129,11 @@ struct matrix_a;
 struct matrix_b;
 struct accumulator;
 struct common;
+
+enum layout_t : uint32_t
+{
+    mem_row_major,
+    mem_col_major
+};
 
 #endif // WMMA_TYPES_H
