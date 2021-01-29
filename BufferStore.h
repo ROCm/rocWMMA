@@ -97,7 +97,8 @@ struct amdgcn_buffer_store_dword_DxK
 #pragma unroll
         for(unsigned i = 0; i < Traits::StoreCount; i++)
         {
-            Storer::exec(*(incoming[i]) * (srd), // SRD regs
+            Storer::exec(incoming[i],
+                         *(srd), // SRD regs
                          0, // stride offset
                          (initOffset + LayoutT::iterativeOffset(i, ldm))
                              * sizeof(DataT), // offset bytes
