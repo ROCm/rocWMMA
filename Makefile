@@ -1,8 +1,8 @@
 CXX=/opt/rocm/hip/bin/hipcc
 
-CXXFLAGS=-I/opt/rocm/hip/include/ -march=native
+CXXFLAGS=-I/opt/rocm/hip/include/ -march=native -O2
 
-ALL = BufferLoadTest
+ALL = BufferLoadTest FillFragmentTest LoadStoreMatrixSyncTest MmaSyncTest
 
 all: $(ALL)
 
