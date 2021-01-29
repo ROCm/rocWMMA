@@ -28,10 +28,10 @@ using v32_i32_t = _VecT<int32_t, 32>;
 using v64_i32_t = _VecT<int32_t, 64>;
 
 // Vector wrapper for element access.
-template <typename T, int VecSize>
+template <typename T, uint32_t VecSize>
 struct VecT;
 
-template <typename T, int VecSize>
+template <typename T, uint32_t VecSize>
 struct __align__(4) VecT
 {
     using VecType = _VecT<T, VecSize>;
@@ -44,7 +44,7 @@ struct __align__(4) VecT
 
     __device__ VecT()
     {
-        mData.v = 0;
+        mData.v = VecType(0);
     }
 
     __device__ VecT(VecT const& other)
@@ -97,7 +97,7 @@ struct __align__(4) VecT
         return (*this)[index];
     }
 
-    __device__ constexpr uint32_t size() const
+    __device__ constexpr static inline uint32_t size()
     {
         return VecSize;
     }
@@ -130,10 +130,13 @@ struct matrix_b;
 struct accumulator;
 struct common;
 
-enum layout_t : uint32_t
+namespace wmma
 {
-    mem_row_major,
-    mem_col_major
-};
+    enum layout_t : uint32_t
+    {
+        mem_row_major,
+        mem_col_major
+    };
+} // namespace wmma
 
 #endif // WMMA_TYPES_H

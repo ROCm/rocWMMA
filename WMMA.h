@@ -37,23 +37,24 @@ namespace wmma
             // Could differentiate on MatrixT or any dimension if needed.
             using BufferLoad
                 = amdgcn_buffer_load_dword_DxK<MatrixT, LeadingDim, KDim, DataT, LayoutT>;
-            using LoadT = typename BufferLoad::Traits::LoadT;
 
             using BufferStore
                 = amdgcn_buffer_store_dword_DxK<MatrixT, LeadingDim, KDim, DataT, LayoutT>;
-            using StoreT = typename BufferStore::Traits::StoreT;
 
-            using StorageT = typename BufferLoad::Traits::ResultT;
+            static_assert(std::is_same<typename BufferLoad::Traits::ResultT,
+                                       typename BufferStore::Traits::ResultT>::value,
+                          "Mismatched BufferLoad and BufferStore types");
 
+            using StorageT    = typename BufferLoad::Traits::ResultT;
             using DataLayoutT = LayoutT;
 
             enum : uint32_t
             {
-                StorageElements = BufferLoad::Traits::LoadCount
+                StorageElements = StorageT::size(),
             };
         };
 
-        __device__ inline typename Traits::LoadT& operator[](uint32_t index)
+        __device__ inline DataT& operator[](uint32_t index)
         {
             return mStorage[index];
         }
@@ -63,7 +64,7 @@ namespace wmma
             return mStorage;
         }
 
-        __device__ inline typename Traits::LoadT const& operator[](uint32_t index) const
+        __device__ inline DataT const& operator[](uint32_t index) const
         {
             return mStorage[index];
         }
@@ -73,8 +74,29 @@ namespace wmma
             return mStorage;
         }
 
+        __device__ constexpr static inline uint32_t num_elements()
+        {
+            return Traits::StorageElements;
+        }
+
         typename Traits::StorageT mStorage;
     };
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename LayoutT>
+    __device__ void fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>& frag,
+                                  DataT                                                      value)
+    {
+#pragma unroll
+        for(uint32_t i = 0; i < frag.num_elements(); i++)
+        {
+            frag[i] = value;
+        }
+    }
 
     template <typename MatrixT,
               uint32_t BlockM,
@@ -105,10 +127,14 @@ namespace wmma
         using FragRowMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, row_major>;
         using FragColMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, col_major>;
 
-        load_matrix_sync(layout == layout_t::mem_row_major ? reinterpret_cast<FragRowMajor&>(frag)
-                                                           : reinterpret_cast<FragColMajor&>(frag),
-                         data,
-                         ldm);
+        if(layout == layout_t::mem_row_major)
+        {
+            load_matrix_sync(reinterpret_cast<FragRowMajor&>(frag), data, ldm);
+        }
+        else
+        {
+            load_matrix_sync(reinterpret_cast<FragColMajor&>(frag), data, ldm);
+        }
     }
 
     template <typename MatrixT,
@@ -118,8 +144,8 @@ namespace wmma
               typename DataT,
               typename LayoutT>
     __device__ void
-        store_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT> const& frag,
-                          DataT*                                                           data,
+        store_matrix_sync(DataT*                                                           data,
+                          fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT> const& frag,
                           uint32_t                                                         ldm)
     {
         static_assert(!std::is_same<LayoutT, void>::value,
@@ -132,19 +158,22 @@ namespace wmma
     }
 
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
-    __device__ void store_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag,
-                                      DataT*                                                  data,
+    __device__ void store_matrix_sync(DataT*                                                  data,
+                                      fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag,
                                       uint32_t                                                ldm,
                                       layout_t layout)
     {
         using FragRowMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, row_major>;
         using FragColMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, col_major>;
 
-        store_matrix_sync(layout == layout_t::mem_row_major
-                              ? reinterpret_cast<FragRowMajor const&>(frag)
-                              : reinterpret_cast<FragColMajor const&>(frag),
-                          data,
-                          ldm);
+        if(layout == layout_t::mem_row_major)
+        {
+            store_matrix_sync(data, reinterpret_cast<FragRowMajor const&>(frag), ldm);
+        }
+        else
+        {
+            store_matrix_sync(data, reinterpret_cast<FragColMajor const&>(frag), ldm);
+        }
     }
 
     template <uint32_t BlockM,
