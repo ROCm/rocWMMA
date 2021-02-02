@@ -222,6 +222,7 @@ template<uint32_t TBlockX,
           typename ComputeT>
 inline void test_mma_sync_h_32x32(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
 {
+    // Minimum K = 2 for 32 x 32
     test_mma_sync_h<TBlockX, TBlockY, 32, 32, 2, InputT, ComputeT>(M, N, K, alpha, beta);
     test_mma_sync_h<TBlockX, TBlockY, 32, 32, 4, InputT, ComputeT>(M, N, K, alpha, beta);
     test_mma_sync_h<TBlockX, TBlockY, 32, 32, 8, InputT, ComputeT>(M, N, K, alpha, beta);
@@ -234,8 +235,35 @@ inline void test_mma_sync_h_32x32(uint32_t M, uint32_t N, uint32_t K, ComputeT a
     test_mma_sync_h<TBlockX, TBlockY, 32, 32, 1024, InputT, ComputeT>(M, N, K, alpha, beta);
 }
 
+template<uint32_t TBlockX,
+          uint32_t TBlockY,
+          typename InputT,
+          typename ComputeT>
+inline void test_mma_sync_h_16x16(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
+{
+    // Minimum K = 4 for 16 x 16
+    test_mma_sync_h<TBlockX, TBlockY, 16, 16, 4, InputT, ComputeT>(M, N, K, alpha, beta);
+    test_mma_sync_h<TBlockX, TBlockY, 16, 16, 8, InputT, ComputeT>(M, N, K, alpha, beta);
+    test_mma_sync_h<TBlockX, TBlockY, 16, 16, 16, InputT, ComputeT>(M, N, K, alpha, beta);
+    test_mma_sync_h<TBlockX, TBlockY, 16, 16, 32, InputT, ComputeT>(M, N, K, alpha, beta);
+    test_mma_sync_h<TBlockX, TBlockY, 16, 16, 64, InputT, ComputeT>(M, N, K, alpha, beta);
+    test_mma_sync_h<TBlockX, TBlockY, 16, 16, 128, InputT, ComputeT>(M, N, K, alpha, beta);
+    test_mma_sync_h<TBlockX, TBlockY, 16, 16, 256, InputT, ComputeT>(M, N, K, alpha, beta);
+    test_mma_sync_h<TBlockX, TBlockY, 16, 16, 512, InputT, ComputeT>(M, N, K, alpha, beta);
+    test_mma_sync_h<TBlockX, TBlockY, 16, 16, 1024, InputT, ComputeT>(M, N, K, alpha, beta);
+}
+
 void test_mma_sync_h()
 {
+    // float32_t  64 x 1 threads, block 16 x 16 x 4/8/16/32/64/128/256/512/1024,
+    test_mma_sync_h_16x16<64, 1, float32_t, float32_t>(64, 64, 1024, 2.0f, 2.0f);
+    test_mma_sync_h_16x16<64, 1, float32_t, float32_t>(32, 64, 1024, 2.0f, 2.0f);
+    test_mma_sync_h_16x16<64, 1, float32_t, float32_t>(64, 32, 1024, 2.0f, 2.0f);
+
+    test_mma_sync_h_16x16<64, 1, float32_t, float32_t>(1024, 2048, 1024, 2.0f, 2.0f);
+    test_mma_sync_h_16x16<64, 1, float32_t, float32_t>(2048, 64, 1024, 2.0f, 2.0f);
+    test_mma_sync_h_16x16<64, 1, float32_t, float32_t>(2048, 2048, 1024, 2.0f, 2.0f);
+
     // float32_t  64 x 1 threads, block 32 x 32 x 2/4/8/16/32/64/128/256/512/1024,
     test_mma_sync_h_32x32<64, 1, float32_t, float32_t>(64, 64, 1024, 2.0f, 2.0f);
     test_mma_sync_h_32x32<64, 1, float32_t, float32_t>(32, 64, 1024, 2.0f, 2.0f);

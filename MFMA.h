@@ -21,6 +21,20 @@ struct amdgcn_mfma<float32_t, float32_t, 32, 32, 2>
 };
 
 template <>
+struct amdgcn_mfma<float32_t, float32_t, 16, 16, 4>
+{
+    using ARegT = VRegF32x1;
+    using BRegT = VRegF32x1;
+    using CRegT = AccRegF32x4;
+    using DRegT = AccRegF32x4;
+
+    __device__ static inline auto exec(ARegT regA, BRegT regB, CRegT regC) -> DRegT
+    {
+        return DRegT(__builtin_amdgcn_mfma_f32_16x16x4f32(*regA, *regB, *regC, 0, 0, 0));
+    }
+};
+
+template <>
 struct amdgcn_mfma<float32_t, float32_t, 32, 64, 1>
 {
     using ARegT = VRegF32x1;
@@ -56,13 +70,29 @@ struct amdgcn_mfma_MxNxK_traits<float32_t, float32_t, 32, 32, BlockK>
 {
     enum : uint32_t
     {
-        MfmaCount = BlockK / 2,
+        KPerMfma = 2,
+        MfmaCount = BlockK / KPerMfma,
     };
-    using MFMA     = amdgcn_mfma<float32_t, float32_t, 32, 32, 2>;
+    using MFMA     = amdgcn_mfma<float32_t, float32_t, 32, 32, KPerMfma>;
     using AInputT  = VecT<float32_t, MfmaCount>;
     using BInputT  = VecT<float32_t, MfmaCount>;
     using CInputT  = AccRegF32x16;
     using DOutputT = AccRegF32x16;
+};
+
+template <uint32_t BlockK>
+struct amdgcn_mfma_MxNxK_traits<float32_t, float32_t, 16, 16, BlockK>
+{
+    enum : uint32_t
+    {
+        KPerMfma = 4,
+        MfmaCount = BlockK / KPerMfma,
+    };
+    using MFMA     = amdgcn_mfma<float32_t, float32_t, 16, 16, KPerMfma>;
+    using AInputT  = VecT<float32_t, MfmaCount>;
+    using BInputT  = VecT<float32_t, MfmaCount>;
+    using CInputT  = AccRegF32x4;
+    using DOutputT = AccRegF32x4;
 };
 
 template <typename InputT, typename ComputeT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
