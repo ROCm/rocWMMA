@@ -18,7 +18,7 @@ namespace wmma
               uint32_t BlockK,
               typename DataT,
               typename LayoutT = void>
-    struct fragment
+    struct __align__(4) fragment
     {
         struct Traits
         {
@@ -92,7 +92,7 @@ namespace wmma
                                   DataT                                                      value)
     {
 #pragma unroll
-        for(uint32_t i = 0; i < frag.num_elements(); i++)
+        for(uint32_t i = 0; i < frag.num_elements(); ++i)
         {
             frag[i] = value;
         }

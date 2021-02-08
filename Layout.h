@@ -114,6 +114,9 @@ namespace Layout
             RCount = 4
         };
 
+        static_assert(Traits::LoadCount % RCount == 0,
+                      "Need a minimum of 4 registers for this layout");
+
         __device__ static inline uint32_t initialOffset(uint32_t ldm)
         {
             // Initialize starting offsets.
@@ -137,6 +140,9 @@ namespace Layout
         {
             RCount = 4
         };
+
+        static_assert(Traits::LoadCount % RCount == 0,
+                      "Need a minimum of 4 registers for this layout");
 
         __device__ static inline uint32_t initialOffset(uint32_t ldm)
         {

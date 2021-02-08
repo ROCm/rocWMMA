@@ -84,7 +84,7 @@ struct amdgcn_buffer_load_dword_DxK
         // Loop over loads to fill BlockDim * BlockK for each wave.
         ResultT result;
 #pragma unroll
-        for(unsigned i = 0; i < Traits::LoadCount; i++)
+        for(uint32_t i = 0; i < Traits::LoadCount; ++i)
         {
             LoadT loadResult = Loader::exec(*(srd), // SRD regs
                                             0, // stride offset

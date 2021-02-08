@@ -93,9 +93,8 @@ struct amdgcn_buffer_store_dword_DxK
         uint32_t initOffset = LayoutT::initialOffset(ldm);
 
         // Loop over loads to fill BlockDim * BlockK for each wave.
-        ResultT result;
 #pragma unroll
-        for(unsigned i = 0; i < Traits::StoreCount; i++)
+        for(uint32_t i = 0; i < Traits::StoreCount; ++i)
         {
             Storer::exec(incoming[i],
                          *(srd), // SRD regs

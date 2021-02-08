@@ -1,5 +1,7 @@
 #include <hip/hip_runtime.h>
 
+#include <unistd.h>
+
 #include "BufferLoad.h"
 #include "BufferStore.h"
 #include "Constants.h"
@@ -47,10 +49,9 @@ __global__ void test_fill_fragment_d(InputT*   a,
     auto* offsetA = MappingA::dataCoord(a, lda);
     wmma::store_matrix_sync(offsetA, fragA, lda);
 
-    auto* offsetB = MappingA::dataCoord(b, ldb);
+    auto* offsetB = MappingB::dataCoord(b, ldb);
     wmma::store_matrix_sync(offsetB, fragB, ldb);
 
-    // Map each block of C
     auto* offsetC = MappingC::dataCoord(c, ldc);
     wmma::store_matrix_sync(offsetC,
                             fragC,
@@ -78,7 +79,7 @@ __host__ void test_fill_fragment_h(
               << "FmtABC(" << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << ", "
               << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << ", "
               << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << ") "
-              << "TiTc( " << (std::is_same<InputT, float32_t>::value ? "f32" : "X") << ") \n";
+              << "TiTc(" << (std::is_same<InputT, float32_t>::value ? "f32" : "X") << ") \n";
 
     int lda = std::is_same<LayoutA, row_major>::value ? K : M;
     int ldb = std::is_same<LayoutB, row_major>::value ? N : K;
@@ -89,7 +90,7 @@ __host__ void test_fill_fragment_h(
     std::vector<InputT>   matrixB(K * N, 0.0f);
     std::vector<ComputeT> matrixC(M * N, 0.0f);
 
-    // Allocate and copy device memory
+    // Allocate and copy init values to device memory
     InputT*      d_a;
     const size_t bytesA = matrixA.size() * sizeof(InputT);
     assert(hipMalloc(&d_a, bytesA) == hipSuccess);
@@ -146,187 +147,334 @@ __host__ void test_fill_fragment_h(
     compareEqual<ComputeT, ComputeT, LayoutC, LayoutC>(matrixC, refC, M, N);
 }
 
+template <uint32_t TBlockX,
+          uint32_t TBlockY,
+          uint32_t BlockM,
+          uint32_t BlockN,
+          uint32_t BlockK,
+          typename InputT,
+          typename ComputeT>
+__host__ void test_fill_fragment_h(
+    uint32_t M, uint32_t N, uint32_t K, InputT fillA, InputT fillB, ComputeT fillC)
+{
+    test_fill_fragment_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         row_major,
+                         row_major,
+                         row_major>(M, N, K, fillA, fillB, fillC);
+    test_fill_fragment_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         row_major,
+                         col_major,
+                         row_major>(M, N, K, fillA, fillB, fillC);
+    test_fill_fragment_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         col_major,
+                         row_major,
+                         row_major>(M, N, K, fillA, fillB, fillC);
+    test_fill_fragment_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         col_major,
+                         col_major,
+                         row_major>(M, N, K, fillA, fillB, fillC);
+    test_fill_fragment_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         row_major,
+                         row_major,
+                         col_major>(M, N, K, fillA, fillB, fillC);
+    test_fill_fragment_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         row_major,
+                         col_major,
+                         col_major>(M, N, K, fillA, fillB, fillC);
+    test_fill_fragment_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         col_major,
+                         row_major,
+                         col_major>(M, N, K, fillA, fillB, fillC);
+    test_fill_fragment_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         col_major,
+                         col_major,
+                         col_major>(M, N, K, fillA, fillB, fillC);
+}
+
 void test_fill_fragment_h()
 {
     // For fills, we must have the same geometry for all matrices
 
-    // float32_t  64 x 1 threads, block 64 x 64,
-
-    // MNK = 64
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
-        64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        64, 64, 64, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        64, 64, 64, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        64, 64, 64, 10.0f, -11.0f, 12.0f);
-
-    // MNK = 128
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
+    // float32_t  64 x 1 threads, block 16 x 16
+    test_fill_fragment_h<64, 1, 16, 16, 16, float32_t, float32_t>(16, 16, 16, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 16, 16, 16, float32_t, float32_t>(32, 32, 32, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 16, 16, 16, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 16, 16, 16, float32_t, float32_t>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        128, 128, 128, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        128, 128, 128, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        128, 128, 128, 10.0f, -11.0f, 12.0f);
-
-    // MNK = 512
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
-        512, 512, 512, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        512, 512, 512, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        512, 512, 512, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        512, 512, 512, 10.0f, -11.0f, 12.0f);
-
-    // MNK = 16384
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
+    test_fill_fragment_h<64, 1, 16, 16, 16, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 16, 16, 16, float32_t, float32_t>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        16384, 16384, 16384, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        16384, 16384, 16384, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        16384, 16384, 16384, 10.0f, -11.0f, 12.0f);
 
-    // float32_t  64 x 2 threads, block 64 x 64,
-
-    // MNK = 128
-    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
+    // float32_t  64 x 2 threads, block 16 x 16
+    test_fill_fragment_h<64, 2, 16, 16, 16, float32_t, float32_t>(32, 32, 32, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 2, 16, 16, 16, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 2, 16, 16, 16, float32_t, float32_t>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        128, 128, 128, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        128, 128, 128, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        128, 128, 128, 10.0f, -11.0f, 12.0f);
-
-    // MNK = 512
-    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
-        512, 512, 512, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        512, 512, 512, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        512, 512, 512, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        512, 512, 512, 10.0f, -11.0f, 12.0f);
-
-    // MNK = 16384
-    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
+    test_fill_fragment_h<64, 2, 16, 16, 16, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 2, 16, 16, 16, float32_t, float32_t>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        16384, 16384, 16384, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        16384, 16384, 16384, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        16384, 16384, 16384, 10.0f, -11.0f, 12.0f);
 
-    // float32_t  64 x 4 threads, block 64 x 64,
-
-    // MNK = 512
-    test_fill_fragment_h<64, 4, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
-        512, 512, 512, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 4, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        512, 512, 512, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<64, 4, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        512, 512, 512, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<64, 4, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        512, 512, 512, 10.0f, -11.0f, 12.0f);
-
-    // float32_t  64 x 8 threads, block 64 x 64,
-
-    // MNK = 512
-    test_fill_fragment_h<64, 8, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
-        512, 512, 512, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 8, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        512, 512, 512, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<64, 8, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        512, 512, 512, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<64, 8, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        512, 512, 512, 10.0f, -11.0f, 12.0f);
-
-    // float32_t  128 x 1 threads, block 64 x 64,
-
-    // MNK = 128
-    test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
+    // float32_t  64 x 4 threads, block 16 x 16
+    test_fill_fragment_h<64, 4, 16, 16, 16, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 4, 16, 16, 16, float32_t, float32_t>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        128, 128, 128, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        128, 128, 128, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        128, 128, 128, 10.0f, -11.0f, 12.0f);
+    test_fill_fragment_h<64, 4, 16, 16, 16, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 4, 16, 16, 16, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
-    // MNK = 512
-    test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
-        512, 512, 512, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        512, 512, 512, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        512, 512, 512, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        512, 512, 512, 10.0f, -11.0f, 12.0f);
-
-    // float32_t  128 x 2 threads, block 64 x 64,
-
-    // MNK = 128
-    test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
+    // float32_t  64 x 8 threads, block 16 x 16
+    test_fill_fragment_h<64, 8, 16, 16, 16, float32_t, float32_t>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        128, 128, 128, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        128, 128, 128, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        128, 128, 128, 10.0f, -11.0f, 12.0f);
+    test_fill_fragment_h<64, 8, 16, 16, 16, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 8, 16, 16, 16, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
-    // MNK = 512
-    test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
-        512, 512, 512, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        512, 512, 512, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        512, 512, 512, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        512, 512, 512, 10.0f, -11.0f, 12.0f);
+    // float32_t  64 x 16 threads, block 16 x 16
+    test_fill_fragment_h<64, 16, 16, 16, 16, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 16, 16, 16, 16, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
-    // float32_t  128 x 4 threads, block 64 x 64,
+    // float32_t  128 x 1 threads, block 16 x 16
+    test_fill_fragment_h<128, 1, 16, 16, 16, float32_t, float32_t>(32, 32, 32, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 1, 16, 16, 16, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 1, 16, 16, 16, float32_t, float32_t>(
+        128, 128, 128, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 1, 16, 16, 16, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 1, 16, 16, 16, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
-    // MNK = 512
-    test_fill_fragment_h<128, 4, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
-        512, 512, 512, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 4, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        512, 512, 512, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<128, 4, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        512, 512, 512, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<128, 4, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        512, 512, 512, 10.0f, -11.0f, 12.0f);
+    // float32_t  128 x 2 threads, block 16 x 16
+    test_fill_fragment_h<128, 2, 16, 16, 16, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 2, 16, 16, 16, float32_t, float32_t>(
+        128, 128, 128, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 2, 16, 16, 16, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 2, 16, 16, 16, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
-    // float32_t  256 x 1 threads, block 64 x 64,
+    // float32_t  128 x 4 threads, block 16 x 16
+    test_fill_fragment_h<128, 4, 16, 16, 16, float32_t, float32_t>(
+        128, 128, 128, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 4, 16, 16, 16, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 4, 16, 16, 16, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
-    // MNK = 512
-    test_fill_fragment_h<256, 1, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
-        512, 512, 512, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 1, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        512, 512, 512, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<256, 1, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        512, 512, 512, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<256, 1, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        512, 512, 512, 10.0f, -11.0f, 12.0f);
+    // float32_t  128 x 8 threads, block 16 x 16
+    test_fill_fragment_h<128, 8, 16, 16, 16, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 8, 16, 16, 16, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
-    // float32_t  256 x 2 threads, block 64 x 64,
+    // float32_t  256 x 1 threads, block 16 x 16
+    test_fill_fragment_h<256, 1, 16, 16, 16, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<256, 1, 16, 16, 16, float32_t, float32_t>(
+        128, 128, 128, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<256, 1, 16, 16, 16, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<256, 1, 16, 16, 16, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
-    // MNK = 512
-    test_fill_fragment_h<256, 2, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>(
-        512, 512, 512, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 2, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>(
-        512, 512, 512, 4.0f, -5.0f, 6.0f);
-    test_fill_fragment_h<256, 2, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>(
-        512, 512, 512, -7.0f, 8.0f, -9.0f);
-    test_fill_fragment_h<256, 2, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>(
-        512, 512, 512, 10.0f, -11.0f, 12.0f);
+    // float32_t  256 x 2 threads, block 16 x 16
+    test_fill_fragment_h<256, 2, 16, 16, 16, float32_t, float32_t>(
+        128, 128, 128, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<256, 2, 16, 16, 16, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<256, 2, 16, 16, 16, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  256 x 4 threads, block 16 x 16
+    test_fill_fragment_h<256, 4, 16, 16, 16, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<256, 4, 16, 16, 16, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  512 x 1 threads, block 16 x 16
+    test_fill_fragment_h<512, 1, 16, 16, 16, float32_t, float32_t>(
+        128, 128, 128, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<512, 1, 16, 16, 16, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<512, 1, 16, 16, 16, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  512 x 2 threads, block 16 x 16
+    test_fill_fragment_h<512, 2, 16, 16, 16, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<512, 2, 16, 16, 16, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  64 x 1 threads, block 32 x 32
+    test_fill_fragment_h<64, 1, 32, 32, 32, float32_t, float32_t>(32, 32, 32, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 32, 32, 32, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 32, 32, 32, float32_t, float32_t>(
+        128, 128, 128, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 32, 32, 32, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 32, 32, 32, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  64 x 2 threads, block 32 x 32
+    test_fill_fragment_h<64, 2, 32, 32, 32, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 2, 32, 32, 32, float32_t, float32_t>(
+        128, 128, 128, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 2, 32, 32, 32, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 2, 32, 32, 32, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  64 x 4 threads, block 32 x 32
+    test_fill_fragment_h<64, 4, 32, 32, 32, float32_t, float32_t>(
+        128, 128, 128, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 4, 32, 32, 32, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 4, 32, 32, 32, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  64 x 8 threads, block 32 x 32
+    test_fill_fragment_h<64, 8, 32, 32, 32, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 8, 32, 32, 32, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  128 x 1 threads, block 32 x 32
+    test_fill_fragment_h<128, 1, 32, 32, 32, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 1, 32, 32, 32, float32_t, float32_t>(
+        128, 128, 128, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 1, 32, 32, 32, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 1, 32, 32, 32, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  128 x 2 threads, block 32 x 32
+    test_fill_fragment_h<128, 2, 32, 32, 32, float32_t, float32_t>(
+        128, 128, 128, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 2, 32, 32, 32, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 2, 32, 32, 32, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  128 x 4 threads, block 32 x 32
+    test_fill_fragment_h<128, 4, 32, 32, 32, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 4, 32, 32, 32, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  256 x 1 threads, block 32 x 32
+    test_fill_fragment_h<256, 1, 32, 32, 32, float32_t, float32_t>(
+        128, 128, 128, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<256, 1, 32, 32, 32, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<256, 1, 32, 32, 32, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  256 x 2 threads, block 32 x 32
+    test_fill_fragment_h<256, 2, 32, 32, 32, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<256, 2, 32, 32, 32, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  512 x 1 threads, block 32 x 32
+    test_fill_fragment_h<512, 1, 32, 32, 32, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<512, 1, 32, 32, 32, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  64 x 1 threads, block 64 x 64
+    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t>(
+        128, 128, 128, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  64 x 2 threads, block 64 x 64
+    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t>(
+        128, 128, 128, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  64 x 4 threads, block 64 x 64
+    test_fill_fragment_h<64, 4, 64, 64, 64, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 4, 64, 64, 64, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  128 x 1 threads, block 64 x 64
+    test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t>(
+        128, 128, 128, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  128 x 2 threads, block 64 x 64
+    test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+
+    // float32_t  256 x 1 threads, block 64 x 64
+    test_fill_fragment_h<256, 1, 64, 64, 64, float32_t, float32_t>(
+        256, 256, 256, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<256, 1, 64, 64, 64, float32_t, float32_t>(
+        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 }
 
 int main()
