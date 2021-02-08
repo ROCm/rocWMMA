@@ -89,7 +89,7 @@ __host__ void test_load_store_matrix_h(uint32_t M, uint32_t N, uint32_t K)
     std::vector<InputT> matrixB(K * N, 0.0f);
     MatrixUtil<LayoutB>::fill(matrixB, K, N);
     std::vector<ComputeT> matrixC(M * N, 0.0f);
-    MatrixUtil<LayoutB>::fill(matrixC, M, N);
+    MatrixUtil<LayoutC>::fill(matrixC, M, N);
 
     // Output matrices
     std::vector<InputT>   matrixA_r(M * K, 0.0f);
@@ -166,443 +166,225 @@ __host__ void test_load_store_matrix_h(uint32_t M, uint32_t N, uint32_t K)
     compareEqual<ComputeT, ComputeT, LayoutC, LayoutC>(matrixC, matrixC_r, M, N);
 }
 
+template <uint32_t TBlockX,
+          uint32_t TBlockY,
+          uint32_t BlockM,
+          uint32_t BlockN,
+          uint32_t BlockK,
+          typename InputT,
+          typename ComputeT>
+__host__ void test_load_store_matrix_h(uint32_t M, uint32_t N, uint32_t K)
+{
+    test_load_store_matrix_h<TBlockX,
+                             TBlockY,
+                             BlockM,
+                             BlockN,
+                             BlockK,
+                             InputT,
+                             ComputeT,
+                             row_major,
+                             row_major,
+                             row_major>(M, N, K);
+    test_load_store_matrix_h<TBlockX,
+                             TBlockY,
+                             BlockM,
+                             BlockN,
+                             BlockK,
+                             InputT,
+                             ComputeT,
+                             row_major,
+                             col_major,
+                             row_major>(M, N, K);
+    test_load_store_matrix_h<TBlockX,
+                             TBlockY,
+                             BlockM,
+                             BlockN,
+                             BlockK,
+                             InputT,
+                             ComputeT,
+                             col_major,
+                             row_major,
+                             row_major>(M, N, K);
+    test_load_store_matrix_h<TBlockX,
+                             TBlockY,
+                             BlockM,
+                             BlockN,
+                             BlockK,
+                             InputT,
+                             ComputeT,
+                             col_major,
+                             col_major,
+                             row_major>(M, N, K);
+    test_load_store_matrix_h<TBlockX,
+                             TBlockY,
+                             BlockM,
+                             BlockN,
+                             BlockK,
+                             InputT,
+                             ComputeT,
+                             row_major,
+                             row_major,
+                             col_major>(M, N, K);
+    test_load_store_matrix_h<TBlockX,
+                             TBlockY,
+                             BlockM,
+                             BlockN,
+                             BlockK,
+                             InputT,
+                             ComputeT,
+                             row_major,
+                             col_major,
+                             col_major>(M, N, K);
+    test_load_store_matrix_h<TBlockX,
+                             TBlockY,
+                             BlockM,
+                             BlockN,
+                             BlockK,
+                             InputT,
+                             ComputeT,
+                             col_major,
+                             row_major,
+                             col_major>(M, N, K);
+    test_load_store_matrix_h<TBlockX,
+                             TBlockY,
+                             BlockM,
+                             BlockN,
+                             BlockK,
+                             InputT,
+                             ComputeT,
+                             col_major,
+                             col_major,
+                             col_major>(M, N, K);
+}
+
 void test_load_store_matrix_h()
 {
-    // For fills, we must have the same geometry for all matrices
+    // Store / load, we must have the same geometry for all matrices.
+    // This will exercise matrix a, b and accum load / store layouts.
 
-    // float32_t  64 x 1 threads, block 64 x 64,
+    // float32_t  64 x 1 threads, block 16 x 16
+    test_load_store_matrix_h<64, 1, 16, 16, 16, float32_t, float32_t>(16, 16, 16);
+    test_load_store_matrix_h<64, 1, 16, 16, 16, float32_t, float32_t>(32, 32, 32);
+    test_load_store_matrix_h<64, 1, 16, 16, 16, float32_t, float32_t>(64, 64, 64);
+    test_load_store_matrix_h<64, 1, 16, 16, 16, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<64, 1, 16, 16, 16, float32_t, float32_t>(256, 256, 256);
 
-    // MNK = 64
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             row_major,
-                             row_major>(64, 64, 64);
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             col_major,
-                             row_major>(64, 64, 64);
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             row_major,
-                             row_major>(64, 64, 64);
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             col_major,
-                             row_major>(64, 64, 64);
+    // float32_t  64 x 2 threads, block 16 x 16
+    test_load_store_matrix_h<64, 2, 16, 16, 16, float32_t, float32_t>(32, 32, 32);
+    test_load_store_matrix_h<64, 2, 16, 16, 16, float32_t, float32_t>(64, 64, 64);
+    test_load_store_matrix_h<64, 2, 16, 16, 16, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<64, 2, 16, 16, 16, float32_t, float32_t>(256, 256, 256);
 
-    // MNK = 128
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             row_major,
-                             row_major>(128, 128, 128);
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             col_major,
-                             row_major>(128, 128, 128);
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             row_major,
-                             row_major>(128, 128, 128);
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             col_major,
-                             row_major>(128, 128, 128);
+    // float32_t  64 x 4 threads, block 16 x 16
+    test_load_store_matrix_h<64, 4, 16, 16, 16, float32_t, float32_t>(64, 64, 64);
+    test_load_store_matrix_h<64, 4, 16, 16, 16, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<64, 4, 16, 16, 16, float32_t, float32_t>(256, 256, 256);
 
-    // MNK = 512
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             row_major,
-                             row_major>(512, 512, 512);
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             col_major,
-                             row_major>(512, 512, 512);
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             row_major,
-                             row_major>(512, 512, 512);
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             col_major,
-                             row_major>(512, 512, 512);
+    // float32_t  64 x 8 threads, block 16 x 16
+    test_load_store_matrix_h<64, 8, 16, 16, 16, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<64, 8, 16, 16, 16, float32_t, float32_t>(256, 256, 256);
 
-    // MNK = 16384
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             row_major,
-                             row_major>(16384, 16384, 16384);
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             col_major,
-                             row_major>(16384, 16384, 16384);
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             row_major,
-                             row_major>(16384, 16384, 16384);
-    test_load_store_matrix_h<64,
-                             1,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             col_major,
-                             row_major>(16384, 16384, 16384);
+    // float32_t  64 x 16 threads, block 16 x 16
+    test_load_store_matrix_h<64, 16, 16, 16, 16, float32_t, float32_t>(256, 256, 256);
 
-    // float32_t  64 x 2 threads, block 64 x 64,
+    // float32_t  128 x 1 threads, block 16 x 16
+    test_load_store_matrix_h<128, 1, 16, 16, 16, float32_t, float32_t>(32, 32, 32);
+    test_load_store_matrix_h<128, 1, 16, 16, 16, float32_t, float32_t>(64, 64, 64);
+    test_load_store_matrix_h<128, 1, 16, 16, 16, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<128, 1, 16, 16, 16, float32_t, float32_t>(256, 256, 256);
 
-    // MNK = 128
-    test_load_store_matrix_h<64,
-                             2,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             row_major,
-                             row_major>(128, 128, 128);
-    test_load_store_matrix_h<64,
-                             2,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             col_major,
-                             row_major>(128, 128, 128);
-    test_load_store_matrix_h<64,
-                             2,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             row_major,
-                             row_major>(128, 128, 128);
-    test_load_store_matrix_h<64,
-                             2,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             col_major,
-                             row_major>(128, 128, 128);
+    // float32_t  128 x 2 threads, block 16 x 16
+    test_load_store_matrix_h<128, 2, 16, 16, 16, float32_t, float32_t>(64, 64, 64);
+    test_load_store_matrix_h<128, 2, 16, 16, 16, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<128, 2, 16, 16, 16, float32_t, float32_t>(256, 256, 256);
 
-    // MNK = 512
-    test_load_store_matrix_h<64,
-                             2,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             row_major,
-                             row_major>(512, 512, 512);
-    test_load_store_matrix_h<64,
-                             2,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             col_major,
-                             row_major>(512, 512, 512);
-    test_load_store_matrix_h<64,
-                             2,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             row_major,
-                             row_major>(512, 512, 512);
-    test_load_store_matrix_h<64,
-                             2,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             col_major,
-                             row_major>(512, 512, 512);
+    // float32_t  128 x 4 threads, block 16 x 16
+    test_load_store_matrix_h<128, 4, 16, 16, 16, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<128, 4, 16, 16, 16, float32_t, float32_t>(256, 256, 256);
 
-    // MNK = 16384
-    test_load_store_matrix_h<64,
-                             2,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             row_major,
-                             row_major>(16384, 16384, 16384);
-    test_load_store_matrix_h<64,
-                             2,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             col_major,
-                             row_major>(16384, 16384, 16384);
-    test_load_store_matrix_h<64,
-                             2,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             row_major,
-                             row_major>(16384, 16384, 16384);
-    test_load_store_matrix_h<64,
-                             2,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             col_major,
-                             row_major>(16384, 16384, 16384);
+    // float32_t  128 x 8 threads, block 16 x 16
+    test_load_store_matrix_h<128, 8, 16, 16, 16, float32_t, float32_t>(256, 256, 256);
 
-    // float32_t  64 x 4 threads, block 64 x 64,
+    // float32_t  256 x 1 threads, block 16 x 16
+    test_load_store_matrix_h<256, 1, 16, 16, 16, float32_t, float32_t>(64, 64, 64);
+    test_load_store_matrix_h<256, 1, 16, 16, 16, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<256, 1, 16, 16, 16, float32_t, float32_t>(256, 256, 256);
 
-    // MNK = 512
-    test_load_store_matrix_h<64,
-                             4,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             row_major,
-                             row_major>(512, 512, 512);
-    test_load_store_matrix_h<64,
-                             4,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             row_major,
-                             col_major,
-                             row_major>(512, 512, 512);
-    test_load_store_matrix_h<64,
-                             4,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             row_major,
-                             row_major>(512, 512, 512);
-    test_load_store_matrix_h<64,
-                             4,
-                             64,
-                             64,
-                             64,
-                             float32_t,
-                             float32_t,
-                             col_major,
-                             col_major,
-                             row_major>(512, 512, 512);
+    // float32_t  256 x 2 threads, block 16 x 16
+    test_load_store_matrix_h<256, 2, 16, 16, 16, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<256, 2, 16, 16, 16, float32_t, float32_t>(256, 256, 256);
 
-    // // float32_t  64 x 8 threads, block 64 x 64,
+    // float32_t  256 x 4 threads, block 16 x 16
+    test_load_store_matrix_h<256, 4, 16, 16, 16, float32_t, float32_t>(256, 256, 256);
 
-    // // MNK = 512
-    // test_fill_fragment_h<64, 8, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>
-    // (512, 512, 512, -1.0f, 2.0f, -3.0f);
-    // test_fill_fragment_h<64, 8, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>
-    // (512, 512, 512, 4.0f, -5.0f, 6.0f);
-    // test_fill_fragment_h<64, 8, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>
-    // (512, 512, 512, -7.0f, 8.0f, -9.0f);
-    // test_fill_fragment_h<64, 8, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>
-    // (512, 512, 512, 10.0f, -11.0f, 12.0f);
+    // float32_t  512 x 1 threads, block 16 x 16
+    test_load_store_matrix_h<512, 1, 16, 16, 16, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<512, 1, 16, 16, 16, float32_t, float32_t>(256, 256, 256);
 
-    // // float32_t  128 x 1 threads, block 64 x 64,
+    // float32_t  512 x 2 threads, block 16 x 16
+    test_load_store_matrix_h<512, 2, 16, 16, 16, float32_t, float32_t>(256, 256, 256);
 
-    // // MNK = 128
-    // test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>
-    // (128, 128, 128, -1.0f, 2.0f, -3.0f);
-    // test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>
-    // (128, 128, 128, 4.0f, -5.0f, 6.0f);
-    // test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>
-    // (128, 128, 128, -7.0f, 8.0f, -9.0f);
-    // test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>
-    // (128, 128, 128, 10.0f, -11.0f, 12.0f);
+    // float32_t  64 x 1 threads, block 32 x 32
+    test_load_store_matrix_h<64, 1, 32, 32, 32, float32_t, float32_t>(32, 32, 32);
+    test_load_store_matrix_h<64, 1, 32, 32, 32, float32_t, float32_t>(64, 64, 64);
+    test_load_store_matrix_h<64, 1, 32, 32, 32, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<64, 1, 32, 32, 32, float32_t, float32_t>(256, 256, 256);
 
-    // // MNK = 512
-    // test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>
-    // (512, 512, 512, -1.0f, 2.0f, -3.0f);
-    // test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>
-    // (512, 512, 512, 4.0f, -5.0f, 6.0f);
-    // test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>
-    // (512, 512, 512, -7.0f, 8.0f, -9.0f);
-    // test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>
-    // (512, 512, 512, 10.0f, -11.0f, 12.0f);
+    // float32_t  64 x 2 threads, block 32 x 32
+    test_load_store_matrix_h<64, 2, 32, 32, 32, float32_t, float32_t>(64, 64, 64);
+    test_load_store_matrix_h<64, 2, 32, 32, 32, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<64, 2, 32, 32, 32, float32_t, float32_t>(256, 256, 256);
 
-    // // float32_t  128 x 2 threads, block 64 x 64,
+    // float32_t  64 x 4 threads, block 32 x 32
+    test_load_store_matrix_h<64, 4, 32, 32, 32, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<64, 4, 32, 32, 32, float32_t, float32_t>(256, 256, 256);
 
-    // // MNK = 128
-    // test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>
-    // (128, 128, 128, -1.0f, 2.0f, -3.0f);
-    // test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>
-    // (128, 128, 128, 4.0f, -5.0f, 6.0f);
-    // test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>
-    // (128, 128, 128, -7.0f, 8.0f, -9.0f);
-    // test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>
-    // (128, 128, 128, 10.0f, -11.0f, 12.0f);
+    // float32_t  64 x 8 threads, block 32 x 32
+    test_load_store_matrix_h<64, 8, 32, 32, 32, float32_t, float32_t>(256, 256, 256);
 
-    // // MNK = 512
-    // test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>
-    // (512, 512, 512, -1.0f, 2.0f, -3.0f);
-    // test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>
-    // (512, 512, 512, 4.0f, -5.0f, 6.0f);
-    // test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>
-    // (512, 512, 512, -7.0f, 8.0f, -9.0f);
-    // test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>
-    // (512, 512, 512, 10.0f, -11.0f, 12.0f);
+    // float32_t  128 x 1 threads, block 32 x 32
+    test_load_store_matrix_h<128, 1, 32, 32, 32, float32_t, float32_t>(64, 64, 64);
+    test_load_store_matrix_h<128, 1, 32, 32, 32, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<128, 1, 32, 32, 32, float32_t, float32_t>(256, 256, 256);
 
-    // // float32_t  128 x 4 threads, block 64 x 64,
+    // float32_t  128 x 2 threads, block 32 x 32
+    test_load_store_matrix_h<128, 2, 32, 32, 32, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<128, 2, 32, 32, 32, float32_t, float32_t>(256, 256, 256);
 
-    // // MNK = 512
-    // test_fill_fragment_h<128, 4, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>
-    // (512, 512, 512, -1.0f, 2.0f, -3.0f);
-    // test_fill_fragment_h<128, 4, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>
-    // (512, 512, 512, 4.0f, -5.0f, 6.0f);
-    // test_fill_fragment_h<128, 4, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>
-    // (512, 512, 512, -7.0f, 8.0f, -9.0f);
-    // test_fill_fragment_h<128, 4, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>
-    // (512, 512, 512, 10.0f, -11.0f, 12.0f);
+    // float32_t  128 x 4 threads, block 32 x 32
+    test_load_store_matrix_h<128, 4, 32, 32, 32, float32_t, float32_t>(256, 256, 256);
 
-    // // float32_t  256 x 1 threads, block 64 x 64,
+    // float32_t  256 x 1 threads, block 32 x 32
+    test_load_store_matrix_h<256, 1, 32, 32, 32, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<256, 1, 32, 32, 32, float32_t, float32_t>(256, 256, 256);
 
-    // // MNK = 512
-    // test_fill_fragment_h<256, 1, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>
-    // (512, 512, 512, -1.0f, 2.0f, -3.0f);
-    // test_fill_fragment_h<256, 1, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>
-    // (512, 512, 512, 4.0f, -5.0f, 6.0f);
-    // test_fill_fragment_h<256, 1, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>
-    // (512, 512, 512, -7.0f, 8.0f, -9.0f);
-    // test_fill_fragment_h<256, 1, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>
-    // (512, 512, 512, 10.0f, -11.0f, 12.0f);
+    // float32_t  256 x 2 threads, block 32 x 32
+    test_load_store_matrix_h<256, 2, 32, 32, 32, float32_t, float32_t>(256, 256, 256);
 
-    // // float32_t  256 x 2 threads, block 64 x 64,
+    // float32_t  512 x 1 threads, block 32 x 32
+    test_load_store_matrix_h<512, 1, 32, 32, 32, float32_t, float32_t>(256, 256, 256);
 
-    // // MNK = 512
-    // test_fill_fragment_h<256, 2, 64, 64, 64, float32_t, float32_t, row_major, row_major, row_major>
-    // (512, 512, 512, -1.0f, 2.0f, -3.0f);
-    // test_fill_fragment_h<256, 2, 64, 64, 64, float32_t, float32_t, row_major, col_major, row_major>
-    // (512, 512, 512, 4.0f, -5.0f, 6.0f);
-    // test_fill_fragment_h<256, 2, 64, 64, 64, float32_t, float32_t, col_major, row_major, row_major>
-    // (512, 512, 512, -7.0f, 8.0f, -9.0f);
-    // test_fill_fragment_h<256, 2, 64, 64, 64, float32_t, float32_t, col_major, col_major, row_major>
-    // (512, 512, 512, 10.0f, -11.0f, 12.0f);
+    // float32_t  64 x 1 threads, block 64 x 64
+    test_load_store_matrix_h<64, 1, 64, 64, 64, float32_t, float32_t>(64, 64, 64);
+    test_load_store_matrix_h<64, 1, 64, 64, 64, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<64, 1, 64, 64, 64, float32_t, float32_t>(256, 256, 256);
+
+    // float32_t  64 x 2 threads, block 64 x 64
+    test_load_store_matrix_h<64, 2, 64, 64, 64, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<64, 2, 64, 64, 64, float32_t, float32_t>(256, 256, 256);
+
+    // float32_t  64 x 4 threads, block 64 x 64
+    test_load_store_matrix_h<64, 4, 64, 64, 64, float32_t, float32_t>(256, 256, 256);
+
+    // float32_t  128 x 1 threads, block 64 x 64
+    test_load_store_matrix_h<128, 1, 64, 64, 64, float32_t, float32_t>(128, 128, 128);
+    test_load_store_matrix_h<128, 1, 64, 64, 64, float32_t, float32_t>(256, 256, 256);
+
+    // float32_t  128 x 2 threads, block 64 x 64
+    test_load_store_matrix_h<128, 2, 64, 64, 64, float32_t, float32_t>(256, 256, 256);
+
+    // float32_t  256 x 1 threads, block 64 x 64
+    test_load_store_matrix_h<256, 1, 64, 64, 64, float32_t, float32_t>(256, 256, 256);
 }
 
 int main()
