@@ -341,12 +341,12 @@ void gemmCPU(std::vector<InputT> const& a,
     int ldb = std::is_same<LayoutB, row_major>::value ? N : K;
     int ldc = std::is_same<LayoutC, row_major>::value ? N : M;
 
-    for(int i = 0; i < M; i++) // Row
+    for(int i = 0; i < M; ++i) // Row
     {
-        for(int j = 0; j < N; j++) // Col
+        for(int j = 0; j < N; ++j) // Col
         {
             float accum = 0.0f;
-            for(int k = 0; k < K; k++)
+            for(int k = 0; k < K; ++k)
             {
                 auto indexA
                     = std::is_same<LayoutA, row_major>::value ? (i * lda + k) : (i + lda * k);
@@ -369,9 +369,9 @@ void compareEqual(std::vector<TypeA> const& a, std::vector<TypeB> const& b, int 
     int lda = std::is_same<LayoutA, row_major>::value ? N : M;
     int ldb = std::is_same<LayoutB, row_major>::value ? N : M;
 
-    for(int i = 0; i < M; i++) // Row
+    for(int i = 0; i < M; ++i) // Row
     {
-        for(int j = 0; j < N; j++) // Col
+        for(int j = 0; j < N; ++j) // Col
         {
             auto indexA = std::is_same<LayoutA, row_major>::value ? (i * lda + j) : (i + j * lda);
             auto indexB = std::is_same<LayoutB, row_major>::value ? (i * ldb + j) : (i + j * ldb);

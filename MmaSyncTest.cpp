@@ -92,7 +92,7 @@ __global__ void test_mma_sync_d(const InputT* a,
                                std::is_same<LayoutC, row_major>::value ? wmma::mem_row_major
                                                                        : wmma::mem_col_major);
 
-        for(int i = 0; i < fragC.num_elements(); i++)
+        for(int i = 0; i < fragC.registerCount(); ++i)
         {
             fragC[i] = alpha * fragAcc[i] + beta * fragC[i];
         }
