@@ -2,7 +2,7 @@ CXX=/opt/rocm/hip/bin/hipcc
 
 CXXFLAGS=-I/opt/rocm/hip/include/ -march=native -O2
 
-ALL = FillFragmentTest LoadStoreMatrixSyncTest MmaSyncTest
+ALL = FillFragmentTest LoadStoreMatrixSyncTest MmaSyncTest MmaSyncCoopTest
 
 all: $(ALL)
 

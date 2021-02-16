@@ -6,6 +6,8 @@
 static constexpr uint32_t AMDGCN_WAVE_SIZE   = 64;
 static constexpr uint32_t BYTES_PER_REGISTER = 256;
 
+static constexpr uint32_t LDS_MAX_BYTES = 65536;
+
 template <typename DataT>
 static constexpr uint32_t elementsPerRegister()
 {

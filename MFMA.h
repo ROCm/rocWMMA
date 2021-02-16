@@ -4,22 +4,12 @@
 #include "Types.h"
 
 template <typename InputT, typename ComputeT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
-struct amdgcn_mfma;
-
-template <>
-struct amdgcn_mfma<float32_t, float32_t, 32, 32, 2>
+struct amdgcn_mfma
 {
-    using ARegT = VRegF32x1;
-    using BRegT = VRegF32x1;
-    using CRegT = AccRegF32x16;
-    using DRegT = AccRegF32x16;
-
-    __device__ static inline auto exec(ARegT regA, BRegT regB, CRegT regC) -> DRegT
-    {
-        return DRegT(__builtin_amdgcn_mfma_f32_32x32x2f32(*regA, *regB, *regC, 0, 0, 0));
-    }
+    //static_assert(0, "Not implemented");
 };
 
+// Single 16 x 16 block mfma
 template <>
 struct amdgcn_mfma<float32_t, float32_t, 16, 16, 4>
 {
@@ -34,6 +24,22 @@ struct amdgcn_mfma<float32_t, float32_t, 16, 16, 4>
     }
 };
 
+// Single 32 x 32 block mfma
+template <>
+struct amdgcn_mfma<float32_t, float32_t, 32, 32, 2>
+{
+    using ARegT = VRegF32x1;
+    using BRegT = VRegF32x1;
+    using CRegT = AccRegF32x16;
+    using DRegT = AccRegF32x16;
+
+    __device__ static inline auto exec(ARegT regA, BRegT regB, CRegT regC) -> DRegT
+    {
+        return DRegT(__builtin_amdgcn_mfma_f32_32x32x2f32(*regA, *regB, *regC, 0, 0, 0));
+    }
+};
+
+// Single 32 x 64 block mfma
 template <>
 struct amdgcn_mfma<float32_t, float32_t, 32, 64, 1>
 {
@@ -48,6 +54,7 @@ struct amdgcn_mfma<float32_t, float32_t, 32, 64, 1>
     }
 };
 
+// Single 64 x 32 block mfma
 template <>
 struct amdgcn_mfma<float32_t, float32_t, 64, 32, 1>
 {
