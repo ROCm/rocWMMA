@@ -11,7 +11,7 @@ template <>
 struct amdgcn_local_store<float32_t, 1>
 {
     using StoreT = VRegF32x1;
-    __device__ static inline void exec(float* localPtr, StoreT data, index_t offset)
+    __device__ static inline void exec(float* localPtr, StoreT const& data, index_t offset)
     {
         localPtr[offset] = *data;
     }
@@ -55,7 +55,7 @@ struct amdgcn_local_store_dword_DxK
     using ResultT = typename Traits::ResultT;
     using LayoutT = typename Traits::LayoutT;
 
-    __device__ static void exec(DataT* localPtr, ResultT data, uint32_t ldm)
+    __device__ static void exec(DataT* localPtr, ResultT const& data, uint32_t ldm)
     {
         // Arrange wave threads to starting data offsets due to layout.
         // In this case, the LDS contains only block data.
