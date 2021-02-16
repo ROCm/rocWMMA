@@ -77,7 +77,8 @@ namespace _MappingUtil
                                                   = BlockMapping<BlockM, BlockN>::fromGrid())
         {
             // Align pointer to data starting at (row, col)
-            return const_cast<float*>(addr) + std::get<0>(blockCoord) * ldm + // Row
+            return const_cast<float*>(addr) + 
+                   std::get<0>(blockCoord) * ldm + // Row
                    std::get<1>(blockCoord); // Col
         }
 
@@ -301,32 +302,6 @@ struct BlockGeometry
     }
 };
 
-template <int M, int N, int K>
-void validateC(std::vector<float> const& a,
-               std::vector<float> const& b,
-               std::vector<float> const& c)
-{
-    for(int i = 0; i < M; i++)
-    {
-        auto rowStartA = i * K;
-        for(int j = 0; j < N; j++)
-        {
-            auto  colStartB = j;
-            float result    = 0.0f;
-            for(int k = 0; k < K; k++)
-            {
-                result += (a[rowStartA + k] * b[colStartB + k * N]);
-            }
-
-            if(c[i * M + j] != result)
-            {
-                std::cout << "No match: C( " << i << ", " << j << " )\n";
-                std::cout << "(Expected, actual): ( " << result << ", " << c[i * M + j] << ")\n";
-            }
-        }
-    }
-}
-
 template <typename LayoutA, typename LayoutB, typename LayoutC, typename InputT, typename ComputeT>
 void gemmCPU(std::vector<InputT> const& a,
              std::vector<InputT> const& b,
@@ -384,5 +359,59 @@ void compareEqual(std::vector<TypeA> const& a, std::vector<TypeB> const& b, int 
         }
     }
 }
+
+
+template<typename DataT>
+struct MfmaPerfTraits;
+
+template<>
+struct MfmaPerfTraits<float32_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 4
+    };
+};
+
+template<typename DataT>
+struct PerfTraits;
+
+template<>
+struct PerfTraits<float32_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 2
+    };
+};
+
+class Mi100;
+
+template<typename GfxArch>
+struct HardwareTraits;
+
+template<>
+struct HardwareTraits<Mi100>
+{
+    enum : uint32_t
+    {
+        CuCount = 120,
+    };
+};
+
+template<typename DataT, typename GfxArch, template<typename> class PerformanceTraits = MfmaPerfTraits>
+inline double calculatePeakGFlops(uint32_t freqMHz)
+{
+    auto basePeakGFlops = static_cast<double>(64.0 * HardwareTraits<GfxArch>::CuCount * freqMHz) / 1000.0;
+    auto multiplier = (double)(PerformanceTraits<DataT>::Multiplier);
+    return multiplier * basePeakGFlops;
+}
+
+inline double calculateGFlops(uint32_t M, uint32_t N, uint32_t K, double elapsedTimeMs)
+{
+    constexpr double flopsPerMac = 2.0;
+    return static_cast<float32_t>(flopsPerMac * M * N * K) / 1000000.0 / elapsedTimeMs;
+}
+
 
 #endif // WMMA_UTILS_H

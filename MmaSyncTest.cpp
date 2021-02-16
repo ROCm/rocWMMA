@@ -1,3 +1,4 @@
+#include <hip/hip_ext.h>
 #include <hip/hip_runtime.h>
 
 #include "BufferLoad.h"
@@ -161,12 +162,19 @@ __host__ void test_mma_sync_h(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha
 
     auto blockDim = dim3(TBlockX, TBlockY);
 
-    hipLaunchKernelGGL(
+    hipEvent_t startEvent, stopEvent;
+    assert(hipEventCreate(&startEvent) == hipSuccess);
+    assert(hipEventCreate(&stopEvent) == hipSuccess);
+
+    hipExtLaunchKernelGGL(
         (test_mma_sync_d<BlockM, BlockN, BlockK, InputT, ComputeT, LayoutA, LayoutB, LayoutC>),
         gridDim,
         blockDim,
         0, // sharedMemBytes
         0, // stream
+        startEvent, // Event start
+        stopEvent,  // event stop
+        0,          // flags
         d_a,
         d_b,
         d_c,
@@ -176,12 +184,20 @@ __host__ void test_mma_sync_h(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha
         alpha,
         beta);
 
-    assert(hipMemcpy(matrixC.data(), d_c, bytesC, hipMemcpyDeviceToHost) == hipSuccess);
+    auto elapsedTimeMs = 0.0f;
+    assert(hipEventSynchronize(stopEvent) == hipSuccess);
+    assert(hipEventElapsedTime(&elapsedTimeMs, startEvent, stopEvent) == hipSuccess);
+    assert(hipEventDestroy(startEvent) == hipSuccess);
+    assert(hipEventDestroy(stopEvent) == hipSuccess);
 
-    // Release device memory
-    assert(hipFree(d_a) == hipSuccess);
-    assert(hipFree(d_b) == hipSuccess);
-    assert(hipFree(d_c) == hipSuccess);
+    auto peakGFlops = calculatePeakGFlops<float32_t, Mi100>(1087);
+    auto gFlops = calculateGFlops(M, N, K, elapsedTimeMs);
+    auto efficiency = gFlops / peakGFlops * 100.0f;
+    std::cout << "Elapsed time (ms): " << elapsedTimeMs << " Speed (Gflops/s): " << gFlops << " Efficiency (%): " << efficiency << std::endl;
+
+#ifdef WMMA_VALIDATE_TESTS
+
+    assert(hipMemcpy(matrixC.data(), d_c, bytesC, hipMemcpyDeviceToHost) == hipSuccess);
 
     // Validate
     std::vector<ComputeT> matrixC_r(M * N, 0.0f);
@@ -195,6 +211,13 @@ __host__ void test_mma_sync_h(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha
         alpha,
         beta);
     compareEqual<InputT, InputT, LayoutA, LayoutA>(matrixC, matrixC_r, M, N);
+
+#endif
+    
+    // Release device memory
+    assert(hipFree(d_a) == hipSuccess);
+    assert(hipFree(d_b) == hipSuccess);
+    assert(hipFree(d_c) == hipSuccess);
 }
 
 template <uint32_t TBlockX,

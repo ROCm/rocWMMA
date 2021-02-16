@@ -1,5 +1,5 @@
-#include <hip/hip_runtime.h>
 #include <hip/hip_ext.h>
+#include <hip/hip_runtime.h>
 
 #include "Constants.h"
 #include "Types.h"
@@ -191,6 +191,7 @@ __host__ void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT 
     hipEvent_t startEvent, stopEvent;
     assert(hipEventCreate(&startEvent) == hipSuccess);
     assert(hipEventCreate(&stopEvent) == hipSuccess);
+
     hipExtLaunchKernelGGL(
         (test_mma_sync_coop_d<BlockM, BlockN, BlockK, InputT, ComputeT, LayoutA, LayoutB, LayoutC>),
         gridDim,
@@ -215,9 +216,12 @@ __host__ void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT 
     assert(hipEventDestroy(startEvent) == hipSuccess);
     assert(hipEventDestroy(stopEvent) == hipSuccess);
 
-    auto gflops = (2.0f * M * N * K) / 1000000000.0f; 
-    std::cout << "Elapsed time (ms): " << elapsedTimeMs << " Speed (Gflops/s): " << gflops / elapsedTimeMs * 1000.0f << std::endl;
+    auto peakGFlops = calculatePeakGFlops<float32_t, Mi100>(1087);
+    auto gFlops = calculateGFlops(M, N, K, elapsedTimeMs);
+    auto efficiency = gFlops / peakGFlops * 100.0f;
+    std::cout << "Elapsed time (ms): " << elapsedTimeMs << " Speed (Gflops/s): " << gFlops << " Efficiency (%): " << efficiency << std::endl;
 
+#ifdef WMMA_VALIDATE_TESTS
     // Copy for validation
     assert(hipMemcpy(matrixC.data(), d_c, bytesC, hipMemcpyDeviceToHost) == hipSuccess);
 
@@ -233,6 +237,7 @@ __host__ void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT 
         alpha,
         beta);
     compareEqual<InputT, InputT, LayoutA, LayoutA>(matrixC, matrixC_r, M, N);
+#endif
 
     // Release device memory
     assert(hipFree(d_a) == hipSuccess);
@@ -240,24 +245,24 @@ __host__ void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT 
     assert(hipFree(d_c) == hipSuccess);
 }
 
-template <uint32_t TBlockX,
-          uint32_t TBlockY,
-          uint32_t BlockM,
-          uint32_t BlockN,
-          uint32_t BlockK,
-          typename InputT,
-          typename ComputeT>
-inline void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
-{
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, row_major, row_major, row_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, row_major, col_major, row_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, col_major, row_major, row_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, col_major, col_major, row_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, row_major, row_major, col_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, row_major, col_major, col_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, col_major, row_major, col_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, col_major, col_major, col_major>(M, N, K, alpha, beta);
-}
+// template <uint32_t TBlockX,
+//           uint32_t TBlockY,
+//           uint32_t BlockM,
+//           uint32_t BlockN,
+//           uint32_t BlockK,
+//           typename InputT,
+//           typename ComputeT>
+// inline void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
+// {
+//     test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, row_major, row_major, row_major>(M, N, K, alpha, beta);
+//     test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, row_major, col_major, row_major>(M, N, K, alpha, beta);
+//     test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, col_major, row_major, row_major>(M, N, K, alpha, beta);
+//     test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, col_major, col_major, row_major>(M, N, K, alpha, beta);
+//     test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, row_major, row_major, col_major>(M, N, K, alpha, beta);
+//     test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, row_major, col_major, col_major>(M, N, K, alpha, beta);
+//     test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, col_major, row_major, col_major>(M, N, K, alpha, beta);
+//     test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, col_major, col_major, col_major>(M, N, K, alpha, beta);
+// }
 
 // template<uint32_t TBlockX,
 //           uint32_t TBlockY,
@@ -337,9 +342,9 @@ inline void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT al
 
 int main()
 {
-    //test_mma_sync_coop_h(); 
+    //test_mma_sync_coop_h();
     //test_mma_sync_coop_h<64, 1, 16, 16, 8, float32_t, float32_t>(4096, 4096, 256, 2.0f, 2.0f);
     //test_mma_sync_coop_h<64, 1, 16, 16, 32, float32_t, float32_t>(4096, 4096, 256, 2.0f, 2.0f); 
-    test_mma_sync_coop_h<256, 2 , 32, 32, 64, float32_t, float32_t>(4096, 4096, 4096, 2.0f, 2.0f);
+    test_mma_sync_coop_h<256, 2 , 32, 32, 32, float32_t, float32_t, col_major, row_major, row_major>(8192, 8192, 8192, 2.0f, 2.0f);
     return 0;
 }
