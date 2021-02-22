@@ -42,8 +42,6 @@ __global__ void test_mma_sync_d(const InputT* a,
 
     wmma::fill_fragment(fragAcc, 0.0f);
 
-    int iterations = K / BlockK;
-
     // Tile using a 2D grid
     int warpM = (blockIdx.x * blockDim.x + threadIdx.x) / AMDGCN_WAVE_SIZE;
     int warpN = (blockIdx.y * blockDim.y + threadIdx.y);
@@ -95,7 +93,7 @@ __global__ void test_mma_sync_d(const InputT* a,
 
         for(int i = 0; i < fragC.registerCount(); ++i)
         {
-            fragC[i] = alpha * fragAcc[i] + beta * fragC[i];
+            fragC[i] = alpha * fragAcc[i] + beta * fragC[i]; 
         }
 
         // Store the output
@@ -210,7 +208,7 @@ __host__ void test_mma_sync_h(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha
         K,
         alpha,
         beta);
-    compareEqual<InputT, InputT, LayoutA, LayoutA>(matrixC, matrixC_r, M, N);
+    compareEqual<ComputeT, ComputeT, LayoutC, LayoutC>(matrixC, matrixC_r, M, N);
 
 #endif
     
@@ -276,7 +274,7 @@ inline void test_mma_sync_h_16x16(uint32_t M, uint32_t N, uint32_t K, ComputeT a
     test_mma_sync_h<TBlockX, TBlockY, 16, 16, 1024, InputT, ComputeT>(M, N, K, alpha, beta);
 }
 
-void test_mma_sync_h()
+void test_mma_sync_h() 
 {
     // float32_t  64 x 1 threads, block 16 x 16 x 4/8/16/32/64/128/256/512/1024,
     test_mma_sync_h_16x16<64, 1, float32_t, float32_t>(64, 64, 1024, 2.0f, 2.0f);
@@ -313,10 +311,10 @@ void test_mma_sync_h()
     test_mma_sync_h_32x32<64, 4, float32_t, float32_t>(1024, 2048, 1024, 2.0f, 2.0f);
     test_mma_sync_h_32x32<64, 4, float32_t, float32_t>(2048, 128, 1024, 2.0f, 2.0f);
     test_mma_sync_h_32x32<64, 4, float32_t, float32_t>(2048, 2048, 1024, 2.0f, 2.0f);
-}
+} 
 
 int main()
 {
     test_mma_sync_h();
-    return 0;
+    return 0; 
 }

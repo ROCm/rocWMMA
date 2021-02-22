@@ -4,61 +4,75 @@
 #include <hip/hip_runtime.h>
 
 #include "Types.h"
+#include "BufferLoad.h"
 
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-struct amdgcn_buffer_load_dword_traits;
+template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t ElementsPerThread>
+struct amdgcn_io_traits;
+
+/* Layouts
+
+These layouts are based in Matrix Space. They are to map each of the wave lanes into
+corresponding row / col coordinates for a particular memory layout. 
+
+For example, the A matrix loads columns of size BlockDim in the K direction. The B matrix
+loads rows of size BlockDim in the K direction.
+
+Each of these layouts is indexed differently, especially when different datatypes and load
+widths are used. These classes are intended to address these matrix space indexing challenges.
+
+*/
 
 namespace Layout
 {
 
     ////////////// Col /////////////////////////
-    // Every register holds 2 x 32 elements
-    // of consecutive K strides. In this case,
-    // K strides are matrix columns of size BlockDim
-    //
-    // Elements 0.....31 32.....64
-    //          _______________
-    // Reg0    |  C0   |   C1  |
-    // Reg1    |  C2   |   C3  |
-    //  ...       ...      ...
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
+    /*
+        Every register holds k columns of size blockDim.
+        
+        Elements 0.....31 32.....64
+                _______________
+        Reg0    |  C0   |   C1  |
+        Reg1    |  C2   |   C3  |
+        ...       ...      ...
+     */
+    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout, uint32_t ElementsPerThread>
     struct Col;
 
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-    struct Col<BlockDim, BlockK, DataT, row_major>
+    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t ElementsPerThread>
+    struct Col<BlockDim, BlockK, DataT, row_major, ElementsPerThread>
     {
-        using Traits = amdgcn_buffer_load_dword_traits<BlockDim, BlockK, DataT>;
+        using Traits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
 
         __device__ static inline uint32_t initialOffset(uint32_t ldm)
         {
-            uint32_t rowOffset = (threadIdx.x % BlockDim) * ldm;
-            uint32_t colOffset = (threadIdx.x / BlockDim) % Traits::StridesPerLoad;
+            uint32_t rowOffset = ((threadIdx.x * ElementsPerThread) % BlockDim) * ldm;
+            uint32_t colOffset = ((threadIdx.x * ElementsPerThread) / BlockDim) % Traits::KPerIO;
 
             return rowOffset + colOffset;
         }
 
         __device__ static inline uint32_t iterativeOffset(uint32_t i, uint32_t ldm)
         {
-            return i * Traits::StridesPerLoad; // Shift K
+            return i * Traits::KPerIO; // Shift K
         }
     };
 
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-    struct Col<BlockDim, BlockK, DataT, col_major>
+    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t ElementsPerThread>
+    struct Col<BlockDim, BlockK, DataT, col_major, ElementsPerThread>
     {
-        using Traits = amdgcn_buffer_load_dword_traits<BlockDim, BlockK, DataT>;
+        using Traits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
 
         __device__ static inline uint32_t initialOffset(uint32_t ldm)
         {
-            uint32_t rowOffset = (threadIdx.x % BlockDim);
-            uint32_t colOffset = (threadIdx.x / BlockDim) % Traits::StridesPerLoad * ldm;
+            uint32_t rowOffset = ((threadIdx.x * ElementsPerThread) % BlockDim);
+            uint32_t colOffset = ((threadIdx.x * ElementsPerThread) / BlockDim) % Traits::KPerIO * ldm;
 
             return rowOffset + colOffset;
         }
 
         __device__ static inline uint32_t iterativeOffset(uint32_t i, uint32_t ldm)
         {
-            return i * Traits::StridesPerLoad * ldm; // Shift K
+            return i * Traits::KPerIO * ldm ; // Shift K
         }
     };
 
@@ -74,16 +88,16 @@ namespace Layout
     // ...        ...      ...
 
     // Row layout is the transpose of column layout
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
+    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout, uint32_t ElementsPerThread>
     struct Row;
 
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-    struct Row<BlockDim, BlockK, DataT, row_major> : public Col<BlockDim, BlockK, DataT, col_major>
+    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t ElementsPerThread>
+    struct Row<BlockDim, BlockK, DataT, row_major, ElementsPerThread> : public Col<BlockDim, BlockK, DataT, col_major, ElementsPerThread>
     {
     };
 
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-    struct Row<BlockDim, BlockK, DataT, col_major> : public Col<BlockDim, BlockK, DataT, row_major>
+    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t ElementsPerThread>
+    struct Row<BlockDim, BlockK, DataT, col_major, ElementsPerThread> : public Col<BlockDim, BlockK, DataT, row_major, ElementsPerThread>
     {
     };
 
@@ -102,25 +116,25 @@ namespace Layout
     //
     // Similar to row layout, however register halves are transposed
     // in every group of 4 registers.
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
+    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout, uint32_t ElementsPerThread>
     struct Row4T;
 
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-    struct Row4T<BlockDim, BlockK, DataT, row_major>
+    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t ElementsPerThread>
+    struct Row4T<BlockDim, BlockK, DataT, row_major, ElementsPerThread>
     {
-        using Traits = amdgcn_buffer_load_dword_traits<BlockDim, BlockK, DataT>;
+        using Traits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
         enum : uint32_t
         {
             RCount = 4
         };
 
-        static_assert(Traits::LoadCount % RCount == 0,
+        static_assert(Traits::IOCount % RCount == 0,
                       "Need a minimum of 4 registers for this layout");
 
         __device__ static inline uint32_t initialOffset(uint32_t ldm)
         {
             // Initialize starting offsets.
-            uint32_t rowOffset = (threadIdx.x / BlockDim) % Traits::StridesPerLoad * RCount * ldm;
+            uint32_t rowOffset = (threadIdx.x / BlockDim) % Traits::KPerIO * RCount * ldm;
             uint32_t colOffset = (threadIdx.x % BlockDim);
 
             return rowOffset + colOffset;
@@ -128,26 +142,26 @@ namespace Layout
 
         __device__ static inline uint32_t iterativeOffset(uint32_t i, uint32_t ldm)
         {
-            return (((i / RCount) * RCount * Traits::StridesPerLoad + (i % RCount))) * ldm;
+            return (((i / RCount) * RCount * Traits::KPerIO + (i % RCount))) * ldm;
         }
     };
 
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-    struct Row4T<BlockDim, BlockK, DataT, col_major>
+    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t ElementsPerThread>
+    struct Row4T<BlockDim, BlockK, DataT, col_major, ElementsPerThread>
     {
-        using Traits = amdgcn_buffer_load_dword_traits<BlockDim, BlockK, DataT>;
+        using Traits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
         enum : uint32_t
         {
             RCount = 4
         };
 
-        static_assert(Traits::LoadCount % RCount == 0,
+        static_assert(Traits::PackedRegisterCount % RCount == 0,
                       "Need a minimum of 4 registers for this layout");
 
         __device__ static inline uint32_t initialOffset(uint32_t ldm)
         {
             // Initialize starting offsets.
-            uint32_t rowOffset = (threadIdx.x / BlockDim) % Traits::StridesPerLoad * RCount;
+            uint32_t rowOffset = (threadIdx.x / BlockDim) % Traits::KPerIO * RCount;
             uint32_t colOffset = (threadIdx.x % BlockDim) * ldm; // K Id
 
             return rowOffset + colOffset;
@@ -155,37 +169,8 @@ namespace Layout
 
         __device__ static inline uint32_t iterativeOffset(uint32_t i, uint32_t ldm)
         {
-            return (((i / RCount) * RCount * Traits::StridesPerLoad + i % RCount));
+            return (((i / RCount) * RCount * Traits::KPerIO + i % RCount));
         }
-    };
-
-    // Selector for K layout based on MatrixT
-    template <typename MatrixT>
-    struct KLayout;
-
-    // Matrix A loads matrix columns of size BlockDim in the K direction
-    template <>
-    struct KLayout<matrix_a>
-    {
-        template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
-        using LayoutT = Layout::Col<BlockDim, BlockK, DataT, DataLayout>;
-    };
-
-    // Matrix B loads matrix rows of size BlockDim in the K direction
-    template <>
-    struct KLayout<matrix_b>
-    {
-        template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
-        using LayoutT = Layout::Row<BlockDim, BlockK, DataT, DataLayout>;
-    };
-
-    // Accumulator loads matrix rows of size BlockDim in the K direction,
-    // with the rows transposed each group of 4 registers.
-    template <>
-    struct KLayout<accumulator>
-    {
-        template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
-        using LayoutT = Layout::Row4T<BlockDim, BlockK, DataT, DataLayout>;
     };
 
 } // namespace Layout

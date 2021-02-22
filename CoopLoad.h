@@ -1,80 +1,81 @@
 #ifndef WMMA_COOP_LOAD_H
 #define WMMA_COOP_LOAD_H
 
-#include "Types.h"
 #include "Layout.h"
 #include "LocalLoad.h"
 #include "LocalStore.h"
-
-template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t WaveRows, uint32_t WaveCols>
-struct amdgcn_cooperative_load_dword_traits
-{
-    // LDS set to row_major for performance
-    using LdsDataFmt = row_major;
-
-    // Result same format as buffer / local load
-    using ResultT = typename amdgcn_buffer_load_dword_traits<BlockDim, BlockK, DataT>::ResultT;
-
-    enum : uint32_t 
-    {
-        // Matrix A splits K direction loads amongst neighbouring waves in X, or column direction
-        // Matrix B splits K direction loads amongst neighbouring waves in Y, or row direction
-        SplitCount = std::is_same<MatrixT, matrix_a>::value ? WaveCols : WaveRows,
-
-        // Matrix A will store blockDim.y blocks due to splitting in only X, or column direction
-        // Matrix B will store blockDim.x / 64 blocks due to splitting in only Y, or row direction
-        LdsBlockCount = std::is_same<MatrixT, matrix_a>::value ? WaveRows : WaveCols,
-
-        // Statically calculate how much LDS mem is used.
-        LdsBytes = BlockDim * BlockK * LdsBlockCount * sizeof(DataT),
-    };
-
-    static_assert(WaveRows > 0, "Wave row count must be greater than 0");
-    static_assert(WaveCols > 0, "Wave col count must be greater than 0");
-    static_assert(BlockK % SplitCount == 0, "BlockK size is not divisible by SplitCount");
-};
+#include "MappingUtil.h"
+#include "Types.h"
 
 template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout, uint32_t WaveRows = 0, uint32_t WaveCols = 0>
 struct amdgcn_cooperative_load_dword_DxK
 {
-    using Traits = amdgcn_cooperative_load_dword_traits<MatrixT, BlockDim, BlockK, DataT, WaveRows, WaveCols>;
+    struct Traits
+    {
+        enum : uint32_t 
+        {
+            // Matrix A splits K direction loads amongst neighbouring waves in X, or column direction
+            // Matrix B splits K direction loads amongst neighbouring waves in Y, or row direction
+            SplitCount = std::is_same<MatrixT, matrix_a>::value ? WaveCols : WaveRows,
+
+            // Matrix A will store blockDim.x / 64 blocks due competing waves in other rows
+            // Matrix B will store blockDim.y blocks due to waves in other cols
+            LdsBlockCount = std::is_same<MatrixT, matrix_a>::value ? WaveRows : WaveCols,
+
+            // Statically calculate how much LDS mem is used.
+            LdsBytes = BlockDim * BlockK * LdsBlockCount * sizeof(DataT),
+        };
+
+        static_assert(WaveRows > 0, "Wave row count must be greater than 0");
+        static_assert(WaveCols > 0, "Wave col count must be greater than 0");
+        static_assert(BlockK % SplitCount == 0, "BlockK size is not divisible by SplitCount");
+
+        // LDS set to row_major for performance
+        using LdsDataFmt = row_major;
+
+        // Same packed register count throughout
+        using OutputT = VecT<DataT, amdgcn_io_traits<BlockDim, BlockK, DataT, 1>::PackedRegisterCount>;
+    };
     
-    __device__ static auto exec(DataT const* globalPtr, uint32_t ldg, DataT* localPtr, uint32_t ldl) -> typename Traits::ResultT
+    __device__ static auto exec(DataT const* globalPtr, uint32_t ldg, DataT* localPtr, uint32_t ldl) -> typename Traits::OutputT
     {     
-        // Obtain the grid coordinate for splitting in the K direction.
+        // Obtain the local wave coordinate for splitting in the K direction.
+        // These are Id's local to the current workgroup
         using MappingUtil = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
-        auto gridCoord = MappingUtil::gridCoord();
+        auto waveCoord = MappingUtil::waveCoord();
         
         // Splitting the K direction:
-        // Matrix A will split work with waves on same row (diff col)
-        // Matrix B will split work with waves on same col (diff row)
-        uint32_t gridIdSplit = (std::is_same<MatrixT, matrix_a>::value ? std::get<1>(gridCoord) : std::get<0>(gridCoord)) % Traits::SplitCount;
+        // Matrix A will share work with waves on same row (different col)
+        // Matrix B will share work with waves on same col (different row)
+        // Matrix A will compete for LDS with waves on different row
+        // Matrix B will compete for LDS with waves on different col
+        uint32_t sharedWaveId = (std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCoord) : std::get<0>(waveCoord));
+        uint32_t competingWaveId = (std::is_same<MatrixT, matrix_a>::value ? std::get<0>(waveCoord) : std::get<1>(waveCoord));
 
         // Global load using buffer.
         // Base address is the same, and split load by (SplitCount).
         // Multiply the gridId by the split load count to get iterative offset per wave.
         using GlobalBufferLoad = amdgcn_buffer_load_dword_DxK<MatrixT, BlockDim, BlockK / Traits::SplitCount, DataT, DataLayout>;
-        using GlobalLoadLayout = typename GlobalBufferLoad::LayoutT;
-        auto globalLoadOffset = GlobalLoadLayout::iterativeOffset(gridIdSplit * GlobalBufferLoad::Traits::LoadCount, ldg);
+        using GlobalLoadLayout = typename GlobalBufferLoad::Traits::LayoutT;
+        auto globalLoadOffset = GlobalLoadLayout::iterativeOffset(sharedWaveId * GlobalBufferLoad::Traits::IOCount, ldg);
         auto splitLoad = GlobalBufferLoad::exec(globalPtr + globalLoadOffset, ldg);
 
         // Local store
         // Base offset is for threads working in another split group.
-        using LocalStore = amdgcn_local_store_dword_DxK<MatrixT, BlockDim, BlockK / Traits::SplitCount, DataT, typename Traits::LdsDataFmt>;
-        using LocalStoreLayout = typename LocalStore::LayoutT;
-        auto ldsBaseOffset = BlockDim * BlockK * (std::is_same<MatrixT, matrix_a>::value ? threadIdx.y : (threadIdx.x / AMDGCN_WAVE_SIZE));
-        auto localStoreOffset =  LocalStoreLayout::iterativeOffset(gridIdSplit * LocalStore::Traits::StoreCount, ldl);
+        using LocalStore = amdgcn_local_store_dword_DxK<MatrixT, BlockDim, BlockK / Traits::SplitCount, DataT>;
+        using LocalStoreLayout = typename LocalStore::Traits::LayoutT;
+        auto ldsBaseOffset = BlockDim * BlockK * competingWaveId;
+        auto localStoreOffset = LocalStoreLayout::iterativeOffset(sharedWaveId * LocalStore::Traits::IOCount, ldl);
         LocalStore::exec(localPtr + ldsBaseOffset + localStoreOffset, splitLoad, ldl);
 
         // Wait until all waves in the workgroup finish with their share of load.
         __syncthreads();
 
         // Perform the full load from LDS.
-        using LocalLoad = amdgcn_local_load_dword_DxK<MatrixT, BlockDim, BlockK, DataT, typename Traits::LdsDataFmt>;
+        using LocalLoad = amdgcn_local_load_dword_DxK<MatrixT, BlockDim, BlockK, DataT>;
         return LocalLoad::exec(localPtr + ldsBaseOffset, ldl);
     }
 };
-
 
 // Wrapper for runtime wave count
 template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
@@ -86,10 +87,10 @@ struct amdgcn_cooperative_load_dword_DxK<MatrixT, BlockDim, BlockK, DataT, DataL
     // All loads will have the same result type
     struct Traits
     {
-        using ResultT = typename CooperativeLoad<1>::Traits::ResultT;
+        using OutputT = typename CooperativeLoad<1>::Traits::OutputT;
     };
 
-    __device__ static inline auto exec(DataT const* globalPtr, uint32_t ldg, DataT* localPtr, uint32_t ldl, uint32_t waveRows, uint32_t waveCols) -> typename Traits::ResultT
+    __device__ static inline auto exec(DataT const* globalPtr, uint32_t ldg, DataT* localPtr, uint32_t ldl, uint32_t waveRows, uint32_t waveCols) -> typename Traits::OutputT
     {
         if(waveRows == 8)
         {
@@ -110,7 +111,7 @@ struct amdgcn_cooperative_load_dword_DxK<MatrixT, BlockDim, BlockK, DataT, DataL
         else
         {
             assert(0 && "Unsupported wave col count");
-            return typename Traits::ResultT();
+            return typename Traits::OutputT();
         }
     }
 };
@@ -124,10 +125,10 @@ struct amdgcn_cooperative_load_dword_DxK<MatrixT, BlockDim, BlockK, DataT, DataL
     // All loads will have the same result type
     struct Traits
     {
-        using ResultT = typename CooperativeLoad<1>::Traits::ResultT;
+        using OutputT = typename CooperativeLoad<1>::Traits::OutputT;
     };
 
-    __device__ static inline auto exec(DataT const* globalPtr, uint32_t ldg, DataT* localPtr, uint32_t ldl, uint32_t waveCols) -> typename Traits::ResultT
+    __device__ static inline auto exec(DataT const* globalPtr, uint32_t ldg, DataT* localPtr, uint32_t ldl, uint32_t waveCols) -> typename Traits::OutputT
     {
         if(waveCols == 8)
         {
@@ -148,7 +149,7 @@ struct amdgcn_cooperative_load_dword_DxK<MatrixT, BlockDim, BlockK, DataT, DataL
         else
         {
             assert(0 && "Unsupported wave col count");
-            return typename Traits::ResultT();
+            return typename Traits::OutputT();
         }
     }
 };

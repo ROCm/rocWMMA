@@ -45,47 +45,46 @@ struct amdgcn_buffer_store<float32_t, 1>
     }
 };
 
-// Buffer store dword meta-data
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-struct amdgcn_buffer_store_dword_traits;
-
-template <uint32_t BlockDim, uint32_t BlockK>
-struct amdgcn_buffer_store_dword_traits<BlockDim, BlockK, float32_t>
+template <>
+struct amdgcn_buffer_store<float32_t, 4>
 {
-    using DataT  = float32_t; // Float data
-    using Storer = amdgcn_buffer_store<DataT, 1>; // Load DWORD, one float per thread
-    using StoreT = typename Storer::StoreT; // Output register type per load
-
-    enum : uint32_t
+    using StoreT = VRegF32x4;
+    __device__ static inline void
+        exec(StoreT data, v4_i32_t rsrc, index_t vindex, index_t offset, bool glc = 0, bool slc = 0)
     {
-        StridesPerStore
-        = AMDGCN_WAVE_SIZE / BlockDim, // Number of consecutive strides of BlockDim per store
-        StoreCount = ceilDiv(BlockDim * BlockK,
-                             AMDGCN_WAVE_SIZE) // Number of store required for BlockDim * BlockK
-    };
-
-    using ResultT = VecT<DataT, StoreCount>; // Collection of registers for total load
+        return __llvm_amdgcn_buffer_store_f32x4(*data, rsrc, vindex, offset, glc, slc);
+    }
 };
 
+// Buffer store dword meta-data
 template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
 struct amdgcn_buffer_store_dword_DxK
 {
-    // Extend traits for WMMA purposes with extra geometric
-    // layout specification coming from the MatrixT
-    struct Traits : public amdgcn_buffer_store_dword_traits<BlockDim, BlockK, DataT>
+    using Config = BufferConfig<MatrixT, DataLayout>;
+    using TraitsBase = amdgcn_io_traits<BlockDim, BlockK, DataT, Config::ElementsPerThread>;
+    
+    struct Traits : public TraitsBase
     {
-        using LayoutT = typename Layout::template KLayout<
-            MatrixT>::template LayoutT<BlockDim, BlockK, DataT, DataLayout>;
+        // These traits are per-load
+        using Storer = amdgcn_buffer_store<DataT, Config::ElementsPerThread>;
+        using StoreT  = typename Storer::StoreT;
+        static_assert(std::is_same< VecT<DataT, TraitsBase::RegistersPerIO>, StoreT>::value, "Unexpected StoreT");
+
+        using LayoutT = typename Config::template LayoutT<BlockDim, BlockK, DataT>;
+        
+        // Output format for entire block.
+        // WMMA will load packed results.
+        using InputT = VecT<DataT, TraitsBase::PackedRegisterCount>;
     };
 
-    // Extract traits
-    using Storer  = typename Traits::Storer;
-    using StoreT  = typename Traits::StoreT;
-    using ResultT = typename Traits::ResultT;
-    using LayoutT = typename Traits::LayoutT;
-
-    __device__ static void exec(ResultT const& incoming, DataT const* data, uint32_t ldm)
+    __device__ static void exec(typename Traits::InputT const& incoming, DataT const* data, uint32_t ldm)
     {
+        // Extract traits
+        using Storer  = typename Traits::Storer;
+        using StoreT  = typename Traits::StoreT;
+        using InputT = typename Traits::InputT;
+        using LayoutT = typename Traits::LayoutT;
+
         // Address and offset calcs for each wave
         BufferDescriptor<DataT> srd(data);
 
@@ -94,13 +93,19 @@ struct amdgcn_buffer_store_dword_DxK
 
         // Loop over loads to fill BlockDim * BlockK for each wave.
 #pragma unroll
-        for(uint32_t i = 0; i < Traits::StoreCount; ++i)
+        for(uint32_t i = 0; i < Traits::IOCount; ++i)
         {
-            Storer::exec(incoming[i],
+            StoreT chunk;
+#pragma unroll
+            for(uint32_t j = 0; j < Traits::RegistersPerIO; ++j)
+            {
+                chunk[j] = incoming[i * Traits::RegistersPerIO + j];
+            }
+           
+            Storer::exec(chunk,
                          *(srd), // SRD regs
                          0, // stride offset
-                         (initOffset + LayoutT::iterativeOffset(i, ldm))
-                             * sizeof(DataT), // offset bytes
+                         (initOffset + LayoutT::iterativeOffset(i, ldm)) * sizeof(DataT), // offset bytes
                          false,
                          false);
         }
