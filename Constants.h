@@ -5,6 +5,7 @@
 
 static constexpr uint32_t AMDGCN_WAVE_SIZE   = 64;
 static constexpr uint32_t BYTES_PER_REGISTER = 256;
+static constexpr uint32_t MAX_ELEMENTS_PER_THREAD = 4;
 
 static constexpr uint32_t LDS_MAX_BYTES = 65536;
 

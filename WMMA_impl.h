@@ -88,7 +88,7 @@ namespace wmma
         // TODO (future): Can possibly look at using load schemes such as dwordx2
         using FragT      = typename std::decay<decltype(frag)>::type;
         using BufferLoad = amdgcn_buffer_load_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
-        static_assert(std::is_same<typename FragT::Traits::StorageT, typename BufferLoad::Traits::ResultT>::value, "Fragment storage type and bufferLoad result type do not match");
+        static_assert(std::is_same<typename FragT::Traits::StorageT, typename BufferLoad::Traits::OutputT>::value, "Fragment storage type and bufferLoad result type do not match");
         (*frag)          = BufferLoad::exec(data, ldm); 
     }
 
@@ -122,13 +122,16 @@ namespace wmma
                       "fragment declaration or use the run-time function overload.");
 
         using FragT      = typename std::decay<decltype(frag)>::type;
+        using CooperativeLoad = amdgcn_cooperative_load_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+        using WaveSpace = _MappingUtil::WaveSpace;
+
+        static_assert(std::is_same<typename FragT::Traits::StorageT, typename CooperativeLoad::Traits::OutputT>::value, "Fragment storage type and coopLoad result type do not match");
 
         // Cooperative load will split the global load amongst all waves in the workgroup
         // because they will all be using the same tile.
         HIP_DYNAMIC_SHARED(DataT, localMemPtr);
-        using CooperativeLoad = amdgcn_cooperative_load_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
-        static_assert(std::is_same<typename FragT::Traits::StorageT, typename CooperativeLoad::Traits::ResultT>::value, "Fragment storage type and coopLoad result type do not match");
-        (*frag) = CooperativeLoad::exec(data, ldm, localMemPtr, FragT::leadingDim(), blockDim.y, blockDim.x / AMDGCN_WAVE_SIZE);
+        auto waveCount = WaveSpace::workgroupDim();
+        (*frag) = CooperativeLoad::exec(data, ldm, localMemPtr, FragT::leadingDim(), std::get<0>(waveCount), std::get<1>(waveCount));
     }
 
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename DataLayout>
@@ -143,7 +146,7 @@ namespace wmma
          // TODO (future): Can possibly look at using load schemes such as dwordx2
         using FragT       = typename std::decay<decltype(frag)>::type;
         using BufferStore = amdgcn_buffer_store_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
-        static_assert(std::is_same<typename FragT::Traits::StorageT, typename BufferStore::Traits::ResultT>::value, "Fragment storage type and bufferStore result type do not match");
+        static_assert(std::is_same<typename FragT::Traits::StorageT, typename BufferStore::Traits::InputT>::value, "Fragment storage type and bufferStore result type do not match");
         BufferStore::exec((*frag), data, ldm);
     }
 

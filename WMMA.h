@@ -31,6 +31,7 @@ namespace wmma
                 ElementCount = (std::is_same<MatrixT, matrix_b>::value ? BlockK : BlockM) *
                                (std::is_same<MatrixT, matrix_a>::value ? BlockK : BlockN),
 
+                // Packed elements
                 RegisterCount = ElementCount * sizeof(DataT) / BYTES_PER_REGISTER,
             };
 

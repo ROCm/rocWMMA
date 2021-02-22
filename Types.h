@@ -38,7 +38,7 @@ struct __align__(4) VecT
 
     union DataT
     {
-        VecType v; // Vector representation
+        VecType v;          // Vector representation
         T       e[VecSize]; // Element representation
     };
 
