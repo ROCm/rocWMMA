@@ -1,207 +1,106 @@
 #ifndef WMMA_BUFFER_LOAD_H
 #define WMMA_BUFFER_LOAD_H
 
-
 #include <hip/hip_runtime.h>
 
-
 #include "BufferDescriptor.h"
+#include "Constants.h"
+#include "IOConfig.h"
+#include "IOTraits.h"
+#include "Layout.h"
 #include "Types.h"
 #include "Utils.h"
 
 // Declare LLVM IR hook
 __device__ float __llvm_amdgcn_buffer_load_f32(v4_i32_t rsrc,
-                                               index_t vindex,
-                                               index_t offset,
-                                               bool glc,
-                                               bool slc) __asm("llvm.amdgcn.buffer.load.f32");
+                                               index_t  vindex,
+                                               index_t  offset,
+                                               bool     glc,
+                                               bool     slc) __asm("llvm.amdgcn.buffer.load.f32");
+
+__device__ v4_f32_t
+__llvm_amdgcn_buffer_load_f32x4(v4_i32_t rsrc,
+                                index_t vindex,
+                                index_t offset,
+                                bool glc,
+                                bool slc) __asm("llvm.amdgcn.buffer.load.v4f32");
 
 // Basic instruction wrapper
 // Buffer load doesn't have clang __builtin, so we will have to use LLVM
 template <typename T, uint32_t ElementsPerThread>
 struct amdgcn_buffer_load;
 
-template<>
+template <>
 struct amdgcn_buffer_load<float32_t, 1>
 {
     using LoadT = VRegF32x1;
-    __device__ static inline auto exec(v4_i32_t rsrc, index_t vindex, index_t offset, bool glc = 0, bool slc = 0) -> LoadT
+    __device__ static inline auto
+        exec(v4_i32_t rsrc, index_t vindex, index_t offset, bool glc = 0, bool slc = 0) -> LoadT
     {
         return LoadT(__llvm_amdgcn_buffer_load_f32(rsrc, vindex, offset, glc, slc));
     }
 };
 
-using amdgcn_buffer_load_f32x1 = amdgcn_buffer_load<float32_t, 1>;
-
-
-// Buffer load dword meta-data
-template<uint32_t BlockDim, uint32_t BlockK, typename DataT>
-struct amdgcn_buffer_load_dword_traits;
-
-template<uint32_t BlockDim, uint32_t BlockK>
-struct amdgcn_buffer_load_dword_traits<BlockDim, BlockK, float32_t>
+template <>
+struct amdgcn_buffer_load<float32_t, 4>
 {
-    using DataT = float32_t;                               // Float data
-    using Loader = amdgcn_buffer_load<DataT, 1>;           // Load DWORD, one float per thread
-    using LoadT = typename Loader::LoadT;                  // Output register type per load
-    
-    enum { StridesPerLoad = 64 / BlockDim };               // Number of consecutive strides of BlockDim per load
-    enum { LoadCount = ceilDiv(BlockDim*BlockK, 64) };     // Number of loads required for BlockDim * BlockK
-
-    using ResultT = VecT<DataT, LoadCount>;                // Collection of registers for total load
-};
-
-
-template <typename Mat, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename Layout>
-struct amdgcn_buffer_load_dword_MxNxK;
-
-template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
-struct amdgcn_buffer_load_dword_MxNxK<matrix_a, BlockM, BlockN, BlockK, float32_t, row_major>
-{
-    // Extract traits
-    using DataT = float32_t;
-    using Traits = amdgcn_buffer_load_dword_traits<BlockM, BlockK, DataT>;
-    using Loader = typename Traits::Loader;
-    using LoadT = typename Traits::LoadT;
-    using ResultT = typename Traits::ResultT;
-
-    __device__ static auto exec(DataT const* data, uint32_t ldm) -> ResultT
+    using LoadT = VRegF32x4;
+    __device__ static inline auto
+        exec(v4_i32_t rsrc, index_t vindex, index_t offset, bool glc = 0, bool slc = 0) -> LoadT
     {
-        // Address and offset calcs for each wave
-        BufferDescriptor<DataT> srd(data, ldm);
-
-        uint32_t rowOffset = threadIdx.x % BlockM;
-        uint32_t waveColOffset = (threadIdx.x / 64) * BlockN;                    // Wave ID
-        uint32_t kColOffset = (threadIdx.x / BlockM) % Traits::StridesPerLoad;   // K Id 
-        uint32_t colOffset = waveColOffset + kColOffset;
-        
-        // Loop over loads to fill BlockM * BlockK for each wave.
-        ResultT result;
-        for(unsigned i = 0; i < Traits::LoadCount; i++)
-        {
-            LoadT loadResult = Loader::exec( 
-                *(srd),                                                     // SRD regs
-                rowOffset,                                                  // stride offset (row)
-                (i * Traits::StridesPerLoad + colOffset) * sizeof(DataT),   // offset bytes (col)
-                false,
-                false);
-            result[i] = *(loadResult);
-            //result[i] = blockIdx.y;
-        }
-        return result;
+        return LoadT(__llvm_amdgcn_buffer_load_f32x4(rsrc, vindex, offset, glc, slc));
     }
 };
 
-template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
-struct amdgcn_buffer_load_dword_MxNxK<matrix_a, BlockM, BlockN, BlockK, float32_t, col_major>
+template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
+struct amdgcn_buffer_load_dword_DxK
 {
-    using DataT = float32_t;
-    using Traits = amdgcn_buffer_load_dword_traits<BlockM, BlockK, DataT>;
-    using Loader = typename Traits::Loader;
-    using LoadT = typename Traits::LoadT;
-    using ResultT = typename Traits::ResultT;
+    using Config = BufferConfig<MatrixT, DataLayout>;
+    using TraitsBase = amdgcn_io_traits<BlockDim, BlockK, DataT, Config::ElementsPerThread>;
 
-    __device__ static auto exec(DataT const* data, uint32_t ldm) -> ResultT
+    struct Traits : public TraitsBase
     {
-        // Move the data origin to the start of the block data.
-        uint32_t startOffset = 
-            (blockIdx.x * ldm * (blockDim.x / 64) * BlockM) +             // Start row
-            blockIdx.y * BlockN ; // Start col
+        // These traits are per-load
+        using Loader = amdgcn_buffer_load<DataT, Config::ElementsPerThread>;
+        using LoadT  = typename Loader::LoadT;
+
+        using LayoutT = typename Config::template LayoutT<BlockDim, BlockK, DataT>;
+        
+        // Output format for entire block.
+        // WMMA will load packed results.
+        using OutputT = VecT<DataT, TraitsBase::PackedRegisterCount>;
+    };
+
+    __device__ static auto exec(DataT const* data, uint32_t ldm) -> typename Traits::OutputT
+    {
+        // Extract traits
+        using Loader  = typename Traits::Loader;
+        using LoadT  = typename Traits::LoadT;
+        using OutputT = typename Traits::OutputT;
+        using LayoutT = typename Traits::LayoutT;
 
         // Address and offset calcs for each wave
-        BufferDescriptor<DataT> srd(data + startOffset, ldm);
+        BufferDescriptor<DataT> srd(data);
 
-        uint32_t colOffset = threadIdx.x % BlockN;
-        uint32_t waveRowOffset = (threadIdx.x / 64) * BlockM;                    // Wave ID
-        uint32_t kRowOffset = (threadIdx.x / BlockN) % Traits::StridesPerLoad;   // K Id 
-        uint32_t rowOffset = waveRowOffset + kRowOffset;
-        
-        // Loop over loads to fill BlockM * BlockK for each wave.
-        ResultT result;
-        for(unsigned i = 0; i < Traits::LoadCount; i++)
+        // Arrange wave threads to starting data offsets due to layout.
+        uint32_t initOffset = LayoutT::initialOffset(ldm);
+
+        // Loop over loads to fill BlockDim * BlockK for each wave.
+        OutputT result;
+#pragma unroll
+        for(uint32_t i = 0; i < Traits::IOCount; ++i)
         {
-            LoadT loadResult = Loader::exec( 
-                *(srd),                                     // SRD regs
-                i * Traits::StridesPerLoad + rowOffset,     // stride offset (row)
-                colOffset * sizeof(DataT),                  // offset bytes (col)
-                false,
-                false);
-            result[i] = *(loadResult);
-        }
-        return result;
-    }
-};
-
-template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
-struct amdgcn_buffer_load_dword_MxNxK<matrix_b, BlockM, BlockN, BlockK, float32_t, row_major>
-{
-    using DataT = float32_t;
-    using Traits = amdgcn_buffer_load_dword_traits<BlockM, BlockK, DataT>;
-    using Loader = typename Traits::Loader;
-    using LoadT = typename Traits::LoadT;
-    using ResultT = typename Traits::ResultT;
-
-    __device__ static auto exec(DataT const* data, uint32_t ldm) -> ResultT
-    {
-        // Move the data origin to the start of the block data.
-        uint32_t startOffset = 
-            (blockIdx.x * ldm * BlockN) +  // Start row
-            blockIdx.y * blockDim.x;       // Start col
-
-        // Address and offset calcs for each wave
-        BufferDescriptor<DataT> srd(data, ldm);
-
-        uint32_t waveColOffset = (threadIdx.x / 64) * BlockN;                   // Wave ID
-        uint32_t colOffset = threadIdx.x % BlockN + waveColOffset;
-        uint32_t rowOffset = (threadIdx.x / BlockN) % Traits::StridesPerLoad;   // K Id 
-        
-        // Loop over loads to fill BlockM * BlockK for each wave.
-        ResultT result;
-        for(unsigned i = 0; i < Traits::LoadCount; i++)
-        {
-            LoadT loadResult = Loader::exec( 
-                *(srd),                                     // SRD regs
-                i * Traits::StridesPerLoad + rowOffset,     // stride offset (row)
-                colOffset * sizeof(DataT),                  // offset bytes (col)
-                false,
-                false);
-            result[i] = *(loadResult);
-        }
-        return result;
-    }
-};
-
-template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
-struct amdgcn_buffer_load_dword_MxNxK<matrix_b, BlockM, BlockN, BlockK, float32_t, col_major>
-{
-    // Extract traits
-    using DataT = float32_t;
-    using Traits = amdgcn_buffer_load_dword_traits<BlockM, BlockK, DataT>;
-    using Loader = typename Traits::Loader;
-    using LoadT = typename Traits::LoadT;
-    using ResultT = typename Traits::ResultT;
-
-    __device__ static auto exec(DataT const* data, uint32_t ldm) -> ResultT
-    {
-
-        // Address and offset calcs for each wave
-        BufferDescriptor<DataT> srd(data, ldm);
-
-        uint32_t waveRowOffset = (threadIdx.x / 64) * BlockN;                    // Wave ID
-        uint32_t rowOffset = threadIdx.x % BlockM + waveRowOffset;
-        uint32_t colOffset = (threadIdx.x / BlockM) % Traits::StridesPerLoad;    // K Id 
-        
-        // Loop over loads to fill BlockM * BlockK for each wave.
-        ResultT result;
-        for(unsigned i = 0; i < Traits::LoadCount; i++)
-        {
-            LoadT loadResult = Loader::exec( 
-                *(srd),                                                     // SRD regs
-                rowOffset,                                                  // stride offset (row)
-                (i * Traits::StridesPerLoad + colOffset) * sizeof(DataT),   // offset bytes (col)
-                false,
-                false);
-            result[i] = *(loadResult);
+            LoadT loadResult = Loader::exec(*(srd), // SRD regs
+                                    0, // stride offset
+                                    (initOffset + LayoutT::iterativeOffset(i, ldm))
+                                        * sizeof(DataT), // offset bytes
+                                    false,
+                                    false);
+#pragma unroll
+            for(uint32_t j = 0; j < Traits::RegistersPerIO; ++j)
+            {
+                result[i*Traits::RegistersPerIO + j] = loadResult[j];
+            }
         }
         return result;
     }
