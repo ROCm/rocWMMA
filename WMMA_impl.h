@@ -76,7 +76,7 @@ namespace wmma
         }
     }
 
-    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename DataLayout>
+    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename DataLayout, typename MemT>
     __device__ void load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                          const DataT*                                               data,
                          uint32_t                                                   ldm)
@@ -85,15 +85,18 @@ namespace wmma
                       "Must provide layout information. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
-        // TODO (future): Can possibly look at using load schemes such as dwordx2
         using FragT      = typename std::decay<decltype(frag)>::type;
-        using BufferLoad = amdgcn_buffer_load_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
-        static_assert(std::is_same<typename FragT::Traits::StorageT, typename BufferLoad::Traits::OutputT>::value, "Fragment storage type and bufferLoad result type do not match");
-        (*frag)          = BufferLoad::exec(data, ldm); 
+        using Loader = typename std::conditional<
+            std::is_same<MemT, globalMem>::value,
+            amdgcn_buffer_load_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>,
+            amdgcn_local_load_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout> >::type;
+
+        static_assert(std::is_same<typename FragT::Traits::StorageT, typename Loader::Traits::OutputT>::value, "Fragment storage type and load output type do not match");
+        (*frag)          = Loader::exec(data, ldm); 
     }
 
     
-    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
+    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename MemT>
     __device__ void load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT>& frag,
                                      const DataT*                                      data,
                                      uint32_t                                          ldm,
@@ -104,11 +107,11 @@ namespace wmma
 
         if(layout == layout_t::mem_row_major)
         {
-            load_matrix_sync(reinterpret_cast<FragRowMajor&>(frag), data, ldm);
+            load_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, row_major, MemT>(reinterpret_cast<FragRowMajor&>(frag), data, ldm);
         }
         else
         {
-            load_matrix_sync(reinterpret_cast<FragColMajor&>(frag), data, ldm);
+            load_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, col_major, MemT>(reinterpret_cast<FragColMajor&>(frag), data, ldm);
         }
     }
 
@@ -134,7 +137,7 @@ namespace wmma
         (*frag) = CooperativeLoad::exec(data, ldm, localMemPtr, FragT::leadingDim(), std::get<0>(waveCount), std::get<1>(waveCount));
     }
 
-    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename DataLayout>
+    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename DataLayout, typename MemT>
     __device__ void store_matrix_sync(DataT*                                                           data,
                           fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
                           uint32_t                                                         ldm)
@@ -145,12 +148,17 @@ namespace wmma
 
          // TODO (future): Can possibly look at using load schemes such as dwordx2
         using FragT       = typename std::decay<decltype(frag)>::type;
-        using BufferStore = amdgcn_buffer_store_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
-        static_assert(std::is_same<typename FragT::Traits::StorageT, typename BufferStore::Traits::InputT>::value, "Fragment storage type and bufferStore result type do not match");
-        BufferStore::exec((*frag), data, ldm);
+
+        using Storer = typename std::conditional<
+            std::is_same<MemT, globalMem>::value,
+            amdgcn_buffer_store_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>,
+            amdgcn_local_store_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout> >::type;
+
+        static_assert(std::is_same<typename FragT::Traits::StorageT, typename Storer::Traits::InputT>::value, "Fragment storage type and storage input type do not match");
+        Storer::exec((*frag), data, ldm);
     }
 
-    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
+    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename MemT>
     __device__ void store_matrix_sync(DataT*                                                  data,
                                       fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag,
                                       uint32_t                                                ldm,
@@ -161,11 +169,11 @@ namespace wmma
 
         if(layout == layout_t::mem_row_major)
         {
-            store_matrix_sync(data, reinterpret_cast<FragRowMajor const&>(frag), ldm);
+            store_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, row_major, MemT>(data, reinterpret_cast<FragRowMajor const&>(frag), ldm);
         }
         else
         {
-            store_matrix_sync(data, reinterpret_cast<FragColMajor const&>(frag), ldm);
+            store_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, col_major, MemT>(data, reinterpret_cast<FragColMajor const&>(frag), ldm);
         }
     }
 

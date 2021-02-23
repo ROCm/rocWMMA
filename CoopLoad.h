@@ -62,7 +62,7 @@ struct amdgcn_cooperative_load_dword_DxK
 
         // Local store
         // Base offset is for threads working in another split group.
-        using LocalStore = amdgcn_local_store_dword_DxK<MatrixT, BlockDim, BlockK / Traits::SplitCount, DataT>;
+        using LocalStore = amdgcn_local_store_dword_DxK<MatrixT, BlockDim, BlockK / Traits::SplitCount, DataT, typename Traits::LdsDataFmt>;
         using LocalStoreLayout = typename LocalStore::Traits::LayoutT;
         auto ldsBaseOffset = BlockDim * BlockK * competingWaveId;
         auto localStoreOffset = LocalStoreLayout::iterativeOffset(sharedWaveId * LocalStore::Traits::IOCount, ldl);
@@ -72,7 +72,7 @@ struct amdgcn_cooperative_load_dword_DxK
         __syncthreads();
 
         // Perform the full load from LDS.
-        using LocalLoad = amdgcn_local_load_dword_DxK<MatrixT, BlockDim, BlockK, DataT>;
+        using LocalLoad = amdgcn_local_load_dword_DxK<MatrixT, BlockDim, BlockK, DataT, typename Traits::LdsDataFmt>;
         return LocalLoad::exec(localPtr + ldsBaseOffset, ldl);
     }
 };
