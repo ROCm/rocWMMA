@@ -89,7 +89,7 @@ struct BufferConfig<accumulator, DataLayout>
 // matrix_a
 // matrix_b
 // accumulator
-template <typename MatrixT>
+template <typename MatrixT, typename DataLayout>
 struct LocalConfig
 {
     // TODO: For now, just stick with 1 element per thread until x2, x3, x4 are implemented
@@ -97,9 +97,6 @@ struct LocalConfig
     {
         ElementsPerThread = 1
     };
-
-    // LDS layout will be treated as rows, in row-major format for best performance
-    using DataLayout = row_major;
 
     template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
     using LayoutT = Layout::Row<BlockDim, BlockK, DataT, DataLayout, ElementsPerThread>;

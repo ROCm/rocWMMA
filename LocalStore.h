@@ -17,10 +17,10 @@ struct amdgcn_local_store<float32_t, 1>
     }
 };
 
-template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT>
+template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
 struct amdgcn_local_store_dword_DxK
 {
-    using Config = LocalConfig<MatrixT>;
+    using Config = LocalConfig<MatrixT, DataLayout>;
     using TraitsBase = amdgcn_io_traits<BlockDim, BlockK, DataT, Config::ElementsPerThread>;
 
     struct Traits : public TraitsBase
