@@ -155,7 +155,7 @@ namespace wmma
             amdgcn_local_store_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout> >::type;
 
         static_assert(std::is_same<typename FragT::Traits::StorageT, typename Storer::Traits::InputT>::value, "Fragment storage type and storage input type do not match");
-        Storer::exec((*frag), data, ldm);
+        Storer::exec(data, (*frag), ldm);
     }
 
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename MemT>
