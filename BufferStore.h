@@ -77,7 +77,7 @@ struct amdgcn_buffer_store_dword_DxK
         using InputT = VecT<DataT, TraitsBase::PackedRegisterCount>;
     };
 
-    __device__ static void exec(typename Traits::InputT const& incoming, DataT const* data, uint32_t ldm)
+    __device__ static void exec(DataT const* data, typename Traits::InputT const& incoming, uint32_t ldm)
     {
         // Extract traits
         using Storer  = typename Traits::Storer;
