@@ -10,6 +10,13 @@ template<typename T>
 struct BufferTraits;
 
 template<>
+struct BufferTraits<float16_t>
+{
+    static constexpr uint32_t DataFormat = 0x2; // 2 = 16 bit elements
+    static constexpr uint32_t NumFormat = 0x7;  // 7 = float
+};
+
+template<>
 struct BufferTraits<float32_t>
 {
     static constexpr uint32_t DataFormat = 0x4; // 4 = 32 bit elements

@@ -1,130 +1,159 @@
 #ifndef WMMA_MFMA_H
 #define WMMA_MFMA_H
 
+#include "IOTraits.h"
 #include "Types.h"
 
-template <typename InputT, typename ComputeT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
-struct amdgcn_mfma
+template <typename InputT, typename ComputeT, uint32_t BlockM, uint32_t BlockN>
+struct amdgcn_mfma;
+
+template <>
+struct amdgcn_mfma<float16_t, float32_t, 16, 16>
 {
-    //static_assert(0, "Not implemented");
+    // Packed register traits
+    struct Traits
+    {
+        enum : uint32_t 
+        {
+            KPerMfma = 16,
+        };
+        using ARegsT = VRegF32x2;
+        using BRegsT = VRegF32x2;
+        using CRegsT = AccRegF32x4;
+        using DRegsT = AccRegF32x4;
+    };
+
+    __device__ static inline auto exec(
+        typename Traits::ARegsT const& regsA,
+        typename Traits::BRegsT const& regsB,
+        typename Traits::CRegsT const& regsC) -> typename Traits::DRegsT
+    {
+        return typename Traits::DRegsT(__builtin_amdgcn_mfma_f32_16x16x16f16(*regsA, *regsB, *regsC, 0, 0, 0));
+    }
 };
 
-// Single 16 x 16 block mfma
 template <>
-struct amdgcn_mfma<float32_t, float32_t, 16, 16, 4>
+struct amdgcn_mfma<float16_t, float32_t, 32, 32>
 {
-    using ARegT = VRegF32x1;
-    using BRegT = VRegF32x1;
-    using CRegT = AccRegF32x4;
-    using DRegT = AccRegF32x4;
-
-    __device__ static inline auto exec(ARegT regA, BRegT regB, CRegT regC) -> DRegT
+    // Packed register traits
+    struct Traits
     {
-        return DRegT(__builtin_amdgcn_mfma_f32_16x16x4f32(*regA, *regB, *regC, 0, 0, 0));
+        enum : uint32_t 
+        {
+            KPerMfma = 8
+        };
+        using ARegsT = VRegF32x2;
+        using BRegsT = VRegF32x2;
+        using CRegsT = AccRegF32x16;
+        using DRegsT = AccRegF32x16;
+    };
+
+    __device__ static inline auto exec(
+        typename Traits::ARegsT const& regsA,
+        typename Traits::BRegsT const& regsB,
+        typename Traits::CRegsT const& regsC) -> typename Traits::DRegsT
+    {
+        return typename Traits::DRegsT(__builtin_amdgcn_mfma_f32_32x32x8f16(*regsA, *regsB, *regsC, 0, 0, 0));
+    }
+};
+
+template <>
+struct amdgcn_mfma<float32_t, float32_t, 16, 16>
+{
+    // Packed register traits
+    struct Traits
+    {
+        enum : uint32_t 
+        {
+            KPerMfma = 4
+        };
+        using ARegsT = VRegF32x1;
+        using BRegsT = VRegF32x1;
+        using CRegsT = AccRegF32x4;
+        using DRegsT = AccRegF32x4;
+    };
+
+    __device__ static inline auto exec(
+        typename Traits::ARegsT const& regsA,
+        typename Traits::BRegsT const& regsB,
+        typename Traits::CRegsT const& regsC) -> typename Traits::DRegsT
+    {
+        return typename Traits::DRegsT(__builtin_amdgcn_mfma_f32_16x16x4f32(*regsA, *regsB, *regsC, 0, 0, 0));
     }
 };
 
 // Single 32 x 32 block mfma
 template <>
-struct amdgcn_mfma<float32_t, float32_t, 32, 32, 2>
+struct amdgcn_mfma<float32_t, float32_t, 32, 32>
 {
-    using ARegT = VRegF32x1;
-    using BRegT = VRegF32x1;
-    using CRegT = AccRegF32x16;
-    using DRegT = AccRegF32x16;
-
-    __device__ static inline auto exec(ARegT regA, BRegT regB, CRegT regC) -> DRegT
+    // Packed register traits
+    struct Traits
     {
-        return DRegT(__builtin_amdgcn_mfma_f32_32x32x2f32(*regA, *regB, *regC, 0, 0, 0));
-    }
-};
-
-// Single 32 x 64 block mfma
-template <>
-struct amdgcn_mfma<float32_t, float32_t, 32, 64, 1>
-{
-    using ARegT = VRegF32x1;
-    using BRegT = VRegF32x1;
-    using CRegT = AccRegF32x32;
-    using DRegT = AccRegF32x32;
-
-    __device__ static inline auto exec(ARegT regA, BRegT regB, CRegT regC) -> DRegT
-    {
-        return DRegT(__builtin_amdgcn_mfma_f32_32x32x1f32(*regA, *regB, *regC, 1, 0, 0));
-    }
-};
-
-// Single 64 x 32 block mfma
-template <>
-struct amdgcn_mfma<float32_t, float32_t, 64, 32, 1>
-{
-    using ARegT = VRegF32x1;
-    using BRegT = VRegF32x1;
-    using CRegT = AccRegF32x32;
-    using DRegT = AccRegF32x32;
-
-    __device__ static inline auto exec(ARegT regA, BRegT regB, CRegT regC) -> DRegT
-    {
-        return DRegT(__builtin_amdgcn_mfma_f32_32x32x1f32(*regA, *regB, *regC, 0, 0, 1));
-    }
-};
-
-template <typename InputT, typename ComputeT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
-struct amdgcn_mfma_MxNxK_traits;
-
-template <uint32_t BlockK>
-struct amdgcn_mfma_MxNxK_traits<float32_t, float32_t, 32, 32, BlockK>
-{
-    enum : uint32_t
-    {
-        KPerMfma = 2,
-        MfmaCount = BlockK / KPerMfma,
+        enum : uint32_t 
+        {
+            KPerMfma = 2
+        };
+        using ARegsT = VRegF32x1;
+        using BRegsT = VRegF32x1;
+        using CRegsT = AccRegF32x16;
+        using DRegsT = AccRegF32x16;
     };
-    using MFMA     = amdgcn_mfma<float32_t, float32_t, 32, 32, KPerMfma>;
-    using AInputT  = VecT<float32_t, MfmaCount>;
-    using BInputT  = VecT<float32_t, MfmaCount>;
-    using CInputT  = AccRegF32x16;
-    using DOutputT = AccRegF32x16;
-};
 
-template <uint32_t BlockK>
-struct amdgcn_mfma_MxNxK_traits<float32_t, float32_t, 16, 16, BlockK>
-{
-    enum : uint32_t
+    __device__ static inline auto exec(
+        typename Traits::ARegsT const& regsA,
+        typename Traits::BRegsT const& regsB,
+        typename Traits::CRegsT const& regsC) -> typename Traits::DRegsT
     {
-        KPerMfma = 4,
-        MfmaCount = BlockK / KPerMfma,
-    };
-    using MFMA     = amdgcn_mfma<float32_t, float32_t, 16, 16, KPerMfma>;
-    using AInputT  = VecT<float32_t, MfmaCount>;
-    using BInputT  = VecT<float32_t, MfmaCount>;
-    using CInputT  = AccRegF32x4;
-    using DOutputT = AccRegF32x4;
+        return typename Traits::DRegsT(__builtin_amdgcn_mfma_f32_32x32x2f32(*regsA, *regsB, *regsC, 0, 0, 0));
+    }
 };
 
 template <typename InputT, typename ComputeT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
 struct amdgcn_mfma_MxNxK
 {
-    using Traits = amdgcn_mfma_MxNxK_traits<InputT, ComputeT, BlockM, BlockN, BlockK>;
-
-    using MFMA   = typename Traits::MFMA;
-    using ARegsT = typename Traits::AInputT;
-    using BRegsT = typename Traits::BInputT;
-    using CRegsT = typename Traits::CInputT;
-    using DRegsT = typename Traits::DOutputT;
-
-    static_assert(std::is_same<ARegsT, BRegsT>::value, "A and B registers must be of same type");
-    static_assert(std::is_same<CRegsT, DRegsT>::value, "C and D registers must be of same type");
-
-    __device__ static auto exec(ARegsT const& aRegs, BRegsT const& bRegs, CRegsT const& cRegs)
-        -> DRegsT
+    struct Traits
     {
-        DRegsT result = cRegs;
-#pragma unroll
+        using MFMA = amdgcn_mfma<InputT, ComputeT, BlockM, BlockN>;
+        
+        enum : uint32_t
+        {
+            MfmaCount = BlockK / MFMA::Traits::KPerMfma,
+            MinK = MFMA::Traits::KPerMfma,
+        };
+
+        // Propagate individual MFMA types to full block inputs.
+        using ARegsT = VecT<typename MFMA::Traits::ARegsT::Type, MfmaCount * MFMA::Traits::ARegsT::size()>;
+        using BRegsT = VecT<typename MFMA::Traits::BRegsT::Type, MfmaCount * MFMA::Traits::BRegsT::size()>;
+        using CRegsT = VecT<typename MFMA::Traits::CRegsT::Type, MFMA::Traits::CRegsT::size()>;
+        using DRegsT = VecT<typename MFMA::Traits::DRegsT::Type, MFMA::Traits::DRegsT::size()>;
+
+        // Sanity checks
+        static_assert(BlockK >= MinK, "BlockK is not a minimum of MinK");
+        static_assert(BlockK % MinK == 0, "BlockK is not a multiple of MinK");
+        static_assert(std::is_same<ARegsT, BRegsT>::value, "A and B registers must be of same type");
+        static_assert(std::is_same<CRegsT, DRegsT>::value, "C and D registers must be of same type");
+        static_assert(ARegsT::size() == amdgcn_io_traits<BlockM, BlockK, InputT>::PackedRegisterCount, "Unexpected packed register count for A");
+        static_assert(BRegsT::size() == amdgcn_io_traits<BlockN, BlockK, InputT>::PackedRegisterCount, "Unexpected packed register count for B");
+        static_assert(CRegsT::size() == amdgcn_io_traits<BlockM, BlockN, ComputeT>::PackedRegisterCount, "Unexpected packed register count for C");
+        static_assert(DRegsT::size() == amdgcn_io_traits<BlockM, BlockN, ComputeT>::PackedRegisterCount, "Unexpected packed register count for D");
+    };
+
+    __device__ static inline auto exec(
+        typename Traits::ARegsT const& regsA,
+        typename Traits::BRegsT const& regsB,
+        typename Traits::CRegsT const& regsC) -> typename Traits::DRegsT
+    {
+        typename Traits::DRegsT result = regsC;
+
         // Accumulate into result regs
+        auto aIt = regsA.template begin<Traits::MFMA::Traits::ARegsT::size()>();
+        auto bIt = regsB.template begin<Traits::MFMA::Traits::BRegsT::size()>();
+#pragma unroll
         for(unsigned i = 0; i < Traits::MfmaCount; i++)
         {
-            result = MFMA::exec(aRegs[i], bRegs[i], result);
+            result = Traits::MFMA::exec(*aIt, *bIt, result);
+            aIt++;
+            bIt++;
         }
         return result;
     }

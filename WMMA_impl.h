@@ -5,6 +5,7 @@
 
 #include "BufferLoad.h"
 #include "BufferStore.h"
+#include "IOBroadcast.h"
 #include "CoopLoad.h"
 #include "LocalLoad.h"
 #include "MFMA.h"
@@ -68,12 +69,9 @@ namespace wmma
                                   DataT                                                      value)
     {
         using FragT      = typename std::decay<decltype(frag)>::type;
+        using Broadcaster = PackedBroadcastRegs<DataT, FragT::registerCount()>;
 
-        #pragma unroll
-        for(uint32_t i = 0; i < FragT::registerCount(); ++i)
-        {
-            frag[i] = value;
-        }
+        (*frag) = Broadcaster::exec(value);
     }
 
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename DataLayout, typename MemT>
@@ -85,14 +83,16 @@ namespace wmma
                       "Must provide layout information. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
-        using FragT      = typename std::decay<decltype(frag)>::type;
+        using FragT = typename std::decay<decltype(frag)>::type;
         using Loader = typename std::conditional<
             std::is_same<MemT, globalMem>::value,
             amdgcn_buffer_load_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>,
             amdgcn_local_load_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout> >::type;
 
-        static_assert(std::is_same<typename FragT::Traits::StorageT, typename Loader::Traits::OutputT>::value, "Fragment storage type and load output type do not match");
-        (*frag)          = Loader::exec(data, ldm); 
+        // Pack and store into frag
+        using Packer = PackRegs<DataT, Loader::Traits::UnpackedRegisterCount>;
+        static_assert(std::is_same<typename FragT::Traits::StorageT, typename Packer::Traits::OutputT>::value, "Fragment storage type and packed types do not match");
+        (*frag) = Packer::exec(Loader::exec(data, ldm));
     }
 
     
@@ -154,8 +154,10 @@ namespace wmma
             amdgcn_buffer_store_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>,
             amdgcn_local_store_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout> >::type;
 
-        static_assert(std::is_same<typename FragT::Traits::StorageT, typename Storer::Traits::InputT>::value, "Fragment storage type and storage input type do not match");
-        Storer::exec(data, (*frag), ldm);
+        // Unpack and scatter
+        using Unpacker = UnpackRegs<DataT, Storer::Traits::PackedRegisterCount>;
+        static_assert(std::is_same<typename FragT::Traits::StorageT, typename Unpacker::Traits::InputT>::value, "Fragment storage type and packed types do not match");
+        Storer::exec(data, Unpacker::exec(*frag), ldm);
     }
 
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename MemT>

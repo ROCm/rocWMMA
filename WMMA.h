@@ -37,7 +37,9 @@ namespace wmma
 
             static_assert((ElementCount * sizeof(DataT)) % BYTES_PER_REGISTER == 0, "Partial registers unsupported");
 
-            using StorageT = VecT<DataT, RegisterCount>;
+            using PackedT = PackedType<DataT>;           
+
+            using StorageT = VecT<PackedT, RegisterCount>;
         };
 
         // Accessors
