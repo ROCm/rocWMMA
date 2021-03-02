@@ -11,7 +11,7 @@ template <>
 struct amdgcn_local_load<float32_t, 1>
 {
     using LoadT = VRegF32x1;
-    __device__ static inline auto exec(float const* localPtr, index_t offset) -> LoadT
+    __device__ static inline auto exec(float32_t const* localPtr, index_t offset) -> LoadT
     {
         return LoadT(localPtr[offset]);
     }
@@ -32,8 +32,7 @@ struct amdgcn_local_load_dword_DxK
         using LayoutT = typename Config::template LayoutT<BlockDim, BlockK, DataT>;
 
         // Output format for entire block.
-        // WMMA will load packed results.
-        using OutputT = VecT<DataT, TraitsBase::PackedRegisterCount>;
+        using OutputT = VecT<DataT, TraitsBase::UnpackedRegisterCount>;
     };
 
     __device__ static auto exec(DataT const* localPtr, uint32_t ldm) -> typename Traits::OutputT

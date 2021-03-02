@@ -155,7 +155,7 @@ namespace Layout
             RCount = 4
         };
 
-        static_assert(Traits::PackedRegisterCount % RCount == 0,
+        static_assert(Traits::UnpackedRegisterCount % RCount == 0,
                       "Need a minimum of 4 registers for this layout");
 
         __device__ static inline uint32_t initialOffset(uint32_t ldm)

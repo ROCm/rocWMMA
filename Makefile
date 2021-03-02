@@ -1,6 +1,6 @@
 CXX=/opt/rocm/hip/bin/hipcc
 
-CXXFLAGS=-I/opt/rocm/hip/include/ -march=native -O2 -DWMMA_VALIDATE_TESTS
+CXXFLAGS=-I/opt/rocm/hip/include/ -march=native -O2 -std=c++14 -DWMMA_VALIDATE_TESTS
 
 ALL = FillFragmentTest LoadStoreMatrixSyncTest MmaSyncTest MmaSyncCoopTest
 

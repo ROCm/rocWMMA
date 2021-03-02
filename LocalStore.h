@@ -33,7 +33,7 @@ struct amdgcn_local_store_dword_DxK
 
         // Input format for entire block.
         // WMMA will load packed results.
-        using InputT = VecT<DataT, TraitsBase::PackedRegisterCount>;
+        using InputT = VecT<DataT, TraitsBase::UnpackedRegisterCount>;
     };
 
     __device__ static void exec(DataT* localPtr, typename Traits::InputT const& data, uint32_t ldm)
