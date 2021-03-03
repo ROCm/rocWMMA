@@ -16,6 +16,11 @@ namespace std
     template<>
     struct is_floating_point<float16_t>
      : public true_type { };
+
+    inline ostream& operator<<(ostream& stream, const float16_t val)
+    {
+        return stream << static_cast<float>(val);
+    }
 } // namespace std
 
 // Vector types

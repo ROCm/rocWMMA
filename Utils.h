@@ -37,7 +37,7 @@ struct MatrixUtil<row_major>
             for(int j = 0; j < n; ++j)
             {
                 // (Row, col)
-                std::cout << (float)mat[i * n + j] << " ";
+                std::cout << mat[i * n + j] << " ";
             }
             std::cout << "]\n";
         }
@@ -73,7 +73,7 @@ struct MatrixUtil<col_major>
             for(int j = 0; j < n; ++j)
             {
                 // (Row, col)
-                std::cout << (float)mat[i + j * m] << " ";
+                std::cout << mat[i + j * m] << " ";
             }
             std::cout << "]\n";
         }
@@ -170,6 +170,15 @@ template<typename DataT>
 struct MfmaPerfTraits;
 
 template<>
+struct MfmaPerfTraits<float16_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 16
+    };
+};
+
+template<>
 struct MfmaPerfTraits<float32_t>
 {
     enum : uint32_t
@@ -182,6 +191,15 @@ template<typename DataT>
 struct PerfTraits;
 
 template<>
+struct PerfTraits<float16_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 4
+    };
+};
+
+template<>
 struct PerfTraits<float32_t>
 {
     enum : uint32_t
@@ -189,6 +207,7 @@ struct PerfTraits<float32_t>
         Multiplier = 2
     };
 };
+
 
 class Mi100;
 
@@ -215,7 +234,7 @@ inline double calculatePeakGFlops(uint32_t freqMHz)
 inline double calculateGFlops(uint32_t M, uint32_t N, uint32_t K, double elapsedTimeMs)
 {
     constexpr double flopsPerMac = 2.0;
-    return static_cast<float32_t>(flopsPerMac * M * N * K) / 1000000.0 / elapsedTimeMs;
+    return static_cast<double>(flopsPerMac * M * N * K) / 1000000.0 / elapsedTimeMs;
 }
 
 template<typename DataT>
