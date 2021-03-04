@@ -87,7 +87,7 @@ namespace _MappingUtil
         __device__ static inline DataT* fromMatrixCoord(DataT const* addr, uint32_t ldm, CoordT const& matrixCoord)
         {
             // Align pointer to data starting at (row, col)
-            return const_cast<float*>(addr) + 
+            return const_cast<DataT*>(addr) + 
                    std::get<0>(matrixCoord) * ldm + // Row
                    std::get<1>(matrixCoord);        // Col
         }
@@ -107,7 +107,7 @@ namespace _MappingUtil
         __device__ static inline DataT* fromMatrixCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& matrixCoord)
         {
             // Align pointer to data starting at (row, col)
-            return const_cast<float*>(baseAddr) +
+            return const_cast<DataT*>(baseAddr) +
                    std::get<0>(matrixCoord) +      // Row
                    std::get<1>(matrixCoord) * ldm; // Col
         }

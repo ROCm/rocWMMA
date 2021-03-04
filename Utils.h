@@ -55,7 +55,7 @@ struct MatrixUtil<row_major>
                 // Count up in ascending order, alternating evens and odds
                 // with respective positive / negative
                 int32_t val = i * n + j;
-                mat[val]    = val % 2 ? -val : val;
+                mat[val]    = (val % 2 ? -val : val);
             }
         }
     }
@@ -115,14 +115,14 @@ void gemmCPU(std::vector<InputT> const& a,
     {
         for(int j = 0; j < N; ++j) // Col
         {
-            float accum = 0.0f;
+            ComputeT accum = 0.0f;
             for(int k = 0; k < K; ++k)
             {
                 auto indexA
                     = std::is_same<LayoutA, row_major>::value ? (i * lda + k) : (i + lda * k);
                 auto indexB
                     = std::is_same<LayoutB, row_major>::value ? (k * ldb + j) : (k + j * ldb);
-                accum += a[indexA] * b[indexB];
+                accum += static_cast<ComputeT>(a[indexA]) * static_cast<ComputeT>(b[indexB]);
             }
 
             auto indexC = std::is_same<LayoutC, row_major>::value ? (i * ldc + j) : (i + j * ldc);
@@ -139,6 +139,8 @@ void compareEqual(std::vector<TypeA> const& a, std::vector<TypeB> const& b, int 
     int lda = std::is_same<LayoutA, row_major>::value ? N : M;
     int ldb = std::is_same<LayoutB, row_major>::value ? N : M;
 
+    double max_relative_error = 0;
+
     for(int i = 0; i < M; ++i) // Row
     {
         for(int j = 0; j < N; ++j) // Col
@@ -146,18 +148,35 @@ void compareEqual(std::vector<TypeA> const& a, std::vector<TypeB> const& b, int 
             auto indexA = std::is_same<LayoutA, row_major>::value ? (i * lda + j) : (i + j * lda);
             auto indexB = std::is_same<LayoutB, row_major>::value ? (i * ldb + j) : (i + j * ldb);
 
-            if(a[indexA] != b[indexB])
+            auto relative_error = fabs(double(a[indexA] - b[indexB]) / a[indexA]);
+            if(relative_error > max_relative_error)
             {
-                std::cout << "No match: Element( " << i << ", " << j << " )\n";
-                std::cout << "(A, B): ( " << a[indexA] << ", " << b[indexB] << ")\n";
+                max_relative_error = relative_error;
             }
         }
     }
+
+    auto eps       = std::numeric_limits<TypeA>::epsilon();
+    auto tolerance = 10.0;
+    if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
+        std::cout << "FAIL: ";
+    else
+        std::cout << "PASS: ";
+    std::cout << "max_relative_error = " << max_relative_error << std::endl;
 }
 
 
 template<typename DataT>
 struct MfmaPerfTraits;
+
+template<>
+struct MfmaPerfTraits<float16_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 16
+    };
+};
 
 template<>
 struct MfmaPerfTraits<float32_t>
@@ -172,6 +191,15 @@ template<typename DataT>
 struct PerfTraits;
 
 template<>
+struct PerfTraits<float16_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 4
+    };
+};
+
+template<>
 struct PerfTraits<float32_t>
 {
     enum : uint32_t
@@ -179,6 +207,7 @@ struct PerfTraits<float32_t>
         Multiplier = 2
     };
 };
+
 
 class Mi100;
 
@@ -205,8 +234,30 @@ inline double calculatePeakGFlops(uint32_t freqMHz)
 inline double calculateGFlops(uint32_t M, uint32_t N, uint32_t K, double elapsedTimeMs)
 {
     constexpr double flopsPerMac = 2.0;
-    return static_cast<float32_t>(flopsPerMac * M * N * K) / 1000000.0 / elapsedTimeMs;
+    return static_cast<double>(flopsPerMac * M * N * K) / 1000000.0 / elapsedTimeMs;
 }
+
+template<typename DataT>
+constexpr const char* dataTypeToString()
+{
+    if(std::is_same<DataT, float16_t>::value)
+    {
+        return "f16";
+    }
+    else if (std::is_same<DataT, float32_t>::value)
+    {
+        return "f32";
+    }
+    else if (std::is_same<DataT, int32_t>::value)
+    {
+        return "i32";
+    }
+    else
+    {
+        return "invalid";
+    }
+}
+
 
 
 #endif // WMMA_UTILS_H

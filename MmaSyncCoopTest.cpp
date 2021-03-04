@@ -7,6 +7,7 @@
 
 #include "WMMA.h"
 
+
 // LDS capacity helper
 template<uint32_t TBlockX,
          uint32_t TBlockY,
@@ -25,11 +26,11 @@ struct CoopLoadHelper
     using InputFrag = wmma::fragment<MatrixT, BlockM, BlockN, BlockK, InputT, DataLayout<MatrixT> >;
 
     template <typename MatrixT>
-    using Loader = amdgcn_cooperative_load_dword_DxK<MatrixT, InputFrag<MatrixT>::leadingDim(), InputFrag<MatrixT>::kDim(), InputT, DataLayout<MatrixT>, TBlockY, TBlockX / AMDGCN_WAVE_SIZE>;
+    using Loader = amdgcn_cooperative_load_dword_DxK<MatrixT, InputFrag<MatrixT>::leadingDim(), InputFrag<MatrixT>::kDim(), InputT, DataLayout<MatrixT>, TBlockX / AMDGCN_WAVE_SIZE, TBlockY>;
 
     enum : uint32_t 
     {
-        LdsUsage = Loader<matrix_a>::Traits::LdsBytes + Loader<matrix_b>::Traits::LdsBytes
+        LdsUsage = Loader<matrix_a>::Traits::LdsBytes > Loader<matrix_b>::Traits::LdsBytes ? Loader<matrix_a>::Traits::LdsBytes : Loader<matrix_b>::Traits::LdsBytes
     };
 };
 
@@ -93,7 +94,7 @@ __global__ void test_mma_sync_coop_d(const InputT* a,
 
             // Load the inputs
             wmma::load_matrix_coop_sync(fragA, aOffset, lda); 
-            wmma::load_matrix_coop_sync(fragB, bOffset, ldb);
+            wmma::load_matrix_coop_sync(fragB, bOffset, ldb); 
 
             // Perform the matrix multiplication
             wmma::mma_sync(fragAcc, fragA, fragB, fragAcc); 
@@ -148,11 +149,11 @@ __host__ void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT 
               << "FmtABC(" << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << ", "
               << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << ", "
               << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << ") "
-              << "TiTc(" << (std::is_same<InputT, float32_t>::value ? "f32" : "X") << ") \n";
+              << "TiTc(" << dataTypeToString<InputT>() << "_" << dataTypeToString<ComputeT>() << ") \n";
 
     // Static check on LDS resource requirements.
     // Make sure that we can fit both A and B in LDS if needed.
-    static_assert(CoopLoadHelper<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, LayoutA, LayoutB>::LdsUsage <= LDS_MAX_BYTES, "Exceeded LDS capacity");
+    static_assert(CoopLoadHelper<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, LayoutA, LayoutB>::LdsUsage < LDS_MAX_BYTES, "Exceeded LDS capacity");
 
     int lda = std::is_same<LayoutA, row_major>::value ? K : M;
     int ldb = std::is_same<LayoutB, row_major>::value ? N : K;
@@ -216,12 +217,12 @@ __host__ void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT 
     assert(hipEventDestroy(startEvent) == hipSuccess);
     assert(hipEventDestroy(stopEvent) == hipSuccess);
 
-    auto peakGFlops = calculatePeakGFlops<float32_t, Mi100>(1087);
+    auto peakGFlops = calculatePeakGFlops<InputT, Mi100>(1087);
     auto gFlops = calculateGFlops(M, N, K, elapsedTimeMs);
-    auto efficiency = gFlops / peakGFlops * 100.0f;
+    auto efficiency = gFlops / peakGFlops * 100.0f; 
     std::cout << "Elapsed time (ms): " << elapsedTimeMs << " Speed (Gflops/s): " << gFlops << " Efficiency (%): " << efficiency << std::endl;
 
-#if 0 //def WMMA_VALIDATE_TESTS 
+#ifdef WMMA_VALIDATE_TESTS 
     // Copy for validation
     assert(hipMemcpy(matrixC.data(), d_c, bytesC, hipMemcpyDeviceToHost) == hipSuccess);
 
@@ -236,7 +237,7 @@ __host__ void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT 
         K,
         alpha,
         beta);
-    compareEqual<InputT, InputT, LayoutA, LayoutA>(matrixC, matrixC_r, M, N);
+    compareEqual<ComputeT, ComputeT, LayoutC, LayoutC>(matrixC, matrixC_r, M, N);
 #endif
 
     // Release device memory
@@ -254,14 +255,14 @@ template <uint32_t TBlockX,
           typename ComputeT>
 inline void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
 {
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, row_major, row_major, row_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, row_major, col_major, row_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, col_major, row_major, row_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, col_major, col_major, row_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, row_major, row_major, col_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, row_major, col_major, col_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, col_major, row_major, col_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, float32_t, float32_t, col_major, col_major, col_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, row_major, row_major, row_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, row_major, col_major, row_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, col_major, row_major, row_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, col_major, col_major, row_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, row_major, row_major, col_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, row_major, col_major, col_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, col_major, row_major, col_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, col_major, col_major, col_major>(M, N, K, alpha, beta);
 }
 
 template<uint32_t TBlockX,
@@ -274,7 +275,7 @@ inline void test_mma_sync_coop_h_32x32(uint32_t M, uint32_t N, uint32_t K, Compu
     //test_mma_sync_coop_h<TBlockX, TBlockY, 32, 32, 2, InputT, ComputeT>(M, N, K, alpha, beta);
     //test_mma_sync_coop_h<TBlockX, TBlockY, 32, 32, 4, InputT, ComputeT>(M, N, K, alpha, beta);
     //test_mma_sync_coop_h<TBlockX, TBlockY, 32, 32, 8, InputT, ComputeT>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, 32, 32, 16, InputT, ComputeT>(M, N, K, alpha, beta);
+    //test_mma_sync_coop_h<TBlockX, TBlockY, 32, 32, 16, InputT, ComputeT>(M, N, K, alpha, beta);
     test_mma_sync_coop_h<TBlockX, TBlockY, 32, 32, 32, InputT, ComputeT>(M, N, K, alpha, beta);
     test_mma_sync_coop_h<TBlockX, TBlockY, 32, 32, 64, InputT, ComputeT>(M, N, K, alpha, beta);
     //test_mma_sync_coop_h<TBlockX, TBlockY, 32, 32, 128, InputT, ComputeT>(M, N, K, alpha, beta);
@@ -293,7 +294,7 @@ inline void test_mma_sync_coop_h_16x16(uint32_t M, uint32_t N, uint32_t K, Compu
     //test_mma_sync_coop_h<TBlockX, TBlockY, 16, 16, 4, InputT, ComputeT>(M, N, K, alpha, beta);
     //test_mma_sync_coop_h<TBlockX, TBlockY, 16, 16, 8, InputT, ComputeT>(M, N, K, alpha, beta);
     //test_mma_sync_coop_h<TBlockX, TBlockY, 16, 16, 16, InputT, ComputeT>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, 16, 16, 32, InputT, ComputeT>(M, N, K, alpha, beta);
+    //test_mma_sync_coop_h<TBlockX, TBlockY, 16, 16, 32, InputT, ComputeT>(M, N, K, alpha, beta);
     test_mma_sync_coop_h<TBlockX, TBlockY, 16, 16, 64, InputT, ComputeT>(M, N, K, alpha, beta);
     test_mma_sync_coop_h<TBlockX, TBlockY, 16, 16, 128, InputT, ComputeT>(M, N, K, alpha, beta);
     test_mma_sync_coop_h<TBlockX, TBlockY, 16, 16, 256, InputT, ComputeT>(M, N, K, alpha, beta);
@@ -301,47 +302,52 @@ inline void test_mma_sync_coop_h_16x16(uint32_t M, uint32_t N, uint32_t K, Compu
     //test_mma_sync_coop_h<TBlockX, TBlockY, 16, 16, 1024, InputT, ComputeT>(M, N, K, alpha, beta);
 }
 
+template<typename InputT, typename ComputeT>
 void test_mma_sync_coop_h()
 {
     // // float32_t  64 x 1 threads, block 16 x 16 x 4/8/16/32/64/128/256/512/1024,
-    // test_mma_sync_coop_h_16x16<64, 1, float32_t, float32_t>(64, 64, 1024, 2.0f, 2.0f);
-    // test_mma_sync_coop_h_16x16<64, 1, float32_t, float32_t>(32, 64, 1024, 2.0f, 2.0f);
-    // test_mma_sync_coop_h_16x16<64, 1, float32_t, float32_t>(64, 32, 1024, 2.0f, 2.0f);
+    // test_mma_sync_coop_h_16x16<64, 1, InputT, ComputeT>(64, 64, 1024, 2.0f, 2.0f);
+    // test_mma_sync_coop_h_16x16<64, 1, InputT, ComputeT>(32, 64, 1024, 2.0f, 2.0f);
+    // test_mma_sync_coop_h_16x16<64, 1, InputT, ComputeT>(64, 32, 1024, 2.0f, 2.0f);
 
-    // test_mma_sync_coop_h_16x16<64, 1, float32_t, float32_t>(1024, 2048, 1024, 2.0f, 2.0f);
-    // test_mma_sync_coop_h_16x16<64, 1, float32_t, float32_t>(2048, 64, 1024, 2.0f, 2.0f);
-    test_mma_sync_coop_h_16x16<64, 1, float32_t, float32_t>(2048, 2048, 1024, 2.0f, 2.0f);
+    // test_mma_sync_coop_h_16x16<64, 1, InputT, ComputeT>(1024, 2048, 1024, 2.0f, 2.0f);
+    // test_mma_sync_coop_h_16x16<64, 1, InputT, ComputeT>(2048, 64, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_16x16<64, 1, InputT, ComputeT>(2048, 2048, 1024, 2.0f, 2.0f);
 
     // float32_t  64 x 1 threads, block 32 x 32 x 2/4/8/16/32/64/128/256/512/1024,
-    test_mma_sync_coop_h_32x32<64, 1, float32_t, float32_t>(64, 64, 1024, 2.0f, 2.0f);
-    test_mma_sync_coop_h_32x32<64, 1, float32_t, float32_t>(32, 64, 1024, 2.0f, 2.0f);
-    test_mma_sync_coop_h_32x32<64, 1, float32_t, float32_t>(64, 32, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 1, InputT, ComputeT>(64, 64, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 1, InputT, ComputeT>(32, 64, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 1, InputT, ComputeT>(64, 32, 1024, 2.0f, 2.0f);
 
-    test_mma_sync_coop_h_32x32<64, 1, float32_t, float32_t>(1024, 2048, 1024, 2.0f, 2.0f);
-    test_mma_sync_coop_h_32x32<64, 1, float32_t, float32_t>(2048, 64, 1024, 2.0f, 2.0f);
-    test_mma_sync_coop_h_32x32<64, 1, float32_t, float32_t>(2048, 2048, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 1, InputT, ComputeT>(1024, 2048, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 1, InputT, ComputeT>(2048, 64, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 1, InputT, ComputeT>(2048, 2048, 1024, 2.0f, 2.0f);
 
     // float32_t  64 x 2 threads, block 32 x 32 x 2/4/8/16/32/64/128/256/512/1024,
-    test_mma_sync_coop_h_32x32<64, 2, float32_t, float32_t>(64, 64, 1024, 2.0f, 2.0f);
-    test_mma_sync_coop_h_32x32<64, 2, float32_t, float32_t>(128, 64, 1024, 2.0f, 2.0f);
-    test_mma_sync_coop_h_32x32<64, 2, float32_t, float32_t>(64, 128, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 2, InputT, ComputeT>(64, 64, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 2, InputT, ComputeT>(128, 64, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 2, InputT, ComputeT>(64, 128, 1024, 2.0f, 2.0f);
 
-    test_mma_sync_coop_h_32x32<64, 2, float32_t, float32_t>(1024, 2048, 1024, 2.0f, 2.0f);
-    test_mma_sync_coop_h_32x32<64, 2, float32_t, float32_t>(2048, 64, 1024, 2.0f, 2.0f);
-    test_mma_sync_coop_h_32x32<64, 2, float32_t, float32_t>(2048, 2048, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 2, InputT, ComputeT>(1024, 2048, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 2, InputT, ComputeT>(2048, 64, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 2, InputT, ComputeT>(2048, 2048, 1024, 2.0f, 2.0f);
 
     // float32_t  64 x 4 threads, block 32 x 32 x 2/4/8/16/32/64/128/256/512/1024,
-    test_mma_sync_coop_h_32x32<64, 4, float32_t, float32_t>(128, 128, 1024, 2.0f, 2.0f);
-    test_mma_sync_coop_h_32x32<64, 4, float32_t, float32_t>(128, 256, 1024, 2.0f, 2.0f);
-    test_mma_sync_coop_h_32x32<64, 4, float32_t, float32_t>(256, 128, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 4, InputT, ComputeT>(128, 128, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 4, InputT, ComputeT>(128, 256, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 4, InputT, ComputeT>(256, 128, 1024, 2.0f, 2.0f);
 
-    test_mma_sync_coop_h_32x32<64, 4, float32_t, float32_t>(1024, 2048, 1024, 2.0f, 2.0f);
-    test_mma_sync_coop_h_32x32<64, 4, float32_t, float32_t>(2048, 128, 1024, 2.0f, 2.0f);
-    test_mma_sync_coop_h_32x32<64, 4, float32_t, float32_t>(2048, 2048, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 4, InputT, ComputeT>(1024, 2048, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 4, InputT, ComputeT>(2048, 128, 1024, 2.0f, 2.0f);
+    test_mma_sync_coop_h_32x32<64, 4, InputT, ComputeT>(2048, 2048, 1024, 2.0f, 2.0f);
+    //test_mma_sync_coop_h_32x32<128, 4, InputT, ComputeT>(4096, 4096, 4096, 2.0f, 2.0f);
 }
 
 int main()
 {
-    test_mma_sync_coop_h();
+    test_mma_sync_coop_h<float16_t, float32_t>(); 
+    test_mma_sync_coop_h<float32_t, float32_t>(); 
+      
+    //test_mma_sync_coop_h<128, 4, 32, 32, 32, float32_t, float32_t>(8192, 8192, 8192, 1.0f, 2.0f);
     return 0;
 }

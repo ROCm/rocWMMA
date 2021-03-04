@@ -6,6 +6,26 @@
 
 namespace wmma
 {
+    // Meta-tags
+
+    // Matrices    
+    using row_major = ::row_major;
+    using col_major = ::col_major;
+    using matrix_a = ::matrix_a;
+    using matrix_b = ::matrix_b;
+    using accumulator = ::accumulator;
+    using common = ::common;
+
+    // Memory
+    using globalMem = ::globalMem;
+    using ldsMem = ::ldsMem;
+
+    enum layout_t : uint32_t
+    {
+        mem_row_major,
+        mem_col_major
+    };
+
     template <typename MatrixT,
               uint32_t BlockM,
               uint32_t BlockN,
@@ -37,7 +57,9 @@ namespace wmma
 
             static_assert((ElementCount * sizeof(DataT)) % BYTES_PER_REGISTER == 0, "Partial registers unsupported");
 
-            using StorageT = VecT<DataT, RegisterCount>;
+            using PackedT = PackedType<DataT>;           
+
+            using StorageT = VecT<PackedT, RegisterCount>;
         };
 
         // Accessors
@@ -60,13 +82,13 @@ namespace wmma
     __device__ void fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                                   DataT                                                      value);
 
-    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename DataLayout>
+    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename DataLayout, typename MemT = globalMem>
     __device__ void load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                          const DataT*                                               data,
                          uint32_t                                                   ldm);
     
 
-    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
+    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename MemT = globalMem>
     __device__ void load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT>& frag,
                                      const DataT*                                      data,
                                      uint32_t                                          ldm,
@@ -77,12 +99,12 @@ namespace wmma
                          const DataT*                                               data,
                          uint32_t                                                   ldm);
 
-    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename DataLayout>
+    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename DataLayout, typename MemT = globalMem>
     __device__ void store_matrix_sync(DataT*                                                           data,
                           fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
                           uint32_t                                                         ldm);
 
-    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
+    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename MemT = globalMem>
     __device__ void store_matrix_sync(DataT*                                                  data,
                                       fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag,
                                       uint32_t                                                ldm,

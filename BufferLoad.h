@@ -6,17 +6,27 @@
 #include "BufferDescriptor.h"
 #include "Constants.h"
 #include "IOConfig.h"
+#include "IOPack.h"
 #include "IOTraits.h"
 #include "Layout.h"
 #include "Types.h"
 #include "Utils.h"
 
+#define F16_LLVM_BUG_WORKAROUND
+
 // Declare LLVM IR hook
-__device__ float __llvm_amdgcn_buffer_load_f32(v4_i32_t rsrc,
+__device__ float32_t __llvm_amdgcn_buffer_load_f32(v4_i32_t rsrc,
                                                index_t  vindex,
                                                index_t  offset,
                                                bool     glc,
                                                bool     slc) __asm("llvm.amdgcn.buffer.load.f32");
+
+__device__ v2_f32_t
+__llvm_amdgcn_buffer_load_f32x2(v4_i32_t rsrc,
+                                index_t vindex,
+                                index_t offset,
+                                bool glc,
+                                bool slc) __asm("llvm.amdgcn.buffer.load.v2f32");
 
 __device__ v4_f32_t
 __llvm_amdgcn_buffer_load_f32x4(v4_i32_t rsrc,
@@ -24,6 +34,24 @@ __llvm_amdgcn_buffer_load_f32x4(v4_i32_t rsrc,
                                 index_t offset,
                                 bool glc,
                                 bool slc) __asm("llvm.amdgcn.buffer.load.v4f32");
+
+__device__ float16_t __llvm_amdgcn_buffer_load_f16(v4_i32_t rsrc,
+                                                index_t vindex,
+                                                index_t offset,
+                                                bool glc,
+                                                bool slc) __asm("llvm.amdgcn.buffer.load.f16");
+
+__device__ v2_f16_t __llvm_amdgcn_buffer_load_f16x2(v4_i32_t rsrc,
+                                                   index_t vindex,
+                                                   index_t offset,
+                                                   bool glc,
+                                                   bool slc) __asm("llvm.amdgcn.buffer.load.v2f16");
+
+__device__ v4_f16_t __llvm_amdgcn_buffer_load_f16x4(v4_i32_t rsrc,
+                                                   index_t vindex,
+                                                   index_t offset,
+                                                   bool glc,
+                                                   bool slc) __asm("llvm.amdgcn.buffer.load.v4f16");
 
 // Basic instruction wrapper
 // Buffer load doesn't have clang __builtin, so we will have to use LLVM
@@ -42,6 +70,17 @@ struct amdgcn_buffer_load<float32_t, 1>
 };
 
 template <>
+struct amdgcn_buffer_load<float32_t, 2>
+{
+    using LoadT = VRegF32x2;
+    __device__ static inline auto
+        exec(v4_i32_t rsrc, index_t vindex, index_t offset, bool glc = 0, bool slc = 0) -> LoadT
+    {
+        return LoadT(__llvm_amdgcn_buffer_load_f32x2(rsrc, vindex, offset, glc, slc));
+    }
+};
+
+template <>
 struct amdgcn_buffer_load<float32_t, 4>
 {
     using LoadT = VRegF32x4;
@@ -49,6 +88,62 @@ struct amdgcn_buffer_load<float32_t, 4>
         exec(v4_i32_t rsrc, index_t vindex, index_t offset, bool glc = 0, bool slc = 0) -> LoadT
     {
         return LoadT(__llvm_amdgcn_buffer_load_f32x4(rsrc, vindex, offset, glc, slc));
+    }
+};
+
+template <>
+struct amdgcn_buffer_load<float16_t, 1>
+{
+    using LoadT = VRegF16x1;
+    __device__ static inline auto
+        exec(v4_i32_t rsrc, index_t vindex, index_t offset, bool glc = 0, bool slc = 0) -> LoadT
+    {
+        return LoadT(__llvm_amdgcn_buffer_load_f16(rsrc, vindex, offset, glc, slc));
+    }
+};
+
+template <>
+struct amdgcn_buffer_load<float16_t, 2>
+{
+    using LoadT = VRegF16x2;
+    __device__ static inline auto
+        exec(v4_i32_t rsrc, index_t vindex, index_t offset, bool glc = 0, bool slc = 0) -> LoadT
+    {
+        return LoadT(__llvm_amdgcn_buffer_load_f16x2(rsrc, vindex, offset, glc, slc));
+    }
+};
+
+template <>
+struct amdgcn_buffer_load<float16_t, 4>
+{
+    using LoadT = VRegF16x4;
+    __device__ static inline auto
+        exec(v4_i32_t rsrc, index_t vindex, index_t offset, bool glc = 0, bool slc = 0) -> LoadT
+    {
+        return LoadT(__llvm_amdgcn_buffer_load_f16x4(rsrc, vindex, offset, glc, slc));
+    }
+};
+
+template<typename T, uint32_t ElementsPerThread>
+struct amdgcn_opaque_load;
+
+template <>
+struct amdgcn_opaque_load<float16_t, 1>
+{
+    using LoadT = VRegF16x1;
+    __device__ static inline auto exec(float16_t const* data, index_t offset) -> LoadT
+    {
+        return LoadT(data[offset]);
+    }
+};
+
+template <>
+struct amdgcn_opaque_load<float32_t, 1>
+{
+    using LoadT = VRegF32x1;
+    __device__ static inline auto exec(float32_t const* data, index_t offset) -> LoadT
+    {
+        return LoadT(data[offset]);
     }
 };
 
@@ -60,25 +155,23 @@ struct amdgcn_buffer_load_dword_DxK
 
     struct Traits : public TraitsBase
     {
-        // These traits are per-load
-        using Loader = amdgcn_buffer_load<DataT, Config::ElementsPerThread>;
-        using LoadT  = typename Loader::LoadT;
-
+         // Matrix space thread offsets
         using LayoutT = typename Config::template LayoutT<BlockDim, BlockK, DataT>;
-        
-        // Output format for entire block.
-        // WMMA will load packed results.
-        using OutputT = VecT<DataT, TraitsBase::PackedRegisterCount>;
+
+        // Raw IO that produce unpacked register data.
+        using Loader = amdgcn_buffer_load<DataT, Config::ElementsPerThread>; // Intrinsic wrapper
+        using LoadT  = typename Loader::LoadT; // Intrinsic output (unpacked)
+        using OutputT = VecT<DataT, TraitsBase::UnpackedRegisterCount>;
     };
 
     __device__ static auto exec(DataT const* data, uint32_t ldm) -> typename Traits::OutputT
     {
         // Extract traits
-        using Loader  = typename Traits::Loader;
-        using LoadT  = typename Traits::LoadT;
-        using OutputT = typename Traits::OutputT;
         using LayoutT = typename Traits::LayoutT;
-
+        using Loader  = typename Traits::Loader;
+        using LoadT = typename Traits::LoadT;
+        using OutputT = typename Traits::OutputT;
+        
         // Address and offset calcs for each wave
         BufferDescriptor<DataT> srd(data);
 
@@ -87,21 +180,29 @@ struct amdgcn_buffer_load_dword_DxK
 
         // Loop over loads to fill BlockDim * BlockK for each wave.
         OutputT result;
+        auto it = result.template begin<LoadT::size()>();
+
+        static_assert(decltype(it)::Range == Traits::IOCount, "IOCount inconsistent with iterator range");
+
 #pragma unroll
         for(uint32_t i = 0; i < Traits::IOCount; ++i)
         {
-            LoadT loadResult = Loader::exec(*(srd), // SRD regs
+#ifdef F16_LLVM_BUG_WORKAROUND
+            *it = *amdgcn_opaque_load<DataT, 1>::exec(
+                        data, initOffset + LayoutT::iterativeOffset(i, ldm));
+#else
+
+            *it = *Loader::exec(*(srd), // SRD regs
                                     0, // stride offset
                                     (initOffset + LayoutT::iterativeOffset(i, ldm))
                                         * sizeof(DataT), // offset bytes
                                     false,
                                     false);
-#pragma unroll
-            for(uint32_t j = 0; j < Traits::RegistersPerIO; ++j)
-            {
-                result[i*Traits::RegistersPerIO + j] = loadResult[j];
-            }
+
+#endif // F16_LLVM_BUG_WORKAROUND
+            it++;
         }
+
         return result;
     }
 };
