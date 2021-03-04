@@ -4,7 +4,7 @@
 #include "Constants.h"
 #include "Utils.h"
 
-// Buffer load meta-data
+// IO meta-data
 template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t ElementsPerThread = 1>
 struct amdgcn_io_traits
 {

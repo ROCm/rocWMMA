@@ -8,6 +8,16 @@ template <typename T, uint32_t ElementsPerThread>
 struct amdgcn_local_load;
 
 template <>
+struct amdgcn_local_load<float16_t, 1>
+{
+    using LoadT = VRegF16x1;
+    __device__ static inline auto exec(float16_t const* localPtr, index_t offset) -> LoadT
+    {
+        return LoadT(localPtr[offset]);
+    }
+};
+
+template <>
 struct amdgcn_local_load<float32_t, 1>
 {
     using LoadT = VRegF32x1;
@@ -25,13 +35,12 @@ struct amdgcn_local_load_dword_DxK
 
     struct Traits : public TraitsBase
     {
+        // Matrix space thread offsets
+        using LayoutT = typename Config::template LayoutT<BlockDim, BlockK, DataT>;
+
         // These traits are per-load
         using Loader = amdgcn_local_load<DataT, Config::ElementsPerThread>;
         using LoadT = typename Loader::LoadT;
-
-        using LayoutT = typename Config::template LayoutT<BlockDim, BlockK, DataT>;
-
-        // Output format for entire block.
         using OutputT = VecT<DataT, TraitsBase::UnpackedRegisterCount>;
     };
 
@@ -49,13 +58,15 @@ struct amdgcn_local_load_dword_DxK
 
         // Loop over loads to fill BlockDim * BlockK for each wave.
         OutputT result;
+        auto it = result.template begin<LoadT::size()>();
+
+        static_assert(decltype(it)::Range == Traits::IOCount, "IOCount inconsistent with iterator range");
+
 #pragma unroll
         for(uint32_t i = 0; i < Traits::IOCount; ++i)
         {
-            LoadT loadResult = Loader::exec(localPtr,
-                                            (initOffset + LayoutT::iterativeOffset(i, ldm))
-                                                );
-            result[i]        = *(loadResult);
+            *it = *Loader::exec(localPtr, initOffset + LayoutT::iterativeOffset(i, ldm));
+            it++;       
         }
         return result;
     }

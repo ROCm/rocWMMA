@@ -188,7 +188,7 @@ __host__ void test_mma_sync_h(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha
     assert(hipEventDestroy(startEvent) == hipSuccess);
     assert(hipEventDestroy(stopEvent) == hipSuccess);
 
-    auto peakGFlops = calculatePeakGFlops<float32_t, Mi100>(1087);
+    auto peakGFlops = calculatePeakGFlops<InputT, Mi100>(1087);
     auto gFlops = calculateGFlops(M, N, K, elapsedTimeMs);
     auto efficiency = gFlops / peakGFlops * 100.0f;
     std::cout << "Elapsed time (ms): " << elapsedTimeMs << " Speed (Gflops/s): " << gFlops << " Efficiency (%): " << efficiency << std::endl;
