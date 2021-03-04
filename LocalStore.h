@@ -1,8 +1,8 @@
 #ifndef WMMA_LOCAL_STORE_H
 #define WMMA_LOCAL_STORE_H
 
-#include "Types.h"
 #include "Layout.h"
+#include "Types.h"
 
 template <typename T, uint32_t ElementsPerThread>
 struct amdgcn_local_store;
@@ -30,7 +30,7 @@ struct amdgcn_local_store<float32_t, 1>
 template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
 struct amdgcn_local_store_dword_DxK
 {
-    using Config = LocalConfig<MatrixT, DataLayout>;
+    using Config     = LocalConfig<MatrixT, DataLayout>;
     using TraitsBase = amdgcn_io_traits<BlockDim, BlockK, DataT, Config::ElementsPerThread>;
 
     struct Traits : public TraitsBase
@@ -43,11 +43,12 @@ struct amdgcn_local_store_dword_DxK
         using InputT = VecT<DataT, TraitsBase::UnpackedRegisterCount>;
     };
 
-    __device__ static void exec(DataT* localPtr, typename Traits::InputT const& incoming, uint32_t ldm)
+    __device__ static void
+        exec(DataT* localPtr, typename Traits::InputT const& incoming, uint32_t ldm)
     {
         // Extract traits
         using Storer  = typename Traits::Storer;
-        using StoreT   = typename Traits::StoreT;
+        using StoreT  = typename Traits::StoreT;
         using LayoutT = typename Traits::LayoutT;
 
         // Arrange wave threads to starting data offsets due to layout.
@@ -55,7 +56,8 @@ struct amdgcn_local_store_dword_DxK
         uint32_t initOffset = LayoutT::initialOffset(ldm);
 
         auto it = incoming.template begin<StoreT::size()>();
-        static_assert(decltype(it)::Range == Traits::IOCount, "IOCount inconsistent with iterator range");
+        static_assert(decltype(it)::Range == Traits::IOCount,
+                      "IOCount inconsistent with iterator range");
 
 #pragma unroll
         for(uint32_t i = 0; i < Traits::IOCount; ++i)

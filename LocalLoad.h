@@ -1,8 +1,8 @@
 #ifndef WMMA_LOCAL_LOAD_H
 #define WMMA_LOCAL_LOAD_H
 
-#include "Types.h"
 #include "Layout.h"
+#include "Types.h"
 
 template <typename T, uint32_t ElementsPerThread>
 struct amdgcn_local_load;
@@ -30,7 +30,7 @@ struct amdgcn_local_load<float32_t, 1>
 template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
 struct amdgcn_local_load_dword_DxK
 {
-    using Config = LocalConfig<MatrixT, DataLayout>;
+    using Config     = LocalConfig<MatrixT, DataLayout>;
     using TraitsBase = amdgcn_io_traits<BlockDim, BlockK, DataT, Config::ElementsPerThread>;
 
     struct Traits : public TraitsBase
@@ -39,8 +39,8 @@ struct amdgcn_local_load_dword_DxK
         using LayoutT = typename Config::template LayoutT<BlockDim, BlockK, DataT>;
 
         // These traits are per-load
-        using Loader = amdgcn_local_load<DataT, Config::ElementsPerThread>;
-        using LoadT = typename Loader::LoadT;
+        using Loader  = amdgcn_local_load<DataT, Config::ElementsPerThread>;
+        using LoadT   = typename Loader::LoadT;
         using OutputT = VecT<DataT, TraitsBase::UnpackedRegisterCount>;
     };
 
@@ -58,15 +58,16 @@ struct amdgcn_local_load_dword_DxK
 
         // Loop over loads to fill BlockDim * BlockK for each wave.
         OutputT result;
-        auto it = result.template begin<LoadT::size()>();
+        auto    it = result.template begin<LoadT::size()>();
 
-        static_assert(decltype(it)::Range == Traits::IOCount, "IOCount inconsistent with iterator range");
+        static_assert(decltype(it)::Range == Traits::IOCount,
+                      "IOCount inconsistent with iterator range");
 
 #pragma unroll
         for(uint32_t i = 0; i < Traits::IOCount; ++i)
         {
             *it = *Loader::exec(localPtr, initOffset + LayoutT::iterativeOffset(i, ldm));
-            it++;       
+            it++;
         }
         return result;
     }
