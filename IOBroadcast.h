@@ -5,17 +5,17 @@
 #include "Types.h"
 #include "Utils.h"
 
-template<typename DataT>
+template <typename DataT>
 struct PackedBroadcast;
 
-template<>
+template <>
 struct PackedBroadcast<float16_t>
 {
     using Traits = Pack<float16_t>::Traits;
-    
+
     __device__ static inline auto exec(float16_t input) -> typename Traits::OutputT
-    {  
-        using OutputT = typename Traits::OutputT;
+    {
+        using OutputT   = typename Traits::OutputT;
         using UnpackedT = typename Traits::UnpackedT;
 
         VecT<UnpackedT, 2> f16Vec;
@@ -26,36 +26,37 @@ struct PackedBroadcast<float16_t>
     }
 };
 
-template<>
+template <>
 struct PackedBroadcast<float32_t>
 {
     using Traits = Pack<float32_t>::Traits;
-    
+
     __device__ static inline auto exec(float32_t input) -> typename Traits::OutputT
-    {  
+    {
         return typename Traits::OutputT(input);
     }
 };
 
-template<typename DataT, uint32_t PackedRegisterCount>
+template <typename DataT, uint32_t PackedRegisterCount>
 struct PackedBroadcastRegs
 {
     struct Traits
     {
         using Broadcaster = PackedBroadcast<DataT>;
-        using PackedT = PackedType<DataT>;
-        using OutputT = VecT<PackedT, PackedRegisterCount>;
+        using PackedT     = PackedType<DataT>;
+        using OutputT     = VecT<PackedT, PackedRegisterCount>;
     };
 
     __device__ static inline auto exec(DataT input) -> typename Traits::OutputT
     {
         using Broadcaster = typename Traits::Broadcaster;
-        using OutputT = typename Traits::OutputT;
+        using OutputT     = typename Traits::OutputT;
 
         OutputT result;
-        auto it = result.begin();
+        auto    it = result.begin();
 
-        static_assert(decltype(it)::Range == PackedRegisterCount, "Iterator range doesn't match packed register count");
+        static_assert(decltype(it)::Range == PackedRegisterCount,
+                      "Iterator range doesn't match packed register count");
 
 #pragma unroll
         for(int i = 0; i < PackedRegisterCount; ++i)
