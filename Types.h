@@ -259,6 +259,7 @@ using AccRegF32x16 = VecT<float32_t, 16>;
 using AccRegF32x32 = VecT<float32_t, 32>;
 
 // Meta-tags
+// Matrices    
 struct row_major;
 struct col_major;
 struct matrix_a;
@@ -269,14 +270,5 @@ struct common;
 // Memory
 struct globalMem;
 struct ldsMem;
-
-namespace wmma
-{
-    enum layout_t : uint32_t
-    {
-        mem_row_major,
-        mem_col_major
-    };
-} // namespace wmma
 
 #endif // WMMA_TYPES_H

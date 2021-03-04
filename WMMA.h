@@ -6,6 +6,26 @@
 
 namespace wmma
 {
+    // Meta-tags
+
+    // Matrices    
+    using row_major = ::row_major;
+    using col_major = ::col_major;
+    using matrix_a = ::matrix_a;
+    using matrix_b = ::matrix_b;
+    using accumulator = ::accumulator;
+    using common = ::common;
+
+    // Memory
+    using globalMem = ::globalMem;
+    using ldsMem = ::ldsMem;
+
+    enum layout_t : uint32_t
+    {
+        mem_row_major,
+        mem_col_major
+    };
+
     template <typename MatrixT,
               uint32_t BlockM,
               uint32_t BlockN,
