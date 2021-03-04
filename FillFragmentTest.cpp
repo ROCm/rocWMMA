@@ -79,7 +79,7 @@ __host__ void test_fill_fragment_h(
               << "FmtABC(" << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << ", "
               << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << ", "
               << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << ") "
-              << "TiTc(" << (std::is_same<InputT, float32_t>::value ? "f32" : "X") << ") \n";
+              << "TiTc(" << dataTypeToString<InputT>() << "_" << dataTypeToString<ComputeT>() << ") \n";
 
     int lda = std::is_same<LayoutA, row_major>::value ? K : M;
     int ldb = std::is_same<LayoutB, row_major>::value ? N : K;
@@ -239,246 +239,249 @@ __host__ void test_fill_fragment_h(
                          col_major>(M, N, K, fillA, fillB, fillC);
 }
 
+template<typename InputT, typename ComputeT>
 void test_fill_fragment_h()
 {
     // For fills, we must have the same geometry for all matrices
 
     // float32_t  64 x 1 threads, block 16 x 16
-    test_fill_fragment_h<64, 1, 16, 16, 16, float32_t, float32_t>(16, 16, 16, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 16, 16, 16, float32_t, float32_t>(32, 32, 32, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 16, 16, 16, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<64, 1, 16, 16, 16, InputT, ComputeT>(16, 16, 16, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 16, 16, 16, InputT, ComputeT>(32, 32, 32, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 16, 16, 16, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 16, 16, 16, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<64, 1, 16, 16, 16, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<64, 1, 16, 16, 16, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  64 x 2 threads, block 16 x 16
-    test_fill_fragment_h<64, 2, 16, 16, 16, float32_t, float32_t>(32, 32, 32, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 16, 16, 16, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<64, 2, 16, 16, 16, InputT, ComputeT>(32, 32, 32, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 2, 16, 16, 16, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 2, 16, 16, 16, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<64, 2, 16, 16, 16, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<64, 2, 16, 16, 16, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  64 x 4 threads, block 16 x 16
-    test_fill_fragment_h<64, 4, 16, 16, 16, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 4, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<64, 4, 16, 16, 16, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 4, 16, 16, 16, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 4, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<64, 4, 16, 16, 16, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 4, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<64, 4, 16, 16, 16, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  64 x 8 threads, block 16 x 16
-    test_fill_fragment_h<64, 8, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<64, 8, 16, 16, 16, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 8, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<64, 8, 16, 16, 16, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 8, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<64, 8, 16, 16, 16, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  64 x 16 threads, block 16 x 16
-    test_fill_fragment_h<64, 16, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<64, 16, 16, 16, 16, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 16, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<64, 16, 16, 16, 16, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  128 x 1 threads, block 16 x 16
-    test_fill_fragment_h<128, 1, 16, 16, 16, float32_t, float32_t>(32, 32, 32, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 16, 16, 16, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<128, 1, 16, 16, 16, InputT, ComputeT>(32, 32, 32, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 1, 16, 16, 16, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 1, 16, 16, 16, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<128, 1, 16, 16, 16, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<128, 1, 16, 16, 16, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  128 x 2 threads, block 16 x 16
-    test_fill_fragment_h<128, 2, 16, 16, 16, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 2, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<128, 2, 16, 16, 16, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 2, 16, 16, 16, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 2, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<128, 2, 16, 16, 16, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 2, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<128, 2, 16, 16, 16, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  128 x 4 threads, block 16 x 16
-    test_fill_fragment_h<128, 4, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<128, 4, 16, 16, 16, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 4, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<128, 4, 16, 16, 16, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 4, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<128, 4, 16, 16, 16, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  128 x 8 threads, block 16 x 16
-    test_fill_fragment_h<128, 8, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<128, 8, 16, 16, 16, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 8, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<128, 8, 16, 16, 16, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  256 x 1 threads, block 16 x 16
-    test_fill_fragment_h<256, 1, 16, 16, 16, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 1, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<256, 1, 16, 16, 16, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<256, 1, 16, 16, 16, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 1, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<256, 1, 16, 16, 16, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 1, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<256, 1, 16, 16, 16, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  256 x 2 threads, block 16 x 16
-    test_fill_fragment_h<256, 2, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<256, 2, 16, 16, 16, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 2, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<256, 2, 16, 16, 16, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 2, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<256, 2, 16, 16, 16, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  256 x 4 threads, block 16 x 16
-    test_fill_fragment_h<256, 4, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<256, 4, 16, 16, 16, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 4, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<256, 4, 16, 16, 16, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  512 x 1 threads, block 16 x 16
-    test_fill_fragment_h<512, 1, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<512, 1, 16, 16, 16, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<512, 1, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<512, 1, 16, 16, 16, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<512, 1, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<512, 1, 16, 16, 16, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  512 x 2 threads, block 16 x 16
-    test_fill_fragment_h<512, 2, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<512, 2, 16, 16, 16, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<512, 2, 16, 16, 16, float32_t, float32_t>(
+    test_fill_fragment_h<512, 2, 16, 16, 16, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  64 x 1 threads, block 32 x 32
-    test_fill_fragment_h<64, 1, 32, 32, 32, float32_t, float32_t>(32, 32, 32, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 32, 32, 32, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<64, 1, 32, 32, 32, InputT, ComputeT>(32, 32, 32, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 32, 32, 32, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 32, 32, 32, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<64, 1, 32, 32, 32, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<64, 1, 32, 32, 32, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  64 x 2 threads, block 32 x 32
-    test_fill_fragment_h<64, 2, 32, 32, 32, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<64, 2, 32, 32, 32, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 2, 32, 32, 32, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<64, 2, 32, 32, 32, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<64, 2, 32, 32, 32, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  64 x 4 threads, block 32 x 32
-    test_fill_fragment_h<64, 4, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<64, 4, 32, 32, 32, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 4, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<64, 4, 32, 32, 32, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 4, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<64, 4, 32, 32, 32, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  64 x 8 threads, block 32 x 32
-    test_fill_fragment_h<64, 8, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<64, 8, 32, 32, 32, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 8, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<64, 8, 32, 32, 32, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  128 x 1 threads, block 32 x 32
-    test_fill_fragment_h<128, 1, 32, 32, 32, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<128, 1, 32, 32, 32, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<128, 1, 32, 32, 32, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<128, 1, 32, 32, 32, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<128, 1, 32, 32, 32, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  128 x 2 threads, block 32 x 32
-    test_fill_fragment_h<128, 2, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<128, 2, 32, 32, 32, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 2, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<128, 2, 32, 32, 32, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 2, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<128, 2, 32, 32, 32, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  128 x 4 threads, block 32 x 32
-    test_fill_fragment_h<128, 4, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<128, 4, 32, 32, 32, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 4, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<128, 4, 32, 32, 32, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  256 x 1 threads, block 32 x 32
-    test_fill_fragment_h<256, 1, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<256, 1, 32, 32, 32, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 1, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<256, 1, 32, 32, 32, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 1, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<256, 1, 32, 32, 32, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  256 x 2 threads, block 32 x 32
-    test_fill_fragment_h<256, 2, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<256, 2, 32, 32, 32, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 2, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<256, 2, 32, 32, 32, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  512 x 1 threads, block 32 x 32
-    test_fill_fragment_h<512, 1, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<512, 1, 32, 32, 32, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<512, 1, 32, 32, 32, float32_t, float32_t>(
+    test_fill_fragment_h<512, 1, 32, 32, 32, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  64 x 1 threads, block 64 x 64
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t>(
+    test_fill_fragment_h<64, 1, 64, 64, 64, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
+    test_fill_fragment_h<64, 1, 64, 64, 64, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t>(
+    test_fill_fragment_h<64, 1, 64, 64, 64, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, float32_t, float32_t>(
+    test_fill_fragment_h<64, 1, 64, 64, 64, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  64 x 2 threads, block 64 x 64
-    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t>(
+    test_fill_fragment_h<64, 2, 64, 64, 64, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t>(
+    test_fill_fragment_h<64, 2, 64, 64, 64, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 64, 64, 64, float32_t, float32_t>(
+    test_fill_fragment_h<64, 2, 64, 64, 64, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  64 x 4 threads, block 64 x 64
-    test_fill_fragment_h<64, 4, 64, 64, 64, float32_t, float32_t>(
+    test_fill_fragment_h<64, 4, 64, 64, 64, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 4, 64, 64, 64, float32_t, float32_t>(
+    test_fill_fragment_h<64, 4, 64, 64, 64, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  128 x 1 threads, block 64 x 64
-    test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t>(
+    test_fill_fragment_h<128, 1, 64, 64, 64, InputT, ComputeT>(
         128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t>(
+    test_fill_fragment_h<128, 1, 64, 64, 64, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 64, 64, 64, float32_t, float32_t>(
+    test_fill_fragment_h<128, 1, 64, 64, 64, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  128 x 2 threads, block 64 x 64
-    test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t>(
+    test_fill_fragment_h<128, 2, 64, 64, 64, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 2, 64, 64, 64, float32_t, float32_t>(
+    test_fill_fragment_h<128, 2, 64, 64, 64, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 
     // float32_t  256 x 1 threads, block 64 x 64
-    test_fill_fragment_h<256, 1, 64, 64, 64, float32_t, float32_t>(
+    test_fill_fragment_h<256, 1, 64, 64, 64, InputT, ComputeT>(
         256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 1, 64, 64, 64, float32_t, float32_t>(
+    test_fill_fragment_h<256, 1, 64, 64, 64, InputT, ComputeT>(
         16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
 }
 
 int main()
 {
-    test_fill_fragment_h();
+    test_fill_fragment_h<float16_t, float16_t>();
+    test_fill_fragment_h<float16_t, float32_t>();
+    test_fill_fragment_h<float32_t, float32_t>(); 
     return 0;
 }

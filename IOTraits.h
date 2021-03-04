@@ -4,8 +4,8 @@
 #include "Constants.h"
 #include "Utils.h"
 
-// Buffer load meta-data
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t ElementsPerThread>
+// IO meta-data
+template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t ElementsPerThread = 1>
 struct amdgcn_io_traits
 {
     enum : uint32_t
@@ -29,7 +29,7 @@ struct amdgcn_io_traits
         IOCount = ceilDiv(ElementCount, ElementsPerIO),
 
         // Total number of registers required for the entire block
-        RegisterCount = RegistersPerIO * IOCount,
+        UnpackedRegisterCount = RegistersPerIO * IOCount,
 
         // Total number of packed registers for the entire block
         PackedRegisterCount = ceilDiv(ElementCount * sizeof(DataT), BYTES_PER_REGISTER), 

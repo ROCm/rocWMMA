@@ -89,8 +89,11 @@ struct BufferConfig<accumulator, DataLayout>
 // matrix_a
 // matrix_b
 // accumulator
-template <typename MatrixT>
-struct LocalConfig
+template <typename MatrixT, typename DataLayout>
+struct LocalConfig;
+
+template<typename DataLayout>
+struct LocalConfig<matrix_a, DataLayout>
 {
     // TODO: For now, just stick with 1 element per thread until x2, x3, x4 are implemented
     enum : uint32_t 
@@ -98,11 +101,34 @@ struct LocalConfig
         ElementsPerThread = 1
     };
 
-    // LDS layout will be treated as rows, in row-major format for best performance
-    using DataLayout = row_major;
+    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
+    using LayoutT = Layout::Col<BlockDim, BlockK, DataT, DataLayout, ElementsPerThread>;
+};
+
+template<typename DataLayout>
+struct LocalConfig<matrix_b, DataLayout>
+{
+    // TODO: For now, just stick with 1 element per thread until x2, x3, x4 are implemented
+    enum : uint32_t 
+    {
+        ElementsPerThread = 1
+    };
 
     template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
     using LayoutT = Layout::Row<BlockDim, BlockK, DataT, DataLayout, ElementsPerThread>;
+};
+
+template<typename DataLayout>
+struct LocalConfig<accumulator, DataLayout>
+{
+    // TODO: For now, just stick with 1 element per thread until x2, x3, x4 are implemented
+    enum : uint32_t 
+    {
+        ElementsPerThread = 1
+    };
+
+    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
+    using LayoutT = Layout::Row4T<BlockDim, BlockK, DataT, DataLayout, ElementsPerThread>;
 };
 
 #endif // IO_CONFIG_H
