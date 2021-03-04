@@ -1,6 +1,7 @@
 #ifndef WMMA_COOP_LOAD_H
 #define WMMA_COOP_LOAD_H
 
+#include "IOTraits.h"
 #include "Layout.h"
 #include "LocalLoad.h"
 #include "LocalStore.h"
@@ -33,22 +34,19 @@ struct amdgcn_cooperative_load_dword_DxK
         // LDS set to row_major for performance
         using LdsDataFmt = row_major;
 
-        // Same packed register count throughout
-        using OutputT = VecT<DataT, amdgcn_io_traits<BlockDim, BlockK, DataT, 1>::PackedRegisterCount>;
+        // Same unpacked register count throughout
+        using OutputT = VecT<DataT, amdgcn_io_traits<BlockDim, BlockK, DataT>::UnpackedRegisterCount>;
     };
     
     __device__ static auto exec(DataT const* globalPtr, uint32_t ldg, DataT* localPtr, uint32_t ldl) -> typename Traits::OutputT
     {     
-        // Obtain the local wave coordinate for splitting in the K direction.
-        // These are Id's local to the current workgroup
-        using MappingUtil = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
-        auto waveCoord = MappingUtil::waveCoord();
-        
         // Splitting the K direction:
         // Matrix A will share work with waves on same row (different col)
         // Matrix B will share work with waves on same col (different row)
         // Matrix A will compete for LDS with waves on different row
         // Matrix B will compete for LDS with waves on different col
+        using MappingUtil = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+        auto waveCoord = MappingUtil::waveCoord(); // Local to workgroup
         uint32_t sharedWaveId = (std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCoord) : std::get<0>(waveCoord));
         uint32_t competingWaveId = (std::is_same<MatrixT, matrix_a>::value ? std::get<0>(waveCoord) : std::get<1>(waveCoord));
 
@@ -62,7 +60,9 @@ struct amdgcn_cooperative_load_dword_DxK
 
         // Local store
         // Base offset is for threads working in another split group.
-        using LocalStore = amdgcn_local_store_dword_DxK<MatrixT, BlockDim, BlockK / Traits::SplitCount, DataT, typename Traits::LdsDataFmt>;
+        // TODO: Forcing layout to matrix_b which at this time is ROW.
+        // Need to fix this to become more flexible.
+        using LocalStore = amdgcn_local_store_dword_DxK<matrix_b, BlockDim, BlockK / Traits::SplitCount, DataT, typename Traits::LdsDataFmt>;
         using LocalStoreLayout = typename LocalStore::Traits::LayoutT;
         auto ldsBaseOffset = BlockDim * BlockK * competingWaveId;
         auto localStoreOffset = LocalStoreLayout::iterativeOffset(sharedWaveId * LocalStore::Traits::IOCount, ldl);
@@ -72,8 +72,13 @@ struct amdgcn_cooperative_load_dword_DxK
         __syncthreads();
 
         // Perform the full load from LDS.
-        using LocalLoad = amdgcn_local_load_dword_DxK<MatrixT, BlockDim, BlockK, DataT, typename Traits::LdsDataFmt>;
-        return LocalLoad::exec(localPtr + ldsBaseOffset, ldl);
+        using LocalLoad = amdgcn_local_load_dword_DxK<matrix_b, BlockDim, BlockK, DataT, typename Traits::LdsDataFmt>;
+        auto result = LocalLoad::exec(localPtr + ldsBaseOffset, ldl);
+
+        // Make sure that everything is read
+        __syncthreads();
+
+        return result;
     }
 };
 

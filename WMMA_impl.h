@@ -125,16 +125,18 @@ namespace wmma
                       "fragment declaration or use the run-time function overload.");
 
         using FragT      = typename std::decay<decltype(frag)>::type;
-        using CooperativeLoad = amdgcn_cooperative_load_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+        using Loader = amdgcn_cooperative_load_dword_DxK<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
         using WaveSpace = _MappingUtil::WaveSpace;
 
-        static_assert(std::is_same<typename FragT::Traits::StorageT, typename CooperativeLoad::Traits::OutputT>::value, "Fragment storage type and coopLoad result type do not match");
+        // Pack and store into frag
+        using Packer = PackRegs<DataT, amdgcn_io_traits<FragT::leadingDim(), FragT::kDim(), DataT>::UnpackedRegisterCount>;
+        static_assert(std::is_same<typename FragT::Traits::StorageT, typename Packer::Traits::OutputT>::value, "Fragment storage type and packed types do not match");
 
         // Cooperative load will split the global load amongst all waves in the workgroup
         // because they will all be using the same tile.
         HIP_DYNAMIC_SHARED(DataT, localMemPtr);
         auto waveCount = WaveSpace::workgroupDim();
-        (*frag) = CooperativeLoad::exec(data, ldm, localMemPtr, FragT::leadingDim(), std::get<0>(waveCount), std::get<1>(waveCount));
+        (*frag) = Packer::exec(Loader::exec(data, ldm, localMemPtr, FragT::leadingDim(), std::get<0>(waveCount), std::get<1>(waveCount)));
     }
 
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename DataLayout, typename MemT>

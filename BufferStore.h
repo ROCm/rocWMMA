@@ -180,7 +180,6 @@ struct amdgcn_buffer_store_dword_DxK
         // Arrange wave threads to starting data offsets due to layout.
         uint32_t initOffset = LayoutT::initialOffset(ldm);
 
-        // Loop over loads to fill BlockDim * BlockK for each wave.
         auto it = incoming.template begin<StoreT::size()>();
         static_assert(decltype(it)::Range == Traits::IOCount, "IOCount inconsistent with iterator range");
         
