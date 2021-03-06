@@ -1,134 +1,281 @@
 #ifndef IO_CONFIG_H
 #define IO_CONFIG_H
 
+#include "BufferLoad.h"
+#include "BufferStore.h"
+#include "Constants.h"
+#include "IOPack.h"
+#include "IOTraits.h"
+#include "IOUnpack.h"
 #include "Layout.h"
+#include "OpaqueLoad.h"
+#include "OpaqueStore.h"
 #include "Types.h"
 
-// Selector for buffer I/O layout based on MatrixT and DataLayout.
-// Possible MatrixT types:
-// matrix_a
-// matrix_b
-// accumulator
-// Possible DataLayout Types:
-// row_major
-// col_major
-template <typename MatrixT, typename DataLayout>
-struct BufferConfig;
+#define LLVM_BUFFER_BUG_WORKAROUND
 
-// Matrix A loads matrix columns of size BlockDim in the K direction
-template <>
-struct BufferConfig<matrix_a, row_major>
+template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
+struct IOConfig;
+
+// Matrix A config
+template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
+struct IOConfig<matrix_a, BlockDim, BlockK, DataT, DataLayout>
 {
-    // Row major config for A column loading has no contiguous neighbours
-    enum : uint32_t 
+    enum : uint32_t
     {
-        ElementsPerThread = 1// MAX_ELEMENTS_PER_THREAD
+        ElementsPerThread = std::is_same<DataLayout, row_major>::value ? 4 : 1
     };
 
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-    using LayoutT = Layout::Col<BlockDim, BlockK, DataT, row_major, 1>;
+    // Global data config
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using GlobalLoadLayout = Layout::Col<BlkDim, BlkK, DT, DL, EPT>;
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using GlobalStoreLayout = Layout::Col<BlkDim, BlkK, DT, DL, EPT>;
+
+#ifdef LLVM_BUFFER_BUG_WORKAROUND
+    using GlobalLoader = amdgcn_opaque_load_DxK<BlockDim,
+                                                BlockK,
+                                                DataT,
+                                                DataLayout,
+                                                GlobalLoadLayout,
+                                                ElementsPerThread>;
+    using GlobalStorer = amdgcn_opaque_store_DxK<BlockDim,
+                                                 BlockK,
+                                                 DataT,
+                                                 DataLayout,
+                                                 GlobalStoreLayout,
+                                                 ElementsPerThread>;
+#else
+    using GlobalLoader = amdgcn_buffer_load_DxK<BlockDim,
+                                                BlockK,
+                                                DataT,
+                                                DataLayout,
+                                                GlobalLoadLayout,
+                                                ElementsPerThread>;
+    using GlobalStorer = amdgcn_buffer_store_DxK<BlockDim,
+                                                 BlockK,
+                                                 DataT,
+                                                 DataLayout,
+                                                 GlobalStoreLayout,
+                                                 ElementsPerThread>;
+#endif
+
+    // Local LDS data config
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using LocalLoadLayout = Layout::Col<BlkDim, BlkK, DT, DL, EPT>;
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using LocalStoreLayout = Layout::Col<BlkDim, BlkK, DT, DL, EPT>;
+
+    using LocalLoader = amdgcn_opaque_load_DxK<BlockDim,
+                                               BlockK,
+                                               DataT,
+                                               DataLayout,
+                                               LocalLoadLayout,
+                                               ElementsPerThread>;
+    using LocalStorer = amdgcn_opaque_store_DxK<BlockDim,
+                                                BlockK,
+                                                DataT,
+                                                DataLayout,
+                                                LocalStoreLayout,
+                                                ElementsPerThread>;
+
+    // Coop LDS data config
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using CoopLocalLoadLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using CoopLocalStoreLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
+
+    using CoopLocalLoader = amdgcn_opaque_load_DxK<BlockDim,
+                                                   BlockK,
+                                                   DataT,
+                                                   DataLayout,
+                                                   CoopLocalLoadLayout,
+                                                   ElementsPerThread>;
+    using CoopLocalStorer = amdgcn_opaque_store_DxK<BlockDim,
+                                                    BlockK,
+                                                    DataT,
+                                                    DataLayout,
+                                                    CoopLocalStoreLayout,
+                                                    ElementsPerThread>;
+
+    // Other IO configs
+    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
+    using Packer   = Pack<DataT, IOTraits::UnpackedRegisterCount>;
+    using Unpacker = Unpack<DataT, IOTraits::PackedRegisterCount>;
 };
 
-template <>
-struct BufferConfig<matrix_a, col_major>
+// Matrix B config
+template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
+struct IOConfig<matrix_b, BlockDim, BlockK, DataT, DataLayout>
 {
-    // Col major config for A column loading has many contiguous neighbours
-    enum : uint32_t 
+    enum : uint32_t
     {
-        ElementsPerThread = 1//MAX_ELEMENTS_PER_THREAD
+        ElementsPerThread = std::is_same<DataLayout, col_major>::value ? 4 : 1
     };
 
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-    using LayoutT = Layout::Col<BlockDim, BlockK, DataT, col_major, ElementsPerThread>;
+    // Global data config
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using GlobalLoadLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using GlobalStoreLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
+
+#ifdef LLVM_BUFFER_BUG_WORKAROUND
+    using GlobalLoader = amdgcn_opaque_load_DxK<BlockDim,
+                                                BlockK,
+                                                DataT,
+                                                DataLayout,
+                                                GlobalLoadLayout,
+                                                ElementsPerThread>;
+    using GlobalStorer = amdgcn_opaque_store_DxK<BlockDim,
+                                                 BlockK,
+                                                 DataT,
+                                                 DataLayout,
+                                                 GlobalStoreLayout,
+                                                 ElementsPerThread>;
+#else
+    using GlobalLoader = amdgcn_buffer_load_DxK<BlockDim,
+                                                BlockK,
+                                                DataT,
+                                                DataLayout,
+                                                GlobalLoadLayout,
+                                                ElementsPerThread>;
+    using GlobalStorer = amdgcn_buffer_store_DxK<BlockDim,
+                                                 BlockK,
+                                                 DataT,
+                                                 DataLayout,
+                                                 GlobalStoreLayout,
+                                                 ElementsPerThread>;
+#endif
+
+    // Local LDS data config
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using LocalLoadLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using LocalStoreLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
+
+    using LocalLoader = amdgcn_opaque_load_DxK<BlockDim,
+                                               BlockK,
+                                               DataT,
+                                               DataLayout,
+                                               LocalLoadLayout,
+                                               ElementsPerThread>;
+    using LocalStorer = amdgcn_opaque_store_DxK<BlockDim,
+                                                BlockK,
+                                                DataT,
+                                                DataLayout,
+                                                LocalStoreLayout,
+                                                ElementsPerThread>;
+
+    // Coop LDS data config
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using CoopLocalLoadLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using CoopLocalStoreLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
+
+    using CoopLocalLoader = amdgcn_opaque_load_DxK<BlockDim,
+                                                   BlockK,
+                                                   DataT,
+                                                   DataLayout,
+                                                   CoopLocalLoadLayout,
+                                                   ElementsPerThread>;
+    using CoopLocalStorer = amdgcn_opaque_store_DxK<BlockDim,
+                                                    BlockK,
+                                                    DataT,
+                                                    DataLayout,
+                                                    CoopLocalStoreLayout,
+                                                    ElementsPerThread>;
+
+    // Other IO configs
+    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
+    using Packer   = Pack<DataT, IOTraits::UnpackedRegisterCount>;
+    using Unpacker = Unpack<DataT, IOTraits::PackedRegisterCount>;
 };
 
-template <>
-struct BufferConfig<matrix_b, row_major>
+// Matrix C/D config
+template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
+struct IOConfig<accumulator, BlockDim, BlockK, DataT, DataLayout>
 {
-    // Row major config for B row loading has many contiguous neighbours
-    enum : uint32_t 
-    {
-        ElementsPerThread = 1// MAX_ELEMENTS_PER_THREAD
-    };
-
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-    using LayoutT = Layout::Row<BlockDim, BlockK, DataT, row_major, ElementsPerThread>;
-};
-
-template <>
-struct BufferConfig<matrix_b, col_major>
-{
-    // Col major config for B row loading has no contiguous neighbours
-    enum : uint32_t 
-    {
-        ElementsPerThread = 1// MAX_ELEMENTS_PER_THREAD
-    };
-
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-    using LayoutT = Layout::Row<BlockDim, BlockK, DataT, col_major, 1>;
-};
-
-// Accumulator loads matrix rows of size BlockDim in the K direction,
-// with the rows transposed each group of 4 registers.
-template <typename DataLayout>
-struct BufferConfig<accumulator, DataLayout>
-{
-    // For now, use ElementCount of 1 until indexing is adjusted
-    enum : uint32_t 
+    enum : uint32_t
     {
         ElementsPerThread = 1
     };
 
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-    using LayoutT = Layout::Row4T<BlockDim, BlockK, DataT, DataLayout, ElementsPerThread>;
-};
+    // Global data config
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using GlobalLoadLayout = Layout::Row4T<BlkDim, BlkK, DT, DL, EPT>;
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using GlobalStoreLayout = Layout::Row4T<BlkDim, BlkK, DT, DL, EPT>;
 
+#ifdef LLVM_BUFFER_BUG_WORKAROUND
+    using GlobalLoader = amdgcn_opaque_load_DxK<BlockDim,
+                                                BlockK,
+                                                DataT,
+                                                DataLayout,
+                                                GlobalLoadLayout,
+                                                ElementsPerThread>;
+    using GlobalStorer = amdgcn_opaque_store_DxK<BlockDim,
+                                                 BlockK,
+                                                 DataT,
+                                                 DataLayout,
+                                                 GlobalStoreLayout,
+                                                 ElementsPerThread>;
+#else
+    using GlobalLoader = amdgcn_buffer_load_DxK<BlockDim,
+                                                BlockK,
+                                                DataT,
+                                                DataLayout,
+                                                GlobalLoadLayout,
+                                                ElementsPerThread>;
+    using GlobalStorer = amdgcn_buffer_store_DxK<BlockDim,
+                                                 BlockK,
+                                                 DataT,
+                                                 DataLayout,
+                                                 GlobalStoreLayout,
+                                                 ElementsPerThread>;
+#endif
 
-// Selector for local I/O layout based on MatrixT
-// Possible MatrixT types:
-// matrix_a
-// matrix_b
-// accumulator
-template <typename MatrixT, typename DataLayout>
-struct LocalConfig;
+    // Local LDS data config
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using LocalLoadLayout = Layout::Row4T<BlkDim, BlkK, DT, DL, EPT>;
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using LocalStoreLayout = Layout::Row4T<BlkDim, BlkK, DT, DL, EPT>;
 
-template<typename DataLayout>
-struct LocalConfig<matrix_a, DataLayout>
-{
-    // TODO: For now, just stick with 1 element per thread until x2, x3, x4 are implemented
-    enum : uint32_t 
-    {
-        ElementsPerThread = 1
-    };
+    using LocalLoader = amdgcn_opaque_load_DxK<BlockDim,
+                                               BlockK,
+                                               DataT,
+                                               DataLayout,
+                                               LocalLoadLayout,
+                                               ElementsPerThread>;
+    using LocalStorer = amdgcn_opaque_store_DxK<BlockDim,
+                                                BlockK,
+                                                DataT,
+                                                DataLayout,
+                                                LocalStoreLayout,
+                                                ElementsPerThread>;
 
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-    using LayoutT = Layout::Col<BlockDim, BlockK, DataT, DataLayout, ElementsPerThread>;
-};
+    // Coop LDS data config
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using CoopLocalLoadLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    using CoopLocalStoreLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
 
-template<typename DataLayout>
-struct LocalConfig<matrix_b, DataLayout>
-{
-    // TODO: For now, just stick with 1 element per thread until x2, x3, x4 are implemented
-    enum : uint32_t 
-    {
-        ElementsPerThread = 1
-    };
+    using CoopLocalLoader = amdgcn_opaque_load_DxK<BlockDim,
+                                                   BlockK,
+                                                   DataT,
+                                                   DataLayout,
+                                                   CoopLocalLoadLayout,
+                                                   ElementsPerThread>;
+    using CoopLocalStorer = amdgcn_opaque_store_DxK<BlockDim,
+                                                    BlockK,
+                                                    DataT,
+                                                    DataLayout,
+                                                    CoopLocalStoreLayout,
+                                                    ElementsPerThread>;
 
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-    using LayoutT = Layout::Row<BlockDim, BlockK, DataT, DataLayout, ElementsPerThread>;
-};
-
-template<typename DataLayout>
-struct LocalConfig<accumulator, DataLayout>
-{
-    // TODO: For now, just stick with 1 element per thread until x2, x3, x4 are implemented
-    enum : uint32_t 
-    {
-        ElementsPerThread = 1
-    };
-
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-    using LayoutT = Layout::Row4T<BlockDim, BlockK, DataT, DataLayout, ElementsPerThread>;
+    // Other IO configs
+    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
+    using Packer   = Pack<DataT, IOTraits::UnpackedRegisterCount>;
+    using Unpacker = Unpack<DataT, IOTraits::PackedRegisterCount>;
 };
 
 #endif // IO_CONFIG_H

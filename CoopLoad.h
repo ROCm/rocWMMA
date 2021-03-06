@@ -1,11 +1,12 @@
 #ifndef WMMA_COOP_LOAD_H
 #define WMMA_COOP_LOAD_H
 
+#include "IOConfig.h"
 #include "IOTraits.h"
 #include "Layout.h"
-#include "LocalLoad.h"
-#include "LocalStore.h"
 #include "MappingUtil.h"
+#include "OpaqueLoad.h"
+#include "OpaqueStore.h"
 #include "Types.h"
 
 template <typename MatrixT,
@@ -64,40 +65,35 @@ struct amdgcn_cooperative_load_dword_DxK
         // Global load using buffer.
         // Base address is the same, and split load by (SplitCount).
         // Multiply the gridId by the split load count to get iterative offset per wave.
-        using GlobalBufferLoad = amdgcn_buffer_load_dword_DxK<MatrixT,
-                                                              BlockDim,
-                                                              BlockK / Traits::SplitCount,
-                                                              DataT,
-                                                              DataLayout>;
-        using GlobalLoadLayout = typename GlobalBufferLoad::Traits::LayoutT;
-        auto globalLoadOffset  = GlobalLoadLayout::iterativeOffset(
-            sharedWaveId * GlobalBufferLoad::Traits::IOCount, ldg);
-        auto splitLoad = GlobalBufferLoad::exec(globalPtr + globalLoadOffset, ldg);
+        using GlobalConfig
+            = IOConfig<MatrixT, BlockDim, BlockK / Traits::SplitCount, DataT, DataLayout>;
+        using GlobalLoad       = typename GlobalConfig::GlobalLoader;
+        using GlobalLoadLayout = typename GlobalLoad::Traits::LayoutT;
+        auto globalLoadOffset
+            = GlobalLoadLayout::iterativeOffset(sharedWaveId * GlobalLoad::Traits::IOCount, ldg);
+        auto splitLoad = GlobalLoad::exec(globalPtr + globalLoadOffset, ldg);
 
         // Local store
         // Base offset is for threads working in another split group.
-        // TODO: Forcing layout to matrix_b which at this time is ROW.
-        // Need to fix this to become more flexible.
-        using LocalStore       = amdgcn_local_store_dword_DxK<matrix_b,
-                                                        BlockDim,
-                                                        BlockK / Traits::SplitCount,
-                                                        DataT,
-                                                        typename Traits::LdsDataFmt>;
+        using LocalStoreConfig = IOConfig<MatrixT,
+                                          BlockDim,
+                                          BlockK / Traits::SplitCount,
+                                          DataT,
+                                          typename Traits::LdsDataFmt>;
+        using LocalStore       = typename LocalStoreConfig::CoopLocalStorer;
         using LocalStoreLayout = typename LocalStore::Traits::LayoutT;
         auto ldsBaseOffset     = BlockDim * BlockK * competingWaveId;
-        auto localStoreOffset
-            = LocalStoreLayout::iterativeOffset(sharedWaveId * LocalStore::Traits::IOCount, ldl);
+        auto localStoreOffset  = LocalStoreLayout::iterativeOffset(
+            sharedWaveId * LocalStoreConfig::IOTraits::IOCount, ldl);
         LocalStore::exec(localPtr + ldsBaseOffset + localStoreOffset, splitLoad, ldl);
 
         // Wait until all waves in the workgroup finish with their share of load.
         __syncthreads();
 
-        // Perform the full load from LDS.
-        using LocalLoad = amdgcn_local_load_dword_DxK<matrix_b,
-                                                      BlockDim,
-                                                      BlockK,
-                                                      DataT,
-                                                      typename Traits::LdsDataFmt>;
+        // Perform the full block load from LDS.
+        using LocalLoadConfig
+            = IOConfig<MatrixT, BlockDim, BlockK, DataT, typename Traits::LdsDataFmt>;
+        using LocalLoad = typename LocalLoadConfig::CoopLocalLoad;
         auto result     = LocalLoad::exec(localPtr + ldsBaseOffset, ldl);
 
         // Make sure that everything is read
