@@ -135,8 +135,7 @@ namespace wmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayout,
-              typename MemT>
+              typename DataLayout>
     __device__ void
         load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                          const DataT*                                                  data,
@@ -158,12 +157,7 @@ namespace wmma
         (*frag) = Packer::exec(Loader::exec(data, ldm));
     }
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename MemT>
+    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
     __device__ void load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT>& frag,
                                      const DataT*                                      data,
                                      uint32_t                                          ldm,
@@ -174,12 +168,12 @@ namespace wmma
 
         if(layout == layout_t::mem_row_major)
         {
-            load_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, row_major, MemT>(
+            load_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, row_major>(
                 reinterpret_cast<FragRowMajor&>(frag), data, ldm);
         }
         else
         {
-            load_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, col_major, MemT>(
+            load_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, col_major>(
                 reinterpret_cast<FragColMajor&>(frag), data, ldm);
         }
     }
@@ -232,8 +226,7 @@ namespace wmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayout,
-              typename MemT>
+              typename DataLayout>
     __device__ void
         store_matrix_sync(DataT*                                                              data,
                           fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
@@ -255,12 +248,7 @@ namespace wmma
         Storer::exec(data, Unpacker::exec(*frag), ldm);
     }
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename MemT>
+    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
     __device__ void store_matrix_sync(DataT*                                                  data,
                                       fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag,
                                       uint32_t                                                ldm,
@@ -271,12 +259,12 @@ namespace wmma
 
         if(layout == layout_t::mem_row_major)
         {
-            store_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, row_major, MemT>(
+            store_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, row_major>(
                 data, reinterpret_cast<FragRowMajor const&>(frag), ldm);
         }
         else
         {
-            store_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, col_major, MemT>(
+            store_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, col_major>(
                 data, reinterpret_cast<FragColMajor const&>(frag), ldm);
         }
     }
