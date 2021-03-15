@@ -3,7 +3,6 @@
 
 #include <hip/hip_runtime.h>
 
-#include "BufferLoad.h"
 #include "Types.h"
 
 template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t ElementsPerThread>
@@ -69,7 +68,8 @@ namespace Layout
         __device__ static inline uint32_t initialOffset(uint32_t ldm)
         {
             uint32_t rowOffset = ((threadIdx.x * ElementsPerThread) % BlockDim);
-            uint32_t colOffset = (threadIdx.x / BlockDim) % Traits::KPerIO * ldm;
+            uint32_t colOffset
+                = (threadIdx.x * ElementsPerThread / BlockDim) % Traits::KPerIO * ldm;
 
             return rowOffset + colOffset;
         }
@@ -149,7 +149,7 @@ namespace Layout
         {
             // Initialize starting offsets.
             uint32_t rowOffset = (threadIdx.x / BlockDim) % Traits::KPerIO * RCount * ldm;
-            uint32_t colOffset = (threadIdx.x % BlockDim);
+            uint32_t colOffset = (threadIdx.x * ElementsPerThread % BlockDim);
 
             return rowOffset + colOffset;
         }
@@ -175,7 +175,8 @@ namespace Layout
         __device__ static inline uint32_t initialOffset(uint32_t ldm)
         {
             // Initialize starting offsets.
-            uint32_t rowOffset = (threadIdx.x / BlockDim) % Traits::KPerIO * RCount;
+            uint32_t rowOffset
+                = (threadIdx.x * ElementsPerThread / BlockDim) % Traits::KPerIO * RCount;
             uint32_t colOffset = (threadIdx.x % BlockDim) * ldm; // K Id
 
             return rowOffset + colOffset;
