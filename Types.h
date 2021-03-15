@@ -88,6 +88,11 @@ struct __align__(4) VecT
         mData.v = other;
     }
 
+    __device__ VecT(VecType && other)
+    {
+        mData.v = std::move(other);
+    }
+
     __device__ T& operator[](uint32_t index)
     {
         return mData.e[index];
