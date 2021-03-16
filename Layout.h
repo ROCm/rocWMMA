@@ -48,8 +48,8 @@ namespace Layout
 
         __device__ static inline uint32_t initialOffset(uint32_t ldm)
         {
-            uint32_t rowOffset = ((threadIdx.x) % BlockDim) * ldm;
-            uint32_t colOffset = (threadIdx.x / BlockDim) * ElementsPerThread % Traits::KPerIO;
+            uint32_t rowOffset = (threadIdx.x % BlockDim) * ldm;
+            uint32_t colOffset = (threadIdx.x / BlockDim * ElementsPerThread) % Traits::KPerIO;
 
             return rowOffset + colOffset;
         }
@@ -68,8 +68,7 @@ namespace Layout
         __device__ static inline uint32_t initialOffset(uint32_t ldm)
         {
             uint32_t rowOffset = ((threadIdx.x * ElementsPerThread) % BlockDim);
-            uint32_t colOffset
-                = (threadIdx.x * ElementsPerThread / BlockDim) % Traits::KPerIO * ldm;
+            uint32_t colOffset = (threadIdx.x / BlockDim) % Traits::KPerIO * ldm;
 
             return rowOffset + colOffset;
         }
