@@ -1,7 +1,6 @@
 #ifndef WMMA_COOP_STORE_H
 #define WMMA_COOP_STORE_H
 
-#include "IOConfig.h"
 #include "IOTraits.h"
 #include "Layout.h"
 #include "MappingUtil.h"
@@ -18,7 +17,7 @@ template <typename MatrixT,
           class StoreLayout,
           uint32_t ElementsPerThread,
           uint32_t SpCount = 0>
-struct amdgcn_cooperative_store_dword_DxK
+struct amdgcn_cooperative_store_DxK
 {
     using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT>;
     struct Traits
@@ -81,24 +80,24 @@ template <typename MatrixT,
           template <uint32_t, uint32_t, typename, typename, uint32_t>
           class StoreLayout,
           uint32_t ElementsPerThread>
-struct amdgcn_cooperative_store_dword_DxK<MatrixT,
-                                          BlockDim,
-                                          BlockK,
-                                          DataT,
-                                          DataLayout,
-                                          StoreLayout,
-                                          ElementsPerThread,
-                                          0>
+struct amdgcn_cooperative_store_DxK<MatrixT,
+                                    BlockDim,
+                                    BlockK,
+                                    DataT,
+                                    DataLayout,
+                                    StoreLayout,
+                                    ElementsPerThread,
+                                    0>
 {
     template <uint32_t SplitCount>
-    using CooperativeStore = amdgcn_cooperative_store_dword_DxK<MatrixT,
-                                                                BlockDim,
-                                                                BlockK,
-                                                                DataT,
-                                                                DataLayout,
-                                                                StoreLayout,
-                                                                ElementsPerThread,
-                                                                SplitCount>;
+    using CooperativeStore = amdgcn_cooperative_store_DxK<MatrixT,
+                                                          BlockDim,
+                                                          BlockK,
+                                                          DataT,
+                                                          DataLayout,
+                                                          StoreLayout,
+                                                          ElementsPerThread,
+                                                          SplitCount>;
 
     using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
 
@@ -111,19 +110,19 @@ struct amdgcn_cooperative_store_dword_DxK<MatrixT,
     /*
     * While we try to do the runtime dispatching, we need to make sure that we only
     * instantiate splitting functions that make sense. The maximum possible split is 8
-    * but this only makes sense if the IOCount is divisible by 8. Otherwise we will have
-    * an explosion of static asserts from the IOTraits class during compile time.
+    * but this only makes sense if the packed IOCount is divisible by 8. Otherwise we
+    * will have an explosion of static asserts from the IOTraits class during compile time.
     *
     * Note: The additional template parameter IncomingT sets us up for proper forwarding
     * technique while allowing us to use it as the dependent parameter to exploit SFINAE
     * and hide instantiations that would be otherwise not compileable.
     */
 
-    // IOCount of 8+ can potentially split work between 8 workgroups
+    // IOCount of 8+ can potentially split work between 8 waves
     template <typename IncomingT,
               typename std::enable_if<
                   std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && IOTraits::IOCount >= 8,
+                      && IOTraits::IOCount / PackTraits<DataT>::PackRatio >= 8,
                   int>::type
               = 0>
     __device__ static inline void exec(DataT* dataPtr, IncomingT&& input, uint32_t ldm)
@@ -152,15 +151,15 @@ struct amdgcn_cooperative_store_dword_DxK<MatrixT,
         }
         else
         {
-            assert(0 && "Unsupported split count. Try reducing concurrent workgroups.");
+            assert(0 && "Unsupported split count. Try reducing workgroup waves.");
         }
     }
 
-    // IOCount of 4 can potentially split work between 4 workgroups
+    // IOCount of 4 can potentially split work between 4 waves
     template <typename IncomingT,
               typename std::enable_if<
                   std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && IOTraits::IOCount == 4,
+                      && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 4,
                   int32_t>::type
               = 0>
     __device__ static inline void exec(DataT* dataPtr, IncomingT&& input, uint32_t ldm)
@@ -185,15 +184,15 @@ struct amdgcn_cooperative_store_dword_DxK<MatrixT,
         }
         else
         {
-            assert(0 && "Unsupported split count. Try reducing concurrent workgroups.");
+            assert(0 && "Unsupported split count. Try reducing workgroup waves.");
         }
     }
 
-    // IOCount of 2 can potentially split work between 2 workgroups
+    // IOCount of 2 can potentially split work between 2 waves
     template <typename IncomingT,
               typename std::enable_if<
                   std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && IOTraits::IOCount == 2,
+                      && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 2,
                   int32_t>::type
               = 0>
     __device__ static inline void exec(DataT* dataPtr, IncomingT&& input, uint32_t ldm)
@@ -214,14 +213,14 @@ struct amdgcn_cooperative_store_dword_DxK<MatrixT,
         }
         else
         {
-            assert(0 && "Unsupported split count. Try reducing concurrent workgroups.");
+            assert(0 && "Unsupported split count. Try reducing workgroup waves.");
         }
     }
 
     template <typename IncomingT,
               typename std::enable_if<
                   std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && IOTraits::IOCount == 1,
+                      && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 1,
                   int32_t>::type
               = 0>
     __device__ static inline void exec(DataT* dataPtr, IncomingT&& input, uint32_t ldm)
@@ -238,7 +237,7 @@ struct amdgcn_cooperative_store_dword_DxK<MatrixT,
         }
         else
         {
-            assert(0 && "Unsupported split count. Try reducing concurrent workgroups.");
+            assert(0 && "Unsupported split count. Try reducing workgroup waves.");
         }
     }
 
@@ -246,7 +245,7 @@ struct amdgcn_cooperative_store_dword_DxK<MatrixT,
     template <typename IncomingT,
               typename std::enable_if<
                   std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && IOTraits::IOCount == 0,
+                      && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 0,
                   int32_t>::type
               = 0>
     __device__ static inline void exec(DataT* dataPtr, IncomingT&& input, uint32_t ldm);

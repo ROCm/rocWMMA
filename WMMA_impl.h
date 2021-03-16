@@ -8,7 +8,9 @@
 #include "CoopLoad.h"
 #include "CoopStore.h"
 #include "IOBroadcast.h"
+#include "IOConfig.h"
 #include "MFMA.h"
+#include "MappingUtil.h"
 #include "OpaqueLoad.h"
 #include "OpaqueStore.h"
 #include "WMMA.h"
@@ -265,12 +267,12 @@ namespace wmma
                 uint32_t competingWaveId = std::get<0>(waveCoord);
 
                 auto ldsOffset = std::make_pair(competingWaveId * FragAT::leadingDim(), 0);
-                auto ldsAddr = MappingUtil::dataCoord(localMemPtr, FragAT::leadingDim(), ldsOffset);
+                auto ldsAddr   = MappingUtil::dataCoord(localMemPtr, FragAT::kDim(), ldsOffset);
 
-                StoreA::exec(ldsAddr, UnpackA::exec(*a), FragAT::leadingDim());
+                StoreA::exec(ldsAddr, UnpackA::exec(*a), FragAT::kDim());
                 __syncthreads();
 
-                AFmt = PackA::exec(LoadA::exec(ldsAddr, FragAT::leadingDim()));
+                AFmt = PackA::exec(LoadA::exec(ldsAddr, FragAT::kDim()));
                 __syncthreads();
             }
             else
@@ -335,32 +337,42 @@ namespace wmma
                       "Must provide layout information. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
-        using FragT     = typename std::decay<decltype(frag)>::type;
-        using Loader    = amdgcn_cooperative_load_dword_DxK<MatrixT,
-                                                         FragT::leadingDim(),
-                                                         FragT::kDim(),
-                                                         DataT,
-                                                         DataLayout>;
-        using WaveSpace = _MappingUtil::WaveSpace;
+        using FragT = typename std::decay<decltype(frag)>::type;
 
-        // Pack and store into frag
-        using Packer = Pack<
-            DataT,
-            amdgcn_io_traits<FragT::leadingDim(), FragT::kDim(), DataT>::UnpackedRegisterCount>;
+        using Config = OptConfig<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+
+        using CoopLoader = typename Config::CoopLoader;
+        using CoopStorer = typename Config::CoopStorer;
+
+        using Packer   = typename Config::Packer;
+        using Unpacker = typename Config::Unpacker;
+
+        using FullLoader = typename Config::LocalLoader;
+
         static_assert(
             std::is_same<typename FragT::Traits::StorageT, typename Packer::Traits::OutputT>::value,
             "Fragment storage type and packed types do not match");
 
+        HIP_DYNAMIC_SHARED(DataT, localMemPtr);
+        using MappingUtil  = MappingUtil<FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+        auto     waveCoord = MappingUtil::waveCoord(); // Local to workgroup
+        uint32_t competingWaveId
+            = (std::is_same<MatrixT, matrix_a>::value ? std::get<0>(waveCoord)
+                                                      : std::get<1>(waveCoord));
+
+        auto ldsBaseOffset = FragT::leadingDim() * FragT::kDim() * competingWaveId;
+
         // Cooperative load will split the global load amongst all waves in the workgroup
         // because they will all be using the same tile.
-        HIP_DYNAMIC_SHARED(DataT, localMemPtr);
-        auto waveCount = WaveSpace::workgroupDim();
-        (*frag)        = Packer::exec(Loader::exec(data,
-                                            ldm,
-                                            localMemPtr,
-                                            FragT::leadingDim(),
-                                            std::get<0>(waveCount),
-                                            std::get<1>(waveCount)));
+        typename FragT::Traits::StorageT temp;
+        CoopLoader::exec(temp, data, ldm);
+
+        CoopStorer::exec(localMemPtr + ldsBaseOffset, temp, FragT::leadingDim());
+
+        __syncthreads();
+        *frag = Packer::exec(FullLoader::exec(localMemPtr + ldsBaseOffset, FragT::leadingDim()));
+
+        __syncthreads();
     }
 
     // template <uint32_t BlockM,

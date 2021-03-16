@@ -21,7 +21,6 @@ static constexpr intT1 ceilDiv(const intT1 numerator, const intT2 divisor)
     return (numerator + divisor - 1) / divisor;
 }
 
-
 template <typename Layout>
 struct MatrixUtil;
 
@@ -55,7 +54,7 @@ struct MatrixUtil<row_major>
                 // Count up in ascending order, alternating evens and odds
                 // with respective positive / negative
                 int32_t val = i * n + j;
-                mat[val]    = (val % 2 ? -val : val);
+                mat[val]    = (val % 2 ? -val : val) % 13;
             }
         }
     }
@@ -91,7 +90,7 @@ struct MatrixUtil<col_major>
                 // Count up in ascending order, alternating evens and odds
                 // with respective positive / negative
                 int32_t val    = i * n + j;
-                mat[i + j * m] = val % 2 ? -val : val;
+                mat[i + j * m] = (val % 2 ? -val : val) % 13;
             }
         }
     }
@@ -141,6 +140,7 @@ void compareEqual(std::vector<TypeA> const& a, std::vector<TypeB> const& b, int 
 
     double max_relative_error = 0;
 
+#pragma omp parallel for
     for(int i = 0; i < M; ++i) // Row
     {
         for(int j = 0; j < N; ++j) // Col
@@ -165,11 +165,10 @@ void compareEqual(std::vector<TypeA> const& a, std::vector<TypeB> const& b, int 
     std::cout << "max_relative_error = " << max_relative_error << std::endl;
 }
 
-
-template<typename DataT>
+template <typename DataT>
 struct MfmaPerfTraits;
 
-template<>
+template <>
 struct MfmaPerfTraits<float16_t>
 {
     enum : uint32_t
@@ -178,7 +177,7 @@ struct MfmaPerfTraits<float16_t>
     };
 };
 
-template<>
+template <>
 struct MfmaPerfTraits<float32_t>
 {
     enum : uint32_t
@@ -187,10 +186,10 @@ struct MfmaPerfTraits<float32_t>
     };
 };
 
-template<typename DataT>
+template <typename DataT>
 struct PerfTraits;
 
-template<>
+template <>
 struct PerfTraits<float16_t>
 {
     enum : uint32_t
@@ -199,7 +198,7 @@ struct PerfTraits<float16_t>
     };
 };
 
-template<>
+template <>
 struct PerfTraits<float32_t>
 {
     enum : uint32_t
@@ -208,13 +207,12 @@ struct PerfTraits<float32_t>
     };
 };
 
-
 class Mi100;
 
-template<typename GfxArch>
+template <typename GfxArch>
 struct HardwareTraits;
 
-template<>
+template <>
 struct HardwareTraits<Mi100>
 {
     enum : uint32_t
@@ -223,10 +221,13 @@ struct HardwareTraits<Mi100>
     };
 };
 
-template<typename DataT, typename GfxArch, template<typename> class PerformanceTraits = MfmaPerfTraits>
+template <typename DataT,
+          typename GfxArch,
+          template <typename> class PerformanceTraits = MfmaPerfTraits>
 inline double calculatePeakGFlops(uint32_t freqMHz)
 {
-    auto basePeakGFlops = static_cast<double>(64.0 * HardwareTraits<GfxArch>::CuCount * freqMHz) / 1000.0;
+    auto basePeakGFlops
+        = static_cast<double>(64.0 * HardwareTraits<GfxArch>::CuCount * freqMHz) / 1000.0;
     auto multiplier = (double)(PerformanceTraits<DataT>::Multiplier);
     return multiplier * basePeakGFlops;
 }
@@ -237,18 +238,18 @@ inline double calculateGFlops(uint32_t M, uint32_t N, uint32_t K, double elapsed
     return static_cast<double>(flopsPerMac * M * N * K) / 1000000.0 / elapsedTimeMs;
 }
 
-template<typename DataT>
+template <typename DataT>
 constexpr const char* dataTypeToString()
 {
     if(std::is_same<DataT, float16_t>::value)
     {
         return "f16";
     }
-    else if (std::is_same<DataT, float32_t>::value)
+    else if(std::is_same<DataT, float32_t>::value)
     {
         return "f32";
     }
-    else if (std::is_same<DataT, int32_t>::value)
+    else if(std::is_same<DataT, int32_t>::value)
     {
         return "i32";
     }
@@ -257,7 +258,5 @@ constexpr const char* dataTypeToString()
         return "invalid";
     }
 }
-
-
 
 #endif // WMMA_UTILS_H

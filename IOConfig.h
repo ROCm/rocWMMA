@@ -4,6 +4,7 @@
 #include "BufferLoad.h"
 #include "BufferStore.h"
 #include "Constants.h"
+#include "CoopLoad.h"
 #include "CoopStore.h"
 #include "IOPack.h"
 #include "IOTraits.h"
@@ -289,7 +290,7 @@ struct OptConfig<matrix_a, BlockDim, BlockK, DataT, row_major>
 {
     enum : uint32_t
     {
-        ElementsPerThread = 4 * PackTraits<DataT>::PackRatio
+        ElementsPerThread = VecWidthTraits<BlockDim, BlockK, DataT>::MaxElementsPerThread
     };
 
     // Other IO configs
@@ -316,13 +317,21 @@ struct OptConfig<matrix_a, BlockDim, BlockK, DataT, row_major>
                                                  GlobalLayout,
                                                  ElementsPerThread>;
 
-    using CoopStorer = amdgcn_cooperative_store_dword_DxK<matrix_a,
-                                                          BlockDim,
-                                                          BlockK,
-                                                          DataT,
-                                                          row_major,
-                                                          GlobalLayout,
-                                                          ElementsPerThread>;
+    using CoopLoader = amdgcn_cooperative_load_DxK<matrix_a,
+                                                   BlockDim,
+                                                   BlockK,
+                                                   DataT,
+                                                   row_major,
+                                                   GlobalLayout,
+                                                   ElementsPerThread>;
+
+    using CoopStorer = amdgcn_cooperative_store_DxK<matrix_a,
+                                                    BlockDim,
+                                                    BlockK,
+                                                    DataT,
+                                                    row_major,
+                                                    GlobalLayout,
+                                                    ElementsPerThread>;
 
     // Local data config.
     // After writing from global to LDS, load proper format for MFMA.
@@ -367,13 +376,21 @@ struct OptConfig<matrix_a, BlockDim, BlockK, DataT, col_major>
                                                  GlobalLayout,
                                                  ElementsPerThread>;
 
-    using CoopStorer = amdgcn_cooperative_store_dword_DxK<matrix_a,
-                                                          BlockDim,
-                                                          BlockK,
-                                                          DataT,
-                                                          col_major,
-                                                          GlobalLayout,
-                                                          ElementsPerThread>;
+    using CoopLoader = amdgcn_cooperative_load_DxK<matrix_a,
+                                                   BlockDim,
+                                                   BlockK,
+                                                   DataT,
+                                                   col_major,
+                                                   GlobalLayout,
+                                                   ElementsPerThread>;
+
+    using CoopStorer = amdgcn_cooperative_store_DxK<matrix_a,
+                                                    BlockDim,
+                                                    BlockK,
+                                                    DataT,
+                                                    col_major,
+                                                    GlobalLayout,
+                                                    ElementsPerThread>;
 
     // Local data config.
     // After writing from global to LDS, load proper format for MFMA.
@@ -414,13 +431,21 @@ struct OptConfig<matrix_b, BlockDim, BlockK, DataT, row_major>
                                                  GlobalLayout,
                                                  ElementsPerThread>;
 
-    using CoopStorer = amdgcn_cooperative_store_dword_DxK<matrix_b,
-                                                          BlockDim,
-                                                          BlockK,
-                                                          DataT,
-                                                          row_major,
-                                                          GlobalLayout,
-                                                          ElementsPerThread>;
+    using CoopLoader = amdgcn_cooperative_load_DxK<matrix_b,
+                                                   BlockDim,
+                                                   BlockK,
+                                                   DataT,
+                                                   row_major,
+                                                   GlobalLayout,
+                                                   ElementsPerThread>;
+
+    using CoopStorer = amdgcn_cooperative_store_DxK<matrix_b,
+                                                    BlockDim,
+                                                    BlockK,
+                                                    DataT,
+                                                    row_major,
+                                                    GlobalLayout,
+                                                    ElementsPerThread>;
 
     // Local data config.
     // After writing from global to LDS, load proper format for MFMA.
@@ -436,7 +461,7 @@ struct OptConfig<matrix_b, BlockDim, BlockK, DataT, col_major>
 {
     enum : uint32_t
     {
-        ElementsPerThread = 4 * PackTraits<DataT>::PackRatio
+        ElementsPerThread = VecWidthTraits<BlockDim, BlockK, DataT>::MaxElementsPerThread
     };
 
     // Other IO configs
@@ -462,13 +487,21 @@ struct OptConfig<matrix_b, BlockDim, BlockK, DataT, col_major>
                                                  GlobalLayout,
                                                  ElementsPerThread>;
 
-    using CoopStorer = amdgcn_cooperative_store_dword_DxK<matrix_b,
-                                                          BlockDim,
-                                                          BlockK,
-                                                          DataT,
-                                                          col_major,
-                                                          GlobalLayout,
-                                                          ElementsPerThread>;
+    using CoopLoader = amdgcn_cooperative_load_DxK<matrix_b,
+                                                   BlockDim,
+                                                   BlockK,
+                                                   DataT,
+                                                   col_major,
+                                                   GlobalLayout,
+                                                   ElementsPerThread>;
+
+    using CoopStorer = amdgcn_cooperative_store_DxK<matrix_b,
+                                                    BlockDim,
+                                                    BlockK,
+                                                    DataT,
+                                                    col_major,
+                                                    GlobalLayout,
+                                                    ElementsPerThread>;
 
     // Local data config.
     // After writing from global to LDS, load proper format for MFMA.
@@ -516,7 +549,7 @@ struct OptConfig<accumulator, BlockDim, BlockK, DataT, col_major>
 {
     enum : uint32_t
     {
-        ElementsPerThread = 4 * PackTraits<DataT>::PackRatio
+        ElementsPerThread = VecWidthTraits<BlockDim, BlockK, DataT>::MaxElementsPerThread
     };
 
     // Other IO configs
