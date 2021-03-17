@@ -401,9 +401,8 @@ int main()
     test_mma_sync_h<float16_t, float32_t>();
     test_mma_sync_h<float32_t, float32_t>();
 
-    //test_mma_sync_h<64, 4, 32, 32, 32, float32_t, float32_t>(2048, 2048, 1024, 1.0f, 1.0f);
+    //test_mma_sync_h<64, 1, 32, 32, 32, float16_t, float32_t>(2048, 2048, 1024, 1.0f, 1.0f);
 
-    //test_mma_sync_h<64, 1, 16, 16, 32, float32_t, float32_t, row_major, row_major, row_major>(16, 16, 32, 1.0f, 1.0f);
-
+    //test_mma_sync_h<64, 1, 16, 16, 32, float32_t, float32_t, row_major, row_major, col_major>(16, 16, 32, 1.0f, 1.0f);
     return 0;
 }
