@@ -133,7 +133,7 @@ struct amdgcn_cooperative_store_DxK<MatrixT,
         auto splitCount = std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCount)
                                                                  : std::get<0>(waveCount);
 
-        if(splitCount == 8)
+        if(splitCount >= 8)
         {
             CooperativeStore<8>::exec(dataPtr, std::forward<IncomingT>(input), ldm);
         }
@@ -170,7 +170,7 @@ struct amdgcn_cooperative_store_DxK<MatrixT,
         auto splitCount = std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCount)
                                                                  : std::get<0>(waveCount);
 
-        if(splitCount == 4)
+        if(splitCount >= 4)
         {
             CooperativeStore<4>::exec(dataPtr, std::forward<IncomingT>(input), ldm);
         }
@@ -203,7 +203,7 @@ struct amdgcn_cooperative_store_DxK<MatrixT,
         auto splitCount = std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCount)
                                                                  : std::get<0>(waveCount);
 
-        if(splitCount == 2)
+        if(splitCount >= 2)
         {
             CooperativeStore<2>::exec(dataPtr, std::forward<IncomingT>(input), ldm);
         }
@@ -231,7 +231,7 @@ struct amdgcn_cooperative_store_DxK<MatrixT,
         auto splitCount = std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCount)
                                                                  : std::get<0>(waveCount);
 
-        if(splitCount == 1)
+        if(splitCount >= 1)
         {
             CooperativeStore<1>::exec(dataPtr, std::forward<IncomingT>(input), ldm);
         }

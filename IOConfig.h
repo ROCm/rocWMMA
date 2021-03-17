@@ -549,7 +549,7 @@ struct OptConfig<accumulator, BlockDim, BlockK, DataT, col_major>
 {
     enum : uint32_t
     {
-        ElementsPerThread = VecWidthTraits<BlockDim, BlockK, DataT>::MaxElementsPerThread
+        ElementsPerThread = 4
     };
 
     // Other IO configs
