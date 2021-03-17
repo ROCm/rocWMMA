@@ -47,8 +47,8 @@ struct amdgcn_cooperative_store_DxK
         uint32_t sharedWaveId = (std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCoord)
                                                                         : std::get<0>(waveCoord));
 
-        // Even if we have multiple waves, SpCount of 1 we cannot split
-        sharedWaveId = (Traits::SplitCount == 1) ? 0 : sharedWaveId;
+        // For the cases where there are more groups than splits.
+        sharedWaveId = sharedWaveId % Traits::SplitCount;
 
         // Base address is the same, and split load by (SplitCount).
         // Multiply the gridId by the split load count to get iterative offset per wave.
