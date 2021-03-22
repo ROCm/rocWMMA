@@ -17,15 +17,15 @@ namespace _MappingUtil
 
     This particular mapping assumes that the major dimension for
     threadcount is in the blockDim.x element.
-    
+
     This means that blockSize.x threadcounts are multiples of 64,
     and blockSize.y threadcounts are in multiples of 1.
-    
+
     blockDim = (waveRows * 64, waveCols).
 
     Wave rows and cols map directly to scaled matrix rows and cols for processing.
 
-    *** 
+    ***
 
     E.g.
     BlockDim of (64, 1) will give a grid of (1, 1) waves, or 1 total wave in the workgroup.
@@ -43,10 +43,14 @@ namespace _MappingUtil
     __device__ static inline uint32_t laneId();
 
     // Convert from thread count to wave count
-    __device__ constexpr static inline auto waveCount(std::pair<uint32_t, uint32_t> const& threadCount) -> std::pair<uint32_t, uint32_t>;
+    __device__ constexpr static inline auto
+        waveCount(std::pair<uint32_t, uint32_t> const& threadCount)
+            -> std::pair<uint32_t, uint32_t>;
 
     // Convert from wave count to thread count
-    __device__ constexpr static inline auto threadCount(std::pair<uint32_t, uint32_t> const& waveCount) -> std::pair<uint32_t, uint32_t>;
+    __device__ constexpr static inline auto
+        threadCount(std::pair<uint32_t, uint32_t> const& waveCount)
+            -> std::pair<uint32_t, uint32_t>;
 
     // Coordinate spaces
 
@@ -79,7 +83,7 @@ namespace _MappingUtil
     struct MatrixSpace
     {
         using CoordT = std::pair<uint32_t, uint32_t>;
-        
+
         __device__ static inline auto fromBlockCoord(CoordT const& blockCoord) -> CoordT;
     };
 
@@ -91,8 +95,10 @@ namespace _MappingUtil
     {
         using CoordT = std::pair<uint32_t, uint32_t>;
 
-        __device__ static inline DataT* fromMatrixCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& matrixCoord);
-        __device__ static inline DataT* fromBlockCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& blockCoord);
+        __device__ static inline DataT*
+            fromMatrixCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& matrixCoord);
+        __device__ static inline DataT*
+            fromBlockCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& blockCoord);
     };
 
 } // namespace _MappingUtil
@@ -100,17 +106,17 @@ namespace _MappingUtil
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
 struct MappingUtil
 {
-    using WaveSpace = _MappingUtil::WaveSpace;
+    using WaveSpace   = _MappingUtil::WaveSpace;
     using MatrixSpace = _MappingUtil::MatrixSpace<BlockM, BlockN>;
-    using DataSpace  = _MappingUtil::DataSpace<DataT, BlockM, BlockN, DataLayout>;
-    using CoordT = std::pair<uint32_t, uint32_t>;
+    using DataSpace   = _MappingUtil::DataSpace<DataT, BlockM, BlockN, DataLayout>;
+    using CoordT      = std::pair<uint32_t, uint32_t>;
 
     /// Current wave perspective
 
     // Current lane of current wave
     __device__ static inline uint32_t laneId();
 
-    // Current local wave coordinate 
+    // Current local wave coordinate
     __device__ static inline auto waveCoord() -> CoordT;
 
     // Current global wave coordinate
@@ -120,11 +126,11 @@ struct MappingUtil
     __device__ static inline auto matrixCoord() -> CoordT;
 
     // Data address of current wave
-     __device__ static inline DataT* dataCoord(DataT const* baseAddr, uint32_t ldm);
+    __device__ static inline DataT* dataCoord(DataT const* baseAddr, uint32_t ldm);
 
     /// Coordinate override helpers
 
-    // Current global wave coordinate with row override 
+    // Current global wave coordinate with row override
     __device__ static inline auto blockCoordM(uint32_t m) -> CoordT;
 
     // Current global wave coordinate with col override
@@ -142,27 +148,28 @@ struct MappingUtil
     __device__ static inline auto matrixCoord(CoordT const& blockCoord) -> CoordT;
 
     // Convert from any matrix coord to data address
-    __device__ static inline DataT* dataCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& matrixCoord);
+    __device__ static inline DataT*
+        dataCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& matrixCoord);
 };
 
-template <size_t WaveRows,
-          size_t WaveCols,
-          size_t BlockM,
-          size_t BlockN,
-          size_t BlockK>
-struct LaunchUtil
-{
-    static inline auto gridDim(uint32_t M, uint32_t N, uint32_t K) -> dim3
-    {
-        return dim3(ceilDiv(M, BlockM * WaveRows), ceilDiv(N, BlockM * WaveCols));
-    }
+// template <size_t WaveRows,
+//           size_t WaveCols,
+//           size_t BlockM,
+//           size_t BlockN,
+//           size_t BlockK>
+// struct LaunchUtil
+// {
+//     static inline auto gridDim(uint32_t M, uint32_t N, uint32_t K) -> dim3
+//     {
+//         return dim3(ceilDiv(M, BlockM * WaveRows), ceilDiv(N, BlockM * WaveCols));
+//     }
 
-    static inline auto blockDim() -> dim3
-    {
-        auto threads = _MappingUtil::threadCount(std::make_pair<uint32_t, uint32_t>(WaveRows, WaveCols));
-        return dim3(std::get<0>(threads), std::get<1>(threads));
-    }
-};
+//     static inline auto blockDim() -> dim3
+//     {
+//         auto threads = _MappingUtil::threadCount(std::make_pair<uint32_t, uint32_t>(WaveRows, WaveCols));
+//         return dim3(std::get<0>(threads), std::get<1>(threads));
+//     }
+// };
 
 #include "MappingUtil_impl.h"
 
