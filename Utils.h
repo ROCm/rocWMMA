@@ -22,21 +22,26 @@ static constexpr intT1 ceilDiv(const intT1 numerator, const intT2 divisor)
 }
 
 template <typename Layout>
-struct MatrixUtil;
-
-template <>
-struct MatrixUtil<row_major>
+struct MatrixUtil
 {
     template <typename DataT>
     __host__ static inline void print(std::vector<DataT> const& mat, uint32_t m, uint32_t n)
     {
-        for(int i = 0; i < m; ++i)
+        assert(mat.size() == n * m);
+
+        auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
+        auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
+
+        auto index = std::is_same<Layout, row_major>::value ? rowMjr : colMjr;
+        auto ld    = std::is_same<Layout, row_major>::value ? n : m;
+
+        for(int i = 0; i < m; ++i) // row
         {
             std::cout << "[ ";
-            for(int j = 0; j < n; ++j)
+            for(int j = 0; j < n; ++j) // col
             {
                 // (Row, col)
-                std::cout << mat[i * n + j] << " ";
+                std::cout << mat[index(i, j, ld)] << " ";
             }
             std::cout << "]\n";
         }
@@ -47,88 +52,45 @@ struct MatrixUtil<row_major>
     __host__ static inline void fill(std::vector<DataT>& mat, uint32_t m, uint32_t n)
     {
         assert(mat.size() == n * m);
-        for(int i = 0; i < m; ++i)
+
+        auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
+        auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
+
+        auto index = std::is_same<Layout, row_major>::value ? rowMjr : colMjr;
+        auto ld    = std::is_same<Layout, row_major>::value ? n : m;
+
+        for(int i = 0; i < m; ++i) // row
         {
-            for(int j = 0; j < n; ++j)
+            for(int j = 0; j < n; ++j) // col
             {
-                // Count up in ascending order, alternating evens and odds
-                // with respective positive / negative
-                int32_t val = i * n + j;
-                mat[val]    = (val % 2 ? -val : val) % 13;
+                // Count up in integers, in ascending order for each row.
+                auto value = (i * n + j) % 13;
+                auto idx   = index(i, j, ld);
+                mat[idx]   = value % 2 ? -static_cast<DataT>(value) : static_cast<DataT>(value);
             }
         }
     }
-};
-
-template <>
-struct MatrixUtil<col_major>
-{
-    template <typename DataT>
-    __host__ static inline void print(std::vector<DataT> const& mat, uint32_t m, uint32_t n)
-    {
-        for(int i = 0; i < m; ++i)
-        {
-            std::cout << "[ ";
-            for(int j = 0; j < n; ++j)
-            {
-                // (Row, col)
-                std::cout << mat[i + j * m] << " ";
-            }
-            std::cout << "]\n";
-        }
-        std::cout << "\n";
-    }
 
     template <typename DataT>
-    __host__ static inline void fill(std::vector<DataT>& mat, uint32_t m, uint32_t n)
+    __host__ static inline void fill(std::vector<DataT>& mat, uint32_t m, uint32_t n, DataT value)
     {
         assert(mat.size() == n * m);
-        for(int i = 0; i < m; ++i)
+
+        auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
+        auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
+
+        auto index = std::is_same<Layout, row_major>::value ? rowMjr : colMjr;
+        auto ld    = std::is_same<Layout, row_major>::value ? n : m;
+
+        for(int i = 0; i < m; ++i) // row
         {
-            for(int j = 0; j < n; ++j)
+            for(int j = 0; j < n; ++j) // col
             {
-                // Count up in ascending order, alternating evens and odds
-                // with respective positive / negative
-                int32_t val    = i * n + j;
-                mat[i + j * m] = (val % 2 ? -val : val) % 13;
+                mat[index(i, j, ld)] = value;
             }
         }
     }
 };
-
-template <typename LayoutA, typename LayoutB, typename LayoutC, typename InputT, typename ComputeT>
-void gemmCPU(std::vector<InputT> const& a,
-             std::vector<InputT> const& b,
-             std::vector<ComputeT>&     c,
-             int                        M,
-             int                        N,
-             int                        K,
-             ComputeT                   alpha,
-             ComputeT                   beta)
-{
-    int lda = std::is_same<LayoutA, row_major>::value ? K : M;
-    int ldb = std::is_same<LayoutB, row_major>::value ? N : K;
-    int ldc = std::is_same<LayoutC, row_major>::value ? N : M;
-
-    for(int i = 0; i < M; ++i) // Row
-    {
-        for(int j = 0; j < N; ++j) // Col
-        {
-            ComputeT accum = 0.0f;
-            for(int k = 0; k < K; ++k)
-            {
-                auto indexA
-                    = std::is_same<LayoutA, row_major>::value ? (i * lda + k) : (i + lda * k);
-                auto indexB
-                    = std::is_same<LayoutB, row_major>::value ? (k * ldb + j) : (k + j * ldb);
-                accum += static_cast<ComputeT>(a[indexA]) * static_cast<ComputeT>(b[indexB]);
-            }
-
-            auto indexC = std::is_same<LayoutC, row_major>::value ? (i * ldc + j) : (i + j * ldc);
-            c[indexC]   = alpha * accum + beta * c[indexC];
-        }
-    }
-}
 
 template <typename TypeA, typename TypeB, typename LayoutA, typename LayoutB>
 void compareEqual(std::vector<TypeA> const& a, std::vector<TypeB> const& b, int M, int N)
@@ -157,6 +119,34 @@ void compareEqual(std::vector<TypeA> const& a, std::vector<TypeB> const& b, int 
     }
 
     auto eps       = std::numeric_limits<TypeA>::epsilon();
+    auto tolerance = 10.0;
+    if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
+        std::cout << "FAIL: ";
+    else
+        std::cout << "PASS: ";
+    std::cout << "max_relative_error = " << max_relative_error << std::endl;
+}
+
+template <typename DataT>
+void compareEqual(std::vector<DataT> const& a, std::vector<DataT> const& b, int M, int N)
+{
+    assert(a.size() == b.size() && "A and B are not the same size");
+    assert(a.size() == M * N && "A and B do not match size M x N");
+
+    double   max_relative_error = 0;
+    uint32_t numElements        = M * N;
+
+#pragma omp parallel for
+    for(int i = 0; i < numElements; ++i)
+    {
+        auto relative_error = fabs(double(a[i] - b[i]) / a[i]);
+        if(relative_error > max_relative_error)
+        {
+            max_relative_error = relative_error;
+        }
+    }
+
+    auto eps       = std::numeric_limits<DataT>::epsilon();
     auto tolerance = 10.0;
     if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
         std::cout << "FAIL: ";
