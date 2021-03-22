@@ -13,11 +13,6 @@ using index_t   = int32_t;
 
 namespace std
 {
-    template <>
-    struct is_floating_point<float16_t> : public true_type
-    {
-    };
-
     inline ostream& operator<<(ostream& stream, const float16_t val)
     {
         return stream << static_cast<float>(val);
@@ -51,11 +46,6 @@ using v4_i32_t  = _VecT<int32_t, 4>;
 using v16_i32_t = _VecT<int32_t, 16>;
 using v32_i32_t = _VecT<int32_t, 32>;
 using v64_i32_t = _VecT<int32_t, 64>;
-
-// Packed type conversion
-template <typename DataT>
-using PackedType =
-    typename std::conditional<std::is_floating_point<DataT>::value, float32_t, int32_t>::type;
 
 // Vector wrapper for element access.
 template <typename T, uint32_t VecSize>

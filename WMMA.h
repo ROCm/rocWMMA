@@ -1,8 +1,10 @@
 #ifndef WMMA_H_
 #define WMMA_H_
 
-#include "Types.h"
 #include <type_traits>
+
+#include "IOTraits.h"
+#include "Types.h"
 
 namespace wmma
 {
@@ -57,7 +59,7 @@ namespace wmma
             static_assert((ElementCount * sizeof(DataT)) % BYTES_PER_REGISTER == 0,
                           "Partial registers unsupported");
 
-            using PackedT = PackedType<DataT>;
+            using PackedT = typename PackTraits<DataT>::PackedT;
 
             using StorageT = VecT<PackedT, RegisterCount>;
         };

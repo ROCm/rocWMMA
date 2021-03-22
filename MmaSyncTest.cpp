@@ -1,13 +1,16 @@
 #include <hip/hip_ext.h>
 #include <hip/hip_runtime.h>
 
-#include "BufferLoad.h"
-#include "BufferStore.h"
-#include "Constants.h"
-#include "Types.h"
 #include "Utils.h"
-
 #include "WMMA.h"
+
+#ifdef WMMA_VALIDATE_TESTS
+#ifdef WMMA_VALIDATE_WITH_ROCBLAS
+#include "rocBLASReference.h" // rocBLAS GPU kernel
+#else
+#include "Reference.h" // Vanilla CPU kernel
+#endif // WMMA_VALIDATE_WITH_ROCBLAS
+#endif // WMMA_VALIDATE_TESTS
 
 template <uint32_t BlockM,
           uint32_t BlockN,
@@ -16,23 +19,27 @@ template <uint32_t BlockM,
           typename ComputeT,
           typename LayoutA,
           typename LayoutB,
-          typename LayoutC>
-__global__ void test_mma_sync_d(const InputT* a,
-                                const InputT* b,
-                                ComputeT*     c,
-                                uint32_t      M,
-                                uint32_t      N,
-                                uint32_t      K,
-                                ComputeT      alpha,
-                                ComputeT      beta)
+          typename LayoutC,
+          typename LayoutD>
+__global__ void test_mma_sync_d(uint32_t        m,
+                                uint32_t        n,
+                                uint32_t        k,
+                                InputT const*   a,
+                                InputT const*   b,
+                                ComputeT const* c,
+                                ComputeT*       d,
+                                ComputeT        alpha,
+                                ComputeT        beta)
 {
     using MappingA = MappingUtil<BlockM, BlockK, InputT, LayoutA>;
     using MappingB = MappingUtil<BlockK, BlockN, InputT, LayoutB>;
     using MappingC = MappingUtil<BlockM, BlockN, ComputeT, LayoutC>;
+    using MappingD = MappingUtil<BlockM, BlockN, ComputeT, LayoutD>;
 
-    int lda = std::is_same<LayoutA, row_major>::value ? K : M;
-    int ldb = std::is_same<LayoutB, row_major>::value ? N : K;
-    int ldc = std::is_same<LayoutC, row_major>::value ? N : M;
+    int lda = std::is_same<LayoutA, row_major>::value ? k : m;
+    int ldb = std::is_same<LayoutB, row_major>::value ? n : k;
+    int ldc = std::is_same<LayoutC, row_major>::value ? n : m;
+    int ldd = std::is_same<LayoutD, row_major>::value ? n : m;
 
     // Create frags
     auto fragA   = wmma::fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA>();
@@ -47,7 +54,7 @@ __global__ void test_mma_sync_d(const InputT* a,
     int warpN = (blockIdx.y * blockDim.y + threadIdx.y);
 
     // Loop over k
-    for(int i = 0; i < K; i += BlockK)
+    for(int i = 0; i < k; i += BlockK)
     {
         int aRow = warpM * BlockM;
         int aCol = i;
@@ -56,7 +63,7 @@ __global__ void test_mma_sync_d(const InputT* a,
         int bCol = warpN * BlockN;
 
         // Bounds checking
-        if(aRow < M && aCol < K && bRow < K && bCol < N)
+        if(aRow < m && aCol < k && bRow < k && bCol < n)
         {
             // Load the inputs
             wmma::load_matrix_sync(
@@ -73,11 +80,11 @@ __global__ void test_mma_sync_d(const InputT* a,
     int cRow = warpM * BlockM;
     int cCol = warpN * BlockN;
 
-    if(cRow < M && cCol < N)
+    if(cRow < m && cCol < n)
     {
-        ComputeT* cOffset = c
-                            + (std::is_same<LayoutC, row_major>::value ? (cRow * ldc + cCol)
-                                                                       : (cRow + cCol * ldc));
+        ComputeT const* cOffset = c
+                                  + (std::is_same<LayoutC, row_major>::value ? (cRow * ldc + cCol)
+                                                                             : (cRow + cCol * ldc));
         wmma::load_matrix_sync(fragC,
                                cOffset,
                                ldc,
@@ -89,11 +96,14 @@ __global__ void test_mma_sync_d(const InputT* a,
             fragC[i] = alpha * fragAcc[i] + beta * fragC[i];
         }
 
+        ComputeT* dOffset = d
+                            + (std::is_same<LayoutD, row_major>::value ? (cRow * ldd + cCol)
+                                                                       : (cRow + cCol * ldd));
         // Store the output
-        wmma::store_matrix_sync(cOffset,
+        wmma::store_matrix_sync(dOffset,
                                 fragC,
-                                ldc,
-                                std::is_same<LayoutC, row_major>::value ? wmma::mem_row_major
+                                ldd,
+                                std::is_same<LayoutD, row_major>::value ? wmma::mem_row_major
                                                                         : wmma::mem_col_major);
     }
 }
@@ -107,49 +117,49 @@ template <uint32_t TBlockX,
           typename ComputeT,
           typename LayoutA,
           typename LayoutB,
-          typename LayoutC>
-__host__ void test_mma_sync_h(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
+          typename LayoutC,
+          typename LayoutD = LayoutC>
+__host__ void test_mma_sync_h(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, ComputeT beta)
 {
-    std::cout << "HIP wmma::mma_sync test: TBlock (" << TBlockX << ", " << TBlockY << ") "
-              << "BlockMNK(" << BlockM << ", " << BlockN << ", " << BlockK << ") "
-              << "MatrixMNK(" << M << ", " << N << ", " << K << ") "
-              << "FmtABC(" << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << ", "
-              << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << ", "
-              << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << ") "
-              << "TiTc(" << dataTypeToString<InputT>() << "_" << dataTypeToString<ComputeT>()
-              << ") \n";
-
-    int lda = std::is_same<LayoutA, row_major>::value ? K : M;
-    int ldb = std::is_same<LayoutB, row_major>::value ? N : K;
-    int ldc = std::is_same<LayoutC, row_major>::value ? N : M;
+    int lda = std::is_same<LayoutA, row_major>::value ? k : m;
+    int ldb = std::is_same<LayoutB, row_major>::value ? n : k;
+    int ldc = std::is_same<LayoutC, row_major>::value ? n : m;
+    int ldd = std::is_same<LayoutD, row_major>::value ? n : m;
 
     // Initialize input matrices
-    std::vector<InputT> matrixA(M * K);
-    MatrixUtil<LayoutA>::fill(matrixA, M, K);
+    std::vector<InputT>   matrixA(m * k);
+    std::vector<InputT>   matrixB(k * n);
+    std::vector<ComputeT> matrixC(m * n, 0.0f);
+    std::vector<ComputeT> matrixD(m * n);
 
-    std::vector<InputT> matrixB(K * N);
-    MatrixUtil<LayoutB>::fill(matrixB, K, N);
-
-    std::vector<ComputeT> matrixC(M * N, 0.0f);
+    MatrixUtil<LayoutA>::fill(matrixA, m, k);
+    MatrixUtil<LayoutB>::fill(matrixB, k, n);
+    MatrixUtil<LayoutC>::fill(matrixC, m, n);
+    MatrixUtil<LayoutD>::fill(matrixD, m, n, std::numeric_limits<ComputeT>::signaling_NaN());
 
     // Allocate and copy device memory
-    InputT*      d_a;
+    InputT*   d_a;
+    InputT*   d_b;
+    ComputeT* d_c;
+    ComputeT* d_d;
+
     const size_t bytesA = matrixA.size() * sizeof(InputT);
-    assert(hipMalloc(&d_a, bytesA) == hipSuccess);
-    assert(hipMemcpy(d_a, matrixA.data(), bytesA, hipMemcpyHostToDevice) == hipSuccess);
-
-    InputT*      d_b;
     const size_t bytesB = matrixB.size() * sizeof(InputT);
-    assert(hipMalloc(&d_b, bytesB) == hipSuccess);
-    assert(hipMemcpy(d_b, matrixB.data(), bytesB, hipMemcpyHostToDevice) == hipSuccess);
-
-    ComputeT*    d_c;
     const size_t bytesC = matrixC.size() * sizeof(ComputeT);
+    const size_t bytesD = matrixD.size() * sizeof(ComputeT);
+
+    assert(hipMalloc(&d_a, bytesA) == hipSuccess);
+    assert(hipMalloc(&d_b, bytesB) == hipSuccess);
     assert(hipMalloc(&d_c, bytesC) == hipSuccess);
+    assert(hipMalloc(&d_d, bytesD) == hipSuccess);
+
+    assert(hipMemcpy(d_a, matrixA.data(), bytesA, hipMemcpyHostToDevice) == hipSuccess);
+    assert(hipMemcpy(d_b, matrixB.data(), bytesB, hipMemcpyHostToDevice) == hipSuccess);
     assert(hipMemcpy(d_c, matrixC.data(), bytesC, hipMemcpyHostToDevice) == hipSuccess);
+    assert(hipMemcpy(d_d, matrixD.data(), bytesD, hipMemcpyHostToDevice) == hipSuccess);
 
     auto gridDim
-        = dim3(ceilDiv(M, BlockM * TBlockX / AMDGCN_WAVE_SIZE), ceilDiv(N, BlockN * TBlockY));
+        = dim3(ceilDiv(m, BlockM * TBlockX / AMDGCN_WAVE_SIZE), ceilDiv(n, BlockN * TBlockY));
 
     auto blockDim = dim3(TBlockX, TBlockY);
 
@@ -157,24 +167,32 @@ __host__ void test_mma_sync_h(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha
     assert(hipEventCreate(&startEvent) == hipSuccess);
     assert(hipEventCreate(&stopEvent) == hipSuccess);
 
-    hipExtLaunchKernelGGL(
-        (test_mma_sync_d<BlockM, BlockN, BlockK, InputT, ComputeT, LayoutA, LayoutB, LayoutC>),
-        gridDim,
-        blockDim,
-        max(BlockM * blockDim.y, BlockN * blockDim.x / AMDGCN_WAVE_SIZE) * BlockK
-            * sizeof(InputT), // sharedMemBytes
-        0, // stream
-        startEvent, // Event start
-        stopEvent, // event stop
-        0, // flags
-        d_a,
-        d_b,
-        d_c,
-        M,
-        N,
-        K,
-        alpha,
-        beta);
+    hipExtLaunchKernelGGL((test_mma_sync_d<BlockM,
+                                           BlockN,
+                                           BlockK,
+                                           InputT,
+                                           ComputeT,
+                                           LayoutA,
+                                           LayoutB,
+                                           LayoutC,
+                                           LayoutD>),
+                          gridDim,
+                          blockDim,
+                          max(BlockM * blockDim.y, BlockN * blockDim.x / AMDGCN_WAVE_SIZE) * BlockK
+                              * sizeof(InputT), // sharedMemBytes
+                          0, // stream
+                          startEvent, // Event start
+                          stopEvent, // event stop
+                          0, // flags
+                          m,
+                          n,
+                          k,
+                          d_a,
+                          d_b,
+                          d_c,
+                          d_d,
+                          alpha,
+                          beta);
 
     auto elapsedTimeMs = 0.0f;
     assert(hipEventSynchronize(stopEvent) == hipSuccess);
@@ -183,30 +201,52 @@ __host__ void test_mma_sync_h(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha
     assert(hipEventDestroy(stopEvent) == hipSuccess);
 
     auto peakGFlops = calculatePeakGFlops<InputT, Mi100>(1087);
-    auto gFlops     = calculateGFlops(M, N, K, elapsedTimeMs);
+    auto gFlops     = calculateGFlops(m, n, k, elapsedTimeMs);
     auto efficiency = gFlops / peakGFlops * 100.0f;
-    std::cout << "Elapsed time (ms): " << elapsedTimeMs << " Speed (Gflops/s): " << gFlops
-              << " Efficiency (%): " << efficiency << std::endl;
+    std::cout << elapsedTimeMs << ", " << static_cast<double>(2.0 * m * n * k) / 1000000000.0
+              << ", " << gFlops << ", " << efficiency << std::endl;
 
 #ifdef WMMA_VALIDATE_TESTS
 
-    assert(hipMemcpy(matrixC.data(), d_c, bytesC, hipMemcpyDeviceToHost) == hipSuccess);
+    assert(hipMemcpy(matrixD.data(), d_d, bytesD, hipMemcpyDeviceToHost) == hipSuccess);
 
-    // Validate
-    std::vector<ComputeT> matrixC_r(M * N, 0.0f);
-    gemmCPU<LayoutA, LayoutB, LayoutC, InputT, ComputeT>(
-        matrixA, matrixB, matrixC_r, M, N, K, alpha, beta);
-    compareEqual<ComputeT, ComputeT, LayoutC, LayoutC>(matrixC, matrixC_r, M, N);
+    std::cout << "TBlkX, TBlkY, BlkM, BlkN, BlkK, MatM, MatN, MatK, alpha, lda, ldb, beta, ldc, "
+                 "ldd, LytA_LytB_LytC_LytD, Ti_Tc = "
+              << TBlockX << ", " << TBlockY << ", " << BlockM << ", " << BlockN << ", " << BlockK
+              << ", " << m << ", " << n << ", " << k << ", " << alpha << ", " << lda << ", " << ldb
+              << "," << beta << ", " << ldc << ", " << ldd << ", "
+              << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << "_"
+              << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << "_"
+              << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << "_"
+              << (std::is_same<LayoutD, row_major>::value ? "R" : "C") << ", "
+              << dataTypeToString<InputT>() << "_" << dataTypeToString<ComputeT>() << ", ";
 
-    //MatrixUtil<LayoutC>::print(matrixC, M, N);
-    //MatrixUtil<LayoutC>::print(matrixC_r, M, N);
+    // Init reference data and then validate
+    std::vector<ComputeT> matrixD_ref(m * n, 0.0f);
 
-#endif
+#ifdef WMMA_VALIDATE_WITH_ROCBLAS
+
+    // rocblas matrix C, D always in col_major
+    MatrixUtil<col_major>::fill(matrixC, m, n);
+    gemm_rocBLAS<InputT, ComputeT, LayoutA, LayoutB>(
+        m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
+    compareEqual<ComputeT, ComputeT, LayoutD, col_major>(matrixD, matrixD_ref, m, n);
+
+#else
+
+    gemm_CPU<InputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD>(
+        m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
+    compareEqual<ComputeT, ComputeT, LayoutD, LayoutD>(matrixD, matrixD_ref, m, n);
+
+#endif // WMMA_VALIDATE_WITH_ROCBLAS
+
+#endif // WMMA_VALIDATE_TESTS
 
     // Release device memory
     assert(hipFree(d_a) == hipSuccess);
     assert(hipFree(d_b) == hipSuccess);
     assert(hipFree(d_c) == hipSuccess);
+    assert(hipFree(d_d) == hipSuccess);
 }
 
 template <uint32_t TBlockX,
@@ -311,7 +351,6 @@ inline void test_mma_sync_h_32x32(uint32_t M, uint32_t N, uint32_t K, ComputeT a
     test_mma_sync_h<TBlockX, TBlockY, 32, 32, 32, InputT, ComputeT>(M, N, K, alpha, beta);
     test_mma_sync_h<TBlockX, TBlockY, 32, 32, 64, InputT, ComputeT>(M, N, K, alpha, beta);
     test_mma_sync_h<TBlockX, TBlockY, 32, 32, 128, InputT, ComputeT>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX, TBlockY, 32, 32, 256, InputT, ComputeT>(M, N, K, alpha, beta);
 }
 
 template <uint32_t TBlockX, uint32_t TBlockY, typename InputT, typename ComputeT>
@@ -398,8 +437,9 @@ int main()
     test_mma_sync_h<float16_t, float32_t>();
     test_mma_sync_h<float32_t, float32_t>();
 
-    //test_mma_sync_h<64, 1, 32, 32, 32, float16_t, float32_t>(2048, 2048, 1024, 1.0f, 1.0f);
+    //test_mma_sync_h<64, 4, 32, 32, 128, float32_t, float32_t>(8192, 8192, 8192, 1.0f, 1.0f);
 
-    //test_mma_sync_h<128, 1, 16, 16, 64, float16_t, float32_t, col_major, col_major, col_major>(1024, 2048, 1024, 1.0f, 1.0f);
+    //test_mma_sync_h<64, 2, 16, 16, 64, float16_t, float32_t, row_major, row_major, col_major>(1024, 2048, 1024, 1.0f, 1.0f);
+    //test_mma_sync_h<64, 1, 16, 16, 16, float16_t, float32_t, row_major, row_major, row_major>(16, 16, 16, 1.0f, 1.0f);
     return 0;
 }
