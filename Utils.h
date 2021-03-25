@@ -177,10 +177,10 @@ struct MfmaPerfTraits<float32_t>
 };
 
 template <typename DataT>
-struct PerfTraits;
+struct ALUPerfTraits;
 
 template <>
-struct PerfTraits<float16_t>
+struct ALUPerfTraits<float16_t>
 {
     enum : uint32_t
     {
@@ -189,7 +189,7 @@ struct PerfTraits<float16_t>
 };
 
 template <>
-struct PerfTraits<float32_t>
+struct ALUPerfTraits<float32_t>
 {
     enum : uint32_t
     {
@@ -211,21 +211,50 @@ struct HardwareTraits<Mi100>
     };
 };
 
-template <typename DataT,
-          typename GfxArch,
-          template <typename> class PerformanceTraits = MfmaPerfTraits>
-inline double calculatePeakGFlops(uint32_t freqMHz)
+inline double calculateAccumGFlops(uint32_t m, uint32_t n, uint32_t k)
 {
-    auto basePeakGFlops
-        = static_cast<double>(64.0 * HardwareTraits<GfxArch>::CuCount * freqMHz) / 1000.0;
-    auto multiplier = (double)(PerformanceTraits<DataT>::Multiplier);
-    return multiplier * basePeakGFlops;
+    constexpr double flopsPerAccum = 2.0;
+    return flopsPerAccum * static_cast<double>(m) * static_cast<double>(n) * static_cast<double>(k)
+           / 1000000000.0;
 }
 
-inline double calculateGFlops(uint32_t M, uint32_t N, uint32_t K, double elapsedTimeMs)
+inline double calculateBlendGFlops(uint32_t m, uint32_t n, uint32_t k)
 {
-    constexpr double flopsPerMac = 2.0;
-    return static_cast<double>(flopsPerMac * M * N * K) / 1000000.0 / elapsedTimeMs;
+    constexpr double flopsPerBlend = 3.0;
+    return flopsPerBlend * static_cast<double>(m) * static_cast<double>(n) / 1000000000.0;
+}
+
+inline double calculateTotalGFlops(uint32_t m, uint32_t n, uint32_t k)
+{
+    return calculateAccumGFlops(m, n, k) + calculateBlendGFlops(m, n, k);
+}
+
+inline double calculateGFlopsPerSec(uint32_t m, uint32_t n, uint32_t k, double elapsedTimeMs)
+{
+    return calculateTotalGFlops(m, n, k) / elapsedTimeMs * 1000.0;
+}
+
+template <typename InputT,
+          typename ComputeT,
+          typename GfxArch,
+          template <typename> class AccumPerfTraits = MfmaPerfTraits,
+          template <typename> class BlendPerfTraits = ALUPerfTraits>
+inline double calculatePeakGFlopsPerSec(uint32_t M, uint32_t N, uint32_t K, uint32_t freqMHz)
+{
+    auto accumGFlops = calculateAccumGFlops(M, N, K);
+    auto blendGFlops = calculateBlendGFlops(M, N, K);
+    auto totalGFlops = accumGFlops + blendGFlops;
+
+    auto accumMultiplier = static_cast<double>(AccumPerfTraits<InputT>::Multiplier);
+    auto blendMultiplier = static_cast<double>(BlendPerfTraits<ComputeT>::Multiplier);
+
+    auto basePeakGFlops
+        = static_cast<double>(64.0 * HardwareTraits<GfxArch>::CuCount * freqMHz) / 1000.0;
+
+    return (accumGFlops / totalGFlops * accumMultiplier * basePeakGFlops)
+           + // Portion of peak flops in accumulation
+           (blendGFlops / totalGFlops * blendMultiplier
+            * basePeakGFlops); // Portion of peak flops in blending
 }
 
 template <typename DataT>
