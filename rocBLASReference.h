@@ -200,6 +200,7 @@ void gemm_rocBLAS(uint32_t        m,
     CHECK_HIP_ERROR(hipFree(da));
     CHECK_HIP_ERROR(hipFree(db));
     CHECK_HIP_ERROR(hipFree(dc));
+    CHECK_HIP_ERROR(hipFree(dd));
     CHECK_ROCBLAS_ERROR(rocblas_destroy_handle(handle));
 }
 
