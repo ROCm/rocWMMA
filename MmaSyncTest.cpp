@@ -1,6 +1,7 @@
 #include <hip/hip_ext.h>
 #include <hip/hip_runtime.h>
 
+#include "Performance.h"
 #include "Utils.h"
 #include "WMMA.h"
 
