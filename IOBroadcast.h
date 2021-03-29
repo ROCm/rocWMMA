@@ -11,46 +11,44 @@ struct PackedBroadcast;
 template <>
 struct PackedBroadcast<float16_t>
 {
-    using Traits = Pack<float16_t>::Traits;
+    using Packer = Pack<float16_t, 2>;
+    using Traits = typename Packer::Traits;
 
     __device__ static inline auto exec(float16_t input) -> typename Traits::OutputT
     {
-        using OutputT   = typename Traits::OutputT;
-        using UnpackedT = typename Traits::UnpackedT;
+        using InputT = typename Traits::InputT;
 
-        VecT<UnpackedT, 2> f16Vec;
+        InputT f16Vec;
         f16Vec[0] = input;
         f16Vec[1] = input;
 
-        return OutputT(*reinterpret_cast<typename OutputT::VecType*>(&(f16Vec.v())));
+        return Packer::exec(f16Vec);
     }
 };
 
 template <>
 struct PackedBroadcast<float32_t>
 {
-    using Traits = Pack<float32_t>::Traits;
+    using Packer = Pack<float32_t, 1>;
+    using Traits = typename Packer::Traits;
 
     __device__ static inline auto exec(float32_t input) -> typename Traits::OutputT
     {
-        return typename Traits::OutputT(input);
+        using InputT = typename Traits::InputT;
+        return Packer::exec(InputT(input));
     }
 };
 
 template <typename DataT, uint32_t PackedRegisterCount>
 struct PackedBroadcastRegs
 {
-    struct Traits
-    {
-        using Broadcaster = PackedBroadcast<DataT>;
-        using PackedT     = PackedType<DataT>;
-        using OutputT     = VecT<PackedT, PackedRegisterCount>;
-    };
+    using Broadcaster = PackedBroadcast<DataT>;
+    using Traits =
+        typename Pack<DataT, PackedRegisterCount * Broadcaster::Traits::PackRatio>::Traits;
 
     __device__ static inline auto exec(DataT input) -> typename Traits::OutputT
     {
-        using Broadcaster = typename Traits::Broadcaster;
-        using OutputT     = typename Traits::OutputT;
+        using OutputT = typename Traits::OutputT;
 
         OutputT result;
         auto    it = result.begin();
