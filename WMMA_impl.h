@@ -263,11 +263,10 @@ namespace wmma
 
                 using MappingUtil
                     = MappingUtil<FragAT::leadingDim(), FragAT::kDim(), InputT, LayoutA>;
-                auto     waveCoord       = MappingUtil::waveCoord(); // Local to workgroup
-                uint32_t competingWaveId = std::get<0>(waveCoord);
 
-                auto ldsOffset = std::make_pair(competingWaveId * FragAT::leadingDim(), 0);
-                auto ldsAddr   = MappingUtil::dataCoord(localMemPtr, FragAT::kDim(), ldsOffset);
+                auto ldsAddr = localMemPtr
+                               + std::get<0>(MappingUtil::waveCoord()) * FragAT::leadingDim()
+                                     * FragAT::kDim();
 
                 StoreA::exec(ldsAddr, UnpackA::exec(*a), FragAT::kDim());
                 __syncthreads();
@@ -290,21 +289,15 @@ namespace wmma
 
                 using MappingUtil
                     = MappingUtil<FragBT::leadingDim(), FragBT::kDim(), InputT, LayoutB>;
-                auto     waveCoord       = MappingUtil::waveCoord(); // Local to workgroup
-                uint32_t competingWaveId = std::get<1>(waveCoord);
 
-                using WaveSpace   = _MappingUtil::WaveSpace;
-                auto workgroupDim = WaveSpace::workgroupDim();
-                //auto ldsSize = std::make_pair(FragBT::kDim(), std::get<1>(workgroupDim) * FragBT::leadingDim());
-                auto ldl = FragBT::kDim();
+                auto ldsAddr = localMemPtr
+                               + std::get<1>(MappingUtil::waveCoord()) * FragBT::leadingDim()
+                                     * FragBT::kDim();
 
-                auto ldsOffset = std::make_pair(0, competingWaveId * FragBT::leadingDim());
-                auto ldsAddr   = MappingUtil::dataCoord(localMemPtr, ldl, ldsOffset);
-
-                StoreB::exec(ldsAddr, UnpackB::exec(*b), ldl);
+                StoreB::exec(ldsAddr, UnpackB::exec(*b), FragBT::kDim());
                 __syncthreads();
 
-                BFmt = PackB::exec(LoadB::exec(ldsAddr, ldl));
+                BFmt = PackB::exec(LoadB::exec(ldsAddr, FragBT::kDim()));
                 __syncthreads();
             }
             else
@@ -337,59 +330,50 @@ namespace wmma
                       "Must provide layout information. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
-        using FragT = typename std::decay<decltype(frag)>::type;
-
-        using Config = OptConfig<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
-
-        using CoopLoader = typename Config::CoopLoader;
-        using CoopStorer = typename Config::CoopStorer;
-
+        using FragT       = typename std::decay<decltype(frag)>::type;
+        using MappingUtil = MappingUtil<FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+        using Config   = OptConfig<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
         using Packer   = typename Config::Packer;
         using Unpacker = typename Config::Unpacker;
 
-        using FullLoader = typename Config::LocalLoader;
+        // Load a portion of the global data
+        //using CoopLoader = typename Config::CoopLoader;
+        using CoopLoader = typename Config::GlobalLoader;
+        typename CoopLoader::Traits::OutputT blockRegs;
+        blockRegs = CoopLoader::exec(data, ldm);
 
-        static_assert(
-            std::is_same<typename FragT::Traits::StorageT, typename Packer::Traits::OutputT>::value,
-            "Fragment storage type and packed types do not match");
-
+        // Dump the partial global data to LDS
         HIP_DYNAMIC_SHARED(DataT, localMemPtr);
-        using MappingUtil  = MappingUtil<FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+        using CoopStorer = typename Config::CoopStorer;
+        auto ldl         = -1;
+        if(std::is_same<MatrixT, matrix_a>::value)
+        {
+            ldl = std::is_same<DataLayout, row_major>::value ? BlockK : BlockM;
+        }
+        else if(std::is_same<MatrixT, matrix_b>::value)
+        {
+            ldl = std::is_same<DataLayout, row_major>::value ? BlockN : BlockK;
+        }
+        else if(std::is_same<MatrixT, accumulator>::value)
+        {
+            ldl = std::is_same<DataLayout, row_major>::value ? BlockN : BlockM;
+        }
         auto     waveCoord = MappingUtil::waveCoord(); // Local to workgroup
         uint32_t competingWaveId
             = (std::is_same<MatrixT, matrix_a>::value ? std::get<0>(waveCoord)
                                                       : std::get<1>(waveCoord));
-
-        auto ldsBaseOffset = FragT::leadingDim() * FragT::kDim() * competingWaveId;
-
-        // Cooperative load will split the global load amongst all waves in the workgroup
-        // because they will all be using the same tile.
-        typename FragT::Traits::StorageT temp;
-        CoopLoader::exec(temp, data, ldm);
-
-        CoopStorer::exec(localMemPtr + ldsBaseOffset, temp, FragT::leadingDim());
-
+        assert(ldl == 16);
+        assert(competingWaveId * FragT::leadingDim() * FragT::kDim() == 0);
+        auto ldsAddr = localMemPtr + competingWaveId * FragT::leadingDim() * FragT::kDim();
+        CoopStorer::exec(ldsAddr, blockRegs, ldl);
         __syncthreads();
-        *frag = Packer::exec(FullLoader::exec(localMemPtr + ldsBaseOffset, FragT::leadingDim()));
+
+        // Load the full block from LDS
+        using FullLoader = typename Config::LocalLoader;
+        *frag            = Packer::exec(FullLoader::exec(ldsAddr, ldl));
 
         __syncthreads();
     }
-
-    // template <uint32_t BlockM,
-    //           uint32_t BlockN,
-    //           uint32_t BlockK,
-    //           typename InputT,
-    //           typename ComputeT,
-    //           typename LayoutA,
-    //           typename LayoutB>
-    // __device__ void mma_sync(fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>&           d,
-    //                          fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA> const& a,
-    //                          fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB> const& b,
-    //                          fragment<accumulator, BlockM, BlockN, BlockK, ComputeT> const&     c)
-    // {
-    //     using MFMA = amdgcn_mfma_MxNxK<InputT, ComputeT, BlockM, BlockN, BlockK>;
-    //     (*d)       = MFMA::exec((*a), (*b), (*c));
-    // }
 
 } // namespace wmma
 
