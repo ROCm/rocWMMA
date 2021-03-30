@@ -9,70 +9,74 @@ AMD's C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications 
 
 ## Currently supported configurations (ongoing)
 
-- Matrix Layouts <LayoutA, LayoutB, LayoutAcc> (N = col major, T = row major) =
-    <N, N, N>
-    <N, T, N>
-    <T, N, N>
-    <T, T, N>
-    <N, N, T>
-    <N, T, T>
-    <T, N, T>
-    <T, T, T>
+- Matrix Layout <LayoutA, LayoutB, Layout C, LayoutD> (N = col major, T = row major)  
+    <N, N, N, N>  
+    <N, T, N, N>  
+    <T, N, N, N>  
+    <T, T, N, N>  
+    <N, N, T, T>  
+    <N, T, T, T>  
+    <T, N, T, T>  
+    <T, T, T, T>  
 
-- Thread Block Sizes <TBlockX, TBlockY> =
-**Note: TBlockX must be a multiple of 64 **
-    <64, 1>
-    <64, 2>
-    <64, 4>
-    <128, 1>
-    <128, 2>
-    <128, 4>
-    <256, 1>
-    <256, 2>
-    <256, 4>
+- Thread Block Sizes <TBlockX, TBlockY> =  
+**Note: TBlockX must be a multiple of 64 **  
+    <64, 1>  
+    <64, 2>  
+    <64, 4>  
+    <128, 1>  
+    <128, 2>  
+    <128, 4>  
+    <256, 1>  
+    <256, 2>  
+    <256, 4>  
 
-- Data Types <Ti / To / Tc> = <Input type / Output Type / Compute Type>
-* <f16 / f32 / f32>
-    - MFMA Block Size <BlockM, BlockN, BlockK> =
-    <16, 16, 16>
-    <16, 16, 32>
-    <16, 16, 64>
-    <16, 16, 128>
-    <16, 16, 256>
-    <16, 16, 512>
-    <32, 32, 8>
-    <32, 32, 16>
-    <32, 32, 32>
-    <32, 32, 64>
-    <32, 32, 128>
+- Data Types <Ti / To / Tc> = <Input type / Output Type / Compute Type> 
 
-* <f32 / f32 / f32>
-    - MFMA Block Size <BlockM, BlockN, BlockK> =
-    <16, 16, 4>
-    <16, 16, 8>
-    <16, 16, 16>
-    <16, 16, 32>
-    <16, 16, 64>
-    <16, 16, 128>
-    <16, 16, 256>
-    <16, 16, 512>
-    <32, 32, 2>
-    <32, 32, 4>
-    <32, 32, 8>
-    <32, 32, 16>
-    <32, 32, 32>
-    <32, 32, 64>
-    <32, 32, 128>
+    * <f16 / f16 / f32> - MFMA Block Size <BlockM, BlockN, BlockK> =  
+    <16, 16, 16>  
+    <16, 16, 32>  
+    <16, 16, 64>  
+    <16, 16, 128>  
+    <16, 16, 256>  
+    <16, 16, 512>  
+    <32, 32, 8>  
+    <32, 32, 16>  
+    <32, 32, 32>  
+    <32, 32, 64>  
+    <32, 32, 128>  
+    
+    * <f16 / f32 / f32> - MFMA Block Size <BlockM, BlockN, BlockK> =  
+    <16, 16, 16>  
+    <16, 16, 32>  
+    <16, 16, 64>  
+    <16, 16, 128>  
+    <16, 16, 256>  
+    <16, 16, 512>  
+    <32, 32, 8>  
+    <32, 32, 16>  
+    <32, 32, 32>  
+    <32, 32, 64>  
+    <32, 32, 128>  
 
-    - Matrix Layout <LayoutA, LayoutB, Layout C, LayoutD> (N = col major, T = row major)
-    <N, N, N, N>
-    <N, T, N, N>
-    <T, N, N, N>
-    <T, T, N, N>
-    <N, N, T, T>
-    <N, T, T, T>
-    <T, N, T, T>
-    <T, T, T, T>
+    * <f32 / f32 / f32> - MFMA Block Size <BlockM, BlockN, BlockK> =  
+    <16, 16, 4>  
+    <16, 16, 8>  
+    <16, 16, 16>  
+    <16, 16, 32>  
+    <16, 16, 64>  
+    <16, 16, 128>  
+    <16, 16, 256>  
+    <16, 16, 512>  
+    <32, 32, 2>  
+    <32, 32, 4>  
+    <32, 32, 8>  
+    <32, 32, 16>  
+    <32, 32, 32>  
+    <32, 32, 64>  
+    <32, 32, 128>  
+
+
 
 ## Functions
 ### fill_fragment
@@ -138,7 +142,7 @@ make LoadStoreMatrixSyncTest -j4
 
 ### MmaSyncTest
 Implements a simple GEMM using wmma for all supported configurations. Validates on CPU algorithm or rocBLAS if available. Also provides benchmarking data on GEMM performance.
-Build and run (CPU validation + benchmark): **Warning CPU validation can be very slow**
+Build and run (CPU validation + benchmark): **Warning CPU validation can be very slow especially for large matrices**
 ```
 make MmaSyncTest-cpu -j4
 ./MmaSyncTest-cpu
@@ -146,7 +150,9 @@ make MmaSyncTest-cpu -j4
 
 Build and run (rocBLAS validation + benchmark):
 ```
-ROCBLAS_DIR=<path_to_rocblas_dir> make MmaSyncTest-rocBLAS -j4
+export ROCBLAS_DIR=<path_to_rocblas_dir>  
+make MmaSyncTest-rocBLAS -j4  
+export LD_LIBRARY_PATH=ROCBLAS_DIR/lib:$LD_LIBRARY_PATH
 ./MmaSyncTest-rocBLAS
 ```
 
