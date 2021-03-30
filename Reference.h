@@ -5,20 +5,21 @@
 #include <type_traits>
 
 template <typename InputT,
+          typename OutputT,
           typename ComputeT,
           typename LayoutA,
           typename LayoutB,
           typename LayoutC,
           typename LayoutD>
-void gemm_CPU(uint32_t        m,
-              uint32_t        n,
-              uint32_t        k,
-              InputT const*   a,
-              InputT const*   b,
-              ComputeT const* c,
-              ComputeT*       d,
-              ComputeT        alpha,
-              ComputeT        beta)
+void gemm_CPU(uint32_t       m,
+              uint32_t       n,
+              uint32_t       k,
+              InputT const*  a,
+              InputT const*  b,
+              OutputT const* c,
+              OutputT*       d,
+              ComputeT       alpha,
+              ComputeT       beta)
 {
     int lda = std::is_same<LayoutA, row_major>::value ? k : m;
     int ldb = std::is_same<LayoutB, row_major>::value ? n : k;
@@ -44,7 +45,8 @@ void gemm_CPU(uint32_t        m,
                 accum += static_cast<ComputeT>(a[aIndex(i, h, lda)])
                          * static_cast<ComputeT>(b[bIndex(h, j, ldb)]);
             }
-            d[dIndex(i, j, ldd)] = alpha * accum + beta * c[cIndex(i, j, ldc)];
+            d[dIndex(i, j, ldd)] = static_cast<OutputT>(
+                alpha * accum + beta * static_cast<ComputeT>(c[cIndex(i, j, ldc)]));
         }
     }
 }
