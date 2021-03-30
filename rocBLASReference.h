@@ -103,27 +103,27 @@ struct rocblas_layout<col_major>
 * Non-transpose (N) is col-major
 * Transpose (T) is row-major
 */
-template <typename InputT, typename ComputeT, typename LayoutA, typename LayoutB>
-void gemm_rocBLAS(uint32_t        m,
-                  uint32_t        n,
-                  uint32_t        k,
-                  InputT const*   ha,
-                  InputT const*   hb,
-                  ComputeT const* hc,
-                  ComputeT*       hd,
-                  ComputeT        alpha,
-                  ComputeT        beta)
+template <typename InputT, typename OutputT, typename ComputeT, typename LayoutA, typename LayoutB>
+void gemm_rocBLAS(uint32_t       m,
+                  uint32_t       n,
+                  uint32_t       k,
+                  InputT const*  ha,
+                  InputT const*  hb,
+                  OutputT const* hc,
+                  OutputT*       hd,
+                  ComputeT       alpha,
+                  ComputeT       beta)
 {
     rocblas_datatype a_type       = rocblas_types<InputT>::type();
     rocblas_datatype b_type       = rocblas_types<InputT>::type();
-    rocblas_datatype c_type       = rocblas_types<ComputeT>::type();
-    rocblas_datatype d_type       = rocblas_types<ComputeT>::type();
+    rocblas_datatype c_type       = rocblas_types<OutputT>::type();
+    rocblas_datatype d_type       = rocblas_types<OutputT>::type();
     rocblas_datatype compute_type = rocblas_types<ComputeT>::type();
 
     using a_t = typename rocblas_types<InputT>::DataType;
     using b_t = typename rocblas_types<InputT>::DataType;
-    using c_t = typename rocblas_types<ComputeT>::DataType;
-    using d_t = typename rocblas_types<ComputeT>::DataType;
+    using c_t = typename rocblas_types<OutputT>::DataType;
+    using d_t = typename rocblas_types<OutputT>::DataType;
 
     size_t size_a = m * k;
     size_t size_b = k * n;
