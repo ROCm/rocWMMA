@@ -1,6 +1,6 @@
 CXX=/opt/rocm/hip/bin/hipcc
 
-CXXFLAGS=-I/opt/rocm/hip/include/ -march=native -O2 -std=c++14
+CXXFLAGS=-I/opt/rocm/hip/include/ -march=native -O3 -std=c++14
 ALL = FillFragmentTest LoadStoreMatrixSyncTest MmaSyncTest-bench MmaSyncTest-cpu
 
 all: $(ALL)
