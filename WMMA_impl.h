@@ -118,6 +118,10 @@ namespace wmma
         return Traits::RegisterCount;
     }
 
+    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename LayoutT>
+    class __align__(4) fragment<MatrixT, BlockM, BlockN, BlockK, __half, LayoutT>
+        : public fragment<MatrixT, BlockM, BlockN, BlockK, float16_t, LayoutT>{};
+
     template <typename MatrixT,
               uint32_t BlockM,
               uint32_t BlockN,

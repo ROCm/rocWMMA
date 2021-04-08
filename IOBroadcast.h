@@ -27,6 +27,24 @@ struct PackedBroadcast<float16_t>
 };
 
 template <>
+struct PackedBroadcast<__half>
+{
+    using Packer = Pack<__half, 2>;
+    using Traits = typename Packer::Traits;
+
+    __device__ static inline auto exec(__half input) -> typename Traits::OutputT
+    {
+        using InputT = typename Traits::InputT;
+
+        InputT f16Vec;
+        f16Vec[0] = input;
+        f16Vec[1] = input;
+
+        return Packer::exec(f16Vec);
+    }
+};
+
+template <>
 struct PackedBroadcast<float32_t>
 {
     using Packer = Pack<float32_t, 1>;

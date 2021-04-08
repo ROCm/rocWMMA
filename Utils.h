@@ -2,6 +2,7 @@
 #define WMMA_UTILS_H
 
 #include <assert.h>
+#include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 #include <iostream>
 #include <set>
@@ -21,24 +22,81 @@ static constexpr intT1 ceilDiv(const intT1 numerator, const intT2 divisor)
     return (numerator + divisor - 1) / divisor;
 }
 
-template <typename DataT>
-struct MachineEpsilon
+struct Fp16Bits
 {
-    static constexpr DataT value()
+    union
     {
-        return std::numeric_limits<DataT>::epsilon();
+        uint16_t      i16;
+        float16_t     f16;
+        __half        h16;
+        unsigned char c16[16];
+    };
+    constexpr Fp16Bits(uint16_t initVal)
+        : i16(initVal)
+    {
+    }
+    constexpr Fp16Bits(float16_t initVal)
+        : f16(initVal)
+    {
+    }
+    constexpr Fp16Bits(__half initVal)
+        : h16(initVal)
+    {
     }
 };
 
-template <>
-struct MachineEpsilon<float16_t>
+namespace std
 {
-    static float16_t value()
+    template <>
+    __host__ __device__ constexpr float16_t numeric_limits<float16_t>::epsilon() noexcept
     {
-        uint16_t eps = 0x1400;
-        return *reinterpret_cast<float16_t*>(&eps);
+        ::Fp16Bits eps(static_cast<uint16_t>(0x1400));
+        return eps.f16;
     }
-};
+
+    template <>
+    __host__ __device__ constexpr float16_t numeric_limits<float16_t>::min() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x0400));
+        return eps.f16;
+    }
+
+    template <>
+    __host__ __device__ constexpr __half numeric_limits<__half>::epsilon() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x1400));
+        return eps.h16;
+    }
+
+    template <>
+    __host__ __device__ constexpr __half numeric_limits<__half>::min() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x0400));
+        return eps.h16;
+    }
+}
+
+// Needed for compareEqual
+__host__ inline bool operator==(const __half& x, const __half& y)
+{
+    auto absDiff = std::fabs(__half2float(x) - __half2float(y));
+    auto absAdd  = std::fabs(__half2float(x) + __half2float(y));
+    return absDiff <= __half2float(std::numeric_limits<__half>::epsilon()) * absAdd * 2.0f
+           || absDiff < __half2float(std::numeric_limits<__half>::min());
+}
+
+__host__ inline bool operator!=(const __half& x, const __half& y)
+{
+    return !(x == y);
+}
+
+// Needed for MatrixUtil::fill
+__host__ inline __half operator-(const __half& x)
+{
+    Fp16Bits fp16(x);
+    fp16.i16 = (~fp16.i16 & 0x8000) | fp16.i16; // Flip sign
+    return fp16.h16;
+}
 
 template <typename Layout>
 struct MatrixUtil
@@ -85,7 +143,7 @@ struct MatrixUtil
                 // Count up in integers, in ascending order for each row.
                 auto value = (i * n + j) % 13;
                 auto idx   = index(i, j, ld);
-                mat[idx]   = value % 2 ? -static_cast<DataT>(value) : static_cast<DataT>(value);
+                mat[idx]   = (value % 2) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
             }
         }
     }
@@ -112,6 +170,11 @@ void compareEqual(
 
     double max_relative_error = 0.0;
 
+    // Some types don't have direct conversion to double.
+    // Convert to float first then to double.
+    auto toDoubleA = [](TypeA const& val) { return static_cast<double>(static_cast<float>(val)); };
+    auto toDoubleB = [](TypeB const& val) { return static_cast<double>(static_cast<float>(val)); };
+
 #pragma omp parallel for
     for(int i = 0; i < M; ++i) // Row
     {
@@ -121,7 +184,9 @@ void compareEqual(
             auto indexB = std::is_same<LayoutB, row_major>::value ? (i * ldb + j) : (i + j * ldb);
 
             auto relative_error
-                = a[indexA] != 0 ? fabs(double(a[indexA] - b[indexB]) / double(a[indexA])) : 0.0;
+                = (a[indexA] != static_cast<TypeA>(0))
+                      ? fabs((toDoubleA(a[indexA]) - toDoubleB(b[indexB])) / toDoubleA(a[indexA]))
+                      : 0.0;
             if(relative_error > max_relative_error)
             {
                 max_relative_error = relative_error;
@@ -129,7 +194,7 @@ void compareEqual(
         }
     }
 
-    auto eps = MachineEpsilon<TypeA>::value();
+    auto eps = toDoubleA(std::numeric_limits<TypeA>::epsilon());
     if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
     {
         std::cout << "FAIL: ";
@@ -151,17 +216,23 @@ void compareEqual(
     double   max_relative_error = 0.0;
     uint32_t numElements        = M * N;
 
+    // Some types don't have direct conversion to double.
+    // Convert to float first then to double.
+    auto toDouble = [](DataT const& val) { return static_cast<double>(static_cast<float>(val)); };
+
 #pragma omp parallel for
     for(int i = 0; i < numElements; ++i)
     {
-        auto relative_error = a[i] != 0 ? fabs(double(a[i] - b[i]) / double(a[i])) : 0.0;
+        auto relative_error = a[i] != static_cast<DataT>(0)
+                                  ? fabs((toDouble(a[i]) - toDouble(b[i])) / toDouble(a[i]))
+                                  : 0.0;
         if(relative_error > max_relative_error)
         {
             max_relative_error = relative_error;
         }
     }
 
-    auto eps = MachineEpsilon<DataT>::value();
+    auto eps = toDouble(std::numeric_limits<DataT>::epsilon());
     if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
     {
         std::cout << "FAIL: ";
