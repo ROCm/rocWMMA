@@ -1,13 +1,13 @@
 #ifndef WMMA_UTILS_H
 #define WMMA_UTILS_H
 
+#include <array>
 #include <assert.h>
+#include <iostream>
+#include <vector>
+
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
-#include <iostream>
-#include <set>
-#include <tuple>
-#include <vector>
 
 #include "Constants.h"
 #include "Types.h"
@@ -21,6 +21,8 @@ static constexpr intT1 ceilDiv(const intT1 numerator, const intT2 divisor)
 {
     return (numerator + divisor - 1) / divisor;
 }
+
+#if __HCC_OR_HIP_CLANG__
 
 struct Fp16Bits
 {
@@ -45,6 +47,7 @@ struct Fp16Bits
     }
 };
 
+// Define std::numeric_limits<float16_t/__half> functions that we need for validation
 namespace std
 {
     template <>
@@ -76,6 +79,8 @@ namespace std
     }
 }
 
+// Define host side __half operators that we need for validation
+
 // Needed for compareEqual
 __host__ inline bool operator==(const __half& x, const __half& y)
 {
@@ -97,6 +102,8 @@ __host__ inline __half operator-(const __half& x)
     fp16.i16 = (~fp16.i16 & 0x8000) | fp16.i16; // Flip sign
     return fp16.h16;
 }
+
+#endif // #if __HCC_OR_HIP_CLANG__
 
 template <typename Layout>
 struct MatrixUtil
@@ -248,6 +255,10 @@ template <typename DataT>
 constexpr const char* dataTypeToString()
 {
     if(std::is_same<DataT, float16_t>::value)
+    {
+        return "f16";
+    }
+    else if(std::is_same<DataT, __half>::value)
     {
         return "f16";
     }

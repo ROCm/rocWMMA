@@ -48,7 +48,7 @@ struct Pack
         using OutputT = typename Traits::OutputT;
 
         return OutputT(
-            *reinterpret_cast<typename OutputT::VecType*>(&(const_cast<InputT&>(input).v())));
+            *reinterpret_cast<typename OutputT::StorageT*>(&(const_cast<InputT&>(input).v)));
     }
 };
 
