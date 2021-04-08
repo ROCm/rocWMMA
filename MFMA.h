@@ -219,11 +219,11 @@ struct amdgcn_mfma_MxNxK
 
         // Propagate individual MFMA types to full block inputs.
         using ARegsT
-            = VecT<typename MFMA::Traits::ARegsT::Type, MfmaCount * MFMA::Traits::ARegsT::size()>;
+            = VecT<typename MFMA::Traits::ARegsT::DataT, MfmaCount * MFMA::Traits::ARegsT::size()>;
         using BRegsT
-            = VecT<typename MFMA::Traits::BRegsT::Type, MfmaCount * MFMA::Traits::BRegsT::size()>;
-        using CRegsT = VecT<typename MFMA::Traits::CRegsT::Type, MFMA::Traits::CRegsT::size()>;
-        using DRegsT = VecT<typename MFMA::Traits::DRegsT::Type, MFMA::Traits::DRegsT::size()>;
+            = VecT<typename MFMA::Traits::BRegsT::DataT, MfmaCount * MFMA::Traits::BRegsT::size()>;
+        using CRegsT = VecT<typename MFMA::Traits::CRegsT::DataT, MFMA::Traits::CRegsT::size()>;
+        using DRegsT = VecT<typename MFMA::Traits::DRegsT::DataT, MFMA::Traits::DRegsT::size()>;
 
         // Sanity checks
         static_assert(BlockK >= MinK, "BlockK is not a minimum of MinK");

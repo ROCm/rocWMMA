@@ -18,7 +18,7 @@ namespace std
 {
     inline ostream& operator<<(ostream& stream, float16_t const& val)
     {
-        return stream << setprecision(6) << static_cast<float>(val);
+        return stream << static_cast<float>(val);
     }
 
     inline ostream& operator<<(ostream& stream, __half const& val)
@@ -27,27 +27,31 @@ namespace std
     }
 } // namespace std
 
-// Vector types
+// Vector internal storage
 template <typename T, int Elements, typename IsNativeType = typename std::is_fundamental<T>::type>
-struct VectorType;
+struct VectorStorage;
 
-// Native types can use vector extension
+// Native types can use explicit vector extension
 template <typename T, int Elements>
-struct VectorType<T, Elements, std::true_type>
+struct VectorStorage<T, Elements, std::true_type>
 {
     using type = T __attribute__((ext_vector_type(Elements)));
 };
 
-// Non-native types can use arrays
+// Non-native types can use std::arrays.
+// std::arrays has the same memory footprint as C-arrays
+// but carry extra useful functionality.
+// This allows us to use non-native data types as "vectors".
 template <typename T, int Elements>
-struct VectorType<T, Elements, std::false_type>
+struct VectorStorage<T, Elements, std::false_type>
 {
     using type = std::array<T, Elements>;
 };
 
+// Only vectorize for elements > 1
 template <typename T, int Elements>
 using _VecT =
-    typename std::conditional<Elements == 1, T, typename VectorType<T, Elements>::type>::type;
+    typename std::conditional<Elements == 1, T, typename VectorStorage<T, Elements>::type>::type;
 
 // Vectors of f16
 using v2_f16_t  = _VecT<float16_t, 2>;
@@ -79,73 +83,53 @@ struct VecT;
 template <typename T, uint32_t VecSize>
 struct __align__(4) VecT
 {
-    using VecType = _VecT<T, VecSize>;
-    using Type    = T;
+    using StorageT = _VecT<T, VecSize>;
+    using DataT    = T;
 
-    union DataT
+    union
     {
-        VecType v; // Vector representation
-        T       e[VecSize]; // Element representation
+        static_assert(sizeof(StorageT) == sizeof(DataT[VecSize]),
+                      "Unable to vectorize with StorageT");
+        StorageT v; // Vector representation
+        DataT    e[VecSize]; // Element array representation
     };
 
-    __device__ VecT()
-    {
-        mData.v = VecType();
-    }
+    __device__ VecT()  = default;
+    __device__ ~VecT() = default;
 
     __device__ VecT(VecT const& other)
     {
-        mData.v = other.mData.v;
+        v = other.v;
     }
 
-    __device__ VecT(VecType const& other)
+    __device__ VecT(StorageT const& other)
     {
-        mData.v = other;
+        v = other;
     }
 
-    __device__ VecT(VecType && other)
+    __device__ VecT(StorageT && other)
     {
-        mData.v = std::move(other);
+        v = std::move(other);
     }
 
-    __device__ T& operator[](uint32_t index)
+    __device__ DataT& operator[](uint32_t index)
     {
-        return mData.e[index];
+        return e[index];
     }
 
-    __device__ VecType& operator*()
+    __device__ StorageT& operator*()
     {
-        return mData.v;
+        return v;
     }
 
-    __device__ VecType& v()
+    __device__ DataT const& operator[](uint32_t index) const
     {
-        return *(*this);
+        return e[index];
     }
 
-    __device__ T& e(uint32_t index)
+    __device__ StorageT const& operator*() const
     {
-        return (*this)[index];
-    }
-
-    __device__ T const& operator[](uint32_t index) const
-    {
-        return mData.e[index];
-    }
-
-    __device__ VecType const& operator*() const
-    {
-        return mData.v;
-    }
-
-    __device__ VecType const& v() const
-    {
-        return *(*this);
-    }
-
-    __device__ T const& e(uint32_t index) const
-    {
-        return (*this)[index];
+        return v;
     }
 
     __device__ constexpr static inline uint32_t size()
@@ -156,7 +140,7 @@ struct __align__(4) VecT
     template <uint32_t SubVecSize>
     struct Iterator
     {
-        using ItVecT = _VecT<T, SubVecSize>;
+        using ItVecT = _VecT<DataT, SubVecSize>;
         enum : uint32_t
         {
             Range = VecSize / SubVecSize
@@ -164,20 +148,20 @@ struct __align__(4) VecT
 
         static_assert(VecSize % SubVecSize == 0, "VecSize not iterable by ItVecSize");
 
-        __device__ Iterator(VecT<T, VecSize>& parent, uint32_t startIndex = 0)
+        __device__ Iterator(VecT<DataT, VecSize>& parent, uint32_t startIndex = 0)
             : mIndex(startIndex)
             , mParent(parent)
         {
         }
 
-        __device__ Iterator(VecT<T, VecSize> const& parent, uint32_t startIndex = 0)
+        __device__ Iterator(VecT<DataT, VecSize> const& parent, uint32_t startIndex = 0)
             : mIndex(startIndex)
-            , mParent(const_cast<VecT<T, VecSize>&>(parent))
+            , mParent(const_cast<VecT<DataT, VecSize>&>(parent))
         {
         }
 
-        int32_t           mIndex = 0;
-        VecT<T, VecSize>& mParent;
+        int32_t               mIndex = 0;
+        VecT<DataT, VecSize>& mParent;
 
         __device__ inline ItVecT const& operator*() const
         {
@@ -252,9 +236,6 @@ struct __align__(4) VecT
     {
         return Iterator<SubVecSize>(*this, Iterator<SubVecSize>::Range);
     }
-
-private:
-    DataT mData;
 };
 
 // V registers

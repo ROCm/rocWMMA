@@ -1,4 +1,5 @@
 #include <hip/hip_ext.h>
+#include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
 #include "Performance.h"
@@ -247,13 +248,24 @@ __host__ void test_mma_sync_h(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha
     // Init reference data and then validate
     std::vector<OutputT> matrixD_ref(m * n, 0.0f);
 
+    // Give more error tolerance to ComputeT = fp16,
+    // due to MFMA output is always fp32. We downcast the MFMA result to fp16, which
+    // will introduce an error compared to native fp16 MAC. The tolerance would be a function
+    // of max / min values and number of operations propagating the error.
+    // Note that integer values between [-2048, 2048 ] are exactly representable by fp16,
+    // and significant rounding errors occur thereafter to the nearest multiple of 2.
+    // The input generator for GEMM uses integer values within a certain range, therefore
+    // FMA operations will be very prone to significant errors.
+    double errorTolerance = std::is_same<ComputeT, float16_t>::value ? 100.0 : 10.0;
+
 #ifdef WMMA_VALIDATE_WITH_ROCBLAS
 
     // rocblas matrix C, D always in col_major
     MatrixUtil<col_major>::fill(matrixC, m, n);
     gemm_rocBLAS<InputT, OutputT, ComputeT, LayoutA, LayoutB>(
         m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
-    compareEqual<OutputT, OutputT, LayoutD, col_major>(matrixD, matrixD_ref, m, n);
+
+    compareEqual<OutputT, OutputT, LayoutD, col_major>(matrixD, matrixD_ref, m, n, errorTolerance);
 
     //MatrixUtil<LayoutD>::print(matrixD, m, n);
     //MatrixUtil<col_major>::print(matrixD_ref, m, n);
@@ -262,7 +274,7 @@ __host__ void test_mma_sync_h(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha
 
     gemm_CPU<InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD>(
         m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
-    compareEqual<OutputT, OutputT, LayoutD, LayoutD>(matrixD, matrixD_ref, m, n);
+    compareEqual<OutputT, OutputT, LayoutD, LayoutD>(matrixD, matrixD_ref, m, n, errorTolerance);
 
 #endif // WMMA_VALIDATE_WITH_ROCBLAS
 
@@ -593,13 +605,18 @@ void test_mma_sync_h()
 
 int main()
 {
+    test_mma_sync_h<float16_t, float16_t, float16_t>();
     test_mma_sync_h<float16_t, float16_t, float32_t>();
     test_mma_sync_h<float16_t, float32_t, float32_t>();
+    test_mma_sync_h<__half, __half, __half>();
+    test_mma_sync_h<__half, __half, float32_t>();
+    test_mma_sync_h<__half, float32_t, float32_t>();
     test_mma_sync_h<float32_t, float32_t, float32_t>();
 
     //test_mma_sync_h<64, 4, 32, 32, 128, float32_t, float32_t>(8192, 8192, 8192, 1.0f, 1.0f);
 
-    //test_mma_sync_h<64, 2, 16, 16, 64, float16_t, float32_t, row_major, row_major, col_major>(1024, 2048, 1024, 1.0f, 1.0f);
-    //test_mma_sync_h<64, 1, 32, 8, 16, float16_t, float16_t, float32_t, row_major, row_major, row_major>(64, 64, 128, 2.0f, 2.0f);
+    //test_mma_sync_h<64, 1, 32, 32, 32, __half, __half, __half, col_major, row_major, row_major>(128, 128, 256, 1.0f, 1.0f);
+    //test_mma_sync_h<64, 1, 32, 32, 32, float16_t, float16_t, float16_t, col_major, row_major, row_major>(32, 32, 32, 1.0f, 1.0f);
+    //test_mma_sync_h<64, 1, 32, 32, 32, float16_t, float16_t, float32_t, row_major, row_major, row_major>(64, 64, 128, 2.0f, 2.0f);
     return 0;
 }

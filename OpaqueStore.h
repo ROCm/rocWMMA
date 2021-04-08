@@ -13,7 +13,7 @@ struct amdgcn_opaque_store
     using StoreT = VecT<typename PackTraits<DataT>::UnpackedT, ElementsPerThread>;
     __device__ static inline void exec(DataT* localPtr, StoreT const& data, index_t offset)
     {
-        *reinterpret_cast<typename StoreT::VecType*>(&(localPtr[offset])) = *data;
+        *reinterpret_cast<typename StoreT::StorageT*>(&(localPtr[offset])) = *data;
     }
 };
 
