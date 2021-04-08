@@ -1,7 +1,10 @@
 #ifndef WMMA_TYPES_H
 #define WMMA_TYPES_H
 
+#include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
+#include <iomanip>
+#include <iostream>
 #include <type_traits>
 
 // General types
@@ -13,16 +16,38 @@ using index_t   = int32_t;
 
 namespace std
 {
-    inline ostream& operator<<(ostream& stream, const float16_t val)
+    inline ostream& operator<<(ostream& stream, float16_t const& val)
     {
-        return stream << static_cast<float>(val);
+        return stream << setprecision(6) << static_cast<float>(val);
+    }
+
+    inline ostream& operator<<(ostream& stream, __half const& val)
+    {
+        return stream << __half2float(val);
     }
 } // namespace std
 
 // Vector types
+template <typename T, int Elements, typename IsNativeType = typename std::is_fundamental<T>::type>
+struct VectorType;
+
+// Native types can use vector extension
+template <typename T, int Elements>
+struct VectorType<T, Elements, std::true_type>
+{
+    using type = T __attribute__((ext_vector_type(Elements)));
+};
+
+// Non-native types can use arrays
+template <typename T, int Elements>
+struct VectorType<T, Elements, std::false_type>
+{
+    using type = std::array<T, Elements>;
+};
+
 template <typename T, int Elements>
 using _VecT =
-    typename std::conditional<Elements == 1, T, T __attribute__((ext_vector_type(Elements)))>::type;
+    typename std::conditional<Elements == 1, T, typename VectorType<T, Elements>::type>::type;
 
 // Vectors of f16
 using v2_f16_t  = _VecT<float16_t, 2>;
@@ -65,7 +90,7 @@ struct __align__(4) VecT
 
     __device__ VecT()
     {
-        mData.v = VecType(0);
+        mData.v = VecType();
     }
 
     __device__ VecT(VecT const& other)

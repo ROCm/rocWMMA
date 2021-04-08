@@ -65,6 +65,11 @@ struct rocblas_types<float16_t>
 };
 
 template <>
+struct rocblas_types<__half> : public rocblas_types<float16_t>
+{
+};
+
+template <>
 struct rocblas_types<float32_t>
 {
     using DataType = float32_t;

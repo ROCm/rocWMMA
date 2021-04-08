@@ -132,6 +132,26 @@ struct amdgcn_mfma<float16_t, float16_t, 32, 32>
 };
 
 template <>
+struct amdgcn_mfma<__half, float32_t, 16, 16> : public amdgcn_mfma<float16_t, float32_t, 16, 16>
+{
+};
+
+template <>
+struct amdgcn_mfma<__half, __half, 16, 16> : public amdgcn_mfma<float16_t, float16_t, 16, 16>
+{
+};
+
+template <>
+struct amdgcn_mfma<__half, float32_t, 32, 32> : public amdgcn_mfma<float16_t, float32_t, 32, 32>
+{
+};
+
+template <>
+struct amdgcn_mfma<__half, __half, 32, 32> : public amdgcn_mfma<float16_t, float16_t, 32, 32>
+{
+};
+
+template <>
 struct amdgcn_mfma<float32_t, float32_t, 16, 16>
 {
     // Packed register traits
