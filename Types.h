@@ -31,11 +31,6 @@ namespace std
     {
         return stream << __half2float(val);
     }
-
-    inline ostream& operator<<(ostream& stream, bfloat16_t const& val)
-    {
-        return stream << static_cast<float>(val);
-    }
 } // namespace std
 
 // Vector internal storage
