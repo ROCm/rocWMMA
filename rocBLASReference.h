@@ -70,6 +70,16 @@ struct rocblas_types<hfloat16_t> : public rocblas_types<float16_t>
 };
 
 template <>
+struct rocblas_types<bfloat16_t>
+{
+    using DataType = rocblas_bfloat16;
+    constexpr static inline rocblas_datatype type()
+    {
+        return rocblas_datatype_bf16_r;
+    }
+};
+
+template <>
 struct rocblas_types<float32_t>
 {
     using DataType = float32_t;

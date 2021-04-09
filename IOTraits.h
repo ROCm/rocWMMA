@@ -39,6 +39,18 @@ struct PackTraits<hfloat16_t>
 };
 
 template <>
+struct PackTraits<bfloat16_t>
+{
+    enum : uint32_t
+    {
+        PackRatio = 2 // 2 Elements combine to one
+    };
+
+    using UnpackedT = bfloat16_t;
+    using PackedT   = float32_t;
+};
+
+template <>
 struct PackTraits<float32_t>
 {
     enum : uint32_t
