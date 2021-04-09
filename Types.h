@@ -1,18 +1,23 @@
 #ifndef WMMA_TYPES_H
 #define WMMA_TYPES_H
 
+#include <hip/hip_bfloat16.h>
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 #include <iomanip>
 #include <iostream>
 #include <type_traits>
 
-// General types
+// Native types
 using float32_t = float;
 using float16_t = _Float16;
 using float64_t = double;
 using int32_t   = int;
 using index_t   = int32_t;
+
+// Non-native types
+using bfloat16_t = hip_bfloat16;
+using hfloat16_t = __half;
 
 namespace std
 {
@@ -21,7 +26,7 @@ namespace std
         return stream << static_cast<float>(val);
     }
 
-    inline ostream& operator<<(ostream& stream, __half const& val)
+    inline ostream& operator<<(ostream& stream, hfloat16_t const& val)
     {
         return stream << __half2float(val);
     }
