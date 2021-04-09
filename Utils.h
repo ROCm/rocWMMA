@@ -30,7 +30,7 @@ struct Fp16Bits
     {
         uint16_t      i16;
         float16_t     f16;
-        __half        h16;
+        hfloat16_t    h16;
         unsigned char c16[16];
     };
     constexpr Fp16Bits(uint16_t initVal)
@@ -41,13 +41,13 @@ struct Fp16Bits
         : f16(initVal)
     {
     }
-    constexpr Fp16Bits(__half initVal)
+    constexpr Fp16Bits(hfloat16_t initVal)
         : h16(initVal)
     {
     }
 };
 
-// Define std::numeric_limits<float16_t/__half> functions that we need for validation
+// Define std::numeric_limits<float16_t/hfloat16_t> functions that we need for validation
 namespace std
 {
     template <>
@@ -65,41 +65,41 @@ namespace std
     }
 
     template <>
-    __host__ __device__ constexpr __half numeric_limits<__half>::epsilon() noexcept
+    __host__ __device__ constexpr hfloat16_t numeric_limits<hfloat16_t>::epsilon() noexcept
     {
         ::Fp16Bits eps(static_cast<uint16_t>(0x1400));
         return eps.h16;
     }
 
     template <>
-    __host__ __device__ constexpr __half numeric_limits<__half>::min() noexcept
+    __host__ __device__ constexpr hfloat16_t numeric_limits<hfloat16_t>::min() noexcept
     {
         ::Fp16Bits eps(static_cast<uint16_t>(0x0400));
         return eps.h16;
     }
 }
 
-// Define host side __half operators that we need for validation
+// Define host side hfloat16_t operators that we need for validation
 
 // Needed for compareEqual
-__host__ inline bool operator==(const __half& x, const __half& y)
+__host__ inline bool operator==(const hfloat16_t& x, const hfloat16_t& y)
 {
     auto absDiff = std::fabs(__half2float(x) - __half2float(y));
     auto absAdd  = std::fabs(__half2float(x) + __half2float(y));
-    return absDiff <= __half2float(std::numeric_limits<__half>::epsilon()) * absAdd * 2.0f
-           || absDiff < __half2float(std::numeric_limits<__half>::min());
+    return absDiff <= __half2float(std::numeric_limits<hfloat16_t>::epsilon()) * absAdd * 2.0f
+           || absDiff < __half2float(std::numeric_limits<hfloat16_t>::min());
 }
 
-__host__ inline bool operator!=(const __half& x, const __half& y)
+__host__ inline bool operator!=(const hfloat16_t& x, const hfloat16_t& y)
 {
     return !(x == y);
 }
 
 // Needed for MatrixUtil::fill
-__host__ inline __half operator-(const __half& x)
+__host__ inline hfloat16_t operator-(const hfloat16_t& x)
 {
     Fp16Bits fp16(x);
-    fp16.i16 = (~fp16.i16 & 0x8000) | fp16.i16; // Flip sign
+    fp16.i16 ^= 0x8000; // Flip sign
     return fp16.h16;
 }
 
@@ -258,7 +258,7 @@ constexpr const char* dataTypeToString()
     {
         return "f16";
     }
-    else if(std::is_same<DataT, __half>::value)
+    else if(std::is_same<DataT, hfloat16_t>::value)
     {
         return "f16";
     }

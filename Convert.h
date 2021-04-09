@@ -36,10 +36,10 @@ struct amdgcn_convert<float16_t, float32_t>
 };
 
 template <>
-struct amdgcn_convert<__half, float32_t>
+struct amdgcn_convert<hfloat16_t, float32_t>
 {
     template <uint32_t NumRegs>
-    __device__ static inline auto exec(VecT<__half, NumRegs> const& regsIn)
+    __device__ static inline auto exec(VecT<hfloat16_t, NumRegs> const& regsIn)
         -> VecT<float32_t, NumRegs>
     {
         VecT<float32_t, NumRegs> result;
@@ -72,13 +72,13 @@ struct amdgcn_convert<float32_t, float16_t>
 };
 
 template <>
-struct amdgcn_convert<float32_t, __half>
+struct amdgcn_convert<float32_t, hfloat16_t>
 {
     template <uint32_t NumRegs>
     __device__ static inline auto exec(VecT<float32_t, NumRegs> const& regsIn)
-        -> VecT<__half, NumRegs>
+        -> VecT<hfloat16_t, NumRegs>
     {
-        VecT<__half, NumRegs> result;
+        VecT<hfloat16_t, NumRegs> result;
 
 #pragma unroll
         for(unsigned i = 0; i < NumRegs; i++)

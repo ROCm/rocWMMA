@@ -65,7 +65,7 @@ struct rocblas_types<float16_t>
 };
 
 template <>
-struct rocblas_types<__half> : public rocblas_types<float16_t>
+struct rocblas_types<hfloat16_t> : public rocblas_types<float16_t>
 {
 };
 

@@ -27,12 +27,12 @@ struct PackedBroadcast<float16_t>
 };
 
 template <>
-struct PackedBroadcast<__half>
+struct PackedBroadcast<hfloat16_t>
 {
-    using Packer = Pack<__half, 2>;
+    using Packer = Pack<hfloat16_t, 2>;
     using Traits = typename Packer::Traits;
 
-    __device__ static inline auto exec(__half input) -> typename Traits::OutputT
+    __device__ static inline auto exec(hfloat16_t input) -> typename Traits::OutputT
     {
         using InputT = typename Traits::InputT;
 
