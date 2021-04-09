@@ -21,6 +21,15 @@ struct MfmaPerfTraits<hfloat16_t> : public MfmaPerfTraits<float16_t>
 };
 
 template <>
+struct MfmaPerfTraits<bfloat16_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 8
+    };
+};
+
+template <>
 struct MfmaPerfTraits<float32_t>
 {
     enum : uint32_t
@@ -44,6 +53,15 @@ struct VALUPerfTraits<float16_t>
 template <>
 struct VALUPerfTraits<hfloat16_t> : public VALUPerfTraits<float16_t>
 {
+};
+
+template <>
+struct VALUPerfTraits<bfloat16_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 2
+    };
 };
 
 template <>

@@ -12,6 +12,7 @@
 using float32_t = float;
 using float16_t = _Float16;
 using float64_t = double;
+using int16_t   = short;
 using int32_t   = int;
 using index_t   = int32_t;
 
@@ -29,6 +30,11 @@ namespace std
     inline ostream& operator<<(ostream& stream, hfloat16_t const& val)
     {
         return stream << __half2float(val);
+    }
+
+    inline ostream& operator<<(ostream& stream, bfloat16_t const& val)
+    {
+        return stream << static_cast<float>(val);
     }
 } // namespace std
 

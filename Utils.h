@@ -31,6 +31,7 @@ struct Fp16Bits
         uint16_t      i16;
         float16_t     f16;
         hfloat16_t    h16;
+        bfloat16_t    b16;
         unsigned char c16[16];
     };
     constexpr Fp16Bits(uint16_t initVal)
@@ -43,6 +44,10 @@ struct Fp16Bits
     }
     constexpr Fp16Bits(hfloat16_t initVal)
         : h16(initVal)
+    {
+    }
+    constexpr Fp16Bits(bfloat16_t initVal)
+        : b16(initVal)
     {
     }
 };
@@ -76,6 +81,20 @@ namespace std
     {
         ::Fp16Bits eps(static_cast<uint16_t>(0x0400));
         return eps.h16;
+    }
+
+    template <>
+    __host__ __device__ constexpr bfloat16_t numeric_limits<bfloat16_t>::epsilon() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x3C00));
+        return eps.b16;
+    }
+
+    template <>
+    __host__ __device__ constexpr bfloat16_t numeric_limits<bfloat16_t>::min() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x007F));
+        return eps.b16;
     }
 }
 
@@ -260,7 +279,11 @@ constexpr const char* dataTypeToString()
     }
     else if(std::is_same<DataT, hfloat16_t>::value)
     {
-        return "f16";
+        return "h16";
+    }
+    else if(std::is_same<DataT, bfloat16_t>::value)
+    {
+        return "bf16";
     }
     else if(std::is_same<DataT, float32_t>::value)
     {
