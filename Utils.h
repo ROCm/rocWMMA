@@ -1,12 +1,13 @@
 #ifndef WMMA_UTILS_H
 #define WMMA_UTILS_H
 
+#include <array>
 #include <assert.h>
-#include <hip/hip_runtime.h>
 #include <iostream>
-#include <set>
-#include <tuple>
 #include <vector>
+
+#include <hip/hip_fp16.h>
+#include <hip/hip_runtime.h>
 
 #include "Constants.h"
 #include "Types.h"
@@ -20,6 +21,89 @@ static constexpr intT1 ceilDiv(const intT1 numerator, const intT2 divisor)
 {
     return (numerator + divisor - 1) / divisor;
 }
+
+#if __HCC_OR_HIP_CLANG__
+
+struct Fp16Bits
+{
+    union
+    {
+        uint16_t      i16;
+        float16_t     f16;
+        __half        h16;
+        unsigned char c16[16];
+    };
+    constexpr Fp16Bits(uint16_t initVal)
+        : i16(initVal)
+    {
+    }
+    constexpr Fp16Bits(float16_t initVal)
+        : f16(initVal)
+    {
+    }
+    constexpr Fp16Bits(__half initVal)
+        : h16(initVal)
+    {
+    }
+};
+
+// Define std::numeric_limits<float16_t/__half> functions that we need for validation
+namespace std
+{
+    template <>
+    __host__ __device__ constexpr float16_t numeric_limits<float16_t>::epsilon() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x1400));
+        return eps.f16;
+    }
+
+    template <>
+    __host__ __device__ constexpr float16_t numeric_limits<float16_t>::min() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x0400));
+        return eps.f16;
+    }
+
+    template <>
+    __host__ __device__ constexpr __half numeric_limits<__half>::epsilon() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x1400));
+        return eps.h16;
+    }
+
+    template <>
+    __host__ __device__ constexpr __half numeric_limits<__half>::min() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x0400));
+        return eps.h16;
+    }
+}
+
+// Define host side __half operators that we need for validation
+
+// Needed for compareEqual
+__host__ inline bool operator==(const __half& x, const __half& y)
+{
+    auto absDiff = std::fabs(__half2float(x) - __half2float(y));
+    auto absAdd  = std::fabs(__half2float(x) + __half2float(y));
+    return absDiff <= __half2float(std::numeric_limits<__half>::epsilon()) * absAdd * 2.0f
+           || absDiff < __half2float(std::numeric_limits<__half>::min());
+}
+
+__host__ inline bool operator!=(const __half& x, const __half& y)
+{
+    return !(x == y);
+}
+
+// Needed for MatrixUtil::fill
+__host__ inline __half operator-(const __half& x)
+{
+    Fp16Bits fp16(x);
+    fp16.i16 = (~fp16.i16 & 0x8000) | fp16.i16; // Flip sign
+    return fp16.h16;
+}
+
+#endif // #if __HCC_OR_HIP_CLANG__
 
 template <typename Layout>
 struct MatrixUtil
@@ -66,7 +150,7 @@ struct MatrixUtil
                 // Count up in integers, in ascending order for each row.
                 auto value = (i * n + j) % 13;
                 auto idx   = index(i, j, ld);
-                mat[idx]   = value % 2 ? -static_cast<DataT>(value) : static_cast<DataT>(value);
+                mat[idx]   = (value % 2) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
             }
         }
     }
@@ -75,32 +159,28 @@ struct MatrixUtil
     __host__ static inline void fill(std::vector<DataT>& mat, uint32_t m, uint32_t n, DataT value)
     {
         assert(mat.size() == n * m);
-
-        auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
-        auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
-
-        auto index = std::is_same<Layout, row_major>::value ? rowMjr : colMjr;
-        auto ld    = std::is_same<Layout, row_major>::value ? n : m;
-
-        for(int i = 0; i < m; ++i) // row
+        for(int i = 0; i < m * n; ++i) // row
         {
-            for(int j = 0; j < n; ++j) // col
-            {
-                mat[index(i, j, ld)] = value;
-            }
+            mat[i] = value;
         }
     }
 };
 
 template <typename TypeA, typename TypeB, typename LayoutA, typename LayoutB>
-void compareEqual(std::vector<TypeA> const& a, std::vector<TypeB> const& b, int M, int N)
+void compareEqual(
+    std::vector<TypeA> const& a, std::vector<TypeB> const& b, int M, int N, double tolerance = 10.0)
 {
     assert(a.size() == b.size() && "A and B are not the same size");
     assert(a.size() == M * N && "A and B do not match size M x N");
     int lda = std::is_same<LayoutA, row_major>::value ? N : M;
     int ldb = std::is_same<LayoutB, row_major>::value ? N : M;
 
-    double max_relative_error = 0;
+    double max_relative_error = 0.0;
+
+    // Some types don't have direct conversion to double.
+    // Convert to float first then to double.
+    auto toDoubleA = [](TypeA const& val) { return static_cast<double>(static_cast<float>(val)); };
+    auto toDoubleB = [](TypeB const& val) { return static_cast<double>(static_cast<float>(val)); };
 
 #pragma omp parallel for
     for(int i = 0; i < M; ++i) // Row
@@ -110,7 +190,10 @@ void compareEqual(std::vector<TypeA> const& a, std::vector<TypeB> const& b, int 
             auto indexA = std::is_same<LayoutA, row_major>::value ? (i * lda + j) : (i + j * lda);
             auto indexB = std::is_same<LayoutB, row_major>::value ? (i * ldb + j) : (i + j * ldb);
 
-            auto relative_error = fabs(double(a[indexA] - b[indexB]) / a[indexA]);
+            auto relative_error
+                = (a[indexA] != static_cast<TypeA>(0))
+                      ? fabs((toDoubleA(a[indexA]) - toDoubleB(b[indexB])) / toDoubleA(a[indexA]))
+                      : 0.0;
             if(relative_error > max_relative_error)
             {
                 max_relative_error = relative_error;
@@ -118,40 +201,53 @@ void compareEqual(std::vector<TypeA> const& a, std::vector<TypeB> const& b, int 
         }
     }
 
-    auto eps       = std::numeric_limits<TypeA>::epsilon();
-    auto tolerance = 10.0;
+    auto eps = toDoubleA(std::numeric_limits<TypeA>::epsilon());
     if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
+    {
         std::cout << "FAIL: ";
+    }
     else
+    {
         std::cout << "PASS: ";
+    }
     std::cout << "max_relative_error = " << max_relative_error << std::endl;
 }
 
 template <typename DataT>
-void compareEqual(std::vector<DataT> const& a, std::vector<DataT> const& b, int M, int N)
+void compareEqual(
+    std::vector<DataT> const& a, std::vector<DataT> const& b, int M, int N, double tolerance = 10.0)
 {
     assert(a.size() == b.size() && "A and B are not the same size");
     assert(a.size() == M * N && "A and B do not match size M x N");
 
-    double   max_relative_error = 0;
+    double   max_relative_error = 0.0;
     uint32_t numElements        = M * N;
+
+    // Some types don't have direct conversion to double.
+    // Convert to float first then to double.
+    auto toDouble = [](DataT const& val) { return static_cast<double>(static_cast<float>(val)); };
 
 #pragma omp parallel for
     for(int i = 0; i < numElements; ++i)
     {
-        auto relative_error = fabs(double(a[i] - b[i]) / a[i]);
+        auto relative_error = a[i] != static_cast<DataT>(0)
+                                  ? fabs((toDouble(a[i]) - toDouble(b[i])) / toDouble(a[i]))
+                                  : 0.0;
         if(relative_error > max_relative_error)
         {
             max_relative_error = relative_error;
         }
     }
 
-    auto eps       = std::numeric_limits<DataT>::epsilon();
-    auto tolerance = 10.0;
+    auto eps = toDouble(std::numeric_limits<DataT>::epsilon());
     if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
+    {
         std::cout << "FAIL: ";
+    }
     else
+    {
         std::cout << "PASS: ";
+    }
     std::cout << "max_relative_error = " << max_relative_error << std::endl;
 }
 
@@ -159,6 +255,10 @@ template <typename DataT>
 constexpr const char* dataTypeToString()
 {
     if(std::is_same<DataT, float16_t>::value)
+    {
+        return "f16";
+    }
+    else if(std::is_same<DataT, __half>::value)
     {
         return "f16";
     }
