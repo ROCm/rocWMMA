@@ -82,17 +82,17 @@ __host__ void test_load_store_matrix_h(uint32_t M, uint32_t N)
     int ldc = std::is_same<LayoutC, row_major>::value ? N : M;
 
     // Initialize input matrices
-    std::vector<DataT> matrixA(M * N, 0.0f);
+    std::vector<DataT> matrixA(M * N, DataT(0));
     MatrixUtil<LayoutA>::fill(matrixA, M, N);
-    std::vector<DataT> matrixB(M * N, 0.0f);
+    std::vector<DataT> matrixB(M * N, DataT(0));
     MatrixUtil<LayoutB>::fill(matrixB, M, N);
-    std::vector<DataT> matrixC(M * N, 0.0f);
+    std::vector<DataT> matrixC(M * N, DataT(0));
     MatrixUtil<LayoutC>::fill(matrixC, M, N);
 
     // Output matrices
-    std::vector<DataT> matrixA_r(M * N, 0.0f);
-    std::vector<DataT> matrixB_r(M * N, 0.0f);
-    std::vector<DataT> matrixC_r(M * N, 0.0f);
+    std::vector<DataT> matrixA_r(M * N, DataT(0));
+    std::vector<DataT> matrixB_r(M * N, DataT(0));
+    std::vector<DataT> matrixC_r(M * N, DataT(0));
 
     // Allocate and copy device memory
     DataT*       d_a;
@@ -376,6 +376,8 @@ void test_load_store_matrix_h()
 int main()
 {
     test_load_store_matrix_h<float16_t>();
+    test_load_store_matrix_h<hfloat16_t>();
+    test_load_store_matrix_h<bfloat16_t>();
     test_load_store_matrix_h<float32_t>();
     return 0;
 }
