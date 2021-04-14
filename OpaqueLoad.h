@@ -13,7 +13,7 @@ struct amdgcn_opaque_load
     using LoadT = VecT<typename PackTraits<DataT>::UnpackedT, ElementsPerThread>;
     __device__ static inline auto exec(DataT const* localPtr, index_t offset) -> LoadT
     {
-        return LoadT(*reinterpret_cast<typename LoadT::VecType const*>(&(localPtr[offset])));
+        return LoadT(*reinterpret_cast<typename LoadT::StorageT const*>(&(localPtr[offset])));
     }
 };
 
