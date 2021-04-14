@@ -174,7 +174,11 @@ struct amdgcn_mfma<bfloat16_t, float32_t, 16, 16>
                                        typename Traits::CRegsT const& regsC) ->
         typename Traits::DRegsT
     {
+        // Built-in expects unpacked vector of short.
+        // Strange, but OK we can do that here.
         using TypeIn = VecT<short, 2>;
+
+        static_assert(sizeof(TypeIn) == sizeof(decltype(regsA)), "Inconsistent data formats");
         return typename Traits::DRegsT(
             __builtin_amdgcn_mfma_f32_16x16x8bf16(*reinterpret_cast<TypeIn const&>(regsA),
                                                   *reinterpret_cast<TypeIn const&>(regsB),
@@ -240,7 +244,11 @@ struct amdgcn_mfma<bfloat16_t, float32_t, 32, 32>
                                        typename Traits::CRegsT const& regsC) ->
         typename Traits::DRegsT
     {
+        // Built-in expects unpacked vector of short.
+        // Strange, but OK we can do that here.
         using TypeIn = VecT<short, 2>;
+
+        static_assert(sizeof(TypeIn) == sizeof(decltype(regsA)), "Inconsistent data formats");
         return typename Traits::DRegsT(
             __builtin_amdgcn_mfma_f32_32x32x4bf16(*reinterpret_cast<TypeIn const&>(regsA),
                                                   *reinterpret_cast<TypeIn const&>(regsB),
