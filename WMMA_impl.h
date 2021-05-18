@@ -244,7 +244,9 @@ namespace wmma
     {
         if(std::is_same<LayoutA, LayoutB>::value)
         {
-            HIP_DYNAMIC_SHARED(InputT, localMemPtr);
+            // Because templated with same name, must use
+            // same type due to extern __shared__.
+            HIP_DYNAMIC_SHARED(uint8_t, localMemPtr);
 
             using FragAT = typename std::decay<decltype(a)>::type;
             using FragBT = typename std::decay<decltype(b)>::type;
@@ -265,7 +267,7 @@ namespace wmma
                 using MappingUtil
                     = MappingUtil<FragAT::leadingDim(), FragAT::kDim(), InputT, LayoutA>;
 
-                auto ldsAddr = localMemPtr
+                auto ldsAddr = reinterpret_cast<InputT*>(localMemPtr)
                                + std::get<0>(MappingUtil::waveCoord()) * FragAT::leadingDim()
                                      * FragAT::kDim();
 
@@ -291,7 +293,7 @@ namespace wmma
                 using MappingUtil
                     = MappingUtil<FragBT::leadingDim(), FragBT::kDim(), InputT, LayoutB>;
 
-                auto ldsAddr = localMemPtr
+                auto ldsAddr = reinterpret_cast<InputT*>(localMemPtr)
                                + std::get<1>(MappingUtil::waveCoord()) * FragBT::leadingDim()
                                      * FragBT::kDim();
 

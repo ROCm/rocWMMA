@@ -22,8 +22,6 @@ static constexpr intT1 ceilDiv(const intT1 numerator, const intT2 divisor)
     return (numerator + divisor - 1) / divisor;
 }
 
-#if __HCC_OR_HIP_CLANG__
-
 struct Fp16Bits
 {
     union
@@ -121,8 +119,6 @@ __host__ inline hfloat16_t operator-(const hfloat16_t& x)
     fp16.i16 ^= 0x8000; // Flip sign
     return fp16.h16;
 }
-
-#endif // #if __HCC_OR_HIP_CLANG__
 
 template <typename Layout>
 struct MatrixUtil
