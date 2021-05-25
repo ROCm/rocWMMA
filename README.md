@@ -6,6 +6,7 @@ AMD's C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications 
 * Rocm stack minimum version 4.0
 * C++ 14
 * rocblas (only if rocblas validation is used) https://github.com/ROCmSoftwarePlatform/rocBLAS/releases/tag/rocm-4.0.0
+* CMake >3.5 (optional)
 
 ## Currently supported configurations (ongoing)
 
