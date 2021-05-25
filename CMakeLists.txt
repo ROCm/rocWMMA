@@ -86,7 +86,7 @@ if(WMMA_VALIDATE_WITH_ROCBLAS)
 endif()
 
 add_library(wmma INTERFACE)
-target_include_directories(wmma INTERFACE ${PROJECT_SOURCE_DIR})
+target_include_directories(wmma INTERFACE ${PROJECT_SOURCE_DIR}/library/include)
 target_link_libraries(wmma INTERFACE hip::device hip::host)
 target_compile_options(wmma INTERFACE -std=c++14)
 
