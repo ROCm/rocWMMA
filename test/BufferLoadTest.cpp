@@ -148,11 +148,11 @@ int main()
     const size_t valbytes = vala.size() * sizeof(decltype(vala)::value_type);
 
     TestParams::TYPE* d_a;
-    assert(hipMalloc(&d_a, valbytes) == hipSuccess);
-    assert(hipMemcpy(d_a, vala.data(), valbytes, hipMemcpyHostToDevice) == hipSuccess);
+    CHECK_HIP_ERROR(hipMalloc(&d_a, valbytes));
+    CHECK_HIP_ERROR(hipMemcpy(d_a, vala.data(), valbytes, hipMemcpyHostToDevice));
 
     TestParams::TYPE* d_r;
-    assert(hipMalloc(&d_r, valbytes) == hipSuccess);
+    CHECK_HIP_ERROR(hipMalloc(&d_r, valbytes));
 
     hipLaunchKernelGGL(loadTest,
                        dim3(TestParams::GRID_DIM_X, TestParams::GRID_DIM_Y),
@@ -164,13 +164,13 @@ int main()
                        ldm,
                        64);
 
-    assert(hipMemcpy(result.data(), d_r, valbytes, hipMemcpyDeviceToHost) == hipSuccess);
+    CHECK_HIP_ERROR(hipMemcpy(result.data(), d_r, valbytes, hipMemcpyDeviceToHost));
 
     MatrixUtil<row_major>::print(result, 64, 64);
 
     // Release device memory
-    assert(hipFree(d_a) == hipSuccess);
-    assert(hipFree(d_r) == hipSuccess);
+    CHECK_HIP_ERROR(hipFree(d_a));
+    CHECK_HIP_ERROR(hipFree(d_r));
 
     return 0;
 }

@@ -171,18 +171,18 @@ __host__ void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT 
     // Allocate and copy device memory
     InputT*      d_a;
     const size_t bytesA = matrixA.size() * sizeof(InputT);
-    assert(hipMalloc(&d_a, bytesA) == hipSuccess);
-    assert(hipMemcpy(d_a, matrixA.data(), bytesA, hipMemcpyHostToDevice) == hipSuccess);
+    CHECK_HIP_ERROR(hipMalloc(&d_a, bytesA));
+    CHECK_HIP_ERROR(hipMemcpy(d_a, matrixA.data(), bytesA, hipMemcpyHostToDevice));
 
     InputT*      d_b;
     const size_t bytesB = matrixB.size() * sizeof(InputT);
-    assert(hipMalloc(&d_b, bytesB) == hipSuccess);
-    assert(hipMemcpy(d_b, matrixB.data(), bytesB, hipMemcpyHostToDevice) == hipSuccess);
+    CHECK_HIP_ERROR(hipMalloc(&d_b, bytesB));
+    CHECK_HIP_ERROR(hipMemcpy(d_b, matrixB.data(), bytesB, hipMemcpyHostToDevice));
 
     ComputeT*    d_c;
     const size_t bytesC = matrixC.size() * sizeof(ComputeT);
-    assert(hipMalloc(&d_c, bytesC) == hipSuccess);
-    assert(hipMemcpy(d_c, matrixC.data(), bytesC, hipMemcpyHostToDevice) == hipSuccess);
+    CHECK_HIP_ERROR(hipMalloc(&d_c, bytesC));
+    CHECK_HIP_ERROR(hipMemcpy(d_c, matrixC.data(), bytesC, hipMemcpyHostToDevice));
 
     auto gridDim
         = dim3(ceilDiv(M, BlockM * TBlockX / AMDGCN_WAVE_SIZE), ceilDiv(N, BlockN * TBlockY));
@@ -190,8 +190,8 @@ __host__ void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT 
     auto blockDim = dim3(TBlockX, TBlockY);
 
     hipEvent_t startEvent, stopEvent;
-    assert(hipEventCreate(&startEvent) == hipSuccess);
-    assert(hipEventCreate(&stopEvent) == hipSuccess);
+    CHECK_HIP_ERROR(hipEventCreate(&startEvent));
+    CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
 
     hipExtLaunchKernelGGL(
         (test_mma_sync_coop_d<BlockM, BlockN, BlockK, InputT, ComputeT, LayoutA, LayoutB, LayoutC>),
@@ -212,10 +212,10 @@ __host__ void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT 
         beta);
 
     auto elapsedTimeMs = 0.0f;
-    assert(hipEventSynchronize(stopEvent) == hipSuccess);
-    assert(hipEventElapsedTime(&elapsedTimeMs, startEvent, stopEvent) == hipSuccess);
-    assert(hipEventDestroy(startEvent) == hipSuccess);
-    assert(hipEventDestroy(stopEvent) == hipSuccess);
+    CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
+    CHECK_HIP_ERROR(hipEventElapsedTime(&elapsedTimeMs, startEvent, stopEvent));
+    CHECK_HIP_ERROR(hipEventDestroy(startEvent));
+    CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
 
     auto peakGFlops = calculatePeakGFlops<InputT, Mi100>(1087);
     auto gFlops = calculateGFlops(M, N, K, elapsedTimeMs);
@@ -224,7 +224,7 @@ __host__ void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT 
 
 #ifdef WMMA_VALIDATE_TESTS 
     // Copy for validation
-    assert(hipMemcpy(matrixC.data(), d_c, bytesC, hipMemcpyDeviceToHost) == hipSuccess);
+    CHECK_HIP_ERROR(hipMemcpy(matrixC.data(), d_c, bytesC, hipMemcpyDeviceToHost));
 
     // Validate
     std::vector<ComputeT> matrixC_r(M * N, 0.0f);
@@ -241,9 +241,9 @@ __host__ void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT 
 #endif
 
     // Release device memory
-    assert(hipFree(d_a) == hipSuccess);
-    assert(hipFree(d_b) == hipSuccess);
-    assert(hipFree(d_c) == hipSuccess);
+    CHECK_HIP_ERROR(hipFree(d_a));
+    CHECK_HIP_ERROR(hipFree(d_b));
+    CHECK_HIP_ERROR(hipFree(d_c));
 }
 
 template <uint32_t TBlockX,
