@@ -6,7 +6,7 @@
 #define CHECK_HIP_ERROR(expr) assert((expr) == hipSuccess);
 #define CHECK_ROCBLAS_ERROR(expr) assert((expr) == rocblas_status_success);
 
-#include "rocblas-functions.h"
+// #include "rocblas-functions.h"
 #include "rocblas.h"
 
 #include "Types.h"
