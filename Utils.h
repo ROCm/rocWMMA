@@ -120,6 +120,21 @@ __host__ inline hfloat16_t operator-(const hfloat16_t& x)
     return fp16.h16;
 }
 
+__host__ inline hfloat16_t operator*(const hfloat16_t& x, const hfloat16_t& y)
+{
+    return static_cast<hfloat16_t>(static_cast<float16_t>(x) * static_cast<float16_t>(y));
+}
+
+__host__ inline hfloat16_t operator+(const hfloat16_t& x, const hfloat16_t& y)
+{
+    return static_cast<hfloat16_t>(static_cast<float16_t>(x) + static_cast<float16_t>(y));
+}
+
+__host__ inline hfloat16_t& operator+=(hfloat16_t& x, const hfloat16_t& y)
+{
+    return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) + static_cast<float16_t>(y));
+}
+
 template <typename Layout>
 struct MatrixUtil
 {
