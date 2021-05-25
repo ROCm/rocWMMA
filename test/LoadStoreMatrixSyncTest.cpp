@@ -97,27 +97,27 @@ __host__ void test_load_store_matrix_h(uint32_t M, uint32_t N)
     // Allocate and copy device memory
     DataT*       d_a;
     const size_t bytesA = matrixA.size() * sizeof(DataT);
-    assert(hipMalloc(&d_a, bytesA) == hipSuccess);
-    assert(hipMemcpy(d_a, matrixA.data(), bytesA, hipMemcpyHostToDevice) == hipSuccess);
+    CHECK_HIP_ERROR(hipMalloc(&d_a, bytesA));
+    CHECK_HIP_ERROR(hipMemcpy(d_a, matrixA.data(), bytesA, hipMemcpyHostToDevice));
 
     DataT*       d_b;
     const size_t bytesB = matrixB.size() * sizeof(DataT);
-    assert(hipMalloc(&d_b, bytesB) == hipSuccess);
-    assert(hipMemcpy(d_b, matrixB.data(), bytesB, hipMemcpyHostToDevice) == hipSuccess);
+    CHECK_HIP_ERROR(hipMalloc(&d_b, bytesB));
+    CHECK_HIP_ERROR(hipMemcpy(d_b, matrixB.data(), bytesB, hipMemcpyHostToDevice));
 
     DataT*       d_c;
     const size_t bytesC = matrixC.size() * sizeof(DataT);
-    assert(hipMalloc(&d_c, bytesC) == hipSuccess);
-    assert(hipMemcpy(d_c, matrixC.data(), bytesC, hipMemcpyHostToDevice) == hipSuccess);
+    CHECK_HIP_ERROR(hipMalloc(&d_c, bytesC));
+    CHECK_HIP_ERROR(hipMemcpy(d_c, matrixC.data(), bytesC, hipMemcpyHostToDevice));
 
     DataT* d_a_r;
-    assert(hipMalloc(&d_a_r, bytesA) == hipSuccess);
+    CHECK_HIP_ERROR(hipMalloc(&d_a_r, bytesA));
 
     DataT* d_b_r;
-    assert(hipMalloc(&d_b_r, bytesB) == hipSuccess);
+    CHECK_HIP_ERROR(hipMalloc(&d_b_r, bytesB));
 
     DataT* d_c_r;
-    assert(hipMalloc(&d_c_r, bytesC) == hipSuccess);
+    CHECK_HIP_ERROR(hipMalloc(&d_c_r, bytesC));
 
     auto gridDim
         = dim3(ceilDiv(M, BlockM * TBlockX / AMDGCN_WAVE_SIZE), ceilDiv(N, BlockN * TBlockY));
@@ -142,17 +142,17 @@ __host__ void test_load_store_matrix_h(uint32_t M, uint32_t N)
         M,
         N);
 
-    assert(hipMemcpy(matrixA_r.data(), d_a_r, bytesA, hipMemcpyDeviceToHost) == hipSuccess);
-    assert(hipMemcpy(matrixB_r.data(), d_b_r, bytesB, hipMemcpyDeviceToHost) == hipSuccess);
-    assert(hipMemcpy(matrixC_r.data(), d_c_r, bytesC, hipMemcpyDeviceToHost) == hipSuccess);
+    CHECK_HIP_ERROR(hipMemcpy(matrixA_r.data(), d_a_r, bytesA, hipMemcpyDeviceToHost));
+    CHECK_HIP_ERROR(hipMemcpy(matrixB_r.data(), d_b_r, bytesB, hipMemcpyDeviceToHost));
+    CHECK_HIP_ERROR(hipMemcpy(matrixC_r.data(), d_c_r, bytesC, hipMemcpyDeviceToHost));
 
     // Release device memory
-    assert(hipFree(d_a) == hipSuccess);
-    assert(hipFree(d_b) == hipSuccess);
-    assert(hipFree(d_c) == hipSuccess);
-    assert(hipFree(d_a_r) == hipSuccess);
-    assert(hipFree(d_b_r) == hipSuccess);
-    assert(hipFree(d_c_r) == hipSuccess);
+    CHECK_HIP_ERROR(hipFree(d_a));
+    CHECK_HIP_ERROR(hipFree(d_b));
+    CHECK_HIP_ERROR(hipFree(d_c));
+    CHECK_HIP_ERROR(hipFree(d_a_r));
+    CHECK_HIP_ERROR(hipFree(d_b_r));
+    CHECK_HIP_ERROR(hipFree(d_c_r));
 
     // Validate
     compareEqual<DataT, DataT, LayoutA, LayoutA>(matrixA, matrixA_r, M, N);

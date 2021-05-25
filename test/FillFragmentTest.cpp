@@ -93,18 +93,18 @@ __host__ void test_fill_fragment_h(
     // Allocate and copy init values to device memory
     InputT*      d_a;
     const size_t bytesA = matrixA.size() * sizeof(InputT);
-    assert(hipMalloc(&d_a, bytesA) == hipSuccess);
-    assert(hipMemcpy(d_a, matrixA.data(), bytesA, hipMemcpyHostToDevice) == hipSuccess);
+    CHECK_HIP_ERROR(hipMalloc(&d_a, bytesA));
+    CHECK_HIP_ERROR(hipMemcpy(d_a, matrixA.data(), bytesA, hipMemcpyHostToDevice));
 
     InputT*      d_b;
     const size_t bytesB = matrixB.size() * sizeof(InputT);
-    assert(hipMalloc(&d_b, bytesB) == hipSuccess);
-    assert(hipMemcpy(d_b, matrixB.data(), bytesB, hipMemcpyHostToDevice) == hipSuccess);
+    CHECK_HIP_ERROR(hipMalloc(&d_b, bytesB));
+    CHECK_HIP_ERROR(hipMemcpy(d_b, matrixB.data(), bytesB, hipMemcpyHostToDevice));
 
     ComputeT*    d_c;
     const size_t bytesC = matrixC.size() * sizeof(ComputeT);
-    assert(hipMalloc(&d_c, bytesC) == hipSuccess);
-    assert(hipMemcpy(d_c, matrixC.data(), bytesC, hipMemcpyHostToDevice) == hipSuccess);
+    CHECK_HIP_ERROR(hipMalloc(&d_c, bytesC));
+    CHECK_HIP_ERROR(hipMemcpy(d_c, matrixC.data(), bytesC, hipMemcpyHostToDevice));
 
     auto gridDim
         = dim3(ceilDiv(M, BlockM * TBlockX / AMDGCN_WAVE_SIZE), ceilDiv(N, BlockN * TBlockY));
@@ -127,14 +127,14 @@ __host__ void test_fill_fragment_h(
         fillB,
         fillC);
 
-    assert(hipMemcpy(matrixA.data(), d_a, bytesA, hipMemcpyDeviceToHost) == hipSuccess);
-    assert(hipMemcpy(matrixB.data(), d_b, bytesB, hipMemcpyDeviceToHost) == hipSuccess);
-    assert(hipMemcpy(matrixC.data(), d_c, bytesC, hipMemcpyDeviceToHost) == hipSuccess);
+    CHECK_HIP_ERROR(hipMemcpy(matrixA.data(), d_a, bytesA, hipMemcpyDeviceToHost));
+    CHECK_HIP_ERROR(hipMemcpy(matrixB.data(), d_b, bytesB, hipMemcpyDeviceToHost));
+    CHECK_HIP_ERROR(hipMemcpy(matrixC.data(), d_c, bytesC, hipMemcpyDeviceToHost));
 
     // Release device memory
-    assert(hipFree(d_a) == hipSuccess);
-    assert(hipFree(d_b) == hipSuccess);
-    assert(hipFree(d_c) == hipSuccess);
+    CHECK_HIP_ERROR(hipFree(d_a));
+    CHECK_HIP_ERROR(hipFree(d_b));
+    CHECK_HIP_ERROR(hipFree(d_c));
 
     // Initialize reference matrices
     std::vector<InputT>   refA(M * K, fillA);
