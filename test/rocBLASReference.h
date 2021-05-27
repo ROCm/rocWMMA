@@ -3,10 +3,18 @@
 
 #define ROCM_USE_FLOAT16
 
-#define CHECK_HIP_ERROR(expr) assert((expr) == hipSuccess);
-#define CHECK_ROCBLAS_ERROR(expr) assert((expr) == rocblas_status_success);
+#define CHECK_ROCBLAS_ERROR(status)                   \
+    if(status != rocblas_status_success)              \
+    {                                                 \
+        fprintf(stderr,                               \
+                "rocBLAS error: '%s'(%d) at %s:%d\n", \
+                rocblas_status_to_string(status),     \
+                status,                               \
+                __FILE__,                             \
+                __LINE__);                            \
+        exit(EXIT_FAILURE);                           \
+    }
 
-#include "rocblas-functions.h"
 #include "rocblas.h"
 
 #include "Types.h"
