@@ -12,6 +12,20 @@
 #include "Constants.h"
 #include "Types.h"
 
+#ifndef CHECK_HIP_ERROR
+#define CHECK_HIP_ERROR(status)                   \
+    if(status != hipSuccess)                      \
+    {                                             \
+        fprintf(stderr,                           \
+                "hip error: '%s'(%d) at %s:%d\n", \
+                hipGetErrorString(status),        \
+                status,                           \
+                __FILE__,                         \
+                __LINE__);                        \
+        exit(EXIT_FAILURE);                       \
+    }
+#endif
+
 // Computes ceil(numerator/divisor) for integer types.
 template <typename intT1,
           class = typename std::enable_if<std::is_integral<intT1>::value>::type,

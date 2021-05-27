@@ -6,6 +6,7 @@ AMD's C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications 
 * Rocm stack minimum version 4.0
 * C++ 14
 * rocblas (only if rocblas validation is used) https://github.com/ROCmSoftwarePlatform/rocBLAS/releases/tag/rocm-4.0.0
+* CMake >=3.5 (optional)
 
 ## Currently supported configurations (ongoing)
 
@@ -160,4 +161,26 @@ Build and run (benchmark only):
 ```
 make MmaSyncTest-bench -j4
 ./MmaSyncTest-bench
+```
+
+## Build with CMake
+
+By default, the project is configured as Release mode, and is linked against rocBLAS for validating results.
+Here are some of the examples for the configuration:
+|Configuration|Command|
+|---|---|
+|Basic|`CC=hipcc CXX=hipcc cmake -Bbuild .`|
+|Targeting MI100|`CC=hipcc CXX=hipcc cmake -Bbuild . -DAMDGPU_TARGETS=gfx908:xnack-` |
+|Debug build|`CC=hipcc CXX=hipcc cmake -Bbuild . -DCMAKE_BUILD_TYPE=Debug` |
+|Build without rocBLAS (default on)|`CC=hipcc CXX=hipcc cmake -Bbuild . -DWMMA_VALIDATE_WITH_ROCBLAS=OFF` |
+
+After configuration, build with `cmake --build build -- -j`
+
+## Unit tests with CTest
+
+CTest is a testing tool distributed as a part of CMake. The unit tests can be run by:
+
+```
+cd build
+ctest
 ```
