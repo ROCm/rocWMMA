@@ -82,7 +82,7 @@ find_package( hip REQUIRED )
 
 set(WMMA_VALIDATE_WITH_ROCBLAS ON CACHE STRING "Use rocBLAS for validation")
 if(WMMA_VALIDATE_WITH_ROCBLAS)
-  find_package( rocblas REQUIRED PATHS /opt/rocm /opt/rocm/rocblas )
+  find_package( rocblas REQUIRED PATHS /opt/rocm /opt/rocm/rocblas $ENV{ROCBLAS_DIR} )
 endif()
 
 add_library(wmma INTERFACE)
