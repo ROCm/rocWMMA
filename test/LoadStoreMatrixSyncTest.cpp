@@ -23,14 +23,15 @@ __global__ void test_load_store_matrix_d(DataT const* a_in,
                                          DataT*       b_out,
                                          DataT*       c_out,
                                          uint32_t     M,
-                                         uint32_t     N)
+                                         uint32_t     N,
+                                         uint32_t     K)
 {
     using MappingA = MappingUtil<BlockM, BlockN, DataT, LayoutA>;
     using MappingB = MappingUtil<BlockM, BlockN, DataT, LayoutB>;
     using MappingC = MappingUtil<BlockM, BlockN, DataT, LayoutC>;
 
-    int lda = std::is_same<LayoutA, row_major>::value ? N : M;
-    int ldb = std::is_same<LayoutB, row_major>::value ? N : M;
+    int lda = std::is_same<LayoutA, row_major>::value ? K : M;
+    int ldb = std::is_same<LayoutB, row_major>::value ? N : K;
     int ldc = std::is_same<LayoutC, row_major>::value ? N : M;
 
     // Create frags and fill
@@ -66,32 +67,32 @@ template <uint32_t TBlockX,
           typename LayoutA,
           typename LayoutB,
           typename LayoutC>
-__host__ void test_load_store_matrix_h(uint32_t M, uint32_t N)
+__host__ void test_load_store_matrix_h(uint32_t M, uint32_t N, uint32_t K)
 {
     std::cout << "HIP wmma::load/store_matrix_sync test: TBlock (" << TBlockX << ", " << TBlockY
               << ") "
               << "BlockMNK(" << BlockM << ", " << BlockN << ", " << BlockK << ") "
-              << "MatrixMN(" << M << ", " << N << ") "
+              << "MatrixMNK(" << M << ", " << N <<  ", " << K  << ") "
               << "FmtABC(" << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << ", "
               << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << ", "
               << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << ") "
               << "T(" << dataTypeToString<DataT>() << ") \n";
 
-    int lda = std::is_same<LayoutA, row_major>::value ? N : M;
-    int ldb = std::is_same<LayoutB, row_major>::value ? N : M;
+    int lda = std::is_same<LayoutA, row_major>::value ? K : M;
+    int ldb = std::is_same<LayoutB, row_major>::value ? N : K;
     int ldc = std::is_same<LayoutC, row_major>::value ? N : M;
 
     // Initialize input matrices
-    std::vector<DataT> matrixA(M * N, DataT(0));
-    MatrixUtil<LayoutA>::fill(matrixA, M, N);
-    std::vector<DataT> matrixB(M * N, DataT(0));
-    MatrixUtil<LayoutB>::fill(matrixB, M, N);
+    std::vector<DataT> matrixA(M * K, DataT(0));
+    MatrixUtil<LayoutA>::fill(matrixA, M, K);
+    std::vector<DataT> matrixB(K * N, DataT(0));
+    MatrixUtil<LayoutB>::fill(matrixB, K, N);
     std::vector<DataT> matrixC(M * N, DataT(0));
     MatrixUtil<LayoutC>::fill(matrixC, M, N);
 
     // Output matrices
-    std::vector<DataT> matrixA_r(M * N, DataT(0));
-    std::vector<DataT> matrixB_r(M * N, DataT(0));
+    std::vector<DataT> matrixA_r(M * K, DataT(0));
+    std::vector<DataT> matrixB_r(K * N, DataT(0));
     std::vector<DataT> matrixC_r(M * N, DataT(0));
 
     // Allocate and copy device memory
@@ -140,7 +141,8 @@ __host__ void test_load_store_matrix_h(uint32_t M, uint32_t N)
         d_b_r,
         d_c_r,
         M,
-        N);
+        N,
+        K);
 
     CHECK_HIP_ERROR(hipMemcpy(matrixA_r.data(), d_a_r, bytesA, hipMemcpyDeviceToHost));
     CHECK_HIP_ERROR(hipMemcpy(matrixB_r.data(), d_b_r, bytesB, hipMemcpyDeviceToHost));
@@ -155,9 +157,9 @@ __host__ void test_load_store_matrix_h(uint32_t M, uint32_t N)
     CHECK_HIP_ERROR(hipFree(d_c_r));
 
     // Validate
-    compareEqual<DataT, DataT, LayoutA, LayoutA>(matrixA, matrixA_r, M, N);
+    compareEqual<DataT, DataT, LayoutA, LayoutA>(matrixA, matrixA_r, M, K);
     //MatrixUtil<LayoutC>::print(matrixA_r, M, N);
-    compareEqual<DataT, DataT, LayoutB, LayoutB>(matrixB, matrixB_r, M, N);
+    compareEqual<DataT, DataT, LayoutB, LayoutB>(matrixB, matrixB_r, K, N);
     compareEqual<DataT, DataT, LayoutC, LayoutC>(matrixC, matrixC_r, M, N);
 }
 
@@ -177,7 +179,7 @@ __host__ void test_load_store_matrix_h(uint32_t M, uint32_t N, uint32_t K)
                              DataT,
                              row_major,
                              row_major,
-                             row_major>(M, N);
+                             row_major>(M, N, K);
     test_load_store_matrix_h<TBlockX,
                              TBlockY,
                              BlockM,
@@ -186,7 +188,7 @@ __host__ void test_load_store_matrix_h(uint32_t M, uint32_t N, uint32_t K)
                              DataT,
                              row_major,
                              col_major,
-                             row_major>(M, N);
+                             row_major>(M, N, K);
     test_load_store_matrix_h<TBlockX,
                              TBlockY,
                              BlockM,
@@ -195,7 +197,7 @@ __host__ void test_load_store_matrix_h(uint32_t M, uint32_t N, uint32_t K)
                              DataT,
                              col_major,
                              row_major,
-                             row_major>(M, N);
+                             row_major>(M, N, K);
     test_load_store_matrix_h<TBlockX,
                              TBlockY,
                              BlockM,
@@ -204,16 +206,7 @@ __host__ void test_load_store_matrix_h(uint32_t M, uint32_t N, uint32_t K)
                              DataT,
                              col_major,
                              col_major,
-                             row_major>(M, N);
-    test_load_store_matrix_h<TBlockX,
-                             TBlockY,
-                             BlockM,
-                             BlockN,
-                             BlockK,
-                             DataT,
-                             row_major,
-                             row_major,
-                             col_major>(M, N);
+                             row_major>(M, N, K);
     test_load_store_matrix_h<TBlockX,
                              TBlockY,
                              BlockM,
@@ -221,8 +214,17 @@ __host__ void test_load_store_matrix_h(uint32_t M, uint32_t N, uint32_t K)
                              BlockK,
                              DataT,
                              row_major,
+                             row_major,
+                             col_major>(M, N, K);
+    test_load_store_matrix_h<TBlockX,
+                             TBlockY,
+                             BlockM,
+                             BlockN,
+                             BlockK,
+                             DataT,
+                             row_major,
                              col_major,
-                             col_major>(M, N);
+                             col_major>(M, N, K);
     test_load_store_matrix_h<TBlockX,
                              TBlockY,
                              BlockM,
@@ -231,7 +233,7 @@ __host__ void test_load_store_matrix_h(uint32_t M, uint32_t N, uint32_t K)
                              DataT,
                              col_major,
                              row_major,
-                             col_major>(M, N);
+                             col_major>(M, N, K);
     test_load_store_matrix_h<TBlockX,
                              TBlockY,
                              BlockM,
@@ -240,7 +242,7 @@ __host__ void test_load_store_matrix_h(uint32_t M, uint32_t N, uint32_t K)
                              DataT,
                              col_major,
                              col_major,
-                             col_major>(M, N);
+                             col_major>(M, N, K);
 }
 
 template <typename DataT>
@@ -371,6 +373,9 @@ void test_load_store_matrix_h()
 
     // float32_t  256 x 1 threads, block 64 x 64
     test_load_store_matrix_h<256, 1, 64, 64, 64, DataT>(256, 256, 256);
+
+    // 256 x 1 threads, block 64 x 64 non-square large-k
+    test_load_store_matrix_h<256, 1, 64, 64, 64, DataT>(512, 128, 8192);
 }
 
 int main()
