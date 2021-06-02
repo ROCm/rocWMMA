@@ -269,15 +269,15 @@ using AccRegF32x32 = VecT<float32_t, 32>;
 
 // Meta-tags
 // Matrices
-struct row_major;
-struct col_major;
-struct matrix_a;
-struct matrix_b;
-struct accumulator;
-struct common;
+struct row_major{};
+struct col_major{};
+struct matrix_a{};
+struct matrix_b{};
+struct accumulator{};
+struct common{};
 
 // Memory
-struct globalMem;
-struct ldsMem;
+struct globalMem{};
+struct ldsMem{};
 
 #endif // WMMA_TYPES_H
