@@ -128,6 +128,10 @@ struct MappingUtil
     // Data address of current wave
     __device__ static inline DataT* dataCoord(DataT const* baseAddr, uint32_t ldm);
 
+    /// Current workgroup perspective
+
+    __device__ static inline auto workgroupDim() -> CoordT;
+
     /// Coordinate override helpers
 
     // Current global wave coordinate with row override

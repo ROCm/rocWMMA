@@ -21,8 +21,7 @@
 template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
 struct OptConfig;
 
-template <typename MatrixT,
-          uint32_t BlockDim,
+template <uint32_t BlockDim,
           uint32_t BlockK,
           typename DataT,
           typename DataLayout,
@@ -65,16 +64,14 @@ struct OptConfig<matrix_a, BlockDim, BlockK, DataT, row_major>
                                                  GlobalLayout,
                                                  ElementsPerThread>;
 
-    using CoopLoader = amdgcn_cooperative_load_DxK<matrix_a,
-                                                   BlockDim,
+    using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
                                                    BlockK,
                                                    DataT,
                                                    row_major,
                                                    GlobalLayout,
                                                    ElementsPerThread>;
 
-    using CoopStorer = amdgcn_cooperative_store_DxK<matrix_a,
-                                                    BlockDim,
+    using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
                                                     BlockK,
                                                     DataT,
                                                     row_major,
@@ -124,16 +121,14 @@ struct OptConfig<matrix_a, BlockDim, BlockK, DataT, col_major>
                                                  GlobalLayout,
                                                  ElementsPerThread>;
 
-    using CoopLoader = amdgcn_cooperative_load_DxK<matrix_a,
-                                                   BlockDim,
+    using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
                                                    BlockK,
                                                    DataT,
                                                    col_major,
                                                    GlobalLayout,
                                                    ElementsPerThread>;
 
-    using CoopStorer = amdgcn_cooperative_store_DxK<matrix_a,
-                                                    BlockDim,
+    using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
                                                     BlockK,
                                                     DataT,
                                                     col_major,
@@ -179,16 +174,14 @@ struct OptConfig<matrix_b, BlockDim, BlockK, DataT, row_major>
                                                  GlobalLayout,
                                                  ElementsPerThread>;
 
-    using CoopLoader = amdgcn_cooperative_load_DxK<matrix_b,
-                                                   BlockDim,
+    using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
                                                    BlockK,
                                                    DataT,
                                                    row_major,
                                                    GlobalLayout,
                                                    ElementsPerThread>;
 
-    using CoopStorer = amdgcn_cooperative_store_DxK<matrix_b,
-                                                    BlockDim,
+    using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
                                                     BlockK,
                                                     DataT,
                                                     row_major,
@@ -235,16 +228,14 @@ struct OptConfig<matrix_b, BlockDim, BlockK, DataT, col_major>
                                                  GlobalLayout,
                                                  ElementsPerThread>;
 
-    using CoopLoader = amdgcn_cooperative_load_DxK<matrix_b,
-                                                   BlockDim,
+    using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
                                                    BlockK,
                                                    DataT,
                                                    col_major,
                                                    GlobalLayout,
                                                    ElementsPerThread>;
 
-    using CoopStorer = amdgcn_cooperative_store_DxK<matrix_b,
-                                                    BlockDim,
+    using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
                                                     BlockK,
                                                     DataT,
                                                     col_major,

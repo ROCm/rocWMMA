@@ -8,8 +8,7 @@
 #include "OpaqueStore.h"
 #include "Types.h"
 
-template <typename MatrixT,
-          uint32_t BlockDim,
+template <uint32_t BlockDim,
           uint32_t BlockK,
           typename DataT,
           typename DataLayout,
@@ -24,37 +23,18 @@ struct amdgcn_cooperative_load_DxK
     {
         enum : uint32_t
         {
-            // Matrix A splits K direction loads amongst neighbouring waves in X, or column direction
-            // Matrix B splits K direction loads amongst neighbouring waves in Y, or row direction
             SplitCount = SpCount,
         };
 
         static_assert(SplitCount > 0, "Split count must be greater than 0");
         static_assert(BlockK % SplitCount == 0, "BlockK size is not divisible by SplitCount");
 
-        // Same register count for all SplitCounts
+        // Each cooperative wave will load a piece of the final output
         using OutputT = VecT<DataT, IOTraits::UnpackedRegisterCount>;
-    };
+        static_assert(OutputT::size() % SplitCount == 0,
+                      "Register count not divisible by SplitCount");
 
-    __device__ static void
-        exec(typename Traits::OutputT& output, DataT const* dataPtr, uint32_t ldm)
-    {
-        // Splitting the K direction:
-        // Matrix A will share work with waves on same row (different col)
-        // Matrix B will share work with waves on same col (different row)
-        using MappingUtil     = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
-        auto     waveCoord    = MappingUtil::waveCoord(); // Local to workgroup
-        uint32_t sharedWaveId = (std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCoord)
-                                                                        : std::get<0>(waveCoord));
-
-        // For the cases where there are more groups than splits.
-        sharedWaveId = sharedWaveId % Traits::SplitCount;
-
-        assert(sharedWaveId == 0);
-
-        // Global load using buffer.
-        // Base address is the same, and split load by (SplitCount).
-        // Multiply the gridId by the split load count to get iterative offset per wave.
+        // Partial loader
         using Loader = amdgcn_opaque_load_DxK<BlockDim,
                                               BlockK / Traits::SplitCount,
                                               DataT,
@@ -62,33 +42,70 @@ struct amdgcn_cooperative_load_DxK
                                               LoadLayout,
                                               ElementsPerThread>;
 
-        using LoadLayoutT = LoadLayout<BlockDim,
-                                       BlockK / Traits::SplitCount,
-                                       DataT,
-                                       DataLayout,
-                                       ElementsPerThread>;
+        using LoaderLayout = LoadLayout<BlockDim,
+                                        BlockK / Traits::SplitCount,
+                                        DataT,
+                                        DataLayout,
+                                        ElementsPerThread>;
+    };
 
+    __device__ static inline void exec(typename Traits::OutputT& output,
+                                       DataT const*              dataPtr,
+                                       uint32_t                  ldm,
+                                       uint32_t                  waveIndex,
+                                       uint32_t                  waveCount)
+    {
+        using Loader       = typename Traits::Loader;
+        using LoaderLayout = typename Traits::LoaderLayout;
+
+        // For the cases where there are more groups than splits.
+        waveIndex = waveIndex % Traits::SplitCount;
+
+        // Determine offset for the current wave, and
+        // emplace the partial load into the output.
         auto loadOffset
-            = LoadLayoutT::iterativeOffset(sharedWaveId * LoadLayoutT::Traits::IOCount, ldm);
-        assert(loadOffset == 0);
-        auto splitLoad =
-            typename Traits::OutputT::template Iterator<Traits::OutputT::size()
-                                                        / Traits::SplitCount>(output, sharedWaveId);
-        *splitLoad = *Loader::exec(dataPtr + loadOffset, ldm);
+            = LoaderLayout::iterativeOffset(waveIndex * LoaderLayout::Traits::IOCount, ldm);
+
+        auto it = output.template begin<Traits::OutputT::size() / Traits::SplitCount>();
+
+        // This next part is important for optimization.
+        // The goal is to do a partial load and write only one part of the fragment.
+        // However, from the compiler perspective it does not optimize assembly
+        // correctly if we load only the part of the fragment without referencing the rest of the fragment.
+        // For example, we could easily do the following:
+        //
+        //  auto it =
+        //      typename Traits::OutputT::template Iterator<Traits::OutputT::size() / Traits::SplitCount>(
+        //        input, waveIndex);
+        //  *it = *Loader::exec(dataPtr + loadOffset, ldm);
+        //
+        // However we didn't touch the rest of the fragment, so the compiler may decide to dump the fragment
+        // to memory as it will treat this as a sub-array access.
+        //
+        // To keep it in registers, iterate over the entire fragment and load only when we reach our intended
+        // offset.
+
+#pragma unroll
+        for(uint32_t i = 0; i < Traits::SplitCount; ++i)
+        {
+            if(i == waveIndex)
+            {
+                *it = *Loader::exec(dataPtr + loadOffset, ldm);
+            }
+            it++;
+        }
     }
 };
 
 // Wrapper for runtime wave count
-template <typename MatrixT,
-          uint32_t BlockDim,
+template <uint32_t BlockDim,
           uint32_t BlockK,
           typename DataT,
           typename DataLayout,
           template <uint32_t, uint32_t, typename, typename, uint32_t>
           class LoadLayout,
           uint32_t ElementsPerThread>
-struct amdgcn_cooperative_load_DxK<MatrixT,
-                                   BlockDim,
+struct amdgcn_cooperative_load_DxK<BlockDim,
                                    BlockK,
                                    DataT,
                                    DataLayout,
@@ -97,8 +114,7 @@ struct amdgcn_cooperative_load_DxK<MatrixT,
                                    0>
 {
     template <uint32_t SplitCount>
-    using CooperativeLoad = amdgcn_cooperative_load_DxK<MatrixT,
-                                                        BlockDim,
+    using CooperativeLoad = amdgcn_cooperative_load_DxK<BlockDim,
                                                         BlockK,
                                                         DataT,
                                                         DataLayout,
@@ -132,29 +148,31 @@ struct amdgcn_cooperative_load_DxK<MatrixT,
                                           && IOTraits::IOCount / PackTraits<DataT>::PackRatio >= 8,
                                       int>::type
               = 0>
-    __device__ static inline void exec(OutgoingT&& output, DataT const* dataPtr, uint32_t ldm)
+    __device__ static inline void exec(OutgoingT&&  output,
+                                       DataT const* dataPtr,
+                                       uint32_t     ldm,
+                                       uint32_t     waveIndex,
+                                       uint32_t     waveCount)
     {
-        using WaveSpace = _MappingUtil::WaveSpace;
-        auto waveCount  = WaveSpace::workgroupDim();
-
-        auto splitCount = std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCount)
-                                                                 : std::get<0>(waveCount);
-
-        if(splitCount >= 8)
+        if(waveCount >= 8)
         {
-            CooperativeLoad<8>::exec(std::forward<OutgoingT>(output), dataPtr, ldm);
+            CooperativeLoad<8>::exec(
+                std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
-        else if(splitCount == 4)
+        else if(waveCount == 4)
         {
-            CooperativeLoad<4>::exec(std::forward<OutgoingT>(output), dataPtr, ldm);
+            CooperativeLoad<4>::exec(
+                std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
-        else if(splitCount == 2)
+        else if(waveCount == 2)
         {
-            return CooperativeLoad<2>::exec(std::forward<OutgoingT>(output), dataPtr, ldm);
+            CooperativeLoad<2>::exec(
+                std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
-        else if(splitCount == 1)
+        else if(waveCount == 1)
         {
-            return CooperativeLoad<1>::exec(std::forward<OutgoingT>(output), dataPtr, ldm);
+            CooperativeLoad<1>::exec(
+                std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
         else
         {
@@ -169,25 +187,26 @@ struct amdgcn_cooperative_load_DxK<MatrixT,
                                           && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 4,
                                       int>::type
               = 0>
-    __device__ static inline void exec(OutgoingT&& output, DataT const* dataPtr, uint32_t ldm)
+    __device__ static inline void exec(OutgoingT&&  output,
+                                       DataT const* dataPtr,
+                                       uint32_t     ldm,
+                                       uint32_t     waveIndex,
+                                       uint32_t     waveCount)
     {
-        using WaveSpace = _MappingUtil::WaveSpace;
-        auto waveCount  = WaveSpace::workgroupDim();
-
-        auto splitCount = std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCount)
-                                                                 : std::get<0>(waveCount);
-
-        if(splitCount >= 4)
+        if(waveCount >= 4)
         {
-            return CooperativeLoad<4>::exec(std::forward<OutgoingT>(output), dataPtr, ldm);
+            CooperativeLoad<4>::exec(
+                std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
-        else if(splitCount == 2)
+        else if(waveCount == 2)
         {
-            return CooperativeLoad<2>::exec(std::forward<OutgoingT>(output), dataPtr, ldm);
+            CooperativeLoad<2>::exec(
+                std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
-        else if(splitCount == 1)
+        else if(waveCount == 1)
         {
-            return CooperativeLoad<1>::exec(std::forward<OutgoingT>(output), dataPtr, ldm);
+            CooperativeLoad<1>::exec(
+                std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
         else
         {
@@ -202,21 +221,21 @@ struct amdgcn_cooperative_load_DxK<MatrixT,
                                           && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 2,
                                       int>::type
               = 0>
-    __device__ static inline void exec(OutgoingT&& output, DataT const* dataPtr, uint32_t ldm)
+    __device__ static inline void exec(OutgoingT&&  output,
+                                       DataT const* dataPtr,
+                                       uint32_t     ldm,
+                                       uint32_t     waveIndex,
+                                       uint32_t     waveCount)
     {
-        using WaveSpace = _MappingUtil::WaveSpace;
-        auto waveCount  = WaveSpace::workgroupDim();
-
-        auto splitCount = std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCount)
-                                                                 : std::get<0>(waveCount);
-
-        if(splitCount >= 2)
+        if(waveCount >= 2)
         {
-            return CooperativeLoad<2>::exec(std::forward<OutgoingT>(output), dataPtr, ldm);
+            CooperativeLoad<2>::exec(
+                std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
-        else if(splitCount == 1)
+        else if(waveCount == 1)
         {
-            return CooperativeLoad<1>::exec(std::forward<OutgoingT>(output), dataPtr, ldm);
+            CooperativeLoad<1>::exec(
+                std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
         else
         {
@@ -231,17 +250,16 @@ struct amdgcn_cooperative_load_DxK<MatrixT,
                                           && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 1,
                                       int>::type
               = 0>
-    __device__ static inline void exec(OutgoingT&& output, DataT const* dataPtr, uint32_t ldm)
+    __device__ static inline void exec(OutgoingT&&  output,
+                                       DataT const* dataPtr,
+                                       uint32_t     ldm,
+                                       uint32_t     waveIndex,
+                                       uint32_t     waveCount)
     {
-        using WaveSpace = _MappingUtil::WaveSpace;
-        auto waveCount  = WaveSpace::workgroupDim();
-
-        auto splitCount = std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCount)
-                                                                 : std::get<0>(waveCount);
-
-        if(splitCount >= 1)
+        if(waveCount >= 1)
         {
-            return CooperativeLoad<1>::exec(std::forward<OutgoingT>(output), dataPtr, ldm);
+            CooperativeLoad<1>::exec(
+                std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
         else
         {
@@ -256,7 +274,11 @@ struct amdgcn_cooperative_load_DxK<MatrixT,
                                           && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 0,
                                       int>::type
               = 0>
-    __device__ static inline void exec(OutgoingT&& output, DataT const* dataPtr, uint32_t ldm);
+    __device__ static inline void exec(OutgoingT&&  output,
+                                       DataT const* dataPtr,
+                                       uint32_t     ldm,
+                                       uint32_t     waveIndex,
+                                       uint32_t     waveCount);
 };
 
 #endif // WMMA_COOP_LOAD_H
