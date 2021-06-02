@@ -271,7 +271,11 @@ namespace wmma
                                + std::get<0>(MappingUtil::waveCoord()) * FragAT::leadingDim()
                                      * FragAT::kDim();
 
-                StoreA::exec(ldsAddr, UnpackA::exec(*a), FragAT::kDim());
+                StoreA::exec(ldsAddr,
+                             UnpackA::exec(*a),
+                             FragAT::kDim(),
+                             std::get<1>(MappingUtil::waveCoord()),
+                             std::get<1>(MappingUtil::workgroupDim()));
                 __syncthreads();
 
                 AFmt = PackA::exec(LoadA::exec(ldsAddr, FragAT::kDim()));
@@ -297,7 +301,11 @@ namespace wmma
                                + std::get<1>(MappingUtil::waveCoord()) * FragBT::leadingDim()
                                      * FragBT::kDim();
 
-                StoreB::exec(ldsAddr, UnpackB::exec(*b), FragBT::kDim());
+                StoreB::exec(ldsAddr,
+                             UnpackB::exec(*b),
+                             FragBT::kDim(),
+                             std::get<0>(MappingUtil::waveCoord()),
+                             std::get<0>(MappingUtil::workgroupDim()));
                 __syncthreads();
 
                 BFmt = PackB::exec(LoadB::exec(ldsAddr, FragBT::kDim()));
