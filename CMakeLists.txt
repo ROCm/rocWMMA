@@ -33,6 +33,7 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 
 ### Project WMMA
 project( WMMA LANGUAGES CXX )
+set (CMAKE_CXX_STANDARD 14)
 
 # set( AMDGPU_TARGETS "gfx908:xnack-" ) # User variable
 set( CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Install path prefix, prepended onto install directories" )
@@ -79,6 +80,7 @@ endif()
 message( VERBOSE "AMDGPU_TARGETS=${AMDGPU_TARGETS}")
 
 find_package( hip REQUIRED )
+find_package( OpenMP REQUIRED )
 
 set(WMMA_VALIDATE_WITH_ROCBLAS ON CACHE STRING "Use rocBLAS for validation")
 if(WMMA_VALIDATE_WITH_ROCBLAS)
@@ -91,4 +93,10 @@ target_link_libraries(wmma INTERFACE hip::device hip::host)
 target_compile_options(wmma INTERFACE -std=c++14)
 
 enable_testing()
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/609281088cfefc76f9d0ce82e1ff6c30cc3591e5.zip
+)
+FetchContent_MakeAvailable(googletest)
 add_subdirectory(test)

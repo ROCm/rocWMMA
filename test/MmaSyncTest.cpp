@@ -2,9 +2,12 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
+#include <gtest/gtest.h>
+
 #include "Performance.h"
 #include "Utils.h"
 #include "WMMA.h"
+#include "Common.hpp"
 
 #ifdef WMMA_VALIDATE_TESTS
 #ifdef WMMA_VALIDATE_WITH_ROCBLAS
@@ -13,6 +16,7 @@
 #include "Reference.h" // Vanilla CPU kernel
 #endif // WMMA_VALIDATE_WITH_ROCBLAS
 #endif // WMMA_VALIDATE_TESTS
+
 
 template <uint32_t BlockM,
           uint32_t BlockN,
@@ -269,7 +273,7 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
     gemm_rocBLAS<InputT, OutputT, ComputeT, LayoutA, LayoutB>(
         m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
 
-    compareEqual<OutputT, OutputT, LayoutD, col_major>(matrixD, matrixD_ref, m, n, errorTolerance);
+    EXPECT_TRUE( (compareEqual<OutputT, OutputT, LayoutD, col_major>(matrixD, matrixD_ref, m, n, errorTolerance)) );
 
     //MatrixUtil<LayoutD>::print(matrixD, m, n);
     //MatrixUtil<col_major>::print(matrixD_ref, m, n);
@@ -278,7 +282,7 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
 
     gemm_CPU<InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD>(
         m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
-    compareEqual<OutputT, OutputT, LayoutD, LayoutD>(matrixD, matrixD_ref, m, n, errorTolerance);
+    EXPECT_TRUE( (compareEqual<OutputT, OutputT, LayoutD, LayoutD>(matrixD, matrixD_ref, m, n, errorTolerance)) );
 
 #endif // WMMA_VALIDATE_WITH_ROCBLAS
 
@@ -309,78 +313,22 @@ inline void test_mma_sync_h(uint32_t TBlockX,
                             ComputeT alpha,
                             ComputeT beta)
 {
-    test_mma_sync_h<BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    row_major,
-                    row_major,
-                    row_major>(TBlockX, TBlockY, M, N, K, alpha, beta);
-    test_mma_sync_h<BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    row_major,
-                    col_major,
-                    row_major>(TBlockX, TBlockY, M, N, K, alpha, beta);
-    test_mma_sync_h<BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    col_major,
-                    row_major,
-                    row_major>(TBlockX, TBlockY, M, N, K, alpha, beta);
-    test_mma_sync_h<BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    col_major,
-                    col_major,
-                    row_major>(TBlockX, TBlockY, M, N, K, alpha, beta);
-    test_mma_sync_h<BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    row_major,
-                    row_major,
-                    col_major>(TBlockX, TBlockY, M, N, K, alpha, beta);
-    test_mma_sync_h<BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    row_major,
-                    col_major,
-                    col_major>(TBlockX, TBlockY, M, N, K, alpha, beta);
-    test_mma_sync_h<BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    col_major,
-                    row_major,
-                    col_major>(TBlockX, TBlockY, M, N, K, alpha, beta);
-    test_mma_sync_h<BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    col_major,
-                    col_major,
-                    col_major>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    std::tuple<row_major, col_major> types;
+    for_each(types, [&](auto layout_a) {
+        for_each(types, [&](auto layout_b) {
+            for_each(types, [&](auto layout_c) {
+                test_mma_sync_h<BlockM,
+                                BlockN,
+                                BlockK,
+                                InputT,
+                                OutputT,
+                                ComputeT,
+                                decltype(layout_a),
+                                decltype(layout_b),
+                                decltype(layout_c)>(TBlockX, TBlockY, M, N, K, alpha, beta);
+            });
+        });
+    });
 }
 
 template <typename InputT, typename OutputT, typename ComputeT>
@@ -753,30 +701,47 @@ void test_mma_sync_h()
         256, 1, 8192, 8192, 8192, ComputeT(2), ComputeT(2));
 }
 
-int main()
+template <typename... Ts>
+void test_mma_sync(std::tuple<Ts...>)
 {
+    test_mma_sync_h<Ts...>();
+}
+
+template <typename T>
+struct MmaSyncTest : public testing::Test
+{
+    // TODO: buffer new/del in fixture
+};
+
+using Implementations = testing::Types<
     // Native fp16
-    test_mma_sync_h<float16_t, float16_t, float16_t>();
-    test_mma_sync_h<float16_t, float16_t, float32_t>();
-    test_mma_sync_h<float16_t, float32_t, float32_t>();
-
+    std::tuple<float16_t, float16_t, float16_t>,
+    std::tuple<float16_t, float16_t, float32_t>,
+    std::tuple<float16_t, float32_t, float32_t>,
     // Non-native hfloat16_t (i.e. __half)
-    test_mma_sync_h<hfloat16_t, hfloat16_t, hfloat16_t>();
-    test_mma_sync_h<hfloat16_t, hfloat16_t, float32_t>();
-    test_mma_sync_h<hfloat16_t, float32_t, float32_t>();
-
+    std::tuple<hfloat16_t, hfloat16_t, hfloat16_t>,
+    std::tuple<hfloat16_t, hfloat16_t, float32_t>,
+    std::tuple<hfloat16_t, float32_t, float32_t>,
     // Non-native bfloat16_t
-    test_mma_sync_h<bfloat16_t, bfloat16_t, bfloat16_t>();
-    test_mma_sync_h<bfloat16_t, bfloat16_t, float32_t>();
-    test_mma_sync_h<bfloat16_t, float32_t, float32_t>();
-
+    std::tuple<bfloat16_t, bfloat16_t, bfloat16_t>,
+    std::tuple<bfloat16_t, bfloat16_t, float32_t>,
+    std::tuple<bfloat16_t, float32_t, float32_t>,
     // Native fp32
-    test_mma_sync_h<float32_t, float32_t, float32_t>();
+    std::tuple<float32_t, float32_t, float32_t>
+>;
 
-    //test_mma_sync_h<64, 4, 32, 32, 128, float32_t, float32_t>(8192, 8192, 8192, 1.0f, 1.0f);
+TYPED_TEST_SUITE(MmaSyncTest, Implementations);
 
-    //test_mma_sync_h<64, 4, 32, 32, 32, bfloat16_t, bfloat16_t, float32_t, col_major, row_major, row_major>(4096, 4096, 4096, 2.0f, 1.5f);
-    //test_mma_sync_h<64, 1, 32, 32, 32, float16_t, float16_t, float16_t, col_major, row_major, row_major>(32, 32, 32, 1.0f, 1.0f);
-    //test_mma_sync_h<64, 1, 32, 32, 32, float16_t, float16_t, float32_t, row_major, row_major, row_major>(64, 64, 128, ComputeT(2), ComputeT(2));
-    return 0;
+TYPED_TEST(MmaSyncTest, MmaSync)
+{
+    TypeParam types;
+    test_mma_sync(types);
+};
+
+TEST(AdhocMmaSyncTest, AdhocMmaSync)
+{
+    //test_mma_sync_h<32, 32, 128, float32_t, float32_t>(64, 4, 8192, 8192, 8192, 1.0f, 1.0f);
+    //test_mma_sync_h<32, 32, 32, bfloat16_t, bfloat16_t, float32_t, col_major, row_major, row_major>(64, 4, 4096, 4096, 4096, 2.0f, 1.5f);
+    test_mma_sync_h<32, 32, 32, float16_t, float16_t, float16_t, col_major, row_major, row_major>(64, 1, 32, 32, 32, 1.0f, 1.0f);
+    test_mma_sync_h<32, 32, 32, float16_t, float16_t, float32_t, row_major, row_major, row_major>(64, 1, 64, 64, 128, float16_t(2), float16_t(2));
 }
