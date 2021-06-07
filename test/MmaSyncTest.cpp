@@ -701,6 +701,7 @@ void test_mma_sync_h()
         256, 1, 8192, 8192, 8192, ComputeT(2), ComputeT(2));
 }
 
+#ifdef WMMA_VALIDATE_TESTS
 template <typename... Ts>
 void test_mma_sync(std::tuple<Ts...>)
 {
@@ -745,3 +746,34 @@ TEST(AdhocMmaSyncTest, AdhocMmaSync)
     test_mma_sync_h<32, 32, 32, float16_t, float16_t, float16_t, col_major, row_major, row_major>(64, 1, 32, 32, 32, 1.0f, 1.0f);
     test_mma_sync_h<32, 32, 32, float16_t, float16_t, float32_t, row_major, row_major, row_major>(64, 1, 64, 64, 128, float16_t(2), float16_t(2));
 }
+
+#else // WMMA_VALIDATE_TESTS
+
+int main()
+{
+    // Native fp16
+    test_mma_sync_h<float16_t, float16_t, float16_t>();
+    test_mma_sync_h<float16_t, float16_t, float32_t>();
+    test_mma_sync_h<float16_t, float32_t, float32_t>();
+
+    // Non-native hfloat16_t (i.e. __half)
+    test_mma_sync_h<hfloat16_t, hfloat16_t, hfloat16_t>();
+    test_mma_sync_h<hfloat16_t, hfloat16_t, float32_t>();
+    test_mma_sync_h<hfloat16_t, float32_t, float32_t>();
+
+    // Non-native bfloat16_t
+    test_mma_sync_h<bfloat16_t, bfloat16_t, bfloat16_t>();
+    test_mma_sync_h<bfloat16_t, bfloat16_t, float32_t>();
+    test_mma_sync_h<bfloat16_t, float32_t, float32_t>();
+
+    // Native fp32
+    test_mma_sync_h<float32_t, float32_t, float32_t>();
+
+    //test_mma_sync_h<64, 4, 32, 32, 128, float32_t, float32_t>(8192, 8192, 8192, 1.0f, 1.0f);
+
+    //test_mma_sync_h<64, 4, 32, 32, 32, bfloat16_t, bfloat16_t, float32_t, col_major, row_major, row_major>(4096, 4096, 4096, 2.0f, 1.5f);
+    //test_mma_sync_h<64, 1, 32, 32, 32, float16_t, float16_t, float16_t, col_major, row_major, row_major>(32, 32, 32, 1.0f, 1.0f);
+    //test_mma_sync_h<64, 1, 32, 32, 32, float16_t, float16_t, float32_t, row_major, row_major, row_major>(64, 64, 128, ComputeT(2), ComputeT(2));
+    return 0;
+}
+#endif // WMMA_VALIDATE_TESTS
