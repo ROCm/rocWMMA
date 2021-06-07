@@ -33,7 +33,7 @@ endfunction()
 
 function(add_custom_test_with_rocblas TEST_TARGET TEST_SOURCE)
   add_custom_test(${TEST_TARGET} ${TEST_SOURCE})
-  target_link_libraries(${TEST_TARGET} gtest_main roc::rocblas)
+  target_link_libraries(${TEST_TARGET} roc::rocblas)
   target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_VALIDATE_WITH_ROCBLAS)
 endfunction()
 
