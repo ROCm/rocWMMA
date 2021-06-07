@@ -253,7 +253,7 @@ bool compareEqual(
 
             auto relative_error
                 = (a[indexA] != static_cast<TypeA>(0))
-                      ? fabs(toDoubleA(a[indexA]) - toDoubleB(b[indexB])) / fabs(toDoubleA(a[indexA]) + toDoubleB(b[indexB]) + 1)
+                      ? fabs(toDoubleA(a[indexA]) - toDoubleB(b[indexB])) / (fabs(toDoubleA(a[indexA])) + fabs(toDoubleB(b[indexB])) + 1)
                       : 0.0;
             if(relative_error > max_relative_error)
             {
@@ -298,7 +298,7 @@ bool compareEqual(
     for(int i = 0; i < numElements; ++i)
     {
         auto relative_error = a[i] != static_cast<DataT>(0)
-                                  ? fabs(toDouble(a[i]) - toDouble(b[i])) / fabs(toDouble(a[i]) + toDouble(b[i]) + 1)
+                                  ? fabs(toDouble(a[i]) - toDouble(b[i])) / (fabs(toDouble(a[i])) + fabs(toDouble(b[i])) + 1)
                                   : 0.0;
         if(relative_error > max_relative_error)
         {
