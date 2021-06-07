@@ -371,10 +371,9 @@ template <typename InputT, typename OutputT, typename ComputeT>
 void test_mma_sync_h()
 {
     // clang-format off
-    std::vector<std::array<int, 2>> thread_block = {{64, 1}, {64, 2}, {64, 4}, {64, 8}, {64, 16},
-                                                    {128,1}, {128,2}, {128,4}, {128,8},
-                                                    {256,1}, {256,2}, {256,4},
-                                                    {512,1}, {512,2}};
+    std::vector<std::array<int, 2>> thread_block = {{64, 1}, {64, 2}, {64, 4},
+                                                    {128,1}, {128,2},
+                                                    {256,1}};
 
     std::vector<std::array<int, 3>> problem_sizes = {{64, 64, 1024},
                                                      {32, 64, 1024},
