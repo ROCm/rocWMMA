@@ -27,7 +27,6 @@ function(add_custom_test TEST_TARGET TEST_SOURCE)
   target_link_libraries(${TEST_TARGET} wmma OpenMP::OpenMP_CXX gtest_main)
   target_include_directories(${TEST_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_VALIDATE_TESTS)
-  add_test("${TEST_TARGET}" ${TEST_TARGET})
   gtest_discover_tests(${TEST_TARGET})
 endfunction()
 
