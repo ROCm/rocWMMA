@@ -2,14 +2,13 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
-#include <gtest/gtest.h>
-
 #include "Performance.h"
 #include "Utils.h"
 #include "WMMA.h"
 #include "Common.hpp"
 
 #ifdef WMMA_VALIDATE_TESTS
+#include <gtest/gtest.h>
 #ifdef WMMA_VALIDATE_WITH_ROCBLAS
 #include "rocBLASReference.h" // rocBLAS GPU kernel
 #else
