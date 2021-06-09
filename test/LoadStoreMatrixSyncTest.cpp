@@ -26,15 +26,14 @@ __global__ void test_load_store_matrix_d(DataT const* a_in,
                                          DataT*       b_out,
                                          DataT*       c_out,
                                          uint32_t     M,
-                                         uint32_t     N,
-                                         uint32_t     K)
+                                         uint32_t     N)
 {
     using MappingA = MappingUtil<BlockM, BlockN, DataT, LayoutA>;
     using MappingB = MappingUtil<BlockM, BlockN, DataT, LayoutB>;
     using MappingC = MappingUtil<BlockM, BlockN, DataT, LayoutC>;
 
-    int lda = std::is_same<LayoutA, row_major>::value ? K : M;
-    int ldb = std::is_same<LayoutB, row_major>::value ? N : K;
+    int lda = std::is_same<LayoutA, row_major>::value ? N : M;
+    int ldb = std::is_same<LayoutB, row_major>::value ? N : M;
     int ldc = std::is_same<LayoutC, row_major>::value ? N : M;
 
     // Create frags and fill
@@ -61,6 +60,7 @@ __global__ void test_load_store_matrix_d(DataT const* a_in,
     wmma::store_matrix_sync(writeC, fragC, ldc, layoutC);
 }
 
+// K is intentionally ignored in this test
 template <uint32_t BlockM,
           uint32_t BlockN,
           uint32_t BlockK,
@@ -76,27 +76,27 @@ __host__ void test_load_store_matrix_h(uint32_t TBlockX, uint32_t TBlockY, uint3
     std::cout << "HIP wmma::load/store_matrix_sync test: TBlock (" << TBlockX << ", " << TBlockY
               << ") "
               << "BlockMNK(" << BlockM << ", " << BlockN << ", " << BlockK << ") "
-              << "MatrixMNK(" << M << ", " << N <<  ", " << K  << ") "
+              << "MatrixMN(" << M << ", " << N << ") "
               << "FmtABC(" << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << ", "
               << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << ", "
               << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << ") "
               << "T(" << dataTypeToString<DataT>() << ") \n";
 
-    int lda = std::is_same<LayoutA, row_major>::value ? K : M;
-    int ldb = std::is_same<LayoutB, row_major>::value ? N : K;
+    int lda = std::is_same<LayoutA, row_major>::value ? N : M;
+    int ldb = std::is_same<LayoutB, row_major>::value ? N : M;
     int ldc = std::is_same<LayoutC, row_major>::value ? N : M;
 
     // Initialize input matrices
-    std::vector<DataT> matrixA(M * K, DataT(0));
-    MatrixUtil<LayoutA>::fill(matrixA, M, K);
-    std::vector<DataT> matrixB(K * N, DataT(0));
-    MatrixUtil<LayoutB>::fill(matrixB, K, N);
+    std::vector<DataT> matrixA(M * N, DataT(0));
+    MatrixUtil<LayoutA>::fill(matrixA, M, N);
+    std::vector<DataT> matrixB(M * N, DataT(0));
+    MatrixUtil<LayoutB>::fill(matrixB, M, N);
     std::vector<DataT> matrixC(M * N, DataT(0));
     MatrixUtil<LayoutC>::fill(matrixC, M, N);
 
     // Output matrices
-    std::vector<DataT> matrixA_r(M * K, DataT(0));
-    std::vector<DataT> matrixB_r(K * N, DataT(0));
+    std::vector<DataT> matrixA_r(M * N, DataT(0));
+    std::vector<DataT> matrixB_r(M * N, DataT(0));
     std::vector<DataT> matrixC_r(M * N, DataT(0));
 
     // Allocate and copy device memory
@@ -145,8 +145,7 @@ __host__ void test_load_store_matrix_h(uint32_t TBlockX, uint32_t TBlockY, uint3
         d_b_r,
         d_c_r,
         M,
-        N,
-        K);
+        N);
 
     CHECK_HIP_ERROR(hipMemcpy(matrixA_r.data(), d_a_r, bytesA, hipMemcpyDeviceToHost));
     CHECK_HIP_ERROR(hipMemcpy(matrixB_r.data(), d_b_r, bytesB, hipMemcpyDeviceToHost));
@@ -161,9 +160,9 @@ __host__ void test_load_store_matrix_h(uint32_t TBlockX, uint32_t TBlockY, uint3
     CHECK_HIP_ERROR(hipFree(d_c_r));
 
     // Validate
-    EXPECT_TRUE( (compareEqual<DataT, DataT, LayoutA, LayoutA>(matrixA, matrixA_r, M, K)) );
+    EXPECT_TRUE( (compareEqual<DataT, DataT, LayoutA, LayoutA>(matrixA, matrixA_r, M, N)) );
     //MatrixUtil<LayoutC>::print(matrixA_r, M, N);
-    EXPECT_TRUE( (compareEqual<DataT, DataT, LayoutB, LayoutB>(matrixB, matrixB_r, K, N)) );
+    EXPECT_TRUE( (compareEqual<DataT, DataT, LayoutB, LayoutB>(matrixB, matrixB_r, M, N)) );
     EXPECT_TRUE( (compareEqual<DataT, DataT, LayoutC, LayoutC>(matrixC, matrixC_r, M, N)) );
 }
 
@@ -202,7 +201,6 @@ void test_load_store_matrix(std::tuple<Ts...>)
                                                      {64, 64, 64},
                                                      {128, 128, 128},
                                                      {256, 256, 256}};
-                                                    //  {2048, 256, 512}}; // TODO: check why this fails
     // clang-format on
     for(auto tblock : thread_block)
     {
