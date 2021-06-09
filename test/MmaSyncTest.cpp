@@ -9,10 +9,9 @@
 
 #ifdef WMMA_VALIDATE_TESTS
 #include <gtest/gtest.h>
+#include "Reference.h" // Vanilla CPU kernel
 #ifdef WMMA_VALIDATE_WITH_ROCBLAS
 #include "rocBLASReference.h" // rocBLAS GPU kernel
-#else
-#include "Reference.h" // Vanilla CPU kernel
 #endif // WMMA_VALIDATE_WITH_ROCBLAS
 #endif // WMMA_VALIDATE_TESTS
 
@@ -159,6 +158,29 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
     int ldc = std::is_same<LayoutC, row_major>::value ? n : m;
     int ldd = std::is_same<LayoutD, row_major>::value ? n : m;
 
+    if (!headerPrinted)
+    {
+        std::cout << "TBlkX, TBlkY, BlkM, BlkN, BlkK, MatM, MatN, MatK, alpha, lda, ldb, beta, ldc, "
+                    "ldd, LytA_LytB_LytC_LytD, Ti_To_Tc, elapsedMs, GFlops, GFlops/s, Efficiency(%)\n";
+        headerPrinted = true;
+    }
+    std::cout << TBlockX << ", " << TBlockY << ", " << BlockM << ", " << BlockN << ", " << BlockK
+              << ", " << m << ", " << n << ", " << k << ", " << alpha << ", " << lda << ", " << ldb
+              << ", " << beta << ", " << ldc << ", " << ldd << ", "
+              << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << "_"
+              << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << "_"
+              << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << "_"
+              << (std::is_same<LayoutD, row_major>::value ? "R" : "C") << ", "
+              << dataTypeToString<InputT>() << "_" << dataTypeToString<OutputT>() << "_"
+              << dataTypeToString<ComputeT>();
+
+    if ( quirks::hipcc_bug_half_packing<OutputT, LayoutC>::value )
+    {
+        std::cout << ", " << "na" << ", " << "na"
+            << ", " << "na" << ", " << "na" << ", " << " SKIPPED" << std::endl;
+        return;
+    }
+
     // Initialize input matrices
     std::vector<InputT>  matrixA(m * k);
     std::vector<InputT>  matrixB(k * n);
@@ -239,22 +261,7 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
     auto actualGFlopsPerSec = calculateGFlopsPerSec(m, n, k, elapsedTimeMs);
     auto efficiency         = actualGFlopsPerSec / peakGFlopsPerSec * 100.0f;
 
-    if (!headerPrinted)
-    {
-        std::cout << "TBlkX, TBlkY, BlkM, BlkN, BlkK, MatM, MatN, MatK, alpha, lda, ldb, beta, ldc, "
-                    "ldd, LytA_LytB_LytC_LytD, Ti_To_Tc, elapsedMs, GFlops, GFlops/s, Efficiency(%)\n";
-        headerPrinted = true;
-    }
-
-    std::cout << TBlockX << ", " << TBlockY << ", " << BlockM << ", " << BlockN << ", " << BlockK
-              << ", " << m << ", " << n << ", " << k << ", " << alpha << ", " << lda << ", " << ldb
-              << ", " << beta << ", " << ldc << ", " << ldd << ", "
-              << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << "_"
-              << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << "_"
-              << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << "_"
-              << (std::is_same<LayoutD, row_major>::value ? "R" : "C") << ", "
-              << dataTypeToString<InputT>() << "_" << dataTypeToString<OutputT>() << "_"
-              << dataTypeToString<ComputeT>() << ", " << elapsedTimeMs << ", " << totalGFlops
+    std::cout << ", " << elapsedTimeMs << ", " << totalGFlops
               << ", " << actualGFlopsPerSec << ", " << efficiency << ", ";
 
 #ifdef WMMA_VALIDATE_TESTS
@@ -274,27 +281,31 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
     // FMA operations will be very prone to significant errors.
     double errorTolerance = sizeof(ComputeT) < sizeof(float32_t) ? 100.0 : 10.0;
 
+    bool validated = false;
 #ifdef WMMA_VALIDATE_WITH_ROCBLAS
+    if (!quirks::rocblas_not_support_bf16_bf16_bf16<InputT, OutputT, ComputeT>::value)
+    {
+        // rocblas matrix C, D always in col_major
+        MatrixUtil<col_major>::fill(matrixC, m, n);
+        gemm_rocBLAS<InputT, OutputT, ComputeT, LayoutA, LayoutB>(
+            m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
 
-    // rocblas matrix C, D always in col_major
-    MatrixUtil<col_major>::fill(matrixC, m, n);
-    gemm_rocBLAS<InputT, OutputT, ComputeT, LayoutA, LayoutB>(
-        m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
+        EXPECT_TRUE( (compareEqual<OutputT, OutputT, LayoutD, col_major>(matrixD, matrixD_ref, m, n, errorTolerance)) );
 
-    EXPECT_TRUE( (compareEqual<OutputT, OutputT, LayoutD, col_major>(matrixD, matrixD_ref, m, n, errorTolerance)) );
+        //MatrixUtil<LayoutD>::print(matrixD, m, n);
+        //MatrixUtil<col_major>::print(matrixD_ref, m, n);
 
-    //MatrixUtil<LayoutD>::print(matrixD, m, n);
-    //MatrixUtil<col_major>::print(matrixD_ref, m, n);
-
-#else
-
-    gemm_CPU<InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD>(
-        m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
-    EXPECT_TRUE( (compareEqual<OutputT, OutputT, LayoutD, LayoutD>(matrixD, matrixD_ref, m, n, errorTolerance)) );
-
+        validated = true;
+    }
 #endif // WMMA_VALIDATE_WITH_ROCBLAS
+    if (!validated)
+    {
+        gemm_CPU<InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD>(
+            m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
+        EXPECT_TRUE( (compareEqual<OutputT, OutputT, LayoutD, LayoutD>(matrixD, matrixD_ref, m, n, errorTolerance)) );
+    }
 
-#else
+#else // WMMA_VALIDATE_TESTS
     // No validation, close off the line.
     std::cout << std::endl;
 
