@@ -1,6 +1,8 @@
 #ifndef WMMA_LOCAL_STORE_H
 #define WMMA_LOCAL_STORE_H
 
+#warning "LocalStore is deprecated. Please use OpaqueStore."
+
 #include "Layout.h"
 #include "Types.h"
 

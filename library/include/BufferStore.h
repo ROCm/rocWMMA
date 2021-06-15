@@ -1,6 +1,8 @@
 #ifndef WMMA_BUFFER_STORE_H
 #define WMMA_BUFFER_STORE_H
 
+#warning "BufferStore is deprecated. Please use OpaqueStore"
+
 #include <hip/hip_runtime.h>
 
 #include "BufferDescriptor.h"

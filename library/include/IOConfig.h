@@ -1,10 +1,8 @@
 #ifndef IO_CONFIG_H
 #define IO_CONFIG_H
 
-#include "BufferLoad.h"
-#include "BufferStore.h"
 #include "Constants.h"
-//#include "CoopLoad.h"
+#include "CoopLoad.h"
 #include "CoopStore.h"
 #include "IOPack.h"
 #include "IOTraits.h"
