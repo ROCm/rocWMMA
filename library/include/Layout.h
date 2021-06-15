@@ -248,7 +248,6 @@ namespace Layout
               uint32_t ElementsPerThread>
     struct Row
     {
-        using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
         struct Traits
         {
             using MappingUtil  = MappingUtil<BlockK, BlockDim, DataT, DataLayout>;
@@ -446,8 +445,12 @@ namespace Layout
             // Use IOTraits for full RegCount so we can properly calculate the offsets.
             using C4Traits = amdgcn_io_traits<BlockDim, BlockK, DataT, Traits::RegCount>;
 
-            constexpr auto majorStepSize = C4Traits::KPerIO / 2;
-            constexpr auto minorStepSize = VectorWidth;
+            static_assert(IOTraits::KPerIO <= C4Traits::KPerIO, "");
+            constexpr auto fullLoad = (IOTraits::KPerIO == C4Traits::KPerIO);
+
+            constexpr auto majorStepSize
+                = fullLoad ? C4Traits::KPerIO : C4Traits::KPerIO - Traits::RegCount;
+            constexpr auto minorStepSize = fullLoad ? 0 : VectorWidth;
             auto           doMajorStep = ((iteration + 1) % (Traits::RegCount / VectorWidth)) == 0;
 
             return std::make_pair(
