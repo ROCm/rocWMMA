@@ -59,8 +59,7 @@ struct amdgcn_cooperative_store_DxK
                                          DataLayout,
                                          ElementsPerThread>;
 
-        auto storeOffset
-            = StoreLayoutT::iterativeOffset(waveIndex * StoreLayoutT::Traits::IOCount, ldm);
+        auto storeOffset = StoreLayoutT::dataBlockOffset(ldm) * waveIndex;
 
         auto it = input.template begin<Traits::InputT::size() / Traits::SplitCount>();
 
