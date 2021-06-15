@@ -63,8 +63,7 @@ struct amdgcn_cooperative_load_DxK
 
         // Determine offset for the current wave, and
         // emplace the partial load into the output.
-        auto loadOffset
-            = LoaderLayout::iterativeOffset(waveIndex * LoaderLayout::Traits::IOCount, ldm);
+        auto loadOffset = LoaderLayout::dataBlockOffset(ldm) * waveIndex;
 
         auto it = output.template begin<Traits::OutputT::size() / Traits::SplitCount>();
 

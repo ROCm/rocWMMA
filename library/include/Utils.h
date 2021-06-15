@@ -324,4 +324,39 @@ constexpr const char* dataTypeToString()
     }
 }
 
+inline std::pair<uint32_t, uint32_t> operator+(std::pair<uint32_t, uint32_t> const& lhs,
+                                               std::pair<uint32_t, uint32_t> const& rhs)
+{
+    return std::make_pair(std::get<0>(lhs) + std::get<0>(rhs), std::get<1>(lhs) + std::get<1>(rhs));
+}
+inline std::pair<uint32_t, uint32_t>& operator+=(std::pair<uint32_t, uint32_t>&       lhs,
+                                                 std::pair<uint32_t, uint32_t> const& rhs)
+{
+    std::get<0>(lhs) += std::get<0>(rhs);
+    std::get<1>(lhs) += std::get<1>(rhs);
+    return lhs;
+}
+
+inline std::pair<uint32_t, uint32_t> operator-(std::pair<uint32_t, uint32_t> const& lhs,
+                                               std::pair<uint32_t, uint32_t> const& rhs)
+{
+    return std::make_pair(std::get<0>(lhs) - std::get<0>(rhs), std::get<1>(lhs) - std::get<1>(rhs));
+}
+inline std::pair<uint32_t, uint32_t>& operator-=(std::pair<uint32_t, uint32_t>&       lhs,
+                                                 std::pair<uint32_t, uint32_t> const& rhs)
+{
+    std::get<0>(lhs) -= std::get<0>(rhs);
+    std::get<1>(lhs) -= std::get<1>(rhs);
+    return lhs;
+}
+
+namespace std
+{
+    template <typename T>
+    __device__ inline pair<T, T> reverse(pair<T, T> const& p)
+    {
+        return make_pair(p.second, p.first);
+    }
+} // namespace std
+
 #endif // WMMA_UTILS_H
