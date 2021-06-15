@@ -201,8 +201,7 @@ __host__ void test_mma_sync_h(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha
                                            LayoutD>),
                           gridDim,
                           blockDim,
-                          max(BlockM * blockDim.y, BlockN * blockDim.x / AMDGCN_WAVE_SIZE) * BlockK
-                              * sizeof(InputT), // sharedMemBytes
+                          0, // sharedMemBytes
                           0, // stream
                           startEvent, // Event start
                           stopEvent, // event stop
