@@ -1,6 +1,8 @@
 #ifndef WMMA_BUFFER_LOAD_H
 #define WMMA_BUFFER_LOAD_H
 
+#warning "BufferLoad is deprecated. Please use OpaqueLoad."
+
 #include <hip/hip_runtime.h>
 
 #include "BufferDescriptor.h"

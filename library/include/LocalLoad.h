@@ -1,6 +1,8 @@
 #ifndef WMMA_LOCAL_LOAD_H
 #define WMMA_LOCAL_LOAD_H
 
+#warning "LocalLoad is deprecated. Please use OpaqueLoad."
+
 #include "Layout.h"
 #include "Types.h"
 
