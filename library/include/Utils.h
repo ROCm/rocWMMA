@@ -324,38 +324,40 @@ constexpr const char* dataTypeToString()
     }
 }
 
-inline std::pair<uint32_t, uint32_t> operator+(std::pair<uint32_t, uint32_t> const& lhs,
-                                               std::pair<uint32_t, uint32_t> const& rhs)
-{
-    return std::make_pair(std::get<0>(lhs) + std::get<0>(rhs), std::get<1>(lhs) + std::get<1>(rhs));
-}
-inline std::pair<uint32_t, uint32_t>& operator+=(std::pair<uint32_t, uint32_t>&       lhs,
-                                                 std::pair<uint32_t, uint32_t> const& rhs)
-{
-    std::get<0>(lhs) += std::get<0>(rhs);
-    std::get<1>(lhs) += std::get<1>(rhs);
-    return lhs;
-}
-
-inline std::pair<uint32_t, uint32_t> operator-(std::pair<uint32_t, uint32_t> const& lhs,
-                                               std::pair<uint32_t, uint32_t> const& rhs)
-{
-    return std::make_pair(std::get<0>(lhs) - std::get<0>(rhs), std::get<1>(lhs) - std::get<1>(rhs));
-}
-inline std::pair<uint32_t, uint32_t>& operator-=(std::pair<uint32_t, uint32_t>&       lhs,
-                                                 std::pair<uint32_t, uint32_t> const& rhs)
-{
-    std::get<0>(lhs) -= std::get<0>(rhs);
-    std::get<1>(lhs) -= std::get<1>(rhs);
-    return lhs;
-}
-
 namespace std
 {
     template <typename T>
     __device__ inline pair<T, T> reverse(pair<T, T> const& p)
     {
         return make_pair(p.second, p.first);
+    }
+
+    inline pair<uint32_t, uint32_t> operator+(pair<uint32_t, uint32_t> const& lhs,
+                                              pair<uint32_t, uint32_t> const& rhs)
+    {
+        return make_pair(get<0>(lhs) + get<0>(rhs), get<1>(lhs) + get<1>(rhs));
+    }
+
+    inline pair<uint32_t, uint32_t>& operator+=(pair<uint32_t, uint32_t>&       lhs,
+                                                pair<uint32_t, uint32_t> const& rhs)
+    {
+        get<0>(lhs) += get<0>(rhs);
+        get<1>(lhs) += get<1>(rhs);
+        return lhs;
+    }
+
+    inline pair<uint32_t, uint32_t> operator-(pair<uint32_t, uint32_t> const& lhs,
+                                              pair<uint32_t, uint32_t> const& rhs)
+    {
+        return make_pair(get<0>(lhs) - get<0>(rhs), get<1>(lhs) - get<1>(rhs));
+    }
+
+    inline pair<uint32_t, uint32_t>& operator-=(pair<uint32_t, uint32_t>&       lhs,
+                                                pair<uint32_t, uint32_t> const& rhs)
+    {
+        get<0>(lhs) -= get<0>(rhs);
+        get<1>(lhs) -= get<1>(rhs);
+        return lhs;
     }
 } // namespace std
 
