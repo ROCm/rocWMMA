@@ -1,6 +1,8 @@
 #ifndef WMMA_BUFFER_LOAD_H
 #define WMMA_BUFFER_LOAD_H
 
+#warning "BufferLoad is deprecated. Please use OpaqueLoad."
+
 #include <hip/hip_runtime.h>
 
 #include "BufferDescriptor.h"
@@ -157,7 +159,7 @@ struct amdgcn_buffer_load_DxK
         BufferDescriptor<DataT> srd(data);
 
         // Arrange wave threads to starting data offsets due to layout.
-        uint32_t initOffset = LayoutT::initialOffset(ldm);
+        auto baseOffset = LayoutT::baseDataOffset(ldm);
 
         // Loop over loads to fill BlockDim * BlockK for each wave.
         OutputT result;
@@ -171,11 +173,11 @@ struct amdgcn_buffer_load_DxK
         {
             *it = *Loader::exec(*(srd), // SRD regs
                                 0, // stride offset
-                                (initOffset + LayoutT::iterativeOffset(i, ldm))
-                                    * sizeof(DataT), // offset bytes
+                                baseOffset * sizeof(DataT), // offset bytes
                                 false,
                                 false);
             it++;
+            baseOffset += LayoutT::dataOffsetIncrement(i, ldm);
         }
 
         return result;

@@ -24,15 +24,15 @@ template <uint32_t BlockM,
           typename LayoutB,
           typename LayoutC,
           typename LayoutD>
-__global__ void test_mma_sync_d(uint32_t       m,
-                                uint32_t       n,
-                                uint32_t       k,
-                                InputT const*  a,
-                                InputT const*  b,
-                                OutputT const* c,
-                                OutputT*       d,
-                                ComputeT       alpha,
-                                ComputeT       beta)
+__global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
+                                                          uint32_t       n,
+                                                          uint32_t       k,
+                                                          InputT const*  a,
+                                                          InputT const*  b,
+                                                          OutputT const* c,
+                                                          OutputT*       d,
+                                                          ComputeT       alpha,
+                                                          ComputeT       beta)
 {
     using MappingA = MappingUtil<BlockM, BlockK, InputT, LayoutA>;
     using MappingB = MappingUtil<BlockK, BlockN, InputT, LayoutB>;
@@ -201,8 +201,7 @@ __host__ void test_mma_sync_h(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha
                                            LayoutD>),
                           gridDim,
                           blockDim,
-                          max(BlockM * blockDim.y, BlockN * blockDim.x / AMDGCN_WAVE_SIZE) * BlockK
-                              * sizeof(InputT), // sharedMemBytes
+                          0, // sharedMemBytes
                           0, // stream
                           startEvent, // Event start
                           stopEvent, // event stop
@@ -781,7 +780,7 @@ int main()
     // Native fp32
     test_mma_sync_h<float32_t, float32_t, float32_t>();
 
-    //test_mma_sync_h<64, 4, 32, 32, 128, float32_t, float32_t>(8192, 8192, 8192, 1.0f, 1.0f);
+    //test_mma_sync_h<64, 4, 32, 32, 32, float32_t, float32_t, float32_t>(8192, 8192, 8192, 1.0f, 1.0f);
 
     //test_mma_sync_h<64, 4, 32, 32, 32, bfloat16_t, bfloat16_t, float32_t, col_major, row_major, row_major>(4096, 4096, 4096, 2.0f, 1.5f);
     //test_mma_sync_h<64, 1, 32, 32, 32, float16_t, float16_t, float16_t, col_major, row_major, row_major>(32, 32, 32, 1.0f, 1.0f);

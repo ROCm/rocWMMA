@@ -88,12 +88,17 @@ namespace _MappingUtil
     };
 
     /*
-    Calculate the memory address for a given matrix coordinate or block coordinate.
+    Calculate the memory offsets and addresses for a given matrix coordinate or block coordinate.
     */
     template <typename DataT, uint32_t BlockM, uint32_t BlockN, typename DataLayout>
     struct DataSpace
     {
         using CoordT = std::pair<uint32_t, uint32_t>;
+
+        __device__ static inline uint32_t offsetFromMatrixCoord(uint32_t      ldm,
+                                                                CoordT const& matrixCoord);
+        __device__ static inline uint32_t offsetFromBlockCoord(uint32_t      ldm,
+                                                               CoordT const& blockCoord);
 
         __device__ static inline DataT*
             fromMatrixCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& matrixCoord);
@@ -128,6 +133,10 @@ struct MappingUtil
     // Data address of current wave
     __device__ static inline DataT* dataCoord(DataT const* baseAddr, uint32_t ldm);
 
+    /// Current workgroup perspective
+
+    __device__ static inline auto workgroupDim() -> CoordT;
+
     /// Coordinate override helpers
 
     // Current global wave coordinate with row override
@@ -146,6 +155,9 @@ struct MappingUtil
 
     // Convert from any block coord to matrix coord
     __device__ static inline auto matrixCoord(CoordT const& blockCoord) -> CoordT;
+
+    // Convert from any matrix coord to data offset
+    __device__ static inline auto dataOffset(uint32_t ldm, CoordT const& blockCoord) -> uint32_t;
 
     // Convert from any matrix coord to data address
     __device__ static inline DataT*

@@ -75,7 +75,7 @@ struct PackTraits<float32_t>
 * until the min reqs are satisfied.
 */
 
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t TestWidth = 8>
+template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t TestWidth = 4>
 struct VecWidthTraits
 {
     enum : uint32_t

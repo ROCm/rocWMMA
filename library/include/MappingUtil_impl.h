@@ -4,11 +4,9 @@
 #include <hip/hip_runtime.h>
 #include <utility>
 
-
 #include "Constants.h"
 #include "MappingUtil.h"
 #include "Types.h"
-
 
 namespace _MappingUtil
 {
@@ -22,18 +20,18 @@ namespace _MappingUtil
         return threadIdx.x / AMDGCN_WAVE_SIZE;
     }
 
-    __device__ constexpr inline auto waveCount(std::pair<uint32_t, uint32_t> const& threadCount) -> std::pair<uint32_t, uint32_t>
+    __device__ constexpr inline auto waveCount(std::pair<uint32_t, uint32_t> const& threadCount)
+        -> std::pair<uint32_t, uint32_t>
     {
-        return std::make_pair(
-            std::get<0>(threadCount) / AMDGCN_WAVE_SIZE, // ROW
-            std::get<1>(threadCount));                   // COL
+        return std::make_pair(std::get<0>(threadCount) / AMDGCN_WAVE_SIZE, // ROW
+                              std::get<1>(threadCount)); // COL
     }
 
-    __device__ constexpr inline auto threadCount(std::pair<uint32_t, uint32_t> const& waveCount) -> std::pair<uint32_t, uint32_t>
+    __device__ constexpr inline auto threadCount(std::pair<uint32_t, uint32_t> const& waveCount)
+        -> std::pair<uint32_t, uint32_t>
     {
-        return std::make_pair(
-            std::get<0>(waveCount) * AMDGCN_WAVE_SIZE, // ROW
-            std::get<1>(waveCount));                   // COL
+        return std::make_pair(std::get<0>(waveCount) * AMDGCN_WAVE_SIZE, // ROW
+                              std::get<1>(waveCount)); // COL
     }
 
     // struct WaveSpace
@@ -55,9 +53,8 @@ namespace _MappingUtil
 
     __device__ inline auto WaveSpace::globalWaveCoord() -> CoordT
     {
-        return waveCount(std::make_pair(
-            blockIdx.x * blockDim.x + threadIdx.x,
-            blockIdx.y * blockDim.y + threadIdx.y));
+        return waveCount(std::make_pair(blockIdx.x * blockDim.x + threadIdx.x,
+                                        blockIdx.y * blockDim.y + threadIdx.y));
     }
 
     __device__ inline uint32_t WaveSpace::localLaneId()
@@ -69,55 +66,56 @@ namespace _MappingUtil
     // struct MatrixSpace
 
     template <uint32_t BlockM, uint32_t BlockN>
-    __device__ inline auto MatrixSpace<BlockM, BlockN>::fromBlockCoord(CoordT const& blockCoord) -> CoordT
+    __device__ inline auto MatrixSpace<BlockM, BlockN>::fromBlockCoord(CoordT const& blockCoord)
+        -> CoordT
     {
         // Map block to matrix coordinate space.
-        return std::make_pair(std::get<0>(blockCoord) * BlockM,  // ROW
+        return std::make_pair(std::get<0>(blockCoord) * BlockM, // ROW
                               std::get<1>(blockCoord) * BlockN); // COL
     }
 
     // template <typename DataT, uint32_t BlockM, uint32_t BlockN, typename DataLayout>
     // struct DataSpace;
 
-    template <typename DataT, uint32_t BlockM, uint32_t BlockN>
-    struct DataSpace<DataT, BlockM, BlockN, row_major>
+    template <typename DataT, uint32_t BlockM, uint32_t BlockN, typename DataLayout>
+    __device__ inline uint32_t DataSpace<DataT, BlockM, BlockN, DataLayout>::offsetFromMatrixCoord(
+        uint32_t ldm, CoordT const& matrixCoord)
     {
-        using CoordT = std::pair<uint32_t, uint32_t>;
-
-        __device__ static inline DataT* fromMatrixCoord(DataT const* addr, uint32_t ldm, CoordT const& matrixCoord)
+        enum : uint32_t
         {
-            // Align pointer to data starting at (row, col)
-            return const_cast<DataT*>(addr) + 
-                   std::get<0>(matrixCoord) * ldm + // Row
-                   std::get<1>(matrixCoord);        // Col
-        }
+            MajorIndex = std::is_same<DataLayout, row_major>::value ? 0 : 1,
+            MinorIndex = std::is_same<DataLayout, row_major>::value ? 1 : 0
+        };
+        // Upgrade to 64 bit DataT offset
+        return std::get<MajorIndex>(matrixCoord) * ldm + std::get<MinorIndex>(matrixCoord);
+    }
 
-        __device__ static inline DataT* fromBlockCoord(DataT const* addr, uint32_t ldm, CoordT const& blockCoord)
-        {
-            // First map from matrix then fwd.
-            return fromMatrixCoord(MatrixSpace<BlockM, BlockN>::fromBlockCoord(blockCoord));
-        }
-    };
-
-    template <typename DataT, uint32_t BlockM, uint32_t BlockN>
-    struct DataSpace<DataT, BlockM, BlockN, col_major>
+    template <typename DataT, uint32_t BlockM, uint32_t BlockN, typename DataLayout>
+    __device__ inline uint32_t
+        DataSpace<DataT, BlockM, BlockN, DataLayout>::offsetFromBlockCoord(uint32_t      ldm,
+                                                                           CoordT const& blockCoord)
     {
-        using CoordT = std::pair<uint32_t, uint32_t>;
+        // First map to matrix coord then fwd
+        return offsetFromMatrixCoord(
+            ldm,
+            MatrixSpace<BlockM, BlockN>::fromBlockCoord(std::forward<CoordT const>(blockCoord)));
+    }
 
-        __device__ static inline DataT* fromMatrixCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& matrixCoord)
-        {
-            // Align pointer to data starting at (row, col)
-            return const_cast<DataT*>(baseAddr) +
-                   std::get<0>(matrixCoord) +      // Row
-                   std::get<1>(matrixCoord) * ldm; // Col
-        }
+    template <typename DataT, uint32_t BlockM, uint32_t BlockN, typename DataLayout>
+    __device__ inline DataT* DataSpace<DataT, BlockM, BlockN, DataLayout>::fromMatrixCoord(
+        DataT const* baseAddr, uint32_t ldm, CoordT const& matrixCoord)
+    {
+        return const_cast<DataT*>(baseAddr)
+               + offsetFromMatrixCoord(ldm, std::forward<CoordT const>(matrixCoord));
+    }
 
-        __device__ static inline DataT* fromBlockCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& blockCoord)
-        {
-            // First map from matrix then fwd.
-            return fromMatrixCoord(baseAddr, ldm, MatrixSpace<BlockM, BlockN>::fromBlockCoord(blockCoord));
-        }
-    };
+    template <typename DataT, uint32_t BlockM, uint32_t BlockN, typename DataLayout>
+    __device__ inline DataT* DataSpace<DataT, BlockM, BlockN, DataLayout>::fromBlockCoord(
+        DataT const* baseAddr, uint32_t ldm, CoordT const& blockCoord)
+    {
+        return const_cast<DataT*>(baseAddr)
+               + offsetFromBlockCoord(ldm, std::forward<CoordT const>(blockCoord));
+    }
 
 } // namespace _MappingUtil
 
@@ -151,41 +149,54 @@ __device__ inline auto MappingUtil<BlockM, BlockN, DataT, DataLayout>::matrixCoo
 }
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
-__device__ inline DataT* MappingUtil<BlockM, BlockN, DataT, DataLayout>::dataCoord(DataT const* baseAddr, uint32_t ldm)
+__device__ inline DataT*
+    MappingUtil<BlockM, BlockN, DataT, DataLayout>::dataCoord(DataT const* baseAddr, uint32_t ldm)
 {
     return DataSpace::fromMatrixCoord(baseAddr, ldm, matrixCoord());
+}
+
+/// Current workgroup perspective
+
+template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
+__device__ inline auto MappingUtil<BlockM, BlockN, DataT, DataLayout>::workgroupDim() -> CoordT
+{
+    return WaveSpace::workgroupDim();
 }
 
 /// Coordinate override helpers
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
-__device__ inline auto MappingUtil<BlockM, BlockN, DataT, DataLayout>::blockCoordM(uint32_t m) -> CoordT
+__device__ inline auto MappingUtil<BlockM, BlockN, DataT, DataLayout>::blockCoordM(uint32_t m)
+    -> CoordT
 {
-    auto coord = blockCoord();
+    auto coord         = blockCoord();
     std::get<0>(coord) = m;
     return coord;
 }
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
-__device__ inline auto MappingUtil<BlockM, BlockN, DataT, DataLayout>::blockCoordN(uint32_t n) -> CoordT
+__device__ inline auto MappingUtil<BlockM, BlockN, DataT, DataLayout>::blockCoordN(uint32_t n)
+    -> CoordT
 {
-    auto coord = blockCoord();
+    auto coord         = blockCoord();
     std::get<1>(coord) = n;
     return coord;
 }
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
-__device__ inline auto MappingUtil<BlockM, BlockN, DataT, DataLayout>::matrixCoordM(uint32_t m) -> CoordT
+__device__ inline auto MappingUtil<BlockM, BlockN, DataT, DataLayout>::matrixCoordM(uint32_t m)
+    -> CoordT
 {
-    auto coord = matrixCoord();
+    auto coord         = matrixCoord();
     std::get<0>(coord) = m;
     return coord;
 }
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
-__device__ inline auto MappingUtil<BlockM, BlockN, DataT, DataLayout>::matrixCoordN(uint32_t n) -> CoordT
+__device__ inline auto MappingUtil<BlockM, BlockN, DataT, DataLayout>::matrixCoordN(uint32_t n)
+    -> CoordT
 {
-    auto coord = matrixCoord();
+    auto coord         = matrixCoord();
     std::get<1>(coord) = n;
     return coord;
 }
@@ -193,13 +204,23 @@ __device__ inline auto MappingUtil<BlockM, BlockN, DataT, DataLayout>::matrixCoo
 /// Conversion helpers
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
-__device__ inline auto MappingUtil<BlockM, BlockN, DataT, DataLayout>::matrixCoord(CoordT const& blockCoord) -> CoordT
+__device__ inline auto
+    MappingUtil<BlockM, BlockN, DataT, DataLayout>::matrixCoord(CoordT const& blockCoord) -> CoordT
 {
     return MatrixSpace::fromBlockCoord(blockCoord);
 }
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
-__device__ inline DataT* MappingUtil<BlockM, BlockN, DataT, DataLayout>::dataCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& matrixCoord)
+__device__ inline uint32_t
+    MappingUtil<BlockM, BlockN, DataT, DataLayout>::dataOffset(uint32_t      ldm,
+                                                               CoordT const& matrixCoord)
+{
+    return DataSpace::offsetFromMatrixCoord(ldm, matrixCoord);
+}
+
+template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
+__device__ inline DataT* MappingUtil<BlockM, BlockN, DataT, DataLayout>::dataCoord(
+    DataT const* baseAddr, uint32_t ldm, CoordT const& matrixCoord)
 {
     return DataSpace::fromMatrixCoord(baseAddr, ldm, matrixCoord);
 }

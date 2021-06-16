@@ -1,10 +1,8 @@
 #ifndef IO_CONFIG_H
 #define IO_CONFIG_H
 
-#include "BufferLoad.h"
-#include "BufferStore.h"
 #include "Constants.h"
-//#include "CoopLoad.h"
+#include "CoopLoad.h"
 #include "CoopStore.h"
 #include "IOPack.h"
 #include "IOTraits.h"
@@ -21,8 +19,7 @@
 template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
 struct OptConfig;
 
-template <typename MatrixT,
-          uint32_t BlockDim,
+template <uint32_t BlockDim,
           uint32_t BlockK,
           typename DataT,
           typename DataLayout,
@@ -49,7 +46,7 @@ struct OptConfig<matrix_a, BlockDim, BlockK, DataT, row_major>
     // Global data config.
     // For fastest loading from global in row major, we should load by rows.
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using GlobalLayout = Layout::Col<BlkDim, BlkK, DT, DL, EPT>;
+    using GlobalLayout = Layout::Col4T<BlkDim, BlkK, DT, DL, EPT>;
 
     using GlobalLoader = amdgcn_opaque_load_DxK<BlockDim,
                                                 BlockK,
@@ -65,16 +62,14 @@ struct OptConfig<matrix_a, BlockDim, BlockK, DataT, row_major>
                                                  GlobalLayout,
                                                  ElementsPerThread>;
 
-    using CoopLoader = amdgcn_cooperative_load_DxK<matrix_a,
-                                                   BlockDim,
+    using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
                                                    BlockK,
                                                    DataT,
                                                    row_major,
                                                    GlobalLayout,
                                                    ElementsPerThread>;
 
-    using CoopStorer = amdgcn_cooperative_store_DxK<matrix_a,
-                                                    BlockDim,
+    using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
                                                     BlockK,
                                                     DataT,
                                                     row_major,
@@ -105,7 +100,7 @@ struct OptConfig<matrix_a, BlockDim, BlockK, DataT, col_major>
     // Global data config.
     // For fastest loading from global in row major, we should load by rows.
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using GlobalLayout = Layout::Col<BlkDim, BlkK, DT, DL, EPT>;
+    using GlobalLayout = Layout::Col4T<BlkDim, BlkK, DT, DL, EPT>;
 
     using GlobalLoader = amdgcn_opaque_load_DxK<BlockDim,
                                                 BlockK,
@@ -124,16 +119,14 @@ struct OptConfig<matrix_a, BlockDim, BlockK, DataT, col_major>
                                                  GlobalLayout,
                                                  ElementsPerThread>;
 
-    using CoopLoader = amdgcn_cooperative_load_DxK<matrix_a,
-                                                   BlockDim,
+    using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
                                                    BlockK,
                                                    DataT,
                                                    col_major,
                                                    GlobalLayout,
                                                    ElementsPerThread>;
 
-    using CoopStorer = amdgcn_cooperative_store_DxK<matrix_a,
-                                                    BlockDim,
+    using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
                                                     BlockK,
                                                     DataT,
                                                     col_major,
@@ -143,7 +136,7 @@ struct OptConfig<matrix_a, BlockDim, BlockK, DataT, col_major>
     // Local data config.
     // After writing from global to LDS, load proper format for MFMA.
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using LocalLayout = Layout::Col<BlkDim, BlkK, DT, DL, EPT>;
+    using LocalLayout = Layout::Col4T<BlkDim, BlkK, DT, DL, EPT>;
 
     using LocalLoader = amdgcn_opaque_load_DxK<BlockDim, BlockK, DataT, col_major, LocalLayout, 1>;
 };
@@ -164,7 +157,7 @@ struct OptConfig<matrix_b, BlockDim, BlockK, DataT, row_major>
 
     // Global data config
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using GlobalLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
+    using GlobalLayout = Layout::Row4T<BlkDim, BlkK, DT, DL, EPT>;
 
     using GlobalLoader = amdgcn_opaque_load_DxK<BlockDim,
                                                 BlockK,
@@ -179,16 +172,14 @@ struct OptConfig<matrix_b, BlockDim, BlockK, DataT, row_major>
                                                  GlobalLayout,
                                                  ElementsPerThread>;
 
-    using CoopLoader = amdgcn_cooperative_load_DxK<matrix_b,
-                                                   BlockDim,
+    using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
                                                    BlockK,
                                                    DataT,
                                                    row_major,
                                                    GlobalLayout,
                                                    ElementsPerThread>;
 
-    using CoopStorer = amdgcn_cooperative_store_DxK<matrix_b,
-                                                    BlockDim,
+    using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
                                                     BlockK,
                                                     DataT,
                                                     row_major,
@@ -219,7 +210,7 @@ struct OptConfig<matrix_b, BlockDim, BlockK, DataT, col_major>
 
     // Global data config
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using GlobalLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
+    using GlobalLayout = Layout::Row4T<BlkDim, BlkK, DT, DL, EPT>;
 
     using GlobalLoader = amdgcn_opaque_load_DxK<BlockDim,
                                                 BlockK,
@@ -235,16 +226,14 @@ struct OptConfig<matrix_b, BlockDim, BlockK, DataT, col_major>
                                                  GlobalLayout,
                                                  ElementsPerThread>;
 
-    using CoopLoader = amdgcn_cooperative_load_DxK<matrix_b,
-                                                   BlockDim,
+    using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
                                                    BlockK,
                                                    DataT,
                                                    col_major,
                                                    GlobalLayout,
                                                    ElementsPerThread>;
 
-    using CoopStorer = amdgcn_cooperative_store_DxK<matrix_b,
-                                                    BlockDim,
+    using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
                                                     BlockK,
                                                     DataT,
                                                     col_major,
@@ -307,7 +296,7 @@ struct OptConfig<accumulator, BlockDim, BlockK, DataT, col_major>
 
     // Global data config
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using GlobalLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
+    using GlobalLayout = Layout::Row4T<BlkDim, BlkK, DT, DL, EPT>;
 
     using GlobalLoader = amdgcn_opaque_load_DxK<BlockDim,
                                                 BlockK,
