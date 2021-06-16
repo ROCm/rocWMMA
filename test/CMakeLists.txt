@@ -20,23 +20,27 @@
 # THE SOFTWARE.
 # #############################################################################
 
+include(GoogleTest)
+
 function(add_custom_test TEST_TARGET TEST_SOURCE)
   add_executable(${TEST_TARGET} ${TEST_SOURCE})
-  target_link_libraries(${TEST_TARGET} wmma)
+  target_link_libraries(${TEST_TARGET} wmma OpenMP::OpenMP_CXX gtest_main)
   target_include_directories(${TEST_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_VALIDATE_TESTS)
-  add_test("${TEST_TARGET}" ${TEST_TARGET})
+  gtest_discover_tests(${TEST_TARGET})
+endfunction()
+
+function(add_custom_test_with_rocblas TEST_TARGET TEST_SOURCE)
+  add_custom_test(${TEST_TARGET} ${TEST_SOURCE})
+  target_link_libraries(${TEST_TARGET} roc::rocblas)
+  target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_VALIDATE_WITH_ROCBLAS)
 endfunction()
 
 add_custom_test(LoadStoreMatrixSyncTest LoadStoreMatrixSyncTest.cpp)
 add_custom_test(FillFragmentTest FillFragmentTest.cpp)
 
 if(WMMA_VALIDATE_WITH_ROCBLAS)
-  add_executable(MmaSyncTest-rocBLAS MmaSyncTest.cpp)
-  target_link_libraries(MmaSyncTest-rocBLAS wmma roc::rocblas)
-  target_include_directories(MmaSyncTest-rocBLAS PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-  target_compile_definitions(MmaSyncTest-rocBLAS PRIVATE WMMA_VALIDATE_TESTS WMMA_VALIDATE_WITH_ROCBLAS)
-  add_test("MmaSyncTest-rocBLAS" MmaSyncTest-rocBLAS)
+  add_custom_test_with_rocblas(MmaSyncTest-rocBLAS MmaSyncTest.cpp)
 else()
   add_custom_test(MmaSyncTest MmaSyncTest.cpp)
 endif()

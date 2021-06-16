@@ -5,12 +5,14 @@
 #include <assert.h>
 #include <iostream>
 #include <vector>
+#include <tuple>
 
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
 #include "Constants.h"
 #include "Types.h"
+#include "Utils.h"
 
 #ifndef CHECK_HIP_ERROR
 #define CHECK_HIP_ERROR(status)                   \
@@ -108,6 +110,19 @@ namespace std
         ::Fp16Bits eps(static_cast<uint16_t>(0x007F));
         return eps.b16;
     }
+#if !(__cplusplus >= 201703L)
+    template <typename F, typename Tuple, size_t... I>
+    auto apply_impl(F fn, Tuple t, std::index_sequence<I...>)
+    {
+        return fn(std::get<I>(t)...);
+    }
+    template <typename F, typename Tuple>
+    auto apply(F fn, Tuple t)
+    {
+        const std::size_t size = std::tuple_size<Tuple>::value;
+        return apply_impl(fn, t, std::make_index_sequence<size>());
+    }
+#endif
 }
 
 // Define host side hfloat16_t operators that we need for validation
@@ -211,9 +226,11 @@ struct MatrixUtil
 };
 
 template <typename TypeA, typename TypeB, typename LayoutA, typename LayoutB>
-void compareEqual(
+bool compareEqual(
     std::vector<TypeA> const& a, std::vector<TypeB> const& b, int M, int N, double tolerance = 10.0)
 {
+    bool retval;
+
     assert(a.size() == b.size() && "A and B are not the same size");
     assert(a.size() == M * N && "A and B do not match size M x N");
     int lda = std::is_same<LayoutA, row_major>::value ? N : M;
@@ -250,18 +267,24 @@ void compareEqual(
     if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
     {
         std::cout << "FAIL: ";
+        retval = false;
     }
     else
     {
         std::cout << "PASS: ";
+        retval = true;
     }
     std::cout << "max_relative_error = " << max_relative_error << std::endl;
+
+    return retval;
 }
 
 template <typename DataT>
-void compareEqual(
+bool compareEqual(
     std::vector<DataT> const& a, std::vector<DataT> const& b, int M, int N, double tolerance = 10.0)
 {
+    bool retval;
+
     assert(a.size() == b.size() && "A and B are not the same size");
     assert(a.size() == M * N && "A and B do not match size M x N");
 
@@ -289,12 +312,15 @@ void compareEqual(
     if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
     {
         std::cout << "FAIL: ";
+        retval = false;
     }
     else
     {
         std::cout << "PASS: ";
+        retval = true;
     }
     std::cout << "max_relative_error = " << max_relative_error << std::endl;
+    return retval;
 }
 
 template <typename DataT>
