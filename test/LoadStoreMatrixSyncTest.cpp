@@ -7,6 +7,9 @@
 
 #include "WMMA.h"
 
+#include <gtest/gtest.h>
+#include "Common.hpp"
+
 template <uint32_t BlockM,
           uint32_t BlockN,
           uint32_t BlockK,
@@ -55,17 +58,19 @@ __global__ void test_load_store_matrix_d(DataT const* a_in,
     wmma::store_matrix_sync(writeC, fragC, ldc, layoutC);
 }
 
-template <uint32_t TBlockX,
-          uint32_t TBlockY,
-          uint32_t BlockM,
+// K is intentionally ignored in this test
+template <uint32_t BlockM,
           uint32_t BlockN,
           uint32_t BlockK,
           typename DataT,
           typename LayoutA,
           typename LayoutB,
           typename LayoutC>
-__host__ void test_load_store_matrix_h(uint32_t M, uint32_t N)
+__host__ void test_load_store_matrix_h(uint32_t TBlockX, uint32_t TBlockY, uint32_t M, uint32_t N, uint32_t K)
 {
+    if ( M < BlockM * TBlockX / AMDGCN_WAVE_SIZE || N < BlockN * TBlockY || K < BlockK )
+        return;
+
     std::cout << "HIP wmma::load/store_matrix_sync test: TBlock (" << TBlockX << ", " << TBlockY
               << ") "
               << "BlockMNK(" << BlockM << ", " << BlockN << ", " << BlockK << ") "
@@ -153,230 +158,87 @@ __host__ void test_load_store_matrix_h(uint32_t M, uint32_t N)
     CHECK_HIP_ERROR(hipFree(d_c_r));
 
     // Validate
-    compareEqual<DataT, DataT, LayoutA, LayoutA>(matrixA, matrixA_r, M, N);
-    //MatrixUtil<LayoutC>::print(matrixC, M, N);
-    //MatrixUtil<LayoutC>::print(matrixC_r, M, N);
-    compareEqual<DataT, DataT, LayoutB, LayoutB>(matrixB, matrixB_r, M, N);
-    compareEqual<DataT, DataT, LayoutC, LayoutC>(matrixC, matrixC_r, M, N);
+    EXPECT_TRUE( (compareEqual<DataT, DataT, LayoutA, LayoutA>(matrixA, matrixA_r, M, N)) );
+    //MatrixUtil<LayoutC>::print(matrixA_r, M, N);
+    EXPECT_TRUE( (compareEqual<DataT, DataT, LayoutB, LayoutB>(matrixB, matrixB_r, M, N)) );
+    EXPECT_TRUE( (compareEqual<DataT, DataT, LayoutC, LayoutC>(matrixC, matrixC_r, M, N)) );
 }
 
-template <uint32_t TBlockX,
-          uint32_t TBlockY,
-          uint32_t BlockM,
-          uint32_t BlockN,
-          uint32_t BlockK,
+template <typename IntConstBlockM,
+          typename IntConstBlockN,
+          typename IntConstBlockK,
           typename DataT>
-__host__ void test_load_store_matrix_h(uint32_t M, uint32_t N, uint32_t K)
+void test_load_store_matrix_h(uint32_t TBlockX, uint32_t TBlockY, uint32_t M, uint32_t N, uint32_t K)
 {
-    test_load_store_matrix_h<TBlockX,
-                             TBlockY,
-                             BlockM,
-                             BlockN,
-                             BlockK,
-                             DataT,
-                             row_major,
-                             row_major,
-                             row_major>(M, N);
-    test_load_store_matrix_h<TBlockX,
-                             TBlockY,
-                             BlockM,
-                             BlockN,
-                             BlockK,
-                             DataT,
-                             row_major,
-                             col_major,
-                             row_major>(M, N);
-    test_load_store_matrix_h<TBlockX,
-                             TBlockY,
-                             BlockM,
-                             BlockN,
-                             BlockK,
-                             DataT,
-                             col_major,
-                             row_major,
-                             row_major>(M, N);
-    test_load_store_matrix_h<TBlockX,
-                             TBlockY,
-                             BlockM,
-                             BlockN,
-                             BlockK,
-                             DataT,
-                             col_major,
-                             col_major,
-                             row_major>(M, N);
-    test_load_store_matrix_h<TBlockX,
-                             TBlockY,
-                             BlockM,
-                             BlockN,
-                             BlockK,
-                             DataT,
-                             row_major,
-                             row_major,
-                             col_major>(M, N);
-    test_load_store_matrix_h<TBlockX,
-                             TBlockY,
-                             BlockM,
-                             BlockN,
-                             BlockK,
-                             DataT,
-                             row_major,
-                             col_major,
-                             col_major>(M, N);
-    test_load_store_matrix_h<TBlockX,
-                             TBlockY,
-                             BlockM,
-                             BlockN,
-                             BlockK,
-                             DataT,
-                             col_major,
-                             row_major,
-                             col_major>(M, N);
-    test_load_store_matrix_h<TBlockX,
-                             TBlockY,
-                             BlockM,
-                             BlockN,
-                             BlockK,
-                             DataT,
-                             col_major,
-                             col_major,
-                             col_major>(M, N);
+    std::tuple<row_major, col_major> types;
+    for_each(types, [&](auto layout_a) {
+        for_each(types, [&](auto layout_b) {
+            for_each(types, [&](auto layout_c) {
+                test_load_store_matrix_h<IntConstBlockM::value,
+                                         IntConstBlockN::value,
+                                         IntConstBlockK::value,
+                                         DataT,
+                                         decltype(layout_a),
+                                         decltype(layout_b),
+                                         decltype(layout_c)>(TBlockX, TBlockY, M, N, K);
+            });
+        });
+    });
 }
 
-template <typename DataT>
-void test_load_store_matrix_h()
+template <typename... Ts>
+void test_load_store_matrix(std::tuple<Ts...>)
 {
-    // This will exercise matrix a, b and accum load / store layouts.
+    // clang-format off
+    std::vector<std::array<int, 2>> thread_block = {{64, 1}, {64, 2}, {64, 4}, {64, 8}, {64, 16},
+                                                    {128,1}, {128,2}, {128,4}, {128,8},
+                                                    {256,1}, {256,2}, {256,4},
+                                                    {512,1}, {512,2}};
 
-    // float32_t  64 x 1 threads, block 16 x 16
-    test_load_store_matrix_h<64, 1, 16, 16, 16, DataT>(16, 16, 16);
-    test_load_store_matrix_h<64, 1, 16, 16, 16, DataT>(32, 32, 32);
-    test_load_store_matrix_h<64, 1, 16, 16, 16, DataT>(64, 64, 64);
-    test_load_store_matrix_h<64, 1, 16, 16, 16, DataT>(128, 128, 128);
-    test_load_store_matrix_h<64, 1, 16, 16, 16, DataT>(256, 256, 256);
-
-    // float32_t  64 x 2 threads, block 16 x 16
-    test_load_store_matrix_h<64, 2, 16, 16, 16, DataT>(32, 32, 32);
-    test_load_store_matrix_h<64, 2, 16, 16, 16, DataT>(64, 64, 64);
-    test_load_store_matrix_h<64, 2, 16, 16, 16, DataT>(128, 128, 128);
-    test_load_store_matrix_h<64, 2, 16, 16, 16, DataT>(256, 256, 256);
-
-    // float32_t  64 x 4 threads, block 16 x 16
-    test_load_store_matrix_h<64, 4, 16, 16, 16, DataT>(64, 64, 64);
-    test_load_store_matrix_h<64, 4, 16, 16, 16, DataT>(128, 128, 128);
-    test_load_store_matrix_h<64, 4, 16, 16, 16, DataT>(256, 256, 256);
-
-    // float32_t  64 x 8 threads, block 16 x 16
-    test_load_store_matrix_h<64, 8, 16, 16, 16, DataT>(128, 128, 128);
-    test_load_store_matrix_h<64, 8, 16, 16, 16, DataT>(256, 256, 256);
-
-    // float32_t  64 x 16 threads, block 16 x 16
-    test_load_store_matrix_h<64, 16, 16, 16, 16, DataT>(256, 256, 256);
-
-    // float32_t  128 x 1 threads, block 16 x 16
-    test_load_store_matrix_h<128, 1, 16, 16, 16, DataT>(32, 32, 32);
-    test_load_store_matrix_h<128, 1, 16, 16, 16, DataT>(64, 64, 64);
-    test_load_store_matrix_h<128, 1, 16, 16, 16, DataT>(128, 128, 128);
-    test_load_store_matrix_h<128, 1, 16, 16, 16, DataT>(256, 256, 256);
-
-    // float32_t  128 x 2 threads, block 16 x 16
-    test_load_store_matrix_h<128, 2, 16, 16, 16, DataT>(64, 64, 64);
-    test_load_store_matrix_h<128, 2, 16, 16, 16, DataT>(128, 128, 128);
-    test_load_store_matrix_h<128, 2, 16, 16, 16, DataT>(256, 256, 256);
-
-    // float32_t  128 x 4 threads, block 16 x 16
-    test_load_store_matrix_h<128, 4, 16, 16, 16, DataT>(128, 128, 128);
-    test_load_store_matrix_h<128, 4, 16, 16, 16, DataT>(256, 256, 256);
-
-    // float32_t  128 x 8 threads, block 16 x 16
-    test_load_store_matrix_h<128, 8, 16, 16, 16, DataT>(256, 256, 256);
-
-    // float32_t  256 x 1 threads, block 16 x 16
-    test_load_store_matrix_h<256, 1, 16, 16, 16, DataT>(64, 64, 64);
-    test_load_store_matrix_h<256, 1, 16, 16, 16, DataT>(128, 128, 128);
-    test_load_store_matrix_h<256, 1, 16, 16, 16, DataT>(256, 256, 256);
-
-    // float32_t  256 x 2 threads, block 16 x 16
-    test_load_store_matrix_h<256, 2, 16, 16, 16, DataT>(128, 128, 128);
-    test_load_store_matrix_h<256, 2, 16, 16, 16, DataT>(256, 256, 256);
-
-    // float32_t  256 x 4 threads, block 16 x 16
-    test_load_store_matrix_h<256, 4, 16, 16, 16, DataT>(256, 256, 256);
-
-    // float32_t  512 x 1 threads, block 16 x 16
-    test_load_store_matrix_h<512, 1, 16, 16, 16, DataT>(128, 128, 128);
-    test_load_store_matrix_h<512, 1, 16, 16, 16, DataT>(256, 256, 256);
-
-    // float32_t  512 x 2 threads, block 16 x 16
-    test_load_store_matrix_h<512, 2, 16, 16, 16, DataT>(256, 256, 256);
-
-    // float32_t  64 x 1 threads, block 32 x 32
-    test_load_store_matrix_h<64, 1, 32, 32, 32, DataT>(32, 32, 32);
-    test_load_store_matrix_h<64, 1, 32, 32, 32, DataT>(64, 64, 64);
-    test_load_store_matrix_h<64, 1, 32, 32, 32, DataT>(128, 128, 128);
-    test_load_store_matrix_h<64, 1, 32, 32, 32, DataT>(256, 256, 256);
-
-    // float32_t  64 x 2 threads, block 32 x 32
-    test_load_store_matrix_h<64, 2, 32, 32, 32, DataT>(64, 64, 64);
-    test_load_store_matrix_h<64, 2, 32, 32, 32, DataT>(128, 128, 128);
-    test_load_store_matrix_h<64, 2, 32, 32, 32, DataT>(256, 256, 256);
-
-    // float32_t  64 x 4 threads, block 32 x 32
-    test_load_store_matrix_h<64, 4, 32, 32, 32, DataT>(128, 128, 128);
-    test_load_store_matrix_h<64, 4, 32, 32, 32, DataT>(256, 256, 256);
-
-    // float32_t  64 x 8 threads, block 32 x 32
-    test_load_store_matrix_h<64, 8, 32, 32, 32, DataT>(256, 256, 256);
-
-    // float32_t  128 x 1 threads, block 32 x 32
-    test_load_store_matrix_h<128, 1, 32, 32, 32, DataT>(64, 64, 64);
-    test_load_store_matrix_h<128, 1, 32, 32, 32, DataT>(128, 128, 128);
-    test_load_store_matrix_h<128, 1, 32, 32, 32, DataT>(256, 256, 256);
-
-    // float32_t  128 x 2 threads, block 32 x 32
-    test_load_store_matrix_h<128, 2, 32, 32, 32, DataT>(128, 128, 128);
-    test_load_store_matrix_h<128, 2, 32, 32, 32, DataT>(256, 256, 256);
-
-    // float32_t  128 x 4 threads, block 32 x 32
-    test_load_store_matrix_h<128, 4, 32, 32, 32, DataT>(256, 256, 256);
-
-    // float32_t  256 x 1 threads, block 32 x 32
-    test_load_store_matrix_h<256, 1, 32, 32, 32, DataT>(128, 128, 128);
-    test_load_store_matrix_h<256, 1, 32, 32, 32, DataT>(256, 256, 256);
-
-    // float32_t  256 x 2 threads, block 32 x 32
-    test_load_store_matrix_h<256, 2, 32, 32, 32, DataT>(256, 256, 256);
-
-    // float32_t  512 x 1 threads, block 32 x 32
-    test_load_store_matrix_h<512, 1, 32, 32, 32, DataT>(256, 256, 256);
-
-    // float32_t  64 x 1 threads, block 64 x 64
-    test_load_store_matrix_h<64, 1, 64, 64, 64, DataT>(64, 64, 64);
-    test_load_store_matrix_h<64, 1, 64, 64, 64, DataT>(128, 128, 128);
-    test_load_store_matrix_h<64, 1, 64, 64, 64, DataT>(256, 256, 256);
-
-    // float32_t  64 x 2 threads, block 64 x 64
-    test_load_store_matrix_h<64, 2, 64, 64, 64, DataT>(128, 128, 128);
-    test_load_store_matrix_h<64, 2, 64, 64, 64, DataT>(256, 256, 256);
-
-    // float32_t  64 x 4 threads, block 64 x 64
-    test_load_store_matrix_h<64, 4, 64, 64, 64, DataT>(256, 256, 256);
-
-    // float32_t  128 x 1 threads, block 64 x 64
-    test_load_store_matrix_h<128, 1, 64, 64, 64, DataT>(128, 128, 128);
-    test_load_store_matrix_h<128, 1, 64, 64, 64, DataT>(256, 256, 256);
-
-    // float32_t  128 x 2 threads, block 64 x 64
-    test_load_store_matrix_h<128, 2, 64, 64, 64, DataT>(256, 256, 256);
-
-    // float32_t  256 x 1 threads, block 64 x 64
-    test_load_store_matrix_h<256, 1, 64, 64, 64, DataT>(256, 256, 256);
+    std::vector<std::array<int, 3>> problem_sizes = {{16, 16, 16},
+                                                     {32, 32, 32},
+                                                     {64, 64, 64},
+                                                     {128, 128, 128},
+                                                     {256, 256, 256}};
+    // clang-format on
+    for(auto tblock : thread_block)
+    {
+        for (auto size : problem_sizes)
+        {
+            auto fargs = std::tuple_cat(tblock, size);
+            std::apply(test_load_store_matrix_h<Ts...>, fargs);
+        }
+    }
 }
 
-int main()
+template <typename T>
+struct LoadStoreMatrixSyncTest : public testing::Test
 {
-    test_load_store_matrix_h<float16_t>();
-    test_load_store_matrix_h<hfloat16_t>();
-    test_load_store_matrix_h<bfloat16_t>();
-    test_load_store_matrix_h<float32_t>();
-    return 0;
-}
+    // TODO: buffer new/del in fixture
+};
+
+using Implementations = testing::Types<
+    // BlockM, BlockN, BlockK, InputT/ComputeT
+    std::tuple<I<16>, I<16>, I<16>, float32_t>,
+    std::tuple<I<16>, I<16>, I<16>, hfloat16_t>,
+    std::tuple<I<16>, I<16>, I<16>, float16_t>,
+    std::tuple<I<16>, I<16>, I<16>, bfloat16_t>,
+
+    std::tuple<I<32>, I<32>, I<32>, float32_t>,
+    std::tuple<I<32>, I<32>, I<32>, hfloat16_t>,
+    std::tuple<I<32>, I<32>, I<32>, float16_t>,
+    std::tuple<I<32>, I<32>, I<32>, bfloat16_t>,
+
+    std::tuple<I<64>, I<64>, I<64>, float32_t>,
+    std::tuple<I<64>, I<64>, I<64>, hfloat16_t>,
+    std::tuple<I<64>, I<64>, I<64>, float16_t>,
+    std::tuple<I<64>, I<64>, I<64>, bfloat16_t>
+>;
+
+TYPED_TEST_SUITE(LoadStoreMatrixSyncTest, Implementations);
+
+TYPED_TEST(LoadStoreMatrixSyncTest, LoadStoreMatrixSync)
+{
+    TypeParam types;
+    test_load_store_matrix(types);
+};

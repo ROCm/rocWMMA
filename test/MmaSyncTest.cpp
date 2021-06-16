@@ -5,14 +5,17 @@
 #include "Performance.h"
 #include "Utils.h"
 #include "WMMA.h"
+#include "Common.hpp"
 
 #ifdef WMMA_VALIDATE_TESTS
+#include <gtest/gtest.h>
+#include "Reference.h" // Vanilla CPU kernel
 #ifdef WMMA_VALIDATE_WITH_ROCBLAS
 #include "rocBLASReference.h" // rocBLAS GPU kernel
-#else
-#include "Reference.h" // Vanilla CPU kernel
 #endif // WMMA_VALIDATE_WITH_ROCBLAS
 #endif // WMMA_VALIDATE_TESTS
+
+static bool headerPrinted = false;
 
 template <uint32_t BlockM,
           uint32_t BlockN,
@@ -129,9 +132,7 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
     }
 }
 
-template <uint32_t TBlockX,
-          uint32_t TBlockY,
-          uint32_t BlockM,
+template <uint32_t BlockM,
           uint32_t BlockN,
           uint32_t BlockK,
           typename InputT,
@@ -141,12 +142,44 @@ template <uint32_t TBlockX,
           typename LayoutB,
           typename LayoutC,
           typename LayoutD = LayoutC>
-__host__ void test_mma_sync_h(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, ComputeT beta)
+__host__ void test_mma_sync_h(uint32_t TBlockX,
+                              uint32_t TBlockY,
+                              uint32_t m,
+                              uint32_t n,
+                              uint32_t k,
+                              ComputeT alpha,
+                              ComputeT beta)
 {
+    if ( m < BlockM * TBlockX / AMDGCN_WAVE_SIZE || n < BlockN * TBlockY || k < BlockK )
+        return;
+
     int lda = std::is_same<LayoutA, row_major>::value ? k : m;
     int ldb = std::is_same<LayoutB, row_major>::value ? n : k;
     int ldc = std::is_same<LayoutC, row_major>::value ? n : m;
     int ldd = std::is_same<LayoutD, row_major>::value ? n : m;
+
+    if (!headerPrinted)
+    {
+        std::cout << "TBlkX, TBlkY, BlkM, BlkN, BlkK, MatM, MatN, MatK, alpha, lda, ldb, beta, ldc, "
+                    "ldd, LytA_LytB_LytC_LytD, Ti_To_Tc, elapsedMs, GFlops, GFlops/s, Efficiency(%)\n";
+        headerPrinted = true;
+    }
+    std::cout << TBlockX << ", " << TBlockY << ", " << BlockM << ", " << BlockN << ", " << BlockK
+              << ", " << m << ", " << n << ", " << k << ", " << alpha << ", " << lda << ", " << ldb
+              << ", " << beta << ", " << ldc << ", " << ldd << ", "
+              << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << "_"
+              << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << "_"
+              << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << "_"
+              << (std::is_same<LayoutD, row_major>::value ? "R" : "C") << ", "
+              << dataTypeToString<InputT>() << "_" << dataTypeToString<OutputT>() << "_"
+              << dataTypeToString<ComputeT>();
+
+    if ( quirks::hipcc_bug_half_packing<OutputT, LayoutC>::value )
+    {
+        std::cout << ", " << "na" << ", " << "na"
+            << ", " << "na" << ", " << "na" << ", " << " SKIPPED" << std::endl;
+        return;
+    }
 
     // Initialize input matrices
     std::vector<InputT>  matrixA(m * k);
@@ -227,17 +260,7 @@ __host__ void test_mma_sync_h(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha
     auto actualGFlopsPerSec = calculateGFlopsPerSec(m, n, k, elapsedTimeMs);
     auto efficiency         = actualGFlopsPerSec / peakGFlopsPerSec * 100.0f;
 
-    std::cout << "TBlkX, TBlkY, BlkM, BlkN, BlkK, MatM, MatN, MatK, alpha, lda, ldb, beta, ldc, "
-                 "ldd, LytA_LytB_LytC_LytD, Ti_To_Tc, elapsedMs, GFlops, GFlops/s, Efficiency(%) = "
-              << TBlockX << ", " << TBlockY << ", " << BlockM << ", " << BlockN << ", " << BlockK
-              << ", " << m << ", " << n << ", " << k << ", " << alpha << ", " << lda << ", " << ldb
-              << ", " << beta << ", " << ldc << ", " << ldd << ", "
-              << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << "_"
-              << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << "_"
-              << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << "_"
-              << (std::is_same<LayoutD, row_major>::value ? "R" : "C") << ", "
-              << dataTypeToString<InputT>() << "_" << dataTypeToString<OutputT>() << "_"
-              << dataTypeToString<ComputeT>() << ", " << elapsedTimeMs << ", " << totalGFlops
+    std::cout << ", " << elapsedTimeMs << ", " << totalGFlops
               << ", " << actualGFlopsPerSec << ", " << efficiency << ", ";
 
 #ifdef WMMA_VALIDATE_TESTS
@@ -257,27 +280,31 @@ __host__ void test_mma_sync_h(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha
     // FMA operations will be very prone to significant errors.
     double errorTolerance = sizeof(ComputeT) < sizeof(float32_t) ? 100.0 : 10.0;
 
+    bool validated = false;
 #ifdef WMMA_VALIDATE_WITH_ROCBLAS
+    if (!quirks::rocblas_not_support_bf16_bf16_bf16<InputT, OutputT, ComputeT>::value)
+    {
+        // rocblas matrix C, D always in col_major
+        MatrixUtil<col_major>::fill(matrixC, m, n);
+        gemm_rocBLAS<InputT, OutputT, ComputeT, LayoutA, LayoutB>(
+            m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
 
-    // rocblas matrix C, D always in col_major
-    MatrixUtil<col_major>::fill(matrixC, m, n);
-    gemm_rocBLAS<InputT, OutputT, ComputeT, LayoutA, LayoutB>(
-        m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
+        EXPECT_TRUE( (compareEqual<OutputT, OutputT, LayoutD, col_major>(matrixD, matrixD_ref, m, n, errorTolerance)) );
 
-    compareEqual<OutputT, OutputT, LayoutD, col_major>(matrixD, matrixD_ref, m, n, errorTolerance);
+        //MatrixUtil<LayoutD>::print(matrixD, m, n);
+        //MatrixUtil<col_major>::print(matrixD_ref, m, n);
 
-    //MatrixUtil<LayoutD>::print(matrixD, m, n);
-    //MatrixUtil<col_major>::print(matrixD_ref, m, n);
-
-#else
-
-    gemm_CPU<InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD>(
-        m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
-    compareEqual<OutputT, OutputT, LayoutD, LayoutD>(matrixD, matrixD_ref, m, n, errorTolerance);
-
+        validated = true;
+    }
 #endif // WMMA_VALIDATE_WITH_ROCBLAS
+    if (!validated)
+    {
+        gemm_CPU<InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD>(
+            m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
+        EXPECT_TRUE( (compareEqual<OutputT, OutputT, LayoutD, LayoutD>(matrixD, matrixD_ref, m, n, errorTolerance)) );
+    }
 
-#else
+#else // WMMA_VALIDATE_TESTS
     // No validation, close off the line.
     std::cout << std::endl;
 
@@ -290,475 +317,159 @@ __host__ void test_mma_sync_h(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha
     CHECK_HIP_ERROR(hipFree(d_d));
 }
 
-template <uint32_t TBlockX,
-          uint32_t TBlockY,
-          uint32_t BlockM,
+template <uint32_t BlockM,
           uint32_t BlockN,
           uint32_t BlockK,
           typename InputT,
           typename OutputT,
           typename ComputeT>
-inline void test_mma_sync_h(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
+inline void test_mma_sync_h(uint32_t TBlockX,
+                            uint32_t TBlockY,
+                            uint32_t M,
+                            uint32_t N,
+                            uint32_t K,
+                            ComputeT alpha,
+                            ComputeT beta)
 {
-    test_mma_sync_h<TBlockX,
-                    TBlockY,
-                    BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    row_major,
-                    row_major,
-                    row_major>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX,
-                    TBlockY,
-                    BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    row_major,
-                    col_major,
-                    row_major>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX,
-                    TBlockY,
-                    BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    col_major,
-                    row_major,
-                    row_major>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX,
-                    TBlockY,
-                    BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    col_major,
-                    col_major,
-                    row_major>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX,
-                    TBlockY,
-                    BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    row_major,
-                    row_major,
-                    col_major>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX,
-                    TBlockY,
-                    BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    row_major,
-                    col_major,
-                    col_major>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX,
-                    TBlockY,
-                    BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    col_major,
-                    row_major,
-                    col_major>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX,
-                    TBlockY,
-                    BlockM,
-                    BlockN,
-                    BlockK,
-                    InputT,
-                    OutputT,
-                    ComputeT,
-                    col_major,
-                    col_major,
-                    col_major>(M, N, K, alpha, beta);
+    std::tuple<row_major, col_major> types;
+    for_each(types, [&](auto layout_a) {
+        for_each(types, [&](auto layout_b) {
+            for_each(types, [&](auto layout_c) {
+                test_mma_sync_h<BlockM,
+                                BlockN,
+                                BlockK,
+                                InputT,
+                                OutputT,
+                                ComputeT,
+                                decltype(layout_a),
+                                decltype(layout_b),
+                                decltype(layout_c)>(TBlockX, TBlockY, M, N, K, alpha, beta);
+            });
+        });
+    });
 }
 
-template <uint32_t TBlockX, uint32_t TBlockY, typename InputT, typename OutputT, typename ComputeT>
-inline void test_mma_sync_h_32x32(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
+template <typename InputT, typename OutputT, typename ComputeT>
+inline void test_mma_sync_h_32x32(uint32_t TBlockX, uint32_t TBlockY, uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
 {
     // Minimum K = 2 for 32 x 32
-    //test_mma_sync_h<TBlockX, TBlockY, 32, 32, 2, InputT, OutputT, ComputeT>(M, N, K, alpha, beta);
-    //test_mma_sync_h<TBlockX, TBlockY, 32, 32, 4, InputT, OutputT, ComputeT>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX, TBlockY, 32, 32, 8, InputT, OutputT, ComputeT>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX, TBlockY, 32, 32, 16, InputT, OutputT, ComputeT>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX, TBlockY, 32, 32, 32, InputT, OutputT, ComputeT>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX, TBlockY, 32, 32, 64, InputT, OutputT, ComputeT>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX, TBlockY, 32, 32, 128, InputT, OutputT, ComputeT>(M, N, K, alpha, beta);
+    //test_mma_sync_h<32, 32, 2, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    //test_mma_sync_h<32, 32, 4, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    test_mma_sync_h<32, 32, 8, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    test_mma_sync_h<32, 32, 16, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    test_mma_sync_h<32, 32, 32, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    test_mma_sync_h<32, 32, 64, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    test_mma_sync_h<32, 32, 128, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
 }
 
-template <uint32_t TBlockX, uint32_t TBlockY, typename InputT, typename OutputT, typename ComputeT>
-inline void test_mma_sync_h_16x16(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
+template <typename InputT, typename OutputT, typename ComputeT>
+inline void test_mma_sync_h_16x16(uint32_t TBlockX, uint32_t TBlockY, uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
 {
     // Minimum K = 4 for 16 x 16
-    //test_mma_sync_h<TBlockX, TBlockY, 16, 16, 4, InputT, OutputT, ComputeT>(M, N, K, alpha, beta);
-    //test_mma_sync_h<TBlockX, TBlockY, 16, 16, 8, InputT, OutputT, ComputeT>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX, TBlockY, 16, 16, 16, InputT, OutputT, ComputeT>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX, TBlockY, 16, 16, 32, InputT, OutputT, ComputeT>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX, TBlockY, 16, 16, 64, InputT, OutputT, ComputeT>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX, TBlockY, 16, 16, 128, InputT, OutputT, ComputeT>(M, N, K, alpha, beta);
-    test_mma_sync_h<TBlockX, TBlockY, 16, 16, 256, InputT, OutputT, ComputeT>(M, N, K, alpha, beta);
-    // test_mma_sync_h<TBlockX, TBlockY, 16, 16, 512, InputT, OutputT, ComputeT>(M, N, K, alpha, beta);
+    //test_mma_sync_h<16, 16, 4, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    //test_mma_sync_h<16, 16, 8, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    test_mma_sync_h<16, 16, 16, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    test_mma_sync_h<16, 16, 32, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    test_mma_sync_h<16, 16, 64, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    test_mma_sync_h<16, 16, 128, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    test_mma_sync_h<16, 16, 256, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    // test_mma_sync_h<16, 16, 512, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
 }
 
 template <typename InputT, typename OutputT, typename ComputeT>
 void test_mma_sync_h()
 {
-    // 16 x 16
-    test_mma_sync_h_16x16<64, 1, InputT, OutputT, ComputeT>(64, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 1, InputT, OutputT, ComputeT>(32, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 1, InputT, OutputT, ComputeT>(64, 32, 1024, ComputeT(2), ComputeT(2));
+    // clang-format off
+    std::vector<std::array<int, 2>> thread_block = {{64, 1}, {64, 2}, {64, 4},
+                                                    {128,1}, {128,2},
+                                                    {256,1}};
 
-    test_mma_sync_h_16x16<64, 1, InputT, OutputT, ComputeT>(
-        1024, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 1, InputT, OutputT, ComputeT>(
-        2048, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 1, InputT, OutputT, ComputeT>(
-        2048, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 1, InputT, OutputT, ComputeT>(
-        2048, 2048, 2048, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 1, InputT, OutputT, ComputeT>(
-        2560, 2560, 2560, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 1, InputT, OutputT, ComputeT>(
-        3072, 3072, 3072, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 1, InputT, OutputT, ComputeT>(
-        3584, 3584, 3584, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 1, InputT, OutputT, ComputeT>(
-        4096, 4096, 4096, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 1, InputT, OutputT, ComputeT>(
-        5120, 5120, 5120, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 1, InputT, OutputT, ComputeT>(
-        6144, 6144, 6144, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 1, InputT, OutputT, ComputeT>(
-        7168, 7168, 7168, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 1, InputT, OutputT, ComputeT>(
-        8192, 8192, 8192, ComputeT(2), ComputeT(2));
+    std::vector<std::array<int, 3>> problem_sizes = {{64, 64, 1024},
+                                                     {32, 64, 1024},
+                                                     {64, 32, 1024},
+                                                     {256, 256, 1024},
+                                                     {2048, 64, 1024},
+                                                     {64, 2048, 1024},
+                                                     {1024, 1024, 1024},
+                                                     {2048, 2048, 2048},
+                                                     {2560, 2560, 2560},
+                                                     {3072, 3072, 3072},
+                                                     {3584, 3584, 3584},
+                                                     {4096, 4096, 4096},
+                                                     {5120, 5120, 5120},
+                                                     {6144, 6144, 6144},
+                                                     {7168, 7168, 7168},
+                                                     {8192, 8192, 8192}};
 
-    test_mma_sync_h_16x16<64, 2, InputT, OutputT, ComputeT>(
-        1024, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 2, InputT, OutputT, ComputeT>(
-        2048, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 2, InputT, OutputT, ComputeT>(
-        2048, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 2, InputT, OutputT, ComputeT>(
-        2048, 2048, 2048, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 2, InputT, OutputT, ComputeT>(
-        2560, 2560, 2560, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 2, InputT, OutputT, ComputeT>(
-        3072, 3072, 3072, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 2, InputT, OutputT, ComputeT>(
-        3584, 3584, 3584, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 2, InputT, OutputT, ComputeT>(
-        4096, 4096, 4096, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 2, InputT, OutputT, ComputeT>(
-        5120, 5120, 5120, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 2, InputT, OutputT, ComputeT>(
-        6144, 6144, 6144, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 2, InputT, OutputT, ComputeT>(
-        7168, 7168, 7168, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 2, InputT, OutputT, ComputeT>(
-        8192, 8192, 8192, ComputeT(2), ComputeT(2));
-
-    test_mma_sync_h_16x16<64, 4, InputT, OutputT, ComputeT>(
-        1024, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 4, InputT, OutputT, ComputeT>(
-        2048, 128, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 4, InputT, OutputT, ComputeT>(
-        2048, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 4, InputT, OutputT, ComputeT>(
-        2048, 2048, 2048, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 4, InputT, OutputT, ComputeT>(
-        2560, 2560, 2560, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 4, InputT, OutputT, ComputeT>(
-        3072, 3072, 3072, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 4, InputT, OutputT, ComputeT>(
-        3584, 3584, 3584, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 4, InputT, OutputT, ComputeT>(
-        4096, 4096, 4096, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 4, InputT, OutputT, ComputeT>(
-        5120, 5120, 5120, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 4, InputT, OutputT, ComputeT>(
-        6144, 6144, 6144, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 4, InputT, OutputT, ComputeT>(
-        7168, 7168, 7168, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<64, 4, InputT, OutputT, ComputeT>(
-        8192, 8192, 8192, ComputeT(2), ComputeT(2));
-
-    test_mma_sync_h_16x16<128, 1, InputT, OutputT, ComputeT>(
-        1024, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 1, InputT, OutputT, ComputeT>(
-        2048, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 1, InputT, OutputT, ComputeT>(
-        2048, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 1, InputT, OutputT, ComputeT>(
-        2048, 2048, 2048, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 1, InputT, OutputT, ComputeT>(
-        2560, 2560, 2560, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 1, InputT, OutputT, ComputeT>(
-        3072, 3072, 3072, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 1, InputT, OutputT, ComputeT>(
-        3584, 3584, 3584, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 1, InputT, OutputT, ComputeT>(
-        4096, 4096, 4096, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 1, InputT, OutputT, ComputeT>(
-        5120, 5120, 5120, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 1, InputT, OutputT, ComputeT>(
-        6144, 6144, 6144, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 1, InputT, OutputT, ComputeT>(
-        7168, 7168, 7168, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 1, InputT, OutputT, ComputeT>(
-        8192, 8192, 8192, ComputeT(2), ComputeT(2));
-
-    test_mma_sync_h_16x16<128, 2, InputT, OutputT, ComputeT>(
-        1024, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 2, InputT, OutputT, ComputeT>(
-        2048, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 2, InputT, OutputT, ComputeT>(
-        2048, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 2, InputT, OutputT, ComputeT>(
-        2048, 2048, 2048, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 2, InputT, OutputT, ComputeT>(
-        2560, 2560, 2560, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 2, InputT, OutputT, ComputeT>(
-        3072, 3072, 3072, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 2, InputT, OutputT, ComputeT>(
-        3584, 3584, 3584, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 2, InputT, OutputT, ComputeT>(
-        4096, 4096, 4096, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 2, InputT, OutputT, ComputeT>(
-        5120, 5120, 5120, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 2, InputT, OutputT, ComputeT>(
-        6144, 6144, 6144, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 2, InputT, OutputT, ComputeT>(
-        7168, 7168, 7168, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<128, 2, InputT, OutputT, ComputeT>(
-        8192, 8192, 8192, ComputeT(2), ComputeT(2));
-
-    test_mma_sync_h_16x16<256, 1, InputT, OutputT, ComputeT>(
-        1024, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<256, 1, InputT, OutputT, ComputeT>(
-        2048, 1024, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<256, 1, InputT, OutputT, ComputeT>(
-        2048, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<256, 1, InputT, OutputT, ComputeT>(
-        2048, 2048, 2048, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<256, 1, InputT, OutputT, ComputeT>(
-        2560, 2560, 2560, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<256, 1, InputT, OutputT, ComputeT>(
-        3072, 3072, 3072, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<256, 1, InputT, OutputT, ComputeT>(
-        3584, 3584, 3584, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<256, 1, InputT, OutputT, ComputeT>(
-        4096, 4096, 4096, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<256, 1, InputT, OutputT, ComputeT>(
-        5120, 5120, 5120, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<256, 1, InputT, OutputT, ComputeT>(
-        6144, 6144, 6144, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<256, 1, InputT, OutputT, ComputeT>(
-        7168, 7168, 7168, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_16x16<256, 1, InputT, OutputT, ComputeT>(
-        8192, 8192, 8192, ComputeT(2), ComputeT(2));
-
-    // 32 x 32
-    test_mma_sync_h_32x32<64, 1, InputT, OutputT, ComputeT>(64, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 1, InputT, OutputT, ComputeT>(32, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 1, InputT, OutputT, ComputeT>(64, 32, 1024, ComputeT(2), ComputeT(2));
-
-    test_mma_sync_h_32x32<64, 1, InputT, OutputT, ComputeT>(
-        1024, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 1, InputT, OutputT, ComputeT>(
-        2048, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 1, InputT, OutputT, ComputeT>(
-        2048, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 1, InputT, OutputT, ComputeT>(
-        2048, 2048, 2048, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 1, InputT, OutputT, ComputeT>(
-        2560, 2560, 2560, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 1, InputT, OutputT, ComputeT>(
-        3072, 3072, 3072, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 1, InputT, OutputT, ComputeT>(
-        3584, 3584, 3584, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 1, InputT, OutputT, ComputeT>(
-        4096, 4096, 4096, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 1, InputT, OutputT, ComputeT>(
-        5120, 5120, 5120, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 1, InputT, OutputT, ComputeT>(
-        6144, 6144, 6144, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 1, InputT, OutputT, ComputeT>(
-        7168, 7168, 7168, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 1, InputT, OutputT, ComputeT>(
-        8192, 8192, 8192, ComputeT(2), ComputeT(2));
-
-    test_mma_sync_h_32x32<64, 2, InputT, OutputT, ComputeT>(64, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 2, InputT, OutputT, ComputeT>(
-        128, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 2, InputT, OutputT, ComputeT>(
-        64, 128, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 2, InputT, OutputT, ComputeT>(
-        1024, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 2, InputT, OutputT, ComputeT>(
-        2048, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 2, InputT, OutputT, ComputeT>(
-        2048, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 2, InputT, OutputT, ComputeT>(
-        2048, 2048, 2048, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 2, InputT, OutputT, ComputeT>(
-        2560, 2560, 2560, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 2, InputT, OutputT, ComputeT>(
-        3072, 3072, 3072, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 2, InputT, OutputT, ComputeT>(
-        3584, 3584, 3584, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 2, InputT, OutputT, ComputeT>(
-        4096, 4096, 4096, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 2, InputT, OutputT, ComputeT>(
-        5120, 5120, 5120, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 2, InputT, OutputT, ComputeT>(
-        6144, 6144, 6144, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 2, InputT, OutputT, ComputeT>(
-        7168, 7168, 7168, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 2, InputT, OutputT, ComputeT>(
-        8192, 8192, 8192, ComputeT(2), ComputeT(2));
-
-    test_mma_sync_h_32x32<64, 4, InputT, OutputT, ComputeT>(
-        128, 128, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 4, InputT, OutputT, ComputeT>(
-        128, 256, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 4, InputT, OutputT, ComputeT>(
-        256, 128, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 4, InputT, OutputT, ComputeT>(
-        1024, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 4, InputT, OutputT, ComputeT>(
-        2048, 128, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 4, InputT, OutputT, ComputeT>(
-        2048, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 4, InputT, OutputT, ComputeT>(
-        2048, 2048, 2048, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 4, InputT, OutputT, ComputeT>(
-        2560, 2560, 2560, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 4, InputT, OutputT, ComputeT>(
-        3072, 3072, 3072, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 4, InputT, OutputT, ComputeT>(
-        3584, 3584, 3584, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 4, InputT, OutputT, ComputeT>(
-        4096, 4096, 4096, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 4, InputT, OutputT, ComputeT>(
-        5120, 5120, 5120, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 4, InputT, OutputT, ComputeT>(
-        6144, 6144, 6144, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 4, InputT, OutputT, ComputeT>(
-        7168, 7168, 7168, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<64, 4, InputT, OutputT, ComputeT>(
-        8192, 8192, 8192, ComputeT(2), ComputeT(2));
-
-    test_mma_sync_h_32x32<128, 1, InputT, OutputT, ComputeT>(
-        64, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 1, InputT, OutputT, ComputeT>(
-        128, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 1, InputT, OutputT, ComputeT>(
-        64, 128, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 1, InputT, OutputT, ComputeT>(
-        1024, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 1, InputT, OutputT, ComputeT>(
-        2048, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 1, InputT, OutputT, ComputeT>(
-        2048, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 1, InputT, OutputT, ComputeT>(
-        2048, 2048, 2048, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 1, InputT, OutputT, ComputeT>(
-        2560, 2560, 2560, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 1, InputT, OutputT, ComputeT>(
-        3072, 3072, 3072, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 1, InputT, OutputT, ComputeT>(
-        3584, 3584, 3584, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 1, InputT, OutputT, ComputeT>(
-        4096, 4096, 4096, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 1, InputT, OutputT, ComputeT>(
-        5120, 5120, 5120, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 1, InputT, OutputT, ComputeT>(
-        6144, 6144, 6144, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 1, InputT, OutputT, ComputeT>(
-        7168, 7168, 7168, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 1, InputT, OutputT, ComputeT>(
-        8192, 8192, 8192, ComputeT(2), ComputeT(2));
-
-    test_mma_sync_h_32x32<128, 2, InputT, OutputT, ComputeT>(
-        64, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 2, InputT, OutputT, ComputeT>(
-        128, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 2, InputT, OutputT, ComputeT>(
-        64, 128, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 2, InputT, OutputT, ComputeT>(
-        1024, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 2, InputT, OutputT, ComputeT>(
-        2048, 64, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 2, InputT, OutputT, ComputeT>(
-        2048, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 2, InputT, OutputT, ComputeT>(
-        2048, 2048, 2048, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 2, InputT, OutputT, ComputeT>(
-        2560, 2560, 2560, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 2, InputT, OutputT, ComputeT>(
-        3072, 3072, 3072, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 2, InputT, OutputT, ComputeT>(
-        3584, 3584, 3584, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 2, InputT, OutputT, ComputeT>(
-        4096, 4096, 4096, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 2, InputT, OutputT, ComputeT>(
-        5120, 5120, 5120, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 2, InputT, OutputT, ComputeT>(
-        6144, 6144, 6144, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 2, InputT, OutputT, ComputeT>(
-        7168, 7168, 7168, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<128, 2, InputT, OutputT, ComputeT>(
-        8192, 8192, 8192, ComputeT(2), ComputeT(2));
-
-    test_mma_sync_h_32x32<256, 1, InputT, OutputT, ComputeT>(
-        128, 128, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<256, 1, InputT, OutputT, ComputeT>(
-        128, 256, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<256, 1, InputT, OutputT, ComputeT>(
-        256, 128, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<256, 1, InputT, OutputT, ComputeT>(
-        1024, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<256, 1, InputT, OutputT, ComputeT>(
-        2048, 128, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<256, 1, InputT, OutputT, ComputeT>(
-        2048, 2048, 1024, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<256, 1, InputT, OutputT, ComputeT>(
-        2048, 2048, 2048, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<256, 1, InputT, OutputT, ComputeT>(
-        2560, 2560, 2560, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<256, 1, InputT, OutputT, ComputeT>(
-        3072, 3072, 3072, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<256, 1, InputT, OutputT, ComputeT>(
-        3584, 3584, 3584, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<256, 1, InputT, OutputT, ComputeT>(
-        4096, 4096, 4096, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<256, 1, InputT, OutputT, ComputeT>(
-        5120, 5120, 5120, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<256, 1, InputT, OutputT, ComputeT>(
-        6144, 6144, 6144, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<256, 1, InputT, OutputT, ComputeT>(
-        7168, 7168, 7168, ComputeT(2), ComputeT(2));
-    test_mma_sync_h_32x32<256, 1, InputT, OutputT, ComputeT>(
-        8192, 8192, 8192, ComputeT(2), ComputeT(2));
+    for(auto tblock : thread_block)
+    {
+        for(auto size : problem_sizes)
+        {
+            // skip large sizes when in validation mode
+            #ifdef WMMA_VALIDATE_TESTS
+            if(size[0] * size[1] > 1024 * 1024)
+                continue;
+            #endif // WMMA_VALIDATE_TESTS
+            auto fargs = std::tuple_cat(tblock, size, std::make_tuple(ComputeT(2.0f), ComputeT(2.0f)));
+            std::apply(test_mma_sync_h_16x16<InputT, OutputT, ComputeT>, fargs);
+            std::apply(test_mma_sync_h_32x32<InputT, OutputT, ComputeT>, fargs);
+        }
+    }
+    // clang-format on
 }
+
+#ifdef WMMA_VALIDATE_TESTS
+template <typename... Ts>
+void test_mma_sync(std::tuple<Ts...>)
+{
+    test_mma_sync_h<Ts...>();
+}
+
+template <typename T>
+struct MmaSyncTest : public testing::Test
+{
+public:
+    void SetUp() override
+    {
+        headerPrinted = false;
+    }
+    // TODO: buffer new/del in fixture
+};
+
+using Implementations = testing::Types<
+    // Native fp16
+    std::tuple<float16_t, float16_t, float16_t>,
+    std::tuple<float16_t, float16_t, float32_t>,
+    std::tuple<float16_t, float32_t, float32_t>,
+    // Non-native hfloat16_t (i.e. __half)
+    std::tuple<hfloat16_t, hfloat16_t, hfloat16_t>,
+    std::tuple<hfloat16_t, hfloat16_t, float32_t>,
+    std::tuple<hfloat16_t, float32_t, float32_t>,
+    // Non-native bfloat16_t
+    std::tuple<bfloat16_t, bfloat16_t, bfloat16_t>,
+    std::tuple<bfloat16_t, bfloat16_t, float32_t>,
+    std::tuple<bfloat16_t, float32_t, float32_t>,
+    // Native fp32
+    std::tuple<float32_t, float32_t, float32_t>
+>;
+
+TYPED_TEST_SUITE(MmaSyncTest, Implementations);
+
+TYPED_TEST(MmaSyncTest, MmaSync)
+{
+    TypeParam types;
+    test_mma_sync(types);
+};
+
+TEST(AdhocMmaSyncTest, AdhocMmaSync)
+{
+    //test_mma_sync_h<32, 32, 128, float32_t, float32_t>(64, 4, 8192, 8192, 8192, 1.0f, 1.0f);
+    //test_mma_sync_h<32, 32, 32, bfloat16_t, bfloat16_t, float32_t, col_major, row_major, row_major>(64, 4, 4096, 4096, 4096, 2.0f, 1.5f);
+    test_mma_sync_h<32, 32, 32, float16_t, float16_t, float16_t, col_major, row_major, row_major>(64, 1, 32, 32, 32, 1.0f, 1.0f);
+    test_mma_sync_h<32, 32, 32, float16_t, float16_t, float32_t, row_major, row_major, row_major>(64, 1, 64, 64, 128, float16_t(2), float16_t(2));
+}
+
+#else // WMMA_VALIDATE_TESTS
 
 int main()
 {
@@ -787,3 +498,4 @@ int main()
     //test_mma_sync_h<64, 1, 32, 32, 32, float16_t, float16_t, float32_t, row_major, row_major, row_major>(64, 64, 128, ComputeT(2), ComputeT(2));
     return 0;
 }
+#endif // WMMA_VALIDATE_TESTS

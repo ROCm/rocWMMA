@@ -1,12 +1,16 @@
 #include <hip/hip_runtime.h>
 
 #include <unistd.h>
+#include <type_traits>
 
 #include "Constants.h"
 #include "Types.h"
 #include "Utils.h"
 
 #include "WMMA.h"
+#include <gtest/gtest.h>
+
+#include "Common.hpp"
 
 template <uint32_t BlockM,
           uint32_t BlockN,
@@ -58,9 +62,7 @@ __global__ void test_fill_fragment_d(InputT*   a,
                                                                     : wmma::mem_col_major);
 }
 
-template <uint32_t TBlockX,
-          uint32_t TBlockY,
-          uint32_t BlockM,
+template <uint32_t BlockM,
           uint32_t BlockN,
           uint32_t BlockK,
           typename InputT,
@@ -68,9 +70,18 @@ template <uint32_t TBlockX,
           typename LayoutA,
           typename LayoutB,
           typename LayoutC>
-__host__ void test_fill_fragment_h(
-    uint32_t M, uint32_t N, uint32_t K, InputT fillA, InputT fillB, ComputeT fillC)
+__host__ void test_fill_fragment_h(uint32_t TBlockX,
+                                   uint32_t TBlockY,
+                                   uint32_t M,
+                                   uint32_t N,
+                                   uint32_t K,
+                                   InputT   fillA,
+                                   InputT   fillB,
+                                   ComputeT fillC)
 {
+    if ( M < BlockM * TBlockX / AMDGCN_WAVE_SIZE || N < BlockN * TBlockY || K < BlockK )
+        return;
+
     std::cout << "HIP wmma::fill_fragment test: TBlock (" << TBlockX << ", " << TBlockY << ") "
               << "BlockMNK(" << BlockM << ", " << BlockN << ", " << BlockK << ") "
               << "MatrixMNK(" << M << ", " << N << ", " << K << ") "
@@ -141,297 +152,90 @@ __host__ void test_fill_fragment_h(
     std::vector<ComputeT> refC(M * N, fillC);
 
     // Compare
-    compareEqual<InputT, InputT, LayoutA, LayoutA>(matrixA, refA, M, K);
-    compareEqual<InputT, InputT, LayoutB, LayoutB>(matrixB, refB, K, N);
-    compareEqual<ComputeT, ComputeT, LayoutC, LayoutC>(matrixC, refC, M, N);
+    EXPECT_TRUE( (compareEqual<InputT, InputT, LayoutA, LayoutA>(matrixA, refA, M, K)) );
+    EXPECT_TRUE( (compareEqual<InputT, InputT, LayoutB, LayoutB>(matrixB, refB, K, N)) );
+    EXPECT_TRUE( (compareEqual<ComputeT, ComputeT, LayoutC, LayoutC>(matrixC, refC, M, N)) );
 }
 
-template <uint32_t TBlockX,
-          uint32_t TBlockY,
-          uint32_t BlockM,
-          uint32_t BlockN,
-          uint32_t BlockK,
+template <typename T>
+struct FillFragmentTest : public testing::Test
+{
+    // TODO: buffer new/del in fixture
+};
+
+template <typename IntConstBlockM,
+          typename IntConstBlockN,
+          typename IntConstBlockK,
           typename InputT,
           typename ComputeT>
-__host__ void test_fill_fragment_h(
-    uint32_t M, uint32_t N, uint32_t K, InputT fillA, InputT fillB, ComputeT fillC)
+__host__ void test_fill_fragment_h(uint32_t TBlockX,
+                                   uint32_t TBlockY,
+                                   uint32_t M,
+                                   uint32_t N,
+                                   uint32_t K,
+                                   InputT   fillA,
+                                   InputT   fillB,
+                                   ComputeT fillC)
 {
-    test_fill_fragment_h<TBlockX,
-                         TBlockY,
-                         BlockM,
-                         BlockN,
-                         BlockK,
-                         InputT,
-                         ComputeT,
-                         row_major,
-                         row_major,
-                         row_major>(M, N, K, fillA, fillB, fillC);
-    test_fill_fragment_h<TBlockX,
-                         TBlockY,
-                         BlockM,
-                         BlockN,
-                         BlockK,
-                         InputT,
-                         ComputeT,
-                         row_major,
-                         col_major,
-                         row_major>(M, N, K, fillA, fillB, fillC);
-    test_fill_fragment_h<TBlockX,
-                         TBlockY,
-                         BlockM,
-                         BlockN,
-                         BlockK,
-                         InputT,
-                         ComputeT,
-                         col_major,
-                         row_major,
-                         row_major>(M, N, K, fillA, fillB, fillC);
-    test_fill_fragment_h<TBlockX,
-                         TBlockY,
-                         BlockM,
-                         BlockN,
-                         BlockK,
-                         InputT,
-                         ComputeT,
-                         col_major,
-                         col_major,
-                         row_major>(M, N, K, fillA, fillB, fillC);
-    test_fill_fragment_h<TBlockX,
-                         TBlockY,
-                         BlockM,
-                         BlockN,
-                         BlockK,
-                         InputT,
-                         ComputeT,
-                         row_major,
-                         row_major,
-                         col_major>(M, N, K, fillA, fillB, fillC);
-    test_fill_fragment_h<TBlockX,
-                         TBlockY,
-                         BlockM,
-                         BlockN,
-                         BlockK,
-                         InputT,
-                         ComputeT,
-                         row_major,
-                         col_major,
-                         col_major>(M, N, K, fillA, fillB, fillC);
-    test_fill_fragment_h<TBlockX,
-                         TBlockY,
-                         BlockM,
-                         BlockN,
-                         BlockK,
-                         InputT,
-                         ComputeT,
-                         col_major,
-                         row_major,
-                         col_major>(M, N, K, fillA, fillB, fillC);
-    test_fill_fragment_h<TBlockX,
-                         TBlockY,
-                         BlockM,
-                         BlockN,
-                         BlockK,
-                         InputT,
-                         ComputeT,
-                         col_major,
-                         col_major,
-                         col_major>(M, N, K, fillA, fillB, fillC);
+    std::tuple<row_major, col_major> types;
+    for_each(types, [&](auto layout_a) {
+        for_each(types, [&](auto layout_b) {
+            for_each(types, [&](auto layout_c) {
+                test_fill_fragment_h<IntConstBlockM::value,
+                                     IntConstBlockN::value,
+                                     IntConstBlockK::value,
+                                     InputT,
+                                     ComputeT,
+                                     decltype(layout_a),
+                                     decltype(layout_b),
+                                     decltype(layout_c)>(
+                    TBlockX, TBlockY, M, N, K, fillA, fillB, fillC);
+            });
+        });
+    });
 }
 
-template <typename InputT, typename ComputeT>
-void test_fill_fragment_h()
+template <typename... Ts>
+void test_fill_fragment(std::tuple<Ts...>)
 {
+    // clang-format off
+    std::vector<std::array<int, 2>> thread_block = {{64, 1}, {64, 2}, {64, 4}, {64, 8}, {64, 16},
+                                                    {128,1}, {128,2}, {128,4}, {128,8},
+                                                    {256,1}, {256,2}, {256,4},
+                                                    {512,1}, {512,2}};
+
     // For fills, we must have the same geometry for all matrices
-
-    // float32_t  64 x 1 threads, block 16 x 16
-    test_fill_fragment_h<64, 1, 16, 16, 16, InputT, ComputeT>(16, 16, 16, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 16, 16, 16, InputT, ComputeT>(32, 32, 32, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 16, 16, 16, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 16, 16, 16, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 16, 16, 16, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 16, 16, 16, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  64 x 2 threads, block 16 x 16
-    test_fill_fragment_h<64, 2, 16, 16, 16, InputT, ComputeT>(32, 32, 32, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 16, 16, 16, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 16, 16, 16, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 16, 16, 16, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 16, 16, 16, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  64 x 4 threads, block 16 x 16
-    test_fill_fragment_h<64, 4, 16, 16, 16, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 4, 16, 16, 16, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 4, 16, 16, 16, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 4, 16, 16, 16, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  64 x 8 threads, block 16 x 16
-    test_fill_fragment_h<64, 8, 16, 16, 16, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 8, 16, 16, 16, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 8, 16, 16, 16, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  64 x 16 threads, block 16 x 16
-    test_fill_fragment_h<64, 16, 16, 16, 16, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 16, 16, 16, 16, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  128 x 1 threads, block 16 x 16
-    test_fill_fragment_h<128, 1, 16, 16, 16, InputT, ComputeT>(32, 32, 32, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 16, 16, 16, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 16, 16, 16, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 16, 16, 16, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 16, 16, 16, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  128 x 2 threads, block 16 x 16
-    test_fill_fragment_h<128, 2, 16, 16, 16, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 2, 16, 16, 16, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 2, 16, 16, 16, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 2, 16, 16, 16, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  128 x 4 threads, block 16 x 16
-    test_fill_fragment_h<128, 4, 16, 16, 16, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 4, 16, 16, 16, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 4, 16, 16, 16, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  128 x 8 threads, block 16 x 16
-    test_fill_fragment_h<128, 8, 16, 16, 16, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 8, 16, 16, 16, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  256 x 1 threads, block 16 x 16
-    test_fill_fragment_h<256, 1, 16, 16, 16, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 1, 16, 16, 16, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 1, 16, 16, 16, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 1, 16, 16, 16, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  256 x 2 threads, block 16 x 16
-    test_fill_fragment_h<256, 2, 16, 16, 16, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 2, 16, 16, 16, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 2, 16, 16, 16, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  256 x 4 threads, block 16 x 16
-    test_fill_fragment_h<256, 4, 16, 16, 16, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 4, 16, 16, 16, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  512 x 1 threads, block 16 x 16
-    test_fill_fragment_h<512, 1, 16, 16, 16, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<512, 1, 16, 16, 16, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<512, 1, 16, 16, 16, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  512 x 2 threads, block 16 x 16
-    test_fill_fragment_h<512, 2, 16, 16, 16, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<512, 2, 16, 16, 16, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  64 x 1 threads, block 32 x 32
-    test_fill_fragment_h<64, 1, 32, 32, 32, InputT, ComputeT>(32, 32, 32, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 32, 32, 32, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 32, 32, 32, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 32, 32, 32, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 32, 32, 32, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  64 x 2 threads, block 32 x 32
-    test_fill_fragment_h<64, 2, 32, 32, 32, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 32, 32, 32, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 32, 32, 32, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 32, 32, 32, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  64 x 4 threads, block 32 x 32
-    test_fill_fragment_h<64, 4, 32, 32, 32, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 4, 32, 32, 32, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 4, 32, 32, 32, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  64 x 8 threads, block 32 x 32
-    test_fill_fragment_h<64, 8, 32, 32, 32, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 8, 32, 32, 32, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  128 x 1 threads, block 32 x 32
-    test_fill_fragment_h<128, 1, 32, 32, 32, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 32, 32, 32, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 32, 32, 32, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 32, 32, 32, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  128 x 2 threads, block 32 x 32
-    test_fill_fragment_h<128, 2, 32, 32, 32, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 2, 32, 32, 32, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 2, 32, 32, 32, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  128 x 4 threads, block 32 x 32
-    test_fill_fragment_h<128, 4, 32, 32, 32, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 4, 32, 32, 32, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  256 x 1 threads, block 32 x 32
-    test_fill_fragment_h<256, 1, 32, 32, 32, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 1, 32, 32, 32, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 1, 32, 32, 32, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  256 x 2 threads, block 32 x 32
-    test_fill_fragment_h<256, 2, 32, 32, 32, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 2, 32, 32, 32, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  512 x 1 threads, block 32 x 32
-    test_fill_fragment_h<512, 1, 32, 32, 32, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<512, 1, 32, 32, 32, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  64 x 1 threads, block 64 x 64
-    test_fill_fragment_h<64, 1, 64, 64, 64, InputT, ComputeT>(64, 64, 64, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 1, 64, 64, 64, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  64 x 2 threads, block 64 x 64
-    test_fill_fragment_h<64, 2, 64, 64, 64, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 64, 64, 64, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 2, 64, 64, 64, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  64 x 4 threads, block 64 x 64
-    test_fill_fragment_h<64, 4, 64, 64, 64, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<64, 4, 64, 64, 64, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  128 x 1 threads, block 64 x 64
-    test_fill_fragment_h<128, 1, 64, 64, 64, InputT, ComputeT>(128, 128, 128, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 64, 64, 64, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 1, 64, 64, 64, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  128 x 2 threads, block 64 x 64
-    test_fill_fragment_h<128, 2, 64, 64, 64, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<128, 2, 64, 64, 64, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
-
-    // float32_t  256 x 1 threads, block 64 x 64
-    test_fill_fragment_h<256, 1, 64, 64, 64, InputT, ComputeT>(256, 256, 256, -1.0f, 2.0f, -3.0f);
-    test_fill_fragment_h<256, 1, 64, 64, 64, InputT, ComputeT>(
-        16384, 16384, 16384, -1.0f, 2.0f, -3.0f);
+    std::vector<std::array<int, 3>> problem_sizes = {{16, 16, 16},
+                                                     {32, 32, 32},
+                                                     {64, 64, 64},
+                                                     {128, 128, 128},
+                                                     {256, 256, 256},
+                                                     {2048, 2048, 2048}};
+    // clang-format on
+    for(auto tblock : thread_block)
+    {
+        for (auto size : problem_sizes)
+        {
+            auto fargs = std::tuple_cat(tblock, size, std::make_tuple(1.0f, 2.0f, -3.0f));
+            std::apply(test_fill_fragment_h<Ts...>, fargs);
+        }
+    }
 }
 
-int main()
+using Implementations = testing::Types<
+    // BlockM, BlockN, BlockK, InputT, ComputeT
+    std::tuple<I<16>, I<16>, I<16>, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<32>, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<16>, float16_t, float16_t>,
+    std::tuple<I<32>, I<32>, I<32>, float16_t, float16_t>,
+    std::tuple<I<16>, I<16>, I<16>, hfloat16_t, hfloat16_t>,
+    std::tuple<I<32>, I<32>, I<32>, hfloat16_t, hfloat16_t>
+>;
+
+TYPED_TEST_SUITE(FillFragmentTest, Implementations);
+
+TYPED_TEST(FillFragmentTest, FillFragment)
 {
-    test_fill_fragment_h<float16_t, float16_t>();
-    test_fill_fragment_h<float16_t, float32_t>();
-    test_fill_fragment_h<float32_t, float32_t>();
-    return 0;
-}
+    TypeParam types;
+    test_fill_fragment(types);
+};
