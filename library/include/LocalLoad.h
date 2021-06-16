@@ -1,6 +1,8 @@
 #ifndef WMMA_LOCAL_LOAD_H
 #define WMMA_LOCAL_LOAD_H
 
+#warning "LocalLoad is deprecated. Please use OpaqueLoad."
+
 #include "Layout.h"
 #include "Types.h"
 
@@ -54,7 +56,7 @@ struct amdgcn_local_load_dword_DxK
 
         // Arrange wave threads to starting data offsets due to layout.
         // In this case, the LDS contains only block data.
-        uint32_t initOffset = LayoutT::initialOffset(ldm);
+        auto baseOffset = LayoutT::baseDataOffset(ldm);
 
         // Loop over loads to fill BlockDim * BlockK for each wave.
         OutputT result;
@@ -66,8 +68,9 @@ struct amdgcn_local_load_dword_DxK
 #pragma unroll
         for(uint32_t i = 0; i < Traits::IOCount; ++i)
         {
-            *it = *Loader::exec(localPtr, initOffset + LayoutT::iterativeOffset(i, ldm));
+            *it = *Loader::exec(localPtr, baseOffset);
             it++;
+            baseOffset += LayoutT::dataOffsetIncrement(i, ldm);
         }
         return result;
     }

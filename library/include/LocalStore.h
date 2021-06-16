@@ -1,6 +1,8 @@
 #ifndef WMMA_LOCAL_STORE_H
 #define WMMA_LOCAL_STORE_H
 
+#warning "LocalStore is deprecated. Please use OpaqueStore."
+
 #include "Layout.h"
 #include "Types.h"
 
@@ -52,8 +54,7 @@ struct amdgcn_local_store_dword_DxK
         using LayoutT = typename Traits::LayoutT;
 
         // Arrange wave threads to starting data offsets due to layout.
-        // In this case, the LDS contains only block data.
-        uint32_t initOffset = LayoutT::initialOffset(ldm);
+        auto baseOffset = LayoutT::baseDataOffset(ldm);
 
         auto it = incoming.template begin<StoreT::size()>();
         static_assert(decltype(it)::Range == Traits::IOCount,
@@ -62,8 +63,9 @@ struct amdgcn_local_store_dword_DxK
 #pragma unroll
         for(uint32_t i = 0; i < Traits::IOCount; ++i)
         {
-            Storer::exec(localPtr, *it, initOffset + LayoutT::iterativeOffset(i, ldm));
+            Storer::exec(localPtr, *it, baseOffset);
             it++;
+            baseOffset += LayoutT::dataOffsetIncrement(i, ldm);
         }
     }
 };
