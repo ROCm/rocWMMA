@@ -3,8 +3,6 @@
 
 #include <type_traits>
 
-#include "BufferLoad.h"
-#include "BufferStore.h"
 #include "Convert.h"
 #include "CoopLoad.h"
 #include "CoopStore.h"
@@ -242,80 +240,8 @@ namespace wmma
                              fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB> const& b,
                              fragment<accumulator, BlockM, BlockN, BlockK, ComputeT> const&     c)
     {
-        if(std::is_same<LayoutA, LayoutB>::value)
-        {
-            // Because templated with same name, must use
-            // same type due to extern __shared__.
-            HIP_DYNAMIC_SHARED(uint8_t, localMemPtr);
-
-            using FragAT = typename std::decay<decltype(a)>::type;
-            using FragBT = typename std::decay<decltype(b)>::type;
-
-            using ConfigA
-                = OptConfig<matrix_a, FragAT::leadingDim(), FragAT::kDim(), InputT, LayoutA>;
-            using ConfigB
-                = OptConfig<matrix_b, FragBT::leadingDim(), FragBT::kDim(), InputT, LayoutB>;
-
-            typename FragAT::Traits::StorageT AFmt;
-            if(std::is_same<LayoutA, row_major>::value)
-            {
-                using StoreA  = typename ConfigA::CoopStorer;
-                using LoadA   = typename ConfigA::LocalLoader;
-                using PackA   = typename ConfigA::Packer;
-                using UnpackA = typename ConfigA::Unpacker;
-
-                using MappingUtil
-                    = MappingUtil<FragAT::leadingDim(), FragAT::kDim(), InputT, LayoutA>;
-
-                auto ldsAddr = reinterpret_cast<InputT*>(localMemPtr)
-                               + std::get<0>(MappingUtil::waveCoord()) * FragAT::leadingDim()
-                                     * FragAT::kDim();
-
-                StoreA::exec(ldsAddr, UnpackA::exec(*a), FragAT::kDim());
-                __syncthreads();
-
-                AFmt = PackA::exec(LoadA::exec(ldsAddr, FragAT::kDim()));
-                __syncthreads();
-            }
-            else
-            {
-                AFmt = *a;
-            }
-
-            typename FragBT::Traits::StorageT BFmt;
-            if(std::is_same<LayoutB, col_major>::value)
-            {
-                using StoreB  = typename ConfigB::CoopStorer;
-                using LoadB   = typename ConfigB::LocalLoader;
-                using PackB   = typename ConfigB::Packer;
-                using UnpackB = typename ConfigB::Unpacker;
-
-                using MappingUtil
-                    = MappingUtil<FragBT::leadingDim(), FragBT::kDim(), InputT, LayoutB>;
-
-                auto ldsAddr = reinterpret_cast<InputT*>(localMemPtr)
-                               + std::get<1>(MappingUtil::waveCoord()) * FragBT::leadingDim()
-                                     * FragBT::kDim();
-
-                StoreB::exec(ldsAddr, UnpackB::exec(*b), FragBT::kDim());
-                __syncthreads();
-
-                BFmt = PackB::exec(LoadB::exec(ldsAddr, FragBT::kDim()));
-                __syncthreads();
-            }
-            else
-            {
-                BFmt = *b;
-            }
-
-            using MFMA = amdgcn_mfma_MxNxK<InputT, ComputeT, BlockM, BlockN, BlockK>;
-            (*d)       = MFMA::exec(*AFmt, *BFmt, *c);
-        }
-        else
-        {
-            using MFMA = amdgcn_mfma_MxNxK<InputT, ComputeT, BlockM, BlockN, BlockK>;
-            (*d)       = MFMA::exec(*a, *b, *c);
-        }
+        using MFMA = amdgcn_mfma_MxNxK<InputT, ComputeT, BlockM, BlockN, BlockK>;
+        (*d)       = MFMA::exec(*a, *b, *c);
     }
 
     template <typename MatrixT,

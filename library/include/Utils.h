@@ -253,7 +253,8 @@ bool compareEqual(
 
             auto relative_error
                 = (a[indexA] != static_cast<TypeA>(0))
-                      ? fabs(toDoubleA(a[indexA]) - toDoubleB(b[indexB])) / (fabs(toDoubleA(a[indexA])) + fabs(toDoubleB(b[indexB])) + 1)
+                      ? fabs(toDoubleA(a[indexA]) - toDoubleB(b[indexB]))
+                            / (fabs(toDoubleA(a[indexA])) + fabs(toDoubleB(b[indexB])) + 1)
                       : 0.0;
             if(relative_error > max_relative_error)
             {
@@ -298,7 +299,8 @@ bool compareEqual(
     for(int i = 0; i < numElements; ++i)
     {
         auto relative_error = a[i] != static_cast<DataT>(0)
-                                  ? fabs(toDouble(a[i]) - toDouble(b[i])) / (fabs(toDouble(a[i])) + fabs(toDouble(b[i])) + 1)
+                                  ? fabs(toDouble(a[i]) - toDouble(b[i]))
+                                        / (fabs(toDouble(a[i])) + fabs(toDouble(b[i])) + 1)
                                   : 0.0;
         if(relative_error > max_relative_error)
         {
@@ -349,5 +351,42 @@ constexpr const char* dataTypeToString()
         return "invalid";
     }
 }
+
+namespace std
+{
+    template <typename T>
+    __device__ inline pair<T, T> reverse(pair<T, T> const& p)
+    {
+        return make_pair(p.second, p.first);
+    }
+
+    inline pair<uint32_t, uint32_t> operator+(pair<uint32_t, uint32_t> const& lhs,
+                                              pair<uint32_t, uint32_t> const& rhs)
+    {
+        return make_pair(get<0>(lhs) + get<0>(rhs), get<1>(lhs) + get<1>(rhs));
+    }
+
+    inline pair<uint32_t, uint32_t>& operator+=(pair<uint32_t, uint32_t>&       lhs,
+                                                pair<uint32_t, uint32_t> const& rhs)
+    {
+        get<0>(lhs) += get<0>(rhs);
+        get<1>(lhs) += get<1>(rhs);
+        return lhs;
+    }
+
+    inline pair<uint32_t, uint32_t> operator-(pair<uint32_t, uint32_t> const& lhs,
+                                              pair<uint32_t, uint32_t> const& rhs)
+    {
+        return make_pair(get<0>(lhs) - get<0>(rhs), get<1>(lhs) - get<1>(rhs));
+    }
+
+    inline pair<uint32_t, uint32_t>& operator-=(pair<uint32_t, uint32_t>&       lhs,
+                                                pair<uint32_t, uint32_t> const& rhs)
+    {
+        get<0>(lhs) -= get<0>(rhs);
+        get<1>(lhs) -= get<1>(rhs);
+        return lhs;
+    }
+} // namespace std
 
 #endif // WMMA_UTILS_H

@@ -8,8 +8,7 @@
 #include "OpaqueStore.h"
 #include "Types.h"
 
-template <typename MatrixT,
-          uint32_t BlockDim,
+template <uint32_t BlockDim,
           uint32_t BlockK,
           typename DataT,
           typename DataLayout,
@@ -24,31 +23,26 @@ struct amdgcn_cooperative_store_DxK
     {
         enum : uint32_t
         {
-            // Matrix A splits K direction loads amongst neighbouring waves in X, or column direction
-            // Matrix B splits K direction loads amongst neighbouring waves in Y, or row direction
             SplitCount = SpCount,
         };
 
         static_assert(SplitCount > 0, "Split count must be greater than 0");
         static_assert(BlockK % SplitCount == 0, "BlockK size is not divisible by SplitCount");
 
-        // Same register count for all SplitCounts
+        // Same register count for each split
         using InputT = VecT<DataT, IOTraits::UnpackedRegisterCount>;
+        static_assert(InputT::size() % SplitCount == 0,
+                      "Register count not divisible by SplitCount");
     };
 
-    __device__ static inline void
-        exec(DataT* dataPtr, typename Traits::InputT const& input, uint32_t ldm)
+    __device__ static inline void exec(DataT*                         dataPtr,
+                                       typename Traits::InputT const& input,
+                                       uint32_t                       ldm,
+                                       uint32_t                       waveIndex,
+                                       uint32_t                       waveCount)
     {
-        // Splitting the K direction:
-        // Matrix A will share work with waves on same row (different col)
-        // Matrix B will share work with waves on same col (different row)
-        using MappingUtil     = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
-        auto     waveCoord    = MappingUtil::waveCoord(); // Local to workgroup
-        uint32_t sharedWaveId = (std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCoord)
-                                                                        : std::get<0>(waveCoord));
-
         // For the cases where there are more groups than splits.
-        sharedWaveId = sharedWaveId % Traits::SplitCount;
+        waveIndex = waveIndex % Traits::SplitCount;
 
         // Base address is the same, and split load by (SplitCount).
         // Multiply the gridId by the split load count to get iterative offset per wave.
@@ -65,26 +59,48 @@ struct amdgcn_cooperative_store_DxK
                                          DataLayout,
                                          ElementsPerThread>;
 
-        auto storeOffset
-            = StoreLayoutT::iterativeOffset(sharedWaveId * StoreLayoutT::Traits::IOCount, ldm);
-        auto splitStore =
-            typename Traits::InputT::template Iterator<Traits::InputT::size() / Traits::SplitCount>(
-                input, sharedWaveId);
-        Storer::exec(dataPtr + storeOffset, *splitStore, ldm);
+        auto storeOffset = StoreLayoutT::dataBlockOffset(ldm) * waveIndex;
+
+        auto it = input.template begin<Traits::InputT::size() / Traits::SplitCount>();
+
+// This next part is important for optimization.
+// The goal is to do a partial store and write only one part of the fragment.
+// However, from the compiler perspective it does not optimize assembly
+// correctly if we directly write only the middle of the fragment (e.g. not the first regs)
+// without referencing the rest of the fragment.
+// For example, we could easily do the following:
+//
+//  auto it =
+//      typename Traits::InputT::template Iterator<Traits::InputT::size() / Traits::SplitCount>(
+//        input, waveIndex);
+//  Storer::exec(dataPtr + storeOffset, *it, ldm);
+//
+// However we didn't touch the rest of the fragment, so the compiler may decide to dump the fragment
+// to memory as it will treat this as a sub-array access.
+//
+// To keep it in registers, iterate over the entire fragment and store only when we reach our intended
+// offset.
+#pragma unroll
+        for(uint32_t i = 0; i < Traits::SplitCount; ++i)
+        {
+            if(i == waveIndex)
+            {
+                Storer::exec(dataPtr + storeOffset, *it, ldm);
+            }
+            it++;
+        }
     }
 };
 
 // Wrapper for runtime wave count
-template <typename MatrixT,
-          uint32_t BlockDim,
+template <uint32_t BlockDim,
           uint32_t BlockK,
           typename DataT,
           typename DataLayout,
           template <uint32_t, uint32_t, typename, typename, uint32_t>
           class StoreLayout,
           uint32_t ElementsPerThread>
-struct amdgcn_cooperative_store_DxK<MatrixT,
-                                    BlockDim,
+struct amdgcn_cooperative_store_DxK<BlockDim,
                                     BlockK,
                                     DataT,
                                     DataLayout,
@@ -93,8 +109,7 @@ struct amdgcn_cooperative_store_DxK<MatrixT,
                                     0>
 {
     template <uint32_t SplitCount>
-    using CooperativeStore = amdgcn_cooperative_store_DxK<MatrixT,
-                                                          BlockDim,
+    using CooperativeStore = amdgcn_cooperative_store_DxK<BlockDim,
                                                           BlockK,
                                                           DataT,
                                                           DataLayout,
@@ -104,7 +119,7 @@ struct amdgcn_cooperative_store_DxK<MatrixT,
 
     using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
 
-    // All loads will have the same result type
+    // All stores will have the same input type
     struct Traits
     {
         using InputT = typename CooperativeStore<1>::Traits::InputT;
@@ -121,36 +136,35 @@ struct amdgcn_cooperative_store_DxK<MatrixT,
     * and hide instantiations that would be otherwise not compileable.
     */
 
-    // IOCount of 8+ can potentially split work between 8 waves
+    //IOCount of 8+ can potentially split work between 8 waves
     template <typename IncomingT,
               typename std::enable_if<
                   std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
                       && IOTraits::IOCount / PackTraits<DataT>::PackRatio >= 8,
                   int>::type
               = 0>
-    __device__ static inline void exec(DataT* dataPtr, IncomingT&& input, uint32_t ldm)
+    __device__ static inline void exec(
+        DataT* dataPtr, IncomingT&& input, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount)
     {
-        using WaveSpace = _MappingUtil::WaveSpace;
-        auto waveCount  = WaveSpace::workgroupDim();
-
-        auto splitCount = std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCount)
-                                                                 : std::get<0>(waveCount);
-
-        if(splitCount >= 8)
+        if(waveCount >= 8)
         {
-            CooperativeStore<8>::exec(dataPtr, std::forward<IncomingT>(input), ldm);
+            CooperativeStore<8>::exec(
+                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
         }
-        else if(splitCount == 4)
+        else if(waveCount == 4)
         {
-            CooperativeStore<4>::exec(dataPtr, std::forward<IncomingT>(input), ldm);
+            CooperativeStore<4>::exec(
+                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
         }
-        else if(splitCount == 2)
+        else if(waveCount == 2)
         {
-            CooperativeStore<2>::exec(dataPtr, std::forward<IncomingT>(input), ldm);
+            CooperativeStore<2>::exec(
+                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
         }
-        else if(splitCount == 1)
+        else if(waveCount == 1)
         {
-            CooperativeStore<1>::exec(dataPtr, std::forward<IncomingT>(input), ldm);
+            CooperativeStore<1>::exec(
+                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
         }
         else
         {
@@ -165,25 +179,23 @@ struct amdgcn_cooperative_store_DxK<MatrixT,
                       && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 4,
                   int32_t>::type
               = 0>
-    __device__ static inline void exec(DataT* dataPtr, IncomingT&& input, uint32_t ldm)
+    __device__ static inline void exec(
+        DataT* dataPtr, IncomingT&& input, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount)
     {
-        using WaveSpace = _MappingUtil::WaveSpace;
-        auto waveCount  = WaveSpace::workgroupDim();
-
-        auto splitCount = std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCount)
-                                                                 : std::get<0>(waveCount);
-
-        if(splitCount >= 4)
+        if(waveCount >= 4)
         {
-            CooperativeStore<4>::exec(dataPtr, std::forward<IncomingT>(input), ldm);
+            CooperativeStore<4>::exec(
+                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
         }
-        else if(splitCount == 2)
+        else if(waveCount == 2)
         {
-            CooperativeStore<2>::exec(dataPtr, std::forward<IncomingT>(input), ldm);
+            CooperativeStore<2>::exec(
+                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
         }
-        else if(splitCount == 1)
+        else if(waveCount == 1)
         {
-            CooperativeStore<1>::exec(dataPtr, std::forward<IncomingT>(input), ldm);
+            CooperativeStore<1>::exec(
+                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
         }
         else
         {
@@ -198,21 +210,18 @@ struct amdgcn_cooperative_store_DxK<MatrixT,
                       && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 2,
                   int32_t>::type
               = 0>
-    __device__ static inline void exec(DataT* dataPtr, IncomingT&& input, uint32_t ldm)
+    __device__ static inline void exec(
+        DataT* dataPtr, IncomingT&& input, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount)
     {
-        using WaveSpace = _MappingUtil::WaveSpace;
-        auto waveCount  = WaveSpace::workgroupDim();
-
-        auto splitCount = std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCount)
-                                                                 : std::get<0>(waveCount);
-
-        if(splitCount >= 2)
+        if(waveCount >= 2)
         {
-            CooperativeStore<2>::exec(dataPtr, std::forward<IncomingT>(input), ldm);
+            CooperativeStore<2>::exec(
+                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
         }
-        else if(splitCount == 1)
+        else if(waveCount == 1)
         {
-            CooperativeStore<1>::exec(dataPtr, std::forward<IncomingT>(input), ldm);
+            CooperativeStore<1>::exec(
+                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
         }
         else
         {
@@ -226,17 +235,13 @@ struct amdgcn_cooperative_store_DxK<MatrixT,
                       && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 1,
                   int32_t>::type
               = 0>
-    __device__ static inline void exec(DataT* dataPtr, IncomingT&& input, uint32_t ldm)
+    __device__ static inline void exec(
+        DataT* dataPtr, IncomingT&& input, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount)
     {
-        using WaveSpace = _MappingUtil::WaveSpace;
-        auto waveCount  = WaveSpace::workgroupDim();
-
-        auto splitCount = std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCount)
-                                                                 : std::get<0>(waveCount);
-
-        if(splitCount >= 1)
+        if(waveCount >= 1)
         {
-            CooperativeStore<1>::exec(dataPtr, std::forward<IncomingT>(input), ldm);
+            CooperativeStore<1>::exec(
+                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
         }
         else
         {
@@ -251,7 +256,8 @@ struct amdgcn_cooperative_store_DxK<MatrixT,
                       && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 0,
                   int32_t>::type
               = 0>
-    __device__ static inline void exec(DataT* dataPtr, IncomingT&& input, uint32_t ldm);
+    __device__ static inline void exec(
+        DataT* dataPtr, IncomingT&& input, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount);
 };
 
 #endif // WMMA_COOP_STORE_H

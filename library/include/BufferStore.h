@@ -1,6 +1,8 @@
 #ifndef WMMA_BUFFER_STORE_H
 #define WMMA_BUFFER_STORE_H
 
+#warning "BufferStore is deprecated. Please use OpaqueStore"
+
 #include <hip/hip_runtime.h>
 
 #include "BufferDescriptor.h"
@@ -155,7 +157,7 @@ struct amdgcn_buffer_store_DxK
         BufferDescriptor<DataT> srd(data);
 
         // Arrange wave threads to starting data offsets due to layout.
-        uint32_t initOffset = LayoutT::initialOffset(ldm);
+        auto baseOffset = LayoutT::baseDataOffset(ldm);
 
         auto it = incoming.template begin<StoreT::size()>();
         static_assert(decltype(it)::Range == IOTraits::IOCount,
@@ -167,11 +169,11 @@ struct amdgcn_buffer_store_DxK
             Storer::exec(*it,
                          *(srd), // SRD regs
                          0, // stride offset
-                         (initOffset + LayoutT::iterativeOffset(i, ldm))
-                             * sizeof(DataT), // offset bytes
+                         baseOffset * sizeof(DataT), // offset bytes
                          false,
                          false);
             it++;
+            baseOffset += LayoutT::dataOffsetIncrement(i, ldm);
         }
     }
 };
