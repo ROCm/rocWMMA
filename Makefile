@@ -1,6 +1,6 @@
 CXX=/opt/rocm/hip/bin/hipcc
 
-CXXFLAGS=-I/opt/rocm/hip/include/ -I. -march=native -O3 -std=c++14
+CXXFLAGS=-I/opt/rocm/hip/include/ -I./library/include -march=native -O3 -std=c++14
 ALL = test/FillFragmentTest test/LoadStoreMatrixSyncTest test/MmaSyncTest-bench test/MmaSyncTest-cpu
 
 all: $(ALL)
@@ -12,7 +12,10 @@ MmaSyncTest-cpu: test/MmaSyncTest.cpp
 	$(CXX) $(CXXFLAGS) -DWMMA_VALIDATE_TESTS -o MmaSyncTest-cpu $^
 
 MmaSyncTest-rocBLAS: test/MmaSyncTest.cpp
-	$(CXX) $(CXXFLAGS) -DWMMA_VALIDATE_WITH_ROCBLAS -DWMMA_VALIDATE_TESTS -I$(ROCBLAS_DIR)/include -I$(ROCBLAS_DIR)/include/internal -L$(ROCBLAS_DIR)/lib -lrocblas -o MmaSyncTest-rocBLAS $^
+	$(CXX) $(CXXFLAGS) -DWMMA_VALIDATE_WITH_ROCBLAS -DWMMA_VALIDATE_TESTS -I$(ROCBLAS_DIR)/include -I$(ROCBLAS_DIR)/include/internal -L$(ROCBLAS_DIR)/lib -lrocblas -ldl -o MmaSyncTest-rocBLAS $^
+
+LoadStoreMatrixSyncTest: test/LoadStoreMatrixSyncTest.cpp
+	$(CXX) $(CXXFLAGS) -DWMMA_VALIDATE_TESTS -o LoadStoreMatrixSyncTest $^
 
 $(TARGET): $(TARGET:.cpp)
 	$(CXX) $(CXXFLAGS) -DWMMA_VALIDATE_TESTS -o $@ $^

@@ -103,12 +103,12 @@ struct __align__(4) VecT
     __device__ VecT()  = default;
     __device__ ~VecT() = default;
 
-    __device__ VecT(VecT const& other)
+    __device__ inline VecT(VecT const& other)
     {
         v = other.v;
     }
 
-    __device__ VecT(StorageT const& other)
+    __device__ inline VecT(StorageT const& other)
     {
         v = other;
     }
@@ -241,6 +241,18 @@ struct __align__(4) VecT
     __device__ inline Iterator<SubVecSize> end() const
     {
         return Iterator<SubVecSize>(*this, Iterator<SubVecSize>::Range);
+    }
+
+    template <uint32_t SubVecSize = 1>
+    __device__ inline Iterator<SubVecSize> iterator(uint32_t startIndex = 0)
+    {
+        return Iterator<SubVecSize>(*this, startIndex);
+    }
+
+    template <uint32_t SubVecSize = 1>
+    __device__ inline Iterator<SubVecSize> iterator(uint32_t startIndex = 0) const
+    {
+        return Iterator<SubVecSize>(*this, startIndex);
     }
 };
 

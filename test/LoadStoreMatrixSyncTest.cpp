@@ -1,7 +1,5 @@
 #include <hip/hip_runtime.h>
 
-#include "BufferLoad.h"
-#include "BufferStore.h"
 #include "Constants.h"
 #include "MappingUtil.h"
 #include "Types.h"
@@ -196,6 +194,7 @@ void test_load_store_matrix(std::tuple<Ts...>)
                                                     {128,1}, {128,2}, {128,4}, {128,8},
                                                     {256,1}, {256,2}, {256,4},
                                                     {512,1}, {512,2}};
+
     std::vector<std::array<int, 3>> problem_sizes = {{16, 16, 16},
                                                      {32, 32, 32},
                                                      {64, 64, 64},

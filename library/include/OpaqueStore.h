@@ -49,7 +49,7 @@ struct amdgcn_opaque_store_DxK
 
         // Arrange wave threads to starting data offsets due to layout.
         // In this case, the LDS contains only block data.
-        uint32_t initOffset = LayoutT::initialOffset(ldm);
+        auto baseOffset = LayoutT::baseDataOffset(ldm);
 
         auto it = incoming.template begin<StoreT::size()>();
         static_assert(decltype(it)::Range == IOTraits::IOCount,
@@ -58,8 +58,9 @@ struct amdgcn_opaque_store_DxK
 #pragma unroll
         for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
         {
-            Storer::exec(localPtr, *it, initOffset + LayoutT::iterativeOffset(i, ldm));
+            Storer::exec(localPtr, *it, baseOffset);
             it++;
+            baseOffset += LayoutT::dataOffsetIncrement(i, ldm);
         }
     }
 };

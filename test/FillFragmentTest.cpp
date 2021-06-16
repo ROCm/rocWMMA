@@ -3,8 +3,6 @@
 #include <unistd.h>
 #include <type_traits>
 
-#include "BufferLoad.h"
-#include "BufferStore.h"
 #include "Constants.h"
 #include "Types.h"
 #include "Utils.h"
@@ -90,7 +88,8 @@ __host__ void test_fill_fragment_h(uint32_t TBlockX,
               << "FmtABC(" << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << ", "
               << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << ", "
               << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << ") "
-              << "TiTc(" << dataTypeToString<InputT>() << "_" << dataTypeToString<ComputeT>() << ") \n";
+              << "TiTc(" << dataTypeToString<InputT>() << "_" << dataTypeToString<ComputeT>()
+              << ") \n";
 
     int lda = std::is_same<LayoutA, row_major>::value ? K : M;
     int ldb = std::is_same<LayoutB, row_major>::value ? N : K;
@@ -204,6 +203,7 @@ void test_fill_fragment(std::tuple<Ts...>)
                                                     {128,1}, {128,2}, {128,4}, {128,8},
                                                     {256,1}, {256,2}, {256,4},
                                                     {512,1}, {512,2}};
+
     // For fills, we must have the same geometry for all matrices
     std::vector<std::array<int, 3>> problem_sizes = {{16, 16, 16},
                                                      {32, 32, 32},
