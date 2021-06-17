@@ -12,9 +12,6 @@
 #include "OpaqueStore.h"
 #include "Types.h"
 
-// TODO: Remove when LLVM buffer commands are removed.
-#define LLVM_BUFFER_BUG_WORKAROUND
-
 // Optimal IO config
 template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
 struct OptConfig;
@@ -30,287 +27,108 @@ template <uint32_t BlockDim,
 struct amdgcn_cooperative_load_DxK;
 
 // Matrix A config
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-struct OptConfig<matrix_a, BlockDim, BlockK, DataT, row_major>
+template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
+struct OptConfig<matrix_a, BlockDim, BlockK, DataT, DataLayout>
 {
     enum : uint32_t
     {
-        ElementsPerThread = VecWidthTraits<BlockDim, BlockK, DataT>::MaxElementsPerThread
+        MaxVectorWidth = VecWidthTraits<BlockDim, BlockK, DataT>::MaxElementsPerThread,
+        VectorWidth    = std::is_same<DataLayout, row_major>::value ? MaxVectorWidth : 1
     };
 
     // Other IO configs
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
+    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
     using Packer   = Pack<DataT, IOTraits::UnpackedRegisterCount>;
     using Unpacker = Unpack<DataT, IOTraits::PackedRegisterCount>;
 
     // Global data config.
-    // For fastest loading from global in row major, we should load by rows.
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using GlobalLayout = Layout::Col4T<BlkDim, BlkK, DT, DL, EPT>;
+    using GlobalLayout = Layout::ColNT<BlkDim, BlkK, DT, DL, EPT, MaxVectorWidth>;
 
-    using GlobalLoader = amdgcn_opaque_load_DxK<BlockDim,
-                                                BlockK,
-                                                DataT,
-                                                row_major,
-                                                GlobalLayout,
-                                                ElementsPerThread>;
+    using GlobalLoader
+        = amdgcn_opaque_load_DxK<BlockDim, BlockK, DataT, DataLayout, GlobalLayout, VectorWidth>;
 
-    using GlobalStorer = amdgcn_opaque_store_DxK<BlockDim,
-                                                 BlockK,
-                                                 DataT,
-                                                 row_major,
-                                                 GlobalLayout,
-                                                 ElementsPerThread>;
+    using GlobalStorer
+        = amdgcn_opaque_store_DxK<BlockDim, BlockK, DataT, DataLayout, GlobalLayout, VectorWidth>;
 
     using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
                                                    BlockK,
                                                    DataT,
-                                                   row_major,
+                                                   DataLayout,
                                                    GlobalLayout,
-                                                   ElementsPerThread>;
+                                                   VectorWidth>;
 
     using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
                                                     BlockK,
                                                     DataT,
-                                                    row_major,
+                                                    DataLayout,
                                                     GlobalLayout,
-                                                    ElementsPerThread>;
-
-    // Local data config.
-    // After writing from global to LDS, load proper format for MFMA.
-    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using LocalLayout = Layout::Col<BlkDim, BlkK, DT, DL, EPT>;
-
-    using LocalLoader = amdgcn_opaque_load_DxK<BlockDim, BlockK, DataT, row_major, LocalLayout, 1>;
-};
-
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-struct OptConfig<matrix_a, BlockDim, BlockK, DataT, col_major>
-{
-    enum : uint32_t
-    {
-        ElementsPerThread = 1
-    };
-
-    // Other IO configs
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
-    using Packer   = Pack<DataT, IOTraits::UnpackedRegisterCount>;
-    using Unpacker = Unpack<DataT, IOTraits::PackedRegisterCount>;
-
-    // Global data config.
-    // For fastest loading from global in row major, we should load by rows.
-    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using GlobalLayout = Layout::Col4T<BlkDim, BlkK, DT, DL, EPT>;
-
-    using GlobalLoader = amdgcn_opaque_load_DxK<BlockDim,
-                                                BlockK,
-                                                DataT,
-                                                col_major,
-                                                GlobalLayout,
-                                                ElementsPerThread>;
-
-    // template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    // using GlobalLayoutT = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
-
-    using GlobalStorer = amdgcn_opaque_store_DxK<BlockDim,
-                                                 BlockK,
-                                                 DataT,
-                                                 col_major,
-                                                 GlobalLayout,
-                                                 ElementsPerThread>;
-
-    using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
-                                                   BlockK,
-                                                   DataT,
-                                                   col_major,
-                                                   GlobalLayout,
-                                                   ElementsPerThread>;
-
-    using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
-                                                    BlockK,
-                                                    DataT,
-                                                    col_major,
-                                                    GlobalLayout,
-                                                    ElementsPerThread>;
-
-    // Local data config.
-    // After writing from global to LDS, load proper format for MFMA.
-    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using LocalLayout = Layout::Col4T<BlkDim, BlkK, DT, DL, EPT>;
-
-    using LocalLoader = amdgcn_opaque_load_DxK<BlockDim, BlockK, DataT, col_major, LocalLayout, 1>;
+                                                    VectorWidth>;
 };
 
 // Matrix B config
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-struct OptConfig<matrix_b, BlockDim, BlockK, DataT, row_major>
+template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
+struct OptConfig<matrix_b, BlockDim, BlockK, DataT, DataLayout>
 {
     enum : uint32_t
     {
-        ElementsPerThread = 1
+        MaxVectorWidth = VecWidthTraits<BlockDim, BlockK, DataT>::MaxElementsPerThread,
+        VectorWidth    = std::is_same<DataLayout, col_major>::value ? MaxVectorWidth : 1
     };
 
     // Other IO configs
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
+    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
     using Packer   = Pack<DataT, IOTraits::UnpackedRegisterCount>;
     using Unpacker = Unpack<DataT, IOTraits::PackedRegisterCount>;
 
     // Global data config
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using GlobalLayout = Layout::Row4T<BlkDim, BlkK, DT, DL, EPT>;
+    using GlobalLayout = Layout::RowNT<BlkDim, BlkK, DT, DL, EPT, MaxVectorWidth>;
 
-    using GlobalLoader = amdgcn_opaque_load_DxK<BlockDim,
-                                                BlockK,
-                                                DataT,
-                                                row_major,
-                                                GlobalLayout,
-                                                ElementsPerThread>;
-    using GlobalStorer = amdgcn_opaque_store_DxK<BlockDim,
-                                                 BlockK,
-                                                 DataT,
-                                                 row_major,
-                                                 GlobalLayout,
-                                                 ElementsPerThread>;
+    using GlobalLoader
+        = amdgcn_opaque_load_DxK<BlockDim, BlockK, DataT, DataLayout, GlobalLayout, VectorWidth>;
+    using GlobalStorer
+        = amdgcn_opaque_store_DxK<BlockDim, BlockK, DataT, DataLayout, GlobalLayout, VectorWidth>;
 
     using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
                                                    BlockK,
                                                    DataT,
-                                                   row_major,
+                                                   DataLayout,
                                                    GlobalLayout,
-                                                   ElementsPerThread>;
+                                                   VectorWidth>;
 
     using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
                                                     BlockK,
                                                     DataT,
-                                                    row_major,
+                                                    DataLayout,
                                                     GlobalLayout,
-                                                    ElementsPerThread>;
-
-    // Local data config.
-    // After writing from global to LDS, load proper format for MFMA.
-    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using LocalLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
-
-    using LocalLoader = amdgcn_opaque_load_DxK<BlockDim, BlockK, DataT, row_major, LocalLayout, 1>;
+                                                    VectorWidth>;
 };
 
-// Matrix B config
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-struct OptConfig<matrix_b, BlockDim, BlockK, DataT, col_major>
+// Matrix C / D config
+template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
+struct OptConfig<accumulator, BlockDim, BlockK, DataT, DataLayout>
 {
     enum : uint32_t
     {
-        ElementsPerThread = VecWidthTraits<BlockDim, BlockK, DataT>::MaxElementsPerThread
+        MaxVectorWidth = 4, // Actual output of the mfma hardware
+        VectorWidth    = std::is_same<DataLayout, col_major>::value ? MaxVectorWidth : 1
     };
 
     // Other IO configs
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
+    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
     using Packer   = Pack<DataT, IOTraits::UnpackedRegisterCount>;
     using Unpacker = Unpack<DataT, IOTraits::PackedRegisterCount>;
 
     // Global data config
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using GlobalLayout = Layout::Row4T<BlkDim, BlkK, DT, DL, EPT>;
+    using GlobalLayout = Layout::RowNT<BlkDim, BlkK, DT, DL, EPT, MaxVectorWidth>;
 
-    using GlobalLoader = amdgcn_opaque_load_DxK<BlockDim,
-                                                BlockK,
-                                                DataT,
-                                                col_major,
-                                                GlobalLayout,
-                                                ElementsPerThread>;
+    using GlobalLoader
+        = amdgcn_opaque_load_DxK<BlockDim, BlockK, DataT, DataLayout, GlobalLayout, VectorWidth>;
 
-    using GlobalStorer = amdgcn_opaque_store_DxK<BlockDim,
-                                                 BlockK,
-                                                 DataT,
-                                                 col_major,
-                                                 GlobalLayout,
-                                                 ElementsPerThread>;
-
-    using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
-                                                   BlockK,
-                                                   DataT,
-                                                   col_major,
-                                                   GlobalLayout,
-                                                   ElementsPerThread>;
-
-    using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
-                                                    BlockK,
-                                                    DataT,
-                                                    col_major,
-                                                    GlobalLayout,
-                                                    ElementsPerThread>;
-
-    // Local data config.
-    // After writing from global to LDS, load proper format for MFMA.
-    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using LocalLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
-
-    using LocalLoader = amdgcn_opaque_load_DxK<BlockDim, BlockK, DataT, col_major, LocalLayout, 1>;
-};
-
-// Matrix C config
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-struct OptConfig<accumulator, BlockDim, BlockK, DataT, row_major>
-{
-    enum : uint32_t
-    {
-        ElementsPerThread = 1
-    };
-
-    // Other IO configs
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
-    using Packer   = Pack<DataT, IOTraits::UnpackedRegisterCount>;
-    using Unpacker = Unpack<DataT, IOTraits::PackedRegisterCount>;
-
-    // Global data config
-    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using GlobalLayout = Layout::Row4T<BlkDim, BlkK, DT, DL, EPT>;
-
-    using GlobalLoader = amdgcn_opaque_load_DxK<BlockDim,
-                                                BlockK,
-                                                DataT,
-                                                row_major,
-                                                GlobalLayout,
-                                                ElementsPerThread>;
-
-    using GlobalStorer = amdgcn_opaque_store_DxK<BlockDim,
-                                                 BlockK,
-                                                 DataT,
-                                                 row_major,
-                                                 GlobalLayout,
-                                                 ElementsPerThread>;
-};
-
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-struct OptConfig<accumulator, BlockDim, BlockK, DataT, col_major>
-{
-    enum : uint32_t
-    {
-        ElementsPerThread = 4
-    };
-
-    // Other IO configs
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
-    using Packer   = Pack<DataT, IOTraits::UnpackedRegisterCount>;
-    using Unpacker = Unpack<DataT, IOTraits::PackedRegisterCount>;
-
-    // Global data config
-    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using GlobalLayout = Layout::Row4T<BlkDim, BlkK, DT, DL, EPT>;
-
-    using GlobalLoader = amdgcn_opaque_load_DxK<BlockDim,
-                                                BlockK,
-                                                DataT,
-                                                col_major,
-                                                GlobalLayout,
-                                                ElementsPerThread>;
-
-    using GlobalStorer = amdgcn_opaque_store_DxK<BlockDim,
-                                                 BlockK,
-                                                 DataT,
-                                                 col_major,
-                                                 GlobalLayout,
-                                                 ElementsPerThread>;
+    using GlobalStorer
+        = amdgcn_opaque_store_DxK<BlockDim, BlockK, DataT, DataLayout, GlobalLayout, VectorWidth>;
 };
 
 #endif // IO_CONFIG_H
