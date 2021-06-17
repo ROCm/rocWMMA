@@ -295,13 +295,16 @@ namespace Layout
         }
     };
 
-    ////////////// Col4T /////////////////////////
+    ////////////// ColNT /////////////////////////
     /*
 
         Matrix layout:
 
         BlockDim = column size
         BlockK = column count
+
+        N = Max vector width
+        VW = Actual vector width
 
         kDim ->
         (0, 0)              (0, BlockK - 1)
@@ -316,11 +319,11 @@ namespace Layout
         Register layout:
 
         Guarantees:
-        Col4T guarantees the following register format, regardless of VW and data layout.
-        Register 0 to contain Cols (i % 4) == 0
-        Register 1 to contain Cols (i % 4) == 1
-        Register 2 to contain Cols (i % 4) == 2
-        Register 3 to contain Cols (i % 4) == 3
+        ColNT guarantees the following register format, regardless of VW and data layout.
+        Register 0 to contain Cols (i % N) == 0
+        Register 1 to contain Cols (i % N) == 1
+        Register 2 to contain Cols (i % N) == 2
+        ...
 
         Limitations:
         col_major data format is not supported for VW > 1, as it produces
@@ -328,7 +331,7 @@ namespace Layout
 
         KPerIO == # of columns per IO (either load or store)
 
-        E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = row_major
+        E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = row_major
 
         Elements 0.....31 32.....64
                  _______________
@@ -336,7 +339,7 @@ namespace Layout
         ...       ...      ...
 
 
-        E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
+        E.g. BlockDim = 32, VW = 4, N = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
 
         Elements 0.....31 32.....64
                  _______________
@@ -347,7 +350,7 @@ namespace Layout
         ...       ...      ...
 
 
-        E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = col_major
+        E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = col_major
 
         Elements 0.....31 32.....64
                  _______________
@@ -355,23 +358,20 @@ namespace Layout
         ...       ...      ...
 
         NOTE:
-        E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
+        E.g. BlockDim = 32, VW = 4, N = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
         Is NOT implemented due to incorrect mapping with col_major and VW = 4
      */
     template <uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
               typename DataLayout,
-              uint32_t VectorWidth>
-    struct Col4T
+              uint32_t VectorWidth,
+              uint32_t MaxVectorWidth>
+    struct ColNT
     {
         using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
         struct Traits
         {
-            enum : uint32_t
-            {
-                RegCount = 4
-            };
             using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
             using MatrixCoordT = typename MappingUtil::CoordT;
         };
@@ -384,17 +384,17 @@ namespace Layout
 
         __device__ static inline typename Traits::MatrixCoordT baseOffset()
         {
-            // Use IOTraits for full RegCount so we can properly calculate the offsets.
-            using C4Traits = amdgcn_io_traits<BlockDim, BlockK, DataT, Traits::RegCount>;
+            // Use IOTraits for MaxVectorWidth so we can properly calculate the offsets.
+            using CNTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, MaxVectorWidth>;
 
             return std::make_pair(threadIdx.x % BlockDim,
-                                  ((threadIdx.x / BlockDim) * Traits::RegCount) % C4Traits::KPerIO);
+                                  ((threadIdx.x / BlockDim) * MaxVectorWidth) % CNTraits::KPerIO);
         }
 
         __device__ static inline typename Traits::MatrixCoordT offsetIncrement(uint32_t iteration)
         {
             /*
-            E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = row_major
+            E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = row_major
 
             Elements 0.....31 32.....64
                     _______________
@@ -406,7 +406,7 @@ namespace Layout
 
             The startCoord points threads 0-31 at elements of C0, threads 32-63 at elements of C4.
 
-            There are two increment cycles, one major step size and one minor step size.
+            If not a full load, there are two increment cycles, one major step size and one minor step size.
             The minor cycle increments every iteration.
             The major cycle increments on every iteration that has loaded 4 registers.
 
@@ -443,15 +443,15 @@ namespace Layout
             */
 
             // Use IOTraits for full RegCount so we can properly calculate the offsets.
-            using C4Traits = amdgcn_io_traits<BlockDim, BlockK, DataT, Traits::RegCount>;
+            using CNTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, MaxVectorWidth>;
 
-            static_assert(IOTraits::KPerIO <= C4Traits::KPerIO, "");
-            constexpr auto fullLoad = (IOTraits::KPerIO == C4Traits::KPerIO);
+            static_assert(IOTraits::KPerIO <= CNTraits::KPerIO, "");
+            constexpr auto fullLoad = (IOTraits::KPerIO == CNTraits::KPerIO);
 
             constexpr auto majorStepSize
-                = fullLoad ? C4Traits::KPerIO : C4Traits::KPerIO - Traits::RegCount;
+                = fullLoad ? CNTraits::KPerIO : CNTraits::KPerIO - MaxVectorWidth;
             constexpr auto minorStepSize = fullLoad ? 0 : VectorWidth;
-            auto           doMajorStep = ((iteration + 1) % (Traits::RegCount / VectorWidth)) == 0;
+            auto           doMajorStep   = ((iteration + 1) % (MaxVectorWidth / VectorWidth)) == 0;
 
             return std::make_pair(
                 0, static_cast<uint32_t>(doMajorStep) * majorStepSize + minorStepSize);
@@ -478,27 +478,30 @@ namespace Layout
         }
     };
 
-    // Col4T with BlockDim = 64, is the same as Col layout.
+    // ColNT with BlockDim = 64, is the same as Col layout.
     // Note: col_major only supported for VW = 1
-    template <uint32_t BlockK, typename DataT>
-    struct Col4T<AMDGCN_WAVE_SIZE, BlockK, DataT, col_major, 1>
+    template <uint32_t BlockK, typename DataT, uint32_t MaxVectorWidth>
+    struct ColNT<AMDGCN_WAVE_SIZE, BlockK, DataT, col_major, 1, MaxVectorWidth>
         : public Col<AMDGCN_WAVE_SIZE, BlockK, DataT, col_major, 1>
     {
     };
 
-    template <uint32_t BlockK, typename DataT, uint32_t VectorWidth>
-    struct Col4T<AMDGCN_WAVE_SIZE, BlockK, DataT, row_major, VectorWidth>
+    template <uint32_t BlockK, typename DataT, uint32_t VectorWidth, uint32_t MaxVectorWidth>
+    struct ColNT<AMDGCN_WAVE_SIZE, BlockK, DataT, row_major, VectorWidth, MaxVectorWidth>
         : public Col<AMDGCN_WAVE_SIZE, BlockK, DataT, row_major, VectorWidth>
     {
     };
 
-    ////////////// Row4T /////////////////////////
+    ////////////// RowNT /////////////////////////
     /*
 
         Matrix layout:
 
         BlockDim = row size
         BlockK = row count
+
+        VW = actual vector width
+        N = max vector width
 
         (0, 0)                 (0, BlockDim - 1)
         v______________  ...  _v__
@@ -512,11 +515,11 @@ namespace Layout
         Register layout:
 
         Guarantees:
-        Row4T guarantees the following register format, regardless of VW and data layout.
-        Register 0 to contain Rows (i % 4) == 0
-        Register 1 to contain Rows (i % 4) == 1
-        Register 2 to contain Rows (i % 4) == 2
-        Register 3 to contain Rows (i % 4) == 3
+        RowNT guarantees the following register format, regardless of VW and data layout.
+        Register 0 to contain Rows (i % N) == 0
+        Register 1 to contain Rows (i % N) == 1
+        Register 2 to contain Rows (i % N) == 2
+        ...
 
         Limitations:
         row_major data format is not supported for VW > 1, as it produces
@@ -524,7 +527,7 @@ namespace Layout
 
         KPerIO == # of rows per IO (either load or store)
 
-        E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = col_major
+        E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = col_major
 
         Elements 0.....31 32.....64
                  _______________
@@ -532,7 +535,7 @@ namespace Layout
         ...       ...      ...
 
 
-        E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
+        E.g. BlockDim = 32, VW = 4, N = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
 
         Elements 0.....31 32.....64
                  _______________
@@ -543,7 +546,7 @@ namespace Layout
         ...       ...      ...
 
 
-        E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = row_major
+        E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = row_major
 
         Elements 0.....31 32.....64
                  _______________
@@ -551,7 +554,7 @@ namespace Layout
         ...       ...      ...
 
         NOTE:
-        E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
+        E.g. BlockDim = 32, VW = 4,  N = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
         Is NOT implemented due to incorrect mapping with row_major and VW = 4
      */
 
@@ -559,22 +562,24 @@ namespace Layout
               uint32_t BlockK,
               typename DataT,
               typename DataLayout,
-              uint32_t VectorWidth>
-    struct Row4T
+              uint32_t VectorWidth,
+              uint32_t MaxVectorWidth>
+    struct RowNT
     {
-        // Row4T is orthogonal to Col4T, therefore we can use reversed coordinates
-        // and opposite DataLayout from Col4T
+        // RowNT is orthogonal to ColNT, therefore we can use reversed coordinates
+        // and opposite DataLayout from ColNT
         struct Traits
         {
             using MappingUtil  = MappingUtil<BlockK, BlockDim, DataT, DataLayout>;
             using MatrixCoordT = typename MappingUtil::CoordT;
-            using OrthoLayout  = Col4T<BlockDim,
+            using OrthoLayout  = ColNT<BlockDim,
                                       BlockK,
                                       DataT,
                                       std::conditional_t<std::is_same<DataLayout, row_major>::value,
                                                          col_major,
                                                          row_major>,
-                                      VectorWidth>;
+                                      VectorWidth,
+                                      MaxVectorWidth>;
         };
 
         static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
