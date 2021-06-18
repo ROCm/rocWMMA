@@ -97,28 +97,15 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
                                std::is_same<LayoutC, row_major>::value ? wmma::mem_row_major
                                                                        : wmma::mem_col_major);
 
-        using CvtCIn    = amdgcn_convert<OutputT, ComputeT>;
-        using UnpackC   = Unpack<OutputT, fragC.registerCount()>;
-        using UnpackAcc = Unpack<ComputeT, fragAcc.registerCount()>;
-
         // Get ready to multiply and accum with C
-        // Must convert to ComputeT and unpack
+        // Must convert to ComputeT
         // TODO: Add packed ops
-        auto cCompute   = CvtCIn::exec(UnpackC::exec(*fragC));
-        auto accCompute = UnpackAcc::exec(*fragAcc);
-        static_assert(decltype(cCompute)::size() == decltype(accCompute)::size(),
-                      "C and accumulator must have same register count");
 
 #pragma unroll
-        for(int i = 0; i < decltype(cCompute)::size(); ++i)
+        for(int i = 0; i < fragC.num_elements; ++i)
         {
-            cCompute[i] = alpha * accCompute[i] + beta * cCompute[i];
+            fragC.x[i] = OutputT(alpha * ComputeT(fragAcc.x[i]) + beta * ComputeT(fragC.x[i]));
         }
-
-        // Re-configure output
-        using CvtCOut = amdgcn_convert<ComputeT, OutputT>;
-        using PackC   = Pack<OutputT, cCompute.size()>;
-        *fragC        = PackC::exec(CvtCOut::exec(cCompute));
 
         OutputT* dOffset = d
                            + (std::is_same<LayoutD, row_major>::value ? (cRow * ldd + cCol)
