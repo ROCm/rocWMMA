@@ -126,10 +126,20 @@ namespace wmma
         fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                       DataT                                                         value)
     {
-        using FragT       = typename std::decay<decltype(frag)>::type;
-        using Broadcaster = PackedBroadcastRegs<DataT, FragT::registerCount()>;
+        using FragT  = typename std::decay<decltype(frag)>::type;
+        using Config = OptConfig<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+        using Broadcaster = Broadcast<DataT, Config::IOTraits::UnpackedRegisterCount>;
+        using Packer      = typename Config::Packer;
 
-        (*frag) = Broadcaster::exec(value);
+        static_assert(std::is_same<typename Broadcaster::Traits::OutputT,
+                                   typename Packer::Traits::InputT>::value,
+                      "Broadcast output and pack input types do not match");
+
+        static_assert(
+            std::is_same<typename FragT::Traits::StorageT, typename Packer::Traits::OutputT>::value,
+            "Fragment storage type and packed types do not match");
+
+        (*frag) = Packer::exec(Broadcaster::exec(value));
     }
 
     template <typename MatrixT,
@@ -244,65 +254,59 @@ namespace wmma
         (*d)       = MFMA::exec(*a, *b, *c);
     }
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout>
-    __device__ void
-        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
-                              const DataT*                                                  data,
-                              uint32_t                                                      ldm)
-    {
-        static_assert(!std::is_same<DataLayout, void>::value,
-                      "Must provide layout information. Either statically assign data layout in "
-                      "fragment declaration or use the run-time function overload.");
+    // template <typename MatrixT,
+    //           uint32_t BlockM,
+    //           uint32_t BlockN,
+    //           uint32_t BlockK,
+    //           typename DataT,
+    //           typename DataLayout>
+    // __device__ void
+    //     prefetch_matrix_coop_sync(DataT* ldsData,
+    //                             uint32_t ldsLdm,
+    //                             fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
+    //                             const DataT*                                                  globalData,
+    //                             uint32_t                                                      ldm,
+    //                             layout_t ldsLayout = DataLayout())
+    // {
+    //     static_assert(!std::is_same<DataLayout, void>::value,
+    //                   "Must provide layout information. Either statically assign data layout in "
+    //                   "fragment declaration or use the run-time function overload.");
 
-        using FragT       = typename std::decay<decltype(frag)>::type;
-        using MappingUtil = MappingUtil<FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
-        using Config   = OptConfig<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
-        using Packer   = typename Config::Packer;
-        using Unpacker = typename Config::Unpacker;
+    //     using FragT       = typename std::decay<decltype(frag)>::type;
+    //     using MappingUtil = MappingUtil<FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+    //     using Config   = OptConfig<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+    //     using Packer   = typename Config::Packer;
+    //     using Unpacker = typename Config::Unpacker;
 
-        // Load a portion of the global data
-        //using CoopLoader = typename Config::CoopLoader;
-        using CoopLoader = typename Config::GlobalLoader;
-        typename CoopLoader::Traits::OutputT blockRegs;
-        blockRegs = CoopLoader::exec(data, ldm);
+    //     using CoopLoader = typename Config::CoopLoader;
 
-        // Dump the partial global data to LDS
-        HIP_DYNAMIC_SHARED(DataT, localMemPtr);
-        using CoopStorer = typename Config::CoopStorer;
-        auto ldl         = -1;
-        if(std::is_same<MatrixT, matrix_a>::value)
-        {
-            ldl = std::is_same<DataLayout, row_major>::value ? BlockK : BlockM;
-        }
-        else if(std::is_same<MatrixT, matrix_b>::value)
-        {
-            ldl = std::is_same<DataLayout, row_major>::value ? BlockN : BlockK;
-        }
-        else if(std::is_same<MatrixT, accumulator>::value)
-        {
-            ldl = std::is_same<DataLayout, row_major>::value ? BlockN : BlockM;
-        }
-        auto     waveCoord = MappingUtil::waveCoord(); // Local to workgroup
-        uint32_t competingWaveId
-            = (std::is_same<MatrixT, matrix_a>::value ? std::get<0>(waveCoord)
-                                                      : std::get<1>(waveCoord));
-        assert(ldl == 16);
-        assert(competingWaveId * FragT::leadingDim() * FragT::kDim() == 0);
-        auto ldsAddr = localMemPtr + competingWaveId * FragT::leadingDim() * FragT::kDim();
-        CoopStorer::exec(ldsAddr, blockRegs, ldl);
-        __syncthreads();
+    //     // Splitting the K direction:
+    //     // Matrix A:
+    //     // - shares work with waves on same row (different col).
+    //     // - waves in different rows work on different blocks
+    //     // Matrix B:
+    //     // - shares work with waves on same col (different row)
+    //     // - waves in different cols work on different blocks
 
-        // Load the full block from LDS
-        using FullLoader = typename Config::LocalLoader;
-        *frag            = Packer::exec(FullLoader::exec(ldsAddr, ldl));
+    //     // coopIndex is used to determine offsets of work that is shared
+    //     // auto coopIndex = std::is_same<MatrixT, matrix_a>::value ? [](typename MappingUtil::CoordT const& coord) { return std::get<1>(coord); } :
+    //     //                                                           [](typename MappingUtil::CoordT const& coord) { return std::get<0>(coord); };
 
-        __syncthreads();
-    }
+    //     auto waveCoord    = MappingUtil::waveCoord();
+    //     auto waveIndex = std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCoord) : std::get<0>(waveCoord);
+
+    //     using WaveSpace = _MappingUtil::WaveSpace;
+    //     auto workgroupDim  = WaveSpace::workgroupDim();
+    //     auto waveCount = std::is_same<MatrixT, matrix_a>::value ? std::get<1>(waveCoord) : std::get<0>(waveCoord);
+
+    //     typename CoopLoader::Traits::OutputT unpacked = *frag;
+
+    //     // Each cooperative wave only loads the portion they are responsible for
+    //     // Note: at this point, the output frag is only partially filled with useful data
+    //     CoopLoader::exec(unpacked, data, ldm, waveIndex, waveCount);
+
+    //     (*frag) = Packer::exec(unpacked);
+    // }
 
 } // namespace wmma
 
