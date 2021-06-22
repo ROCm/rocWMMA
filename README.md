@@ -11,71 +11,198 @@ AMD's C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications 
 ## Currently supported configurations (ongoing)
 
 - Matrix Layout <LayoutA, LayoutB, Layout C, LayoutD> (N = col major, T = row major)
-    <N, N, N, N>
-    <N, T, N, N>
-    <T, N, N, N>
-    <T, T, N, N>
-    <N, N, T, T>
-    <N, T, T, T>
-    <T, N, T, T>
-    <T, T, T, T>
+
+    <N, N, N, N>,  <N, N, T, T>
+    
+    <N, T, N, N>, <N, T, T, T>
+    
+    <T, N, N, N>, <T, N, T, T>
+    
+    <T, T, N, N>, <T, T, T, T>
 
 - Thread Block Sizes <TBlockX, TBlockY> =
 **Note: TBlockX must be a multiple of 64 **
-    <64, 1>
-    <64, 2>
-    <64, 4>
-    <128, 1>
-    <128, 2>
-    <128, 4>
-    <256, 1>
-    <256, 2>
-    <256, 4>
+
+    <64, 1>, <64, 2>, <64, 4>
+    
+    <128, 1>, <128, 2>, <128, 4>
+    
+    <256, 1>, <256, 2>, <256, 4>
 
 - Data Types <Ti / To / Tc> = <Input type / Output Type / Compute Type>
 
-    * <f16 / f16 / f32> - MFMA Block Size <BlockM, BlockN, BlockK> =
-    <16, 16, 16>
-    <16, 16, 32>
-    <16, 16, 64>
-    <16, 16, 128>
-    <16, 16, 256>
-    <16, 16, 512>
-    <32, 32, 8>
-    <32, 32, 16>
-    <32, 32, 32>
-    <32, 32, 64>
-    <32, 32, 128>
+    Input Type = Matrix A/B
+    
+    Output Type = Matrix C/D
+    
+    Compute Type = math / accumulation type
 
-    * <f16 / f32 / f32> - MFMA Block Size <BlockM, BlockN, BlockK> =
-    <16, 16, 16>
-    <16, 16, 32>
-    <16, 16, 64>
-    <16, 16, 128>
-    <16, 16, 256>
-    <16, 16, 512>
-    <32, 32, 8>
-    <32, 32, 16>
-    <32, 32, 32>
-    <32, 32, 64>
-    <32, 32, 128>
-
-    * <f32 / f32 / f32> - MFMA Block Size <BlockM, BlockN, BlockK> =
-    <16, 16, 4>
-    <16, 16, 8>
-    <16, 16, 16>
-    <16, 16, 32>
-    <16, 16, 64>
-    <16, 16, 128>
-    <16, 16, 256>
-    <16, 16, 512>
-    <32, 32, 2>
-    <32, 32, 4>
-    <32, 32, 8>
-    <32, 32, 16>
-    <32, 32, 32>
-    <32, 32, 64>
-    <32, 32, 128>
+<table>
+    <thead>
+      <tr>
+        <th>Ti / To / Tc</th>
+        <th>BlockM</th>
+        <th>BlockN</th>
+        <th>BlockK</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td rowspan=2>i8 / i32 / i32</td>
+            <td>16</td>
+            <td>16</td>
+            <td>Min: 16, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>32</td>
+            <td>32</td>
+            <td>Min: 8, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td rowspan=2>i8 / i8 / i32</td>
+            <td>16</td>
+            <td>16</td>
+            <td>Min: 16, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>32</td>
+            <td>32</td>
+            <td>Min: 8, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td rowspan=2>f16 / f32 / f32</td>
+            <td>16</td>
+            <td>16</td>
+            <td>Min: 16, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>32</td>
+            <td>32</td>
+            <td>Min: 8, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td rowspan=2>f16 / f16 / f32</td>
+            <td>16</td>
+            <td>16</td>
+            <td>Min: 16, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>32</td>
+            <td>32</td>
+            <td>Min: 8, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td rowspan=2>f16 / f16 / f16*</td>
+            <td>16</td>
+            <td>16</td>
+            <td>Min: 16, pow2</td>
+            <td rowspan=2>*= FMA is natively f32, downcasted to fp16</td>
+        </tr>
+        <tr>
+            <td>32</td>
+            <td>32</td>
+            <td>Min: 8, pow2</td>
+        </tr>
+        <tr>
+            <td rowspan=2>__half / f32 / f32</td>
+            <td>16</td>
+            <td>16</td>
+            <td>Min: 16, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>32</td>
+            <td>32</td>
+            <td>Min: 8, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td rowspan=2>__half / __half / f32</td>
+            <td>16</td>
+            <td>16</td>
+            <td>Min: 16, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>32</td>
+            <td>32</td>
+            <td>Min: 8, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td rowspan=2>__half / __half / __half*</td>
+            <td>16</td>
+            <td>16</td>
+            <td>Min: 16, pow2</td>
+            <td rowspan=2>*= FMA is natively f32, downcasted to __half</td>
+        </tr>
+        <tr>
+            <td>32</td>
+            <td>32</td>
+            <td>Min: 8, pow2</td>
+        </tr>
+        <tr>
+            <td rowspan=2>bf16 / f32 / f32</td>
+            <td>16</td>
+            <td>16</td>
+            <td>Min: 8, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>32</td>
+            <td>32</td>
+            <td>Min: 4, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td rowspan=2>bf16 / bf16 / f32</td>
+            <td>16</td>
+            <td>16</td>
+            <td>Min: 8, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>32</td>
+            <td>32</td>
+            <td>Min: 4, pow2</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td rowspan=2>bf16 / bf16 / bf16*</td>
+            <td>16</td>
+            <td>16</td>
+            <td>Min: 8, pow2</td>
+            <td rowspan=2>*= FMA is natively f32, downcasted to bf16</td>
+        </tr>
+        <tr>
+            <td>32</td>
+            <td>32</td>
+            <td>Min: 4, pow2</td>
+        </tr>
+        <tr>
+            <td rowspan=2>f32 / f32 / f32</td>
+            <td>16</td>
+            <td>16</td>
+            <td>Min: 4, pow2</td>
+            <td rowspan=2></td>
+        </tr>
+        <tr>
+            <td>32</td>
+            <td>32</td>
+            <td>Min: 2, pow2</td>
+        </tr>
+    </tbody>
+  </table>
+    
 
 
 
