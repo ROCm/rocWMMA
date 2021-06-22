@@ -2,14 +2,14 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
+#include "Common.hpp"
 #include "Performance.h"
 #include "Utils.h"
 #include "WMMA.h"
-#include "Common.hpp"
 
 #ifdef WMMA_VALIDATE_TESTS
-#include <gtest/gtest.h>
 #include "Reference.h" // Vanilla CPU kernel
+#include <gtest/gtest.h>
 #ifdef WMMA_VALIDATE_WITH_ROCBLAS
 #include "rocBLASReference.h" // rocBLAS GPU kernel
 #endif // WMMA_VALIDATE_WITH_ROCBLAS
@@ -150,7 +150,7 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
                               ComputeT alpha,
                               ComputeT beta)
 {
-    if ( m < BlockM * TBlockX / AMDGCN_WAVE_SIZE || n < BlockN * TBlockY || k < BlockK )
+    if(m < BlockM * TBlockX / AMDGCN_WAVE_SIZE || n < BlockN * TBlockY || k < BlockK)
         return;
 
     int lda = std::is_same<LayoutA, row_major>::value ? k : m;
@@ -158,10 +158,11 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
     int ldc = std::is_same<LayoutC, row_major>::value ? n : m;
     int ldd = std::is_same<LayoutD, row_major>::value ? n : m;
 
-    if (!headerPrinted)
+    if(!headerPrinted)
     {
-        std::cout << "TBlkX, TBlkY, BlkM, BlkN, BlkK, MatM, MatN, MatK, alpha, lda, ldb, beta, ldc, "
-                    "ldd, LytA_LytB_LytC_LytD, Ti_To_Tc, elapsedMs, GFlops, GFlops/s, Efficiency(%)\n";
+        std::cout
+            << "TBlkX, TBlkY, BlkM, BlkN, BlkK, MatM, MatN, MatK, alpha, lda, ldb, beta, ldc, "
+               "ldd, LytA_LytB_LytC_LytD, Ti_To_Tc, elapsedMs, GFlops, GFlops/s, Efficiency(%)\n";
         headerPrinted = true;
     }
     std::cout << TBlockX << ", " << TBlockY << ", " << BlockM << ", " << BlockN << ", " << BlockK
@@ -174,10 +175,18 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
               << dataTypeToString<InputT>() << "_" << dataTypeToString<OutputT>() << "_"
               << dataTypeToString<ComputeT>();
 
-    if ( quirks::hipcc_bug_half_packing<OutputT, LayoutC>::value )
+    if(quirks::hipcc_bug_half_packing<OutputT, LayoutC>::value)
     {
-        std::cout << ", " << "na" << ", " << "na"
-            << ", " << "na" << ", " << "na" << ", " << " SKIPPED" << std::endl;
+        std::cout << ", "
+                  << "na"
+                  << ", "
+                  << "na"
+                  << ", "
+                  << "na"
+                  << ", "
+                  << "na"
+                  << ", "
+                  << " SKIPPED" << std::endl;
         return;
     }
 
@@ -260,8 +269,8 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
     auto actualGFlopsPerSec = calculateGFlopsPerSec(m, n, k, elapsedTimeMs);
     auto efficiency         = actualGFlopsPerSec / peakGFlopsPerSec * 100.0f;
 
-    std::cout << ", " << elapsedTimeMs << ", " << totalGFlops
-              << ", " << actualGFlopsPerSec << ", " << efficiency << ", ";
+    std::cout << ", " << elapsedTimeMs << ", " << totalGFlops << ", " << actualGFlopsPerSec << ", "
+              << efficiency << ", ";
 
 #ifdef WMMA_VALIDATE_TESTS
 
@@ -282,14 +291,22 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
 
     bool validated = false;
 #ifdef WMMA_VALIDATE_WITH_ROCBLAS
-    if (!quirks::rocblas_not_support_bf16_bf16_bf16<InputT, OutputT, ComputeT>::value)
+    if(quirks::rocblas_supported<InputT, OutputT, ComputeT>::value)
     {
         // rocblas matrix C, D always in col_major
         MatrixUtil<col_major>::fill(matrixC, m, n);
-        gemm_rocBLAS<InputT, OutputT, ComputeT, LayoutA, LayoutB>(
-            m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
+        gemm_rocBLAS<InputT, OutputT, ComputeT, LayoutA, LayoutB>(m,
+                                                                  n,
+                                                                  k,
+                                                                  matrixA.data(),
+                                                                  matrixB.data(),
+                                                                  matrixC.data(),
+                                                                  matrixD_ref.data(),
+                                                                  alpha,
+                                                                  beta);
 
-        EXPECT_TRUE( (compareEqual<OutputT, OutputT, LayoutD, col_major>(matrixD, matrixD_ref, m, n, errorTolerance)) );
+        EXPECT_TRUE((compareEqual<OutputT, OutputT, LayoutD, col_major>(
+            matrixD, matrixD_ref, m, n, errorTolerance)));
 
         //MatrixUtil<LayoutD>::print(matrixD, m, n);
         //MatrixUtil<col_major>::print(matrixD_ref, m, n);
@@ -297,11 +314,19 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
         validated = true;
     }
 #endif // WMMA_VALIDATE_WITH_ROCBLAS
-    if (!validated)
+    if(!validated)
     {
-        gemm_CPU<InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD>(
-            m, n, k, matrixA.data(), matrixB.data(), matrixC.data(), matrixD_ref.data(), alpha, beta);
-        EXPECT_TRUE( (compareEqual<OutputT, OutputT, LayoutD, LayoutD>(matrixD, matrixD_ref, m, n, errorTolerance)) );
+        gemm_CPU<InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD>(m,
+                                                                                n,
+                                                                                k,
+                                                                                matrixA.data(),
+                                                                                matrixB.data(),
+                                                                                matrixC.data(),
+                                                                                matrixD_ref.data(),
+                                                                                alpha,
+                                                                                beta);
+        EXPECT_TRUE((compareEqual<OutputT, OutputT, LayoutD, LayoutD>(
+            matrixD, matrixD_ref, m, n, errorTolerance)));
     }
 
 #else // WMMA_VALIDATE_TESTS
@@ -350,7 +375,13 @@ inline void test_mma_sync_h(uint32_t TBlockX,
 }
 
 template <typename InputT, typename OutputT, typename ComputeT>
-inline void test_mma_sync_h_32x32(uint32_t TBlockX, uint32_t TBlockY, uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
+inline void test_mma_sync_h_32x32(uint32_t TBlockX,
+                                  uint32_t TBlockY,
+                                  uint32_t M,
+                                  uint32_t N,
+                                  uint32_t K,
+                                  ComputeT alpha,
+                                  ComputeT beta)
 {
     // Minimum K = 2 for 32 x 32
     //test_mma_sync_h<32, 32, 2, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
@@ -363,7 +394,13 @@ inline void test_mma_sync_h_32x32(uint32_t TBlockX, uint32_t TBlockY, uint32_t M
 }
 
 template <typename InputT, typename OutputT, typename ComputeT>
-inline void test_mma_sync_h_16x16(uint32_t TBlockX, uint32_t TBlockY, uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
+inline void test_mma_sync_h_16x16(uint32_t TBlockX,
+                                  uint32_t TBlockY,
+                                  uint32_t M,
+                                  uint32_t N,
+                                  uint32_t K,
+                                  ComputeT alpha,
+                                  ComputeT beta)
 {
     // Minimum K = 4 for 16 x 16
     //test_mma_sync_h<16, 16, 4, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
@@ -450,8 +487,11 @@ using Implementations = testing::Types<
     std::tuple<bfloat16_t, bfloat16_t, float32_t>,
     std::tuple<bfloat16_t, float32_t, float32_t>,
     // Native fp32
-    std::tuple<float32_t, float32_t, float32_t>
->;
+    std::tuple<float32_t, float32_t, float32_t>,
+
+    // Native int8
+    std::tuple<int8_t, int32_t, int32_t>,
+    std::tuple<int8_t, int8_t, int32_t>>;
 
 TYPED_TEST_SUITE(MmaSyncTest, Implementations);
 
@@ -465,8 +505,10 @@ TEST(AdhocMmaSyncTest, AdhocMmaSync)
 {
     //test_mma_sync_h<32, 32, 128, float32_t, float32_t>(64, 4, 8192, 8192, 8192, 1.0f, 1.0f);
     //test_mma_sync_h<32, 32, 32, bfloat16_t, bfloat16_t, float32_t, col_major, row_major, row_major>(64, 4, 4096, 4096, 4096, 2.0f, 1.5f);
-    test_mma_sync_h<32, 32, 32, float16_t, float16_t, float16_t, col_major, row_major, row_major>(64, 1, 32, 32, 32, 1.0f, 1.0f);
-    test_mma_sync_h<32, 32, 32, float16_t, float16_t, float32_t, row_major, row_major, row_major>(64, 1, 64, 64, 128, float16_t(2), float16_t(2));
+    test_mma_sync_h<32, 32, 32, float16_t, float16_t, float16_t, col_major, row_major, row_major>(
+        64, 1, 32, 32, 32, 1.0f, 1.0f);
+    test_mma_sync_h<32, 32, 32, float16_t, float16_t, float32_t, row_major, row_major, row_major>(
+        64, 1, 64, 64, 128, float16_t(2), float16_t(2));
 }
 
 #else // WMMA_VALIDATE_TESTS
@@ -490,6 +532,10 @@ int main()
 
     // Native fp32
     test_mma_sync_h<float32_t, float32_t, float32_t>();
+
+    // Native i8
+    test_mma_sync_h<int8_t, int32_t, int32_t>();
+    test_mma_sync_h<int8_t, int8_t, int32_t>();
 
     //test_mma_sync_h<64, 4, 32, 32, 32, float32_t, float32_t, float32_t>(8192, 8192, 8192, 1.0f, 1.0f);
 

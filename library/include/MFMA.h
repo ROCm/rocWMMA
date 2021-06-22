@@ -346,6 +346,58 @@ struct amdgcn_mfma<float32_t, float32_t, 32, 32>
     }
 };
 
+template <>
+struct amdgcn_mfma<int8_t, int32_t, 16, 16>
+{
+    // Packed register traits
+    struct Traits
+    {
+        enum : uint32_t
+        {
+            KPerMfma = 16
+        };
+        using ARegsT = VRegI32x1;
+        using BRegsT = VRegI32x1;
+        using CRegsT = AccRegI32x4;
+        using DRegsT = AccRegI32x4;
+    };
+
+    __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
+                                       typename Traits::BRegsT const& regsB,
+                                       typename Traits::CRegsT const& regsC) ->
+        typename Traits::DRegsT
+    {
+        return typename Traits::DRegsT(
+            __builtin_amdgcn_mfma_i32_16x16x16i8(*regsA, *regsB, *regsC, 0, 0, 0));
+    }
+};
+
+template <>
+struct amdgcn_mfma<int8_t, int32_t, 32, 32>
+{
+    // Packed register traits
+    struct Traits
+    {
+        enum : uint32_t
+        {
+            KPerMfma = 8
+        };
+        using ARegsT = VRegI32x1;
+        using BRegsT = VRegI32x1;
+        using CRegsT = AccRegI32x16;
+        using DRegsT = AccRegI32x16;
+    };
+
+    __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
+                                       typename Traits::BRegsT const& regsB,
+                                       typename Traits::CRegsT const& regsC) ->
+        typename Traits::DRegsT
+    {
+        return typename Traits::DRegsT(
+            __builtin_amdgcn_mfma_i32_32x32x8i8(*regsA, *regsB, *regsC, 0, 0, 0));
+    }
+};
+
 template <typename InputT, typename ComputeT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
 struct amdgcn_mfma_MxNxK
 {

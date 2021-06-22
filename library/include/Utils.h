@@ -4,8 +4,8 @@
 #include <array>
 #include <assert.h>
 #include <iostream>
-#include <vector>
 #include <tuple>
+#include <vector>
 
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
@@ -342,9 +342,21 @@ constexpr const char* dataTypeToString()
     {
         return "f32";
     }
+    else if(std::is_same<DataT, int8_t>::value)
+    {
+        return "i8";
+    }
+    else if(std::is_same<DataT, uint8_t>::value)
+    {
+        return "u8";
+    }
     else if(std::is_same<DataT, int32_t>::value)
     {
         return "i32";
+    }
+    else if(std::is_same<DataT, uint32_t>::value)
+    {
+        return "u32";
     }
     else
     {

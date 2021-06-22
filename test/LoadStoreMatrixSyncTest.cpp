@@ -7,8 +7,8 @@
 
 #include "WMMA.h"
 
-#include <gtest/gtest.h>
 #include "Common.hpp"
+#include <gtest/gtest.h>
 
 template <uint32_t BlockM,
           uint32_t BlockN,
@@ -66,9 +66,10 @@ template <uint32_t BlockM,
           typename LayoutA,
           typename LayoutB,
           typename LayoutC>
-__host__ void test_load_store_matrix_h(uint32_t TBlockX, uint32_t TBlockY, uint32_t M, uint32_t N, uint32_t K)
+__host__ void
+    test_load_store_matrix_h(uint32_t TBlockX, uint32_t TBlockY, uint32_t M, uint32_t N, uint32_t K)
 {
-    if ( M < BlockM * TBlockX / AMDGCN_WAVE_SIZE || N < BlockN * TBlockY || K < BlockK )
+    if(M < BlockM * TBlockX / AMDGCN_WAVE_SIZE || N < BlockN * TBlockY || K < BlockK)
         return;
 
     std::cout << "HIP wmma::load/store_matrix_sync test: TBlock (" << TBlockX << ", " << TBlockY
@@ -158,17 +159,15 @@ __host__ void test_load_store_matrix_h(uint32_t TBlockX, uint32_t TBlockY, uint3
     CHECK_HIP_ERROR(hipFree(d_c_r));
 
     // Validate
-    EXPECT_TRUE( (compareEqual<DataT, DataT, LayoutA, LayoutA>(matrixA, matrixA_r, M, N)) );
+    EXPECT_TRUE((compareEqual<DataT, DataT, LayoutA, LayoutA>(matrixA, matrixA_r, M, N)));
     //MatrixUtil<LayoutC>::print(matrixA_r, M, N);
-    EXPECT_TRUE( (compareEqual<DataT, DataT, LayoutB, LayoutB>(matrixB, matrixB_r, M, N)) );
-    EXPECT_TRUE( (compareEqual<DataT, DataT, LayoutC, LayoutC>(matrixC, matrixC_r, M, N)) );
+    EXPECT_TRUE((compareEqual<DataT, DataT, LayoutB, LayoutB>(matrixB, matrixB_r, M, N)));
+    EXPECT_TRUE((compareEqual<DataT, DataT, LayoutC, LayoutC>(matrixC, matrixC_r, M, N)));
 }
 
-template <typename IntConstBlockM,
-          typename IntConstBlockN,
-          typename IntConstBlockK,
-          typename DataT>
-void test_load_store_matrix_h(uint32_t TBlockX, uint32_t TBlockY, uint32_t M, uint32_t N, uint32_t K)
+template <typename IntConstBlockM, typename IntConstBlockN, typename IntConstBlockK, typename DataT>
+void test_load_store_matrix_h(
+    uint32_t TBlockX, uint32_t TBlockY, uint32_t M, uint32_t N, uint32_t K)
 {
     std::tuple<row_major, col_major> types;
     for_each(types, [&](auto layout_a) {
@@ -203,7 +202,7 @@ void test_load_store_matrix(std::tuple<Ts...>)
     // clang-format on
     for(auto tblock : thread_block)
     {
-        for (auto size : problem_sizes)
+        for(auto size : problem_sizes)
         {
             auto fargs = std::tuple_cat(tblock, size);
             std::apply(test_load_store_matrix_h<Ts...>, fargs);
@@ -223,17 +222,28 @@ using Implementations = testing::Types<
     std::tuple<I<16>, I<16>, I<16>, hfloat16_t>,
     std::tuple<I<16>, I<16>, I<16>, float16_t>,
     std::tuple<I<16>, I<16>, I<16>, bfloat16_t>,
+    std::tuple<I<16>, I<16>, I<16>, int8_t>,
+    std::tuple<I<16>, I<16>, I<16>, uint8_t>,
+    std::tuple<I<16>, I<16>, I<16>, int32_t>,
+    std::tuple<I<16>, I<16>, I<16>, uint32_t>,
 
     std::tuple<I<32>, I<32>, I<32>, float32_t>,
     std::tuple<I<32>, I<32>, I<32>, hfloat16_t>,
     std::tuple<I<32>, I<32>, I<32>, float16_t>,
     std::tuple<I<32>, I<32>, I<32>, bfloat16_t>,
+    std::tuple<I<16>, I<32>, I<32>, int8_t>,
+    std::tuple<I<16>, I<32>, I<32>, uint8_t>,
+    std::tuple<I<16>, I<32>, I<32>, int32_t>,
+    std::tuple<I<16>, I<32>, I<32>, uint32_t>,
 
     std::tuple<I<64>, I<64>, I<64>, float32_t>,
     std::tuple<I<64>, I<64>, I<64>, hfloat16_t>,
     std::tuple<I<64>, I<64>, I<64>, float16_t>,
-    std::tuple<I<64>, I<64>, I<64>, bfloat16_t>
->;
+    std::tuple<I<64>, I<64>, I<64>, bfloat16_t>,
+    std::tuple<I<64>, I<64>, I<64>, int8_t>,
+    std::tuple<I<64>, I<64>, I<64>, uint8_t>,
+    std::tuple<I<64>, I<64>, I<64>, int32_t>,
+    std::tuple<I<64>, I<64>, I<64>, uint32_t>>;
 
 TYPED_TEST_SUITE(LoadStoreMatrixSyncTest, Implementations);
 

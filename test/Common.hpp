@@ -6,8 +6,9 @@ template <uint32_t N>
 using I = std::integral_constant<uint32_t, N>;
 
 template <class... Ts, class F>
-void for_each(std::tuple<Ts...>, F f) {
-    std::initializer_list<int> _ = { (f(Ts{}), 0)... }; // poor man's fold expression for C++11/14
+void for_each(std::tuple<Ts...>, F f)
+{
+    std::initializer_list<int> _ = {(f(Ts{}), 0)...}; // poor man's fold expression for C++11/14
     // (f(Ts{}), ...); // fold expression is for C++17 only
 }
 
@@ -15,12 +16,17 @@ namespace quirks
 {
     // rocBLAS does not yet support Ti/To/Tc = bf16/bf16/bf16
     template <typename InputT, typename OutputT, typename ComputeT>
-    struct rocblas_not_support_bf16_bf16_bf16 : std::false_type
+    struct rocblas_supported : std::true_type
     {
     };
 
     template <>
-    struct rocblas_not_support_bf16_bf16_bf16<bfloat16_t, bfloat16_t, bfloat16_t> : std::true_type
+    struct rocblas_supported<bfloat16_t, bfloat16_t, bfloat16_t> : std::false_type
+    {
+    };
+
+    template <>
+    struct rocblas_supported<int8_t, int8_t, int32_t> : std::false_type
     {
     };
 
@@ -48,4 +54,3 @@ namespace quirks
     };
 
 } // namespace quirks
-

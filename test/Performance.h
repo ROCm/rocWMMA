@@ -7,6 +7,24 @@ template <typename DataT>
 struct MfmaPerfTraits;
 
 template <>
+struct MfmaPerfTraits<int8_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 16
+    };
+};
+
+template <>
+struct MfmaPerfTraits<uint8_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 16
+    };
+};
+
+template <>
 struct MfmaPerfTraits<float16_t>
 {
     enum : uint32_t
@@ -42,6 +60,24 @@ template <typename DataT>
 struct VALUPerfTraits;
 
 template <>
+struct VALUPerfTraits<int8_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 4
+    };
+};
+
+template <>
+struct VALUPerfTraits<uint8_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 4
+    };
+};
+
+template <>
 struct VALUPerfTraits<float16_t>
 {
     enum : uint32_t
@@ -70,6 +106,24 @@ struct VALUPerfTraits<float32_t>
     enum : uint32_t
     {
         Multiplier = 2
+    };
+};
+
+template <>
+struct VALUPerfTraits<int32_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 1
+    };
+};
+
+template <>
+struct VALUPerfTraits<uint32_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 1
     };
 };
 
