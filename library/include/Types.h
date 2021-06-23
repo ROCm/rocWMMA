@@ -12,8 +12,11 @@
 using float32_t = float;
 using float16_t = _Float16;
 using float64_t = double;
+using int8_t    = signed char;
+using uint8_t   = unsigned char;
 using int16_t   = short;
 using int32_t   = int;
+using uint32_t  = unsigned int;
 using index_t   = int32_t;
 
 // Non-native types
@@ -257,6 +260,34 @@ struct __align__(4) VecT
 };
 
 // V registers
+using VRegI8x1  = VecT<int8_t, 1>; // Single i8 register
+using VRegI8x2  = VecT<int8_t, 2>; // Two i8 registers
+using VRegI8x4  = VecT<int8_t, 4>; // ...
+using VRegI8x8  = VecT<int8_t, 8>; //
+using VRegI8x16 = VecT<int8_t, 16>; //
+using VRegI8x32 = VecT<int8_t, 32>; // 32 i8 registers
+
+using VRegU8x1  = VecT<uint8_t, 1>; // Single u8 register
+using VRegU8x2  = VecT<uint8_t, 2>; // Two ui8 registers
+using VRegU8x4  = VecT<uint8_t, 4>; // ...
+using VRegU8x8  = VecT<uint8_t, 8>; //
+using VRegU8x16 = VecT<uint8_t, 16>; //
+using VRegU8x32 = VecT<uint8_t, 32>; // 32 u8 registers
+
+using VRegI32x1  = VecT<int32_t, 1>; // Single i32 register
+using VRegI32x2  = VecT<int32_t, 2>; // Two i32 registers
+using VRegI32x4  = VecT<int32_t, 4>; // ...
+using VRegI32x8  = VecT<int32_t, 8>; //
+using VRegI32x16 = VecT<int32_t, 16>; //
+using VRegI32x32 = VecT<int32_t, 32>; // 32 i32 registers
+
+using VRegU32x1  = VecT<uint32_t, 1>; // Single u32 register
+using VRegU32x2  = VecT<uint32_t, 2>; // Two u32 registers
+using VRegU32x4  = VecT<uint32_t, 4>; // ...
+using VRegU32x8  = VecT<uint32_t, 8>; //
+using VRegU32x16 = VecT<uint32_t, 16>; //
+using VRegU32x32 = VecT<uint32_t, 32>; // 32 u32 registers
+
 using VRegF16x1  = VecT<float16_t, 1>; // Single f16 register
 using VRegF16x2  = VecT<float16_t, 2>; // Two f16 registers
 using VRegF16x4  = VecT<float16_t, 4>; // ...
@@ -272,6 +303,20 @@ using VRegF32x16 = VecT<float32_t, 16>; //
 using VRegF32x32 = VecT<float32_t, 32>; // 32 f32 registers
 
 // Acc registers
+using AccRegI32x1  = VecT<int32_t, 1>;
+using AccRegI32x2  = VecT<int32_t, 2>;
+using AccRegI32x4  = VecT<int32_t, 4>;
+using AccRegI32x8  = VecT<int32_t, 8>;
+using AccRegI32x16 = VecT<int32_t, 16>;
+using AccRegI32x32 = VecT<int32_t, 32>;
+
+using AccRegU32x1  = VecT<uint32_t, 1>;
+using AccRegU32x2  = VecT<uint32_t, 2>;
+using AccRegU32x4  = VecT<uint32_t, 4>;
+using AccRegU32x8  = VecT<uint32_t, 8>;
+using AccRegU32x16 = VecT<uint32_t, 16>;
+using AccRegU32x32 = VecT<uint32_t, 32>;
+
 using AccRegF32x1  = VecT<float32_t, 1>;
 using AccRegF32x2  = VecT<float32_t, 2>;
 using AccRegF32x4  = VecT<float32_t, 4>;
@@ -281,15 +326,31 @@ using AccRegF32x32 = VecT<float32_t, 32>;
 
 // Meta-tags
 // Matrices
-struct row_major{};
-struct col_major{};
-struct matrix_a{};
-struct matrix_b{};
-struct accumulator{};
-struct common{};
+struct row_major
+{
+};
+struct col_major
+{
+};
+struct matrix_a
+{
+};
+struct matrix_b
+{
+};
+struct accumulator
+{
+};
+struct common
+{
+};
 
 // Memory
-struct globalMem{};
-struct ldsMem{};
+struct globalMem
+{
+};
+struct ldsMem
+{
+};
 
 #endif // WMMA_TYPES_H
