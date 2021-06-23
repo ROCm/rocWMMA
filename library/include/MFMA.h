@@ -153,6 +153,8 @@ struct amdgcn_mfma<hfloat16_t, hfloat16_t, 32, 32>
 {
 };
 
+#if __gfx908__
+// NOTE: gfx908 architecture supports only subset of bf16 instructions
 template <>
 struct amdgcn_mfma<bfloat16_t, float32_t, 16, 16>
 {
@@ -292,6 +294,132 @@ struct amdgcn_mfma<bfloat16_t, bfloat16_t, 32, 32>
         return PackD::exec(Convert_fp32_bf16::exec(Dfp32));
     }
 };
+
+#else // __gfx908___
+
+// NOTE: Successors to gfx908 have upgraded bf16 instructions
+
+template <>
+struct amdgcn_mfma<bfloat16_t, float32_t, 16, 16>
+{
+    // Packed register traits
+    struct Traits
+    {
+        enum : uint32_t
+        {
+            KPerMfma = 16,
+        };
+        using ARegsT = VRegF32x2;
+        using BRegsT = VRegF32x2;
+        using CRegsT = AccRegF32x4;
+        using DRegsT = AccRegF32x4;
+    };
+
+    __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
+                                       typename Traits::BRegsT const& regsB,
+                                       typename Traits::CRegsT const& regsC) ->
+        typename Traits::DRegsT
+    {
+        return typename Traits::DRegsT(
+            __builtin_amdgcn_mfma_f32_16x16x16bf16_1k(*regsA, *regsB, *regsC, 0, 0, 0));
+    }
+};
+
+template <>
+struct amdgcn_mfma<bfloat16_t, bfloat16_t, 16, 16>
+{
+    // Packed register traits
+    struct Traits
+    {
+        enum : uint32_t
+        {
+            KPerMfma = 16,
+        };
+        using ARegsT = VRegF32x2;
+        using BRegsT = VRegF32x2;
+        using CRegsT = AccRegF32x2;
+        using DRegsT = AccRegF32x2;
+    };
+
+    __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
+                                       typename Traits::BRegsT const& regsB,
+                                       typename Traits::CRegsT const& regsC) ->
+        typename Traits::DRegsT
+    {
+        using Mfma              = amdgcn_mfma<bfloat16_t, float32_t, 16, 16>;
+        using UnpackC           = Unpack<bfloat16_t, 2>;
+        using PackD             = Pack<bfloat16_t, 4>;
+        using Convert_bf16_fp32 = amdgcn_convert<bfloat16_t, float32_t>;
+        using Convert_fp32_bf16 = amdgcn_convert<float32_t, bfloat16_t>;
+
+        // MFMA unit compute type is always fp32.
+        // Upconvert C to fp32, do MFMA, then down convert D to bf16 result
+        auto Dfp32 = Mfma::exec(regsA, regsB, Convert_bf16_fp32::exec(UnpackC::exec(regsC)));
+        return PackD::exec(Convert_fp32_bf16::exec(Dfp32));
+    }
+};
+
+template <>
+struct amdgcn_mfma<bfloat16_t, float32_t, 32, 32>
+{
+    // Packed register traits
+    struct Traits
+    {
+        enum : uint32_t
+        {
+            KPerMfma = 8
+        };
+        using ARegsT = VRegF32x2;
+        using BRegsT = VRegF32x2;
+        using CRegsT = AccRegF32x16;
+        using DRegsT = AccRegF32x16;
+    };
+
+    __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
+                                       typename Traits::BRegsT const& regsB,
+                                       typename Traits::CRegsT const& regsC) ->
+        typename Traits::DRegsT
+    {
+        return typename Traits::DRegsT(
+            __builtin_amdgcn_mfma_f32_32x32x8bf16_1k(*regsA, *regsB, *regsC, 0, 0, 0));
+    }
+};
+
+template <>
+struct amdgcn_mfma<bfloat16_t, bfloat16_t, 32, 32>
+{
+    // Packed register traits
+    struct Traits
+    {
+        enum : uint32_t
+        {
+            KPerMfma = 8,
+        };
+        using ARegsT = VRegF32x2;
+        using BRegsT = VRegF32x2;
+        using CRegsT = AccRegF32x8;
+        using DRegsT = AccRegF32x8;
+    };
+
+    __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
+                                       typename Traits::BRegsT const& regsB,
+                                       typename Traits::CRegsT const& regsC) ->
+        typename Traits::DRegsT
+    {
+        using Mfma              = amdgcn_mfma<bfloat16_t, float32_t, 32, 32>;
+        using UnpackC           = Unpack<bfloat16_t, 8>;
+        using PackD             = Pack<bfloat16_t, 16>;
+        using Convert_bf16_fp32 = amdgcn_convert<bfloat16_t, float32_t>;
+        using Convert_fp32_bf16 = amdgcn_convert<float32_t, bfloat16_t>;
+
+        // MFMA unit compute type is always fp32.
+        // Upconvert C to fp32, do MFMA, then down convert D to bf16 result
+        auto Dfp32 = Mfma::exec(regsA, regsB, Convert_bf16_fp32::exec(UnpackC::exec(regsC)));
+        return PackD::exec(Convert_fp32_bf16::exec(Dfp32));
+    }
+};
+
+#endif // __gfx908___
 
 template <>
 struct amdgcn_mfma<float32_t, float32_t, 16, 16>
