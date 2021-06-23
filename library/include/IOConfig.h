@@ -16,16 +16,6 @@
 template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
 struct OptConfig;
 
-template <uint32_t BlockDim,
-          uint32_t BlockK,
-          typename DataT,
-          typename DataLayout,
-          template <uint32_t, uint32_t, typename, typename, uint32_t>
-          class LoadLayout,
-          uint32_t ElementsPerThread,
-          uint32_t SpCount>
-struct amdgcn_cooperative_load_DxK;
-
 // Matrix A config
 template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
 struct OptConfig<matrix_a, BlockDim, BlockK, DataT, DataLayout>

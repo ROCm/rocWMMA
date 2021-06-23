@@ -63,6 +63,46 @@ template <typename DataT>
 struct rocblas_types;
 
 template <>
+struct rocblas_types<int8_t>
+{
+    using DataType = int8_t;
+    constexpr static inline rocblas_datatype type()
+    {
+        return rocblas_datatype_i8_r;
+    }
+};
+
+template <>
+struct rocblas_types<uint8_t>
+{
+    using DataType = uint8_t;
+    constexpr static inline rocblas_datatype type()
+    {
+        return rocblas_datatype_u8_r;
+    }
+};
+
+template <>
+struct rocblas_types<int32_t>
+{
+    using DataType = rocblas_int;
+    constexpr static inline rocblas_datatype type()
+    {
+        return rocblas_datatype_i32_r;
+    }
+};
+
+template <>
+struct rocblas_types<uint32_t>
+{
+    using DataType = uint32_t;
+    constexpr static inline rocblas_datatype type()
+    {
+        return rocblas_datatype_u32_r;
+    }
+};
+
+template <>
 struct rocblas_types<float16_t>
 {
     using DataType = rocblas_half;

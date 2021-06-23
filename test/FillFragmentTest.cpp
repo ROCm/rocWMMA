@@ -1,7 +1,7 @@
 #include <hip/hip_runtime.h>
 
-#include <unistd.h>
 #include <type_traits>
+#include <unistd.h>
 
 #include "Constants.h"
 #include "Types.h"
@@ -79,7 +79,7 @@ __host__ void test_fill_fragment_h(uint32_t TBlockX,
                                    InputT   fillB,
                                    ComputeT fillC)
 {
-    if ( M < BlockM * TBlockX / AMDGCN_WAVE_SIZE || N < BlockN * TBlockY || K < BlockK )
+    if(M < BlockM * TBlockX / AMDGCN_WAVE_SIZE || N < BlockN * TBlockY || K < BlockK)
         return;
 
     std::cout << "HIP wmma::fill_fragment test: TBlock (" << TBlockX << ", " << TBlockY << ") "
@@ -152,9 +152,9 @@ __host__ void test_fill_fragment_h(uint32_t TBlockX,
     std::vector<ComputeT> refC(M * N, fillC);
 
     // Compare
-    EXPECT_TRUE( (compareEqual<InputT, InputT, LayoutA, LayoutA>(matrixA, refA, M, K)) );
-    EXPECT_TRUE( (compareEqual<InputT, InputT, LayoutB, LayoutB>(matrixB, refB, K, N)) );
-    EXPECT_TRUE( (compareEqual<ComputeT, ComputeT, LayoutC, LayoutC>(matrixC, refC, M, N)) );
+    EXPECT_TRUE((compareEqual<InputT, InputT, LayoutA, LayoutA>(matrixA, refA, M, K)));
+    EXPECT_TRUE((compareEqual<InputT, InputT, LayoutB, LayoutB>(matrixB, refB, K, N)));
+    EXPECT_TRUE((compareEqual<ComputeT, ComputeT, LayoutC, LayoutC>(matrixC, refC, M, N)));
 }
 
 template <typename T>
@@ -214,7 +214,7 @@ void test_fill_fragment(std::tuple<Ts...>)
     // clang-format on
     for(auto tblock : thread_block)
     {
-        for (auto size : problem_sizes)
+        for(auto size : problem_sizes)
         {
             auto fargs = std::tuple_cat(tblock, size, std::make_tuple(1.0f, 2.0f, -3.0f));
             std::apply(test_fill_fragment_h<Ts...>, fargs);
@@ -229,8 +229,11 @@ using Implementations = testing::Types<
     std::tuple<I<16>, I<16>, I<16>, float16_t, float16_t>,
     std::tuple<I<32>, I<32>, I<32>, float16_t, float16_t>,
     std::tuple<I<16>, I<16>, I<16>, hfloat16_t, hfloat16_t>,
-    std::tuple<I<32>, I<32>, I<32>, hfloat16_t, hfloat16_t>
->;
+    std::tuple<I<32>, I<32>, I<32>, hfloat16_t, hfloat16_t>,
+    std::tuple<I<16>, I<16>, I<16>, int8_t, int32_t>,
+    std::tuple<I<32>, I<32>, I<32>, int8_t, int32_t>,
+    std::tuple<I<16>, I<16>, I<16>, uint8_t, uint32_t>,
+    std::tuple<I<32>, I<32>, I<32>, uint8_t, uint32_t>>;
 
 TYPED_TEST_SUITE(FillFragmentTest, Implementations);
 

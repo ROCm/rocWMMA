@@ -15,6 +15,54 @@ template <typename DataT>
 struct PackTraits;
 
 template <>
+struct PackTraits<int8_t>
+{
+    enum : uint32_t
+    {
+        PackRatio = 4
+    };
+
+    using UnpackedT = int8_t;
+    using PackedT   = int32_t;
+};
+
+template <>
+struct PackTraits<uint8_t>
+{
+    enum : uint32_t
+    {
+        PackRatio = 4
+    };
+
+    using UnpackedT = uint8_t;
+    using PackedT   = uint32_t;
+};
+
+template <>
+struct PackTraits<uint32_t>
+{
+    enum : uint32_t
+    {
+        PackRatio = 1
+    };
+
+    using UnpackedT = uint32_t;
+    using PackedT   = uint32_t;
+};
+
+template <>
+struct PackTraits<int32_t>
+{
+    enum : uint32_t
+    {
+        PackRatio = 1
+    };
+
+    using UnpackedT = int32_t;
+    using PackedT   = int32_t;
+};
+
+template <>
 struct PackTraits<float16_t>
 {
     enum : uint32_t
@@ -75,7 +123,7 @@ struct PackTraits<float32_t>
 * until the min reqs are satisfied.
 */
 
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t TestWidth = 8>
+template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t TestWidth = 16>
 struct VecWidthTraits
 {
     enum : uint32_t
