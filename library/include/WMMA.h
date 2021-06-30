@@ -88,6 +88,8 @@ namespace wmma
             typename Traits::StorageT mStorage;
             typename Traits::AccessT  mStorageUnpacked;
             typename Traits::AccessT  x;
+            static_assert(sizeof(typename Traits::AccessT) == sizeof(typename Traits::StorageT),
+                          "Storage type and access type should be views into the same raw data");
         };
         static const uint32_t num_elements = Traits::AccessT::Size;
         using element_type                 = DataT;
