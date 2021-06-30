@@ -41,6 +41,7 @@ namespace wmma
             const fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>& other)
     {
         mStorage = other.mStorage;
+        return *this;
     }
 
     template <typename MatrixT,
