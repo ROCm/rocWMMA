@@ -39,12 +39,13 @@ struct Unpack
     __device__ static inline auto exec(IncomingT&& input) -> typename std::enable_if<
         std::is_same<typename std::decay<IncomingT>::type, typename Traits::InputT>::value
             && (Traits::PackRatio > 1),
-        typename Traits::OutputT&>::type
+        typename Traits::OutputT>::type
     {
         using InputT  = typename Traits::InputT;
         using OutputT = typename Traits::OutputT;
 
-        return *reinterpret_cast<typename Traits::OutputT*>(&(const_cast<InputT&>(input).v));
+        return OutputT(
+            *reinterpret_cast<typename OutputT::StorageT*>(&(const_cast<InputT&>(input).v)));
     }
 };
 
