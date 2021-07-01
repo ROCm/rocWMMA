@@ -82,7 +82,7 @@ namespace wmma
         __device__ constexpr static inline uint32_t elementCount();
         __device__ constexpr static inline uint32_t registerCount();
 
-        // Compatability with nvcuda::wmma
+        // Compatibility with nvcuda::wmma
         union
         {
             typename Traits::StorageT mStorage;
