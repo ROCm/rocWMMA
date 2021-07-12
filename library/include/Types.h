@@ -92,9 +92,9 @@ struct VecT;
 template <typename T, uint32_t VecSize>
 struct __align__(4) VecT
 {
-    using StorageT             = _VecT<T, VecSize>;
-    using DataT                = T;
-    static const uint32_t Size = VecSize;
+    using StorageT                 = _VecT<T, VecSize>;
+    using DataT                    = T;
+    constexpr static uint32_t Size = VecSize;
 
     union
     {

@@ -137,6 +137,16 @@ struct rocblas_types<float32_t>
     }
 };
 
+template <>
+struct rocblas_types<float64_t>
+{
+    using DataType = float64_t;
+    constexpr static inline rocblas_datatype type()
+    {
+        return rocblas_datatype_f64_r;
+    }
+};
+
 template <typename DataLayoutT>
 struct rocblas_layout;
 

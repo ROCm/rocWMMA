@@ -36,7 +36,7 @@ struct amdgcn_opaque_load_DxK
         // Raw IO that produce unpacked register data.
         using Loader  = amdgcn_opaque_load<DataT, ElementsPerThread>;
         using LoadT   = typename Loader::LoadT;
-        using OutputT = VecT<DataT, IOTraits::UnpackedRegisterCount>;
+        using OutputT = VecT<DataT, IOTraits::UnpackedSize>;
     };
 
     __device__ static auto exec(DataT const* localPtr, uint32_t ldm) -> typename Traits::OutputT
