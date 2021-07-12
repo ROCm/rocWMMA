@@ -526,6 +526,34 @@ struct amdgcn_mfma<int8_t, int32_t, 32, 32>
     }
 };
 
+#if !__gfx900__
+template <>
+struct amdgcn_mfma<float64_t, float64_t, 16, 16>
+{
+    // Packed register traits
+    struct Traits
+    {
+        enum : uint32_t
+        {
+            KPerMfma = 4
+        };
+        using ARegsT = VecT<float64_t, 1>;
+        using BRegsT = VecT<float64_t, 1>;
+        using CRegsT = VecT<float64_t, 4>;
+        using DRegsT = VecT<float64_t, 4>;
+    };
+
+    __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
+                                       typename Traits::BRegsT const& regsB,
+                                       typename Traits::CRegsT const& regsC) ->
+        typename Traits::DRegsT
+    {
+        return typename Traits::DRegsT(
+            __builtin_amdgcn_mfma_f64_16x16x4f64(*regsA, *regsB, *regsC, 0, 0, 0));
+    }
+};
+#endif // !__gfx908__
+
 template <typename InputT, typename ComputeT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
 struct amdgcn_mfma_MxNxK
 {
@@ -554,18 +582,14 @@ struct amdgcn_mfma_MxNxK
                       "A and B registers must be of same type");
         static_assert(std::is_same<CRegsT, DRegsT>::value,
                       "C and D registers must be of same type");
-        static_assert(ARegsT::size()
-                          == amdgcn_io_traits<BlockM, BlockK, InputT>::PackedRegisterCount,
-                      "Unexpected packed register count for A");
-        static_assert(BRegsT::size()
-                          == amdgcn_io_traits<BlockN, BlockK, InputT>::PackedRegisterCount,
-                      "Unexpected packed register count for B");
-        static_assert(CRegsT::size()
-                          == amdgcn_io_traits<BlockM, BlockN, ComputeT>::PackedRegisterCount,
-                      "Unexpected packed register count for C");
-        static_assert(DRegsT::size()
-                          == amdgcn_io_traits<BlockM, BlockN, ComputeT>::PackedRegisterCount,
-                      "Unexpected packed register count for D");
+        static_assert(ARegsT::size() == amdgcn_io_traits<BlockM, BlockK, InputT>::PackedSize,
+                      "Unexpected packed vector size for A");
+        static_assert(BRegsT::size() == amdgcn_io_traits<BlockN, BlockK, InputT>::PackedSize,
+                      "Unexpected packed vector size for B");
+        static_assert(CRegsT::size() == amdgcn_io_traits<BlockM, BlockN, ComputeT>::PackedSize,
+                      "Unexpected packed vector size for C");
+        static_assert(DRegsT::size() == amdgcn_io_traits<BlockM, BlockN, ComputeT>::PackedSize,
+                      "Unexpected packed vector size for D");
     };
 
     __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
