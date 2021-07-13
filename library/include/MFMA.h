@@ -574,6 +574,9 @@ struct amdgcn_mfma<float64_t, float64_t, 16, 16>
         using DRegsT = AccRegF64x4;
     };
 
+    // This implementation is needed to satisfy the MmaSyncTest interface,
+    // and WILL not function as intended.
+    // MI-100 lacks support for fp64 MFMA instructions.
     __attribute__((deprecated("fp64 mfma not supported on MI-100"))) __device__ static inline auto
         exec(typename Traits::ARegsT const& regsA,
              typename Traits::BRegsT const& regsB,
