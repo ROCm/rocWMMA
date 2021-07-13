@@ -5,7 +5,17 @@
 #include "Common.hpp"
 #include "Performance.h"
 #include "Utils.h"
+
+// The testing interface instantiates fp64 typed tests for all
+// target devices. MI-100 mfma needs to be instantiated at compile time,
+// but it doesn't do anything except provide a deprecation warning (e.g. not supported).
+// A run-time check will abort the MI-100 fp64 tests anyway.
+// Silence this warning for MmaSyncTests, as test coverage is needed
+// for fp64 on all other targets which succeed MI-100.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "WMMA.h"
+#pragma GCC diagnostic pop
 
 #ifdef WMMA_VALIDATE_TESTS
 #include "Reference.h" // Vanilla CPU kernel
