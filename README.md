@@ -200,6 +200,13 @@ AMD's C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications 
             <td>32</td>
             <td>Min: 2, pow2</td>
         </tr>
+        <tr>
+            <td>f64 / f64 / f64</td>
+            <td>16</td>
+            <td>16</td>
+            <td>Min: 4, pow2</td>
+            <td></td>
+        </tr>
     </tbody>
   </table>
     
@@ -230,58 +237,6 @@ git clone -b <branch> https://github.com/ROCmSoftwarePlatform/WMMA.git .
 
 Please don't forget to install the githooks as there are triggers for clang formatting in commits.
 
-## Tests
-WMMA features are showcased, validated and benchmarked if applicable in test applications.
-Build all: **Warning: Build time for all projects can be lengthy**
-```
-make -j16
-
-#Run
-./FillFragmentTest
-./LoadStoreMatrixSyncTest
-./MmaSyncTest-cpu
-./MmaSyncTest-rocBLAS
-./MmaSyncTest-bench
-```
-
-
-### FillFragmentTest
-Tests the wmma::fill_fragment function for all supported configurations. Tests broadcasting of a desired value to all elements in the fragment.
-Build and run validation:
-```
-make FillFragmentTest -j4
-./FillFragmentTest
-```
-
-### LoadStoreMatrixSyncTest
-Tests the load_matrix_sync and store_matrix_sync functions for all supported configurations. Tests proper emplacement of data during loads and stores.
-Build and run validation:
-```
-make LoadStoreMatrixSyncTest -j4
-./LoadStoreMatrixSyncTest
-```
-
-### MmaSyncTest
-Implements a simple GEMM using wmma for all supported configurations. Validates on CPU algorithm or rocBLAS if available. Also provides benchmarking data on GEMM performance.
-Build and run (CPU validation + benchmark): **Warning CPU validation can be very slow especially for large matrices**
-```
-make MmaSyncTest-cpu -j4
-./MmaSyncTest-cpu
-```
-
-Build and run (rocBLAS validation + benchmark):
-```
-export ROCBLAS_DIR=<path_to_rocblas_dir>
-make MmaSyncTest-rocBLAS -j4
-export LD_LIBRARY_PATH=ROCBLAS_DIR/lib:$LD_LIBRARY_PATH
-./MmaSyncTest-rocBLAS
-```
-
-Build and run (benchmark only):
-```
-make MmaSyncTest-bench -j4
-./MmaSyncTest-bench
-```
 
 ## Build with CMake
 
@@ -289,12 +244,20 @@ By default, the project is configured as Release mode, and is linked against roc
 Here are some of the examples for the configuration:
 |Configuration|Command|
 |---|---|
-|Basic|`CC=hipcc CXX=hipcc cmake -Bbuild .`|
-|Targeting MI100|`CC=hipcc CXX=hipcc cmake -Bbuild . -DAMDGPU_TARGETS=gfx908:xnack-` |
-|Debug build|`CC=hipcc CXX=hipcc cmake -Bbuild . -DCMAKE_BUILD_TYPE=Debug` |
-|Build without rocBLAS (default on)|`CC=hipcc CXX=hipcc cmake -Bbuild . -DWMMA_VALIDATE_WITH_ROCBLAS=OFF` |
+|Basic|`CC=hipcc CXX=hipcc cmake -B<build_dir> .`|
+|Targeting MI100|`CC=hipcc CXX=hipcc cmake -B<build_dir> . -DAMDGPU_TARGETS=gfx908:xnack-` |
+|Debug build|`CC=hipcc CXX=hipcc cmake -B<build_dir> . -DCMAKE_BUILD_TYPE=Debug` |
+|Build without rocBLAS (default on)|`CC=hipcc CXX=hipcc cmake -B<build_dir> . -DWMMA_VALIDATE_WITH_ROCBLAS=OFF` |
 
-After configuration, build with `cmake --build build -- -j`
+After configuration, build with `cmake --build <build_dir> -- -j`
+
+**Warning: Build time for all projects can take several minutes**
+
+Tips to save compiling time:
+- Target a specific GPU (default = MI100, MI200+/-)
+- Use lots of threads (e.g. -j32)
+- Manually reduce test(s) and/or test cases
+
 
 ## Unit tests with CTest
 
@@ -303,4 +266,39 @@ CTest is a testing tool distributed as a part of CMake. The unit tests can be ru
 ```
 cd build
 ctest
+```
+
+## Manually Running Tests
+WMMA features are showcased, validated and benchmarked if applicable in test applications.
+
+### FillFragmentTest
+Tests the wmma::fill_fragment function for all supported configurations. Tests broadcasting of a desired value to all elements in the fragment.
+Run validation:
+```
+<build_dir>/test/FillFragmentTest
+```
+
+### LoadStoreMatrixSyncTest
+Tests the load_matrix_sync and store_matrix_sync functions for all supported configurations. Tests proper emplacement of data during loads and stores.
+Run validation:
+```
+<build_dir>/test/LoadStoreMatrixSyncTest
+```
+
+### MmaSyncTest
+Implements a simple GEMM using wmma for all supported configurations. Validates on CPU algorithm or rocBLAS if available. Validation runs are performed on a reduced subset of matrix sizes. Benchmark only runs are on a larger set of matrix sizes.
+
+Run CPU validation + benchmark: **CPU validation can be very slow especially for large matrices**
+```
+<build_dir>/test/MmaSyncTest-cpu
+```
+
+Run rocBLAS validation + benchmark:
+```
+./MmaSyncTest-rocBLAS
+```
+
+Run benchmark only: **Benchmark runs typically take 3-4 hrs to complete**
+```
+./MmaSyncTest-bench
 ```
