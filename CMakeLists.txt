@@ -29,11 +29,15 @@ if( NOT DEFINED CMAKE_CONFIGURATION_TYPES AND NOT DEFINED CMAKE_BUILD_TYPE )
 endif()
 message( VERBOSE "CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 
-set( CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "" )
+set( CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "" FORCE )
 
 ### Project WMMA
 project( WMMA LANGUAGES CXX )
 set (CMAKE_CXX_STANDARD 14)
+
+if( CMAKE_PROJECT_NAME STREQUAL "WMMA" )
+  option( WMMA_BUILD_TESTS "Build tests & benchmarks" ON )
+endif()
 
 # set( AMDGPU_TARGETS "gfx908:xnack-" ) # User variable
 set( CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Install path prefix, prepended onto install directories" )
@@ -80,23 +84,29 @@ endif()
 message( VERBOSE "AMDGPU_TARGETS=${AMDGPU_TARGETS}")
 
 find_package( hip REQUIRED )
-find_package( OpenMP REQUIRED )
 
-set(WMMA_VALIDATE_WITH_ROCBLAS ON CACHE STRING "Use rocBLAS for validation")
-if(WMMA_VALIDATE_WITH_ROCBLAS)
-  find_package( rocblas REQUIRED PATHS /opt/rocm /opt/rocm/rocblas $ENV{ROCBLAS_DIR} )
-endif()
+include( CMakeDependentOption )
+cmake_dependent_option( WMMA_VALIDATE_WITH_ROCBLAS "Use rocBLAS for validation" ON "WMMA_BUILD_TESTS" OFF )
 
 add_library(wmma INTERFACE)
 target_include_directories(wmma INTERFACE ${PROJECT_SOURCE_DIR}/library/include)
 target_link_libraries(wmma INTERFACE hip::device hip::host)
 target_compile_options(wmma INTERFACE -std=c++14)
 
-enable_testing()
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/609281088cfefc76f9d0ce82e1ff6c30cc3591e5.zip
-)
-FetchContent_MakeAvailable(googletest)
-add_subdirectory(test)
+if(WMMA_BUILD_TESTS)
+  # Test/benchmark requires additional dependencies
+  include( FetchContent )
+  find_package( OpenMP REQUIRED )
+  FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/609281088cfefc76f9d0ce82e1ff6c30cc3591e5.zip
+  )
+  FetchContent_MakeAvailable(googletest)
+
+  if(WMMA_VALIDATE_WITH_ROCBLAS)
+    find_package( rocblas REQUIRED PATHS /opt/rocm /opt/rocm/rocblas $ENV{ROCBLAS_DIR} )
+  endif()
+
+  enable_testing()
+  add_subdirectory(test)
+endif()
