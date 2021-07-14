@@ -52,9 +52,9 @@ namespace wmma
             };
 
         private:
-            using IOTraits = amdgcn_io_traits<LeadingDim, KDim, DataT>;
-            using PackedT  = typename PackTraits<DataT>::PackedT;
-            using UnpackedT  = typename PackTraits<DataT>::UnpackedT;
+            using IOTraits  = amdgcn_io_traits<LeadingDim, KDim, DataT>;
+            using PackedT   = typename PackTraits<DataT>::PackedT;
+            using UnpackedT = typename PackTraits<DataT>::UnpackedT;
 
         public:
             using AccessT  = VecT<UnpackedT, IOTraits::UnpackedSize>;
@@ -70,12 +70,11 @@ namespace wmma
         __device__ inline DataT const&                     operator[](uint32_t index) const;
         __device__ inline typename Traits::StorageT&       operator*();
         __device__ inline typename Traits::StorageT const& operator*() const;
-        __device__ inline uint32_t                         size();
 
         // Traits
         __device__ constexpr static inline uint32_t leadingDim();
         __device__ constexpr static inline uint32_t kDim();
-        __device__ constexpr static inline uint32_t elementCount();
+        __device__ constexpr static inline uint32_t size();
 
         // Compatibility with nvcuda::wmma
         union
@@ -86,8 +85,8 @@ namespace wmma
             static_assert(sizeof(typename Traits::AccessT) == sizeof(typename Traits::StorageT),
                           "Storage type and access type should be views into the same raw data");
         };
-        constexpr static uint32_t num_elements = Traits::StorageT::Size;
-        using element_type                 = DataT;
+        constexpr static uint32_t num_elements = Traits::AccessT::Size;
+        using element_type                     = DataT;
     };
 
     template <typename MatrixT,

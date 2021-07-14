@@ -135,10 +135,7 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
                                std::is_same<LayoutC, row_major>::value ? wmma::mem_row_major
                                                                        : wmma::mem_col_major);
 
-        // Get ready to multiply and accum with C
-        // Must convert to ComputeT
-        // TODO: Add packed ops
-
+        // Multiply and accum with C, with respect to ComputeT
 #pragma unroll
         for(int i = 0; i < fragC.num_elements; ++i)
         {
