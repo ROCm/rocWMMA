@@ -358,6 +358,10 @@ constexpr const char* dataTypeToString()
     {
         return "u32";
     }
+    else if(std::is_same<DataT, float64_t>::value)
+    {
+        return "f64";
+    }
     else
     {
         return "invalid";

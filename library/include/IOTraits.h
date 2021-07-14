@@ -110,6 +110,18 @@ struct PackTraits<float32_t>
     using PackedT   = float32_t;
 };
 
+template <>
+struct PackTraits<float64_t>
+{
+    enum : uint32_t
+    {
+        PackRatio = 1 // No pack
+    };
+
+    using UnpackedT = float64_t;
+    using PackedT   = float64_t;
+};
+
 /*
 * The following class is intended to provide insightful suggestions for
 * IO vector widths. Given a certain size of block, there are finite
@@ -155,7 +167,7 @@ struct VecWidthTraits<BlockDim, BlockK, DataT, 0>
 * class to indicate specific logical issues when implementing IO
 * functionality.
 */
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t ElementsPerThread = 1>
+template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t VectorWidth = 1>
 struct amdgcn_io_traits
 {
     enum : uint32_t
@@ -163,14 +175,11 @@ struct amdgcn_io_traits
         // Number of threads to perform I/O operation
         ThreadsPerIO = AMDGCN_WAVE_SIZE,
 
-        // Number of elements in I/O operation
-        ElementsPerIO = ThreadsPerIO * ElementsPerThread,
+        // Total number of elements in a single I/O operation
+        ElementsPerIO = ThreadsPerIO * VectorWidth,
 
         // Number of BlockDim strides per I/O operation
         KPerIO = ceilDiv(ElementsPerIO, BlockDim),
-
-        // Number of registers required per I/O operation
-        RegistersPerIO = ElementsPerThread,
 
         // Total number of elements per for the entire block
         ElementCount = BlockDim * BlockK,
@@ -178,11 +187,15 @@ struct amdgcn_io_traits
         // Total number of I/O operations needed for the entire block
         IOCount = ceilDiv(ElementCount, ElementsPerIO),
 
-        // Total number of registers required for the entire block
-        UnpackedRegisterCount = RegistersPerIO * IOCount,
+        // Per-thread c++ vector storage size required for:
+        // Unpacked vector = raw I/O
+        // Packed vector = packed raw I/O
+        UnpackedSize = ceilDiv(ElementCount, ThreadsPerIO),
+        PackedSize   = ceilDiv((uint32_t)UnpackedSize, (uint32_t)PackTraits<DataT>::PackRatio),
 
-        // Total number of packed registers for the entire block
-        PackedRegisterCount = ceilDiv(ElementCount * sizeof(DataT), BYTES_PER_REGISTER),
+        // Physical number of hardware vregs used to store packed data
+        PackedVRegCount   = ElementCount * sizeof(DataT) / BYTES_PER_REGISTER,
+        UnpackedVRegCount = PackedVRegCount * PackTraits<DataT>::PackRatio
     };
 
     static_assert(KPerIO >= 1, "I/O operation must handle at least 1 element in K direction");
@@ -190,7 +203,8 @@ struct amdgcn_io_traits
                   "I/O operation elements not a multiple of BlockDim");
     static_assert((ElementCount % ElementsPerIO) == 0,
                   "I/O element count not divisible into equal operations");
-    static_assert((ElementCount * sizeof(DataT) % BYTES_PER_REGISTER) == 0,
+    static_assert((ElementCount % ThreadsPerIO) == 0, "Threads must fetch even element counts");
+    static_assert((UnpackedSize % PackTraits<DataT>::PackRatio) == 0,
                   "Packed elements do not fit equally into registers");
 };
 

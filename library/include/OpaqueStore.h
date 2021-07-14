@@ -36,7 +36,7 @@ struct amdgcn_opaque_store_DxK
         // These traits are per-io
         using Storer = amdgcn_opaque_store<DataT, ElementsPerThread>;
         using StoreT = typename Storer::StoreT;
-        using InputT = VecT<DataT, IOTraits::UnpackedRegisterCount>;
+        using InputT = VecT<DataT, IOTraits::UnpackedSize>;
     };
 
     __device__ static void

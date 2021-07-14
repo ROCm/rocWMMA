@@ -49,20 +49,16 @@ namespace wmma
                 // Matrix C loads BlockM rows size BlockN
                 // Matrix A and B load BlockK strides of leading dim.
                 KDim = std::is_same<MatrixT, accumulator>::value ? BlockM : BlockK,
-
-                ElementCount = (std::is_same<MatrixT, matrix_b>::value ? BlockK : BlockM)
-                               * (std::is_same<MatrixT, matrix_a>::value ? BlockK : BlockN),
-
-                // Packed elements
-                RegisterCount = ElementCount * sizeof(DataT) / BYTES_PER_REGISTER,
             };
 
-            static_assert((ElementCount * sizeof(DataT)) % BYTES_PER_REGISTER == 0,
-                          "Partial registers unsupported");
+        private:
+            using IOTraits  = amdgcn_io_traits<LeadingDim, KDim, DataT>;
+            using PackedT   = typename PackTraits<DataT>::PackedT;
+            using UnpackedT = typename PackTraits<DataT>::UnpackedT;
 
-            using PackedT  = typename PackTraits<DataT>::PackedT;
-            using AccessT  = typename Unpack<DataT, RegisterCount>::Traits::OutputT;
-            using StorageT = VecT<PackedT, RegisterCount>;
+        public:
+            using AccessT  = VecT<UnpackedT, IOTraits::UnpackedSize>;
+            using StorageT = VecT<PackedT, IOTraits::PackedSize>;
         };
 
         __device__ fragment() = default;
@@ -74,13 +70,11 @@ namespace wmma
         __device__ inline DataT const&                     operator[](uint32_t index) const;
         __device__ inline typename Traits::StorageT&       operator*();
         __device__ inline typename Traits::StorageT const& operator*() const;
-        __device__ inline uint32_t                         size();
 
         // Traits
         __device__ constexpr static inline uint32_t leadingDim();
         __device__ constexpr static inline uint32_t kDim();
-        __device__ constexpr static inline uint32_t elementCount();
-        __device__ constexpr static inline uint32_t registerCount();
+        __device__ constexpr static inline uint32_t size();
 
         // Compatibility with nvcuda::wmma
         union
@@ -91,8 +85,8 @@ namespace wmma
             static_assert(sizeof(typename Traits::AccessT) == sizeof(typename Traits::StorageT),
                           "Storage type and access type should be views into the same raw data");
         };
-        static const uint32_t num_elements = Traits::AccessT::Size;
-        using element_type                 = DataT;
+        constexpr static uint32_t num_elements = Traits::AccessT::Size;
+        using element_type                     = DataT;
     };
 
     template <typename MatrixT,

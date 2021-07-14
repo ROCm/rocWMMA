@@ -28,8 +28,8 @@ struct OptConfig<matrix_a, BlockDim, BlockK, DataT, DataLayout>
 
     // Other IO configs
     using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
-    using Packer   = Pack<DataT, IOTraits::UnpackedRegisterCount>;
-    using Unpacker = Unpack<DataT, IOTraits::PackedRegisterCount>;
+    using Packer   = Pack<DataT, IOTraits::UnpackedSize>;
+    using Unpacker = Unpack<DataT, IOTraits::PackedSize>;
 
     // Global data config.
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
@@ -68,8 +68,8 @@ struct OptConfig<matrix_b, BlockDim, BlockK, DataT, DataLayout>
 
     // Other IO configs
     using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
-    using Packer   = Pack<DataT, IOTraits::UnpackedRegisterCount>;
-    using Unpacker = Unpack<DataT, IOTraits::PackedRegisterCount>;
+    using Packer   = Pack<DataT, IOTraits::UnpackedSize>;
+    using Unpacker = Unpack<DataT, IOTraits::PackedSize>;
 
     // Global data config
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
@@ -101,14 +101,15 @@ struct OptConfig<accumulator, BlockDim, BlockK, DataT, DataLayout>
 {
     enum : uint32_t
     {
-        MaxVectorWidth = 4, // Actual output of the mfma hardware
-        VectorWidth    = std::is_same<DataLayout, col_major>::value ? MaxVectorWidth : 1
+        MaxVectorWidth
+        = std::is_same<DataT, float64_t>::value ? 1 : 4, // Actual output of the mfma hardware
+        VectorWidth = std::is_same<DataLayout, col_major>::value ? MaxVectorWidth : 1
     };
 
     // Other IO configs
     using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
-    using Packer   = Pack<DataT, IOTraits::UnpackedRegisterCount>;
-    using Unpacker = Unpack<DataT, IOTraits::PackedRegisterCount>;
+    using Packer   = Pack<DataT, IOTraits::UnpackedSize>;
+    using Unpacker = Unpack<DataT, IOTraits::PackedSize>;
 
     // Global data config
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>

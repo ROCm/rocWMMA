@@ -217,33 +217,36 @@ struct LoadStoreMatrixSyncTest : public testing::Test
 };
 
 using Implementations = testing::Types<
-    // BlockM, BlockN, BlockK, InputT/ComputeT
-    std::tuple<I<16>, I<16>, I<16>, float32_t>,
-    std::tuple<I<16>, I<16>, I<16>, hfloat16_t>,
-    std::tuple<I<16>, I<16>, I<16>, float16_t>,
-    std::tuple<I<16>, I<16>, I<16>, bfloat16_t>,
+    // BlockM, BlockN, BlockK, DataT
     std::tuple<I<16>, I<16>, I<16>, int8_t>,
     std::tuple<I<16>, I<16>, I<16>, uint8_t>,
+    std::tuple<I<16>, I<16>, I<16>, bfloat16_t>,
+    std::tuple<I<16>, I<16>, I<16>, hfloat16_t>,
+    std::tuple<I<16>, I<16>, I<16>, float16_t>,
     std::tuple<I<16>, I<16>, I<16>, int32_t>,
     std::tuple<I<16>, I<16>, I<16>, uint32_t>,
+    std::tuple<I<16>, I<16>, I<16>, float32_t>,
+    std::tuple<I<16>, I<16>, I<16>, float64_t>,
 
-    std::tuple<I<32>, I<32>, I<32>, float32_t>,
+    std::tuple<I<32>, I<32>, I<32>, int8_t>,
+    std::tuple<I<32>, I<32>, I<32>, uint8_t>,
+    std::tuple<I<32>, I<32>, I<32>, bfloat16_t>,
     std::tuple<I<32>, I<32>, I<32>, hfloat16_t>,
     std::tuple<I<32>, I<32>, I<32>, float16_t>,
-    std::tuple<I<32>, I<32>, I<32>, bfloat16_t>,
-    std::tuple<I<16>, I<32>, I<32>, int8_t>,
-    std::tuple<I<16>, I<32>, I<32>, uint8_t>,
-    std::tuple<I<16>, I<32>, I<32>, int32_t>,
-    std::tuple<I<16>, I<32>, I<32>, uint32_t>,
+    std::tuple<I<32>, I<32>, I<32>, int32_t>,
+    std::tuple<I<32>, I<32>, I<32>, uint32_t>,
+    std::tuple<I<32>, I<32>, I<32>, float32_t>,
+    std::tuple<I<32>, I<32>, I<32>, float64_t>,
 
-    std::tuple<I<64>, I<64>, I<64>, float32_t>,
-    std::tuple<I<64>, I<64>, I<64>, hfloat16_t>,
-    std::tuple<I<64>, I<64>, I<64>, float16_t>,
-    std::tuple<I<64>, I<64>, I<64>, bfloat16_t>,
     std::tuple<I<64>, I<64>, I<64>, int8_t>,
     std::tuple<I<64>, I<64>, I<64>, uint8_t>,
+    std::tuple<I<64>, I<64>, I<64>, bfloat16_t>,
+    std::tuple<I<64>, I<64>, I<64>, hfloat16_t>,
+    std::tuple<I<64>, I<64>, I<64>, float16_t>,
     std::tuple<I<64>, I<64>, I<64>, int32_t>,
-    std::tuple<I<64>, I<64>, I<64>, uint32_t>>;
+    std::tuple<I<64>, I<64>, I<64>, uint32_t>,
+    std::tuple<I<64>, I<64>, I<64>, float32_t>,
+    std::tuple<I<64>, I<64>, I<64>, float64_t>>;
 
 TYPED_TEST_SUITE(LoadStoreMatrixSyncTest, Implementations);
 
