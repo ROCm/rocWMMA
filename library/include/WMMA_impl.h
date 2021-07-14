@@ -25,10 +25,35 @@ namespace wmma
               uint32_t BlockK,
               typename DataT,
               typename LayoutT>
+    __device__ fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::fragment(const fragment& other)
+        : mStorage(other.mStorage)
+    {
+    }
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename LayoutT>
+    __device__ fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>&
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator=(
+            const fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>& other)
+    {
+        mStorage = other.mStorage;
+        return *this;
+    }
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename LayoutT>
     __device__ inline DataT&
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator[](uint32_t index)
     {
-        return mStorage[index];
+        return mStorageUnpacked[index];
     }
 
     template <typename MatrixT,
@@ -52,7 +77,7 @@ namespace wmma
     __device__ inline DataT const&
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator[](uint32_t index) const
     {
-        return mStorage[index];
+        return mStorageUnpacked[index];
     }
 
     template <typename MatrixT,
@@ -114,6 +139,18 @@ namespace wmma
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::registerCount()
     {
         return Traits::RegisterCount;
+    }
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename LayoutT>
+    __device__ inline uint32_t
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::size()
+    {
+        return Traits::AccessT::Size;
     }
 
     template <typename MatrixT,
