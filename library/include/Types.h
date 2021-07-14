@@ -92,9 +92,9 @@ struct VecT;
 template <typename T, uint32_t VecSize>
 struct __align__(4) VecT
 {
-    using StorageT             = _VecT<T, VecSize>;
-    using DataT                = T;
-    static const uint32_t Size = VecSize;
+    using StorageT                 = _VecT<T, VecSize>;
+    using DataT                    = T;
+    constexpr static uint32_t Size = VecSize;
 
     union
     {
@@ -303,6 +303,14 @@ using VRegF32x8  = VecT<float32_t, 8>; //
 using VRegF32x16 = VecT<float32_t, 16>; //
 using VRegF32x32 = VecT<float32_t, 32>; // 32 f32 registers
 
+// Note: In assembly, fp64 registers are actually 2 x fp32 regs
+using VRegF64x1  = VecT<float64_t, 1>; // Single f64 register
+using VRegF64x2  = VecT<float64_t, 2>; // Two f64 registers
+using VRegF64x4  = VecT<float64_t, 4>; // ...
+using VRegF64x8  = VecT<float64_t, 8>; //
+using VRegF64x16 = VecT<float64_t, 16>; //
+using VRegF64x32 = VecT<float64_t, 32>; // 32 f64 registers
+
 // Acc registers
 using AccRegI32x1  = VecT<int32_t, 1>;
 using AccRegI32x2  = VecT<int32_t, 2>;
@@ -324,6 +332,14 @@ using AccRegF32x4  = VecT<float32_t, 4>;
 using AccRegF32x8  = VecT<float32_t, 8>;
 using AccRegF32x16 = VecT<float32_t, 16>;
 using AccRegF32x32 = VecT<float32_t, 32>;
+
+// Note: In assembly, fp64 registers are actually 2 x fp32 regs
+using AccRegF64x1  = VecT<float64_t, 1>;
+using AccRegF64x2  = VecT<float64_t, 2>;
+using AccRegF64x4  = VecT<float64_t, 4>;
+using AccRegF64x8  = VecT<float64_t, 8>;
+using AccRegF64x16 = VecT<float64_t, 16>;
+using AccRegF64x32 = VecT<float64_t, 32>;
 
 // Meta-tags
 // Matrices

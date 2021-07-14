@@ -56,6 +56,15 @@ struct MfmaPerfTraits<float32_t>
     };
 };
 
+template <>
+struct MfmaPerfTraits<float64_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 4
+    };
+};
+
 template <typename DataT>
 struct VALUPerfTraits;
 
@@ -110,6 +119,15 @@ struct VALUPerfTraits<float32_t>
 };
 
 template <>
+struct VALUPerfTraits<float64_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 2
+    };
+};
+
+template <>
 struct VALUPerfTraits<int32_t>
 {
     enum : uint32_t
@@ -127,18 +145,28 @@ struct VALUPerfTraits<uint32_t>
     };
 };
 
-class Mi100;
+class MI100;
+class MI200;
 class Vega20;
 
 template <typename GfxArch>
 struct HardwareTraits;
 
 template <>
-struct HardwareTraits<Mi100>
+struct HardwareTraits<MI100>
 {
     enum : uint32_t
     {
         CuCount = 120,
+    };
+};
+
+template <>
+struct HardwareTraits<MI200>
+{
+    enum : uint32_t
+    {
+        CuCount = 110,
     };
 };
 

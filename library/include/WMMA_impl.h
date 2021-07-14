@@ -25,7 +25,8 @@ namespace wmma
               uint32_t BlockK,
               typename DataT,
               typename LayoutT>
-    __device__ fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::fragment(const fragment& other)
+    __device__
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::fragment(const fragment& other)
         : mStorage(other.mStorage)
     {
     }
@@ -124,33 +125,9 @@ namespace wmma
               typename DataT,
               typename LayoutT>
     __device__ constexpr inline uint32_t
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::elementCount()
-    {
-        return Traits::ElementCount;
-    }
-
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename LayoutT>
-    __device__ constexpr inline uint32_t
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::registerCount()
-    {
-        return Traits::RegisterCount;
-    }
-
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename LayoutT>
-    __device__ inline uint32_t
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::size()
     {
-        return Traits::AccessT::Size;
+        return num_elements;
     }
 
     template <typename MatrixT,
@@ -165,7 +142,7 @@ namespace wmma
     {
         using FragT  = typename std::decay<decltype(frag)>::type;
         using Config = OptConfig<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
-        using Broadcaster = Broadcast<DataT, Config::IOTraits::UnpackedRegisterCount>;
+        using Broadcaster = Broadcast<DataT, Config::IOTraits::UnpackedSize>;
         using Packer      = typename Config::Packer;
 
         static_assert(std::is_same<typename Broadcaster::Traits::OutputT,

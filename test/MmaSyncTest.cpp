@@ -5,7 +5,17 @@
 #include "Common.hpp"
 #include "Performance.h"
 #include "Utils.h"
+
+// The testing interface instantiates fp64 typed tests for all
+// target devices. MI-100 mfma needs to be instantiated at compile time,
+// but it doesn't do anything except provide a deprecation warning (e.g. not supported).
+// A run-time check will abort the MI-100 fp64 tests anyway.
+// Silence this warning for MmaSyncTests, as test coverage is needed
+// for fp64 on all other targets which succeed MI-100.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "WMMA.h"
+#pragma GCC diagnostic pop
 
 #ifdef WMMA_VALIDATE_TESTS
 #include "Reference.h" // Vanilla CPU kernel
@@ -16,6 +26,34 @@
 #endif // WMMA_VALIDATE_TESTS
 
 static bool headerPrinted = false;
+
+enum DeviceId_t : uint32_t
+{
+    GFX908 = 0,
+    GFX90A = 1,
+    UNKNOWN,
+};
+
+DeviceId_t getCurrentDeviceId()
+{
+    int deviceId = 0;
+    CHECK_HIP_ERROR(hipGetDevice(&deviceId));
+    hipDeviceProp_t prop;
+    CHECK_HIP_ERROR(hipGetDeviceProperties(&prop, deviceId));
+    std::string deviceName(prop.gcnArchName);
+
+    DeviceId_t idx = DeviceId_t::UNKNOWN;
+
+    if(deviceName.find("gfx908") != std::string::npos)
+    {
+        idx = DeviceId_t::GFX908;
+    }
+    else if(deviceName.find("gfx90a") != std::string::npos)
+    {
+        idx = DeviceId_t::GFX90A;
+    }
+    return idx;
+}
 
 template <uint32_t BlockM,
           uint32_t BlockN,
@@ -97,10 +135,7 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
                                std::is_same<LayoutC, row_major>::value ? wmma::mem_row_major
                                                                        : wmma::mem_col_major);
 
-        // Get ready to multiply and accum with C
-        // Must convert to ComputeT
-        // TODO: Add packed ops
-
+        // Multiply and accum with C, with respect to ComputeT
 #pragma unroll
         for(int i = 0; i < fragC.num_elements; ++i)
         {
@@ -137,8 +172,20 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
                               ComputeT alpha,
                               ComputeT beta)
 {
+    // Unsupported sizes
     if(m < BlockM * TBlockX / AMDGCN_WAVE_SIZE || n < BlockN * TBlockY || k < BlockK)
+    {
         return;
+    }
+
+    auto idx = getCurrentDeviceId();
+
+    // gfx908 does not have mfma for fp64
+    if(idx == DeviceId_t::UNKNOWN
+       || (idx == DeviceId_t::GFX908 && std::is_same<InputT, float64_t>::value))
+    {
+        return;
+    }
 
     int lda = std::is_same<LayoutA, row_major>::value ? k : m;
     int ldb = std::is_same<LayoutB, row_major>::value ? n : k;
@@ -251,8 +298,11 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
     CHECK_HIP_ERROR(hipEventDestroy(startEvent));
     CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
 
-    auto totalGFlops        = calculateTotalGFlops(m, n, k);
-    auto peakGFlopsPerSec   = calculatePeakGFlopsPerSec<InputT, ComputeT, Mi100>(m, n, k, 1087);
+    auto totalGFlops      = calculateTotalGFlops(m, n, k);
+    auto peakGFlopsPerSec = (idx == DeviceId_t::GFX908)
+                                ? calculatePeakGFlopsPerSec<InputT, ComputeT, MI100>(m, n, k, 1087)
+                                : calculatePeakGFlopsPerSec<InputT, ComputeT, MI200>(m, n, k, 985);
+
     auto actualGFlopsPerSec = calculateGFlopsPerSec(m, n, k, elapsedTimeMs);
     auto efficiency         = actualGFlopsPerSec / peakGFlopsPerSec * 100.0f;
 
@@ -314,6 +364,9 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
                                                                                 beta);
         EXPECT_TRUE((compareEqual<OutputT, OutputT, LayoutD, LayoutD>(
             matrixD, matrixD_ref, m, n, errorTolerance)));
+
+        // MatrixUtil<LayoutD>::print(matrixD, m, n);
+        // MatrixUtil<LayoutD>::print(matrixD_ref, m, n);
     }
 
 #else // WMMA_VALIDATE_TESTS
@@ -434,9 +487,58 @@ void test_mma_sync_h()
             if(size[0] * size[1] > 1024 * 1024)
                 continue;
             #endif // WMMA_VALIDATE_TESTS
+
             auto fargs = std::tuple_cat(tblock, size, std::make_tuple(ComputeT(2.0f), ComputeT(2.0f)));
+
+            // Invoke 16 x 16
             std::apply(test_mma_sync_h_16x16<InputT, OutputT, ComputeT>, fargs);
+
+            // Invoke 32 x 32.
             std::apply(test_mma_sync_h_32x32<InputT, OutputT, ComputeT>, fargs);
+        }
+    }
+    // clang-format on
+}
+
+template <>
+void test_mma_sync_h<float64_t, float64_t, float64_t>()
+{
+    // clang-format off
+    std::vector<std::array<int, 2>> thread_block = {{64, 1}, {64, 2}, {64, 4},
+                                                    {128,1}, {128,2},
+                                                    {256,1}};
+
+    std::vector<std::array<int, 3>> problem_sizes = {{64, 64, 1024},
+                                                     {32, 64, 1024},
+                                                     {64, 32, 1024},
+                                                     {256, 256, 1024},
+                                                     {2048, 64, 1024},
+                                                     {64, 2048, 1024},
+                                                     {1024, 1024, 1024},
+                                                     {2048, 2048, 2048},
+                                                     {2560, 2560, 2560},
+                                                     {3072, 3072, 3072},
+                                                     {3584, 3584, 3584},
+                                                     {4096, 4096, 4096},
+                                                     {5120, 5120, 5120},
+                                                     {6144, 6144, 6144},
+                                                     {7168, 7168, 7168},
+                                                     {8192, 8192, 8192}};
+
+    for(auto tblock : thread_block)
+    {
+        for(auto size : problem_sizes)
+        {
+            // skip large sizes when in validation mode
+            #ifdef WMMA_VALIDATE_TESTS
+            if(size[0] * size[1] > 1024 * 1024)
+                continue;
+            #endif // WMMA_VALIDATE_TESTS
+
+            auto fargs = std::tuple_cat(tblock, size, std::make_tuple(2.0, 2.0));
+
+            // Invoke 16 x 16 only
+            std::apply(test_mma_sync_h_16x16<float64_t, float64_t, float64_t>, fargs);
         }
     }
     // clang-format on
@@ -461,20 +563,27 @@ public:
 };
 
 using Implementations = testing::Types<
-    // Native fp16
-    std::tuple<float16_t, float16_t, float16_t>,
-    std::tuple<float16_t, float16_t, float32_t>,
-    std::tuple<float16_t, float32_t, float32_t>,
-    // Non-native hfloat16_t (i.e. __half)
-    std::tuple<hfloat16_t, hfloat16_t, hfloat16_t>,
-    std::tuple<hfloat16_t, hfloat16_t, float32_t>,
-    std::tuple<hfloat16_t, float32_t, float32_t>,
+
     // Non-native bfloat16_t
     std::tuple<bfloat16_t, bfloat16_t, bfloat16_t>,
     std::tuple<bfloat16_t, bfloat16_t, float32_t>,
     std::tuple<bfloat16_t, float32_t, float32_t>,
+
+    // Native fp16
+    std::tuple<float16_t, float16_t, float16_t>,
+    std::tuple<float16_t, float16_t, float32_t>,
+    std::tuple<float16_t, float32_t, float32_t>,
+
     // Native fp32
     std::tuple<float32_t, float32_t, float32_t>,
+
+    // Native fp64
+    std::tuple<float64_t, float64_t, float64_t>,
+
+    // Non-native hfloat16_t (i.e. __half)
+    std::tuple<hfloat16_t, hfloat16_t, hfloat16_t>,
+    std::tuple<hfloat16_t, hfloat16_t, float32_t>,
+    std::tuple<hfloat16_t, float32_t, float32_t>,
 
     // Native int8
     std::tuple<int8_t, int32_t, int32_t>,
@@ -502,33 +611,42 @@ TEST(AdhocMmaSyncTest, AdhocMmaSync)
 
 int main()
 {
-    // Native fp16
-    test_mma_sync_h<float16_t, float16_t, float16_t>();
-    test_mma_sync_h<float16_t, float16_t, float32_t>();
-    test_mma_sync_h<float16_t, float32_t, float32_t>();
+    auto idx = getCurrentDeviceId();
 
-    // Non-native hfloat16_t (i.e. __half)
-    test_mma_sync_h<hfloat16_t, hfloat16_t, hfloat16_t>();
-    test_mma_sync_h<hfloat16_t, hfloat16_t, float32_t>();
-    test_mma_sync_h<hfloat16_t, float32_t, float32_t>();
+    if(idx == DeviceId_t::UNKNOWN)
+    {
+        std::cout << "Invalid device\n";
+        return -1;
+    }
 
     // Non-native bfloat16_t
     test_mma_sync_h<bfloat16_t, bfloat16_t, bfloat16_t>();
     test_mma_sync_h<bfloat16_t, bfloat16_t, float32_t>();
     test_mma_sync_h<bfloat16_t, float32_t, float32_t>();
 
+    // Native fp16
+    test_mma_sync_h<float16_t, float16_t, float16_t>();
+    test_mma_sync_h<float16_t, float16_t, float32_t>();
+    test_mma_sync_h<float16_t, float32_t, float32_t>();
+
     // Native fp32
     test_mma_sync_h<float32_t, float32_t, float32_t>();
+
+    // Native fp64
+    if(idx != DeviceId_t::GFX908)
+    {
+        test_mma_sync_h<float64_t, float64_t, float64_t>();
+    }
+
+    // Non-native hfloat16_t (i.e. __half)
+    test_mma_sync_h<hfloat16_t, hfloat16_t, hfloat16_t>();
+    test_mma_sync_h<hfloat16_t, hfloat16_t, float32_t>();
+    test_mma_sync_h<hfloat16_t, float32_t, float32_t>();
 
     // Native i8
     test_mma_sync_h<int8_t, int32_t, int32_t>();
     test_mma_sync_h<int8_t, int8_t, int32_t>();
 
-    //test_mma_sync_h<64, 4, 32, 32, 32, float32_t, float32_t, float32_t>(8192, 8192, 8192, 1.0f, 1.0f);
-
-    //test_mma_sync_h<64, 4, 32, 32, 32, bfloat16_t, bfloat16_t, float32_t, col_major, row_major, row_major>(4096, 4096, 4096, 2.0f, 1.5f);
-    //test_mma_sync_h<64, 1, 32, 32, 32, float16_t, float16_t, float16_t, col_major, row_major, row_major>(32, 32, 32, 1.0f, 1.0f);
-    //test_mma_sync_h<64, 1, 32, 32, 32, float16_t, float16_t, float32_t, row_major, row_major, row_major>(64, 64, 128, ComputeT(2), ComputeT(2));
     return 0;
 }
 #endif // WMMA_VALIDATE_TESTS
