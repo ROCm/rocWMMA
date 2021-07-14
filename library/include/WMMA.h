@@ -4,6 +4,7 @@
 #include <type_traits>
 
 #include "IOTraits.h"
+#include "IOUnpack.h"
 #include "Types.h"
 
 namespace wmma
@@ -59,16 +60,21 @@ namespace wmma
             static_assert((ElementCount * sizeof(DataT)) % BYTES_PER_REGISTER == 0,
                           "Partial registers unsupported");
 
-            using PackedT = typename PackTraits<DataT>::PackedT;
-
+            using PackedT  = typename PackTraits<DataT>::PackedT;
+            using AccessT  = typename Unpack<DataT, RegisterCount>::Traits::OutputT;
             using StorageT = VecT<PackedT, RegisterCount>;
         };
+
+        __device__ fragment() = default;
+        __device__ fragment(const fragment& other);
+        __device__ fragment& operator=(const fragment& other);
 
         // Accessors
         __device__ inline DataT&                           operator[](uint32_t index);
         __device__ inline DataT const&                     operator[](uint32_t index) const;
         __device__ inline typename Traits::StorageT&       operator*();
         __device__ inline typename Traits::StorageT const& operator*() const;
+        __device__ inline uint32_t                         size();
 
         // Traits
         __device__ constexpr static inline uint32_t leadingDim();
@@ -76,8 +82,17 @@ namespace wmma
         __device__ constexpr static inline uint32_t elementCount();
         __device__ constexpr static inline uint32_t registerCount();
 
-    private:
-        typename Traits::StorageT mStorage;
+        // Compatibility with nvcuda::wmma
+        union
+        {
+            typename Traits::StorageT mStorage;
+            typename Traits::AccessT  mStorageUnpacked;
+            typename Traits::AccessT  x;
+            static_assert(sizeof(typename Traits::AccessT) == sizeof(typename Traits::StorageT),
+                          "Storage type and access type should be views into the same raw data");
+        };
+        static const uint32_t num_elements = Traits::AccessT::Size;
+        using element_type                 = DataT;
     };
 
     template <typename MatrixT,
