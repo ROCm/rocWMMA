@@ -110,3 +110,28 @@ if(WMMA_BUILD_TESTS)
   enable_testing()
   add_subdirectory(test)
 endif()
+
+enable_testing()
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/609281088cfefc76f9d0ce82e1ff6c30cc3591e5.zip
+)
+FetchContent_MakeAvailable(googletest)
+add_subdirectory(test)
+
+add_custom_target(
+  BuildDocs ALL
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/WMMA-Guide.tar
+)
+
+add_custom_command ( OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/WMMA-Guide.tar
+                     COMMAND /bin/bash ${CMAKE_BINARY_DIR}/bin/genDoxygen.sh
+                     DEPENDS ${CMAKE_BINARY_DIR}/bin/genDoxygen.sh)
+
+add_custom_command ( OUTPUT ${CMAKE_BINARY_DIR}/bin/genDoxygen.sh
+                     COMMAND echo "doxygen ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile"
+		     		>> ${CMAKE_BINARY_DIR}/bin/genDoxygen.sh
+                     COMMAND echo "tar -cvf ${CMAKE_CURRENT_SOURCE_DIR}/WMMA-Guide.tar -C ${CMAKE_BINARY_DIR} docs"
+		     		>> ${CMAKE_BINARY_DIR}/bin/genDoxygen.sh)
+
