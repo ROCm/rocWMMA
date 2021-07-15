@@ -6,6 +6,138 @@
 #include "IOTraits.h"
 #include "Types.h"
 
+/**
+ * \mainpage
+ * 
+ * WMMA is a C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications 
+ * leveraging AMD's GPU hardware matrix cores through HIP.
+ * Specifically, the library enhances the portability of CUDA WMMA code to 
+ * AMD's heterogeneous platform and provides an interface to use underlying 
+ * hardware matrix multiplication (MFMA) units.
+ * The WMMA API exposes memory and MMA (Matrix Multiply Accumulate) functions
+ * that operate on blocks, or 'fragments' of data appropriately sized for 
+ * warp (thread block) execution.
+ * WMMA code is templated for componentization and for providing ability to 
+ * make compile-time optimizations based on available meta-data.
+ * This library is an ongoing Work-In-Progress (WIP).
+ * 
+ * 
+ * **Supported Datatypes**
+ *  - Native Data Types
+ *      - float = f32
+ *      - double = f64
+ *      - _Float16 = f16
+ *      - int8
+ *      - uint8
+ *      - int16
+ *      - int32
+ *      - uint32
+ * 
+ * 
+ *  - Non-Native Data Types
+ *      - h16 = __half
+ *      - bf16 = bfloat16
+ * 
+ * **Supported Thread Block Sizes**
+ * 
+ * TBlockX  | TBlockY   |
+ * :-------:|:---------:|
+ * 64       |   1       |
+ * 64       |   2       | 
+ * 64       |   4       |
+ * 64       |   8       | 
+ * 128      |   1       |
+ * 128      |   2       | 
+ * 256      |   1       |
+ * 
+ * @note TBlockX must be a multiple of 64
+ * 
+ * 
+ * **Supported Matrix Layouts**
+ * 
+ * Matrix Layout(N = col major, T = row major) 
+ * 
+ * LayoutA  |   LayoutB |   LayoutC |   LayoutD  |
+ * :-------:|:---------:|:---------:|:----------:|
+ *     N    |      N    |      N    |     N      |
+ *     N    |      T    |      N    |     N      |
+ *     T    |      N    |      N    |     N      |
+ *     T    |      T    |      N    |     N      |
+ *     N    |      N    |      T    |     T      |
+ *     N    |      T    |      T    |     T      |
+ *     T    |      N    |      T    |     T      |
+ *     T    |      T    |      T    |     T      |
+ * 
+ * 
+ * 
+ * **Data Types <Ti / To / Tc> = <InputType / OutputType / ComputeType >**
+ * \n
+ * **MFMA Block Size = <BlockM, BlockN, BlockK>**
+ * \n
+ * Ti / To / Tc         |   BlockM    |   BlockN    |   BlockK
+ * :-------------------:|:-----------:|:-----------:|:-----------:|
+ * i8/i32/i32           |    16       |      16     | Min:16,pow2 |
+ * ^                    |    32       |      32     | Min:8, pow2 |
+ * i8/i8/i32            |    16       |      16     | Min:16,pow2 |           
+ * ^                    |    32       |      32     | Min:8, pow2 |
+ * f16/f32/f32          |    16       |      16     | Min:16,pow2 |
+ * ^                    |    32       |      32     | Min:8, pow2 |
+ * f16/f16/f32          |    16       |      16     | Min:16,pow2 |
+ * ^                    |    32       |      32     | Min:8, pow2 |
+ * f16/f16/f16          |    16       |      16     | Min:16,pow2 |
+ * ^                    |    32       |      32     | Min:8, pow2 |
+ * __half/f32/f32       |    16       |      16     | Min:16,pow2 |
+ * ^                    |    32       |      32     | Min:8, pow2 |
+ * __half/__half/f32    |    16       |      16     | Min:16,pow2 |
+ * ^                    |    32       |      32     | Min:8, pow2 |
+ * __half/__half/__half |    16       |      16     | Min:16,pow2 |
+ * ^                    |    32       |      32     | Min:8, pow2 |
+ * bf16/f32/f32         |    16       |      16     | Min:8, pow2 |
+ * ^                    |    32       |      32     | Min:4, pow2 |
+ * bf16/bf16/f32        |    16       |      16     | Min:8, pow2 |
+ * ^                    |    32       |      32     | Min:4, pow2 |
+ * bf16/bf16/bf16       |    16       |      16     | Min:8, pow2 |
+ * ^                    |    32       |      32     | Min:4, pow2 |
+ * f32/f32/f32          |    16       |      16     | Min:4, pow2 |
+ * ^                    |    32       |      32     | Min:2, pow2 |
+ * f64/f64/f64          |    16       |      16     | Min:4, pow2 |
+ *   
+ * 
+ * \n
+ * 
+ * **LDS Support/Requirements(Only applicable to WMMA v0.3 and below)**
+ * 
+ * Required LDS space is calculated by
+ *  - LDSBytes = max(BlockM * blockDim.y, BlockN * blockDim.x / 64) * BlockK * sizeof(InputT)
+ * 
+ * 
+ * \n
+ * **Fragment:**
+ * 
+ * **fill_fragment**
+ * 
+ * Broadcast a desired value to all elements in the fragment.
+ * 
+ * \n
+ * **load_matrix_sync / store_matrix_sync**
+ * 
+ * Loads data from memory according to Matrix Layout.
+ * Matrix A layout loads / stores matrix columns in the K direction 
+ * (Matrix A = M x K, fragA = BlockM x BlockK)
+ * Matrix B layout loads / stores matrix rows in the K direction 
+ * (Matrix B = K x N, fragB = BlockK x BlockN)
+ * Matrix C layout loads / stores matrix rows in vector width of 4 
+ * (Matrix C = M x N, fragAcc = BlockM x BlockN)
+ * 
+ * Fragments are stored in packed registers in optimal load / store patterns. In-register elements have no guaranteed order, which have been optimized for loading / storing efficiency.
+ * 
+ * \n
+ * **mma_sync**
+ * 
+ * MFMA accumulation is performed with fragment data. Fragment A cols are multiplied
+ * with Fragment B rows and added to the accumulator fragment.
+ */
+
 namespace wmma
 {
     // Meta-tags
