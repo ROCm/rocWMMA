@@ -8,6 +8,27 @@
 #include <iostream>
 #include <type_traits>
 
+   /**
+ * \ingroup wmma
+ * \defgroup DataTypes
+ *
+ * @brief Definition and metadata on supported data types of matrices.
+ * 
+ * Native Data Types:
+ * float = f32
+ * _Float16 = f16
+ * int8
+ * uint8
+ * int16
+ * int32
+ * uint32
+ * 
+ * 
+ * Non-Native Data Types:
+ * h16 = __half
+ * bf16 = bfloat16
+ * 
+ */
 // Native types
 using float32_t = float;
 using float16_t = _Float16;
