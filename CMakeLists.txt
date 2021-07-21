@@ -37,6 +37,7 @@ set (CMAKE_CXX_STANDARD 14)
 
 if( CMAKE_PROJECT_NAME STREQUAL "WMMA" )
   option( WMMA_BUILD_TESTS "Build tests & benchmarks" ON )
+  option( WMMA_BUILD_DOCS "Build doxygen documentation" ON )
 endif()
 
 # set( AMDGPU_TARGETS "gfx908:xnack-" ) # User variable
@@ -109,4 +110,21 @@ if(WMMA_BUILD_TESTS)
 
   enable_testing()
   add_subdirectory(test)
+endif()
+
+if(WMMA_BUILD_DOCS)
+add_custom_target(
+  BuildDocs ALL
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/WMMA-Guide.tar
+)
+
+add_custom_command ( OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/WMMA-Guide.tar
+                     COMMAND /bin/bash ${CMAKE_BINARY_DIR}/bin/genDoxygen.sh
+                     DEPENDS ${CMAKE_BINARY_DIR}/bin/genDoxygen.sh)
+
+add_custom_command ( OUTPUT ${CMAKE_BINARY_DIR}/bin/genDoxygen.sh
+                     COMMAND echo "doxygen ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile"
+		     		>> ${CMAKE_BINARY_DIR}/bin/genDoxygen.sh
+                     COMMAND echo "tar -cvf ${CMAKE_CURRENT_SOURCE_DIR}/WMMA-Guide.tar -C ${CMAKE_BINARY_DIR} docs"
+		     		>> ${CMAKE_BINARY_DIR}/bin/genDoxygen.sh)
 endif()
