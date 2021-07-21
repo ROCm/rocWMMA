@@ -80,73 +80,80 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
     using MappingC = MappingUtil<BlockM, BlockN, OutputT, LayoutC>;
     using MappingD = MappingUtil<BlockM, BlockN, OutputT, LayoutD>;
 
+    using FragA   = wmma::fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA>;
+    using FragB   = wmma::fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB>;
+    using FragC   = wmma::fragment<accumulator, BlockM, BlockN, BlockK, OutputT>;
+    using FragAcc = wmma::fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>;
+
     int lda = std::is_same<LayoutA, row_major>::value ? k : m;
     int ldb = std::is_same<LayoutB, row_major>::value ? n : k;
     int ldc = std::is_same<LayoutC, row_major>::value ? n : m;
     int ldd = std::is_same<LayoutD, row_major>::value ? n : m;
 
-    // Create frags
-    auto fragA   = wmma::fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA>();
-    auto fragB   = wmma::fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB>();
-    auto fragC   = wmma::fragment<accumulator, BlockM, BlockN, BlockK, OutputT>();
-    auto fragAcc = wmma::fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>();
+    // Target C / D block on 2D grid
+    auto matrixCoordC = MappingC::matrixCoord();
 
-    wmma::fill_fragment(fragAcc, static_cast<ComputeT>(0));
-
-    // Tile using a 2D grid
-    int warpM = (blockIdx.x * blockDim.x + threadIdx.x) / AMDGCN_WAVE_SIZE;
-    int warpN = (blockIdx.y * blockDim.y + threadIdx.y);
-
-    // Loop over k
-    for(int i = 0; i < k; i += BlockK)
+    if(std::get<0>(matrixCoordC) < m && std::get<1>(matrixCoordC) < n)
     {
-        int aRow = warpM * BlockM;
-        int aCol = i;
+        // Initialize accumulator
+        auto fragAcc = FragAcc();
+        wmma::fill_fragment(fragAcc, static_cast<ComputeT>(0));
 
-        int bRow = i;
-        int bCol = warpN * BlockN;
-
-        // Bounds checking
-        if(aRow < m && aCol < k && bRow < k && bCol < n)
+        // Accumulate A * B
+        if(alpha)
         {
-            // Load the inputs
-            wmma::load_matrix_sync(
-                fragA, MappingA::dataCoord(a, lda, std::make_pair(aRow, aCol)), lda);
-            wmma::load_matrix_sync(
-                fragB, MappingB::dataCoord(b, ldb, std::make_pair(bRow, bCol)), ldb);
+            // Setup starting addresses
+            auto* addrA = MappingA::dataCoord(a, lda, std::make_pair(std::get<0>(matrixCoordC), 0));
+            auto* addrB = MappingB::dataCoord(b, ldb, std::make_pair(0, std::get<1>(matrixCoordC)));
 
-            // Perform the matrix multiplication
-            wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
+            // Setup address increments.
+            // A steps BlockK through m x k
+            // B steps BlockK through k x n
+            auto incrA = MappingA::dataOffset(lda, std::make_pair(0, BlockK));
+            auto incrB = MappingB::dataOffset(ldb, std::make_pair(BlockK, 0));
+
+            auto count = k / BlockK;
+            for(int i = 0; i < count; i++)
+            {
+                auto fragA = FragA();
+                auto fragB = FragB();
+
+                // Load and multiply
+                wmma::load_matrix_sync(fragA, addrA, lda);
+                wmma::load_matrix_sync(fragB, addrB, ldb);
+                wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
+
+                addrA += incrA;
+                addrB += incrB;
+            }
         }
-    }
 
-    // Load in the current value of c, scale it by beta, and add this our result scaled by alpha
-    int cRow = warpM * BlockM;
-    int cCol = warpN * BlockN;
+        // Load C
+        auto fragC = FragC();
+        wmma::fill_fragment(fragC, static_cast<OutputT>(0));
+        if(beta)
+        {
+            // Setup address
+            auto* addrC = MappingC::dataCoord(c, ldc, matrixCoordC);
+            wmma::load_matrix_sync(fragC,
+                                   addrC,
+                                   ldc,
+                                   std::is_same<LayoutC, row_major>::value ? wmma::mem_row_major
+                                                                           : wmma::mem_col_major);
+        }
 
-    if(cRow < m && cCol < n)
-    {
-        OutputT const* cOffset = c
-                                 + (std::is_same<LayoutC, row_major>::value ? (cRow * ldc + cCol)
-                                                                            : (cRow + cCol * ldc));
-        wmma::load_matrix_sync(fragC,
-                               cOffset,
-                               ldc,
-                               std::is_same<LayoutC, row_major>::value ? wmma::mem_row_major
-                                                                       : wmma::mem_col_major);
-
-        // Multiply and accum with C, with respect to ComputeT
+        // D = alpha * accumAB + beta * C
 #pragma unroll
         for(int i = 0; i < fragC.num_elements; ++i)
         {
             fragC.x[i] = OutputT(alpha * ComputeT(fragAcc.x[i]) + beta * ComputeT(fragC.x[i]));
         }
 
-        OutputT* dOffset = d
-                           + (std::is_same<LayoutD, row_major>::value ? (cRow * ldd + cCol)
-                                                                      : (cRow + cCol * ldd));
+        // Output addresss
+        auto* addrD = MappingD::dataCoord(d, ldd, matrixCoordC);
+
         // Store the output
-        wmma::store_matrix_sync(dOffset,
+        wmma::store_matrix_sync(addrD,
                                 fragC,
                                 ldd,
                                 std::is_same<LayoutD, row_major>::value ? wmma::mem_row_major
@@ -199,6 +206,7 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
                "ldd, LytA_LytB_LytC_LytD, Ti_To_Tc, elapsedMs, GFlops, GFlops/s, Efficiency(%)\n";
         headerPrinted = true;
     }
+
     std::cout << TBlockX << ", " << TBlockY << ", " << BlockM << ", " << BlockN << ", " << BlockK
               << ", " << m << ", " << n << ", " << k << ", " << alpha << ", " << lda << ", " << ldb
               << ", " << beta << ", " << ldc << ", " << ldd << ", "
