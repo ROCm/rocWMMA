@@ -12,19 +12,25 @@ struct amdgcn_io_traits;
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
 struct MappingUtil;
 
-/* Layouts
+    /**
+ * \ingroup wmma
+ * \defgroup dataLayouts
+ *
+ * @brief Definition and metadata on supported data layout of matrices.
+ * 
+ * These layouts are based in Matrix Space. They are to map each of the wave lanes 
+ * into corresponding row / col coordinates for a particular memory layout.
+ * For example, the A matrix loads columns of size BlockDim in the K direction. 
+ * The B matrix loads rows of size BlockDim in the K direction.
+ * 
+ * Each of these layouts is indexed differently, especially when different datatypes
+ * and load widths are used. These classes are intended to address these matrix 
+ * space indexing challenges.
+ */
 
-These layouts are based in Matrix Space. They are to map each of the wave lanes into
-corresponding row / col coordinates for a particular memory layout.
-
-For example, the A matrix loads columns of size BlockDim in the K direction. The B matrix
-loads rows of size BlockDim in the K direction.
-
-Each of these layouts is indexed differently, especially when different datatypes and load
-widths are used. These classes are intended to address these matrix space indexing challenges.
-
-*/
-
+   /**
+ * Layout
+ */
 namespace Layout
 {
     ////////////// Col /////////////////////////
