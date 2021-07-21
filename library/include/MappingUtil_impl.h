@@ -17,7 +17,7 @@ namespace _MappingUtil
     // this determines our laneId.
     __device__ inline uint32_t laneId()
     {
-        return threadIdx.x / AMDGCN_WAVE_SIZE;
+        return threadIdx.x % AMDGCN_WAVE_SIZE;
     }
 
     __device__ constexpr inline auto waveCount(std::pair<uint32_t, uint32_t> const& threadCount)
