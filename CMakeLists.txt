@@ -38,6 +38,7 @@ set (CMAKE_CXX_STANDARD 14)
 if( CMAKE_PROJECT_NAME STREQUAL "WMMA" )
   option( WMMA_BUILD_TESTS "Build tests & benchmarks" ON )
   option( WMMA_BUILD_DOCS "Build doxygen documentation" ON )
+  option( WMMA_BUILD_ASSEMBLY "Output assembly files" OFF )
 endif()
 
 # set( AMDGPU_TARGETS "gfx908:xnack-" ) # User variable
@@ -93,6 +94,10 @@ add_library(wmma INTERFACE)
 target_include_directories(wmma INTERFACE ${PROJECT_SOURCE_DIR}/library/include)
 target_link_libraries(wmma INTERFACE hip::device hip::host)
 target_compile_options(wmma INTERFACE -std=c++14)
+
+if(WMMA_BUILD_ASSEMBLY)
+  target_compile_options(wmma INTERFACE -save-temps)
+endif()
 
 if(WMMA_BUILD_TESTS)
   # Test/benchmark requires additional dependencies
