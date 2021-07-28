@@ -95,10 +95,6 @@ target_include_directories(wmma INTERFACE ${PROJECT_SOURCE_DIR}/library/include)
 target_link_libraries(wmma INTERFACE hip::device hip::host)
 target_compile_options(wmma INTERFACE -std=c++14)
 
-if(WMMA_BUILD_ASSEMBLY)
-  target_compile_options(wmma INTERFACE -save-temps)
-endif()
-
 if(WMMA_BUILD_TESTS)
   # Test/benchmark requires additional dependencies
   include( FetchContent )
