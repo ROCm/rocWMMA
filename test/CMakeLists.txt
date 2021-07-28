@@ -22,30 +22,48 @@
 
 include(GoogleTest)
 
-function(add_custom_test TEST_TARGET TEST_SOURCE)
+# Regular gtests that don't need special definitions for validation
+function(add_wmma_test TEST_TARGET TEST_SOURCE)
   add_executable(${TEST_TARGET} ${TEST_SOURCE})
   target_link_libraries(${TEST_TARGET} wmma OpenMP::OpenMP_CXX gtest_main)
   target_include_directories(${TEST_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-  target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_VALIDATE_TESTS)
   gtest_discover_tests(${TEST_TARGET})
+  if(WMMA_BUILD_ASSEMBLY)
+    add_custom_command(TARGET ${TEST_TARGET}
+                       POST_BUILD
+                       COMMAND make ARGS ${TEST_SOURCE}.s
+                       COMMAND ${CMAKE_COMMAND} -E copy
+                           "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${TEST_TARGET}.dir/${TEST_SOURCE}.s"
+                           "${CMAKE_CURRENT_BINARY_DIR}/${TEST_TARGET}.s"
+                       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  endif()
 endfunction()
 
-function(add_custom_test_with_rocblas TEST_TARGET TEST_SOURCE)
-  add_custom_test(${TEST_TARGET} ${TEST_SOURCE})
+# Tests with additional validation using cpu implementation
+function(add_wmma_validation_test TEST_TARGET TEST_SOURCE)
+  add_wmma_test(${TEST_TARGET} ${TEST_SOURCE})
+  target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_VALIDATE_TESTS)
+endfunction()
+
+# Tests with additional validation using rocblas implementation
+function(add_wmma_validation_test_with_rocblas TEST_TARGET TEST_SOURCE)
+  add_wmma_validation_test(${TEST_TARGET} ${TEST_SOURCE})
   target_link_libraries(${TEST_TARGET} roc::rocblas)
   target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_VALIDATE_WITH_ROCBLAS)
 endfunction()
 
-add_custom_test(LoadStoreMatrixSyncTest LoadStoreMatrixSyncTest.cpp)
-add_custom_test(FillFragmentTest FillFragmentTest.cpp)
-add_custom_test(MappingUtilTest MappingUtilTest.cpp)
-add_custom_test(LayoutTest LayoutTest.cpp)
+add_wmma_test(LoadStoreMatrixSyncTest LoadStoreMatrixSyncTest.cpp)
+add_wmma_test(FillFragmentTest FillFragmentTest.cpp)
+add_wmma_test(MappingUtilTest MappingUtilTest.cpp)
+add_wmma_test(LayoutTest LayoutTest.cpp)
+
+add_wmma_test(MmaSyncTest-bench MmaSyncTest.cpp)
+add_wmma_test(MmaSyncTestLds-bench MmaSyncTestLds.cpp)
 
 if(WMMA_VALIDATE_WITH_ROCBLAS)
-  add_custom_test_with_rocblas(MmaSyncTest-rocBLAS MmaSyncTest.cpp)
+  add_wmma_validation_test_with_rocblas(MmaSyncTest-rocBLAS MmaSyncTest.cpp)
+  add_wmma_validation_test_with_rocblas(MmaSyncTestLds-rocBLAS MmaSyncTestLds.cpp)
 else()
-  add_custom_test(MmaSyncTest MmaSyncTest.cpp)
+  add_wmma_validation_test(MmaSyncTest-cpu MmaSyncTest.cpp)
+  add_wmma_validation_test(MmaSyncTestLds-cpu MmaSyncTestLds.cpp)
 endif()
-
-add_executable(MmaSyncTest-bench MmaSyncTest.cpp)
-target_link_libraries(MmaSyncTest-bench wmma)

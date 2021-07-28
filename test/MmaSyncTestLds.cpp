@@ -2,8 +2,6 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
-#include <gtest/gtest.h>
-
 #include "Common.hpp"
 #include "Performance.h"
 #include "Utils.h"
@@ -18,6 +16,8 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "WMMA.h"
 #pragma GCC diagnostic pop
+
+#include <gtest/gtest.h>
 
 #ifdef WMMA_VALIDATE_TESTS
 #include "Reference.h" // Vanilla CPU kernel
@@ -86,6 +86,12 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
     using FragC   = wmma::fragment<accumulator, BlockM, BlockN, BlockK, OutputT>;
     using FragAcc = wmma::fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>;
 
+    using MappingLDS = MappingUtil<FragB::size(), 64, InputT, row_major>;
+    using FragLds    = wmma::fragment<matrix_b, 1, 64, FragB::size(), InputT, row_major>;
+
+    static_assert(FragB::size() * 64 == BlockK * BlockN, "Elements don't match");
+    static_assert(FragLds::size() == FragB::size(), "Sizes don't match");
+
     int lda = std::is_same<LayoutA, row_major>::value ? k : m;
     int ldb = std::is_same<LayoutB, row_major>::value ? n : k;
     int ldc = std::is_same<LayoutC, row_major>::value ? n : m;
@@ -94,7 +100,14 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
     // Target C / D block on 2D grid
     auto matrixCoordC = MappingC::matrixCoord();
 
-    if(std::get<0>(matrixCoordC) < m && std::get<1>(matrixCoordC) < n)
+    HIP_DYNAMIC_SHARED(void*, localMemPtr);
+    auto  LDSCoord     = MappingLDS::matrixCoord(MappingLDS::waveCoord());
+    auto  workgroupDim = MappingLDS::workgroupDim();
+    auto  ldsldm       = 64 * std::get<1>(workgroupDim);
+    auto* addrBLDS
+        = MappingLDS::dataCoord(reinterpret_cast<InputT*>(localMemPtr), ldsldm, LDSCoord);
+
+    if(std::get<0>(matrixCoordC) < m && std::get<1>(matrixCoordC) < n && BlockK < k)
     {
         // Initialize accumulator
         auto fragAcc = FragAcc();
@@ -107,26 +120,54 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
             auto* addrA = MappingA::dataCoord(a, lda, std::make_pair(std::get<0>(matrixCoordC), 0));
             auto* addrB = MappingB::dataCoord(b, ldb, std::make_pair(0, std::get<1>(matrixCoordC)));
 
+            // Prefetch the first block
+            auto fragA = FragA();
+            auto fragB = FragB();
+            wmma::load_matrix_sync(fragA, addrA, lda);
+            wmma::load_matrix_sync(fragB, addrB, ldb);
+            wmma::store_matrix_sync(addrBLDS, *reinterpret_cast<FragLds*>(&fragB), ldsldm);
+
             // Setup address increments.
             // A steps BlockK through m x k
             // B steps BlockK through k x n
             auto incrA = MappingA::dataOffset(lda, std::make_pair(0, BlockK));
             auto incrB = MappingB::dataOffset(ldb, std::make_pair(BlockK, 0));
 
-            auto count = k / BlockK;
-            for(int i = 0; i < count; i++)
-            {
-                auto fragA = FragA();
-                auto fragB = FragB();
+            auto endA = addrA + incrA * (k / BlockK);
 
-                // Load and multiply
-                wmma::load_matrix_sync(fragA, addrA, lda);
-                wmma::load_matrix_sync(fragB, addrB, ldb);
+            addrA += incrA;
+            addrB += incrB;
+
+            while(addrA != endA)
+            {
+                __syncthreads();
+                wmma::load_matrix_sync(*reinterpret_cast<FragLds*>(&fragB), addrBLDS, ldsldm);
+
+                // Start pulling in the next block
+                auto fragANext = FragA();
+                auto fragBNext = FragB();
+                wmma::load_matrix_sync(fragANext, addrA, lda);
+                wmma::load_matrix_sync(fragBNext, addrB, ldb);
+
+                // Mma for current block
+                __syncthreads();
                 wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
+
+                wmma::store_matrix_sync(addrBLDS, *reinterpret_cast<FragLds*>(&fragBNext), ldsldm);
 
                 addrA += incrA;
                 addrB += incrB;
+
+                fragA = fragANext;
+
+                //fragB = fragBNext;
             }
+
+            // Mma for the last block
+            __syncthreads();
+            wmma::load_matrix_sync(*reinterpret_cast<FragLds*>(&fragB), addrBLDS, ldsldm);
+            __syncthreads();
+            wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
         }
 
         // Load C
@@ -286,7 +327,8 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
                                            LayoutD>),
                           gridDim,
                           blockDim,
-                          0, // sharedMemBytes
+                          sizeof(InputT) * BlockN * BlockK
+                              * (blockDim.x / 64 * blockDim.y), // sharedMemBytes
                           0, // stream
                           startEvent, // Event start
                           stopEvent, // event stop
@@ -558,6 +600,11 @@ void test_mma_sync(std::tuple<Ts...>)
 {
     test_mma_sync_h<Ts...>();
 }
+template <typename T>
+void test_mma_sync(T)
+{
+    // do nothing
+}
 
 template <typename T>
 struct MmaSyncTest : public testing::Test
@@ -573,44 +620,43 @@ public:
 using Implementations = testing::Types<
 
     // Non-native bfloat16_t
-    std::tuple<bfloat16_t, bfloat16_t, bfloat16_t>,
-    std::tuple<bfloat16_t, bfloat16_t, float32_t>,
-    std::tuple<bfloat16_t, float32_t, float32_t>,
+    // std::tuple<bfloat16_t, bfloat16_t, bfloat16_t>,
+    // std::tuple<bfloat16_t, bfloat16_t, float32_t>,
+    // std::tuple<bfloat16_t, float32_t, float32_t>,
 
-    // Native fp16
-    std::tuple<float16_t, float16_t, float16_t>,
-    std::tuple<float16_t, float16_t, float32_t>,
-    std::tuple<float16_t, float32_t, float32_t>,
+    // // Native fp16
+    // std::tuple<float16_t, float16_t, float16_t>,
+    // std::tuple<float16_t, float16_t, float32_t>,
+    // std::tuple<float16_t, float32_t, float32_t>,
 
     // Native fp32
-    std::tuple<float32_t, float32_t, float32_t>,
+    //std::tuple<float32_t, float32_t, float32_t>,
 
-    // Native fp64
-    std::tuple<float64_t, float64_t, float64_t>,
+    // // Native fp64
+    // std::tuple<float64_t, float64_t, float64_t>,
 
-    // Non-native hfloat16_t (i.e. __half)
-    std::tuple<hfloat16_t, hfloat16_t, hfloat16_t>,
-    std::tuple<hfloat16_t, hfloat16_t, float32_t>,
-    std::tuple<hfloat16_t, float32_t, float32_t>,
+    // // Non-native hfloat16_t (i.e. __half)
+    // std::tuple<hfloat16_t, hfloat16_t, hfloat16_t>,
+    // std::tuple<hfloat16_t, hfloat16_t, float32_t>,
+    // std::tuple<hfloat16_t, float32_t, float32_t>,
 
-    // Native int8
-    std::tuple<int8_t, int32_t, int32_t>,
-    std::tuple<int8_t, int8_t, int32_t>>;
+    // // Native int8
+    // std::tuple<int8_t, int32_t, int32_t>,
+    // std::tuple<int8_t, int8_t, int32_t>
+    void>;
 
-TYPED_TEST_SUITE(MmaSyncTest, Implementations);
+//TYPED_TEST_SUITE(MmaSyncTest, Implementations);
 
-// Run the entire gamut of tests
-TYPED_TEST(MmaSyncTest, MmaSync)
-{
-    TypeParam types;
-    test_mma_sync(types);
-};
+// TYPED_TEST(MmaSyncTest, MmaSync)
+// {
+//     TypeParam types;
+//     test_mma_sync(types);
+// };
 
-// Examples of ad-hoc tests with fully specified parameters
 TEST(AdhocMmaSyncTest, AdhocMmaSync)
 {
-    test_mma_sync_h<32, 32, 32, float16_t, float16_t, float16_t, col_major, row_major, row_major>(
-        64, 1, 32, 32, 32, 1.0f, 1.0f);
-    test_mma_sync_h<32, 32, 32, float16_t, float16_t, float32_t, row_major, row_major, row_major>(
-        64, 1, 64, 64, 128, float16_t(2), float16_t(2));
+    //test_mma_sync_h<32, 32, 128, float32_t, float32_t>(64, 4, 8192, 8192, 8192, 1.0f, 1.0f);
+    //test_mma_sync_h<32, 32, 32, bfloat16_t, bfloat16_t, float32_t, col_major, row_major, row_major>(64, 4, 4096, 4096, 4096, 2.0f, 1.5f);
+    test_mma_sync_h<32, 32, 16, float32_t, float32_t, float32_t, col_major, row_major, col_major>(
+        128, 2, 7168, 7168, 7168, 1.0f, 1.0f);
 }
