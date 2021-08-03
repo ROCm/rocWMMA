@@ -76,6 +76,7 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
                                                           ComputeT       alpha,
                                                           ComputeT       beta)
 {
+    // Setup global mapping
     using MappingA = MappingUtil<BlockM, BlockK, InputT, LayoutA>;
     using MappingB = MappingUtil<BlockK, BlockN, InputT, LayoutB>;
     using MappingC = MappingUtil<BlockM, BlockN, OutputT, LayoutC>;
@@ -86,26 +87,28 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
     using FragC   = wmma::fragment<accumulator, BlockM, BlockN, BlockK, OutputT>;
     using FragAcc = wmma::fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>;
 
-    using MappingLDS = MappingUtil<FragB::size(), 64, InputT, row_major>;
-    using FragLds    = wmma::fragment<matrix_b, 1, 64, FragB::size(), InputT, row_major>;
-
-    static_assert(FragB::size() * 64 == BlockK * BlockN, "Elements don't match");
-    static_assert(FragLds::size() == FragB::size(), "Sizes don't match");
-
     int lda = std::is_same<LayoutA, row_major>::value ? k : m;
     int ldb = std::is_same<LayoutB, row_major>::value ? n : k;
     int ldc = std::is_same<LayoutC, row_major>::value ? n : m;
     int ldd = std::is_same<LayoutD, row_major>::value ? n : m;
 
+    // Will store to LDS as though it were a register file.
+    // Rows = register count
+    // Cols = 64
+    // Row major to minimize bank conflicts
+    // matrix_b frag for now because it uses RowNT
+    using MappingLdsA = MappingUtil<FragA::size(), 64, InputT, row_major>;
+    using MappingLdsB = MappingUtil<FragB::size(), 64, InputT, row_major>;
+    using FragLdsA    = wmma::fragment<matrix_b, 1, 64, FragA::size(), InputT, row_major>;
+    using FragLdsB    = wmma::fragment<matrix_b, 1, 64, FragB::size(), InputT, row_major>;
+
+    static_assert(FragA::size() * 64 == BlockM * BlockK, "Elements of A don't match");
+    static_assert(FragLdsA::size() == FragA::size(), "A Sizes don't match");
+    static_assert(FragB::size() * 64 == BlockK * BlockN, "Elements don't match");
+    static_assert(FragLdsB::size() == FragB::size(), "Sizes don't match");
+
     // Target C / D block on 2D grid
     auto matrixCoordC = MappingC::matrixCoord();
-
-    HIP_DYNAMIC_SHARED(void*, localMemPtr);
-    auto  LDSCoord     = MappingLDS::matrixCoord(MappingLDS::waveCoord());
-    auto  workgroupDim = MappingLDS::workgroupDim();
-    auto  ldsldm       = 64 * std::get<1>(workgroupDim);
-    auto* addrBLDS
-        = MappingLDS::dataCoord(reinterpret_cast<InputT*>(localMemPtr), ldsldm, LDSCoord);
 
     if(std::get<0>(matrixCoordC) < m && std::get<1>(matrixCoordC) < n && BlockK < k)
     {
@@ -125,7 +128,24 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
             auto fragB = FragB();
             wmma::load_matrix_sync(fragA, addrA, lda);
             wmma::load_matrix_sync(fragB, addrB, ldb);
-            wmma::store_matrix_sync(addrBLDS, *reinterpret_cast<FragLds*>(&fragB), ldsldm);
+
+            HIP_DYNAMIC_SHARED(void*, localMemPtr);
+
+            auto workgroupDim = MappingLdsA::workgroupDim();
+            auto ldLds        = 64 * std::get<1>(workgroupDim);
+
+            auto* baseAddrLdsA = reinterpret_cast<InputT*>(localMemPtr);
+            auto* baseAddrLdsB
+                = baseAddrLdsA + std::get<0>(workgroupDim) * FragLdsA::size() * ldLds;
+
+            auto matrixCoordLdsA = MappingLdsA::matrixCoord(MappingLdsA::waveCoord());
+            auto matrixCoordLdsB = MappingLdsB::matrixCoord(MappingLdsB::waveCoord());
+
+            auto* addrLdsA = MappingLdsA::dataCoord(baseAddrLdsA, ldLds, matrixCoordLdsA);
+            auto* addrLdsB = MappingLdsA::dataCoord(baseAddrLdsB, ldLds, matrixCoordLdsB);
+
+            wmma::store_matrix_sync(addrLdsA, *reinterpret_cast<FragLdsA*>(&fragA), ldLds);
+            wmma::store_matrix_sync(addrLdsB, *reinterpret_cast<FragLdsB*>(&fragB), ldLds);
 
             // Setup address increments.
             // A steps BlockK through m x k
@@ -141,7 +161,8 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
             while(addrA != endA)
             {
                 __syncthreads();
-                wmma::load_matrix_sync(*reinterpret_cast<FragLds*>(&fragB), addrBLDS, ldsldm);
+                wmma::load_matrix_sync(*reinterpret_cast<FragLdsA*>(&fragA), addrLdsA, ldLds);
+                wmma::load_matrix_sync(*reinterpret_cast<FragLdsB*>(&fragB), addrLdsB, ldLds);
 
                 // Start pulling in the next block
                 auto fragANext = FragA();
@@ -153,19 +174,21 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
                 __syncthreads();
                 wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
 
-                wmma::store_matrix_sync(addrBLDS, *reinterpret_cast<FragLds*>(&fragBNext), ldsldm);
+                wmma::store_matrix_sync(addrLdsA, *reinterpret_cast<FragLdsA*>(&fragANext), ldLds);
+                wmma::store_matrix_sync(addrLdsB, *reinterpret_cast<FragLdsB*>(&fragBNext), ldLds);
 
                 addrA += incrA;
                 addrB += incrB;
 
-                fragA = fragANext;
+                //fragA = fragANext;
 
                 //fragB = fragBNext;
             }
 
             // Mma for the last block
             __syncthreads();
-            wmma::load_matrix_sync(*reinterpret_cast<FragLds*>(&fragB), addrBLDS, ldsldm);
+            wmma::load_matrix_sync(*reinterpret_cast<FragLdsA*>(&fragA), addrLdsA, ldLds);
+            wmma::load_matrix_sync(*reinterpret_cast<FragLdsB*>(&fragB), addrLdsB, ldLds);
             __syncthreads();
             wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
         }
@@ -327,8 +350,8 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
                                            LayoutD>),
                           gridDim,
                           blockDim,
-                          sizeof(InputT) * BlockN * BlockK
-                              * (blockDim.x / 64 * blockDim.y), // sharedMemBytes
+                          sizeof(InputT) * (blockDim.x / 64 * blockDim.y)
+                              * (BlockN * BlockK + BlockM * BlockK), // sharedMemBytes
                           0, // stream
                           startEvent, // Event start
                           stopEvent, // event stop
@@ -481,7 +504,7 @@ inline void test_mma_sync_h_32x32(uint32_t TBlockX,
     test_mma_sync_h<32, 32, 16, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
     test_mma_sync_h<32, 32, 32, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
     test_mma_sync_h<32, 32, 64, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
-    test_mma_sync_h<32, 32, 128, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    //test_mma_sync_h<32, 32, 128, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
 }
 
 template <typename InputT, typename OutputT, typename ComputeT>
@@ -500,7 +523,7 @@ inline void test_mma_sync_h_16x16(uint32_t TBlockX,
     test_mma_sync_h<16, 16, 32, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
     test_mma_sync_h<16, 16, 64, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
     test_mma_sync_h<16, 16, 128, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
-    test_mma_sync_h<16, 16, 256, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    //test_mma_sync_h<16, 16, 256, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
     // test_mma_sync_h<16, 16, 512, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
 }
 
@@ -620,43 +643,42 @@ public:
 using Implementations = testing::Types<
 
     // Non-native bfloat16_t
-    // std::tuple<bfloat16_t, bfloat16_t, bfloat16_t>,
-    // std::tuple<bfloat16_t, bfloat16_t, float32_t>,
-    // std::tuple<bfloat16_t, float32_t, float32_t>,
+    std::tuple<bfloat16_t, bfloat16_t, bfloat16_t>,
+    std::tuple<bfloat16_t, bfloat16_t, float32_t>,
+    std::tuple<bfloat16_t, float32_t, float32_t>,
 
-    // // Native fp16
-    // std::tuple<float16_t, float16_t, float16_t>,
-    // std::tuple<float16_t, float16_t, float32_t>,
-    // std::tuple<float16_t, float32_t, float32_t>,
+    // Native fp16
+    std::tuple<float16_t, float16_t, float16_t>,
+    std::tuple<float16_t, float16_t, float32_t>,
+    std::tuple<float16_t, float32_t, float32_t>,
 
     // Native fp32
-    //std::tuple<float32_t, float32_t, float32_t>,
+    std::tuple<float32_t, float32_t, float32_t>,
 
-    // // Native fp64
-    // std::tuple<float64_t, float64_t, float64_t>,
+    // Native fp64
+    std::tuple<float64_t, float64_t, float64_t>,
 
-    // // Non-native hfloat16_t (i.e. __half)
-    // std::tuple<hfloat16_t, hfloat16_t, hfloat16_t>,
-    // std::tuple<hfloat16_t, hfloat16_t, float32_t>,
-    // std::tuple<hfloat16_t, float32_t, float32_t>,
+    // Non-native hfloat16_t (i.e. __half)
+    std::tuple<hfloat16_t, hfloat16_t, hfloat16_t>,
+    std::tuple<hfloat16_t, hfloat16_t, float32_t>,
+    std::tuple<hfloat16_t, float32_t, float32_t>,
 
-    // // Native int8
-    // std::tuple<int8_t, int32_t, int32_t>,
-    // std::tuple<int8_t, int8_t, int32_t>
-    void>;
+    // Native int8
+    std::tuple<int8_t, int32_t, int32_t>,
+    std::tuple<int8_t, int8_t, int32_t>>;
 
-//TYPED_TEST_SUITE(MmaSyncTest, Implementations);
+TYPED_TEST_SUITE(MmaSyncTest, Implementations);
 
-// TYPED_TEST(MmaSyncTest, MmaSync)
-// {
-//     TypeParam types;
-//     test_mma_sync(types);
-// };
-
-TEST(AdhocMmaSyncTest, AdhocMmaSync)
+TYPED_TEST(MmaSyncTest, MmaSync)
 {
-    //test_mma_sync_h<32, 32, 128, float32_t, float32_t>(64, 4, 8192, 8192, 8192, 1.0f, 1.0f);
-    //test_mma_sync_h<32, 32, 32, bfloat16_t, bfloat16_t, float32_t, col_major, row_major, row_major>(64, 4, 4096, 4096, 4096, 2.0f, 1.5f);
-    test_mma_sync_h<32, 32, 16, float32_t, float32_t, float32_t, col_major, row_major, col_major>(
-        128, 2, 7168, 7168, 7168, 1.0f, 1.0f);
-}
+    TypeParam types;
+    test_mma_sync(types);
+};
+
+// TEST(AdhocMmaSyncTest, AdhocMmaSync)
+// {
+//     //test_mma_sync_h<32, 32, 128, float32_t, float32_t>(64, 4, 8192, 8192, 8192, 1.0f, 1.0f);
+//     //test_mma_sync_h<32, 32, 32, bfloat16_t, bfloat16_t, float32_t, col_major, row_major, row_major>(64, 4, 4096, 4096, 4096, 2.0f, 1.5f);
+//     test_mma_sync_h<32, 32, 16, float32_t, float32_t, float32_t, col_major, row_major, col_major>(
+//         128, 2, 7168, 7168, 7168, 1.0f, 1.0f);
+// }
