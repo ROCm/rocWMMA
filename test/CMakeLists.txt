@@ -39,6 +39,7 @@ endfunction()
 add_custom_test(LoadStoreMatrixSyncTest LoadStoreMatrixSyncTest.cpp)
 add_custom_test(FillFragmentTest FillFragmentTest.cpp)
 add_custom_test(MappingUtilTest MappingUtilTest.cpp)
+add_custom_test(LayoutTest LayoutTest.cpp)
 
 if(WMMA_VALIDATE_WITH_ROCBLAS)
   add_custom_test_with_rocblas(MmaSyncTest-rocBLAS MmaSyncTest.cpp)

@@ -397,7 +397,6 @@ struct SetupWrapper<std::tuple<BlockM, BlockN, InputT, Layout>> : public testing
                         (tblock[0], tblock[1], size[0], size[1]);
             }
         }
-       std::cout << " count " << i << std::endl;
     }
 
     void block2matrixWrapperSetup()
