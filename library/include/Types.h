@@ -15,6 +15,7 @@
  * @brief Definition and metadata on supported data types of matrices.
  * 
  * Native Data Types:
+ * float64_t = f64 = double
  * float = f32
  * _Float16 = f16
  * int8
