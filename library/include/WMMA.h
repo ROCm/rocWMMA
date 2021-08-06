@@ -419,6 +419,17 @@ namespace wmma
                              fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB> const& b,
                              fragment<accumulator, BlockM, BlockN, BlockK, ComputeT> const&     c);
 
+    /**
+ * \ingroup WMMA APIs
+ * @{
+ */
+    /**
+ * 
+ * Performs synchronization across multiple wavefronts in a workgroup.
+ * 
+ */
+    __device__ void wmma_s_barrier();
+
 } // namespace wmma
 
 #include "WMMA_impl.h"
