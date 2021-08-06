@@ -99,14 +99,15 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
     constexpr uint32_t registerFileWidth = 64;
     using MappingLdsA = MappingUtil<FragA::size(), registerFileWidth, InputT, row_major>;
     using MappingLdsB = MappingUtil<FragB::size(), registerFileWidth, InputT, row_major>;
-    using FragLdsA
-        = wmma::fragment<register_file, 1, registerFileWidth, FragA::size(), InputT, row_major>;
-    using FragLdsB
-        = wmma::fragment<register_file, 1, registerFileWidth, FragB::size(), InputT, row_major>;
+    using FragLdsA    = wmma::
+        fragment<register_file_coop_a, 1, registerFileWidth, FragA::size(), InputT, row_major>;
+    using FragLdsB = wmma::
+        fragment<register_file_coop_b, 1, registerFileWidth, FragB::size(), InputT, row_major>;
 
-    static_assert(FragA::size() * 64 == BlockM * BlockK, "Elements of A don't match");
+    static_assert(FragA::size() * registerFileWidth == BlockM * BlockK,
+                  "Elements of A don't match");
     static_assert(FragLdsA::size() == FragA::size(), "A Sizes don't match");
-    static_assert(FragB::size() * 64 == BlockK * BlockN, "Elements don't match");
+    static_assert(FragB::size() * registerFileWidth == BlockK * BlockN, "Elements don't match");
     static_assert(FragLdsB::size() == FragB::size(), "Sizes don't match");
 
     // Target C / D block on 2D grid
@@ -132,25 +133,28 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
             wmma::load_matrix_sync(fragB, addrB, ldb);
 
             // Setup a register file in LDS which is friendly to minimizing bank conflicts.
-            // Register file blocks in LDS follow same wg mapping for convenience.
-            // Each wave will prefetch one block of A and one block of B.
-            // A blocks occupy first portion of LDS and B blocks occupy the latter.
+            // Treating register file as row_major layout with register width = 64.
             HIP_DYNAMIC_SHARED(void*, localMemPtr);
             auto workgroupDim = MappingLdsA::workgroupDim();
-            auto ldLds        = registerFileWidth * std::get<1>(workgroupDim);
+            auto ldLds        = registerFileWidth;
 
+            // For A, work can be shared by waves in same workgroup row because they load the same A data.
+            // For B, work can be shared by waves in same workgroup col because they load the same B data.
+            // E.g.
+            // A blocks needed = WG.rows
+            // B blocks needed = WG.cols
+            // LDS layout is a register file of A blocks, followed by B blocks.
             auto* baseAddrLdsA = reinterpret_cast<InputT*>(localMemPtr);
             auto* baseAddrLdsB
                 = baseAddrLdsA + std::get<0>(workgroupDim) * FragLdsA::size() * ldLds;
 
-            auto matrixCoordLdsA = MappingLdsA::matrixCoord(MappingLdsA::waveCoord());
-            auto matrixCoordLdsB = MappingLdsB::matrixCoord(MappingLdsB::waveCoord());
+            auto* addrLdsA
+                = baseAddrLdsA + std::get<0>(MappingLdsA::waveCoord()) * FragLdsA::size() * ldLds;
+            auto* addrLdsB
+                = baseAddrLdsB + std::get<1>(MappingLdsB::waveCoord()) * FragLdsB::size() * ldLds;
 
-            auto* addrLdsA = MappingLdsA::dataCoord(baseAddrLdsA, ldLds, matrixCoordLdsA);
-            auto* addrLdsB = MappingLdsA::dataCoord(baseAddrLdsB, ldLds, matrixCoordLdsB);
-
-            wmma::store_matrix_sync(addrLdsA, reinterpret_cast<FragLdsA&>(fragA), ldLds);
-            wmma::store_matrix_sync(addrLdsB, reinterpret_cast<FragLdsB&>(fragB), ldLds);
+            wmma::store_matrix_coop_sync(addrLdsA, reinterpret_cast<FragLdsA&>(fragA), ldLds);
+            wmma::store_matrix_coop_sync(addrLdsB, reinterpret_cast<FragLdsB&>(fragB), ldLds);
 
             // Setup address increments.
             // A steps BlockK through m x k
@@ -165,6 +169,7 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
 
             while(addrA != endA)
             {
+                // When loading from LDS, each wave must load a copy of the full fragment.
                 __syncthreads();
                 wmma::load_matrix_sync(reinterpret_cast<FragLdsA&>(fragA), addrLdsA, ldLds);
                 wmma::load_matrix_sync(reinterpret_cast<FragLdsB&>(fragB), addrLdsB, ldLds);
@@ -179,8 +184,10 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
                 __syncthreads();
                 wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
 
-                wmma::store_matrix_sync(addrLdsA, reinterpret_cast<FragLdsA&>(fragANext), ldLds);
-                wmma::store_matrix_sync(addrLdsB, reinterpret_cast<FragLdsB&>(fragBNext), ldLds);
+                wmma::store_matrix_coop_sync(
+                    addrLdsA, reinterpret_cast<FragLdsA&>(fragANext), ldLds);
+                wmma::store_matrix_coop_sync(
+                    addrLdsB, reinterpret_cast<FragLdsB&>(fragBNext), ldLds);
 
                 addrA += incrA;
                 addrB += incrB;
@@ -339,33 +346,34 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
     CHECK_HIP_ERROR(hipEventCreate(&startEvent));
     CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
 
-    hipExtLaunchKernelGGL((test_mma_sync_d<BlockM,
-                                           BlockN,
-                                           BlockK,
-                                           InputT,
-                                           OutputT,
-                                           ComputeT,
-                                           LayoutA,
-                                           LayoutB,
-                                           LayoutC,
-                                           LayoutD>),
-                          gridDim,
-                          blockDim,
-                          sizeof(InputT) * (blockDim.x / 64 * blockDim.y)
-                              * (BlockN * BlockK + BlockM * BlockK), // sharedMemBytes
-                          0, // stream
-                          startEvent, // Event start
-                          stopEvent, // event stop
-                          0, // flags
-                          m,
-                          n,
-                          k,
-                          d_a,
-                          d_b,
-                          d_c,
-                          d_d,
-                          alpha,
-                          beta);
+    hipExtLaunchKernelGGL(
+        (test_mma_sync_d<BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         OutputT,
+                         ComputeT,
+                         LayoutA,
+                         LayoutB,
+                         LayoutC,
+                         LayoutD>),
+        gridDim,
+        blockDim,
+        sizeof(InputT)
+            * (blockDim.x / 64 * BlockM * BlockK + blockDim.y * BlockK * BlockN), // sharedMemBytes
+        0, // stream
+        startEvent, // Event start
+        stopEvent, // event stop
+        0, // flags
+        m,
+        n,
+        k,
+        d_a,
+        d_b,
+        d_c,
+        d_d,
+        alpha,
+        beta);
 
     auto elapsedTimeMs = 0.0f;
     CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
@@ -505,7 +513,7 @@ inline void test_mma_sync_h_32x32(uint32_t TBlockX,
     test_mma_sync_h<32, 32, 16, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
     test_mma_sync_h<32, 32, 32, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
     test_mma_sync_h<32, 32, 64, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
-    //test_mma_sync_h<32, 32, 128, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    test_mma_sync_h<32, 32, 128, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
 }
 
 template <typename InputT, typename OutputT, typename ComputeT>
@@ -524,7 +532,7 @@ inline void test_mma_sync_h_16x16(uint32_t TBlockX,
     test_mma_sync_h<16, 16, 32, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
     test_mma_sync_h<16, 16, 64, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
     test_mma_sync_h<16, 16, 128, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
-    //test_mma_sync_h<16, 16, 256, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    test_mma_sync_h<16, 16, 256, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
     // test_mma_sync_h<16, 16, 512, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
 }
 

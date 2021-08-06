@@ -609,8 +609,16 @@ TYPED_TEST(MmaSyncTest, MmaSync)
 // Examples of ad-hoc tests with fully specified parameters
 TEST(AdhocMmaSyncTest, AdhocMmaSync)
 {
-    test_mma_sync_h<32, 32, 32, float16_t, float16_t, float16_t, col_major, row_major, row_major>(
-        64, 1, 32, 32, 32, 1.0f, 1.0f);
-    test_mma_sync_h<32, 32, 32, float16_t, float16_t, float32_t, row_major, row_major, row_major>(
-        64, 1, 64, 64, 128, float16_t(2), float16_t(2));
+    test_mma_sync_h<32, 32, 16, float32_t, float32_t, float32_t, col_major, row_major, col_major>(
+        64, 1, 7168, 7168, 7168, 1.0f, 1.0f);
+    test_mma_sync_h<32, 32, 16, float32_t, float32_t, float32_t, col_major, row_major, col_major>(
+        128, 1, 7168, 7168, 7168, 1.0f, 1.0f);
+    test_mma_sync_h<32, 32, 16, float32_t, float32_t, float32_t, col_major, row_major, col_major>(
+        128, 2, 7168, 7168, 7168, 1.0f, 1.0f);
+    test_mma_sync_h<32, 32, 16, float32_t, float32_t, float32_t, col_major, row_major, col_major>(
+        256, 1, 7168, 7168, 7168, 1.0f, 1.0f);
+    test_mma_sync_h<32, 32, 16, float32_t, float32_t, float32_t, col_major, row_major, col_major>(
+        64, 2, 7168, 7168, 7168, 1.0f, 1.0f);
+    test_mma_sync_h<32, 32, 16, float32_t, float32_t, float32_t, col_major, row_major, col_major>(
+        64, 4, 7168, 7168, 7168, 1.0f, 1.0f);
 }

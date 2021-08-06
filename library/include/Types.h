@@ -363,33 +363,25 @@ using AccRegF64x8  = VecT<float64_t, 8>;
 using AccRegF64x16 = VecT<float64_t, 16>;
 using AccRegF64x32 = VecT<float64_t, 32>;
 
-// Meta-tags
-// Matrices
-struct row_major
-{
-};
-struct col_major
-{
-};
-struct matrix_a
-{
-};
-struct matrix_b
-{
-};
-struct accumulator
-{
-};
-struct common
-{
-};
+// clang-format off
 
-// Memory
-struct globalMem
-{
-};
-struct ldsMem
-{
-};
+// Data layout meta-tags
+struct row_major{};
+struct col_major{};
+
+// Fragment usage meta-tags
+struct matrix_a{};
+struct matrix_b{};
+struct accumulator{};
+
+struct register_file{};
+struct register_file_coop_a : public register_file, public matrix_a{};
+struct register_file_coop_b : public register_file, public matrix_b{};
+
+// Memory meta-tags
+struct globalMem{};
+struct ldsMem{};
+
+// clang-format on
 
 #endif // WMMA_TYPES_H

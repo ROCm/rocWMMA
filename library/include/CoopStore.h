@@ -30,7 +30,7 @@ struct amdgcn_cooperative_store_DxK
         static_assert(BlockK % SplitCount == 0, "BlockK size is not divisible by SplitCount");
 
         // Same register count for each split
-        using InputT = VecT<DataT, IOTraits::UnpackedRegisterCount>;
+        using InputT = VecT<DataT, IOTraits::UnpackedSize>;
         static_assert(InputT::size() % SplitCount == 0,
                       "Register count not divisible by SplitCount");
     };
