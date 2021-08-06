@@ -30,7 +30,7 @@ struct amdgcn_cooperative_load_DxK
         static_assert(BlockK % SplitCount == 0, "BlockK size is not divisible by SplitCount");
 
         // Each cooperative wave will load a piece of the final output
-        using OutputT = VecT<DataT, IOTraits::UnpackedRegisterCount>;
+        using OutputT = VecT<DataT, IOTraits::UnpackedSize>;
         static_assert(OutputT::size() % SplitCount == 0,
                       "Register count not divisible by SplitCount");
 
