@@ -406,9 +406,9 @@ using Implementations = testing::Types<
     std::tuple<I<32>, I<32>, float16_t, row_major>, std::tuple<I<32>, I<32>, float16_t, col_major>,
     std::tuple<I<32>, I<32>, hfloat16_t, row_major>, std::tuple<I<32>, I<32>, hfloat16_t, col_major>,
     std::tuple<I<32>, I<32>, int8_t, row_major>, std::tuple<I<32>, I<32>, int8_t, col_major>,
-    /*std::tuple<I<32>, I<32>, int32_t, row_major>,*/ std::tuple<I<32>, I<32>, int32_t, col_major>,
-    /*std::tuple<I<32>, I<32>, uint8_t, row_major>,*/ std::tuple<I<32>, I<32>, uint8_t, col_major>,
-    /*std::tuple<I<32>, I<32>, uint32_t, row_major>, */std::tuple<I<32>, I<32>, uint32_t, col_major>>;
+    std::tuple<I<32>, I<32>, int32_t, row_major>, std::tuple<I<32>, I<32>, int32_t, col_major>,
+    std::tuple<I<32>, I<32>, uint8_t, row_major>, std::tuple<I<32>, I<32>, uint8_t, col_major>,
+    std::tuple<I<32>, I<32>, uint32_t, row_major>, std::tuple<I<32>, I<32>, uint32_t, col_major>>;
 
 TYPED_TEST_SUITE(LayoutWrapper, Implementations);
 
