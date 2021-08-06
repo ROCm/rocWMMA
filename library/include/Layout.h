@@ -33,65 +33,73 @@ struct MappingUtil;
  */
 namespace Layout
 {
-    ////////////// Col /////////////////////////
-    /*
-
-        Matrix layout:
-
-        BlockDim = column size
-        BlockK = column count
-
-        kDim ->
-        (0, 0)              (0, BlockK - 1)
-        v______________  ... v____
-        |    |    |          |    |
-        |    |    |          |    |
-        | C0 | C1 | C2       | Ck |
-        |    |    |          |    |
-        |___ |___ |____  ... |____|
-        ^(BlockDim - 1, 0)   ^(BlockDim - 1, BlockK - 1)
-
-        Register layout:
-
-        KPerIO == # of columns per IO (either load or store)
-
-        E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = row_major
-
-        Elements 0.....31 32.....64
-                 _______________
-        Reg0    |  C0   |   C1  |
-        ...       ...      ...
-
-
-        E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
-
-        Elements 0.....31 32.....64
-                 _______________
-        Reg0    |  C0   |   C4  |
-        Reg1    |  C1   |   C5  |
-        Reg2    |  C2   |   C6  |
-        Reg3    |  C3   |   C7  |
-        ...       ...      ...
-
-
-        E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = col_major
-
-        Elements 0.....31 32.....64
-                 _______________
-        Reg0    |  C0   |   C1  |
-        ...       ...      ...
-
-
-        E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
-
-        Elements 0.............1    ...    7...........8..........9....   ...     64
-                 ___________________    _______________________________   ...  _________
-        Reg0    |  C0E0   |   C0E4  ...   C0E28   |   C1E0   |   C1E4  |  ... |  C8E28  |
-        Reg1    |  C0E1   |   C0E5  ...   C0E29   |   C1E1   |   C1E5  |  ... |  C8E29  |
-        Reg2    |  C0E2   |   C0E6  ...   C0E30   |   C1E2   |   C1E6  |  ... |  C8E30  |
-        Reg3    |  C0E3   |   C0E7  ...   C0E31   |   C1E3   |   C1E7  |  ... |  C8E31  |
-        ...       ...      ...
-     */
+   /**
+ * \ingroup dataLayouts
+ * @{
+ */
+    /**
+ * 
+ * *Matrix layout:*
+ * 
+ * BlockDim = column size
+ * 
+ * BlockK = column count
+ * 
+ * 
+ *      kDim ->
+ *      (0, 0)              (0, BlockK - 1)
+ *      v______________  ... v____
+ *      |    |    |          |    |
+ *      |    |    |          |    |
+ *      | C0 | C1 | C2       | Ck |
+ *      |    |    |          |    |
+ *      |___ |___ |____  ... |____|
+ *      ^(BlockDim - 1, 0)   ^(BlockDim - 1, BlockK - 1)
+ * 
+ * *Register layout:*
+ * 
+ * KPerIO == # of columns per IO (either load or store)
+ * 
+ * E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = row_major
+ * 
+ *      Elements 0.....31 32.....64
+ *               _______________
+ *      Reg0    |  C0   |   C1  |
+ *       ...       ...      ...
+ * 
+ * 
+ * E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
+ * 
+ *      Elements 0.....31 32.....64
+ *               _______________
+ *       Reg0    |  C0   |   C4  |
+ *       Reg1    |  C1   |   C5  |
+ *       Reg2    |  C2   |   C6  |
+ *       Reg3    |  C3   |   C7  |
+ *        ...       ...      ...
+ * 
+ * 
+ * E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = col_major
+ * 
+ *       Elements 0.....31 32.....64
+ *               _______________
+ *       Reg0    |  C0   |   C1  |
+ *        ...       ...      ...
+ * 
+ * 
+ *  E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
+ * 
+ *       Elements 0.............1    ...    7...........8..........9....  ...     64
+ *               ___________________    _______________________________   ...  _________
+ *       Reg0    |  C0E0   |   C0E4  ...   C0E28   |   C1E0   |   C1E4  |  ... |  C8E28  |
+ *       Reg1    |  C0E1   |   C0E5  ...   C0E29   |   C1E1   |   C1E5  |  ... |  C8E29  |
+ *       Reg2    |  C0E2   |   C0E6  ...   C0E30   |   C1E2   |   C1E6  |  ... |  C8E30  |
+ *       Reg3    |  C0E3   |   C0E7  ...   C0E31   |   C1E3   |   C1E7  |  ... |  C8E31  |
+ *        ...       ...      ...
+ * 
+ * 
+ */
+////////////// Col /////////////////////////
     template <uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
@@ -185,68 +193,82 @@ namespace Layout
         }
     };
 
-    ////////////// Row /////////////////////////
-    /*
+   /**
+ * \ingroup dataLayouts
+ * @{
+ */
+    /**
+ * 
+ * *Matrix layout:*
+ * 
+ * Common usage: Matrix B, C
+ * 
+ * BlockDim = row size
+ * 
+ * BlockK = row count
+ * 
+ *      BlockDim ->
+ *      (0, 0)                 (0, BlockDim - 1)
+ *      v______________  ...  _v__
+ *      |__________R0__  ...  ____|
+ *      |__________R1__  ...  ____|
+ *      |__________R2__  ...  ____|
+ *      |          ...   ...      |
+ *      |__________Rk__  ...  ____|
+ *      ^(BlockK - 1, 0)       ^(BlockK - 1, BlockDim - 1)
+ * 
+ * *Register layout:*
+ * 
+ * ElementsPerThread == VectorWidth
+ * 
+ * KPerIO == # of rows per IO (either load or store)
+ * 
+ * E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = col_major
+ * 
+ *      Elements 0.....31 32.....64
+ *               _______________
+ *      Reg0    |  R0   |   R1  |
+ *      ...       ...      ...
+ * 
+ * 
+ * E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
+ * 
+ *      Elements 0.....31 32.....64
+ *               _______________
+ *      Reg0    |  R0   |   R4  |
+ *      Reg1    |  R1   |   R5  |
+ *      Reg2    |  R2   |   R6  |
+ *      Reg3    |  R3   |   R7  |
+ *       ...       ...      ...
+ * 
+ * 
+ * E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = row_major
+ * 
+ *      Elements 0.....31 32.....64
+ *               _______________
+ *      Reg0    |  R0   |   R1  
+ *      ...       ...      ...
+ * 
+ * 
+ * E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
+ * 
+ *      Elements 0.............1    ...    7...........8..........9....   ...     64
+ *               ___________________    _______________________________   ...  _________
+ *      Reg0    |  R0E0   |   R0E4  ...   R0E28   |   R1E0   |   R1E4  |  ... |  R8E28  |
+ *      Reg1    |  R0E1   |   R0E5  ...   R0E29   |   R1E1   |   R1E5  |  ... |  R8E29  |
+ *      Reg2    |  R0E2   |   R0E6  ...   R0E30   |   R1E2   |   R1E6  |  ... |  R8E30  |
+ *      Reg3    |  R0E3   |   R0E7  ...   R0E31   |   R1E3   |   R1E7  |  ... |  R8E31  |
+ *       ...       ...      ...
+ * 
+ */
+////////////// Row /////////////////////////
+    template <uint32_t BlockDim,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout,
+              uint32_t ElementsPerThread>
+    struct Row;
 
-        Matrix layout:
-
-        Common usage: Matrix B, C
-        BlockDim = row size
-        BlockK = row count
-
-        BlockDim ->
-        (0, 0)                 (0, BlockDim - 1)
-        v______________  ...  _v__
-        |__________R0__  ...  ____|
-        |__________R1__  ...  ____|
-        |__________R2__  ...  ____|
-        |          ...   ...      |
-        |__________Rk__  ...  ____|
-        ^(BlockK - 1, 0)       ^(BlockK - 1, BlockDim - 1)
-
-        Register layout:
-
-        ElementsPerThread == VectorWidth
-
-        KPerIO == # of rows per IO (either load or store)
-
-        E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = col_major
-
-        Elements 0.....31 32.....64
-                 _______________
-        Reg0    |  R0   |   R1  |
-        ...       ...      ...
-
-
-        E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
-
-        Elements 0.....31 32.....64
-                 _______________
-        Reg0    |  R0   |   R4  |
-        Reg1    |  R1   |   R5  |
-        Reg2    |  R2   |   R6  |
-        Reg3    |  R3   |   R7  |
-        ...       ...      ...
-
-
-        E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = row_major
-
-        Elements 0.....31 32.....64
-                 _______________
-        Reg0    |  R0   |   R1  |
-        ...       ...      ...
-
-
-        E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
-
-        Elements 0.............1    ...    7...........8..........9....   ...     64
-                 ___________________    _______________________________   ...  _________
-        Reg0    |  R0E0   |   R0E4  ...   R0E28   |   R1E0   |   R1E4  |  ... |  R8E28  |
-        Reg1    |  R0E1   |   R0E5  ...   R0E29   |   R1E1   |   R1E5  |  ... |  R8E29  |
-        Reg2    |  R0E2   |   R0E6  ...   R0E30   |   R1E2   |   R1E6  |  ... |  R8E30  |
-        Reg3    |  R0E3   |   R0E7  ...   R0E31   |   R1E3   |   R1E7  |  ... |  R8E31  |
-        ...       ...      ...
-     */
     template <uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
@@ -301,72 +323,92 @@ namespace Layout
         }
     };
 
+   /**
+ * \ingroup dataLayouts
+ * @{
+ */
+    /**
+ * *Matrix layout:*
+ * 
+ * BlockDim = column size
+ * 
+ * BlockK = column count
+ * 
+ * N = Max vector width
+ * 
+ * VW = Actual vector width
+ * 
+ *      kDim ->
+ *      (0, 0)              (0, BlockK - 1)
+ *      v______________  ... v____
+ *      |    |    |          |    |
+ *      |    |    |          |    |
+ *      | C0 | C1 | C2       | Ck |
+ *      |    |    |          |    |
+ *      |___ |___ |____  ... |____|
+ *      ^(BlockDim - 1, 0)   ^(BlockDim - 1, BlockK - 1)
+ * 
+ * *Register layout:*
+ * 
+ * *Guarantees:*
+ * 
+ * ColNT guarantees the following register format, regardless of VW and data layout.
+ * 
+ * Register 0 to contain Cols (i % N) == 0
+ * 
+ * Register 1 to contain Cols (i % N) == 1
+ * 
+ * Register 2 to contain Cols (i % N) == 2
+ * 
+ * ...
+ * 
+ * *Limitations:*
+ * 
+ * col_major data format is not supported for VW > 1, as it produces
+ * incorrect mapping
+ * 
+ * KPerIO == # of columns per IO (either load or store)
+ * 
+ * 
+ * E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = row_major
+ * 
+ *      Elements 0.....31 32.....64
+ *               _______________
+ *      Reg0    |  C0   |   C4  |
+ *       ...       ...      ...
+ * 
+ * 
+ * E.g. BlockDim = 32, VW = 4, N = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
+ * 
+ *      Elements 0.....31 32.....64
+ *               _______________
+ *      Reg0    |  C0   |   C4  |
+ *      Reg1    |  C1   |   C5  |
+ *      Reg2    |  C2   |   C6  |
+ *      Reg3    |  C3   |   C7  |
+ *       ...       ...      ...
+ * 
+ * 
+ * E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = col_major
+ * 
+ *      Elements 0.....31 32.....64
+ *               _______________
+ *      Reg0    |  C0   |   C4  |
+ *       ...       ...      ...
+ * 
+ * @note
+ * E.g. BlockDim = 32, VW = 4, N = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
+ * Is NOT implemented due to incorrect mapping with col_major and VW = 4
+ */
     ////////////// ColNT /////////////////////////
-    /*
+    template <uint32_t BlockDim,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout,
+              uint32_t VectorWidth,
+              uint32_t MaxVectorWidth>
+    struct ColNT;
 
-        Matrix layout:
-
-        BlockDim = column size
-        BlockK = column count
-
-        N = Max vector width
-        VW = Actual vector width
-
-        kDim ->
-        (0, 0)              (0, BlockK - 1)
-        v______________  ... v____
-        |    |    |          |    |
-        |    |    |          |    |
-        | C0 | C1 | C2       | Ck |
-        |    |    |          |    |
-        |___ |___ |____  ... |____|
-        ^(BlockDim - 1, 0)   ^(BlockDim - 1, BlockK - 1)
-
-        Register layout:
-
-        Guarantees:
-        ColNT guarantees the following register format, regardless of VW and data layout.
-        Register 0 to contain Cols (i % N) == 0
-        Register 1 to contain Cols (i % N) == 1
-        Register 2 to contain Cols (i % N) == 2
-        ...
-
-        Limitations:
-        col_major data format is not supported for VW > 1, as it produces
-        incorrect mapping
-
-        KPerIO == # of columns per IO (either load or store)
-
-        E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = row_major
-
-        Elements 0.....31 32.....64
-                 _______________
-        Reg0    |  C0   |   C4  |
-        ...       ...      ...
-
-
-        E.g. BlockDim = 32, VW = 4, N = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
-
-        Elements 0.....31 32.....64
-                 _______________
-        Reg0    |  C0   |   C4  |
-        Reg1    |  C1   |   C5  |
-        Reg2    |  C2   |   C6  |
-        Reg3    |  C3   |   C7  |
-        ...       ...      ...
-
-
-        E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = col_major
-
-        Elements 0.....31 32.....64
-                 _______________
-        Reg0    |  C0   |   C4  |
-        ...       ...      ...
-
-        NOTE:
-        E.g. BlockDim = 32, VW = 4, N = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
-        Is NOT implemented due to incorrect mapping with col_major and VW = 4
-     */
     template <uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
@@ -498,71 +540,91 @@ namespace Layout
     {
     };
 
+   /**
+ * \ingroup dataLayouts
+ * @{
+ */
+    /**
+ * *Matrix layout:*
+ * 
+ * BlockDim = row size
+ * 
+ * BlockK = row count
+ * 
+ * VW = actual vector width
+ * 
+ * N = max vector width
+ * 
+ * 
+ *      (0, 0)                 (0, BlockDim - 1)
+ *      v______________  ...  _v__
+ *      |__________R0__  ...  ____|
+ *      |__________R1__  ...  ____|
+ *      |__________R2__  ...  ____|
+ *      |          ...   ...      |
+ *      |__________Rk__  ...  ____|
+ *      ^(BlockK - 1, 0)       ^(BlockK - 1, BlockDim - 1)
+ * 
+ * *Register layout:*
+ * 
+ * *Guarantees:*
+ * 
+ * RowNT guarantees the following register format, regardless of VW and data layout.
+ * 
+ * Register 0 to contain Rows (i % N) == 0
+ * 
+ * Register 1 to contain Rows (i % N) == 1
+ * 
+ * Register 2 to contain Rows (i % N) == 2
+ * 
+ * ...
+ * 
+ * *Limitations:*
+ * 
+ * row_major data format is not supported for VW > 1, as it produces
+ * incorrect mapping
+ * 
+ * KPerIO == # of rows per IO (either load or store)
+ * 
+ * E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = col_major
+ * 
+ *      Elements 0.....31 32.....64
+ *               _______________
+ *      Reg0    |  R0   |   R4  |
+ *       ...       ...      ...
+ * 
+ * 
+ * E.g. BlockDim = 32, VW = 4, N = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
+ * 
+ *      Elements 0.....31 32.....64
+ *               _______________
+ *      Reg0    |  R0   |   R4  |
+ *      Reg1    |  R1   |   R5  |
+ *      Reg2    |  R2   |   R6  |
+ *      Reg3    |  R3   |   R7  |
+ *      ...       ...      ...
+ * 
+ * 
+ * E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = row_major
+ * 
+ *      Elements 0.....31 32.....64
+ *               _______________
+ *       Reg0    |  R0   |   R4  |
+ *        ...       ...      ...
+ * 
+ * @note
+ * E.g. BlockDim = 32, VW = 4,  N = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
+ * Is NOT implemented due to incorrect mapping with row_major and VW = 4
+ * 
+*/
     ////////////// RowNT /////////////////////////
-    /*
-
-        Matrix layout:
-
-        BlockDim = row size
-        BlockK = row count
-
-        VW = actual vector width
-        N = max vector width
-
-        (0, 0)                 (0, BlockDim - 1)
-        v______________  ...  _v__
-        |__________R0__  ...  ____|
-        |__________R1__  ...  ____|
-        |__________R2__  ...  ____|
-        |          ...   ...      |
-        |__________Rk__  ...  ____|
-        ^(BlockK - 1, 0)       ^(BlockK - 1, BlockDim - 1)
-
-        Register layout:
-
-        Guarantees:
-        RowNT guarantees the following register format, regardless of VW and data layout.
-        Register 0 to contain Rows (i % N) == 0
-        Register 1 to contain Rows (i % N) == 1
-        Register 2 to contain Rows (i % N) == 2
-        ...
-
-        Limitations:
-        row_major data format is not supported for VW > 1, as it produces
-        incorrect mapping
-
-        KPerIO == # of rows per IO (either load or store)
-
-        E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = col_major
-
-        Elements 0.....31 32.....64
-                 _______________
-        Reg0    |  R0   |   R4  |
-        ...       ...      ...
-
-
-        E.g. BlockDim = 32, VW = 4, N = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
-
-        Elements 0.....31 32.....64
-                 _______________
-        Reg0    |  R0   |   R4  |
-        Reg1    |  R1   |   R5  |
-        Reg2    |  R2   |   R6  |
-        Reg3    |  R3   |   R7  |
-        ...       ...      ...
-
-
-        E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = row_major
-
-        Elements 0.....31 32.....64
-                 _______________
-        Reg0    |  R0   |   R4  |
-        ...       ...      ...
-
-        NOTE:
-        E.g. BlockDim = 32, VW = 4,  N = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
-        Is NOT implemented due to incorrect mapping with row_major and VW = 4
-     */
+    template <uint32_t BlockDim,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout,
+              uint32_t VectorWidth,
+              uint32_t MaxVectorWidth>
+    struct RowNT;
 
     template <uint32_t BlockDim,
               uint32_t BlockK,
