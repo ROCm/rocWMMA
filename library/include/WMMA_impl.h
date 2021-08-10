@@ -6,6 +6,7 @@
 #include "Convert.h"
 #include "CoopLoad.h"
 #include "CoopStore.h"
+#include "IOBarrier.h"
 #include "IOBroadcast.h"
 #include "IOConfig.h"
 #include "MFMA.h"
@@ -359,6 +360,12 @@ namespace wmma
         (*d)       = MFMA::exec(*a, *b, *c);
     }
 
+
+    __device__ void synchronize_workgroup()
+    {
+        using Barrier = struct amdgcn_barrier;
+        Barrier::exec();
+    }
 } // namespace wmma
 
 #endif // WMMA_IMPL_H_
