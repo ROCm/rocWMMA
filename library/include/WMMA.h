@@ -428,7 +428,7 @@ namespace wmma
  * Performs synchronization across multiple wavefronts in a workgroup.
  * 
  */
-    __device__ void wmma_s_barrier();
+    __device__ void synchronize_workgroup();
 
 } // namespace wmma
 

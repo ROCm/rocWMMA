@@ -323,7 +323,7 @@ namespace wmma
     //     (*frag) = Packer::exec(unpacked);
     // }
 
-    __device__ void wmma_s_barrier()
+    __device__ void synchronize_workgroup()
     {
         using Barrier = struct amdgcn_barrier;
         Barrier::exec();
