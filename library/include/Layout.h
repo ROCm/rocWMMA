@@ -420,6 +420,10 @@ namespace Layout
         using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
         struct Traits
         {
+            enum : uint32_t
+            {
+                MaxKPerIO = ceilDiv(AMDGCN_WAVE_SIZE * MaxVectorWidth, BlockDim)
+            };
             using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
             using MatrixCoordT = typename MappingUtil::CoordT;
         };
@@ -432,11 +436,8 @@ namespace Layout
 
         __device__ static inline typename Traits::MatrixCoordT baseOffset()
         {
-            // Use IOTraits for MaxVectorWidth so we can properly calculate the offsets.
-            using CNTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, MaxVectorWidth>;
-
             return std::make_pair(threadIdx.x % BlockDim,
-                                  ((threadIdx.x / BlockDim) * MaxVectorWidth) % CNTraits::KPerIO);
+                                  ((threadIdx.x / BlockDim) * MaxVectorWidth) % Traits::MaxKPerIO);
         }
 
         __device__ static inline typename Traits::MatrixCoordT offsetIncrement(uint32_t iteration)
@@ -493,11 +494,11 @@ namespace Layout
             // Use IOTraits for full RegCount so we can properly calculate the offsets.
             using CNTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, MaxVectorWidth>;
 
-            static_assert(IOTraits::KPerIO <= CNTraits::KPerIO, "");
-            constexpr auto fullLoad = (IOTraits::KPerIO == CNTraits::KPerIO);
+            static_assert(IOTraits::KPerIO <= Traits::MaxKPerIO, "");
+            constexpr auto fullLoad = (IOTraits::KPerIO == Traits::MaxKPerIO);
 
             constexpr auto majorStepSize
-                = fullLoad ? CNTraits::KPerIO : CNTraits::KPerIO - MaxVectorWidth;
+                = fullLoad ? Traits::MaxKPerIO : Traits::MaxKPerIO - MaxVectorWidth;
             constexpr auto minorStepSize = fullLoad ? 0 : VectorWidth;
             auto           doMajorStep   = ((iteration + 1) % (MaxVectorWidth / VectorWidth)) == 0;
 
@@ -655,6 +656,10 @@ namespace Layout
 
         static_assert(BlockDim <= AMDGCN_WAVE_SIZE,
                       "Row4T only supports BlockDim <= AMDGCN_WAVE_SIZE");
+
+        static_assert(BlockK >= MaxVectorWidth, "BlockK must be at least MaxVectorWidth");
+
+        static_assert(BlockK % MaxVectorWidth == 0, "BlockK must be a multiple of MaxVectorWidth");
 
         __device__ static inline typename Traits::MatrixCoordT baseOffset()
         {

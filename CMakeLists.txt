@@ -38,6 +38,7 @@ set (CMAKE_CXX_STANDARD 14)
 if( CMAKE_PROJECT_NAME STREQUAL "WMMA" )
   option( WMMA_BUILD_TESTS "Build tests & benchmarks" ON )
   option( WMMA_BUILD_DOCS "Build doxygen documentation" ON )
+  option( WMMA_BUILD_ASSEMBLY "Output assembly files" OFF )
 endif()
 
 # set( AMDGPU_TARGETS "gfx908:xnack-" ) # User variable
