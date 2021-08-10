@@ -38,6 +38,7 @@ set (CMAKE_CXX_STANDARD 14)
 if( CMAKE_PROJECT_NAME STREQUAL "WMMA" )
   option( WMMA_BUILD_TESTS "Build tests & benchmarks" ON )
   option( WMMA_BUILD_DOCS "Build doxygen documentation" ON )
+  option( WMMA_BUILD_ASSEMBLY "Output assembly files" OFF )
 endif()
 
 # set( AMDGPU_TARGETS "gfx908:xnack-" ) # User variable
@@ -113,18 +114,26 @@ if(WMMA_BUILD_TESTS)
 endif()
 
 if(WMMA_BUILD_DOCS)
-add_custom_target(
-  BuildDocs ALL
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/WMMA-Guide.tar
-)
+  # Documentation requires doxygen installation
+  find_package( Doxygen REQUIRED )
 
-add_custom_command ( OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/WMMA-Guide.tar
-                     COMMAND /bin/bash ${CMAKE_BINARY_DIR}/bin/genDoxygen.sh
-                     DEPENDS ${CMAKE_BINARY_DIR}/bin/genDoxygen.sh)
+  set(WMMA_DOCS_ARCHIVE "${CMAKE_CURRENT_SOURCE_DIR}/WMMA-Guide.tar.gz")
+  set(WMMA_DOXYGEN_INPUT "${CMAKE_CURRENT_SOURCE_DIR}/library" "${CMAKE_CURRENT_SOURCE_DIR}/test")
+  set(WMMA_DOXYGEN_OUTPUT "${CMAKE_BINARY_DIR}/docs")
 
-add_custom_command ( OUTPUT ${CMAKE_BINARY_DIR}/bin/genDoxygen.sh
-                     COMMAND echo "doxygen ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile"
-		     		>> ${CMAKE_BINARY_DIR}/bin/genDoxygen.sh
-                     COMMAND echo "tar -cvf ${CMAKE_CURRENT_SOURCE_DIR}/WMMA-Guide.tar -C ${CMAKE_BINARY_DIR} docs"
-		     		>> ${CMAKE_BINARY_DIR}/bin/genDoxygen.sh)
+  add_custom_target(
+    BuildDocs ALL
+    DEPENDS ${WMMA_DOCS_ARCHIVE}
+  )
+
+  # Convert input list to space separated string
+  string (REPLACE ";" " " WMMA_DOXYGEN_INPUT "${WMMA_DOXYGEN_INPUT}")
+
+  # Adjust the doxygen inputs and output directories dynamically
+  add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/WMMA-Guide.tar.gz
+    COMMAND bash -c "(cat ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile; echo \"INPUT=${WMMA_DOXYGEN_INPUT}\"; echo \"OUTPUT_DIRECTORY=${WMMA_DOXYGEN_OUTPUT}\") | doxygen -"
+    COMMAND tar -czvf ${WMMA_DOCS_ARCHIVE} ${WMMA_DOXYGEN_OUTPUT}
+    VERBATIM)
+
 endif()
