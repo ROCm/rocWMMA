@@ -139,17 +139,29 @@
  * with Fragment B rows and added to the accumulator fragment.
  */
 
+template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
+struct IOConfig;
 namespace wmma
 {
     // Meta-tags
 
-    // Matrices
-    using row_major   = ::row_major;
-    using col_major   = ::col_major;
-    using matrix_a    = ::matrix_a;
-    using matrix_b    = ::matrix_b;
-    using accumulator = ::accumulator;
-    using common      = ::common;
+    // Fragments
+    using row_major            = ::row_major;
+    using col_major            = ::col_major;
+    using matrix_a             = ::matrix_a;
+    using matrix_b             = ::matrix_b;
+    using accumulator          = ::accumulator;
+    using register_file        = ::register_file;
+    using register_file_coop_a = ::register_file_coop_a;
+    using register_file_coop_b = ::register_file_coop_b;
+
+    // Configuration used in wmma calls
+    template <typename MatrixT,
+              uint32_t BlockDim,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout>
+    using io_config = ::IOConfig<MatrixT, BlockDim, BlockK, DataT, DataLayout>;
 
     // Memory
     using globalMem = ::globalMem;
@@ -219,8 +231,8 @@ namespace wmma
             using StorageT = VecT<PackedT, IOTraits::PackedSize>;
         };
 
-        __device__ fragment() = default;
-        __device__ fragment(const fragment& other);
+        __device__           fragment() = default;
+        __device__           fragment(const fragment& other);
         __device__ fragment& operator=(const fragment& other);
 
         // Accessors
@@ -392,7 +404,29 @@ namespace wmma
                                       uint32_t                                                ldm,
                                       layout_t layout);
 
-    /**
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout>
+    __device__ void
+        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
+                              const DataT*                                                  data,
+                              uint32_t                                                      ldm);
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout>
+    __device__ void store_matrix_coop_sync(
+        DataT*                                                              data,
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
+        uint32_t                                                            ldm);
+        
+/**
  * \ingroup WMMA APIs
  * @{
  */
