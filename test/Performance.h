@@ -3,151 +3,210 @@
 
 #include "Types.h"
 
-template <typename DataT>
-struct MfmaPerfTraits;
-
-template <>
-struct MfmaPerfTraits<int8_t>
-{
-    enum : uint32_t
-    {
-        Multiplier = 16
-    };
-};
-
-template <>
-struct MfmaPerfTraits<uint8_t>
-{
-    enum : uint32_t
-    {
-        Multiplier = 16
-    };
-};
-
-template <>
-struct MfmaPerfTraits<float16_t>
-{
-    enum : uint32_t
-    {
-        Multiplier = 16
-    };
-};
-
-template <>
-struct MfmaPerfTraits<hfloat16_t> : public MfmaPerfTraits<float16_t>
-{
-};
-
-template <>
-struct MfmaPerfTraits<bfloat16_t>
-{
-    enum : uint32_t
-    {
-        Multiplier = 8
-    };
-};
-
-template <>
-struct MfmaPerfTraits<float32_t>
-{
-    enum : uint32_t
-    {
-        Multiplier = 4
-    };
-};
-
-template <>
-struct MfmaPerfTraits<float64_t>
-{
-    enum : uint32_t
-    {
-        Multiplier = 4
-    };
-};
-
-template <typename DataT>
-struct VALUPerfTraits;
-
-template <>
-struct VALUPerfTraits<int8_t>
-{
-    enum : uint32_t
-    {
-        Multiplier = 4
-    };
-};
-
-template <>
-struct VALUPerfTraits<uint8_t>
-{
-    enum : uint32_t
-    {
-        Multiplier = 4
-    };
-};
-
-template <>
-struct VALUPerfTraits<float16_t>
-{
-    enum : uint32_t
-    {
-        Multiplier = 4
-    };
-};
-
-template <>
-struct VALUPerfTraits<hfloat16_t> : public VALUPerfTraits<float16_t>
-{
-};
-
-template <>
-struct VALUPerfTraits<bfloat16_t>
-{
-    enum : uint32_t
-    {
-        Multiplier = 2
-    };
-};
-
-template <>
-struct VALUPerfTraits<float32_t>
-{
-    enum : uint32_t
-    {
-        Multiplier = 2
-    };
-};
-
-template <>
-struct VALUPerfTraits<float64_t>
-{
-    enum : uint32_t
-    {
-        Multiplier = 2
-    };
-};
-
-template <>
-struct VALUPerfTraits<int32_t>
-{
-    enum : uint32_t
-    {
-        Multiplier = 1
-    };
-};
-
-template <>
-struct VALUPerfTraits<uint32_t>
-{
-    enum : uint32_t
-    {
-        Multiplier = 1
-    };
-};
-
+// Architectures
 class MI100;
 class MI200;
 class Vega20;
+
+template <typename GfxArch, typename DataT>
+struct MfmaPerfTraits;
+
+// MI-100
+template <>
+struct MfmaPerfTraits<MI100, int8_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 1024
+    };
+};
+
+template <>
+struct MfmaPerfTraits<MI100, bfloat16_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 512
+    };
+};
+
+template <>
+struct MfmaPerfTraits<MI100, float16_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 1024
+    };
+};
+
+template <>
+struct MfmaPerfTraits<MI100, float32_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 256
+    };
+};
+
+template <>
+struct MfmaPerfTraits<MI100, float64_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 0
+    };
+};
+
+// MI-200
+template <>
+struct MfmaPerfTraits<MI200, int8_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 1024
+    };
+};
+
+template <>
+struct MfmaPerfTraits<MI200, bfloat16_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 512
+    };
+};
+
+template <>
+struct MfmaPerfTraits<MI200, float16_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 1024
+    };
+};
+
+template <>
+struct MfmaPerfTraits<MI200, float32_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 256
+    };
+};
+
+template <>
+struct MfmaPerfTraits<MI200, float64_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 256
+    };
+};
+
+template <typename GfxArch>
+struct MfmaPerfTraits<GfxArch, hfloat16_t> : public MfmaPerfTraits<GfxArch, float16_t>
+{
+};
+
+template <typename GfxArch, typename DataT>
+struct VALUPerfTraits;
+
+// MI-100
+template <>
+struct VALUPerfTraits<MI100, int8_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 256
+    };
+};
+
+template <>
+struct VALUPerfTraits<MI100, bfloat16_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 128
+    };
+};
+
+template <>
+struct VALUPerfTraits<MI100, float16_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 256
+    };
+};
+
+template <>
+struct VALUPerfTraits<MI100, float32_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 128
+    };
+};
+
+template <>
+struct VALUPerfTraits<MI100, float64_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 64
+    };
+};
+
+// MI200
+template <>
+struct VALUPerfTraits<MI200, int8_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 256
+    };
+};
+
+template <>
+struct VALUPerfTraits<MI200, bfloat16_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 128
+    };
+};
+
+template <>
+struct VALUPerfTraits<MI200, float16_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 256
+    };
+};
+
+template <>
+struct VALUPerfTraits<MI200, float32_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 128
+    };
+};
+
+template <>
+struct VALUPerfTraits<MI200, float64_t>
+{
+    enum : uint32_t
+    {
+        Multiplier = 128
+    };
+};
+
+template <typename GfxArch>
+struct VALUPerfTraits<GfxArch, hfloat16_t> : public VALUPerfTraits<GfxArch, float16_t>
+{
+};
 
 template <typename GfxArch>
 struct HardwareTraits;
@@ -170,50 +229,25 @@ struct HardwareTraits<MI200>
     };
 };
 
-inline double calculateAccumGFlops(uint32_t m, uint32_t n, uint32_t k)
+inline double calculateGFlops(uint32_t m, uint32_t n, uint32_t k)
 {
-    constexpr double flopsPerAccum = 2.0;
-    return flopsPerAccum * static_cast<double>(m) * static_cast<double>(n) * static_cast<double>(k)
+    return 2.0 * static_cast<double>(m) * static_cast<double>(n) * static_cast<double>(k)
            / 1000000000.0;
-}
-
-inline double calculateBlendGFlops(uint32_t m, uint32_t n, uint32_t k)
-{
-    constexpr double flopsPerBlend = 3.0;
-    return flopsPerBlend * static_cast<double>(m) * static_cast<double>(n) / 1000000000.0;
-}
-
-inline double calculateTotalGFlops(uint32_t m, uint32_t n, uint32_t k)
-{
-    return calculateAccumGFlops(m, n, k) + calculateBlendGFlops(m, n, k);
 }
 
 inline double calculateGFlopsPerSec(uint32_t m, uint32_t n, uint32_t k, double elapsedTimeMs)
 {
-    return calculateTotalGFlops(m, n, k) / elapsedTimeMs * 1000.0;
+    return calculateGFlops(m, n, k) / elapsedTimeMs * 1000.0;
 }
 
 template <typename InputT,
-          typename ComputeT,
           typename GfxArch,
-          template <typename> class AccumPerfTraits = MfmaPerfTraits,
-          template <typename> class BlendPerfTraits = VALUPerfTraits>
-inline double calculatePeakGFlopsPerSec(uint32_t M, uint32_t N, uint32_t K, uint32_t freqMHz)
+          template <typename, typename> class PerfTraits = MfmaPerfTraits>
+inline double calculatePeakGFlopsPerSec(uint32_t freqMHz)
 {
-    auto accumGFlops = calculateAccumGFlops(M, N, K);
-    auto blendGFlops = calculateBlendGFlops(M, N, K);
-    auto totalGFlops = accumGFlops + blendGFlops;
-
-    auto accumMultiplier = static_cast<double>(AccumPerfTraits<InputT>::Multiplier);
-    auto blendMultiplier = static_cast<double>(BlendPerfTraits<ComputeT>::Multiplier);
-
-    auto basePeakGFlops
-        = static_cast<double>(64.0 * HardwareTraits<GfxArch>::CuCount * freqMHz) / 1000.0;
-
-    return (accumGFlops / totalGFlops * accumMultiplier * basePeakGFlops)
-           + // Portion of peak flops in accumulation
-           (blendGFlops / totalGFlops * blendMultiplier
-            * basePeakGFlops); // Portion of peak flops in blending
+    return static_cast<double>(PerfTraits<GfxArch, InputT>::Multiplier)
+           * static_cast<double>(HardwareTraits<GfxArch>::CuCount) * static_cast<double>(freqMHz)
+           / 1000.0;
 }
 
 #endif // WMMA_PERFORMANCE_H
