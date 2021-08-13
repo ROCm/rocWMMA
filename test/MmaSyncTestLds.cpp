@@ -245,8 +245,15 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
                               ComputeT alpha,
                               ComputeT beta)
 {
-    // Unsupported sizes
+    // Minimum matrix sizes
     if(m < BlockM * TBlockX / AMDGCN_WAVE_SIZE || n < BlockN * TBlockY || k < BlockK)
+    {
+        return;
+    }
+
+    // Max LDS usage
+    if(LDS_MAX_BYTES
+       < sizeof(InputT) * (blockDim.x / 64 * blockDim.y) * (BlockN * BlockK + BlockM * BlockK))
     {
         return;
     }
@@ -505,7 +512,7 @@ inline void test_mma_sync_h_32x32(uint32_t TBlockX,
     test_mma_sync_h<32, 32, 16, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
     test_mma_sync_h<32, 32, 32, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
     test_mma_sync_h<32, 32, 64, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
-    //test_mma_sync_h<32, 32, 128, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    test_mma_sync_h<32, 32, 128, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
 }
 
 template <typename InputT, typename OutputT, typename ComputeT>
@@ -524,17 +531,16 @@ inline void test_mma_sync_h_16x16(uint32_t TBlockX,
     test_mma_sync_h<16, 16, 32, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
     test_mma_sync_h<16, 16, 64, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
     test_mma_sync_h<16, 16, 128, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
-    //test_mma_sync_h<16, 16, 256, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
-    // test_mma_sync_h<16, 16, 512, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
+    test_mma_sync_h<16, 16, 256, InputT, OutputT, ComputeT>(TBlockX, TBlockY, M, N, K, alpha, beta);
 }
 
 template <typename InputT, typename OutputT, typename ComputeT>
 void test_mma_sync_h()
 {
     // clang-format off
-    std::vector<std::array<int, 2>> thread_block = {{64, 1}, {64, 2}, {64, 4},
-                                                    {128,1}, {128,2},
-                                                    {256,1}};
+    std::vector<std::array<int, 2>> thread_block = {{64, 1},  {64, 2}, {64, 4},
+                                                    {128, 1}, {128, 2},
+                                                    {256, 1}};
 
     std::vector<std::array<int, 3>> problem_sizes = {{64, 64, 1024},
                                                      {32, 64, 1024},
