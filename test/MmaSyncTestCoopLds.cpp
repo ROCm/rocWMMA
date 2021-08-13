@@ -252,8 +252,15 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
                               ComputeT alpha,
                               ComputeT beta)
 {
-    // Unsupported sizes
+    // Minimum matrix sizes
     if(m < BlockM * TBlockX / AMDGCN_WAVE_SIZE || n < BlockN * TBlockY || k < BlockK)
+    {
+        return;
+    }
+
+    // Max LDS usage
+    if(LDS_MAX_BYTES
+       < sizeof(InputT) * (TBlockX / 64 * BlockM * BlockK + TBlockY * BlockK * BlockN))
     {
         return;
     }
@@ -587,9 +594,9 @@ template <>
 void test_mma_sync_h<float64_t, float64_t, float64_t>()
 {
     // clang-format off
-    std::vector<std::array<int, 2>> thread_block = {{64, 1}, {64, 2}, {64, 4},
-                                                    {128,1}, {128,2},
-                                                    {256,1}};
+    std::vector<std::array<int, 2>> thread_block = {{64,  1}, {64, 2}, {64, 4},
+                                                    {128, 1}, {128, 2},
+                                                    {256, 1}};
 
     std::vector<std::array<int, 3>> problem_sizes = {{64, 64, 1024},
                                                      {32, 64, 1024},
