@@ -14,11 +14,11 @@ template <uint32_t BlockDim,
           typename DataLayout,
           template <uint32_t, uint32_t, typename, typename, uint32_t>
           class LoadLayout,
-          uint32_t ElementsPerThread,
+          uint32_t VectorWidth,
           uint32_t SpCount = 0>
 struct amdgcn_cooperative_load_DxK
 {
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT>;
+    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
     struct Traits
     {
         enum : uint32_t
@@ -40,13 +40,10 @@ struct amdgcn_cooperative_load_DxK
                                               DataT,
                                               DataLayout,
                                               LoadLayout,
-                                              ElementsPerThread>;
+                                              VectorWidth>;
 
-        using LoaderLayout = LoadLayout<BlockDim,
-                                        BlockK / Traits::SplitCount,
-                                        DataT,
-                                        DataLayout,
-                                        ElementsPerThread>;
+        using LoadLayoutT
+            = LoadLayout<BlockDim, BlockK / Traits::SplitCount, DataT, DataLayout, VectorWidth>;
     };
 
     __device__ static inline void exec(typename Traits::OutputT& output,
@@ -55,15 +52,16 @@ struct amdgcn_cooperative_load_DxK
                                        uint32_t                  waveIndex,
                                        uint32_t                  waveCount)
     {
-        using Loader       = typename Traits::Loader;
-        using LoaderLayout = typename Traits::LoaderLayout;
+        using Loader      = typename Traits::Loader;
+        using LoadLayoutT = typename Traits::LoadLayoutT;
 
         // For the cases where there are more groups than splits.
-        waveIndex = waveIndex % Traits::SplitCount;
+        if(waveIndex >= Traits::SplitCount)
+            return;
 
         // Determine offset for the current wave, and
         // emplace the partial load into the output.
-        auto loadOffset = LoaderLayout::dataBlockOffset(ldm) * waveIndex;
+        auto loadOffset = LoadLayoutT::dataBlockOffset(ldm) * waveIndex;
 
         auto it = output.template begin<Traits::OutputT::size() / Traits::SplitCount>();
 
@@ -103,14 +101,8 @@ template <uint32_t BlockDim,
           typename DataLayout,
           template <uint32_t, uint32_t, typename, typename, uint32_t>
           class LoadLayout,
-          uint32_t ElementsPerThread>
-struct amdgcn_cooperative_load_DxK<BlockDim,
-                                   BlockK,
-                                   DataT,
-                                   DataLayout,
-                                   LoadLayout,
-                                   ElementsPerThread,
-                                   0>
+          uint32_t VectorWidth>
+struct amdgcn_cooperative_load_DxK<BlockDim, BlockK, DataT, DataLayout, LoadLayout, VectorWidth, 0>
 {
     template <uint32_t SplitCount>
     using CooperativeLoad = amdgcn_cooperative_load_DxK<BlockDim,
@@ -118,16 +110,23 @@ struct amdgcn_cooperative_load_DxK<BlockDim,
                                                         DataT,
                                                         DataLayout,
                                                         LoadLayout,
-                                                        ElementsPerThread,
+                                                        VectorWidth,
                                                         SplitCount>;
 
-    // All loads will have the same result type
     struct Traits
     {
+        // All loads will have the same result type
         using OutputT = typename CooperativeLoad<1>::Traits::OutputT;
+
+        // Determine the allowable split count from the layout
+        using LoadLayoutT = LoadLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
+        enum : uint32_t
+        {
+            MaxSplit = std::max(BlockK / LoadLayoutT::Traits::MinK, 1u),
+        };
     };
 
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
+    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
 
     /*
     * While we try to do the runtime dispatching, we need to make sure that we only
@@ -144,7 +143,7 @@ struct amdgcn_cooperative_load_DxK<BlockDim,
     template <typename OutgoingT,
               typename std::enable_if<std::is_same<typename Traits::OutputT,
                                                    typename std::decay<OutgoingT>::type>::value
-                                          && IOTraits::IOCount / PackTraits<DataT>::PackRatio >= 8,
+                                          && Traits::MaxSplit >= 8,
                                       int>::type
               = 0>
     __device__ static inline void exec(OutgoingT&&  output,
@@ -183,7 +182,7 @@ struct amdgcn_cooperative_load_DxK<BlockDim,
     template <typename OutgoingT,
               typename std::enable_if<std::is_same<typename Traits::OutputT,
                                                    typename std::decay<OutgoingT>::type>::value
-                                          && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 4,
+                                          && Traits::MaxSplit == 4,
                                       int>::type
               = 0>
     __device__ static inline void exec(OutgoingT&&  output,
@@ -217,7 +216,7 @@ struct amdgcn_cooperative_load_DxK<BlockDim,
     template <typename OutgoingT,
               typename std::enable_if<std::is_same<typename Traits::OutputT,
                                                    typename std::decay<OutgoingT>::type>::value
-                                          && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 2,
+                                          && Traits::MaxSplit == 2,
                                       int>::type
               = 0>
     __device__ static inline void exec(OutgoingT&&  output,
@@ -246,7 +245,7 @@ struct amdgcn_cooperative_load_DxK<BlockDim,
     template <typename OutgoingT,
               typename std::enable_if<std::is_same<typename Traits::OutputT,
                                                    typename std::decay<OutgoingT>::type>::value
-                                          && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 1,
+                                          && Traits::MaxSplit == 1,
                                       int>::type
               = 0>
     __device__ static inline void exec(OutgoingT&&  output,
@@ -270,7 +269,7 @@ struct amdgcn_cooperative_load_DxK<BlockDim,
     template <typename OutgoingT,
               typename std::enable_if<std::is_same<typename Traits::OutputT,
                                                    typename std::decay<OutgoingT>::type>::value
-                                          && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 0,
+                                          && Traits::MaxSplit == 0,
                                       int>::type
               = 0>
     __device__ static inline void exec(OutgoingT&&  output,
