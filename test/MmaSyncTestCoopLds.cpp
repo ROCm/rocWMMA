@@ -169,8 +169,9 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
 
             while(addrA != endA)
             {
-                // When loading from LDS, each wave must load a copy of the full fragment.
-                __syncthreads();
+                // Each wave must load a copy of the full fragment from LDS.
+                // Synchronize here to ensure that all waves have written to LDS.
+                wmma::synchronize_workgroup();
                 wmma::load_matrix_sync(reinterpret_cast<FragLdsA&>(fragA), addrLdsA, ldLds);
                 wmma::load_matrix_sync(reinterpret_cast<FragLdsB&>(fragB), addrLdsB, ldLds);
 
@@ -180,10 +181,11 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
                 wmma::load_matrix_sync(fragANext, addrA, lda);
                 wmma::load_matrix_sync(fragBNext, addrB, ldb);
 
-                // Mma for current block
-                __syncthreads();
+                // Mma for current block.
                 wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
 
+                // MUST synchronize here to ensure that all waves have read from LDS.
+                wmma::synchronize_workgroup();
                 wmma::store_matrix_coop_sync(
                     addrLdsA, reinterpret_cast<FragLdsA&>(fragANext), ldLds);
                 wmma::store_matrix_coop_sync(
@@ -193,11 +195,10 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
                 addrB += incrB;
             }
 
-            // Mma for the last block
-            __syncthreads();
+            // Sync point and mma for the last block
+            wmma::synchronize_workgroup();
             wmma::load_matrix_sync(reinterpret_cast<FragLdsA&>(fragA), addrLdsA, ldLds);
             wmma::load_matrix_sync(reinterpret_cast<FragLdsB&>(fragB), addrLdsB, ldLds);
-            __syncthreads();
             wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
         }
 
