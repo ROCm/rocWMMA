@@ -253,7 +253,7 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
 
     // Max LDS usage
     if(LDS_MAX_BYTES
-       < sizeof(InputT) * (blockDim.x / 64 * blockDim.y) * (BlockN * BlockK + BlockM * BlockK))
+       < sizeof(InputT) * (TBlockX / 64 * TBlockY) * (BlockN * BlockK + BlockM * BlockK))
     {
         return;
     }
