@@ -307,13 +307,13 @@ __host__ void test_mma_sync_h(uint32_t TBlockX,
     CHECK_HIP_ERROR(hipEventDestroy(startEvent));
     CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
 
-    auto totalGFlops      = calculateTotalGFlops(m, n, k);
+    auto totalGFlops      = calculateGFlops(m, n, k);
     auto peakGFlopsPerSec = (idx == DeviceId_t::GFX908)
-                                ? calculatePeakGFlopsPerSec<InputT, ComputeT, MI100>(m, n, k, 1087)
-                                : calculatePeakGFlopsPerSec<InputT, ComputeT, MI200>(m, n, k, 985);
+                                ? calculatePeakGFlopsPerSec<InputT, MI100>(1087)
+                                : calculatePeakGFlopsPerSec<InputT, MI200>(985);
 
     auto actualGFlopsPerSec = calculateGFlopsPerSec(m, n, k, elapsedTimeMs);
-    auto efficiency         = actualGFlopsPerSec / peakGFlopsPerSec * 100.0f;
+    auto efficiency         = actualGFlopsPerSec / peakGFlopsPerSec * 100.0;
 
     std::cout << ", " << elapsedTimeMs << ", " << totalGFlops << ", " << actualGFlopsPerSec << ", "
               << efficiency << ", ";
