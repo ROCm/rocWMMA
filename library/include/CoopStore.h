@@ -14,11 +14,11 @@ template <uint32_t BlockDim,
           typename DataLayout,
           template <uint32_t, uint32_t, typename, typename, uint32_t>
           class StoreLayout,
-          uint32_t ElementsPerThread,
+          uint32_t VectorWidth,
           uint32_t SpCount = 0>
 struct amdgcn_cooperative_store_DxK
 {
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT>;
+    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
     struct Traits
     {
         enum : uint32_t
@@ -33,6 +33,16 @@ struct amdgcn_cooperative_store_DxK
         using InputT = VecT<DataT, IOTraits::UnpackedSize>;
         static_assert(InputT::size() % SplitCount == 0,
                       "Register count not divisible by SplitCount");
+
+        using Storer = amdgcn_opaque_store_DxK<BlockDim,
+                                               BlockK / Traits::SplitCount,
+                                               DataT,
+                                               DataLayout,
+                                               StoreLayout,
+                                               VectorWidth>;
+
+        using StoreLayoutT
+            = StoreLayout<BlockDim, BlockK / Traits::SplitCount, DataT, DataLayout, VectorWidth>;
     };
 
     __device__ static inline void exec(DataT*                         dataPtr,
@@ -41,45 +51,36 @@ struct amdgcn_cooperative_store_DxK
                                        uint32_t                       waveIndex,
                                        uint32_t                       waveCount)
     {
+        using Storer       = typename Traits::Storer;
+        using StoreLayoutT = typename Traits::StoreLayoutT;
+
         // For the cases where there are more groups than splits.
-        waveIndex = waveIndex % Traits::SplitCount;
+        if(waveIndex >= Traits::SplitCount)
+            return;
 
-        // Base address is the same, and split load by (SplitCount).
-        // Multiply the gridId by the split load count to get iterative offset per wave.
-        using Storer = amdgcn_opaque_store_DxK<BlockDim,
-                                               BlockK / Traits::SplitCount,
-                                               DataT,
-                                               DataLayout,
-                                               StoreLayout,
-                                               ElementsPerThread>;
-
-        using StoreLayoutT = StoreLayout<BlockDim,
-                                         BlockK / Traits::SplitCount,
-                                         DataT,
-                                         DataLayout,
-                                         ElementsPerThread>;
-
+        // Determine offset for the current wave, and
+        // scatter the partial input into memory.
         auto storeOffset = StoreLayoutT::dataBlockOffset(ldm) * waveIndex;
 
         auto it = input.template begin<Traits::InputT::size() / Traits::SplitCount>();
 
-// This next part is important for optimization.
-// The goal is to do a partial store and write only one part of the fragment.
-// However, from the compiler perspective it does not optimize assembly
-// correctly if we directly write only the middle of the fragment (e.g. not the first regs)
-// without referencing the rest of the fragment.
-// For example, we could easily do the following:
-//
-//  auto it =
-//      typename Traits::InputT::template Iterator<Traits::InputT::size() / Traits::SplitCount>(
-//        input, waveIndex);
-//  Storer::exec(dataPtr + storeOffset, *it, ldm);
-//
-// However we didn't touch the rest of the fragment, so the compiler may decide to dump the fragment
-// to memory as it will treat this as a sub-array access.
-//
-// To keep it in registers, iterate over the entire fragment and store only when we reach our intended
-// offset.
+        // This next part is important for optimization.
+        // The goal is to do a partial store and write only one part of the fragment.
+        // However, from the compiler perspective it does not optimize assembly
+        // correctly if we directly write only the middle of the fragment (e.g. not the first regs)
+        // without referencing the rest of the fragment.
+        // For example, we could easily do the following:
+        //
+        //  auto it =
+        //      typename Traits::InputT::template Iterator<Traits::InputT::size() / Traits::SplitCount>(
+        //        input, waveIndex);
+        //  Storer::exec(dataPtr + storeOffset, *it, ldm);
+        //
+        // However we didn't touch the rest of the fragment, so the compiler may decide to dump the fragment
+        // to memory as it will treat this as a sub-array access.
+        //
+        // To keep it in registers, iterate over the entire fragment and store only when we reach our intended
+        // offset.
 #pragma unroll
         for(uint32_t i = 0; i < Traits::SplitCount; ++i)
         {
@@ -99,13 +100,13 @@ template <uint32_t BlockDim,
           typename DataLayout,
           template <uint32_t, uint32_t, typename, typename, uint32_t>
           class StoreLayout,
-          uint32_t ElementsPerThread>
+          uint32_t VectorWidth>
 struct amdgcn_cooperative_store_DxK<BlockDim,
                                     BlockK,
                                     DataT,
                                     DataLayout,
                                     StoreLayout,
-                                    ElementsPerThread,
+                                    VectorWidth,
                                     0>
 {
     template <uint32_t SplitCount>
@@ -114,16 +115,23 @@ struct amdgcn_cooperative_store_DxK<BlockDim,
                                                           DataT,
                                                           DataLayout,
                                                           StoreLayout,
-                                                          ElementsPerThread,
+                                                          VectorWidth,
                                                           SplitCount>;
 
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
-
-    // All stores will have the same input type
     struct Traits
     {
+        // All stores will have the same input type
         using InputT = typename CooperativeStore<1>::Traits::InputT;
+
+        // Determine the allowable split count from the layout
+        using StoreLayoutT = StoreLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
+        enum : uint32_t
+        {
+            MaxSplit = std::max(BlockK / StoreLayoutT::Traits::MinK, 1u),
+        };
     };
+
+    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
 
     /*
     * While we try to do the runtime dispatching, we need to make sure that we only
@@ -140,7 +148,7 @@ struct amdgcn_cooperative_store_DxK<BlockDim,
     template <typename IncomingT,
               typename std::enable_if<
                   std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && IOTraits::IOCount / PackTraits<DataT>::PackRatio >= 8,
+                      && Traits::MaxSplit >= 8,
                   int>::type
               = 0>
     __device__ static inline void exec(
@@ -176,7 +184,7 @@ struct amdgcn_cooperative_store_DxK<BlockDim,
     template <typename IncomingT,
               typename std::enable_if<
                   std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 4,
+                      && Traits::MaxSplit == 4,
                   int32_t>::type
               = 0>
     __device__ static inline void exec(
@@ -207,7 +215,7 @@ struct amdgcn_cooperative_store_DxK<BlockDim,
     template <typename IncomingT,
               typename std::enable_if<
                   std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 2,
+                      && Traits::MaxSplit == 2,
                   int32_t>::type
               = 0>
     __device__ static inline void exec(
@@ -232,7 +240,7 @@ struct amdgcn_cooperative_store_DxK<BlockDim,
     template <typename IncomingT,
               typename std::enable_if<
                   std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 1,
+                      && Traits::MaxSplit == 1,
                   int32_t>::type
               = 0>
     __device__ static inline void exec(
@@ -253,7 +261,7 @@ struct amdgcn_cooperative_store_DxK<BlockDim,
     template <typename IncomingT,
               typename std::enable_if<
                   std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && IOTraits::IOCount / PackTraits<DataT>::PackRatio == 0,
+                      && Traits::MaxSplit == 0,
                   int32_t>::type
               = 0>
     __device__ static inline void exec(
