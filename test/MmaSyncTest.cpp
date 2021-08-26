@@ -116,6 +116,11 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
             auto count = k / BlockK;
             for(int i = 0; i < count; i++)
             {
+                // Keeping the workgroup in sync here is not necessary for correctness.
+                // HOWEVER, if we keep waves in sync chances are good we may
+                // benefit from cache hits on re-used data from A and B global loads.
+                wmma::synchronize_workgroup();
+
                 auto fragA = FragA();
                 auto fragB = FragB();
 

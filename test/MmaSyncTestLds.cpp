@@ -165,7 +165,10 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
 
             while(addrA != endA)
             {
-                __syncthreads();
+                // Keeping the workgroup in sync here is not necessary for correctness.
+                // HOWEVER, if we keep waves in sync chances are good we may
+                // benefit from cache hits on re-used data from A and B global loads.
+                wmma::synchronize_workgroup();
                 wmma::load_matrix_sync(reinterpret_cast<FragLdsA&>(fragA), addrLdsA, ldLds);
                 wmma::load_matrix_sync(reinterpret_cast<FragLdsB&>(fragB), addrLdsB, ldLds);
 
@@ -176,7 +179,6 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
                 wmma::load_matrix_sync(fragBNext, addrB, ldb);
 
                 // Mma for current block
-                __syncthreads();
                 wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
 
                 wmma::store_matrix_sync(addrLdsA, reinterpret_cast<FragLdsA&>(fragANext), ldLds);
@@ -187,10 +189,8 @@ __global__ void __launch_bounds__(256, 1) test_mma_sync_d(uint32_t       m,
             }
 
             // Mma for the last block
-            __syncthreads();
             wmma::load_matrix_sync(reinterpret_cast<FragLdsA&>(fragA), addrLdsA, ldLds);
             wmma::load_matrix_sync(reinterpret_cast<FragLdsB&>(fragB), addrLdsB, ldLds);
-            __syncthreads();
             wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
         }
 
