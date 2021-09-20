@@ -57,6 +57,7 @@ add_wmma_test(FillFragmentTest FillFragmentTest.cpp)
 add_wmma_test(MappingUtilTest MappingUtilTest.cpp)
 add_wmma_test(LayoutTest LayoutTest.cpp)
 add_wmma_test(ContaminationTest ContaminationTest.cpp)
+add_wmma_test(BarrierTest BarrierTest.cpp)
 
 add_wmma_test(MmaSyncTest-bench MmaSyncTest.cpp)
 add_wmma_test(MmaSyncTestLds-bench MmaSyncTestLds.cpp)
