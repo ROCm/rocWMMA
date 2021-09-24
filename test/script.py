@@ -48,10 +48,8 @@ for key, item in grouped:
 
         for key2, item2 in groupK:
             dfK = groupK.get_group(key2)
-
             groupLayout = dfK.groupby('LytA_LytB_LytC_LytD')
 
-            print(ng)
             targets = zip(groupLayout.groups.keys(), axs.flatten())
 
             for (key3, ax) in targets:
