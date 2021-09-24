@@ -13,28 +13,28 @@ AMD's C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications 
 - Matrix Layout <LayoutA, LayoutB, Layout C, LayoutD> (N = col major, T = row major)
 
     <N, N, N, N>,  <N, N, T, T>
-    
+
     <N, T, N, N>, <N, T, T, T>
-    
+
     <T, N, N, N>, <T, N, T, T>
-    
+
     <T, T, N, N>, <T, T, T, T>
 
 - Thread Block Sizes <TBlockX, TBlockY> =
 **Note: TBlockX must be a multiple of 64 **
 
     <64, 1>, <64, 2>, <64, 4>
-    
+
     <128, 1>, <128, 2>, <128, 4>
-    
+
     <256, 1>, <256, 2>, <256, 4>
 
 - Data Types <Ti / To / Tc> = <Input type / Output Type / Compute Type>
 
     Input Type = Matrix A/B
-    
+
     Output Type = Matrix C/D
-    
+
     Compute Type = math / accumulation type
 
 <table>
@@ -209,7 +209,7 @@ AMD's C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications 
         </tr>
     </tbody>
   </table>
-    
+
 
 
 
@@ -227,6 +227,9 @@ Fragments are stored in packed registers in optimal load / store patterns. In-re
 
 ### mma_sync
 MFMA accumulation is performed with fragment data. Fragment A cols are multiplied with Fragment B rows and added to the accumulator fragment.
+
+### synchronize_workgroup
+Performs synchronization across multiple wavefronts in a workgroup. It also ensures the synchronization of shared/global memory accesses across wavefronts.
 
 ## Contributing to the code
 Clone the repo to current directory:
