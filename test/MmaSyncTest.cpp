@@ -1,3 +1,28 @@
+/*******************************************************************************
+ *
+ * MIT License
+ *
+ * Copyright 2021 Advanced Micro Devices, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
 #include <hip/hip_ext.h>
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
@@ -179,7 +204,7 @@ template <uint32_t BlockM,
           typename LayoutD>
 class Kernel
 {
-    public:
+public:
     Kernel(uint32_t TBlockXI,
            uint32_t TBlockYI,
            uint32_t m,
@@ -190,11 +215,11 @@ class Kernel
     {
         TBlockX = TBlockXI;
         TBlockY = TBlockYI;
-        M = m;
-        N = n;
-        K = k;
-        Alpha = alpha;
-        Beta = beta;
+        M       = m;
+        N       = n;
+        K       = k;
+        Alpha   = alpha;
+        Beta    = beta;
 
         // unsupported sizes
         if(M < BlockM * TBlockX / AMDGCN_WAVE_SIZE || N < TBlockY * BlockN || K < BlockK)
@@ -203,7 +228,7 @@ class Kernel
         idx = getCurrentDeviceId();
         // gfx908 does not have mfma for fp64
         if(idx == DeviceId_t::UNKNOWN
-            || (idx == DeviceId_t::GFX908 && std::is_same<InputT, float64_t>::value))
+           || (idx == DeviceId_t::GFX908 && std::is_same<InputT, float64_t>::value))
         {
             return;
         }
@@ -217,19 +242,20 @@ class Kernel
         {
             std::cout
                 << "TBlkX, TBlkY, BlkM, BlkN, BlkK, MatM, MatN, MatK, alpha, lda, ldb, beta, ldc, "
-                "ldd, LytA_LytB_LytC_LytD, Ti_To_Tc, elapsedMs, GFlops, GFlops/s, Efficiency(%)\n";
+                   "ldd, LytA_LytB_LytC_LytD, Ti_To_Tc, elapsedMs, GFlops, GFlops/s, "
+                   "Efficiency(%)\n";
             headerPrinted = true;
         }
 
-        std::cout << TBlockX << ", " << TBlockY << ", " << BlockM << ", " << BlockN << ", " << BlockK
-              << ", " << M << ", " << N << ", " << K << ", " << Alpha << ", " << lda << ", " << ldb
-              << ", " << Beta << ", " << ldc << ", " << ldd << ", "
-              << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << "_"
-              << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << "_"
-              << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << "_"
-              << (std::is_same<LayoutD, row_major>::value ? "R" : "C") << ", "
-              << dataTypeToString<InputT>() << "_" << dataTypeToString<OutputT>() << "_"
-              << dataTypeToString<ComputeT>();
+        std::cout << TBlockX << ", " << TBlockY << ", " << BlockM << ", " << BlockN << ", "
+                  << BlockK << ", " << M << ", " << N << ", " << K << ", " << Alpha << ", " << lda
+                  << ", " << ldb << ", " << Beta << ", " << ldc << ", " << ldd << ", "
+                  << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << "_"
+                  << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << "_"
+                  << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << "_"
+                  << (std::is_same<LayoutD, row_major>::value ? "R" : "C") << ", "
+                  << dataTypeToString<InputT>() << "_" << dataTypeToString<OutputT>() << "_"
+                  << dataTypeToString<ComputeT>();
 
         if(quirks::hipcc_bug_half_packing<OutputT, LayoutC>::value)
         {
@@ -273,10 +299,10 @@ class Kernel
         CHECK_HIP_ERROR(hipMemcpy(d_d, matrixD.data(), bytesD, hipMemcpyHostToDevice));
 
         gridDim
-        = dim3(ceilDiv(m, BlockM * TBlockX / AMDGCN_WAVE_SIZE), ceilDiv(n, BlockN * TBlockY));
+            = dim3(ceilDiv(m, BlockM * TBlockX / AMDGCN_WAVE_SIZE), ceilDiv(n, BlockN * TBlockY));
 
         blockDim = dim3(TBlockX, TBlockY);
-     }
+    }
 
     void MmaSyncTestKernel()
     {
@@ -291,7 +317,7 @@ class Kernel
 
         // gfx908 does not have mfma for fp64
         if(idx == DeviceId_t::UNKNOWN
-            || (idx == DeviceId_t::GFX908 && std::is_same<InputT, float64_t>::value))
+           || (idx == DeviceId_t::GFX908 && std::is_same<InputT, float64_t>::value))
         {
             return;
         }
@@ -333,7 +359,7 @@ class Kernel
         CHECK_HIP_ERROR(hipEventDestroy(startEvent));
         CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
 
-        auto totalGFlops      = calculateGFlops(M, N, K);
+        auto totalGFlops = calculateGFlops(M, N, K);
 
         auto peakGFlopsPerSec = (idx == DeviceId_t::GFX908)
                                     ? calculatePeakGFlopsPerSec<InputT, MI100>(1087)
@@ -342,8 +368,8 @@ class Kernel
         auto actualGFlopsPerSec = calculateGFlopsPerSec(M, N, K, elapsedTimeMs);
         auto efficiency         = actualGFlopsPerSec / peakGFlopsPerSec * 100.0f;
 
-        std::cout << ", " << elapsedTimeMs << ", " << totalGFlops << ", " << actualGFlopsPerSec << ", "
-                  << efficiency << ", ";
+        std::cout << ", " << elapsedTimeMs << ", " << totalGFlops << ", " << actualGFlopsPerSec
+                  << ", " << efficiency << ", ";
     }
 
     ~Kernel()
@@ -359,7 +385,7 @@ class Kernel
 
         // gfx908 does not have mfma for fp64
         if(idx == DeviceId_t::UNKNOWN
-            || (idx == DeviceId_t::GFX908 && std::is_same<InputT, float64_t>::value))
+           || (idx == DeviceId_t::GFX908 && std::is_same<InputT, float64_t>::value))
         {
             return;
         }
@@ -404,25 +430,25 @@ class Kernel
             validated = true;
         }
 #endif // WMMA_VALIDATE_WITH_ROCBLAS
-        
+
         if(!validated)
         {
-            gemm_CPU<InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD>(M,
-                                                                                    N,
-                                                                                    K,
-                                                                                    matrixA.data(),
-                                                                                    matrixB.data(),
-                                                                                    matrixC.data(),
-                                                                                    matrixD_ref.data(),
-                                                                                    Alpha,
-                                                                                    Beta);
-        
+            gemm_CPU<InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD>(
+                M,
+                N,
+                K,
+                matrixA.data(),
+                matrixB.data(),
+                matrixC.data(),
+                matrixD_ref.data(),
+                Alpha,
+                Beta);
+
             EXPECT_TRUE((compareEqual<OutputT, OutputT, LayoutD, LayoutD>(
                 matrixD, matrixD_ref, M, N, errorTolerance)));
-
         }
-#else // WMMA_VALIDATE_TESTS
-        // No validation, close off the line.
+#else // WMMA_VALIDATE_TESTS \
+    // No validation, close off the line.
         std::cout << std::endl;
 
 #endif // WMMA_VALIDATE_TESTS
@@ -434,27 +460,32 @@ class Kernel
         CHECK_HIP_ERROR(hipFree(d_d));
     }
 
-    private:
-        uint32_t M, N, K, TBlockX, TBlockY;
-        ComputeT Alpha, Beta;
-        InputT *d_a, *d_b;
-        OutputT *d_c, *d_d;
-        dim3 gridDim, blockDim;
-        std::vector<InputT>  matrixA, matrixB;
-        std::vector<OutputT> matrixC, matrixD;
-        DeviceId_t idx;
+private:
+    uint32_t             M, N, K, TBlockX, TBlockY;
+    ComputeT             Alpha, Beta;
+    InputT *             d_a, *d_b;
+    OutputT *            d_c, *d_d;
+    dim3                 gridDim, blockDim;
+    std::vector<InputT>  matrixA, matrixB;
+    std::vector<OutputT> matrixC, matrixD;
+    DeviceId_t           idx;
 };
 
 template <typename T>
 struct MmaSyncTestWrapper;
 
-template<typename BlockM, typename BlockN, typename BlockK, 
-         typename InputT, typename OutputT, typename ComputeT>
-struct MmaSyncTestWrapper<std::tuple<BlockM, BlockN, BlockK, InputT, OutputT, ComputeT>> : public testing::Test
+template <typename BlockM,
+          typename BlockN,
+          typename BlockK,
+          typename InputT,
+          typename OutputT,
+          typename ComputeT>
+struct MmaSyncTestWrapper<std::tuple<BlockM, BlockN, BlockK, InputT, OutputT, ComputeT>>
+    : public testing::Test
 {
-    void SetUp() override 
+    void SetUp() override
     {
-    // clang-format off
+        // clang-format off
     std::vector<std::array<int, 2>> thread_block = {{64, 1}, {64, 2}, {64, 4},
                                                     {128,1}, {128,2},
                                                     {256,1}};
@@ -475,31 +506,52 @@ struct MmaSyncTestWrapper<std::tuple<BlockM, BlockN, BlockK, InputT, OutputT, Co
                                                      {6144, 6144, 6144},
                                                      {7168, 7168, 7168},
                                                      {8192, 8192, 8192}};
-    
+
         // clang-format on
         int i = 0;
         for(auto tblock : thread_block)
         {
             for(auto size : problem_sizes)
             {
-                // skip large sizes when in validation mode
-                #ifdef WMMA_VALIDATE_TESTS
+// skip large sizes when in validation mode
+#ifdef WMMA_VALIDATE_TESTS
                 if(size[0] * size[1] > 1024 * 1024)
                     continue;
-                #endif // WMMA_VALIDATE_TESTS
+#endif // WMMA_VALIDATE_TESTS
                 std::tuple<row_major, col_major> types;
                 for_each(types, [&](auto layout_a) {
                     for_each(types, [&](auto layout_b) {
                         for_each(types, [&](auto layout_c) {
-                            Kernel<BlockM::value, BlockN::value, BlockK::value, InputT,
-                                OutputT, ComputeT, decltype(layout_a), decltype(layout_b),
-                                decltype(layout_c), decltype(layout_c)> *obj = new Kernel<BlockM::value, BlockN::value, BlockK::value, InputT,
-                                OutputT, ComputeT, decltype(layout_a), decltype(layout_b),
-                                decltype(layout_c), decltype(layout_c)>(tblock[0], tblock[1], size[0], size[1], size[2], ComputeT(2.0f), ComputeT(2.0f));
+                            Kernel<BlockM::value,
+                                   BlockN::value,
+                                   BlockK::value,
+                                   InputT,
+                                   OutputT,
+                                   ComputeT,
+                                   decltype(layout_a),
+                                   decltype(layout_b),
+                                   decltype(layout_c),
+                                   decltype(layout_c)>* obj
+                                = new Kernel<BlockM::value,
+                                             BlockN::value,
+                                             BlockK::value,
+                                             InputT,
+                                             OutputT,
+                                             ComputeT,
+                                             decltype(layout_a),
+                                             decltype(layout_b),
+                                             decltype(layout_c),
+                                             decltype(layout_c)>(tblock[0],
+                                                                 tblock[1],
+                                                                 size[0],
+                                                                 size[1],
+                                                                 size[2],
+                                                                 ComputeT(2.0f),
+                                                                 ComputeT(2.0f));
 
-                                obj->MmaSyncTestKernel();
+                            obj->MmaSyncTestKernel();
 
-                                delete obj;
+                            delete obj;
                         });
                     });
                 });
@@ -507,99 +559,155 @@ struct MmaSyncTestWrapper<std::tuple<BlockM, BlockN, BlockK, InputT, OutputT, Co
         }
     }
 
-    void TearDown() override
-    {
-    }
+    void TearDown() override {}
 };
 
 using Implementations = testing::Types<
     // InputT, OutputT, ComputeT
     // Non-native bfloat16_t
-    std::tuple<I<16>, I<16>, I<16>, bfloat16_t, bfloat16_t, bfloat16_t>, std::tuple<I<16>, I<16>, I<32>, bfloat16_t, bfloat16_t, bfloat16_t>,
-    std::tuple<I<16>, I<16>, I<64>, bfloat16_t, bfloat16_t, bfloat16_t>, std::tuple<I<16>, I<16>, I<128>, bfloat16_t, bfloat16_t, bfloat16_t>,
-    std::tuple<I<16>, I<16>, I<256>, bfloat16_t, bfloat16_t, bfloat16_t>, std::tuple<I<32>, I<32>, I<8>, bfloat16_t, bfloat16_t, bfloat16_t>,
-    std::tuple<I<32>, I<32>, I<16>, bfloat16_t, bfloat16_t, bfloat16_t>, std::tuple<I<32>, I<32>, I<32>, bfloat16_t, bfloat16_t, bfloat16_t>,
-    std::tuple<I<32>, I<32>, I<64>, bfloat16_t, bfloat16_t, bfloat16_t>, std::tuple<I<32>, I<32>, I<128>, bfloat16_t, bfloat16_t, bfloat16_t>,
+    std::tuple<I<16>, I<16>, I<16>, bfloat16_t, bfloat16_t, bfloat16_t>,
+    std::tuple<I<16>, I<16>, I<32>, bfloat16_t, bfloat16_t, bfloat16_t>,
+    std::tuple<I<16>, I<16>, I<64>, bfloat16_t, bfloat16_t, bfloat16_t>,
+    std::tuple<I<16>, I<16>, I<128>, bfloat16_t, bfloat16_t, bfloat16_t>,
+    std::tuple<I<16>, I<16>, I<256>, bfloat16_t, bfloat16_t, bfloat16_t>,
+    std::tuple<I<32>, I<32>, I<8>, bfloat16_t, bfloat16_t, bfloat16_t>,
+    std::tuple<I<32>, I<32>, I<16>, bfloat16_t, bfloat16_t, bfloat16_t>,
+    std::tuple<I<32>, I<32>, I<32>, bfloat16_t, bfloat16_t, bfloat16_t>,
+    std::tuple<I<32>, I<32>, I<64>, bfloat16_t, bfloat16_t, bfloat16_t>,
+    std::tuple<I<32>, I<32>, I<128>, bfloat16_t, bfloat16_t, bfloat16_t>,
 
-    
-    std::tuple<I<16>, I<16>, I<16>, bfloat16_t, bfloat16_t, float32_t>, std::tuple<I<16>, I<16>, I<32>, bfloat16_t, bfloat16_t, float32_t>,
-    std::tuple<I<16>, I<16>, I<64>, bfloat16_t, bfloat16_t, float32_t>, std::tuple<I<16>, I<16>, I<128>, bfloat16_t, bfloat16_t, float32_t>,
-    std::tuple<I<16>, I<16>, I<256>, bfloat16_t, bfloat16_t, float32_t>, std::tuple<I<32>, I<32>,I<8>, bfloat16_t, bfloat16_t, float32_t>,
-    std::tuple<I<32>, I<32>, I<16>, bfloat16_t, bfloat16_t, float32_t>, std::tuple<I<32>, I<32>, I<32>, bfloat16_t, bfloat16_t, float32_t>,
-    std::tuple<I<32>, I<32>, I<64>, bfloat16_t, bfloat16_t, float32_t>, std::tuple<I<32>, I<32>, I<128>, bfloat16_t, bfloat16_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<16>, bfloat16_t, bfloat16_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<32>, bfloat16_t, bfloat16_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<64>, bfloat16_t, bfloat16_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<128>, bfloat16_t, bfloat16_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<256>, bfloat16_t, bfloat16_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<8>, bfloat16_t, bfloat16_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<16>, bfloat16_t, bfloat16_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<32>, bfloat16_t, bfloat16_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<64>, bfloat16_t, bfloat16_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<128>, bfloat16_t, bfloat16_t, float32_t>,
 
-    std::tuple<I<16>, I<16>, I<16>, bfloat16_t, float32_t, float32_t>, std::tuple<I<16>, I<16>, I<32>, bfloat16_t, float32_t, float32_t>,
-    std::tuple<I<16>, I<16>, I<64>, bfloat16_t, float32_t, float32_t>, std::tuple<I<16>, I<16>, I<128>, bfloat16_t, float32_t, float32_t>,
-    std::tuple<I<16>, I<16>, I<256>, bfloat16_t, float32_t, float32_t>, std::tuple<I<32>, I<32>,I<8>, bfloat16_t, float32_t, float32_t>,
-    std::tuple<I<32>, I<32>, I<16>, bfloat16_t, float32_t, float32_t>, std::tuple<I<32>, I<32>, I<32>, bfloat16_t, float32_t, float32_t>,
-    std::tuple<I<32>, I<32>, I<64>, bfloat16_t, float32_t, float32_t>, std::tuple<I<32>, I<32>, I<128>, bfloat16_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<16>, bfloat16_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<32>, bfloat16_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<64>, bfloat16_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<128>, bfloat16_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<256>, bfloat16_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<8>, bfloat16_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<16>, bfloat16_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<32>, bfloat16_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<64>, bfloat16_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<128>, bfloat16_t, float32_t, float32_t>,
 
     // Native fp16
-    std::tuple<I<16>, I<16>, I<16>, float16_t, float16_t, float16_t>, std::tuple<I<16>, I<16>, I<32>, float16_t, float16_t, float16_t>,
-    std::tuple<I<16>, I<16>, I<64>, float16_t, float16_t, float16_t>, std::tuple<I<16>, I<16>, I<128>, float16_t, float16_t, float16_t>,
-    std::tuple<I<16>, I<16>, I<256>, float16_t, float16_t, float16_t>, std::tuple<I<32>, I<32>,I<8>, float16_t, float16_t, float16_t>, 
-    std::tuple<I<32>, I<32>, I<16>, float16_t, float16_t, float16_t>, std::tuple<I<32>, I<32>, I<32>, float16_t, float16_t, float16_t>,
-    std::tuple<I<32>, I<32>, I<64>, float16_t, float16_t, float16_t>, std::tuple<I<32>, I<32>, I<128>, float16_t, float16_t, float16_t>,
+    std::tuple<I<16>, I<16>, I<16>, float16_t, float16_t, float16_t>,
+    std::tuple<I<16>, I<16>, I<32>, float16_t, float16_t, float16_t>,
+    std::tuple<I<16>, I<16>, I<64>, float16_t, float16_t, float16_t>,
+    std::tuple<I<16>, I<16>, I<128>, float16_t, float16_t, float16_t>,
+    std::tuple<I<16>, I<16>, I<256>, float16_t, float16_t, float16_t>,
+    std::tuple<I<32>, I<32>, I<8>, float16_t, float16_t, float16_t>,
+    std::tuple<I<32>, I<32>, I<16>, float16_t, float16_t, float16_t>,
+    std::tuple<I<32>, I<32>, I<32>, float16_t, float16_t, float16_t>,
+    std::tuple<I<32>, I<32>, I<64>, float16_t, float16_t, float16_t>,
+    std::tuple<I<32>, I<32>, I<128>, float16_t, float16_t, float16_t>,
 
-    std::tuple<I<16>, I<16>, I<16>, float16_t, float16_t, float32_t>, std::tuple<I<16>, I<16>, I<32>, float16_t, float16_t, float32_t>,
-    std::tuple<I<16>, I<16>, I<64>, float16_t, float16_t, float32_t>, std::tuple<I<16>, I<16>, I<128>, float16_t, float16_t, float32_t>,
-    std::tuple<I<16>, I<16>, I<256>, float16_t, float16_t, float32_t>, std::tuple<I<32>, I<32>,I<8>, float16_t, float16_t, float32_t>,
-    std::tuple<I<32>, I<32>, I<16>, float16_t, float16_t, float32_t>, std::tuple<I<32>, I<32>, I<32>, float16_t, float16_t, float32_t>,
-    std::tuple<I<32>, I<32>, I<64>, float16_t, float16_t, float32_t>, std::tuple<I<32>, I<32>, I<128>, float16_t, float16_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<16>, float16_t, float16_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<32>, float16_t, float16_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<64>, float16_t, float16_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<128>, float16_t, float16_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<256>, float16_t, float16_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<8>, float16_t, float16_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<16>, float16_t, float16_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<32>, float16_t, float16_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<64>, float16_t, float16_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<128>, float16_t, float16_t, float32_t>,
 
-    std::tuple<I<16>, I<16>, I<16>, float16_t, float32_t, float32_t>, std::tuple<I<16>, I<16>, I<32>, float16_t, float32_t, float32_t>,
-    std::tuple<I<16>, I<16>, I<64>, float16_t, float32_t, float32_t>, std::tuple<I<16>, I<16>, I<128>, float16_t, float32_t, float32_t>,
-    std::tuple<I<16>, I<16>, I<256>, float16_t, float32_t, float32_t>, std::tuple<I<32>, I<32>,I<8>, float16_t, float32_t, float32_t>,
-    std::tuple<I<32>, I<32>, I<16>, float16_t, float32_t, float32_t>, std::tuple<I<32>, I<32>, I<32>, float16_t, float32_t, float32_t>,
-    std::tuple<I<32>, I<32>, I<64>, float16_t, float32_t, float32_t>, std::tuple<I<32>, I<32>, I<128>, float16_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<16>, float16_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<32>, float16_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<64>, float16_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<128>, float16_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<256>, float16_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<8>, float16_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<16>, float16_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<32>, float16_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<64>, float16_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<128>, float16_t, float32_t, float32_t>,
 
     // Native fp32
-    std::tuple<I<16>, I<16>, I<16>, float32_t, float32_t, float32_t>, std::tuple<I<16>, I<16>, I<32>, float32_t, float32_t, float32_t>,
-    std::tuple<I<16>, I<16>, I<64>, float32_t, float32_t, float32_t>, std::tuple<I<16>, I<16>, I<128>, float32_t, float32_t, float32_t>,
-    std::tuple<I<16>, I<16>, I<256>, float32_t, float32_t, float32_t>, std::tuple<I<32>, I<32>,I<8>, float32_t, float32_t, float32_t>,
-    std::tuple<I<32>, I<32>, I<16>, float32_t, float32_t, float32_t>, std::tuple<I<32>, I<32>, I<32>, float32_t, float32_t, float32_t>,
-    std::tuple<I<32>, I<32>, I<64>, float32_t, float32_t, float32_t>, std::tuple<I<32>, I<32>, I<128>, float32_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<16>, float32_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<32>, float32_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<64>, float32_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<128>, float32_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<256>, float32_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<8>, float32_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<16>, float32_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<32>, float32_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<64>, float32_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<128>, float32_t, float32_t, float32_t>,
 
     // Non-native hfloat16_t (i.e. __half)
-    std::tuple<I<16>, I<16>, I<16>, hfloat16_t, hfloat16_t, hfloat16_t>, std::tuple<I<16>, I<16>, I<32>, hfloat16_t, hfloat16_t, hfloat16_t>,
-    std::tuple<I<16>, I<16>, I<64>, hfloat16_t, hfloat16_t, hfloat16_t>, std::tuple<I<16>, I<16>, I<128>, hfloat16_t, hfloat16_t, hfloat16_t>,
-    std::tuple<I<16>, I<16>, I<256>, hfloat16_t, hfloat16_t, hfloat16_t>, std::tuple<I<32>, I<32>,I<8>, hfloat16_t, hfloat16_t, hfloat16_t>,
-    std::tuple<I<32>, I<32>, I<16>, hfloat16_t, hfloat16_t, hfloat16_t>, std::tuple<I<32>, I<32>, I<32>, hfloat16_t, hfloat16_t, hfloat16_t>,
-    std::tuple<I<32>, I<32>, I<64>, hfloat16_t, hfloat16_t, hfloat16_t>, std::tuple<I<32>, I<32>, I<128>, hfloat16_t, hfloat16_t, hfloat16_t>,
+    std::tuple<I<16>, I<16>, I<16>, hfloat16_t, hfloat16_t, hfloat16_t>,
+    std::tuple<I<16>, I<16>, I<32>, hfloat16_t, hfloat16_t, hfloat16_t>,
+    std::tuple<I<16>, I<16>, I<64>, hfloat16_t, hfloat16_t, hfloat16_t>,
+    std::tuple<I<16>, I<16>, I<128>, hfloat16_t, hfloat16_t, hfloat16_t>,
+    std::tuple<I<16>, I<16>, I<256>, hfloat16_t, hfloat16_t, hfloat16_t>,
+    std::tuple<I<32>, I<32>, I<8>, hfloat16_t, hfloat16_t, hfloat16_t>,
+    std::tuple<I<32>, I<32>, I<16>, hfloat16_t, hfloat16_t, hfloat16_t>,
+    std::tuple<I<32>, I<32>, I<32>, hfloat16_t, hfloat16_t, hfloat16_t>,
+    std::tuple<I<32>, I<32>, I<64>, hfloat16_t, hfloat16_t, hfloat16_t>,
+    std::tuple<I<32>, I<32>, I<128>, hfloat16_t, hfloat16_t, hfloat16_t>,
 
-    std::tuple<I<16>, I<16>, I<16>, hfloat16_t, hfloat16_t, float32_t>, std::tuple<I<16>, I<16>, I<32>, hfloat16_t, hfloat16_t, float32_t>,
-    std::tuple<I<16>, I<16>, I<64>, hfloat16_t, hfloat16_t, float32_t>, std::tuple<I<16>, I<16>, I<128>, hfloat16_t, hfloat16_t, float32_t>,
-    std::tuple<I<16>, I<16>, I<256>, hfloat16_t, hfloat16_t, float32_t>, std::tuple<I<32>, I<32>,I<8>, hfloat16_t, hfloat16_t, float32_t>,
-    std::tuple<I<32>, I<32>, I<16>, hfloat16_t, hfloat16_t, float32_t>, std::tuple<I<32>, I<32>, I<32>, hfloat16_t, hfloat16_t, float32_t>,
-    std::tuple<I<32>, I<32>, I<64>, hfloat16_t, hfloat16_t, float32_t>, std::tuple<I<32>, I<32>, I<128>, hfloat16_t, hfloat16_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<16>, hfloat16_t, hfloat16_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<32>, hfloat16_t, hfloat16_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<64>, hfloat16_t, hfloat16_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<128>, hfloat16_t, hfloat16_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<256>, hfloat16_t, hfloat16_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<8>, hfloat16_t, hfloat16_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<16>, hfloat16_t, hfloat16_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<32>, hfloat16_t, hfloat16_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<64>, hfloat16_t, hfloat16_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<128>, hfloat16_t, hfloat16_t, float32_t>,
 
-    std::tuple<I<16>, I<16>, I<16>, hfloat16_t, float32_t, float32_t>, std::tuple<I<16>, I<16>, I<32>, hfloat16_t, float32_t, float32_t>,
-    std::tuple<I<16>, I<16>, I<64>, hfloat16_t, float32_t, float32_t>, std::tuple<I<16>, I<16>, I<128>, hfloat16_t, float32_t, float32_t>,
-    std::tuple<I<16>, I<16>, I<256>, hfloat16_t, float32_t, float32_t>, std::tuple<I<32>, I<32>,I<8>, hfloat16_t, float32_t, float32_t>,
-    std::tuple<I<32>, I<32>, I<16>, hfloat16_t, float32_t, float32_t>, std::tuple<I<32>, I<32>, I<32>, hfloat16_t, float32_t, float32_t>,
-    std::tuple<I<32>, I<32>, I<64>, hfloat16_t, float32_t, float32_t>, std::tuple<I<32>, I<32>, I<128>, hfloat16_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<16>, hfloat16_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<32>, hfloat16_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<64>, hfloat16_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<128>, hfloat16_t, float32_t, float32_t>,
+    std::tuple<I<16>, I<16>, I<256>, hfloat16_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<8>, hfloat16_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<16>, hfloat16_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<32>, hfloat16_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<64>, hfloat16_t, float32_t, float32_t>,
+    std::tuple<I<32>, I<32>, I<128>, hfloat16_t, float32_t, float32_t>,
 
     // Native int8
-    std::tuple<I<16>, I<16>, I<16>, int8_t, int32_t, int32_t>, std::tuple<I<16>, I<16>, I<32>, int8_t, int32_t, int32_t>,
-    std::tuple<I<16>, I<16>, I<64>, int8_t, int32_t, int32_t>, std::tuple<I<16>, I<16>, I<128>, int8_t, int32_t, int32_t>,
-    std::tuple<I<16>, I<16>, I<256>, int8_t, int32_t, int32_t>, std::tuple<I<32>, I<32>,I<8>, int8_t, int32_t, int32_t>,
-    std::tuple<I<32>, I<32>, I<16>, int8_t, int32_t, int32_t>,  std::tuple<I<32>, I<32>, I<32>, int8_t, int32_t, int32_t>,
-    std::tuple<I<32>, I<32>, I<64>, int8_t, int32_t, int32_t>,  std::tuple<I<32>, I<32>, I<128>, int8_t, int32_t, int32_t>,
+    std::tuple<I<16>, I<16>, I<16>, int8_t, int32_t, int32_t>,
+    std::tuple<I<16>, I<16>, I<32>, int8_t, int32_t, int32_t>,
+    std::tuple<I<16>, I<16>, I<64>, int8_t, int32_t, int32_t>,
+    std::tuple<I<16>, I<16>, I<128>, int8_t, int32_t, int32_t>,
+    std::tuple<I<16>, I<16>, I<256>, int8_t, int32_t, int32_t>,
+    std::tuple<I<32>, I<32>, I<8>, int8_t, int32_t, int32_t>,
+    std::tuple<I<32>, I<32>, I<16>, int8_t, int32_t, int32_t>,
+    std::tuple<I<32>, I<32>, I<32>, int8_t, int32_t, int32_t>,
+    std::tuple<I<32>, I<32>, I<64>, int8_t, int32_t, int32_t>,
+    std::tuple<I<32>, I<32>, I<128>, int8_t, int32_t, int32_t>,
 
-    std::tuple<I<16>, I<16>, I<16>, int8_t, int8_t, int32_t>, std::tuple<I<16>, I<16>, I<32>, int8_t, int8_t, int32_t>,
-    std::tuple<I<16>, I<16>, I<64>, int8_t, int8_t, int32_t>, std::tuple<I<16>, I<16>, I<128>, int8_t, int8_t, int32_t>,
-    std::tuple<I<16>, I<16>, I<256>, int8_t, int8_t, int32_t>, std::tuple<I<32>, I<32>,I<8>, int8_t, int8_t, int32_t>,
-    std::tuple<I<32>, I<32>, I<16>, int8_t, int8_t, int32_t>, std::tuple<I<32>, I<32>, I<32>, int8_t, int8_t, int32_t>,
-    std::tuple<I<32>, I<32>, I<64>, int8_t, int8_t, int32_t>, std::tuple<I<32>, I<32>, I<128>, int8_t, int8_t, int32_t>,
-    
+    std::tuple<I<16>, I<16>, I<16>, int8_t, int8_t, int32_t>,
+    std::tuple<I<16>, I<16>, I<32>, int8_t, int8_t, int32_t>,
+    std::tuple<I<16>, I<16>, I<64>, int8_t, int8_t, int32_t>,
+    std::tuple<I<16>, I<16>, I<128>, int8_t, int8_t, int32_t>,
+    std::tuple<I<16>, I<16>, I<256>, int8_t, int8_t, int32_t>,
+    std::tuple<I<32>, I<32>, I<8>, int8_t, int8_t, int32_t>,
+    std::tuple<I<32>, I<32>, I<16>, int8_t, int8_t, int32_t>,
+    std::tuple<I<32>, I<32>, I<32>, int8_t, int8_t, int32_t>,
+    std::tuple<I<32>, I<32>, I<64>, int8_t, int8_t, int32_t>,
+    std::tuple<I<32>, I<32>, I<128>, int8_t, int8_t, int32_t>,
+
     // float64_t
-    std::tuple<I<16>, I<16>, I<16>, float64_t, float64_t, float64_t>, std::tuple<I<16>, I<16>, I<32>, float64_t, float64_t, float64_t>,
-    std::tuple<I<16>, I<16>, I<64>, float64_t, float64_t, float64_t>, std::tuple<I<16>, I<16>, I<128>, float64_t, float64_t, float64_t>,
+    std::tuple<I<16>, I<16>, I<16>, float64_t, float64_t, float64_t>,
+    std::tuple<I<16>, I<16>, I<32>, float64_t, float64_t, float64_t>,
+    std::tuple<I<16>, I<16>, I<64>, float64_t, float64_t, float64_t>,
+    std::tuple<I<16>, I<16>, I<128>, float64_t, float64_t, float64_t>,
     std::tuple<I<16>, I<16>, I<256>, float64_t, float64_t, float64_t>>;
 
 TYPED_TEST_SUITE(MmaSyncTestWrapper, Implementations);
 
-TYPED_TEST(MmaSyncTestWrapper, mmasynctest)
-{
-
-}
+TYPED_TEST(MmaSyncTestWrapper, mmasynctest) {}
