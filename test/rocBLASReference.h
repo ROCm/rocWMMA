@@ -42,6 +42,7 @@
 
 #include "rocblas.h"
 
+#include "Common.hpp"
 #include "Types.h"
 
 constexpr const char* rocblas_datatype2string(rocblas_datatype type)
