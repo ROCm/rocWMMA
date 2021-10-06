@@ -23,9 +23,28 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include <type_traits>
+
+#ifndef WMMA_TEST_COMMON_H
+#define WMMA_TEST_COMMON_H
 
 #include <Types.h>
+#include <tuple>
+#include <type_traits>
+#include <vector>
+
+#ifndef CHECK_HIP_ERROR
+#define CHECK_HIP_ERROR(status)                   \
+    if(status != hipSuccess)                      \
+    {                                             \
+        fprintf(stderr,                           \
+                "hip error: '%s'(%d) at %s:%d\n", \
+                hipGetErrorString(status),        \
+                status,                           \
+                __FILE__,                         \
+                __LINE__);                        \
+        exit(EXIT_FAILURE);                       \
+    }
+#endif
 
 template <uint32_t N>
 using I = std::integral_constant<uint32_t, N>;
@@ -79,3 +98,300 @@ namespace quirks
     };
 
 } // namespace quirks
+
+template <typename Layout>
+struct MatrixUtil
+{
+    template <typename DataT>
+    __host__ static inline void print(DataT const* mat, uint32_t m, uint32_t n)
+    {
+        auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
+        auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
+
+        auto index = std::is_same<Layout, row_major>::value ? rowMjr : colMjr;
+        auto ld    = std::is_same<Layout, row_major>::value ? n : m;
+
+        for(int i = 0; i < m; ++i) // row
+        {
+            std::cout << "[ ";
+            for(int j = 0; j < n; ++j) // col
+            {
+                // (Row, col)
+                std::cout << mat[index(i, j, ld)] << " ";
+            }
+            std::cout << "]\n";
+        }
+        std::cout << "\n";
+    }
+
+    template <typename DataT>
+    __host__ static inline void print(std::vector<DataT> const& mat, uint32_t m, uint32_t n)
+    {
+        assert(mat.size() == n * m);
+        print(mat.data(), m, n);
+    }
+
+    template <typename DataT>
+    __host__ static inline void
+        fill_with_padding(DataT* mat, uint32_t m, uint32_t n, DataT padValue)
+    {
+        auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
+        auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
+
+        auto index = std::is_same<Layout, row_major>::value ? rowMjr : colMjr;
+        auto ld    = std::is_same<Layout, row_major>::value ? n : m;
+
+        for(int i = 0; i < m; ++i) // row
+        {
+            for(int j = 0; j < n; ++j) // col
+            {
+                auto idx = index(i, j, ld);
+                if(i == 0 || j == 0 || i == m - 1 || j == n - 1)
+                    mat[idx] = padValue;
+                else
+                {
+                    // Count up in integers, in ascending order for each row.
+                    auto value = (i * n + j) % 13;
+                    mat[idx] = (value % 2) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
+                }
+            }
+        }
+    }
+
+    template <typename DataT>
+    __host__ static inline void
+        fill_with_padding(std::vector<DataT>& mat, uint32_t m, uint32_t n, DataT padValue)
+    {
+        assert(mat.size() == n * m);
+        fill_with_padding(mat.data(), m, n, padValue);
+    }
+
+    template <typename DataT>
+    __host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n)
+    {
+        auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
+        auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
+
+        auto index = std::is_same<Layout, row_major>::value ? rowMjr : colMjr;
+        auto ld    = std::is_same<Layout, row_major>::value ? n : m;
+
+        for(int i = 0; i < m; ++i) // row
+        {
+            for(int j = 0; j < n; ++j) // col
+            {
+                // Count up in integers, in ascending order for each row.
+                auto value = (i * n + j) % 13;
+                auto idx   = index(i, j, ld);
+                mat[idx]   = (value % 2) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
+            }
+        }
+    }
+
+    template <typename DataT>
+    __host__ static inline void fill(std::vector<DataT>& mat, uint32_t m, uint32_t n)
+    {
+        assert(mat.size() == n * m);
+        fill(mat.data(), m, n);
+    }
+
+    template <typename DataT>
+    __host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n, DataT value)
+    {
+        for(int i = 0; i < m * n; ++i) // row
+        {
+            mat[i] = value;
+        }
+    }
+
+    template <typename DataT>
+    __host__ static inline void fill(std::vector<DataT>& mat, uint32_t m, uint32_t n, DataT value)
+    {
+        assert(mat.size() == n * m);
+        fill(mat.data(), m, n, value);
+    }
+};
+
+template <typename DataT, typename DataLayout>
+bool compareEqualPadded(std::vector<DataT> const& a,
+                        std::vector<DataT> const& b,
+                        int                       M,
+                        int                       N,
+                        DataT                     padValue,
+                        double                    tolerance = 10.0)
+{
+    bool retval;
+
+    assert(a.size() == M * N && "A and B do not match size M x N");
+    assert(b.size() == (M + 2) * (N + 2) && "A and B do not match size (M+2) x (N+2)");
+
+    double max_relative_error = 0.0;
+
+    // Some types don't have direct conversion to double.
+    // Convert to float first then to double.
+    auto toDouble = [](DataT const& val) { return static_cast<double>(static_cast<float>(val)); };
+
+    auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
+    auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
+
+    auto index = std::is_same<DataLayout, row_major>::value ? rowMjr : colMjr;
+    auto ldA   = std::is_same<DataLayout, row_major>::value ? N : M;
+    auto ldB   = std::is_same<DataLayout, row_major>::value ? N + 2 : M + 2;
+#pragma omp parallel for
+    for(int i = 0; i < M + 2; ++i) // row
+    {
+        for(int j = 0; j < N + 2; ++j) // col
+        {
+            if(i == 0 || j == 0 || i == M + 1 || j == N + 1)
+            {
+                auto idx = index(i, j, ldB);
+                auto relative_error
+                    = b[idx] != static_cast<DataT>(0)
+                          ? fabs(toDouble(b[idx]) - toDouble(padValue))
+                                / (fabs(toDouble(b[idx])) + fabs(toDouble(padValue)) + 1)
+                          : 0.0;
+                if(relative_error > max_relative_error)
+                {
+                    max_relative_error = relative_error;
+                }
+            }
+            else
+            {
+                auto idxB = index(i, j, ldB);
+                auto idxA = index(i - 1, j - 1, ldA);
+                auto relative_error
+                    = a[idxA] != static_cast<DataT>(0)
+                          ? fabs(toDouble(a[idxA]) - toDouble(b[idxB]))
+                                / (fabs(toDouble(a[idxA])) + fabs(toDouble(b[idxB])) + 1)
+                          : 0.0;
+                if(relative_error > max_relative_error)
+                {
+                    max_relative_error = relative_error;
+                }
+            }
+        }
+    }
+
+    auto eps = toDouble(std::numeric_limits<DataT>::epsilon());
+    if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
+    {
+        std::cout << "FAIL: ";
+        retval = false;
+    }
+    else
+    {
+        std::cout << "PASS: ";
+        retval = true;
+    }
+    std::cout << "max_relative_error = " << max_relative_error << std::endl;
+    return retval;
+}
+
+template <typename TypeA, typename TypeB, typename LayoutA, typename LayoutB>
+bool compareEqual(TypeA const* a, TypeB const* b, int M, int N, double tolerance = 10.0)
+{
+    bool retval;
+    int  lda = std::is_same<LayoutA, row_major>::value ? N : M;
+    int  ldb = std::is_same<LayoutB, row_major>::value ? N : M;
+
+    double max_relative_error = 0.0;
+
+    // Some types don't have direct conversion to double.
+    // Convert to float first then to double.
+    auto toDoubleA = [](TypeA const& val) { return static_cast<double>(static_cast<float>(val)); };
+    auto toDoubleB = [](TypeB const& val) { return static_cast<double>(static_cast<float>(val)); };
+
+#pragma omp parallel for
+    for(int i = 0; i < M; ++i) // Row
+    {
+        for(int j = 0; j < N; ++j) // Col
+        {
+            auto indexA = std::is_same<LayoutA, row_major>::value ? (i * lda + j) : (i + j * lda);
+            auto indexB = std::is_same<LayoutB, row_major>::value ? (i * ldb + j) : (i + j * ldb);
+
+            auto relative_error
+                = (a[indexA] != static_cast<TypeA>(0))
+                      ? fabs(toDoubleA(a[indexA]) - toDoubleB(b[indexB]))
+                            / (fabs(toDoubleA(a[indexA])) + fabs(toDoubleB(b[indexB])) + 1)
+                      : 0.0;
+            if(relative_error > max_relative_error)
+            {
+                max_relative_error = relative_error;
+            }
+        }
+    }
+
+    auto eps = toDoubleA(std::numeric_limits<TypeA>::epsilon());
+    if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
+    {
+        std::cout << "FAIL: ";
+        retval = false;
+    }
+    else
+    {
+        std::cout << "PASS: ";
+        retval = true;
+    }
+    std::cout << "max_relative_error = " << max_relative_error << std::endl;
+
+    return retval;
+}
+
+template <typename TypeA, typename TypeB, typename LayoutA, typename LayoutB>
+bool compareEqual(
+    std::vector<TypeA> const& a, std::vector<TypeB> const& b, int M, int N, double tolerance = 10.0)
+{
+    assert(a.size() == b.size() && "A and B are not the same size");
+    assert(a.size() == M * N && "A and B do not match size M x N");
+    return compareEqual<TypeA, TypeB, LayoutA, LayoutB>(a.data(), b.data(), M, N, tolerance);
+}
+
+template <typename DataT>
+bool compareEqual(DataT const* a, DataT const* b, int M, int N, double tolerance = 10.0)
+{
+    bool     retval;
+    double   max_relative_error = 0.0;
+    uint32_t numElements        = M * N;
+
+    // Some types don't have direct conversion to double.
+    // Convert to float first then to double.
+    auto toDouble = [](DataT const& val) { return static_cast<double>(static_cast<float>(val)); };
+
+#pragma omp parallel for
+    for(int i = 0; i < numElements; ++i)
+    {
+        auto relative_error = a[i] != static_cast<DataT>(0)
+                                  ? fabs(toDouble(a[i]) - toDouble(b[i]))
+                                        / (fabs(toDouble(a[i])) + fabs(toDouble(b[i])) + 1)
+                                  : 0.0;
+        if(relative_error > max_relative_error)
+        {
+            max_relative_error = relative_error;
+        }
+    }
+
+    auto eps = toDouble(std::numeric_limits<DataT>::epsilon());
+    if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
+    {
+        std::cout << "FAIL: ";
+        retval = false;
+    }
+    else
+    {
+        std::cout << "PASS: ";
+        retval = true;
+    }
+    std::cout << "max_relative_error = " << max_relative_error << std::endl;
+    return retval;
+}
+
+template <typename DataT>
+bool compareEqual(
+    std::vector<DataT> const& a, std::vector<DataT> const& b, int M, int N, double tolerance = 10.0)
+{
+    assert(a.size() == b.size() && "A and B are not the same size");
+    assert(a.size() == M * N && "A and B do not match size M x N");
+
+    return compareEqual<DataT>(a.data(), b.data(), M, N, tolerance);
+}
+
+#endif // WMMA_TEST_COMMON_H
