@@ -148,29 +148,25 @@ struct PackTraits<float64_t>
 };
 
 /*
-* The following class is intended to provide insightful suggestions for
-* IO vector widths. Given a certain size of block, there are finite
-* elements to load which will affect appropriate vector widths. We also
-* consider that WMMA uses packed registers. For example in fp16 if the
-* IO count is only 1, the packed reg count is 0.5, which is not useful
-* for WMMA. We need to expect 1 full packed register at a minimum.
+* The following class is intended to provide optimistic suggestions for
+* IO vector widths. Given a certain block size, search for largest
+* vector width that could potentially be used during IO.
 *
-* We start testing at a default width of 8. If we cannot satisfy the
-* minimum requirements, we recurse into a reduced width of 4 and so on
-* until the min reqs are satisfied.
+* Start testing at a default width of BlockK. Keep halving the vector width
+* until it can fit the entire block, or split evenly amongst IO iterations.
 */
 
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t TestWidth = 16>
+template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t TestWidth = BlockK>
 struct VecWidthTraits
 {
     enum : uint32_t
     {
-        IOCount    = (BlockDim * BlockK) / (AMDGCN_WAVE_SIZE * TestWidth),
-        MinIOCount = PackTraits<DataT>::PackRatio,
-        MaxElementsPerThread
-        = IOCount >= MinIOCount
+        ElementCount  = BlockDim * BlockK,
+        ElementsPerIO = TestWidth * AMDGCN_WAVE_SIZE,
+        MaxVectorWidth
+        = (ElementsPerIO <= ElementCount) && (ElementCount % ElementsPerIO == 0)
               ? TestWidth
-              : VecWidthTraits<BlockDim, BlockK, DataT, TestWidth / 2>::MaxElementsPerThread
+              : VecWidthTraits<BlockDim, BlockK, DataT, TestWidth / 2>::MaxVectorWidth
     };
 };
 
@@ -179,9 +175,9 @@ struct VecWidthTraits<BlockDim, BlockK, DataT, 0>
 {
     enum : uint32_t
     {
-        IOCount              = 0,
-        MinIOCount           = 1,
-        MaxElementsPerThread = 0
+        ElementCount   = BlockDim * BlockK,
+        ElementsPerIO  = AMDGCN_WAVE_SIZE,
+        MaxVectorWidth = 1
     };
 };
 
