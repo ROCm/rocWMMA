@@ -1,3 +1,28 @@
+/*******************************************************************************
+ *
+ * MIT License
+ *
+ * Copyright 2021 Advanced Micro Devices, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
 #include <hip/hip_ext.h>
 #include <hip/hip_runtime.h>
 
@@ -7,54 +32,62 @@
 
 #include "WMMA.h"
 
-
 // LDS capacity helper
-template<uint32_t TBlockX,
-         uint32_t TBlockY,
-         uint32_t BlockM,
-         uint32_t BlockN,
-         uint32_t BlockK,
-         typename InputT,
-         typename LayoutA, 
-         typename LayoutB>
+template <uint32_t TBlockX,
+          uint32_t TBlockY,
+          uint32_t BlockM,
+          uint32_t BlockN,
+          uint32_t BlockK,
+          typename InputT,
+          typename LayoutA,
+          typename LayoutB>
 struct CoopLoadHelper
 {
-    template<typename MatrixT>
-    using DataLayout = typename std::conditional<std::is_same<MatrixT, matrix_a>::value, LayoutA, LayoutB>::type;
-
-    template<typename MatrixT>
-    using InputFrag = wmma::fragment<MatrixT, BlockM, BlockN, BlockK, InputT, DataLayout<MatrixT> >;
+    template <typename MatrixT>
+    using DataLayout =
+        typename std::conditional<std::is_same<MatrixT, matrix_a>::value, LayoutA, LayoutB>::type;
 
     template <typename MatrixT>
-    using Loader = amdgcn_cooperative_load_dword_DxK<MatrixT, InputFrag<MatrixT>::leadingDim(), InputFrag<MatrixT>::kDim(), InputT, DataLayout<MatrixT>, TBlockX / AMDGCN_WAVE_SIZE, TBlockY>;
+    using InputFrag = wmma::fragment<MatrixT, BlockM, BlockN, BlockK, InputT, DataLayout<MatrixT>>;
 
-    enum : uint32_t 
+    template <typename MatrixT>
+    using Loader = amdgcn_cooperative_load_dword_DxK<MatrixT,
+                                                     InputFrag<MatrixT>::leadingDim(),
+                                                     InputFrag<MatrixT>::kDim(),
+                                                     InputT,
+                                                     DataLayout<MatrixT>,
+                                                     TBlockX / AMDGCN_WAVE_SIZE,
+                                                     TBlockY>;
+
+    enum : uint32_t
     {
-        LdsUsage = Loader<matrix_a>::Traits::LdsBytes > Loader<matrix_b>::Traits::LdsBytes ? Loader<matrix_a>::Traits::LdsBytes : Loader<matrix_b>::Traits::LdsBytes
+        LdsUsage = Loader<matrix_a>::Traits::LdsBytes > Loader<matrix_b>::Traits::LdsBytes
+                       ? Loader<matrix_a>::Traits::LdsBytes
+                       : Loader<matrix_b>::Traits::LdsBytes
     };
 };
 
 template <uint32_t BlockM,
           uint32_t BlockN,
-          uint32_t BlockK, 
+          uint32_t BlockK,
           typename InputT,
           typename ComputeT,
           typename LayoutA,
           typename LayoutB,
           typename LayoutC>
 __global__ void test_mma_sync_coop_d(const InputT* a,
-                                const InputT* b,
-                                ComputeT*     c,
-                                uint32_t      M,
-                                uint32_t      N,
-                                uint32_t      K,
-                                ComputeT      alpha,
-                                ComputeT      beta)
+                                     const InputT* b,
+                                     ComputeT*     c,
+                                     uint32_t      M,
+                                     uint32_t      N,
+                                     uint32_t      K,
+                                     ComputeT      alpha,
+                                     ComputeT      beta)
 {
     using MappingA = MappingUtil<BlockM, BlockK, InputT, LayoutA>;
     using MappingB = MappingUtil<BlockK, BlockN, InputT, LayoutB>;
     using MappingC = MappingUtil<BlockM, BlockN, ComputeT, LayoutC>;
- 
+
     int lda = std::is_same<LayoutA, row_major>::value ? K : M;
     int ldb = std::is_same<LayoutB, row_major>::value ? N : K;
     int ldc = std::is_same<LayoutC, row_major>::value ? N : M;
@@ -72,7 +105,7 @@ __global__ void test_mma_sync_coop_d(const InputT* a,
     int warpN = (blockIdx.y * blockDim.y + threadIdx.y);
 
     // Loop over k
-    for(int i = 0; i < K; i += BlockK) 
+    for(int i = 0; i < K; i += BlockK)
     {
         int aRow = warpM * BlockM;
         int aCol = i;
@@ -93,11 +126,11 @@ __global__ void test_mma_sync_coop_d(const InputT* a,
                                                              : (bRow + bCol * ldb));
 
             // Load the inputs
-            wmma::load_matrix_coop_sync(fragA, aOffset, lda); 
-            wmma::load_matrix_coop_sync(fragB, bOffset, ldb); 
+            wmma::load_matrix_coop_sync(fragA, aOffset, lda);
+            wmma::load_matrix_coop_sync(fragB, bOffset, ldb);
 
             // Perform the matrix multiplication
-            wmma::mma_sync(fragAcc, fragA, fragB, fragAcc); 
+            wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
         }
     }
 
@@ -137,23 +170,27 @@ template <uint32_t TBlockX,
           uint32_t BlockK,
           typename InputT,
           typename ComputeT,
-          typename LayoutA, 
+          typename LayoutA,
           typename LayoutB,
           typename LayoutC>
-__host__ void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
+__host__ void
+    test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
 {
-    std::cout << "HIP wmma::mma_sync test: TBlock (" << TBlockX << ", " << TBlockY
-              << ") "
+    std::cout << "HIP wmma::mma_sync test: TBlock (" << TBlockX << ", " << TBlockY << ") "
               << "BlockMNK(" << BlockM << ", " << BlockN << ", " << BlockK << ") "
               << "MatrixMNK(" << M << ", " << N << ", " << K << ") "
               << "FmtABC(" << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << ", "
               << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << ", "
               << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << ") "
-              << "TiTc(" << dataTypeToString<InputT>() << "_" << dataTypeToString<ComputeT>() << ") \n";
+              << "TiTc(" << dataTypeToString<InputT>() << "_" << dataTypeToString<ComputeT>()
+              << ") \n";
 
     // Static check on LDS resource requirements.
     // Make sure that we can fit both A and B in LDS if needed.
-    static_assert(CoopLoadHelper<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, LayoutA, LayoutB>::LdsUsage < LDS_MAX_BYTES, "Exceeded LDS capacity");
+    static_assert(
+        CoopLoadHelper<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, LayoutA, LayoutB>::LdsUsage
+            < LDS_MAX_BYTES,
+        "Exceeded LDS capacity");
 
     int lda = std::is_same<LayoutA, row_major>::value ? K : M;
     int ldb = std::is_same<LayoutB, row_major>::value ? N : K;
@@ -200,8 +237,8 @@ __host__ void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT 
         LDS_MAX_BYTES, // sharedMemBytes
         0, // stream
         startEvent, // Event start
-        stopEvent,  // event stop
-        0,          // flags
+        stopEvent, // event stop
+        0, // flags
         d_a,
         d_b,
         d_c,
@@ -218,25 +255,19 @@ __host__ void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT 
     CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
 
     auto peakGFlops = calculatePeakGFlops<InputT, Mi100>(1087);
-    auto gFlops = calculateGFlops(M, N, K, elapsedTimeMs);
-    auto efficiency = gFlops / peakGFlops * 100.0f; 
-    std::cout << "Elapsed time (ms): " << elapsedTimeMs << " Speed (Gflops/s): " << gFlops << " Efficiency (%): " << efficiency << std::endl;
+    auto gFlops     = calculateGFlops(M, N, K, elapsedTimeMs);
+    auto efficiency = gFlops / peakGFlops * 100.0f;
+    std::cout << "Elapsed time (ms): " << elapsedTimeMs << " Speed (Gflops/s): " << gFlops
+              << " Efficiency (%): " << efficiency << std::endl;
 
-#ifdef WMMA_VALIDATE_TESTS 
+#ifdef WMMA_VALIDATE_TESTS
     // Copy for validation
     CHECK_HIP_ERROR(hipMemcpy(matrixC.data(), d_c, bytesC, hipMemcpyDeviceToHost));
 
     // Validate
     std::vector<ComputeT> matrixC_r(M * N, 0.0f);
     gemmCPU<LayoutA, LayoutB, LayoutC, InputT, ComputeT>(
-        matrixA,
-        matrixB,
-        matrixC_r,
-        M,
-        N,
-        K,
-        alpha,
-        beta);
+        matrixA, matrixB, matrixC_r, M, N, K, alpha, beta);
     compareEqual<ComputeT, ComputeT, LayoutC, LayoutC>(matrixC, matrixC_r, M, N);
 #endif
 
@@ -255,21 +286,91 @@ template <uint32_t TBlockX,
           typename ComputeT>
 inline void test_mma_sync_coop_h(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
 {
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, row_major, row_major, row_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, row_major, col_major, row_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, col_major, row_major, row_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, col_major, col_major, row_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, row_major, row_major, col_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, row_major, col_major, col_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, col_major, row_major, col_major>(M, N, K, alpha, beta);
-    test_mma_sync_coop_h<TBlockX, TBlockY, BlockM, BlockN, BlockK, InputT, ComputeT, col_major, col_major, col_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         row_major,
+                         row_major,
+                         row_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         row_major,
+                         col_major,
+                         row_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         col_major,
+                         row_major,
+                         row_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         col_major,
+                         col_major,
+                         row_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         row_major,
+                         row_major,
+                         col_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         row_major,
+                         col_major,
+                         col_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         col_major,
+                         row_major,
+                         col_major>(M, N, K, alpha, beta);
+    test_mma_sync_coop_h<TBlockX,
+                         TBlockY,
+                         BlockM,
+                         BlockN,
+                         BlockK,
+                         InputT,
+                         ComputeT,
+                         col_major,
+                         col_major,
+                         col_major>(M, N, K, alpha, beta);
 }
 
-template<uint32_t TBlockX,
-          uint32_t TBlockY,
-          typename InputT,
-          typename ComputeT>
-inline void test_mma_sync_coop_h_32x32(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
+template <uint32_t TBlockX, uint32_t TBlockY, typename InputT, typename ComputeT>
+inline void
+    test_mma_sync_coop_h_32x32(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
 {
     // Minimum K = 2 for 32 x 32
     //test_mma_sync_coop_h<TBlockX, TBlockY, 32, 32, 2, InputT, ComputeT>(M, N, K, alpha, beta);
@@ -284,11 +385,9 @@ inline void test_mma_sync_coop_h_32x32(uint32_t M, uint32_t N, uint32_t K, Compu
     //test_mma_sync_coop_h<TBlockX, TBlockY, 32, 32, 1024, InputT, ComputeT>(M, N, K, alpha, beta);
 }
 
-template<uint32_t TBlockX,
-          uint32_t TBlockY,
-          typename InputT,
-          typename ComputeT>
-inline void test_mma_sync_coop_h_16x16(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
+template <uint32_t TBlockX, uint32_t TBlockY, typename InputT, typename ComputeT>
+inline void
+    test_mma_sync_coop_h_16x16(uint32_t M, uint32_t N, uint32_t K, ComputeT alpha, ComputeT beta)
 {
     // Minimum K = 4 for 16 x 16
     //test_mma_sync_coop_h<TBlockX, TBlockY, 16, 16, 4, InputT, ComputeT>(M, N, K, alpha, beta);
@@ -302,7 +401,7 @@ inline void test_mma_sync_coop_h_16x16(uint32_t M, uint32_t N, uint32_t K, Compu
     //test_mma_sync_coop_h<TBlockX, TBlockY, 16, 16, 1024, InputT, ComputeT>(M, N, K, alpha, beta);
 }
 
-template<typename InputT, typename ComputeT>
+template <typename InputT, typename ComputeT>
 void test_mma_sync_coop_h()
 {
     // // float32_t  64 x 1 threads, block 16 x 16 x 4/8/16/32/64/128/256/512/1024,
@@ -345,9 +444,9 @@ void test_mma_sync_coop_h()
 
 int main()
 {
-    test_mma_sync_coop_h<float16_t, float32_t>(); 
-    test_mma_sync_coop_h<float32_t, float32_t>(); 
-      
+    test_mma_sync_coop_h<float16_t, float32_t>();
+    test_mma_sync_coop_h<float32_t, float32_t>();
+
     //test_mma_sync_coop_h<128, 4, 32, 32, 32, float32_t, float32_t>(8192, 8192, 8192, 1.0f, 2.0f);
     return 0;
 }
