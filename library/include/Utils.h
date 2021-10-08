@@ -1,3 +1,28 @@
+/*******************************************************************************
+ *
+ * MIT License
+ *
+ * Copyright 2021 Advanced Micro Devices, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
 #ifndef WMMA_UTILS_H
 #define WMMA_UTILS_H
 
@@ -192,7 +217,8 @@ struct MatrixUtil
     }
 
     template <typename DataT>
-    __host__ static inline void fill_with_padding(std::vector<DataT>& mat, uint32_t m, uint32_t n, DataT padValue)
+    __host__ static inline void
+        fill_with_padding(std::vector<DataT>& mat, uint32_t m, uint32_t n, DataT padValue)
     {
         assert(mat.size() == n * m);
 
@@ -206,14 +232,14 @@ struct MatrixUtil
         {
             for(int j = 0; j < n; ++j) // col
             {
-                auto idx   = index(i, j, ld);
-                if(i == 0 || j == 0 || i == m-1 || j == n-1)
+                auto idx = index(i, j, ld);
+                if(i == 0 || j == 0 || i == m - 1 || j == n - 1)
                     mat[idx] = padValue;
                 else
                 {
                     // Count up in integers, in ascending order for each row.
                     auto value = (i * n + j) % 13;
-                    mat[idx]   = (value % 2) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
+                    mat[idx] = (value % 2) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
                 }
             }
         }
@@ -254,26 +280,30 @@ struct MatrixUtil
 };
 
 template <typename DataT, typename DataLayout>
-bool compareEqualPadded(
-    std::vector<DataT> const& a, std::vector<DataT> const& b, int M, int N, DataT padValue, double tolerance = 10.0)
+bool compareEqualPadded(std::vector<DataT> const& a,
+                        std::vector<DataT> const& b,
+                        int                       M,
+                        int                       N,
+                        DataT                     padValue,
+                        double                    tolerance = 10.0)
 {
     bool retval;
 
     assert(a.size() == M * N && "A and B do not match size M x N");
     assert(b.size() == (M + 2) * (N + 2) && "A and B do not match size (M+2) x (N+2)");
 
-    double   max_relative_error = 0.0;
+    double max_relative_error = 0.0;
 
     // Some types don't have direct conversion to double.
     // Convert to float first then to double.
     auto toDouble = [](DataT const& val) { return static_cast<double>(static_cast<float>(val)); };
-        
+
     auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
     auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
 
     auto index = std::is_same<DataLayout, row_major>::value ? rowMjr : colMjr;
-    auto ldA = std::is_same<DataLayout, row_major>::value ? N : M;
-    auto ldB = std::is_same<DataLayout, row_major>::value ? N + 2 : M + 2;
+    auto ldA   = std::is_same<DataLayout, row_major>::value ? N : M;
+    auto ldB   = std::is_same<DataLayout, row_major>::value ? N + 2 : M + 2;
 #pragma omp parallel for
     for(int i = 0; i < M + 2; ++i) // row
     {
@@ -282,10 +312,11 @@ bool compareEqualPadded(
             if(i == 0 || j == 0 || i == M + 1 || j == N + 1)
             {
                 auto idx = index(i, j, ldB);
-                auto relative_error = b[idx] != static_cast<DataT>(0)
-                                  ? fabs(toDouble(b[idx]) - toDouble(padValue))
-                                        / (fabs(toDouble(b[idx])) + fabs(toDouble(padValue)) + 1)
-                                  : 0.0;
+                auto relative_error
+                    = b[idx] != static_cast<DataT>(0)
+                          ? fabs(toDouble(b[idx]) - toDouble(padValue))
+                                / (fabs(toDouble(b[idx])) + fabs(toDouble(padValue)) + 1)
+                          : 0.0;
                 if(relative_error > max_relative_error)
                 {
                     max_relative_error = relative_error;
@@ -294,11 +325,12 @@ bool compareEqualPadded(
             else
             {
                 auto idxB = index(i, j, ldB);
-                auto idxA = index(i-1, j-1, ldA);
-                auto relative_error = a[idxA] != static_cast<DataT>(0)
-                                  ? fabs(toDouble(a[idxA]) - toDouble(b[idxB]))
-                                        / (fabs(toDouble(a[idxA])) + fabs(toDouble(b[idxB])) + 1)
-                                  : 0.0;
+                auto idxA = index(i - 1, j - 1, ldA);
+                auto relative_error
+                    = a[idxA] != static_cast<DataT>(0)
+                          ? fabs(toDouble(a[idxA]) - toDouble(b[idxB]))
+                                / (fabs(toDouble(a[idxA])) + fabs(toDouble(b[idxB])) + 1)
+                          : 0.0;
                 if(relative_error > max_relative_error)
                 {
                     max_relative_error = relative_error;
