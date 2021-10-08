@@ -44,7 +44,7 @@ __global__ void col(DataT* out, uint32_t M, uint32_t N)
 {
     enum : uint32_t
     {
-        MaxVectorWidth    = VecWidthTraits<BlockDim, BlockK, DataT>::MaxElementsPerThread,
+        MaxVectorWidth    = VecWidthTraits<BlockDim, BlockK, DataT>::MaxVectorWidth,
         ElementsPerThread = std::is_same<DataLayout, row_major>::value ? MaxVectorWidth : 1
     };
 
@@ -82,7 +82,7 @@ __global__ void colNT(DataT* out, uint32_t M, uint32_t N)
 {
     enum : uint32_t
     {
-        MaxVectorWidth    = VecWidthTraits<BlockDim, BlockK, DataT>::MaxElementsPerThread,
+        MaxVectorWidth    = VecWidthTraits<BlockDim, BlockK, DataT>::MaxVectorWidth,
         ElementsPerThread = std::is_same<DataLayout, row_major>::value ? MaxVectorWidth : 1
     };
 
@@ -121,7 +121,7 @@ __global__ void row(DataT* out, uint32_t M, uint32_t N)
 {
     enum : uint32_t
     {
-        MaxVectorWidth    = VecWidthTraits<BlockDim, BlockK, DataT>::MaxElementsPerThread,
+        MaxVectorWidth    = VecWidthTraits<BlockDim, BlockK, DataT>::MaxVectorWidth,
         ElementsPerThread = std::is_same<DataLayout, row_major>::value ? MaxVectorWidth : 1
     };
 

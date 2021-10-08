@@ -79,7 +79,7 @@ struct IOConfig<matrix_a, BlockDim, BlockK, DataT, DataLayout>
 {
     enum : uint32_t
     {
-        MaxVectorWidth = VecWidthTraits<BlockDim, BlockK, DataT>::MaxElementsPerThread,
+        MaxVectorWidth = VecWidthTraits<BlockDim, BlockK, DataT>::MaxVectorWidth,
         VectorWidth    = std::is_same<DataLayout, row_major>::value ? MaxVectorWidth : 1
     };
 
@@ -146,7 +146,7 @@ struct IOConfig<matrix_b, BlockDim, BlockK, DataT, DataLayout>
 {
     enum : uint32_t
     {
-        MaxVectorWidth = VecWidthTraits<BlockDim, BlockK, DataT>::MaxElementsPerThread,
+        MaxVectorWidth = VecWidthTraits<BlockDim, BlockK, DataT>::MaxVectorWidth,
         VectorWidth    = std::is_same<DataLayout, col_major>::value ? MaxVectorWidth : 1
     };
 
@@ -272,7 +272,7 @@ struct IOConfig<register_file, BlockDim, BlockK, DataT, DataLayout>
 {
     enum : uint32_t
     {
-        MaxVectorWidth = VecWidthTraits<BlockDim, BlockK, DataT>::MaxElementsPerThread,
+        MaxVectorWidth = VecWidthTraits<BlockDim, BlockK, DataT>::MaxVectorWidth,
         VectorWidth    = std::is_same<DataLayout, col_major>::value ? MaxVectorWidth : 1
     };
 
