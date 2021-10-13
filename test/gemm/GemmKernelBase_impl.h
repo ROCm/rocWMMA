@@ -219,7 +219,8 @@ bool GemmKernelBase<BlockM,
                     LayoutC,
                     LayoutD>::checkSizes() const
 {
-    return (mM >= BlockM * mTBlockX / AMDGCN_WAVE_SIZE && mN >= BlockN * mTBlockY && mK >= BlockK);
+    return (mM >= (BlockM * mTBlockX / AMDGCN_WAVE_SIZE) && mN >= (BlockN * mTBlockY)
+            && mK >= BlockK);
 }
 
 template <uint32_t BlockM,
@@ -267,7 +268,11 @@ bool GemmKernelBase<BlockM,
                     LayoutC,
                     LayoutD>::checkQuirks() const
 {
-    return !quirks::hipcc_bug_half_packing<OutputT, LayoutC>::value;
+    // Historically, there have been some bugs that are elicited under certain conditions
+    // and produce 'quirky' failures that are beyond WMMA's control.
+    // E.g. Previous compiler issue with h16 unsanitized register packing.
+    // We can choose to ignore the quirks and focus on WMMA specific failures here.
+    return true;
 }
 
 template <uint32_t BlockM,
