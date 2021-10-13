@@ -138,8 +138,9 @@ public:
         CHECK_HIP_ERROR(hipMemcpy(ref.data(), d_arr_out, bytes, hipMemcpyDeviceToHost));
 
         //Compare
-        EXPECT_TRUE(
-            (compareEqualPadded<DataT, DataLayout>(ref, matrix, M, N, DataT(PADDING_VALUE))));
+        auto compResult
+            = compareEqualPadded<DataT, DataLayout>(ref, matrix, M, N, DataT(PADDING_VALUE));
+        EXPECT_TRUE((std::get<0>(compResult))) << std::get<1>(compResult);
         CHECK_HIP_ERROR(hipFree(d_arr_in));
         CHECK_HIP_ERROR(hipFree(d_arr_out));
     }
@@ -182,8 +183,9 @@ public:
         CHECK_HIP_ERROR(hipMemcpy(ref.data(), d_arr_out, bytesP, hipMemcpyDeviceToHost));
 
         //Compare
-        EXPECT_TRUE(
-            (compareEqualPadded<DataT, DataLayout>(matrix, ref, M, N, DataT(PADDING_VALUE))));
+        auto compResult
+            = compareEqualPadded<DataT, DataLayout>(matrix, ref, M, N, DataT(PADDING_VALUE));
+        EXPECT_TRUE((std::get<0>(compResult))) << std::get<1>(compResult);
         CHECK_HIP_ERROR(hipFree(d_arr_in));
         CHECK_HIP_ERROR(hipFree(d_arr_out));
     }

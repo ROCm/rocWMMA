@@ -174,9 +174,12 @@ __host__ void test_fill_fragment_h(uint32_t TBlockX,
     std::vector<DataT> refC(M * N, fillC);
 
     // Compare
-    EXPECT_TRUE((compareEqual<DataT, DataT, LayoutA, LayoutA>(matrixA, refA, M, K)));
-    EXPECT_TRUE((compareEqual<DataT, DataT, LayoutB, LayoutB>(matrixB, refB, K, N)));
-    EXPECT_TRUE((compareEqual<DataT, DataT, LayoutC, LayoutC>(matrixC, refC, M, N)));
+    auto compResultA = compareEqual<DataT, DataT, LayoutA, LayoutA>(matrixA, refA, M, K);
+    auto compResultB = compareEqual<DataT, DataT, LayoutB, LayoutB>(matrixB, refB, K, N);
+    auto compResultC = compareEqual<DataT, DataT, LayoutC, LayoutC>(matrixC, refC, M, N);
+    EXPECT_TRUE((std::get<0>(compResultA))) << std::get<1>(compResultA);
+    EXPECT_TRUE((std::get<0>(compResultB))) << std::get<1>(compResultB);
+    EXPECT_TRUE((std::get<0>(compResultC))) << std::get<1>(compResultC);
 }
 
 template <typename T>
@@ -237,7 +240,7 @@ void test_fill_fragment(std::tuple<Ts...>)
             // Incoming Ts... args are BlockM, BlockN, BlockK, DataT.
             using DataT = typename std::tuple_element<3, std::tuple<Ts...>>::type;
             auto fargs  = std::tuple_cat(
-                tblock, size, std::make_tuple(DataT(99.2), DataT(2), DataT(-3.333333)));
+                 tblock, size, std::make_tuple(DataT(99.2), DataT(2), DataT(-3.333333)));
             std::apply(test_fill_fragment_h<Ts...>, fargs);
         }
     }
