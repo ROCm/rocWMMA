@@ -27,10 +27,11 @@
 #ifndef WMMA_TEST_COMMON_H
 #define WMMA_TEST_COMMON_H
 
-#include <Types.h>
 #include <tuple>
 #include <type_traits>
 #include <vector>
+
+#include "Types.h"
 
 #ifndef CHECK_HIP_ERROR
 #define CHECK_HIP_ERROR(status)                   \
@@ -71,29 +72,6 @@ namespace quirks
 
     template <>
     struct rocblas_supported<int8_t, int8_t, int32_t> : std::false_type
-    {
-    };
-
-    // hipcc compiler currently has bug in half-type data packing around 'v_fma_mixlo_f16'
-    // where it forgot to zero out dest vgpr before writing into it
-    //
-    // currently the combination of column-major C/D matrix & half type output (fp16/bf16)
-    // is affected
-    template <typename OutputT,
-              typename LayoutC,
-              typename LayoutD = LayoutC,
-              typename Enable  = void>
-    struct hipcc_bug_half_packing : std::false_type
-    {
-    };
-
-    template <typename OutputT, typename LayoutC, typename LayoutD>
-    struct hipcc_bug_half_packing<
-        OutputT,
-        LayoutC,
-        LayoutD,
-        typename std::enable_if<sizeof(OutputT) == 2u && std::is_same<LayoutC, col_major>::value
-                                && std::is_same<LayoutD, col_major>::value>::type> : std::true_type
     {
     };
 
