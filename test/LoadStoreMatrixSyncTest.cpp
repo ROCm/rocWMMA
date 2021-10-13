@@ -184,10 +184,14 @@ __host__ void
     CHECK_HIP_ERROR(hipFree(d_c_r));
 
     // Validate
-    EXPECT_TRUE((compareEqual<DataT, DataT, LayoutA, LayoutA>(matrixA, matrixA_r, M, N)));
+    auto compResultA = compareEqual<DataT, DataT, LayoutA, LayoutA>(matrixA, matrixA_r, M, N);
+    auto compResultB = compareEqual<DataT, DataT, LayoutB, LayoutB>(matrixB, matrixB_r, M, N);
+    auto compResultC = compareEqual<DataT, DataT, LayoutC, LayoutC>(matrixC, matrixC_r, M, N);
+
     //MatrixUtil<LayoutC>::print(matrixA_r, M, N);
-    EXPECT_TRUE((compareEqual<DataT, DataT, LayoutB, LayoutB>(matrixB, matrixB_r, M, N)));
-    EXPECT_TRUE((compareEqual<DataT, DataT, LayoutC, LayoutC>(matrixC, matrixC_r, M, N)));
+    EXPECT_TRUE((std::get<0>(compResultA))) << std::get<1>(compResultA);
+    EXPECT_TRUE((std::get<0>(compResultB))) << std::get<1>(compResultB);
+    EXPECT_TRUE((std::get<0>(compResultC))) << std::get<1>(compResultC);
 }
 
 template <typename IntConstBlockM, typename IntConstBlockN, typename IntConstBlockK, typename DataT>

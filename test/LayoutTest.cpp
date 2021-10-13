@@ -309,8 +309,9 @@ public:
         const size_t bytes = M * N * sizeof(DataT);
         CHECK_HIP_ERROR(hipMemcpy(ref.data(), d_arr, bytes, hipMemcpyDeviceToHost));
 
-        //Compare
-        EXPECT_TRUE((compareEqual<DataT, DataT, DataLayout, DataLayout>(matrix, ref, M, N)));
+        // Compare
+        auto compResult = compareEqual<DataT, DataT, DataLayout, DataLayout>(matrix, ref, M, N);
+        EXPECT_TRUE((std::get<0>(compResult))) << std::get<1>(compResult);
         CHECK_HIP_ERROR(hipFree(d_arr));
     }
 
