@@ -5,14 +5,18 @@ AMD's C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications 
 ## Minimum Requirements
 * Rocm stack minimum version 4.0
 * C++ 14
-* rocblas (only if rocblas validation is used) https://github.com/ROCmSoftwarePlatform/rocBLAS/releases/tag/rocm-4.0.0
-* CMake >=3.5 (optional)
+* CMake >=3.5
+* OpenMP
+
+Optional:
+* rocblas >= 4.0 (if rocBLAS) https://github.com/ROCmSoftwarePlatform/rocBLAS/releases/tag/rocm-4.0.0
+* doxygen (if documentation is built)
 
 ## Currently supported configurations (ongoing)
 
 - Matrix Layout <LayoutA, LayoutB, Layout C, LayoutD> (N = col major, T = row major)
 
-    <N, N, N, N>,  <N, N, T, T>
+    <N, N, N, N>, <N, N, T, T>
 
     <N, T, N, N>, <N, T, T, T>
 
@@ -211,9 +215,7 @@ AMD's C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications 
   </table>
 
 
-
-
-## Functions
+## API Functions
 ### fill_fragment
 Broadcast a desired value to all elements in the fragment.
 
@@ -226,7 +228,7 @@ Loads data from memory according to Matrix Layout.
 Fragments are stored in packed registers in optimal load / store patterns. In-register elements have no guaranteed order, which have been optimized for loading / storing efficiency.
 
 ### mma_sync
-MFMA accumulation is performed with fragment data. Fragment A cols are multiplied with Fragment B rows and added to the accumulator fragment.
+MFMA accumulation is performed with fragment data. Fragment A elements are multiplied with Fragment B elements and added to the accumulator fragment.
 
 ### synchronize_workgroup
 Performs synchronization across multiple wavefronts in a workgroup. It also ensures the synchronization of shared/global memory accesses across wavefronts.
@@ -238,11 +240,21 @@ git clone -b <branch> https://github.com/ROCmSoftwarePlatform/WMMA.git .
 .githooks/install
 ```
 
-Please don't forget to install the githooks as there are triggers for clang formatting in commits.
+**Please don't forget to install the githooks** as there are triggers for clang formatting in commits.
 
 
 ## Build with CMake
 
+### Project options
+|Option|Description|Default Value|
+|---|---|---|
+|AMDGPU_TARGETS|Build code for specific GPU target(s)|gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+|
+|WMMA_BUILD_TESTS|Build validation tests & benchmarks|ON|
+|WMMA_BUILD_DOCS|Build doxygen documentation from code|OFF|
+|WMMA_BUILD_ASSEMBLY|Generate assembly files|OFF|
+|WMMA_VALIDATE_WITH_ROCBLAS|Use rocBLAS for validation tests| ON (requires WMMA_BUILD_TESTS=ON)|
+
+### Example configurations
 By default, the project is configured as Release mode, and is linked against rocBLAS for validating results.
 Here are some of the examples for the configuration:
 |Configuration|Command|
@@ -258,50 +270,78 @@ After configuration, build with `cmake --build <build_dir> -- -j`
 
 Tips to save compiling time:
 - Target a specific GPU (default = MI100, MI200+/-)
-- Use lots of threads (e.g. -j32)
+- Use lots of threads (e.g. -j64)
 - Manually reduce test(s) and/or test cases
+- Turn assembly generation OFF
 
-
-## Unit tests with CTest
-
-CTest is a testing tool distributed as a part of CMake. The unit tests can be run by:
-
-```
-cd build
-ctest
-```
-
-## Manually Running Tests
-WMMA features are showcased, validated and benchmarked if applicable in test applications.
+## Running Tests
+WMMA library features are showcased, validated and benchmarked if applicable in GTest applications.
 
 ### FillFragmentTest
-Tests the wmma::fill_fragment function for all supported configurations. Tests broadcasting of a desired value to all elements in the fragment.
+Tests the wmma::fill_fragment API function for all supported configurations. Tests broadcasting of a desired value to all elements in the fragment.
 Run validation:
 ```
 <build_dir>/test/FillFragmentTest
 ```
 
 ### LoadStoreMatrixSyncTest
-Tests the load_matrix_sync and store_matrix_sync functions for all supported configurations. Tests proper emplacement of data during loads and stores.
+Tests the load_matrix_sync and store_matrix_sync API functions for all supported configurations. Tests proper emplacement of data during loads and stores.
 Run validation:
 ```
 <build_dir>/test/LoadStoreMatrixSyncTest
 ```
 
-### MmaSyncTest
-Implements a simple GEMM using wmma for all supported configurations. Validates on CPU algorithm or rocBLAS if available. Validation runs are performed on a reduced subset of matrix sizes. Benchmark only runs are on a larger set of matrix sizes.
+### GEMM tests
+Implements a GEMM blocking algorithm using wmma for all supported configurations. Validates on CPU algorithm or rocBLAS if available. Validation runs are performed on a reduced subset of matrix sizes. Benchmark runs are on a larger set of matrix sizes. There are currently 3 variants of GEMM kernels. **MmaSyncTest** is the simplest GEMM example which
+targets one output block of matrix multiplication per wave. **MmaSyncTestLds** implements MmaSyncTest with LDS shared
+memory to implement data prefetching and movement pipelining to improve performance. **MmaSyncTestCoopLds** is a
+slightly more complicated GEMM that reduces LDS footprint by sharing LDS data with other waves in the workgroup.
 
-Run CPU validation + benchmark: **CPU validation can be very slow especially for large matrices**
+Run CPU validation: **CPU validation can be very slow especially for large matrices**
 ```
 <build_dir>/test/MmaSyncTest-cpu
+<build_dir>/test/MmaSyncTestLds-cpu
+<build_dir>/test/MmaSyncTestCoopLds-cpu
 ```
 
-Run rocBLAS validation + benchmark:
+Run rocBLAS validation: **rocBLAS validation is much quicker and typically takes 15-20 mins**
 ```
 ./MmaSyncTest-rocBLAS
+./MmaSyncTestLds-rocBLAS
+./MmaSyncTestCoopLds-rocBLAS
 ```
 
 Run benchmark only: **Benchmark runs typically take 3-4 hrs to complete**
 ```
 ./MmaSyncTest-bench
+./MmaSyncTestLds-bench
+./MmaSyncTestCoopLds-bench
+```
+
+### ContaminationTest
+Unit tests for loading and storing API to verify data boundaries are not crossed and pristine data is not accessed.
+Run validation:
+```
+<build_dir>/test/ContaminationTest
+```
+
+### LayoutTest
+Unit tests for the internal data layout offset calculations for all supported configurations.
+Run validation:
+```
+<build_dir>/test/LayoutTest
+```
+
+### MappingUtilTest
+Unit tests for the MappingUtil class used to help with coordinate transforms and offsets calculations in other tests.
+Run validation:
+```
+<build_dir>/test/MappingUtilTest
+```
+
+### VectorIteratorTest
+Unit tests for internal vector assignments
+Run validation:
+```
+<build_dir>/test/VectorIteratorTest
 ```
