@@ -34,7 +34,7 @@ function(add_wmma_test TEST_TARGET TEST_SOURCE)
   target_include_directories(${TEST_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_include_directories(${TEST_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gemm)
   if(WMMA_BUILD_ASSEMBLY)
-    foreach(file_name in TEST_SOURCE)
+    foreach(file_name ${TEST_SOURCE})
       add_custom_command(TARGET ${TEST_TARGET}
                          POST_BUILD
                          COMMAND make ARGS ${file_name}.s
