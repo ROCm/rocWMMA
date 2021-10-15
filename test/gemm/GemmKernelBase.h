@@ -142,8 +142,9 @@ protected:
     ComputeT mAlpha, mBeta;
 
     // Execution flow control
-    bool mRunFlag          = true;
-    bool mValidationResult = false;
+    bool   mRunFlag          = true;
+    bool   mValidationResult = false;
+    double mMaxRelativeError;
 
     // Performance
     float64_t mTotalGFlops, mMeasuredGFlopsPerSec;
