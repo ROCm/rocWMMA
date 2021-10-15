@@ -113,7 +113,6 @@ if(WMMA_BUILD_TESTS)
     find_package( rocblas REQUIRED PATHS /opt/rocm /opt/rocm/rocblas $ENV{ROCBLAS_DIR} )
   endif()
 
-  enable_testing()
   add_subdirectory(test)
 endif()
 
