@@ -303,6 +303,7 @@ void GemmKernelBase<BlockM,
 
     mRunFlag          = true;
     mValidationResult = false;
+    mMaxRelativeError = 0.0;
 
     mTotalGFlops = mMeasuredGFlopsPerSec = 0.0;
     mElapsedTimeMs = mEfficiency = 0.0;
@@ -504,8 +505,9 @@ void GemmKernelBase<BlockM,
                                                                       mAlpha,
                                                                       mBeta);
 
-            mValidationResult = compareEqual<OutputT, OutputT, LayoutD, col_major>(
-                kernelResult.get(), referenceResult.get(), mM, mN, errorTolerance);
+            std::tie(mValidationResult, mMaxRelativeError)
+                = compareEqual<OutputT, OutputT, LayoutD, col_major>(
+                    kernelResult.get(), referenceResult.get(), mM, mN, errorTolerance);
 
             validated = true;
         }
@@ -526,11 +528,12 @@ void GemmKernelBase<BlockM,
                 mAlpha,
                 mBeta);
 
-            mValidationResult = compareEqual<OutputT, OutputT, LayoutD, LayoutD>(
-                kernelResult.get(), referenceResult.get(), mM, mN, errorTolerance);
+            std::tie(mValidationResult, mMaxRelativeError)
+                = compareEqual<OutputT, OutputT, LayoutD, LayoutD>(
+                    kernelResult.get(), referenceResult.get(), mM, mN, errorTolerance);
         }
 
-        EXPECT_TRUE(mValidationResult);
+        EXPECT_TRUE(mValidationResult) << "Max relative error: " << mMaxRelativeError;
     }
 #endif // WMMA_VALIDATE_TESTS
 }

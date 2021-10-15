@@ -327,7 +327,8 @@ public:
         CHECK_HIP_ERROR(hipFree(d_a_out));
 
         //Compare
-        EXPECT_TRUE((compareEqual<InputT, InputT, Layout, Layout>(matrixA, refA, M, N)));
+        auto compResult = compareEqual<InputT, InputT, Layout, Layout>(matrixA, refA, M, N);
+        EXPECT_TRUE((std::get<0>(compResult))) << std::get<1>(compResult);
     }
 
 private:

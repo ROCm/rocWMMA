@@ -27,6 +27,7 @@
 #ifndef WMMA_TEST_COMMON_H
 #define WMMA_TEST_COMMON_H
 
+#include <ostream>
 #include <tuple>
 #include <type_traits>
 #include <vector>
@@ -81,7 +82,8 @@ template <typename Layout>
 struct MatrixUtil
 {
     template <typename DataT>
-    __host__ static inline void print(DataT const* mat, uint32_t m, uint32_t n)
+    __host__ static inline void
+        print(DataT const* mat, uint32_t m, uint32_t n, std::ostream& stream = std::cout)
     {
         auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
         auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
@@ -91,22 +93,25 @@ struct MatrixUtil
 
         for(int i = 0; i < m; ++i) // row
         {
-            std::cout << "[ ";
+            stream << "[ ";
             for(int j = 0; j < n; ++j) // col
             {
                 // (Row, col)
-                std::cout << mat[index(i, j, ld)] << " ";
+                stream << mat[index(i, j, ld)] << " ";
             }
-            std::cout << "]\n";
+            stream << "]\n";
         }
-        std::cout << "\n";
+        stream << "\n";
     }
 
     template <typename DataT>
-    __host__ static inline void print(std::vector<DataT> const& mat, uint32_t m, uint32_t n)
+    __host__ static inline void print(std::vector<DataT> const& mat,
+                                      uint32_t                  m,
+                                      uint32_t                  n,
+                                      std::ostream&             stream = std::cout)
     {
         assert(mat.size() == n * m);
-        print(mat.data(), m, n);
+        print(mat.data(), m, n, stream);
     }
 
     template <typename DataT>
@@ -190,12 +195,12 @@ struct MatrixUtil
 };
 
 template <typename DataT, typename DataLayout>
-bool compareEqualPadded(std::vector<DataT> const& a,
-                        std::vector<DataT> const& b,
-                        int                       M,
-                        int                       N,
-                        DataT                     padValue,
-                        double                    tolerance = 10.0)
+std::pair<bool, double> compareEqualPadded(std::vector<DataT> const& a,
+                                           std::vector<DataT> const& b,
+                                           int                       M,
+                                           int                       N,
+                                           DataT                     padValue,
+                                           double                    tolerance = 10.0)
 {
     bool retval;
 
@@ -252,20 +257,18 @@ bool compareEqualPadded(std::vector<DataT> const& a,
     auto eps = toDouble(std::numeric_limits<DataT>::epsilon());
     if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
     {
-        std::cout << "FAIL: ";
         retval = false;
     }
     else
     {
-        std::cout << "PASS: ";
         retval = true;
     }
-    std::cout << "max_relative_error = " << max_relative_error << std::endl;
-    return retval;
+    return std::make_pair(retval, max_relative_error);
 }
 
 template <typename TypeA, typename TypeB, typename LayoutA, typename LayoutB>
-bool compareEqual(TypeA const* a, TypeB const* b, int M, int N, double tolerance = 10.0)
+std::pair<bool, double>
+    compareEqual(TypeA const* a, TypeB const* b, int M, int N, double tolerance = 10.0)
 {
     bool retval;
     int  lda = std::is_same<LayoutA, row_major>::value ? N : M;
@@ -301,21 +304,18 @@ bool compareEqual(TypeA const* a, TypeB const* b, int M, int N, double tolerance
     auto eps = toDoubleA(std::numeric_limits<TypeA>::epsilon());
     if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
     {
-        std::cout << "FAIL: ";
         retval = false;
     }
     else
     {
-        std::cout << "PASS: ";
         retval = true;
     }
-    std::cout << "max_relative_error = " << max_relative_error << std::endl;
 
-    return retval;
+    return std::make_pair(retval, max_relative_error);
 }
 
 template <typename TypeA, typename TypeB, typename LayoutA, typename LayoutB>
-bool compareEqual(
+std::pair<bool, double> compareEqual(
     std::vector<TypeA> const& a, std::vector<TypeB> const& b, int M, int N, double tolerance = 10.0)
 {
     assert(a.size() == b.size() && "A and B are not the same size");
@@ -324,7 +324,8 @@ bool compareEqual(
 }
 
 template <typename DataT>
-bool compareEqual(DataT const* a, DataT const* b, int M, int N, double tolerance = 10.0)
+std::pair<bool, double>
+    compareEqual(DataT const* a, DataT const* b, int M, int N, double tolerance = 10.0)
 {
     bool     retval;
     double   max_relative_error = 0.0;
@@ -350,20 +351,17 @@ bool compareEqual(DataT const* a, DataT const* b, int M, int N, double tolerance
     auto eps = toDouble(std::numeric_limits<DataT>::epsilon());
     if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
     {
-        std::cout << "FAIL: ";
         retval = false;
     }
     else
     {
-        std::cout << "PASS: ";
         retval = true;
     }
-    std::cout << "max_relative_error = " << max_relative_error << std::endl;
-    return retval;
+    return std::make_pair(retval, max_relative_error);
 }
 
 template <typename DataT>
-bool compareEqual(
+std::pair<bool, double> compareEqual(
     std::vector<DataT> const& a, std::vector<DataT> const& b, int M, int N, double tolerance = 10.0)
 {
     assert(a.size() == b.size() && "A and B are not the same size");
