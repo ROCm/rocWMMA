@@ -75,6 +75,21 @@ public:
     MmaSyncCoopLdsMultiKernel() {}
     ~MmaSyncCoopLdsMultiKernel() final {}
 
+    dim3 gridDim() const final
+    {
+        auto baseDim = Base::gridDim();
+        baseDim.x /= BlocksX;
+        baseDim.y /= BlocksY;
+        return baseDim;
+    }
+
+    bool checkQuirks() const final
+    {
+        auto blockDims = this->blockDim();
+        return ((blockDims.x / AMDGCN_WAVE_SIZE * BlockM * BlocksX) <= Base::mM)
+               && ((blockDims.y * BlockN * BlocksY) <= Base::mN);
+    }
+
     // Lds memory usage in bytes
     uint32_t ldsUsage() const final
     {
