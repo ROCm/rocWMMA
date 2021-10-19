@@ -106,11 +106,14 @@ add_wmma_test(MmaSyncTest-bench ${MmaSyncTestSources})
 add_wmma_test(MmaSyncLdsTest-bench ${MmaSyncLdsTestSources})
 add_wmma_test(MmaSyncCoopLdsTest-bench ${MmaSyncCoopLdsTestSources})
 
+add_wmma_test(MmaSyncCoopLdsMultiTest-bench ${GemmCommonSources} gemm/test/MmaSyncCoopLdsMultiTest_16x16_NT.cpp)
+
 # Validation GEMM
 if(WMMA_VALIDATE_WITH_ROCBLAS)
   add_wmma_validation_test_with_rocblas(MmaSyncTest-rocBLAS ${MmaSyncTestSources})
   add_wmma_validation_test_with_rocblas(MmaSyncLdsTest-rocBLAS ${MmaSyncLdsTestSources})
   add_wmma_validation_test_with_rocblas(MmaSyncCoopLdsTest-rocBLAS ${MmaSyncCoopLdsTestSources})
+  add_wmma_validation_test_with_rocblas(MmaSyncCoopLdsMultiTest-rocBLAS ${GemmCommonSources} gemm/test/MmaSyncCoopLdsMultiTest_16x16_NT.cpp)
 else()
   add_wmma_validation_test(MmaSyncTest-cpu ${MmaSyncTestSources})
   add_wmma_validation_test(MmaSyncLdsTest-cpu ${MmaSyncLdsTestSources})
