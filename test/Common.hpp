@@ -124,8 +124,10 @@ struct MatrixUtil
         auto index = std::is_same<Layout, row_major>::value ? rowMjr : colMjr;
         auto ld    = std::is_same<Layout, row_major>::value ? n : m;
 
+#pragma omp parallel for
         for(int i = 0; i < m; ++i) // row
         {
+#pragma omp parallel for
             for(int j = 0; j < n; ++j) // col
             {
                 auto idx = index(i, j, ld);
@@ -158,8 +160,10 @@ struct MatrixUtil
         auto index = std::is_same<Layout, row_major>::value ? rowMjr : colMjr;
         auto ld    = std::is_same<Layout, row_major>::value ? n : m;
 
+#pragma omp parallel for
         for(int i = 0; i < m; ++i) // row
         {
+#pragma omp parallel for
             for(int j = 0; j < n; ++j) // col
             {
                 // Count up in integers, in ascending order for each row.
@@ -180,6 +184,7 @@ struct MatrixUtil
     template <typename DataT>
     __host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n, DataT value)
     {
+#pragma omp parallel for
         for(int i = 0; i < m * n; ++i) // row
         {
             mat[i] = value;
@@ -219,37 +224,43 @@ std::pair<bool, double> compareEqualPadded(std::vector<DataT> const& a,
     auto index = std::is_same<DataLayout, row_major>::value ? rowMjr : colMjr;
     auto ldA   = std::is_same<DataLayout, row_major>::value ? N : M;
     auto ldB   = std::is_same<DataLayout, row_major>::value ? N + 2 : M + 2;
+
 #pragma omp parallel for
     for(int i = 0; i < M + 2; ++i) // row
     {
+#pragma omp parallel for
         for(int j = 0; j < N + 2; ++j) // col
         {
+            auto numerator = 0.0;
+            auto divisor   = 0.0;
+
             if(i == 0 || j == 0 || i == M + 1 || j == N + 1)
             {
-                auto idx = index(i, j, ldB);
-                auto relative_error
-                    = b[idx] != static_cast<DataT>(0)
-                          ? fabs(toDouble(b[idx]) - toDouble(padValue))
-                                / (fabs(toDouble(b[idx])) + fabs(toDouble(padValue)) + 1)
-                          : 0.0;
-                if(relative_error > max_relative_error)
-                {
-                    max_relative_error = relative_error;
-                }
+
+                auto idx       = index(i, j, ldB);
+                auto numerator = fabs(toDouble(b[idx]) - toDouble(padValue));
+                auto divisor   = fabs(toDouble(b[idx])) + fabs(toDouble(padValue)) + 1.0;
             }
             else
             {
-                auto idxB = index(i, j, ldB);
-                auto idxA = index(i - 1, j - 1, ldA);
-                auto relative_error
-                    = a[idxA] != static_cast<DataT>(0)
-                          ? fabs(toDouble(a[idxA]) - toDouble(b[idxB]))
-                                / (fabs(toDouble(a[idxA])) + fabs(toDouble(b[idxB])) + 1)
-                          : 0.0;
-                if(relative_error > max_relative_error)
-                {
-                    max_relative_error = relative_error;
-                }
+                auto idxB      = index(i, j, ldB);
+                auto idxA      = index(i - 1, j - 1, ldA);
+                auto numerator = fabs(toDouble(a[idxA]) - toDouble(b[idxB]));
+                auto divisor   = fabs(toDouble(a[idxA])) + fabs(toDouble(b[idxB])) + 1.0;
+            }
+
+            auto relative_error = (divisor == 0.0 ? 0.0 : numerator / divisor);
+
+            if(relative_error > max_relative_error)
+            {
+                max_relative_error = relative_error;
+            }
+            // NaN: propagate the error and break
+            else if(relative_error != relative_error)
+            {
+                max_relative_error = relative_error;
+                i                  = M;
+                j                  = N;
             }
         }
     }
@@ -284,19 +295,26 @@ std::pair<bool, double>
 #pragma omp parallel for
     for(int i = 0; i < M; ++i) // Row
     {
+#pragma omp parallel for
         for(int j = 0; j < N; ++j) // Col
         {
             auto indexA = std::is_same<LayoutA, row_major>::value ? (i * lda + j) : (i + j * lda);
             auto indexB = std::is_same<LayoutB, row_major>::value ? (i * ldb + j) : (i + j * ldb);
 
-            auto relative_error
-                = (a[indexA] != static_cast<TypeA>(0))
-                      ? fabs(toDoubleA(a[indexA]) - toDoubleB(b[indexB]))
-                            / (fabs(toDoubleA(a[indexA])) + fabs(toDoubleB(b[indexB])) + 1)
-                      : 0.0;
+            auto numerator      = fabs(toDoubleA(a[indexA]) - toDoubleB(b[indexB]));
+            auto divisor        = fabs(toDoubleA(a[indexA])) + fabs(toDoubleB(b[indexB])) + 1.0;
+            auto relative_error = (divisor == 0.0 ? 0.0 : numerator / divisor);
+
             if(relative_error > max_relative_error)
             {
                 max_relative_error = relative_error;
+            }
+            // NaN: propagate the error and break
+            else if(relative_error != relative_error)
+            {
+                max_relative_error = relative_error;
+                i                  = M;
+                j                  = N;
             }
         }
     }
@@ -321,53 +339,6 @@ std::pair<bool, double> compareEqual(
     assert(a.size() == b.size() && "A and B are not the same size");
     assert(a.size() == M * N && "A and B do not match size M x N");
     return compareEqual<TypeA, TypeB, LayoutA, LayoutB>(a.data(), b.data(), M, N, tolerance);
-}
-
-template <typename DataT>
-std::pair<bool, double>
-    compareEqual(DataT const* a, DataT const* b, int M, int N, double tolerance = 10.0)
-{
-    bool     retval;
-    double   max_relative_error = 0.0;
-    uint32_t numElements        = M * N;
-
-    // Some types don't have direct conversion to double.
-    // Convert to float first then to double.
-    auto toDouble = [](DataT const& val) { return static_cast<double>(static_cast<float>(val)); };
-
-#pragma omp parallel for
-    for(int i = 0; i < numElements; ++i)
-    {
-        auto relative_error = a[i] != static_cast<DataT>(0)
-                                  ? fabs(toDouble(a[i]) - toDouble(b[i]))
-                                        / (fabs(toDouble(a[i])) + fabs(toDouble(b[i])) + 1)
-                                  : 0.0;
-        if(relative_error > max_relative_error)
-        {
-            max_relative_error = relative_error;
-        }
-    }
-
-    auto eps = toDouble(std::numeric_limits<DataT>::epsilon());
-    if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
-    {
-        retval = false;
-    }
-    else
-    {
-        retval = true;
-    }
-    return std::make_pair(retval, max_relative_error);
-}
-
-template <typename DataT>
-std::pair<bool, double> compareEqual(
-    std::vector<DataT> const& a, std::vector<DataT> const& b, int M, int N, double tolerance = 10.0)
-{
-    assert(a.size() == b.size() && "A and B are not the same size");
-    assert(a.size() == M * N && "A and B do not match size M x N");
-
-    return compareEqual<DataT>(a.data(), b.data(), M, N, tolerance);
 }
 
 #endif // WMMA_TEST_COMMON_H
