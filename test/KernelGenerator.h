@@ -28,10 +28,10 @@
 #define WMMA_KERNEL_GENERATOR_H
 
 /// Definitions
-// TestParams: set of nested kernel parameters.
+// TestParams: outer set of nested kernel parameters.
 // tuple< tuple<KernelParams...>, ...>
 //
-// KernelParams: Params to build a SINGLE kernel.
+// KernelParams: tuple of Params to build a SINGLE kernel.
 // tuple<KernelParams...>
 //
 
@@ -49,8 +49,7 @@
 // under test conditions.
 //
 
-/// STEP 1: Building TestParams from basic types.
-// There are three classes that provide functionality
+// There are several classes that provide functionality
 // to build combinations of basic types.
 //
 // Concat: Concatenation of types together.
@@ -87,6 +86,7 @@ struct Concat<std::tuple<Lhs...>, Rhs>
 // with EACH type of RHS if RHS is a tuple.
 // NOTE: First level of tuples are collapsed into
 // nested tuples, as required by the generator.
+//
 // E.g.
 // CombineOne( A, B ) = tuple< tuple<A, B> >
 // CombineOne( A, tuple<B> ) = tuple< tuple<A, B> >
@@ -117,10 +117,11 @@ struct CombineOne<Lhs, std::tuple<Rhs0, Rhs...>>
     using Result = decltype(std::tuple_cat(std::make_tuple(Mine()), typename Next::Result()));
 };
 
-// CombineMany: Creates combinatorial pairs of
+// CombineMany: Creates combinatorial pairs two lists:
 // EACH type of LHS with EACH type of RHS.
 // NOTE: First level of tuples are collapsed into
 // nested tuples, as required by the generator.
+//
 // E.g.
 // CombineMany( A, B ) = tuple< tuple<A, B> >
 // CombineMany( A, tuple<B> ) = tuple< tuple<A, B> >
@@ -149,6 +150,26 @@ struct CombineMany<std::tuple<Lhs0, Lhs...>, Rhs>
     using Mine   = typename CombineOne<Lhs0, Rhs>::Result;
     using Next   = CombineMany<std::tuple<Lhs...>, Rhs>;
     using Result = decltype(std::tuple_cat(Mine(), typename Next::Result()));
+};
+
+// CombineLists: Creates combinatorial sets from multiple lists.
+//
+// E.g:
+// CombineLists( tuple< tuple<A, B> >, tuple< tuple<C, D> > ) =
+//     tuple< tuple<A, B, C, D> >
+// CombineLists( tuple< tuple<A, B>, tuple<C, D> >, tuple< tuple<E, F>, tuple<G, H> > ) =
+//     tuple< tuple<A, B, E, F>, tuple<A, B, G, H>, tuple<C, D, E, F>, tuple<C, D, G, H> >
+
+template <typename List0, typename... Lists>
+struct CombineLists
+{
+    using Result = typename CombineMany<List0, typename CombineLists<Lists...>::Result>::Result;
+};
+
+template <typename List>
+struct CombineLists<List>
+{
+    using Result = List;
 };
 
 /// Kernel Generator
