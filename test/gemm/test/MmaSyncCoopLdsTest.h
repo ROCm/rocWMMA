@@ -83,16 +83,16 @@ public:
 
     typename Base::KernelFunc kernelImpl() const final
     {
-        return typename Base::KernelFunc(mmaSyncTestCoopLds<BlockM,
-                                                            BlockN,
-                                                            BlockK,
-                                                            InputT,
-                                                            OutputT,
-                                                            ComputeT,
-                                                            LayoutA,
-                                                            LayoutB,
-                                                            LayoutC,
-                                                            LayoutD>);
+        return typename Base::KernelFunc(mmaSyncCoopLds<BlockM,
+                                                        BlockN,
+                                                        BlockK,
+                                                        InputT,
+                                                        OutputT,
+                                                        ComputeT,
+                                                        LayoutA,
+                                                        LayoutB,
+                                                        LayoutC,
+                                                        LayoutD>);
     }
 };
 

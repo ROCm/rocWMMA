@@ -24,8 +24,11 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DEVICE_MMA_SYNC_COOP_LDSM_MULTI_H
-#define WMMA_DEVICE_MMA_SYNC_COOP_LDSM_MULTI_H
+#ifndef WMMA_DEVICE_MMA_SYNC_MULTI_H
+#define WMMA_DEVICE_MMA_SYNC_MULTI_H
+
+#include <array>
+#include <utility>
 
 // The testing interface instantiates fp64 typed tests for all
 // target devices. MI-100 mfma needs to be instantiated at compile time,
@@ -38,7 +41,7 @@
 #include "WMMA.h"
 #pragma GCC diagnostic pop
 
-// A few workarounds to use std library pair and array objects
+// A few workarounds for some lack of std library support on GPU
 template <typename T>
 __device__ inline void assign(T& m, T const& val)
 {
@@ -77,19 +80,19 @@ template <uint32_t BlockM,
           typename LayoutD,
           uint32_t BlocksX = 1,
           uint32_t BlocksY = 1>
-__global__ void __launch_bounds__(256, 1) mmaSyncTestCoopLdsMulti(uint32_t       m,
-                                                                  uint32_t       n,
-                                                                  uint32_t       k,
-                                                                  InputT const*  a,
-                                                                  InputT const*  b,
-                                                                  OutputT const* c,
-                                                                  OutputT*       d,
-                                                                  uint32_t       lda,
-                                                                  uint32_t       ldb,
-                                                                  uint32_t       ldc,
-                                                                  uint32_t       ldd,
-                                                                  ComputeT       alpha,
-                                                                  ComputeT       beta)
+__global__ void __launch_bounds__(256, 1) mmaSyncMulti(uint32_t       m,
+                                                       uint32_t       n,
+                                                       uint32_t       k,
+                                                       InputT const*  a,
+                                                       InputT const*  b,
+                                                       OutputT const* c,
+                                                       OutputT*       d,
+                                                       uint32_t       lda,
+                                                       uint32_t       ldb,
+                                                       uint32_t       ldc,
+                                                       uint32_t       ldd,
+                                                       ComputeT       alpha,
+                                                       ComputeT       beta)
 {
     // Setup global mapping
     using MappingA = MappingUtil<BlockM, BlockK, InputT, LayoutA>;
@@ -264,4 +267,4 @@ __global__ void __launch_bounds__(256, 1) mmaSyncTestCoopLdsMulti(uint32_t      
     }
 }
 
-#endif // WMMA_DEVICE_MMA_SYNC_COOP_LDSM_MULTI_H
+#endif // WMMA_DEVICE_MMA_SYNC_MULTI_H
