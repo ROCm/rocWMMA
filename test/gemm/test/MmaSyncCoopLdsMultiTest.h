@@ -77,26 +77,14 @@ public:
 
     dim3 gridDim() const final
     {
-        auto baseDim = Base::gridDim();
-        baseDim.x /= BlocksX;
-        baseDim.y /= BlocksY;
-        return baseDim;
+        return dim3(ceilDiv(Base::mM, BlockM * BlocksX * Base::mTBlockX / AMDGCN_WAVE_SIZE),
+                    ceilDiv(Base::mN, BlockN * BlocksY * Base::mTBlockY));
     }
 
-    bool checkQuirks() const final
+    bool checkSizes() const final
     {
-        auto blockDims = this->blockDim();
-        return ((blockDims.x / AMDGCN_WAVE_SIZE * BlockM * BlocksX) <= Base::mM)
-               && ((blockDims.y * BlockN * BlocksY) <= Base::mN);
-    }
-
-    // Lds memory usage in bytes
-    uint32_t ldsUsage() const final
-    {
-        auto blockDims = this->blockDim();
-        return sizeof(InputT)
-               * (blockDims.x / AMDGCN_WAVE_SIZE * BlockM * BlockK * BlocksX
-                  + blockDims.y * BlockK * BlockN * BlocksY);
+        return ((BlockM * BlocksX * Base::mTBlockX / AMDGCN_WAVE_SIZE) <= Base::mM)
+               && ((BlockN * BlocksY * Base::mTBlockY) <= Base::mN) && (BlockK <= Base::mK);
     }
 
     typename Base::KernelFunc kernelImpl() const final

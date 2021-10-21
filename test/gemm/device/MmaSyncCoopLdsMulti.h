@@ -38,6 +38,7 @@
 #include "WMMA.h"
 #pragma GCC diagnostic pop
 
+// A few workarounds to use std library pair and array objects
 template <typename T>
 __device__ inline void assign(T& m, T const& val)
 {
@@ -102,37 +103,20 @@ __global__ void __launch_bounds__(256, 1) mmaSyncTestCoopLdsMulti(uint32_t      
     using FragC   = wmma::fragment<accumulator, BlockM, BlockN, BlockK, OutputT>;
     using FragAcc = wmma::fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>;
 
-    // Will store to LDS as though it were a register file.
-    // Rows = register count
-    // Cols = unpacked register elements = 64
-    // Row major to minimize bank conflicts
-    constexpr uint32_t registerFileWidth = AMDGCN_WAVE_SIZE;
-    using MappingLdsA = MappingUtil<FragA::size(), registerFileWidth, InputT, row_major>;
-    using MappingLdsB = MappingUtil<FragB::size(), registerFileWidth, InputT, row_major>;
-    using FragLdsA    = wmma::
-        fragment<register_file_coop_a, 1, registerFileWidth, FragA::size(), InputT, row_major>;
-    using FragLdsB = wmma::
-        fragment<register_file_coop_b, 1, registerFileWidth, FragB::size(), InputT, row_major>;
-
-    static_assert(FragA::size() * registerFileWidth == BlockM * BlockK,
-                  "Elements of A don't match");
-    static_assert(FragLdsA::size() == FragA::size(), "A Sizes don't match");
-    static_assert(FragB::size() * registerFileWidth == BlockK * BlockN, "Elements don't match");
-    static_assert(FragLdsB::size() == FragB::size(), "Sizes don't match");
-
-    // Target C / D block on 2D grid, offset by blocks per wave
+    // Target starting C / D block on 2D grid, offset by blocks per wave
     auto matrixCoordC = MappingC::matrixCoord();
     std::get<0>(matrixCoordC) *= BlocksX;
     std::get<1>(matrixCoordC) *= BlocksY;
 
-    if((std::get<0>(matrixCoordC) * BlocksX) < m && (std::get<1>(matrixCoordC) * BlocksY) < n
-       && BlockK < k)
+    if((std::get<0>(matrixCoordC) + BlocksX * BlockM) <= m
+       && (std::get<1>(matrixCoordC) + BlocksY * BlockN) <= n && (BlockK < k))
     {
         // Targets for C sub-matrices
         std::array<std::array<typename MappingC::CoordT, BlocksY>, BlocksX> subMatrixCoordsC;
         std::array<std::array<FragAcc, BlocksY>, BlocksX>                   fragsAccum;
         std::array<std::array<FragC, BlocksY>, BlocksX>                     fragsC;
 
+        /// Initialization
 #pragma unroll
         for(int i = 0; i < BlocksX; i++)
         {
@@ -157,14 +141,14 @@ __global__ void __launch_bounds__(256, 1) mmaSyncTestCoopLdsMulti(uint32_t      
             }
         }
 
-        // Accumulate A * B
+        /// Accumulate A * B
         if(alpha)
         {
             // Setup global read addresses
             std::array<InputT*, BlocksX> globalAddrsA;
             std::array<InputT*, BlocksY> globalAddrsB;
 
-// Blocks in the same row share the same starting address for A
+            // Blocks in the same row share the same starting address for A
 #pragma unroll
             for(int i = 0; i < BlocksX; i++)
             {
@@ -174,7 +158,7 @@ __global__ void __launch_bounds__(256, 1) mmaSyncTestCoopLdsMulti(uint32_t      
                        MappingA::dataCoord(a, lda, std::make_pair(std::get<0>(subMatARowRef), 0)));
             }
 
-// Blocks in the same col share the same starting address for B
+            // Blocks in the same col share the same starting address for B
 #pragma unroll
             for(int i = 0; i < BlocksY; i++)
             {
@@ -200,6 +184,7 @@ __global__ void __launch_bounds__(256, 1) mmaSyncTestCoopLdsMulti(uint32_t      
 #pragma unroll
                 for(int i = 0; i < BlocksX; i++)
                 {
+                    // Synchronize workgroup increases chances for cache hits
                     wmma::synchronize_workgroup();
 
                     // A fragment will be re-used for each B
