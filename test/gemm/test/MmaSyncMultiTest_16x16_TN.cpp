@@ -24,20 +24,21 @@
  *
  *******************************************************************************/
 
-#include "MmaSyncCoopLdsMultiTest.h"
+#include "MmaSyncMultiTest.h"
 
-// Test params for 16 x 16 NT kernels
-struct TestParams16x16NT : public CommonTestParams
+// Test params for 16 x 16 TN kernels
+struct TestParams16x16TN : public CommonTestParams
 {
-    using ABLayouts = std::tuple<wmma::col_major, wmma::row_major>;
+    using ABLayouts = std::tuple<wmma::row_major, wmma::col_major>;
     using Base      = CommonTestParams;
 
     // Set up the testing context:
-    // Kernel: MmaSync
+    // Kernel: MmaSyncMulti
     // Types: ALL + double
     // Block Sizes: 16 x 16 x BlockK
-    // Layouts: NT
-    using Types      = std::tuple<std::tuple<float32_t, float32_t, float32_t>>;
+    // Layouts: TN
+    using Types =
+        typename Concat<typename Base::TestTypesIOC, typename Base::TestTypeDouble>::Result;
     using BlockSizes = typename Base::TestBlockSizes16x16;
     using Layouts    = typename CombineOne<ABLayouts, typename Base::TestLayoutTypes>::Result;
     using BlocksXY   = std::tuple<std::tuple<I<2>, I<2>>>;
@@ -57,19 +58,19 @@ struct TestParams16x16NT : public CommonTestParams
 };
 
 // Test suite for unique parameterization
-class MmaSyncMultiTest16x16NT : public MmaSyncMultiTest
+class MmaSyncMultiTest16x16TN : public MmaSyncMultiTest
 {
 };
 
-TEST_P(MmaSyncMultiTest16x16NT, RunKernel)
+TEST_P(MmaSyncMultiTest16x16TN, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(GemmKernelTests,
-                         MmaSyncMultiTest16x16NT,
-                         ::testing::Combine(::testing::ValuesIn(TestParams16x16NT::kernels()),
-                                            ::testing::ValuesIn(TestParams16x16NT::threadBlocks()),
-                                            ::testing::ValuesIn(TestParams16x16NT::problemSizes()),
-                                            ::testing::ValuesIn(TestParams16x16NT::alphas()),
-                                            ::testing::ValuesIn(TestParams16x16NT::betas())));
+                         MmaSyncMultiTest16x16TN,
+                         ::testing::Combine(::testing::ValuesIn(TestParams16x16TN::kernels()),
+                                            ::testing::ValuesIn(TestParams16x16TN::threadBlocks()),
+                                            ::testing::ValuesIn(TestParams16x16TN::problemSizes()),
+                                            ::testing::ValuesIn(TestParams16x16TN::alphas()),
+                                            ::testing::ValuesIn(TestParams16x16TN::betas())));

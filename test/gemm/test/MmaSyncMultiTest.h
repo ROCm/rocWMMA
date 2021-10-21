@@ -29,7 +29,7 @@
 
 #include <gtest/gtest.h>
 
-#include "device/MmaSyncCoopLdsMulti.h"
+#include "device/MmaSyncMulti.h"
 
 #include "CommonTestParams.h"
 #include "GemmKernelBase.h"
@@ -185,4 +185,4 @@ struct MmaSyncMultiTest
     }
 };
 
-#endif // WMMA_GEMM_MMA_SYNC_COOP_LDS_MULTI_TEST_H
+#endif // WMMA_GEMM_MMA_SYNC_MULTI_TEST_H
