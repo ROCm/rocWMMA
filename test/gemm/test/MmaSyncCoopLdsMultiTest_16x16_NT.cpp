@@ -37,7 +37,7 @@ struct TestParams16x16NT : public CommonTestParams
     // Types: ALL + double
     // Block Sizes: 16 x 16 x BlockK
     // Layouts: NT
-    using Types      = std::tuple<std::tuple<float16_t, float32_t, float32_t>>;
+    using Types      = std::tuple<std::tuple<float32_t, float32_t, float32_t>>;
     using BlockSizes = typename Base::TestBlockSizes16x16;
     using Layouts    = typename CombineOne<ABLayouts, typename Base::TestLayoutTypes>::Result;
     using BlocksXY   = std::tuple<std::tuple<I<2>, I<2>>>;
@@ -47,7 +47,7 @@ struct TestParams16x16NT : public CommonTestParams
         Types,
         typename CombineMany<BlockSizes,
                              typename CombineMany<Layouts, BlocksXY>::Result>::Result>::Result;
-    using GeneratorImpl   = MmaSyncCoopLdsMultiGenerator;
+    using GeneratorImpl   = MmaSyncMultiGenerator;
     using KernelGenerator = KernelGenerator<TestParams, GeneratorImpl>;
 
     static inline typename KernelGenerator::ResultT kernels()
@@ -57,17 +57,17 @@ struct TestParams16x16NT : public CommonTestParams
 };
 
 // Test suite for unique parameterization
-class MmaSyncCoopLdsMultiTest16x16NT : public MmaSyncCoopLdsMultiTest
+class MmaSyncMultiTest16x16NT : public MmaSyncMultiTest
 {
 };
 
-TEST_P(MmaSyncCoopLdsMultiTest16x16NT, RunKernel)
+TEST_P(MmaSyncMultiTest16x16NT, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(GemmKernelTests,
-                         MmaSyncCoopLdsMultiTest16x16NT,
+                         MmaSyncMultiTest16x16NT,
                          ::testing::Combine(::testing::ValuesIn(TestParams16x16NT::kernels()),
                                             ::testing::ValuesIn(TestParams16x16NT::threadBlocks()),
                                             ::testing::ValuesIn(TestParams16x16NT::problemSizes()),
