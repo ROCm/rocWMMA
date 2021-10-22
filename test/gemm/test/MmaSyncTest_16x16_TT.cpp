@@ -24,29 +24,32 @@
  *
  *******************************************************************************/
 
-#include "MmaSyncTest.h"
+#include <type_traits>
 
-// Test params for 16 x 16 TT kernels
-struct TestParams16x16TT : public CommonTestParams
+#include "GemmTest.h"
+#include "KernelGenerator.h"
+#include "detail/MmaSync.h"
+
+struct TestParams : public CommonTestParams
 {
-    using ABLayouts = std::tuple<wmma::row_major, wmma::row_major>;
-    using Base      = CommonTestParams;
+    using Base = CommonTestParams;
 
-    // Set up the testing context:
-    // Kernel: MmaSync
     // Types: ALL + double
     // Block Sizes: 16 x 16 x BlockK
     // Layouts: TT
-    using Types =
-        typename Concat<typename Base::TestTypesIOC, typename Base::TestTypeDouble>::Result;
-    using BlockSizes = typename Base::TestBlockSizes16x16;
-    using Layouts    = typename CombineOne<ABLayouts, typename Base::TestLayoutTypes>::Result;
+    using Types        = typename Base::TestTypes16x16;
+    using BlockSizes   = typename Base::TestBlockSizes16x16;
+    using Layouts      = typename Base::TestLayoutsTT;
+    using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
 
     // Assemble the kernel generator
-    using TestParams =
-        typename CombineMany<Types, typename CombineMany<BlockSizes, Layouts>::Result>::Result;
+    // Kernel: MmaSyncMulti
     using GeneratorImpl   = MmaSyncGenerator;
-    using KernelGenerator = KernelGenerator<TestParams, GeneratorImpl>;
+    using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
+
+    // Sanity check for kernel generator
+    static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
+                  "Kernels from this generator do not match testing interface");
 
     static inline typename KernelGenerator::ResultT kernels()
     {
@@ -55,7 +58,7 @@ struct TestParams16x16TT : public CommonTestParams
 };
 
 // Test suite for unique parameterization
-class MmaSyncTest16x16TT : public MmaSyncTest
+class MmaSyncTest16x16TT : public GemmTest
 {
 };
 
@@ -66,8 +69,8 @@ TEST_P(MmaSyncTest16x16TT, RunKernel)
 
 INSTANTIATE_TEST_SUITE_P(GemmKernelTests,
                          MmaSyncTest16x16TT,
-                         ::testing::Combine(::testing::ValuesIn(TestParams16x16TT::kernels()),
-                                            ::testing::ValuesIn(TestParams16x16TT::threadBlocks()),
-                                            ::testing::ValuesIn(TestParams16x16TT::problemSizes()),
-                                            ::testing::ValuesIn(TestParams16x16TT::alphas()),
-                                            ::testing::ValuesIn(TestParams16x16TT::betas())));
+                         ::testing::Combine(::testing::ValuesIn(TestParams::kernels()),
+                                            ::testing::ValuesIn(TestParams::threadBlocks()),
+                                            ::testing::ValuesIn(TestParams::problemSizes()),
+                                            ::testing::ValuesIn(TestParams::alphas()),
+                                            ::testing::ValuesIn(TestParams::betas())));

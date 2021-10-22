@@ -27,6 +27,9 @@
 #ifndef WMMA_KERNEL_GENERATOR_H
 #define WMMA_KERNEL_GENERATOR_H
 
+#include <tuple>
+#include <vector>
+
 /// Definitions
 // TestParams: outer set of nested kernel parameters.
 // tuple< tuple<KernelParams...>, ...>
@@ -187,9 +190,7 @@ template <typename TestParams, class GeneratorImpl>
 struct KernelGenerator
 {
     template <typename... Ts>
-    static void generate(Ts...)
-    {
-    }
+    static void generate(Ts...);
 };
 
 template <typename KernelParams, typename... Next, class GeneratorImpl>
@@ -209,19 +210,6 @@ struct KernelGenerator<std::tuple<KernelParams, Next...>, GeneratorImpl>
         kernels.push_back(GeneratorImpl::generate(KernelParams()));
         KernelGenerator<std::tuple<Next...>, GeneratorImpl>::generate(kernels);
     }
-};
-
-/// Test Adaptor plugin for GTEST
-// This is a Gtest adaptor for TYPED_TESTS
-// if you want to use the kernel params for
-// this style of test.
-template <typename TestParams>
-struct TestAdaptor;
-
-template <typename... TestParams>
-struct TestAdaptor<std::tuple<TestParams...>>
-{
-    using TestSuite = testing::Types<TestParams...>;
 };
 
 #endif // WMMA_KERNEL_GENERATOR_H

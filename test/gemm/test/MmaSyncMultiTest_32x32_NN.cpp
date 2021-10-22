@@ -24,31 +24,33 @@
  *
  *******************************************************************************/
 
-#include "MmaSyncMultiTest.h"
+#include <type_traits>
 
-// Test params for 32 x 32 NN kernels
-struct TestParams32x32NN : public CommonTestParams
+#include "GemmTest.h"
+#include "KernelGenerator.h"
+#include "detail/MmaSyncMulti.h"
+
+struct TestParams : public CommonTestParams
 {
-    using ABLayouts = std::tuple<wmma::col_major, wmma::col_major>;
-    using Base      = CommonTestParams;
+    using Base = CommonTestParams;
 
-    // Set up the testing context:
-    // Kernel: MmaSyncMulti
     // Types: ALL - double
     // Block Sizes: 32 x 32 x BlockK
     // Layouts: NN
-    using Types      = typename Base::TestTypesIOC;
-    using BlockSizes = typename Base::TestBlockSizes32x32;
-    using Layouts    = typename CombineOne<ABLayouts, typename Base::TestLayoutTypes>::Result;
-    using BlocksXY   = std::tuple<std::tuple<I<2>, I<2>>>;
+    using Types        = typename Base::TestTypes32x32;
+    using BlockSizes   = typename Base::TestBlockSizes32x32;
+    using Layouts      = typename Base::TestLayoutsNN;
+    using BlocksXY     = std::tuple<std::tuple<I<2>, I<2>>>;
+    using KernelParams = typename CombineLists<Types, BlockSizes, Layouts, BlocksXY>::Result;
 
     // Assemble the kernel generator
-    using TestParams = typename CombineMany<
-        Types,
-        typename CombineMany<BlockSizes,
-                             typename CombineMany<Layouts, BlocksXY>::Result>::Result>::Result;
+    // Kernel: MmaSyncMulti
     using GeneratorImpl   = MmaSyncMultiGenerator;
-    using KernelGenerator = KernelGenerator<TestParams, GeneratorImpl>;
+    using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
+
+    // Sanity check for kernel generator
+    static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
+                  "Kernels from this generator do not match testing interface");
 
     static inline typename KernelGenerator::ResultT kernels()
     {
@@ -57,7 +59,7 @@ struct TestParams32x32NN : public CommonTestParams
 };
 
 // Test suite for unique parameterization
-class MmaSyncMultiTest32x32NN : public MmaSyncMultiTest
+class MmaSyncMultiTest32x32NN : public GemmTest
 {
 };
 
@@ -68,8 +70,8 @@ TEST_P(MmaSyncMultiTest32x32NN, RunKernel)
 
 INSTANTIATE_TEST_SUITE_P(GemmKernelTests,
                          MmaSyncMultiTest32x32NN,
-                         ::testing::Combine(::testing::ValuesIn(TestParams32x32NN::kernels()),
-                                            ::testing::ValuesIn(TestParams32x32NN::threadBlocks()),
-                                            ::testing::ValuesIn(TestParams32x32NN::problemSizes()),
-                                            ::testing::ValuesIn(TestParams32x32NN::alphas()),
-                                            ::testing::ValuesIn(TestParams32x32NN::betas())));
+                         ::testing::Combine(::testing::ValuesIn(TestParams::kernels()),
+                                            ::testing::ValuesIn(TestParams::threadBlocks()),
+                                            ::testing::ValuesIn(TestParams::problemSizes()),
+                                            ::testing::ValuesIn(TestParams::alphas()),
+                                            ::testing::ValuesIn(TestParams::betas())));

@@ -31,10 +31,16 @@
 #include <vector>
 
 #include "Common.hpp"
+#include "KernelGenerator.h"
 #include "Types.h"
 
 struct CommonTestParams
 {
+    ///
+    /// Compile-time params used with KernelGenerator to
+    /// instantiate kernel objects
+    ///
+
     // Testing types as Input/Output/Compute (IOC)
     using TestTypesIOC = std::tuple<
         // Non-native bfloat16_t
@@ -59,10 +65,23 @@ struct CommonTestParams
         std::tuple<int8_t, int32_t, int32_t>,
         std::tuple<int8_t, int8_t, int32_t>>;
 
-    using TestTypeDouble = std::tuple<
-        // Native double
-        std::tuple<float64_t, float64_t, float64_t>>;
+    // Native double
+    using TestTypeDouble = std::tuple<std::tuple<float64_t, float64_t, float64_t>>;
 
+    // Supported layout types
+    using TestLayoutTypes = std::tuple<row_major, col_major>;
+
+    ///
+    /// Grouped compile time kernel parameters
+    ///
+
+    // 16 x 16 has support for double types
+    using TestTypes16x16 = typename Concat<TestTypesIOC, TestTypeDouble>::Result;
+
+    // 32 x 32 does not support double types
+    using TestTypes32x32 = TestTypesIOC;
+
+    // BlockK variances for particular BlockM, BlockN
     using TestBlockSizes16x16 = std::tuple<std::tuple<I<16>, I<16>, I<16>>,
                                            std::tuple<I<16>, I<16>, I<32>>,
                                            std::tuple<I<16>, I<16>, I<64>>,
@@ -75,9 +94,22 @@ struct CommonTestParams
                                            std::tuple<I<32>, I<32>, I<64>>,
                                            std::tuple<I<32>, I<32>, I<128>>>;
 
-    // Supported layout types
-    using TestLayoutTypes = std::tuple<row_major, col_major>;
+    // Layout groupings
+    using TestLayoutsNN =
+        typename CombineOne<std::tuple<col_major, col_major>, TestLayoutTypes>::Result;
+    using TestLayoutsNT =
+        typename CombineOne<std::tuple<col_major, row_major>, TestLayoutTypes>::Result;
+    using TestLayoutsTN =
+        typename CombineOne<std::tuple<row_major, col_major>, TestLayoutTypes>::Result;
+    using TestLayoutsTT =
+        typename CombineOne<std::tuple<row_major, row_major>, TestLayoutTypes>::Result;
 
+    ///
+    /// Run-time kernel argument parameters
+    ///
+
+    // Types of parameters
+    using KernelT      = std::shared_ptr<KernelI>; // Kernel test interface
     using ThreadBlockT = std::pair<int64_t, int64_t>;
     using ProblemSizeT = std::tuple<int64_t, int64_t, int64_t>;
     using AlphaT       = float64_t;
