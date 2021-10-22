@@ -249,7 +249,7 @@ std::pair<bool, double> compareEqualPadded(std::vector<DataT> const& a,
                 auto divisor   = fabs(toDouble(a[idxA])) + fabs(toDouble(b[idxB])) + 1.0;
             }
 
-            auto relative_error = (divisor == 0.0 ? 0.0 : numerator / divisor);
+            auto relative_error = numerator / divisor;
 
             if(relative_error > max_relative_error)
             {
@@ -301,9 +301,8 @@ std::pair<bool, double>
             auto indexA = std::is_same<LayoutA, row_major>::value ? (i * lda + j) : (i + j * lda);
             auto indexB = std::is_same<LayoutB, row_major>::value ? (i * ldb + j) : (i + j * ldb);
 
-            auto numerator      = fabs(toDoubleA(a[indexA]) - toDoubleB(b[indexB]));
-            auto divisor        = fabs(toDoubleA(a[indexA])) + fabs(toDoubleB(b[indexB])) + 1.0;
-            auto relative_error = (divisor == 0.0 ? 0.0 : numerator / divisor);
+            auto relative_error = fabs(toDoubleA(a[indexA]) - toDoubleB(b[indexB]))
+                                  / (fabs(toDoubleA(a[indexA])) + fabs(toDoubleB(b[indexB])) + 1.0);
 
             if(relative_error > max_relative_error)
             {
