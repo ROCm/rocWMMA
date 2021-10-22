@@ -24,28 +24,32 @@
  *
  *******************************************************************************/
 
-#include "MmaSyncCoopLdsTest.h"
+#include <type_traits>
 
-// Test params for 32 x 32 NT kernels
-struct TestParams32x32NT : public CommonTestParams
+#include "GemmTest.h"
+#include "KernelGenerator.h"
+#include "detail/MmaSyncCoopLds.h"
+
+struct TestParams : public CommonTestParams
 {
-    using ABLayouts = std::tuple<wmma::col_major, wmma::row_major>;
-    using Base      = CommonTestParams;
+    using Base = CommonTestParams;
 
-    // Set up the testing context:
-    // Kernel: MmaSyncCoopLds
     // Types: ALL - double
     // Block Sizes: 32 x 32 x BlockK
     // Layouts: NT
-    using Types      = typename Base::TestTypesIOC;
-    using BlockSizes = typename Base::TestBlockSizes32x32;
-    using Layouts    = typename CombineOne<ABLayouts, typename Base::TestLayoutTypes>::Result;
+    using Types        = typename Base::TestTypes32x32;
+    using BlockSizes   = typename Base::TestBlockSizes32x32;
+    using Layouts      = typename Base::TestLayoutsNT;
+    using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
 
     // Assemble the kernel generator
-    using TestParams =
-        typename CombineMany<Types, typename CombineMany<BlockSizes, Layouts>::Result>::Result;
+    // Kernel: MmaSyncCoopLds
     using GeneratorImpl   = MmaSyncCoopLdsGenerator;
-    using KernelGenerator = KernelGenerator<TestParams, GeneratorImpl>;
+    using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
+
+    // Sanity check for kernel generator
+    static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
+                  "Kernels from this generator do not match testing interface");
 
     static inline typename KernelGenerator::ResultT kernels()
     {
@@ -54,7 +58,7 @@ struct TestParams32x32NT : public CommonTestParams
 };
 
 // Test suite for unique parameterization
-class MmaSyncCoopLdsTest32x32NT : public MmaSyncCoopLdsTest
+class MmaSyncCoopLdsTest32x32NT : public GemmTest
 {
 };
 
@@ -65,8 +69,8 @@ TEST_P(MmaSyncCoopLdsTest32x32NT, RunKernel)
 
 INSTANTIATE_TEST_SUITE_P(GemmKernelTests,
                          MmaSyncCoopLdsTest32x32NT,
-                         ::testing::Combine(::testing::ValuesIn(TestParams32x32NT::kernels()),
-                                            ::testing::ValuesIn(TestParams32x32NT::threadBlocks()),
-                                            ::testing::ValuesIn(TestParams32x32NT::problemSizes()),
-                                            ::testing::ValuesIn(TestParams32x32NT::alphas()),
-                                            ::testing::ValuesIn(TestParams32x32NT::betas())));
+                         ::testing::Combine(::testing::ValuesIn(TestParams::kernels()),
+                                            ::testing::ValuesIn(TestParams::threadBlocks()),
+                                            ::testing::ValuesIn(TestParams::problemSizes()),
+                                            ::testing::ValuesIn(TestParams::alphas()),
+                                            ::testing::ValuesIn(TestParams::betas())));
