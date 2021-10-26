@@ -256,13 +256,12 @@ struct HardwareTraits<MI200>
 
 inline double calculateGFlops(uint32_t m, uint32_t n, uint32_t k)
 {
-    return 2.0 * static_cast<double>(m) * static_cast<double>(n) * static_cast<double>(k)
-           / 1000000000.0;
+    return 2.0 * static_cast<double>(m) * static_cast<double>(n) * static_cast<double>(k) * 1.0e-9;
 }
 
 inline double calculateGFlopsPerSec(uint32_t m, uint32_t n, uint32_t k, double elapsedTimeMs)
 {
-    return calculateGFlops(m, n, k) / elapsedTimeMs * 1000.0;
+    return calculateGFlops(m, n, k) / elapsedTimeMs * 1.0e3;
 }
 
 template <typename InputT,
@@ -272,7 +271,7 @@ inline double calculatePeakGFlopsPerSec(uint32_t freqMHz)
 {
     return static_cast<double>(PerfTraits<GfxArch, InputT>::Multiplier)
            * static_cast<double>(HardwareTraits<GfxArch>::CuCount) * static_cast<double>(freqMHz)
-           / 1000.0;
+           * 1.0e-3;
 }
 
 #endif // WMMA_PERFORMANCE_H

@@ -24,7 +24,7 @@
  *
  *******************************************************************************/
 
-#include "MmaSyncCoopLdsTest.h"
+#include "MmaSyncMultiTest.h"
 
 // Test params for 16 x 16 TT kernels
 struct TestParams16x16TT : public CommonTestParams
@@ -33,7 +33,7 @@ struct TestParams16x16TT : public CommonTestParams
     using Base      = CommonTestParams;
 
     // Set up the testing context:
-    // Kernel: MmaSyncCoopLds
+    // Kernel: MmaSyncMulti
     // Types: ALL + double
     // Block Sizes: 16 x 16 x BlockK
     // Layouts: TT
@@ -41,11 +41,14 @@ struct TestParams16x16TT : public CommonTestParams
         typename Concat<typename Base::TestTypesIOC, typename Base::TestTypeDouble>::Result;
     using BlockSizes = typename Base::TestBlockSizes16x16;
     using Layouts    = typename CombineOne<ABLayouts, typename Base::TestLayoutTypes>::Result;
+    using BlocksXY   = std::tuple<std::tuple<I<2>, I<2>>>;
 
     // Assemble the kernel generator
-    using TestParams =
-        typename CombineMany<Types, typename CombineMany<BlockSizes, Layouts>::Result>::Result;
-    using GeneratorImpl   = MmaSyncCoopLdsGenerator;
+    using TestParams = typename CombineMany<
+        Types,
+        typename CombineMany<BlockSizes,
+                             typename CombineMany<Layouts, BlocksXY>::Result>::Result>::Result;
+    using GeneratorImpl   = MmaSyncMultiGenerator;
     using KernelGenerator = KernelGenerator<TestParams, GeneratorImpl>;
 
     static inline typename KernelGenerator::ResultT kernels()
@@ -55,17 +58,17 @@ struct TestParams16x16TT : public CommonTestParams
 };
 
 // Test suite for unique parameterization
-class MmaSyncCoopLdsTest16x16TT : public MmaSyncCoopLdsTest
+class MmaSyncMultiTest16x16TT : public MmaSyncMultiTest
 {
 };
 
-TEST_P(MmaSyncCoopLdsTest16x16TT, RunKernel)
+TEST_P(MmaSyncMultiTest16x16TT, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(GemmKernelTests,
-                         MmaSyncCoopLdsTest16x16TT,
+                         MmaSyncMultiTest16x16TT,
                          ::testing::Combine(::testing::ValuesIn(TestParams16x16TT::kernels()),
                                             ::testing::ValuesIn(TestParams16x16TT::threadBlocks()),
                                             ::testing::ValuesIn(TestParams16x16TT::problemSizes()),

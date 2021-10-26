@@ -24,12 +24,12 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_GEMM_MMA_SYNC_COOP_LDS_TEST_H
-#define WMMA_GEMM_MMA_SYNC_COOP_LDS_TEST_H
+#ifndef WMMA_GEMM_MMA_SYNC_MULTI_TEST_H
+#define WMMA_GEMM_MMA_SYNC_MULTI_TEST_H
 
 #include <gtest/gtest.h>
 
-#include "device/MmaSyncCoopLds.h"
+#include "device/MmaSyncMulti.h"
 
 #include "CommonTestParams.h"
 #include "GemmKernelBase.h"
@@ -45,17 +45,19 @@ template <uint32_t BlockM,
           typename LayoutA,
           typename LayoutB,
           typename LayoutC,
-          typename LayoutD = LayoutC>
-struct MmaSyncCoopLdsKernel final : public GemmKernelBase<BlockM,
-                                                          BlockN,
-                                                          BlockK,
-                                                          InputT,
-                                                          OutputT,
-                                                          ComputeT,
-                                                          LayoutA,
-                                                          LayoutB,
-                                                          LayoutC,
-                                                          LayoutD>
+          typename LayoutD = LayoutC,
+          uint32_t BlocksX = 1,
+          uint32_t BlocksY = 1>
+struct MmaSyncMultiKernel final : public GemmKernelBase<BlockM,
+                                                        BlockN,
+                                                        BlockK,
+                                                        InputT,
+                                                        OutputT,
+                                                        ComputeT,
+                                                        LayoutA,
+                                                        LayoutB,
+                                                        LayoutC,
+                                                        LayoutD>
 {
 private:
     using Base = GemmKernelBase<BlockM,
@@ -70,34 +72,40 @@ private:
                                 LayoutD>;
 
 public:
-    MmaSyncCoopLdsKernel() {}
-    ~MmaSyncCoopLdsKernel() final {}
+    MmaSyncMultiKernel() {}
+    ~MmaSyncMultiKernel() final {}
 
-    // Lds memory usage in bytes
-    uint32_t ldsUsage() const final
+    dim3 gridDim() const final
     {
-        auto blockDims = this->blockDim();
-        return sizeof(InputT)
-               * (blockDims.x / AMDGCN_WAVE_SIZE * BlockM * BlockK + blockDims.y * BlockK * BlockN);
+        return dim3(ceilDiv(Base::mM, BlockM * BlocksX * Base::mTBlockX / AMDGCN_WAVE_SIZE),
+                    ceilDiv(Base::mN, BlockN * BlocksY * Base::mTBlockY));
+    }
+
+    bool checkSizes() const final
+    {
+        return ((BlockM * BlocksX * Base::mTBlockX / AMDGCN_WAVE_SIZE) <= Base::mM)
+               && ((BlockN * BlocksY * Base::mTBlockY) <= Base::mN) && (BlockK <= Base::mK);
     }
 
     typename Base::KernelFunc kernelImpl() const final
     {
-        return typename Base::KernelFunc(mmaSyncCoopLds<BlockM,
-                                                        BlockN,
-                                                        BlockK,
-                                                        InputT,
-                                                        OutputT,
-                                                        ComputeT,
-                                                        LayoutA,
-                                                        LayoutB,
-                                                        LayoutC,
-                                                        LayoutD>);
+        return typename Base::KernelFunc(mmaSyncMulti<BlockM,
+                                                      BlockN,
+                                                      BlockK,
+                                                      InputT,
+                                                      OutputT,
+                                                      ComputeT,
+                                                      LayoutA,
+                                                      LayoutB,
+                                                      LayoutC,
+                                                      LayoutD,
+                                                      BlocksX,
+                                                      BlocksY>);
     }
 };
 
 // This is the GeneratorImpl class for MmaSyncCoopLds
-struct MmaSyncCoopLdsGenerator
+struct MmaSyncMultiGenerator
 {
     // Indices to test parameters
     enum : uint32_t
@@ -110,7 +118,9 @@ struct MmaSyncCoopLdsGenerator
         BlockK   = 5,
         LayoutA  = 6,
         LayoutB  = 7,
-        LayoutCD = 8
+        LayoutCD = 8,
+        BlocksX  = 9,
+        BlocksY  = 10
     };
 
     using ResultT = std::shared_ptr<KernelI>;
@@ -120,30 +130,32 @@ struct MmaSyncCoopLdsGenerator
     {
         using TestParamsT = std::tuple<Ts...>;
         using KernelT
-            = MmaSyncCoopLdsKernel<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
-                                   std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
-                                   std::tuple_element_t<BlockK, TestParamsT>::value, // BlockK
-                                   std::tuple_element_t<InputT, TestParamsT>, // InputT
-                                   std::tuple_element_t<OutputT, TestParamsT>, // OutputT
-                                   std::tuple_element_t<ComputeT, TestParamsT>, // ComputeT
-                                   std::tuple_element_t<LayoutA, TestParamsT>, // LayoutA
-                                   std::tuple_element_t<LayoutB, TestParamsT>, // LayoutB
-                                   std::tuple_element_t<LayoutCD, TestParamsT>, // LayoutC
-                                   std::tuple_element_t<LayoutCD, TestParamsT> // LayoutD
-                                   >;
+            = MmaSyncMultiKernel<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
+                                 std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
+                                 std::tuple_element_t<BlockK, TestParamsT>::value, // BlockK
+                                 std::tuple_element_t<InputT, TestParamsT>, // InputT
+                                 std::tuple_element_t<OutputT, TestParamsT>, // OutputT
+                                 std::tuple_element_t<ComputeT, TestParamsT>, // ComputeT
+                                 std::tuple_element_t<LayoutA, TestParamsT>, // LayoutA
+                                 std::tuple_element_t<LayoutB, TestParamsT>, // LayoutB
+                                 std::tuple_element_t<LayoutCD, TestParamsT>, // LayoutC
+                                 std::tuple_element_t<LayoutCD, TestParamsT>, // LayoutD
+                                 std::tuple_element_t<BlocksX, TestParamsT>::value, // BlocksX
+                                 std::tuple_element_t<BlocksY, TestParamsT>::value // BlocksY
+                                 >;
 
         return std::make_shared<KernelT>();
     }
 };
 
-struct MmaSyncCoopLdsTest
-    : public ::testing::TestWithParam<std::tuple<typename MmaSyncCoopLdsGenerator::ResultT,
+struct MmaSyncMultiTest
+    : public ::testing::TestWithParam<std::tuple<typename MmaSyncMultiGenerator::ResultT,
                                                  typename CommonTestParams::ThreadBlockT,
                                                  typename CommonTestParams::ProblemSizeT,
                                                  typename CommonTestParams::AlphaT,
                                                  typename CommonTestParams::BetaT>>
 {
-    using Base = ::testing::TestWithParam<std::tuple<typename MmaSyncCoopLdsGenerator::ResultT,
+    using Base = ::testing::TestWithParam<std::tuple<typename MmaSyncMultiGenerator::ResultT,
                                                      typename CommonTestParams::ThreadBlockT,
                                                      typename CommonTestParams::ProblemSizeT,
                                                      typename CommonTestParams::AlphaT,
@@ -173,4 +185,4 @@ struct MmaSyncCoopLdsTest
     }
 };
 
-#endif // WMMA_GEMM_MMA_SYNC_COOP_LDS_TEST_H
+#endif // WMMA_GEMM_MMA_SYNC_MULTI_TEST_H
