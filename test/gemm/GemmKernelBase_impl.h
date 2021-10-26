@@ -319,6 +319,93 @@ template <uint32_t BlockM,
           typename LayoutB,
           typename LayoutC,
           typename LayoutD>
+std::ostream& GemmKernelBase<BlockM,
+                             BlockN,
+                             BlockK,
+                             InputT,
+                             OutputT,
+                             ComputeT,
+                             LayoutA,
+                             LayoutB,
+                             LayoutC,
+                             LayoutD>::printHeader(std::ostream& stream /* = std::cout */) const
+{
+
+    return stream
+           << "TBlkX, TBlkY, BlkM, BlkN, BlkK, MatM, MatN, MatK, alpha, lda, ldb, beta, ldc, "
+              "ldd, LytA_LytB_LytC_LytD, Ti_To_Tc, elapsedMs, GFlops, GFlops/s, Efficiency(%), "
+              "Result"
+           << std::endl;
+}
+
+template <uint32_t BlockM,
+          uint32_t BlockN,
+          uint32_t BlockK,
+          typename InputT,
+          typename OutputT,
+          typename ComputeT,
+          typename LayoutA,
+          typename LayoutB,
+          typename LayoutC,
+          typename LayoutD>
+std::ostream& GemmKernelBase<BlockM,
+                             BlockN,
+                             BlockK,
+                             InputT,
+                             OutputT,
+                             ComputeT,
+                             LayoutA,
+                             LayoutB,
+                             LayoutC,
+                             LayoutD>::printKernel(std::ostream& stream /* = std::cout */) const
+{
+    stream << mTBlockX << ", " << mTBlockY << ", " << BlockM << ", " << BlockN << ", " << BlockK
+           << ", " << mM << ", " << mN << ", " << mK << ", " << mAlpha << ", " << mLda << ", "
+           << mLdb << ", " << mBeta << ", " << mLdc << ", " << mLdd << ", "
+           << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << "_"
+           << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << "_"
+           << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << "_"
+           << (std::is_same<LayoutD, row_major>::value ? "R" : "C") << ", "
+           << dataTypeToString<InputT>() << "_" << dataTypeToString<OutputT>() << "_"
+           << dataTypeToString<ComputeT>() << ", ";
+
+    if(!mRunFlag)
+    {
+        stream << "n/a"
+               << ", "
+               << "n/a"
+               << ", "
+               << "n/a"
+               << ", "
+               << "n/a"
+               << ", "
+               << " SKIPPED" << std::endl;
+    }
+    else
+    {
+        stream << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredGFlopsPerSec << ", "
+               << mEfficiency << ", "
+#ifdef WMMA_VALIDATE_TESTS
+               << (mValidationResult ? "PASSED" : "FAILED")
+#else
+               << "BENCH"
+#endif // WMMA_VALIDATE_TESTS
+               << std::endl;
+    }
+
+    return stream;
+}
+
+template <uint32_t BlockM,
+          uint32_t BlockN,
+          uint32_t BlockK,
+          typename InputT,
+          typename OutputT,
+          typename ComputeT,
+          typename LayoutA,
+          typename LayoutB,
+          typename LayoutC,
+          typename LayoutD>
 void GemmKernelBase<BlockM,
                     BlockN,
                     BlockK,
@@ -562,46 +649,11 @@ void GemmKernelBase<BlockM,
 
     if(!KernelI::sHeaderPrinted)
     {
-        std::cout
-            << "TBlkX, TBlkY, BlkM, BlkN, BlkK, MatM, MatN, MatK, alpha, lda, ldb, beta, ldc, "
-               "ldd, LytA_LytB_LytC_LytD, Ti_To_Tc, elapsedMs, GFlops, GFlops/s, Efficiency(%), "
-               "Result\n";
+        printHeader();
         KernelI::sHeaderPrinted = true;
     }
 
-    std::cout << mTBlockX << ", " << mTBlockY << ", " << BlockM << ", " << BlockN << ", " << BlockK
-              << ", " << mM << ", " << mN << ", " << mK << ", " << mAlpha << ", " << mLda << ", "
-              << mLdb << ", " << mBeta << ", " << mLdc << ", " << mLdd << ", "
-              << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << "_"
-              << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << "_"
-              << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << "_"
-              << (std::is_same<LayoutD, row_major>::value ? "R" : "C") << ", "
-              << dataTypeToString<InputT>() << "_" << dataTypeToString<OutputT>() << "_"
-              << dataTypeToString<ComputeT>() << ", ";
-
-    if(!mRunFlag)
-    {
-        std::cout << "n/a"
-                  << ", "
-                  << "n/a"
-                  << ", "
-                  << "n/a"
-                  << ", "
-                  << "n/a"
-                  << ", "
-                  << " SKIPPED" << std::endl;
-    }
-    else
-    {
-        std::cout << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredGFlopsPerSec << ", "
-                  << mEfficiency << ", "
-#ifdef WMMA_VALIDATE_TESTS
-                  << (mValidationResult ? "PASSED" : "FAILED")
-#else
-                  << "BENCH"
-#endif // WMMA_VALIDATE_TESTS
-                  << std::endl;
-    }
+    printKernel();
 }
 
 template <uint32_t BlockM,
@@ -625,38 +677,6 @@ void GemmKernelBase<BlockM,
                     LayoutC,
                     LayoutD>::tearDown()
 {
-}
-
-template <uint32_t BlockM,
-          uint32_t BlockN,
-          uint32_t BlockK,
-          typename InputT,
-          typename OutputT,
-          typename ComputeT,
-          typename LayoutA,
-          typename LayoutB,
-          typename LayoutC,
-          typename LayoutD>
-std::string GemmKernelBase<BlockM,
-                           BlockN,
-                           BlockK,
-                           InputT,
-                           OutputT,
-                           ComputeT,
-                           LayoutA,
-                           LayoutB,
-                           LayoutC,
-                           LayoutD>::debugStr() const
-{
-    std::stringstream outStream;
-    outStream << "Type(" << dataTypeToString<InputT>() << "_" << dataTypeToString<OutputT>() << "_"
-              << dataTypeToString<ComputeT>() << "), "
-              << "BlockMNK(" << BlockM << ", " << BlockN << ", " << BlockK << "), "
-              << "Layout(" << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << "_"
-              << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << "_"
-              << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << "_"
-              << (std::is_same<LayoutD, row_major>::value ? "R" : "C") << ")";
-    return outStream.str();
 }
 
 #endif // WMMA_KERNEL_BASE_IMPL_H

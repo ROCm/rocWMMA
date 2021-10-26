@@ -31,6 +31,7 @@
 #include <vector>
 
 #include "Common.hpp"
+#include "GemmKernelBase.h"
 #include "KernelGenerator.h"
 #include "Types.h"
 
