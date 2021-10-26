@@ -190,7 +190,9 @@ template <typename TestParams, class GeneratorImpl>
 struct KernelGenerator
 {
     template <typename... Ts>
-    static void generate(Ts...);
+    static void generate(Ts...)
+    {
+    }
 };
 
 template <typename KernelParams, typename... Next, class GeneratorImpl>

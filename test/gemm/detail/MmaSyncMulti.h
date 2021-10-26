@@ -97,6 +97,16 @@ public:
                                                       BlocksX,
                                                       BlocksY>);
     }
+
+    std::ostream& printHeader(std::ostream& stream = std::cout) const final
+    {
+        return Base::printHeader(stream << "BlocksX, BlocksY, ");
+    }
+
+    std::ostream& printKernel(std::ostream& stream = std::cout) const final
+    {
+        return Base::printKernel(stream << BlocksX << ", " << BlocksY << ", ");
+    }
 };
 
 // This is the GeneratorImpl class for MmaSyncCoopLds
