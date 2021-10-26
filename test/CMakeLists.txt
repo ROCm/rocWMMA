@@ -71,6 +71,7 @@ add_wmma_test(ContaminationTest ContaminationTest.cpp)
 
 # GEMM Tests
 set(GemmCommonSources HipDevice.cpp gemm/GemmKernelBase.cpp)
+
 set(MmaSyncTestSources ${GemmCommonSources}
                        gemm/test/MmaSyncTest_16x16_NN.cpp
                        gemm/test/MmaSyncTest_16x16_NT.cpp
@@ -80,6 +81,16 @@ set(MmaSyncTestSources ${GemmCommonSources}
                        gemm/test/MmaSyncTest_32x32_NT.cpp
                        gemm/test/MmaSyncTest_32x32_TN.cpp
                        gemm/test/MmaSyncTest_32x32_TT.cpp)
+
+set(MmaSyncMultiTestSources ${GemmCommonSources}
+                       gemm/test/MmaSyncMultiTest_16x16_NN.cpp
+                       gemm/test/MmaSyncMultiTest_16x16_NT.cpp
+                       gemm/test/MmaSyncMultiTest_16x16_TN.cpp
+                       gemm/test/MmaSyncMultiTest_16x16_TT.cpp
+                       gemm/test/MmaSyncMultiTest_32x32_NN.cpp
+                       gemm/test/MmaSyncMultiTest_32x32_NT.cpp
+                       gemm/test/MmaSyncMultiTest_32x32_TN.cpp
+                       gemm/test/MmaSyncMultiTest_32x32_TT.cpp)
 
 set(MmaSyncLdsTestSources ${GemmCommonSources}
                        gemm/test/MmaSyncLdsTest_16x16_NN.cpp
@@ -103,16 +114,19 @@ set(MmaSyncCoopLdsTestSources ${GemmCommonSources}
 
 # Benchmark GEMM
 add_wmma_test(MmaSyncTest-bench ${MmaSyncTestSources})
+add_wmma_test(MmaSyncMultiTest-bench ${MmaSyncMultiTestSources})
 add_wmma_test(MmaSyncLdsTest-bench ${MmaSyncLdsTestSources})
 add_wmma_test(MmaSyncCoopLdsTest-bench ${MmaSyncCoopLdsTestSources})
 
 # Validation GEMM
 if(WMMA_VALIDATE_WITH_ROCBLAS)
   add_wmma_validation_test_with_rocblas(MmaSyncTest-rocBLAS ${MmaSyncTestSources})
+  add_wmma_validation_test_with_rocblas(MmaSyncMultiTest-rocBLAS ${MmaSyncMultiTestSources})
   add_wmma_validation_test_with_rocblas(MmaSyncLdsTest-rocBLAS ${MmaSyncLdsTestSources})
   add_wmma_validation_test_with_rocblas(MmaSyncCoopLdsTest-rocBLAS ${MmaSyncCoopLdsTestSources})
 else()
   add_wmma_validation_test(MmaSyncTest-cpu ${MmaSyncTestSources})
+  add_wmma_validation_test(MmaSyncMultiTest-cpu ${MmaSyncMultiTestSources})
   add_wmma_validation_test(MmaSyncLdsTest-cpu ${MmaSyncLdsTestSources})
   add_wmma_validation_test(MmaSyncCoopLdsTest-cpu ${MmaSyncCoopLdsTestSources})
 endif()

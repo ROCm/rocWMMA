@@ -33,7 +33,7 @@ struct TestParams16x16TN : public CommonTestParams
     using Base      = CommonTestParams;
 
     // Set up the testing context:
-    // Kernel: MmaSync
+    // Kernel: MmaSyncCoopLds
     // Types: ALL + double
     // Block Sizes: 16 x 16 x BlockK
     // Layouts: TN

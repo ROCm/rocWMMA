@@ -24,28 +24,30 @@
  *
  *******************************************************************************/
 
-#include "MmaSyncCoopLdsTest.h"
+#include "MmaSyncMultiTest.h"
 
-// Test params for 16 x 16 TT kernels
-struct TestParams16x16TT : public CommonTestParams
+// Test params for 32 x 32 NT kernels
+struct TestParams32x32NT : public CommonTestParams
 {
-    using ABLayouts = std::tuple<wmma::row_major, wmma::row_major>;
+    using ABLayouts = std::tuple<wmma::col_major, wmma::row_major>;
     using Base      = CommonTestParams;
 
     // Set up the testing context:
-    // Kernel: MmaSyncCoopLds
-    // Types: ALL + double
-    // Block Sizes: 16 x 16 x BlockK
-    // Layouts: TT
-    using Types =
-        typename Concat<typename Base::TestTypesIOC, typename Base::TestTypeDouble>::Result;
-    using BlockSizes = typename Base::TestBlockSizes16x16;
+    // Kernel: MmaSyncMulti
+    // Types: ALL - double
+    // Block Sizes: 32 x 32 x BlockK
+    // Layouts: NT
+    using Types      = typename Base::TestTypesIOC;
+    using BlockSizes = typename Base::TestBlockSizes32x32;
     using Layouts    = typename CombineOne<ABLayouts, typename Base::TestLayoutTypes>::Result;
+    using BlocksXY   = std::tuple<std::tuple<I<2>, I<2>>>;
 
     // Assemble the kernel generator
-    using TestParams =
-        typename CombineMany<Types, typename CombineMany<BlockSizes, Layouts>::Result>::Result;
-    using GeneratorImpl   = MmaSyncCoopLdsGenerator;
+    using TestParams = typename CombineMany<
+        Types,
+        typename CombineMany<BlockSizes,
+                             typename CombineMany<Layouts, BlocksXY>::Result>::Result>::Result;
+    using GeneratorImpl   = MmaSyncMultiGenerator;
     using KernelGenerator = KernelGenerator<TestParams, GeneratorImpl>;
 
     static inline typename KernelGenerator::ResultT kernels()
@@ -55,19 +57,19 @@ struct TestParams16x16TT : public CommonTestParams
 };
 
 // Test suite for unique parameterization
-class MmaSyncCoopLdsTest16x16TT : public MmaSyncCoopLdsTest
+class MmaSyncMultiTest32x32NT : public MmaSyncMultiTest
 {
 };
 
-TEST_P(MmaSyncCoopLdsTest16x16TT, RunKernel)
+TEST_P(MmaSyncMultiTest32x32NT, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(GemmKernelTests,
-                         MmaSyncCoopLdsTest16x16TT,
-                         ::testing::Combine(::testing::ValuesIn(TestParams16x16TT::kernels()),
-                                            ::testing::ValuesIn(TestParams16x16TT::threadBlocks()),
-                                            ::testing::ValuesIn(TestParams16x16TT::problemSizes()),
-                                            ::testing::ValuesIn(TestParams16x16TT::alphas()),
-                                            ::testing::ValuesIn(TestParams16x16TT::betas())));
+                         MmaSyncMultiTest32x32NT,
+                         ::testing::Combine(::testing::ValuesIn(TestParams32x32NT::kernels()),
+                                            ::testing::ValuesIn(TestParams32x32NT::threadBlocks()),
+                                            ::testing::ValuesIn(TestParams32x32NT::problemSizes()),
+                                            ::testing::ValuesIn(TestParams32x32NT::alphas()),
+                                            ::testing::ValuesIn(TestParams32x32NT::betas())));

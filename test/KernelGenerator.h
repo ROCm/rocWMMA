@@ -128,7 +128,7 @@ struct CombineOne<Lhs, std::tuple<Rhs0, Rhs...>>
 // CombineMany( A, tuple<B, C, D> ) = tuple< tuple<A, B>,
 //                                           tuple<A, C>,
 //                                           tuple<A, D>>
-// CombineOne( tuple<A, B>, tuple<C, D> ) = tuple< tuple<A, C>,
+// CombineMany( tuple<A, B>, tuple<C, D> ) = tuple< tuple<A, C>,
 //                                                 tuple<A, D>,
 //                                                 tuple<B, C>,
 //                                                 tuple<B, D>>
