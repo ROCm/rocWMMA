@@ -24,16 +24,11 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_GEMM_MMA_SYNC_MULTI_TEST_H
-#define WMMA_GEMM_MMA_SYNC_MULTI_TEST_H
+#ifndef WMMA_DETAIL_MMA_SYNC_MULTI_H
+#define WMMA_DETAIL_MMA_SYNC_MULTI_H
 
-#include <gtest/gtest.h>
-
-#include "device/MmaSyncMulti.h"
-
-#include "CommonTestParams.h"
 #include "GemmKernelBase.h"
-#include "KernelGenerator.h"
+#include "device/MmaSyncMulti.h"
 
 // Wrapper into the actual device function
 template <uint32_t BlockM,
@@ -102,6 +97,16 @@ public:
                                                       BlocksX,
                                                       BlocksY>);
     }
+
+    std::ostream& printHeader(std::ostream& stream = std::cout) const final
+    {
+        return Base::printHeader(stream << "BlocksX, BlocksY, ");
+    }
+
+    std::ostream& printKernel(std::ostream& stream = std::cout) const final
+    {
+        return Base::printKernel(stream << BlocksX << ", " << BlocksY << ", ");
+    }
 };
 
 // This is the GeneratorImpl class for MmaSyncCoopLds
@@ -148,41 +153,4 @@ struct MmaSyncMultiGenerator
     }
 };
 
-struct MmaSyncMultiTest
-    : public ::testing::TestWithParam<std::tuple<typename MmaSyncMultiGenerator::ResultT,
-                                                 typename CommonTestParams::ThreadBlockT,
-                                                 typename CommonTestParams::ProblemSizeT,
-                                                 typename CommonTestParams::AlphaT,
-                                                 typename CommonTestParams::BetaT>>
-{
-    using Base = ::testing::TestWithParam<std::tuple<typename MmaSyncMultiGenerator::ResultT,
-                                                     typename CommonTestParams::ThreadBlockT,
-                                                     typename CommonTestParams::ProblemSizeT,
-                                                     typename CommonTestParams::AlphaT,
-                                                     typename CommonTestParams::BetaT>>;
-
-    void        SetUp() final {}
-    void        TearDown() final {}
-    static void RunKernel()
-    {
-        // Construct ProblemParams from
-        // incoming gtest parameterization
-        auto param       = Base::GetParam();
-        auto kernel      = std::get<0>(param);
-        auto threadBlock = std::get<1>(param);
-        auto problemSize = std::get<2>(param);
-        auto alpha       = std::get<3>(param);
-        auto beta        = std::get<4>(param);
-
-        ProblemParams params = {threadBlock, problemSize, alpha, beta};
-
-        // Walk through kernel workflow
-        kernel->setup(params);
-        kernel->exec();
-        kernel->validateResults();
-        kernel->reportResults();
-        kernel->tearDown();
-    }
-};
-
-#endif // WMMA_GEMM_MMA_SYNC_MULTI_TEST_H
+#endif // WMMA_DETAIL_MMA_SYNC_MULTI_H
