@@ -92,6 +92,9 @@ set(MmaSyncMultiTestSources ${GemmCommonSources}
                        gemm/test/MmaSyncMultiTest_32x32_TN.cpp
                        gemm/test/MmaSyncMultiTest_32x32_TT.cpp)
 
+set(MmaSyncMultiLdsTestSources ${GemmCommonSources}
+                       gemm/test/MmaSyncMultiLdsTest_16x16_NT.cpp)
+
 set(MmaSyncLdsTestSources ${GemmCommonSources}
                        gemm/test/MmaSyncLdsTest_16x16_NN.cpp
                        gemm/test/MmaSyncLdsTest_16x16_NT.cpp
@@ -115,6 +118,7 @@ set(MmaSyncCoopLdsTestSources ${GemmCommonSources}
 # Benchmark GEMM
 add_wmma_test(MmaSyncTest-bench ${MmaSyncTestSources})
 add_wmma_test(MmaSyncMultiTest-bench ${MmaSyncMultiTestSources})
+add_wmma_test(MmaSyncMultiLdsTest-bench ${MmaSyncMultiLdsTestSources})
 add_wmma_test(MmaSyncLdsTest-bench ${MmaSyncLdsTestSources})
 add_wmma_test(MmaSyncCoopLdsTest-bench ${MmaSyncCoopLdsTestSources})
 
@@ -122,6 +126,7 @@ add_wmma_test(MmaSyncCoopLdsTest-bench ${MmaSyncCoopLdsTestSources})
 if(WMMA_VALIDATE_WITH_ROCBLAS)
   add_wmma_validation_test_with_rocblas(MmaSyncTest-rocBLAS ${MmaSyncTestSources})
   add_wmma_validation_test_with_rocblas(MmaSyncMultiTest-rocBLAS ${MmaSyncMultiTestSources})
+  add_wmma_validation_test_with_rocblas(MmaSyncMultiLdsTest-rocBLAS ${MmaSyncMultiLdsTestSources})
   add_wmma_validation_test_with_rocblas(MmaSyncLdsTest-rocBLAS ${MmaSyncLdsTestSources})
   add_wmma_validation_test_with_rocblas(MmaSyncCoopLdsTest-rocBLAS ${MmaSyncCoopLdsTestSources})
 else()
