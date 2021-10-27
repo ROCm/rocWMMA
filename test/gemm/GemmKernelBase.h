@@ -27,6 +27,7 @@
 #ifndef WMMA_KERNEL_BASE_H
 #define WMMA_KERNEL_BASE_H
 
+#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -49,19 +50,22 @@ struct KernelI
     KernelI() {}
     virtual ~KernelI(){};
 
-    virtual void        setup(ProblemParams const& problem) = 0;
-    virtual void        exec()                              = 0;
-    virtual void        validateResults()                   = 0;
-    virtual void        reportResults()                     = 0;
-    virtual void        tearDown()                          = 0;
-    virtual std::string debugStr() const                    = 0;
+    virtual void          setup(ProblemParams const& problem)                 = 0;
+    virtual void          exec()                                              = 0;
+    virtual void          validateResults()                                   = 0;
+    virtual void          reportResults()                                     = 0;
+    virtual void          tearDown()                                          = 0;
+    virtual std::ostream& printHeader(std::ostream& stream = std::cout) const = 0;
+    virtual std::ostream& printKernel(std::ostream& stream = std::cout) const = 0;
 
     static bool sHeaderPrinted;
 };
 
 inline std::ostream& operator<<(std::ostream& stream, KernelI const& kernel)
 {
-    return stream << kernel.debugStr() << std::endl;
+    kernel.printHeader(stream);
+    kernel.printKernel(stream);
+    return stream;
 }
 
 // Typed GEMM kernel that provides the basis for GEMM tests.
@@ -127,12 +131,13 @@ protected:
 
 public:
     // KernelI interface fulfillment
-    virtual void        setup(ProblemParams const& problem) override;
-    virtual void        exec() override;
-    virtual void        validateResults() override;
-    virtual void        reportResults() override;
-    virtual void        tearDown() override;
-    virtual std::string debugStr() const override;
+    virtual void          setup(ProblemParams const& problem) override;
+    virtual void          exec() override;
+    virtual void          validateResults() override;
+    virtual void          reportResults() override;
+    virtual void          tearDown() override;
+    virtual std::ostream& printHeader(std::ostream& stream = std::cout) const override;
+    virtual std::ostream& printKernel(std::ostream& stream = std::cout) const override;
 
 protected:
     // Problem params for kernel

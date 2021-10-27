@@ -182,7 +182,7 @@ struct MappingUtil
     __device__ static inline auto matrixCoord(CoordT const& blockCoord) -> CoordT;
 
     // Convert from any matrix coord to data offset
-    __device__ static inline auto dataOffset(uint32_t ldm, CoordT const& blockCoord) -> uint32_t;
+    __device__ static inline auto dataOffset(uint32_t ldm, CoordT const& matrixCoord) -> uint32_t;
 
     // Convert from any matrix coord to data address
     __device__ static inline DataT*

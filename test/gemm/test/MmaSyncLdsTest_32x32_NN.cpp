@@ -24,28 +24,32 @@
  *
  *******************************************************************************/
 
-#include "MmaSyncLdsTest.h"
+#include <type_traits>
 
-// Test params for 32 x 32 NN kernels
-struct TestParams32x32NN : public CommonTestParams
+#include "GemmTest.h"
+#include "KernelGenerator.h"
+#include "detail/MmaSyncLds.h"
+
+struct TestParams : public CommonTestParams
 {
-    using ABLayouts = std::tuple<wmma::col_major, wmma::col_major>;
-    using Base      = CommonTestParams;
+    using Base = CommonTestParams;
 
-    // Set up the testing context:
-    // Kernel: MmaSyncLds
     // Types: ALL - double
     // Block Sizes: 32 x 32 x BlockK
     // Layouts: NN
-    using Types      = typename Base::TestTypesIOC;
-    using BlockSizes = typename Base::TestBlockSizes32x32;
-    using Layouts    = typename CombineOne<ABLayouts, typename Base::TestLayoutTypes>::Result;
+    using Types        = typename Base::TestTypes32x32;
+    using BlockSizes   = typename Base::TestBlockSizes32x32;
+    using Layouts      = typename Base::TestLayoutsNN;
+    using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
 
     // Assemble the kernel generator
-    using TestParams =
-        typename CombineMany<Types, typename CombineMany<BlockSizes, Layouts>::Result>::Result;
+    // Kernel: MmaSyncLds
     using GeneratorImpl   = MmaSyncLdsGenerator;
-    using KernelGenerator = KernelGenerator<TestParams, GeneratorImpl>;
+    using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
+
+    // Sanity check for kernel generator
+    static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
+                  "Kernels from this generator do not match testing interface");
 
     static inline typename KernelGenerator::ResultT kernels()
     {
@@ -54,7 +58,7 @@ struct TestParams32x32NN : public CommonTestParams
 };
 
 // Test suite for unique parameterization
-class MmaSyncLdsTest32x32NN : public MmaSyncLdsTest
+class MmaSyncLdsTest32x32NN : public GemmTest
 {
 };
 
@@ -65,8 +69,8 @@ TEST_P(MmaSyncLdsTest32x32NN, RunKernel)
 
 INSTANTIATE_TEST_SUITE_P(GemmKernelTests,
                          MmaSyncLdsTest32x32NN,
-                         ::testing::Combine(::testing::ValuesIn(TestParams32x32NN::kernels()),
-                                            ::testing::ValuesIn(TestParams32x32NN::threadBlocks()),
-                                            ::testing::ValuesIn(TestParams32x32NN::problemSizes()),
-                                            ::testing::ValuesIn(TestParams32x32NN::alphas()),
-                                            ::testing::ValuesIn(TestParams32x32NN::betas())));
+                         ::testing::Combine(::testing::ValuesIn(TestParams::kernels()),
+                                            ::testing::ValuesIn(TestParams::threadBlocks()),
+                                            ::testing::ValuesIn(TestParams::problemSizes()),
+                                            ::testing::ValuesIn(TestParams::alphas()),
+                                            ::testing::ValuesIn(TestParams::betas())));

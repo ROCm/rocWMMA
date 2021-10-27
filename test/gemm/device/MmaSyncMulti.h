@@ -174,10 +174,9 @@ __global__ void __launch_bounds__(256, 1) mmaSyncMulti(uint32_t       m,
             // Setup address increments.
             // A steps BlockK through m x k
             // B steps BlockK through k x n
-            auto incrA        = MappingA::dataOffset(lda, std::make_pair(0, BlockK));
-            auto incrB        = MappingB::dataOffset(ldb, std::make_pair(BlockK, 0));
-            auto stepsK       = k / BlockK;
-            auto currentSteps = 0;
+            auto incrA  = MappingA::dataOffset(lda, std::make_pair(0, BlockK));
+            auto incrB  = MappingB::dataOffset(ldb, std::make_pair(BlockK, 0));
+            auto stepsK = k / BlockK;
 
             for(int currentStep = 0; currentStep < stepsK; currentStep++)
             {

@@ -27,6 +27,7 @@
 #ifndef WMMA_GEMM_RESOURCE_IMPL_H
 #define WMMA_GEMM_RESOURCE_IMPL_H
 
+#include "Common.hpp"
 #include <cstring> // for std::memcpy
 
 template <typename InputT, typename OutputT>

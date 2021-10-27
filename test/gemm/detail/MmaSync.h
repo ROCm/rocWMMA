@@ -24,16 +24,11 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_GEMM_MMA_SYNC_TEST_H
-#define WMMA_GEMM_MMA_SYNC_TEST_H
+#ifndef WMMA_DETAIL_MMA_SYNC_H
+#define WMMA_DETAIL_MMA_SYNC_H
 
-#include <gtest/gtest.h>
-
-#include "device/MmaSync.h"
-
-#include "CommonTestParams.h"
 #include "GemmKernelBase.h"
-#include "KernelGenerator.h"
+#include "device/MmaSync.h"
 
 // Wrapper into the actual device function
 template <uint32_t BlockM,
@@ -128,41 +123,4 @@ struct MmaSyncGenerator
     }
 };
 
-struct MmaSyncTest
-    : public ::testing::TestWithParam<std::tuple<typename MmaSyncGenerator::ResultT,
-                                                 typename CommonTestParams::ThreadBlockT,
-                                                 typename CommonTestParams::ProblemSizeT,
-                                                 typename CommonTestParams::AlphaT,
-                                                 typename CommonTestParams::BetaT>>
-{
-    using Base = ::testing::TestWithParam<std::tuple<typename MmaSyncGenerator::ResultT,
-                                                     typename CommonTestParams::ThreadBlockT,
-                                                     typename CommonTestParams::ProblemSizeT,
-                                                     typename CommonTestParams::AlphaT,
-                                                     typename CommonTestParams::BetaT>>;
-
-    void        SetUp() final {}
-    void        TearDown() final {}
-    static void RunKernel()
-    {
-        // Construct ProblemParams from
-        // incoming gtest parameterization
-        auto param       = Base::GetParam();
-        auto kernel      = std::get<0>(param);
-        auto threadBlock = std::get<1>(param);
-        auto problemSize = std::get<2>(param);
-        auto alpha       = std::get<3>(param);
-        auto beta        = std::get<4>(param);
-
-        ProblemParams params = {threadBlock, problemSize, alpha, beta};
-
-        // Walk through kernel workflow
-        kernel->setup(params);
-        kernel->exec();
-        kernel->validateResults();
-        kernel->reportResults();
-        kernel->tearDown();
-    }
-};
-
-#endif // WMMA_GEMM_MMA_SYNC_TEST_H
+#endif // WMMA_DETAIL_MMA_SYNC_H
