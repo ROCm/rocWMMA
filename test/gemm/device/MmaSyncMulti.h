@@ -183,15 +183,17 @@ __global__ void __launch_bounds__(256, 1) mmaSyncMulti(uint32_t       m,
                 // Cache the B-Blocks for re-use
                 std::array<FragB, BlocksY> cachedFragsB;
 
+                // Synchronize workgroup increases chances for cache hits
+                wmma::synchronize_workgroup();
+
 #pragma unroll
                 for(int i = 0; i < BlocksX; i++)
                 {
-                    // Synchronize workgroup increases chances for cache hits
-                    wmma::synchronize_workgroup();
 
                     // A fragment will be re-used for each B
                     auto fragA = FragA();
                     wmma::load_matrix_sync(fragA, globalAddrsA[i], lda);
+                    const_cast<InputT*&>(globalAddrsA[i]) += incrA;
 
 #pragma unroll
                     for(int j = 0; j < BlocksY; j++)
@@ -209,8 +211,6 @@ __global__ void __launch_bounds__(256, 1) mmaSyncMulti(uint32_t       m,
                                        cachedFragsB[j],
                                        fragsAccum[i][j]);
                     }
-
-                    const_cast<InputT*&>(globalAddrsA[i]) += incrA;
                 }
             }
         }
