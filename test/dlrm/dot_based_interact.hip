@@ -68,8 +68,8 @@ int main(int argc, char **argv) {
     struct buff_t input, output_ref;
     void *output;
 
-    input.file = "dlrmData/input_fp" + fp_str;
-    output_ref.file = "dlrmData/output_fp" + fp_str;
+    input.file = "data/input_fp" + fp_str;
+    output_ref.file = "data/output_fp" + fp_str;
 
     // Read input and reference output data from file
     if (!read_buff(&input) ||
@@ -105,10 +105,10 @@ int main(int argc, char **argv) {
     void *grad, *bottom_mlp_grad;
     struct buff_t grad_ref, bottom_mlp_grad_ref;
 
-    input.file = "dlrmData/input_fp" + fp_str;
-    upstream_grad.file = "dlrmData/input_grad_fp" + fp_str;
-    grad_ref.file = "dlrmData/output_input_grad_fp" + fp_str;
-    bottom_mlp_grad_ref.file = "dlrmData/output_mlp_input_grad_fp" + fp_str;
+    input.file = "data/input_fp" + fp_str;
+    upstream_grad.file = "data/input_grad_fp" + fp_str;
+    grad_ref.file = "data/output_input_grad_fp" + fp_str;
+    bottom_mlp_grad_ref.file = "data/output_mlp_input_grad_fp" + fp_str;
 
     // Read input and reference output data from file
     if (!read_buff(&input) ||
