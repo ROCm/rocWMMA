@@ -28,6 +28,7 @@
 
 #include "GemmTest.h"
 #include "KernelGenerator.h"
+#include "LdsMappingUtil.h"
 #include "detail/MmaSyncMultiLds.h"
 
 struct TestParams : public CommonTestParams
@@ -37,11 +38,15 @@ struct TestParams : public CommonTestParams
     // Types: ALL + double
     // Block Sizes: 16 x 16 x BlockK
     // Layouts: NT
-    using Types        = std::tuple<std::tuple<hfloat16_t, float32_t, float32_t>>;
-    using BlockSizes   = std::tuple<std::tuple<I<16>, I<16>, I<16>>>;
-    using Layouts      = std::tuple<std::tuple<col_major, col_major, col_major>>;
-    using BlocksXY     = std::tuple<std::tuple<I<2>, I<2>>>;
-    using KernelParams = typename CombineLists<Types, BlockSizes, Layouts, BlocksXY>::Result;
+    using Types      = typename Base::TestTypes16x16;
+    using BlockSizes = std::tuple<std::tuple<I<16>, I<16>, I<16>>, std::tuple<I<16>, I<16>, I<32>>>;
+    using Layouts    = typename Base::TestLayoutsNT;
+    using LayoutsLds = typename Base::TestLayoutTypes;
+    using MappingsLds = typename Base::TestMappingsLds;
+    using BlocksXY    = std::tuple<std::tuple<I<2>, I<2>>>;
+    using KernelParams =
+        typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
+            Result;
 
     // Assemble the kernel generator
     // Kernel: MmaSyncMulti

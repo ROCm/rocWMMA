@@ -38,6 +38,7 @@
 // for fp64 on all other targets which succeed MI-100.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "LdsMappingUtil.h"
 #include "WMMA.h"
 #pragma GCC diagnostic pop
 
@@ -78,9 +79,11 @@ template <uint32_t BlockM,
           typename LayoutB,
           typename LayoutC,
           typename LayoutD,
+          typename LayoutLds,
+          typename LdsMapping,
           uint32_t BlocksX = 1,
           uint32_t BlocksY = 1>
-__global__ void __launch_bounds__(512, 1) mmaSyncMultiLds(uint32_t       m,
+__global__ void __launch_bounds__(256, 1) mmaSyncMultiLds(uint32_t       m,
                                                           uint32_t       n,
                                                           uint32_t       k,
                                                           InputT const*  a,
@@ -110,19 +113,25 @@ __global__ void __launch_bounds__(512, 1) mmaSyncMultiLds(uint32_t       m,
     // Rows = register count
     // Cols = unpacked register elements = 64
     // Row major to minimize bank conflicts
-    constexpr uint32_t registerFileWidth = AMDGCN_WAVE_SIZE;
-    using MappingLdsA = MappingUtil<FragA::size(), registerFileWidth, InputT, row_major>;
-    using MappingLdsB = MappingUtil<FragB::size(), registerFileWidth, InputT, row_major>;
-    using FragLdsA    = wmma::
-        fragment<register_file_coop_a, 1, registerFileWidth, FragA::size(), InputT, row_major>;
-    using FragLdsB = wmma::
-        fragment<register_file_coop_b, 1, registerFileWidth, FragB::size(), InputT, row_major>;
 
-    static_assert(FragA::size() * registerFileWidth == BlockM * BlockK,
-                  "Elements of A don't match");
-    static_assert(FragLdsA::size() == FragA::size(), "A Sizes don't match");
-    static_assert(FragB::size() * registerFileWidth == BlockK * BlockN, "Elements don't match");
-    static_assert(FragLdsB::size() == FragB::size(), "Sizes don't match");
+    using MappingLds = LdsMappingUtil<BlockM,
+                                      BlockN,
+                                      BlockK,
+                                      InputT,
+                                      LayoutA,
+                                      LayoutB,
+                                      LayoutLds,
+                                      LdsMapping,
+                                      BlocksX,
+                                      BlocksY>;
+
+    using FragLdsA = typename MappingLds::FragLdsA;
+    using FragLdsB = typename MappingLds::FragLdsB;
+
+    static_assert(FragLdsA::size() == FragA::size(),
+                  "A matrix global and LDS frag sizes don't match");
+    static_assert(FragLdsB::size() == FragB::size(),
+                  "B matrix global and LDS frag sizes don't match");
 
     // Target starting C / D block on 2D grid, offset by blocks per wave
     auto matrixCoordC = MappingC::matrixCoord();
@@ -132,11 +141,12 @@ __global__ void __launch_bounds__(512, 1) mmaSyncMultiLds(uint32_t       m,
     if((std::get<0>(matrixCoordC) + BlocksX * BlockM) <= m
        && (std::get<1>(matrixCoordC) + BlocksY * BlockN) <= n && (BlockK < k))
     {
-        // Targets for C sub-matrices
         typename MappingC::CoordT subMatrixCoordsC[BlocksX][BlocksY];
         FragAcc                   fragsAccum[BlocksX][BlocksY];
 
-        /// Initialization
+        ///
+        /// Initialize sub matrix coords and accum frags
+        ///
 #pragma unroll
         for(int i = 0; i < BlocksX; ++i)
         {
@@ -156,12 +166,13 @@ __global__ void __launch_bounds__(512, 1) mmaSyncMultiLds(uint32_t       m,
             }
         }
 
+        ///
         /// Accumulate A * B
+        ///
         if(alpha)
         {
-            // Initialize global addresses for sub-targets
-            InputT* gAddrsA[BlocksX];
-            InputT* gAddrsB[BlocksY];
+            int64_t gOffsA[BlocksX];
+            int64_t gOffsB[BlocksY];
 
             // A steps BlockK through m x k
             // B steps BlockK through k x n
@@ -178,93 +189,58 @@ __global__ void __launch_bounds__(512, 1) mmaSyncMultiLds(uint32_t       m,
 #pragma unroll
             for(int i = 0; i < BlocksX; ++i)
             {
-                auto subMatARowRef = subMatrixCoordsC[i][0];
-                gAddrsA[i]
-                    = MappingA::dataCoord(a, lda, std::make_pair(std::get<0>(subMatARowRef), 0));
+                gOffsA[i] = MappingA::dataOffset(
+                    lda, std::make_pair(std::get<0>(subMatrixCoordsC[i][0]), 0));
 
                 // Start Pre-fetching
-                wmma::load_matrix_sync(fetchA[i], gAddrsA[i], lda);
-                gAddrsA[i] += gIncA;
+                wmma::load_matrix_sync(fetchA[i], a + gOffsA[i], lda);
+                gOffsA[i] += gIncA;
             }
 
 #pragma unroll
             for(int i = 0; i < BlocksY; ++i)
             {
-                auto subMatBColRef = subMatrixCoordsC[0][i];
-                gAddrsB[i]
-                    = MappingB::dataCoord(b, ldb, std::make_pair(0, std::get<1>(subMatBColRef)));
+                gOffsB[i] = MappingB::dataOffset(
+                    ldb, std::make_pair(0, std::get<1>(subMatrixCoordsC[0][i])));
 
                 // Start Pre-fetching
-                wmma::load_matrix_sync(fetchB[i], gAddrsB[i], ldb);
-                gAddrsB[i] += gIncB;
+                wmma::load_matrix_sync(fetchB[i], b + gOffsB[i], ldb);
+                gOffsB[i] += gIncB;
             }
 
             ///
-            /// Setup LDS addressing and start writing in pre-fetched data
+            /// Setup LDS addressing and start writing pre-fetch to LDS
             ///
 
-            // Setup a register file in LDS which is friendly to minimizing bank conflicts.
-            // Treating register file as row_major layout with register width = 64.
             HIP_DYNAMIC_SHARED(void*, localMemPtr);
-            auto workgroupDim = MappingLdsA::workgroupDim();
-            auto ldLds        = registerFileWidth;
 
-            // For A, work can be shared by waves in same workgroup row because they load the same A data.
-            // For B, work can be shared by waves in same workgroup col because they load the same B data.
-            // E.g.
-            // A blocks needed = WG.rows
-            // B blocks needed = WG.cols * BlocksY
-            // LDS layout is a register file of A blocks, followed by B blocks.
-
+            // For matrix A, work is shared by waves in same workgroup row as they load the same A data.
+            // For matrix B, work is shared by waves in same workgroup col as they load the same B data.
             InputT* sAddrsA[BlocksX];
             InputT* sAddrsB[BlocksY];
 
-            {
-                auto* sBaseAddrA = reinterpret_cast<InputT*>(localMemPtr);
-                auto* sWaveAddrA = sBaseAddrA
-                                   + MappingLdsA::dataOffset(
-                                       ldLds,
-                                       std::make_pair(FragLdsA::size() * BlocksX
-                                                          * std::get<0>(MappingLdsA::waveCoord()),
-                                                      0));
-                auto sIncA = MappingLdsA::dataOffset(ldLds, std::make_pair(FragLdsA::size(), 0));
 #pragma unroll
-                for(int i = 0; i < BlocksX; ++i)
-                {
-                    sAddrsA[i] = sWaveAddrA;
+            for(int i = 0; i < BlocksX; ++i)
+            {
+                sAddrsA[i] = reinterpret_cast<InputT*>(localMemPtr) + MappingLds::baseOffsetA()
+                             + MappingLds::waveOffsetA() + MappingLds::blockOffsetA(i);
 
-                    // Dump global fetch into shared
-                    wmma::store_matrix_coop_sync(
-                        sWaveAddrA, reinterpret_cast<FragLdsA&>(fetchA[i]), ldLds);
-                    sWaveAddrA += sIncA;
-                }
+                // write to LDS
+                wmma::store_matrix_coop_sync(
+                    sAddrsA[i], reinterpret_cast<FragLdsA&>(fetchA[i]), MappingLds::ld());
             }
 
-            {
-                auto* sBaseAddrB
-                    = reinterpret_cast<InputT*>(localMemPtr)
-                      + MappingLdsA::dataOffset(
-                          ldLds,
-                          std::make_pair(FragLdsA::size() * BlocksX * std::get<0>(workgroupDim),
-                                         0));
-                auto* sWaveAddrB = sBaseAddrB
-                                   + MappingLdsB::dataOffset(
-                                       ldLds,
-                                       std::make_pair(FragLdsB::size() * BlocksY
-                                                          * std::get<1>(MappingLdsB::waveCoord()),
-                                                      0));
-                auto sIncB = MappingLdsB::dataOffset(ldLds, std::make_pair(FragLdsB::size(), 0));
 #pragma unroll
-                for(int i = 0; i < BlocksY; ++i)
-                {
-                    sAddrsB[i] = sWaveAddrB;
+            for(int i = 0; i < BlocksY; ++i)
+            {
+                sAddrsB[i] = reinterpret_cast<InputT*>(localMemPtr) + MappingLds::baseOffsetB()
+                             + MappingLds::waveOffsetB() + MappingLds::blockOffsetB(i);
 
-                    // Dump global fetch into shared
-                    wmma::store_matrix_coop_sync(
-                        sWaveAddrB, reinterpret_cast<FragLdsB&>(fetchB[i]), ldLds);
-                    sWaveAddrB += sIncB;
-                }
+                // write to LDS
+                wmma::store_matrix_coop_sync(
+                    sAddrsB[i], reinterpret_cast<FragLdsB&>(fetchB[i]), MappingLds::ld());
             }
+
             ///
             /// Step through and accumulate A * B
             ///
@@ -273,65 +249,69 @@ __global__ void __launch_bounds__(512, 1) mmaSyncMultiLds(uint32_t       m,
             {
                 // Wait for A / B write LDS
                 wmma::synchronize_workgroup();
-                FragB cachedFragsB[BlocksY];
 
                 // Issue global loads, step forward
-                // and issue local loads
 #pragma unroll
                 for(int i = 0; i < BlocksX; ++i)
                 {
-                    wmma::load_matrix_sync(fetchA[i], gAddrsA[i], lda);
-                    gAddrsA[i] += gIncA;
+                    wmma::load_matrix_sync(fetchA[i], a + gOffsA[i], lda);
+                    gOffsA[i] += gIncA;
                 }
 
 #pragma unroll
                 for(int i = 0; i < BlocksY; ++i)
                 {
-                    wmma::load_matrix_sync(fetchB[i], gAddrsB[i], ldb);
-                    gAddrsB[i] += gIncB;
+                    wmma::load_matrix_sync(fetchB[i], b + gOffsB[i], ldb);
+                    gOffsB[i] += gIncB;
                 }
 
                 // A * B
-#pragma unroll
-                for(int i = 0; i < BlocksX; i++)
                 {
-                    // Bring A in from LDS
-                    auto fragA = FragA();
-                    wmma::load_matrix_sync(reinterpret_cast<FragLdsA&>(fragA), sAddrsA[i], ldLds);
+                    FragB cachedFragsB[BlocksY];
+#pragma unroll
+                    for(int i = 0; i < BlocksX; i++)
+                    {
+                        // Bring A in from LDS
+                        auto fragA = FragA();
+                        wmma::load_matrix_sync(
+                            reinterpret_cast<FragLdsA&>(fragA), sAddrsA[i], MappingLds::ld());
 
 #pragma unroll
-                    for(int j = 0; j < BlocksY; j++)
-                    {
-                        // Need to load the B fragments only once.
-                        if(i == 0)
+                        for(int j = 0; j < BlocksY; j++)
                         {
-                            // Bring B in from LDS
-                            wmma::load_matrix_sync(
-                                reinterpret_cast<FragLdsB&>(cachedFragsB[j]), sAddrsB[j], ldLds);
-                        }
+                            // Need to load the B fragments only once.
+                            if(i == 0)
+                            {
+                                // Bring B in from LDS
+                                wmma::load_matrix_sync(reinterpret_cast<FragLdsB&>(cachedFragsB[j]),
+                                                       sAddrsB[j],
+                                                       MappingLds::ld());
+                            }
 
-                        wmma::mma_sync(const_cast<FragAcc&>(fragsAccum[i][j]),
-                                       fragA,
-                                       cachedFragsB[j],
-                                       fragsAccum[i][j]);
+                            wmma::mma_sync(const_cast<FragAcc&>(fragsAccum[i][j]),
+                                           fragA,
+                                           cachedFragsB[j],
+                                           fragsAccum[i][j]);
+                        }
                     }
                 }
 
                 // Wait for A / B LDS reads and MMA
+                // Then, write globals to LDS
                 wmma::synchronize_workgroup();
 
 #pragma unroll
                 for(int i = 0; i < BlocksX; ++i)
                 {
                     wmma::store_matrix_coop_sync(
-                        sAddrsA[i], reinterpret_cast<FragLdsA&>(fetchA[i]), ldLds);
+                        sAddrsA[i], reinterpret_cast<FragLdsA&>(fetchA[i]), MappingLds::ld());
                 }
 
 #pragma unroll
                 for(int i = 0; i < BlocksY; ++i)
                 {
                     wmma::store_matrix_coop_sync(
-                        sAddrsB[i], reinterpret_cast<FragLdsB&>(fetchB[i]), ldLds);
+                        sAddrsB[i], reinterpret_cast<FragLdsB&>(fetchB[i]), MappingLds::ld());
                 }
             }
 
@@ -352,14 +332,14 @@ __global__ void __launch_bounds__(512, 1) mmaSyncMultiLds(uint32_t       m,
             for(int i = 0; i < BlocksX; ++i)
             {
                 wmma::load_matrix_sync(
-                    reinterpret_cast<FragLdsA&>(cachedFragsA[i]), sAddrsA[i], ldLds);
+                    reinterpret_cast<FragLdsA&>(cachedFragsA[i]), sAddrsA[i], MappingLds::ld());
             }
 
 #pragma unroll
             for(int i = 0; i < BlocksY; ++i)
             {
                 wmma::load_matrix_sync(
-                    reinterpret_cast<FragLdsB&>(cachedFragsB[i]), sAddrsB[i], ldLds);
+                    reinterpret_cast<FragLdsB&>(cachedFragsB[i]), sAddrsB[i], MappingLds::ld());
             }
 
             // A * B
@@ -374,6 +354,10 @@ __global__ void __launch_bounds__(512, 1) mmaSyncMultiLds(uint32_t       m,
                 }
             }
         }
+
+        ///
+        /// Initialize C frags
+        ///
 
         FragC fragsC[BlocksX][BlocksY];
 

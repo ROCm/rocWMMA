@@ -40,7 +40,9 @@ template <uint32_t BlockM,
           typename LayoutA,
           typename LayoutB,
           typename LayoutC,
-          typename LayoutD = LayoutC,
+          typename LayoutD,
+          typename LayoutLds,
+          typename MappingLds,
           uint32_t BlocksX = 1,
           uint32_t BlocksY = 1>
 struct MmaSyncMultiLdsKernel final : public GemmKernelBase<BlockM,
@@ -103,18 +105,22 @@ public:
                                                          LayoutB,
                                                          LayoutC,
                                                          LayoutD,
+                                                         LayoutLds,
+                                                         MappingLds,
                                                          BlocksX,
                                                          BlocksY>);
     }
 
     std::ostream& printHeader(std::ostream& stream = std::cout) const final
     {
-        return Base::printHeader(stream << "BlocksX, BlocksY, ");
+        return Base::printHeader(stream << "MappingLds, LytLds, BlocksX, BlocksY, ");
     }
 
     std::ostream& printKernel(std::ostream& stream = std::cout) const final
     {
-        return Base::printKernel(stream << BlocksX << ", " << BlocksY << ", ");
+        return Base::printKernel(stream << dataTypeToString<MappingLds>() << ", "
+                                        << dataTypeToString<LayoutLds>() << ", " << BlocksX << ", "
+                                        << BlocksY << ", ");
     }
 };
 
@@ -124,17 +130,19 @@ struct MmaSyncMultiLdsGenerator
     // Indices to test parameters
     enum : uint32_t
     {
-        InputT   = 0,
-        OutputT  = 1,
-        ComputeT = 2,
-        BlockM   = 3,
-        BlockN   = 4,
-        BlockK   = 5,
-        LayoutA  = 6,
-        LayoutB  = 7,
-        LayoutCD = 8,
-        BlocksX  = 9,
-        BlocksY  = 10
+        InputT     = 0,
+        OutputT    = 1,
+        ComputeT   = 2,
+        BlockM     = 3,
+        BlockN     = 4,
+        BlockK     = 5,
+        LayoutA    = 6,
+        LayoutB    = 7,
+        LayoutCD   = 8,
+        LayoutLds  = 9,
+        MappingLds = 10,
+        BlocksX    = 11,
+        BlocksY    = 12
     };
 
     using ResultT = std::shared_ptr<KernelI>;
@@ -154,6 +162,8 @@ struct MmaSyncMultiLdsGenerator
                                     std::tuple_element_t<LayoutB, TestParamsT>, // LayoutB
                                     std::tuple_element_t<LayoutCD, TestParamsT>, // LayoutC
                                     std::tuple_element_t<LayoutCD, TestParamsT>, // LayoutD
+                                    std::tuple_element_t<LayoutLds, TestParamsT>, // LayoutLds
+                                    std::tuple_element_t<MappingLds, TestParamsT>, // LayoutLds
                                     std::tuple_element_t<BlocksX, TestParamsT>::value, // BlocksX
                                     std::tuple_element_t<BlocksY, TestParamsT>::value // BlocksY
                                     >;
