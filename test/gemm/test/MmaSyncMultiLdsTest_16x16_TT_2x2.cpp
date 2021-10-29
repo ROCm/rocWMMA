@@ -37,10 +37,10 @@ struct TestParams : public CommonTestParams
 
     // Types: ALL + double
     // Block Sizes: 16 x 16 x BlockK
-    // Layouts: NT
+    // Layouts: TT
     using Types      = typename Base::TestTypes16x16;
     using BlockSizes = std::tuple<std::tuple<I<16>, I<16>, I<16>>, std::tuple<I<16>, I<16>, I<32>>>;
-    using Layouts    = typename Base::TestLayoutsNT;
+    using Layouts    = typename Base::TestLayoutsTT;
     using LayoutsLds = typename Base::TestLayoutTypes;
     using MappingsLds = typename Base::TestMappingsLds;
     using BlocksXY    = std::tuple<std::tuple<I<2>, I<2>>>;
@@ -64,17 +64,17 @@ struct TestParams : public CommonTestParams
 };
 
 // Test suite for unique parameterization
-class MmaSyncMultiLdsTest16x16NT2x2 : public GemmTest
+class MmaSyncMultiLdsTest16x16TT2x2 : public GemmTest
 {
 };
 
-TEST_P(MmaSyncMultiLdsTest16x16NT2x2, RunKernel)
+TEST_P(MmaSyncMultiLdsTest16x16TT2x2, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(GemmKernelTests,
-                         MmaSyncMultiLdsTest16x16NT2x2,
+                         MmaSyncMultiLdsTest16x16TT2x2,
                          ::testing::Combine(::testing::ValuesIn(TestParams::kernels()),
                                             ::testing::ValuesIn(TestParams::threadBlocks()),
                                             ::testing::ValuesIn(TestParams::problemSizes()),
