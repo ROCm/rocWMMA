@@ -178,46 +178,73 @@ __host__ inline hfloat16_t& operator+=(hfloat16_t& x, const hfloat16_t& y)
 template <typename DataT>
 constexpr const char* dataTypeToString()
 {
-    if(std::is_same<DataT, float16_t>::value)
-    {
-        return "f16";
-    }
-    else if(std::is_same<DataT, hfloat16_t>::value)
-    {
-        return "h16";
-    }
-    else if(std::is_same<DataT, bfloat16_t>::value)
-    {
-        return "bf16";
-    }
-    else if(std::is_same<DataT, float32_t>::value)
-    {
-        return "f32";
-    }
-    else if(std::is_same<DataT, int8_t>::value)
-    {
-        return "i8";
-    }
-    else if(std::is_same<DataT, uint8_t>::value)
-    {
-        return "u8";
-    }
-    else if(std::is_same<DataT, int32_t>::value)
-    {
-        return "i32";
-    }
-    else if(std::is_same<DataT, uint32_t>::value)
-    {
-        return "u32";
-    }
-    else if(std::is_same<DataT, float64_t>::value)
-    {
-        return "f64";
-    }
-    else
-    {
-        return "invalid";
-    }
+    return "invalid";
+}
+
+template <>
+constexpr const char* dataTypeToString<float16_t>()
+{
+    return "f16";
+}
+
+template <>
+constexpr const char* dataTypeToString<hfloat16_t>()
+{
+    return "h16";
+}
+
+template <>
+constexpr const char* dataTypeToString<bfloat16_t>()
+{
+    return "bf16";
+}
+
+template <>
+constexpr const char* dataTypeToString<float32_t>()
+{
+    return "f32";
+}
+
+template <>
+constexpr const char* dataTypeToString<float64_t>()
+{
+    return "f64";
+}
+
+template <>
+constexpr const char* dataTypeToString<int8_t>()
+{
+    return "i8";
+}
+
+template <>
+constexpr const char* dataTypeToString<uint8_t>()
+{
+    return "u8";
+}
+
+template <>
+constexpr const char* dataTypeToString<int32_t>()
+{
+    return "i32";
+}
+
+template <>
+constexpr const char* dataTypeToString<uint32_t>()
+{
+    return "u32";
+}
+
+template <>
+constexpr const char* dataTypeToString<row_major>()
+{
+    return "T";
+}
+
+template <>
+constexpr const char* dataTypeToString<col_major>()
+{
+    return "N";
 }
 
 namespace std

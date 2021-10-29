@@ -93,7 +93,7 @@ set(MmaSyncMultiTestSources ${GemmCommonSources}
                        gemm/test/MmaSyncMultiTest_32x32_TT.cpp)
 
 set(MmaSyncMultiLdsTestSources ${GemmCommonSources}
-                       gemm/test/MmaSyncMultiLdsTest_16x16_NT.cpp)
+                       gemm/test/MmaSyncMultiLdsTest_16x16_NT_2x2.cpp)
 
 set(MmaSyncLdsTestSources ${GemmCommonSources}
                        gemm/test/MmaSyncLdsTest_16x16_NN.cpp
