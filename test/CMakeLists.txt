@@ -92,6 +92,40 @@ set(MmaSyncMultiTestSources ${GemmCommonSources}
                        gemm/test/MmaSyncMultiTest_32x32_TN.cpp
                        gemm/test/MmaSyncMultiTest_32x32_TT.cpp)
 
+set(MmaSyncMultiLdsTestSources ${GemmCommonSources}
+                       gemm/test/MmaSyncMultiLdsTest_16x16_NN_1x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_16x16_NN_1x2.cpp
+                       gemm/test/MmaSyncMultiLdsTest_16x16_NN_2x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_16x16_NN_2x2.cpp
+                       gemm/test/MmaSyncMultiLdsTest_16x16_NT_1x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_16x16_NT_1x2.cpp
+                       gemm/test/MmaSyncMultiLdsTest_16x16_NT_2x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_16x16_NT_2x2.cpp
+                       gemm/test/MmaSyncMultiLdsTest_16x16_TN_1x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_16x16_TN_1x2.cpp
+                       gemm/test/MmaSyncMultiLdsTest_16x16_TN_2x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_16x16_TN_2x2.cpp
+                       gemm/test/MmaSyncMultiLdsTest_16x16_TT_1x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_16x16_TT_1x2.cpp
+                       gemm/test/MmaSyncMultiLdsTest_16x16_TT_2x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_16x16_TT_2x2.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_NN_1x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_NN_1x2.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_NN_2x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_NN_2x2.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_NT_1x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_NT_1x2.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_NT_2x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_NT_2x2.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_TN_1x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_TN_1x2.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_TN_2x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_TN_2x2.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_TT_1x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_TT_1x2.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_TT_2x1.cpp
+                       gemm/test/MmaSyncMultiLdsTest_32x32_TT_2x2.cpp)
+
 set(MmaSyncLdsTestSources ${GemmCommonSources}
                        gemm/test/MmaSyncLdsTest_16x16_NN.cpp
                        gemm/test/MmaSyncLdsTest_16x16_NT.cpp
@@ -115,6 +149,7 @@ set(MmaSyncCoopLdsTestSources ${GemmCommonSources}
 # Benchmark GEMM
 add_wmma_test(MmaSyncTest-bench ${MmaSyncTestSources})
 add_wmma_test(MmaSyncMultiTest-bench ${MmaSyncMultiTestSources})
+add_wmma_test(MmaSyncMultiLdsTest-bench ${MmaSyncMultiLdsTestSources})
 add_wmma_test(MmaSyncLdsTest-bench ${MmaSyncLdsTestSources})
 add_wmma_test(MmaSyncCoopLdsTest-bench ${MmaSyncCoopLdsTestSources})
 
@@ -122,6 +157,7 @@ add_wmma_test(MmaSyncCoopLdsTest-bench ${MmaSyncCoopLdsTestSources})
 if(WMMA_VALIDATE_WITH_ROCBLAS)
   add_wmma_validation_test_with_rocblas(MmaSyncTest-rocBLAS ${MmaSyncTestSources})
   add_wmma_validation_test_with_rocblas(MmaSyncMultiTest-rocBLAS ${MmaSyncMultiTestSources})
+  add_wmma_validation_test_with_rocblas(MmaSyncMultiLdsTest-rocBLAS ${MmaSyncMultiLdsTestSources})
   add_wmma_validation_test_with_rocblas(MmaSyncLdsTest-rocBLAS ${MmaSyncLdsTestSources})
   add_wmma_validation_test_with_rocblas(MmaSyncCoopLdsTest-rocBLAS ${MmaSyncCoopLdsTestSources})
 else()
