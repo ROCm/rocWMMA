@@ -45,27 +45,36 @@ struct CommonTestParams
 
     // Testing types as Input/Output/Compute (IOC)
     using TestTypesIOC = std::tuple<
-        // Non-native bfloat16_t
+    // Non-native bfloat16_t
+
+#if defined(WMMA_EXTENDED_TESTS)
         std::tuple<bfloat16_t, bfloat16_t, bfloat16_t>,
         std::tuple<bfloat16_t, bfloat16_t, float32_t>,
+#endif // WMMA_EXTENDED_TESTS
         std::tuple<bfloat16_t, float32_t, float32_t>,
 
-        // Native fp16
+    // Native fp16
+#if defined(WMMA_EXTENDED_TESTS)
         std::tuple<float16_t, float16_t, float16_t>,
         std::tuple<float16_t, float16_t, float32_t>,
+#endif // WMMA_EXTENDED_TESTS
         std::tuple<float16_t, float32_t, float32_t>,
 
         // Native fp32
         std::tuple<float32_t, float32_t, float32_t>,
 
-        // Non-native hfloat16_t (i.e. __half)
+    // Non-native hfloat16_t (i.e. __half)
+#if defined(WMMA_EXTENDED_TESTS)
         std::tuple<hfloat16_t, hfloat16_t, hfloat16_t>,
         std::tuple<hfloat16_t, hfloat16_t, float32_t>,
+#endif // WMMA_EXTENDED_TESTS
         std::tuple<hfloat16_t, float32_t, float32_t>,
 
-        // Native int8
-        std::tuple<int8_t, int32_t, int32_t>,
-        std::tuple<int8_t, int8_t, int32_t>>;
+    // Native int8
+#if defined(WMMA_EXTENDED_TESTS)
+        std::tuple<int8_t, int8_t, int32_t>,
+#endif // WMMA_EXTENDED_TESTS
+        std::tuple<int8_t, int32_t, int32_t>>;
 
     // Native double
     using TestTypeDouble = std::tuple<std::tuple<float64_t, float64_t, float64_t>>;
@@ -74,7 +83,12 @@ struct CommonTestParams
     using TestLayoutTypes = std::tuple<row_major, col_major>;
 
     // Supported LDS mappings
-    using TestMappingsLds = std::tuple<std::tuple<LdsKH>, std::tuple<LdsKW>, std::tuple<LdsRF>>;
+    using TestMappingsLds = std::tuple<
+#if defined(WMMA_EXTENDED_TESTS)
+        std::tuple<LdsRF>,
+#endif // WMMA_EXTENDED_TESTS
+        std::tuple<LdsKH>,
+        std::tuple<LdsKW>>;
 
     ///
     /// Grouped compile time kernel parameters
@@ -89,15 +103,24 @@ struct CommonTestParams
     // BlockK variances for particular BlockM, BlockN
     using TestBlockSizes16x16 = std::tuple<std::tuple<I<16>, I<16>, I<16>>,
                                            std::tuple<I<16>, I<16>, I<32>>,
-                                           std::tuple<I<16>, I<16>, I<64>>,
+                                           std::tuple<I<16>, I<16>, I<64>>
+#if defined(WMMA_EXTENDED_TESTS)
+                                           ,
                                            std::tuple<I<16>, I<16>, I<128>>,
-                                           std::tuple<I<16>, I<16>, I<256>>>;
+                                           std::tuple<I<16>, I<16>, I<256>>
+#endif // WMMA_EXTENDED_TESTS
+                                           >;
 
     using TestBlockSizes32x32 = std::tuple<std::tuple<I<32>, I<32>, I<8>>,
                                            std::tuple<I<32>, I<32>, I<16>>,
-                                           std::tuple<I<32>, I<32>, I<32>>,
+                                           std::tuple<I<32>, I<32>, I<32>>
+#if defined(WMMA_EXTENDED_TESTS)
+                                           ,
                                            std::tuple<I<32>, I<32>, I<64>>,
-                                           std::tuple<I<32>, I<32>, I<128>>>;
+                                           ,
+                                           std::tuple<I<32>, I<32>, I<128>>
+#endif // WMMA_EXTENDED_TESTS
+                                           >;
 
     // Layout groupings
     using TestLayoutsNN =
