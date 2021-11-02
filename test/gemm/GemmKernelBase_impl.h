@@ -616,14 +616,28 @@ void GemmKernelBase<BlockM,
         {
             auto& dataInstance = DataStorage::instance();
 
-            // rocblas matrix C, D always in col_major
-            MatrixUtil<col_major>::fill(dataInstance->hostC().get(), mM, mN);
+            // A, B & C are already cached on GPU from WMMA run.
+            // Rocblas matrix C, D always in col_major, so we must
+            // change C if needed
+            if(!std::is_same<LayoutC, col_major>::value)
+            {
+                MatrixUtil<col_major>::fill(dataInstance->hostC().get(), mM, mN);
+                dataInstance->copyData(dataInstance->deviceC(), dataInstance->hostC(), mM * mN);
+            }
+
             benchRef        = true;
             referenceKernel = rocBlasKernel;
 
 #if defined(WMMA_VALIDATE_WITH_ROCBLAS)
-            // Cache wmma kernel result on host D
-            dataInstance->copyData(dataInstance->hostD(), dataInstance->deviceD(), mM * mN);
+            // Cache the WMMA result from device
+            auto wmmaResult = dataInstance->template allocHost<OutputT>(mM * mN);
+            dataInstance->copyData(wmmaResult, dataInstance->deviceD(), mM * mN);
+
+            // Reset device D with NaN, from host
+            dataInstance->copyData(dataInstance->deviceD(), dataInstance->hostD(), mM * mN);
+
+            // Move the WMMA result to host for analysis
+            dataInstance->copyData(dataInstance->hostD(), wmmaResult, mM * mN);
 #endif // WMMA_VALIDATE_WITH_ROCBLAS
         }
 #endif // WMMA_VALIDATE_WITH_ROCBLAS || WMMA_BENCHMARK_WITH_ROCBLAS
