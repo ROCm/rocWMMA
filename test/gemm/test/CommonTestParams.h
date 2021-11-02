@@ -33,6 +33,7 @@
 #include "Common.hpp"
 #include "GemmKernelBase.h"
 #include "KernelGenerator.h"
+#include "LdsMappingUtil.h"
 #include "Types.h"
 
 struct CommonTestParams
@@ -71,6 +72,9 @@ struct CommonTestParams
 
     // Supported layout types
     using TestLayoutTypes = std::tuple<row_major, col_major>;
+
+    // Supported LDS mappings
+    using TestMappingsLds = std::tuple<std::tuple<LdsKH>, std::tuple<LdsKW>, std::tuple<LdsRF>>;
 
     ///
     /// Grouped compile time kernel parameters

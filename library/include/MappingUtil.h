@@ -189,25 +189,6 @@ struct MappingUtil
         dataCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& matrixCoord);
 };
 
-// template <size_t WaveRows,
-//           size_t WaveCols,
-//           size_t BlockM,
-//           size_t BlockN,
-//           size_t BlockK>
-// struct LaunchUtil
-// {
-//     static inline auto gridDim(uint32_t M, uint32_t N, uint32_t K) -> dim3
-//     {
-//         return dim3(ceilDiv(M, BlockM * WaveRows), ceilDiv(N, BlockM * WaveCols));
-//     }
-
-//     static inline auto blockDim() -> dim3
-//     {
-//         auto threads = _MappingUtil::threadCount(std::make_pair<uint32_t, uint32_t>(WaveRows, WaveCols));
-//         return dim3(std::get<0>(threads), std::get<1>(threads));
-//     }
-// };
-
 #include "MappingUtil_impl.h"
 
 #endif // WMMA_MAPPING_UTIL_H
