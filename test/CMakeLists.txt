@@ -24,15 +24,45 @@
  #
  ###############################################################################
 
+include( CMakeDependentOption )
+
+cmake_dependent_option( WMMA_BUILD_VALIDATION_TESTS "Build validation tests" ON "WMMA_BUILD_TESTS" OFF )
+cmake_dependent_option( WMMA_BUILD_BENCHMARK_TESTS "Build benchmarking tests" ON "WMMA_BUILD_TESTS" OFF )
+cmake_dependent_option( WMMA_BUILD_EXTENDED_TESTS "Build extended test parameter coverage" OFF "WMMA_BUILD_TESTS" OFF )
+
+# Test/benchmark requires additional dependencies
+include( FetchContent )
+
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/609281088cfefc76f9d0ce82e1ff6c30cc3591e5.zip
+)
+FetchContent_MakeAvailable(googletest)
+
 include(GoogleTest)
 
-# Regular gtests that don't need special definitions for validation
+set(WMMA_TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(WMMA_COMMON_TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/HipDevice.cpp)
+
+# Regular gtests that don't require any special
+# designation for validation or benchmarking
 function(add_wmma_test TEST_TARGET TEST_SOURCE)
+
   list(APPEND TEST_SOURCE ${ARGN})
   add_executable(${TEST_TARGET} ${TEST_SOURCE})
-  target_link_libraries(${TEST_TARGET} wmma OpenMP::OpenMP_CXX gtest_main)
-  target_include_directories(${TEST_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-  target_include_directories(${TEST_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gemm)
+  target_link_libraries(${TEST_TARGET} wmma gtest_main)
+  target_include_directories(${TEST_TARGET} PRIVATE
+                             ${CMAKE_CURRENT_SOURCE_DIR}
+                             ${WMMA_TEST_INCLUDE_DIR})
+
+  # Add support to include extended test coverage
+  if(WMMA_BUILD_EXTENDED_TESTS)
+    target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_EXTENDED_TESTS)
+  endif()
+
+  get_property(dirs TARGET ${TEST_TARGET} PROPERTY INCLUDE_DIRECTORIES)
+
+  # Add support to build the target's assembly files
   if(WMMA_BUILD_ASSEMBLY)
     foreach(file_name ${TEST_SOURCE})
       add_custom_command(TARGET ${TEST_TARGET}
@@ -44,24 +74,24 @@ function(add_wmma_test TEST_TARGET TEST_SOURCE)
                           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     endforeach()
   endif()
+
 endfunction()
 
-# Tests with additional validation using cpu implementation
+# Targets that implement specifically validation configuration
 function(add_wmma_validation_test TEST_TARGET TEST_SOURCE)
   list(APPEND TEST_SOURCE ${ARGN})
   add_wmma_test(${TEST_TARGET} ${TEST_SOURCE})
-  target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_VALIDATE_TESTS)
+  target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_VALIDATION_TESTS)
 endfunction()
 
-# Tests with additional validation using rocblas implementation
-function(add_wmma_validation_test_with_rocblas TEST_TARGET TEST_SOURCE)
+# Targets that implement specifically benchmarking configuration
+function(add_wmma_benchmark_test TEST_TARGET TEST_SOURCE)
   list(APPEND TEST_SOURCE ${ARGN})
-  add_wmma_validation_test(${TEST_TARGET} ${TEST_SOURCE})
-  target_link_libraries(${TEST_TARGET} roc::rocblas)
-  target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_VALIDATE_WITH_ROCBLAS)
+  add_wmma_test(${TEST_TARGET} ${TEST_SOURCE})
+  target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_BENCHMARK_TESTS)
 endfunction()
 
-# Unit tests
+# TODO: Move these into a unit test subdir
 add_wmma_test(LoadStoreMatrixSyncTest LoadStoreMatrixSyncTest.cpp)
 add_wmma_test(FillFragmentTest FillFragmentTest.cpp)
 add_wmma_test(MappingUtilTest MappingUtilTest.cpp)
@@ -69,100 +99,4 @@ add_wmma_test(LayoutTest LayoutTest.cpp)
 add_wmma_test(VectorIteratorTest VectorIteratorTest.cpp)
 add_wmma_test(ContaminationTest ContaminationTest.cpp)
 
-# GEMM Tests
-set(GemmCommonSources HipDevice.cpp gemm/GemmKernelBase.cpp)
-
-set(MmaSyncTestSources ${GemmCommonSources}
-                       gemm/test/MmaSyncTest_16x16_NN.cpp
-                       gemm/test/MmaSyncTest_16x16_NT.cpp
-                       gemm/test/MmaSyncTest_16x16_TN.cpp
-                       gemm/test/MmaSyncTest_16x16_TT.cpp
-                       gemm/test/MmaSyncTest_32x32_NN.cpp
-                       gemm/test/MmaSyncTest_32x32_NT.cpp
-                       gemm/test/MmaSyncTest_32x32_TN.cpp
-                       gemm/test/MmaSyncTest_32x32_TT.cpp)
-
-set(MmaSyncMultiTestSources ${GemmCommonSources}
-                       gemm/test/MmaSyncMultiTest_16x16_NN.cpp
-                       gemm/test/MmaSyncMultiTest_16x16_NT.cpp
-                       gemm/test/MmaSyncMultiTest_16x16_TN.cpp
-                       gemm/test/MmaSyncMultiTest_16x16_TT.cpp
-                       gemm/test/MmaSyncMultiTest_32x32_NN.cpp
-                       gemm/test/MmaSyncMultiTest_32x32_NT.cpp
-                       gemm/test/MmaSyncMultiTest_32x32_TN.cpp
-                       gemm/test/MmaSyncMultiTest_32x32_TT.cpp)
-
-set(MmaSyncMultiLdsTestSources ${GemmCommonSources}
-                       gemm/test/MmaSyncMultiLdsTest_16x16_NN_1x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_16x16_NN_1x2.cpp
-                       gemm/test/MmaSyncMultiLdsTest_16x16_NN_2x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_16x16_NN_2x2.cpp
-                       gemm/test/MmaSyncMultiLdsTest_16x16_NT_1x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_16x16_NT_1x2.cpp
-                       gemm/test/MmaSyncMultiLdsTest_16x16_NT_2x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_16x16_NT_2x2.cpp
-                       gemm/test/MmaSyncMultiLdsTest_16x16_TN_1x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_16x16_TN_1x2.cpp
-                       gemm/test/MmaSyncMultiLdsTest_16x16_TN_2x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_16x16_TN_2x2.cpp
-                       gemm/test/MmaSyncMultiLdsTest_16x16_TT_1x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_16x16_TT_1x2.cpp
-                       gemm/test/MmaSyncMultiLdsTest_16x16_TT_2x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_16x16_TT_2x2.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_NN_1x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_NN_1x2.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_NN_2x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_NN_2x2.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_NT_1x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_NT_1x2.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_NT_2x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_NT_2x2.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_TN_1x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_TN_1x2.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_TN_2x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_TN_2x2.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_TT_1x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_TT_1x2.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_TT_2x1.cpp
-                       gemm/test/MmaSyncMultiLdsTest_32x32_TT_2x2.cpp)
-
-set(MmaSyncLdsTestSources ${GemmCommonSources}
-                       gemm/test/MmaSyncLdsTest_16x16_NN.cpp
-                       gemm/test/MmaSyncLdsTest_16x16_NT.cpp
-                       gemm/test/MmaSyncLdsTest_16x16_TN.cpp
-                       gemm/test/MmaSyncLdsTest_16x16_TT.cpp
-                       gemm/test/MmaSyncLdsTest_32x32_NN.cpp
-                       gemm/test/MmaSyncLdsTest_32x32_NT.cpp
-                       gemm/test/MmaSyncLdsTest_32x32_TN.cpp
-                       gemm/test/MmaSyncLdsTest_32x32_TT.cpp)
-
-set(MmaSyncCoopLdsTestSources ${GemmCommonSources}
-                       gemm/test/MmaSyncCoopLdsTest_16x16_NN.cpp
-                       gemm/test/MmaSyncCoopLdsTest_16x16_NT.cpp
-                       gemm/test/MmaSyncCoopLdsTest_16x16_TN.cpp
-                       gemm/test/MmaSyncCoopLdsTest_16x16_TT.cpp
-                       gemm/test/MmaSyncCoopLdsTest_32x32_NN.cpp
-                       gemm/test/MmaSyncCoopLdsTest_32x32_NT.cpp
-                       gemm/test/MmaSyncCoopLdsTest_32x32_TN.cpp
-                       gemm/test/MmaSyncCoopLdsTest_32x32_TT.cpp)
-
-# Benchmark GEMM
-add_wmma_test(MmaSyncTest-bench ${MmaSyncTestSources})
-add_wmma_test(MmaSyncMultiTest-bench ${MmaSyncMultiTestSources})
-add_wmma_test(MmaSyncMultiLdsTest-bench ${MmaSyncMultiLdsTestSources})
-add_wmma_test(MmaSyncLdsTest-bench ${MmaSyncLdsTestSources})
-add_wmma_test(MmaSyncCoopLdsTest-bench ${MmaSyncCoopLdsTestSources})
-
-# Validation GEMM
-if(WMMA_VALIDATE_WITH_ROCBLAS)
-  add_wmma_validation_test_with_rocblas(MmaSyncTest-rocBLAS ${MmaSyncTestSources})
-  add_wmma_validation_test_with_rocblas(MmaSyncMultiTest-rocBLAS ${MmaSyncMultiTestSources})
-  add_wmma_validation_test_with_rocblas(MmaSyncMultiLdsTest-rocBLAS ${MmaSyncMultiLdsTestSources})
-  add_wmma_validation_test_with_rocblas(MmaSyncLdsTest-rocBLAS ${MmaSyncLdsTestSources})
-  add_wmma_validation_test_with_rocblas(MmaSyncCoopLdsTest-rocBLAS ${MmaSyncCoopLdsTestSources})
-else()
-  add_wmma_validation_test(MmaSyncTest-cpu ${MmaSyncTestSources})
-  add_wmma_validation_test(MmaSyncMultiTest-cpu ${MmaSyncMultiTestSources})
-  add_wmma_validation_test(MmaSyncLdsTest-cpu ${MmaSyncLdsTestSources})
-  add_wmma_validation_test(MmaSyncCoopLdsTest-cpu ${MmaSyncCoopLdsTestSources})
-endif()
+add_subdirectory(gemm)
