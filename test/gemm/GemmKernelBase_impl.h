@@ -39,12 +39,13 @@
 #include "Common.hpp"
 #include "Performance.h"
 
-#ifdef WMMA_VALIDATE_TESTS
+#ifdef WMMA_VALIDATION_TESTS
 #include "Reference.h" // Vanilla CPU kernel
-#ifdef WMMA_VALIDATE_WITH_ROCBLAS
+#endif // WMMA_VALIDATION_TESTS
+
+#if defined(WMMA_VALIDATE_WITH_ROCBLAS) || defined(WMMA_BENCHMARK_WITH_ROCBLAS)
 #include "rocBLASReference.h" // rocBLAS GPU kernel
-#endif // WMMA_VALIDATE_WITH_ROCBLAS
-#endif // WMMA_VALIDATE_TESTS
+#endif // WMMA_VALIDATE_WITH_ROCBLAS || WMMA_BENCHMARK_WITH_ROCBLAS
 
 // Library includes
 #include "Constants.h"
@@ -301,12 +302,18 @@ void GemmKernelBase<BlockM,
     mLda = mLdb = mLdc = mLdd = 0;
     mAlpha = mBeta = ComputeT(0.0f);
 
+    mRepeats =
+#ifdef WMMA_VALIDATION_TESTS
+        1;
+#else
+        5;
+#endif
     mRunFlag          = true;
     mValidationResult = false;
     mMaxRelativeError = 0.0;
 
-    mTotalGFlops = mMeasuredGFlopsPerSec = 0.0;
-    mElapsedTimeMs = mEfficiency = 0.0;
+    mElapsedTimeMs = mTotalGFlops = mMeasuredGFlopsPerSec = 0.0;
+    mEfficiency = mReferenceEfficiency = -1.0;
 }
 
 template <uint32_t BlockM,
@@ -331,11 +338,20 @@ std::ostream& GemmKernelBase<BlockM,
                              LayoutD>::printHeader(std::ostream& stream /* = std::cout */) const
 {
 
-    return stream
-           << "TBlkX, TBlkY, BlkM, BlkN, BlkK, MatM, MatN, MatK, alpha, lda, ldb, beta, ldc, "
-              "ldd, LytA_LytB_LytC_LytD, Ti_To_Tc, elapsedMs, GFlops, GFlops/s, Efficiency(%), "
-              "Result"
-           << std::endl;
+    return stream << "TBlkX, TBlkY, "
+                  << "BlkM, BlkN, BlkK, "
+                  << "MatM, MatN, MatK, "
+                  << "alpha, lda, ldb, beta, ldc, ldd, "
+                  << "LytA_LytB_LytC_LytD, "
+                  << "Ti_To_Tc, "
+                  << "elapsedMs, "
+                  << "GFlops, "
+                  << "GFlops/s, "
+                  << "Efficiency(%), "
+#if defined(WMMA_BENCHMARK_WITH_ROCBLAS)
+                  << "rocBLAS Efficiency(%), "
+#endif // WMMA_BENCHMARK_WITH_ROCBLAS
+                  << "Result" << std::endl;
 }
 
 template <uint32_t BlockM,
@@ -362,10 +378,8 @@ std::ostream& GemmKernelBase<BlockM,
     stream << mTBlockX << ", " << mTBlockY << ", " << BlockM << ", " << BlockN << ", " << BlockK
            << ", " << mM << ", " << mN << ", " << mK << ", " << mAlpha << ", " << mLda << ", "
            << mLdb << ", " << mBeta << ", " << mLdc << ", " << mLdd << ", "
-           << (std::is_same<LayoutA, row_major>::value ? "R" : "C") << "_"
-           << (std::is_same<LayoutB, row_major>::value ? "R" : "C") << "_"
-           << (std::is_same<LayoutC, row_major>::value ? "R" : "C") << "_"
-           << (std::is_same<LayoutD, row_major>::value ? "R" : "C") << ", "
+           << dataTypeToString<LayoutA>() << "_" << dataTypeToString<LayoutB>() << "_"
+           << dataTypeToString<LayoutC>() << "_" << dataTypeToString<LayoutD>() << ", "
            << dataTypeToString<InputT>() << "_" << dataTypeToString<OutputT>() << "_"
            << dataTypeToString<ComputeT>() << ", ";
 
@@ -379,17 +393,26 @@ std::ostream& GemmKernelBase<BlockM,
                << ", "
                << "n/a"
                << ", "
-               << " SKIPPED" << std::endl;
+#if defined(WMMA_BENCHMARK_WITH_ROCBLAS)
+               << "n/a"
+               << ", "
+#endif // WMMA_BENCHMARK_WITH_ROCBLAS
+               << "SKIPPED" << std::endl;
     }
     else
     {
+
         stream << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredGFlopsPerSec << ", "
                << mEfficiency << ", "
-#ifdef WMMA_VALIDATE_TESTS
+#if defined(WMMA_BENCHMARK_WITH_ROCBLAS)
+               << mReferenceEfficiency << ", "
+#endif // WMMA_BENCHMARK_WITH_ROCBLAS
+
+#if defined(WMMA_VALIDATION_TESTS)
                << (mValidationResult ? "PASSED" : "FAILED")
 #else
                << "BENCH"
-#endif // WMMA_VALIDATE_TESTS
+#endif // WMMA_VALIDATION_TESTS
                << std::endl;
     }
 
@@ -484,48 +507,184 @@ void GemmKernelBase<BlockM,
 {
     if(mRunFlag)
     {
-        hipEvent_t startEvent, stopEvent;
-        CHECK_HIP_ERROR(hipEventCreate(&startEvent));
-        CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
+        ///
+        /// Run WMMA kernel
+        ///
 
-        auto& dataInstance = DataStorage::instance();
+        auto wmmaKernel = [this]() {
+            auto& dataInstance = DataStorage::instance();
+            hipExtLaunchKernelGGL((this->kernelImpl()), // Kernel to launch
+                                  (this->gridDim()), // Wg grid size
+                                  (this->blockDim()), // Thread block size
+                                  (this->ldsUsage()), // sharedMemBytes
+                                  0, // stream
+                                  nullptr, // Event start
+                                  nullptr, // event stop
+                                  0, // flags
+                                  this->mM, // M
+                                  this->mN, // N
+                                  this->mK, // K
+                                  dataInstance->deviceA().get(), // A*
+                                  dataInstance->deviceB().get(), // B*
+                                  dataInstance->deviceC().get(), // C*
+                                  dataInstance->deviceD().get(), // D*
+                                  this->mLda, // lda
+                                  this->mLdb, // ldb
+                                  this->mLdc, // ldc
+                                  this->mLdd, // ldd
+                                  this->mAlpha, // alpha
+                                  this->mBeta); // beta
+        };
 
-        hipExtLaunchKernelGGL((kernelImpl()), // Kernel to launch
-                              (gridDim()), // Wg grid size
-                              (blockDim()), // Thread block size
-                              (ldsUsage()), // sharedMemBytes
-                              0, // stream
-                              startEvent, // Event start
-                              stopEvent, // event stop
-                              0, // flags
-                              mM, // M
-                              mN, // N
-                              mK, // K
-                              dataInstance->deviceA().get(), // A*
-                              dataInstance->deviceB().get(), // B*
-                              dataInstance->deviceC().get(), // C*
-                              dataInstance->deviceD().get(), // D*
-                              mLda, // lda
-                              mLdb, // ldb
-                              mLdc, // ldc
-                              mLdd, // ldd
-                              mAlpha, // alpha
-                              mBeta); // beta
+        {
+            hipEvent_t startEvent, stopEvent;
+            CHECK_HIP_ERROR(hipEventCreate(&startEvent));
+            CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
 
-        auto timeMs = 0.0f;
-        CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
-        CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
-        CHECK_HIP_ERROR(hipEventDestroy(startEvent));
-        CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
+            CHECK_HIP_ERROR(hipEventRecord(startEvent));
+            for(uint32_t i = 0; i < mRepeats; ++i)
+            {
+                wmmaKernel();
+            }
+            CHECK_HIP_ERROR(hipEventRecord(stopEvent));
+            CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
 
-        // Calculate efficiency
-        auto& deviceInfo             = DeviceInfo::instance();
-        auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<InputT>();
+            auto timeMs = 0.0f;
+            CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
 
-        mElapsedTimeMs        = float64_t(timeMs);
-        mTotalGFlops          = calculateGFlops(mM, mN, mK);
-        mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs);
-        mEfficiency           = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
+            // Calculate efficiency
+            auto& deviceInfo             = DeviceInfo::instance();
+            auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<InputT>();
+
+            mElapsedTimeMs        = float64_t(timeMs);
+            mTotalGFlops          = calculateGFlops(mM, mN, mK);
+            mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
+                                    * static_cast<float64_t>(mRepeats);
+            mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
+
+            CHECK_HIP_ERROR(hipEventDestroy(startEvent));
+            CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
+        }
+
+        ///
+        /// Select and run a reference kernel (if necessary)
+        ///
+
+        bool                  benchRef = false;
+        std::function<void()> referenceKernel;
+
+#if defined(WMMA_VALIDATE_WITH_ROCBLAS) || defined(WMMA_BENCHMARK_WITH_ROCBLAS)
+
+        // Create a rocBLAS handle to be used with rocBLAS API
+        rocblas_handle handle;
+        CHECK_ROCBLAS_ERROR(rocblas_create_handle(&handle));
+
+        // Create a guard object to release handle when it goes out of scope.
+        using HandleGuardT = std::unique_ptr<rocblas_handle, void (*)(rocblas_handle*)>;
+        auto handleGuard   = HandleGuardT(&handle, [](rocblas_handle* handle) {
+            CHECK_ROCBLAS_ERROR(rocblas_destroy_handle(*handle));
+          });
+
+        auto rocBlasKernel = [this, &handle]() {
+            auto& dataInstance = DataStorage::instance();
+            CHECK_ROCBLAS_ERROR(rocblas_gemm_ex(handle,
+                                                rocblas_layout<LayoutA>::operation(), // opA
+                                                rocblas_layout<LayoutB>::operation(), // opB
+                                                this->mM, // M
+                                                this->mN, // N
+                                                this->mK, // K
+                                                &(this->mAlpha), // alpha,
+                                                dataInstance->deviceA().get(), // A*,
+                                                rocblas_types<InputT>::type(), // a_type
+                                                this->mLda, // lda
+                                                dataInstance->deviceB().get(), // B*,
+                                                rocblas_types<InputT>::type(), // b_type
+                                                this->mLdb, // ldb
+                                                &(this->mBeta), // beta
+                                                dataInstance->deviceC().get(), // C*
+                                                rocblas_types<OutputT>::type(), // c_type
+                                                this->mM, // ldc (col major output only)
+                                                dataInstance->deviceD().get(), // D*
+                                                rocblas_types<OutputT>::type(), // d_type
+                                                this->mM, // ldd (col major output only)
+                                                rocblas_types<ComputeT>::type(), // compute_type
+                                                rocblas_gemm_algo_standard, // algo
+                                                0, // solution_index
+                                                0)); // flags
+        };
+        if(quirks::rocblas_supported<InputT, OutputT, ComputeT>::value)
+        {
+            auto& dataInstance = DataStorage::instance();
+
+            // rocblas matrix C, D always in col_major
+            MatrixUtil<col_major>::fill(dataInstance->hostC().get(), mM, mN);
+            benchRef        = true;
+            referenceKernel = rocBlasKernel;
+
+#if defined(WMMA_VALIDATE_WITH_ROCBLAS)
+            // Cache wmma kernel result on host D
+            dataInstance->copyData(dataInstance->hostD(), dataInstance->deviceD(), mM * mN);
+#endif // WMMA_VALIDATE_WITH_ROCBLAS
+        }
+#endif // WMMA_VALIDATE_WITH_ROCBLAS || WMMA_BENCHMARK_WITH_ROCBLAS
+
+#if defined(WMMA_VALIDATION_TESTS)
+
+        // Fallback CPU kernel for validation
+        auto cpuKernel = [this]() {
+            auto& dataInstance = DataStorage::instance();
+            gemm_CPU<InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD>(
+                this->mM,
+                this->mN,
+                this->mK,
+                dataInstance->hostA().get(),
+                dataInstance->hostB().get(),
+                dataInstance->hostC().get(),
+                dataInstance->hostD().get(), // Cpu result on host D
+                this->mAlpha,
+                this->mBeta);
+        };
+
+        if(!referenceKernel)
+        {
+            benchRef        = false; // No bench for cpu
+            referenceKernel = cpuKernel;
+        }
+#endif // WMMA_VALIDATION_TESTS
+
+        // Run reference kernel
+        if(referenceKernel)
+        {
+            hipEvent_t startEvent, stopEvent;
+            CHECK_HIP_ERROR(hipEventCreate(&startEvent));
+            CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
+
+            CHECK_HIP_ERROR(hipEventRecord(startEvent));
+            for(uint32_t i = 0; i < mRepeats; ++i)
+            {
+                referenceKernel();
+            }
+            CHECK_HIP_ERROR(hipEventRecord(stopEvent));
+            CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
+
+            auto timeMs = 0.0f;
+            CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
+
+            if(benchRef)
+            {
+                // Calculate GPU efficiency
+                auto& deviceInfo             = DeviceInfo::instance();
+                auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<InputT>();
+
+                auto elapsedTimeMs        = float64_t(timeMs);
+                auto measuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, elapsedTimeMs)
+                                            * static_cast<float64_t>(mRepeats);
+                mReferenceEfficiency = measuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
+            }
+
+            CHECK_HIP_ERROR(hipEventDestroy(startEvent));
+            CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
+        }
     }
 }
 
@@ -551,19 +710,30 @@ void GemmKernelBase<BlockM,
                     LayoutD>::validateResults()
 {
 
-#ifdef WMMA_VALIDATE_TESTS
+#if defined(WMMA_VALIDATION_TESTS)
     if(mRunFlag)
     {
-        bool  validated    = false;
+        using DeviceLayoutD =
+#if defined(WMMA_VALIDATE_WITH_ROCBLAS)
+            // rocBLAS output is col_major.
+            typename std::conditional_t<quirks::rocblas_supported<InputT, OutputT, ComputeT>::value,
+                                        col_major,
+                                        LayoutD>;
+#else
+            LayoutD;
+#endif
+
         auto& dataInstance = DataStorage::instance();
 
         // Allocated managed memory for results on host
-        const int64_t sizeD           = mM * mN;
-        auto          kernelResult    = dataInstance->template allocHost<OutputT>(sizeD);
-        auto          referenceResult = dataInstance->template allocHost<OutputT>(sizeD);
+        const int64_t sizeD = mM * mN;
 
-        // Cache current kernel result from device
-        dataInstance->copyData(kernelResult, dataInstance->deviceD(), sizeD);
+        // One result on device
+        auto result0 = dataInstance->template allocHost<OutputT>(sizeD);
+        dataInstance->copyData(result0, dataInstance->deviceD(), sizeD);
+
+        // Other already on host
+        auto& result1 = dataInstance->hostD();
 
         // Give more error tolerance to ComputeT = fp16,
         // due to MFMA output is always fp32. We downcast the MFMA result to fp16, which
@@ -575,54 +745,13 @@ void GemmKernelBase<BlockM,
         // FMA operations will be very prone to significant errors.
         double errorTolerance = sizeof(ComputeT) < sizeof(float32_t) ? 100.0 : 10.0;
 
-#ifdef WMMA_VALIDATE_WITH_ROCBLAS
-
-        // Attempt a reference result with rocBLAS
-        if(quirks::rocblas_supported<InputT, OutputT, ComputeT>::value)
-        {
-            // rocblas matrix C, D always in col_major
-            MatrixUtil<col_major>::fill(dataInstance->hostC().get(), mM, mN);
-            gemm_rocBLAS<InputT, OutputT, ComputeT, LayoutA, LayoutB>(mM,
-                                                                      mN,
-                                                                      mK,
-                                                                      dataInstance->hostA().get(),
-                                                                      dataInstance->hostB().get(),
-                                                                      dataInstance->hostC().get(),
-                                                                      referenceResult.get(),
-                                                                      mAlpha,
-                                                                      mBeta);
-
-            std::tie(mValidationResult, mMaxRelativeError)
-                = compareEqual<OutputT, OutputT, LayoutD, col_major>(
-                    kernelResult.get(), referenceResult.get(), mM, mN, errorTolerance);
-
-            validated = true;
-        }
-
-#endif // WMMA_VALIDATE_WITH_ROCBLAS
-
-        // Fall back to CPU validation if necessary
-        if(!validated)
-        {
-            gemm_CPU<InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD>(
-                mM,
-                mN,
-                mK,
-                dataInstance->hostA().get(),
-                dataInstance->hostB().get(),
-                dataInstance->hostC().get(),
-                referenceResult.get(),
-                mAlpha,
-                mBeta);
-
-            std::tie(mValidationResult, mMaxRelativeError)
-                = compareEqual<OutputT, OutputT, LayoutD, LayoutD>(
-                    kernelResult.get(), referenceResult.get(), mM, mN, errorTolerance);
-        }
+        std::tie(mValidationResult, mMaxRelativeError)
+            = compareEqual<OutputT, OutputT, DeviceLayoutD, LayoutD>(
+                result0.get(), result1.get(), mM, mN, errorTolerance);
 
         EXPECT_TRUE(mValidationResult) << "Max relative error: " << mMaxRelativeError;
     }
-#endif // WMMA_VALIDATE_TESTS
+#endif // WMMA_VALIDATION_TESTS
 }
 
 template <uint32_t BlockM,
