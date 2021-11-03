@@ -27,81 +27,30 @@
 #ifndef WMMA_GEMM_RESOURCE_IMPL_H
 #define WMMA_GEMM_RESOURCE_IMPL_H
 
-#include "Common.hpp"
-#include <cstring> // for std::memcpy
+#include "GemmResource.h"
 
 template <typename InputT, typename OutputT>
 GemmResource<InputT, OutputT>::GemmResource()
-    : mDeviceA(nullptr, [](InputT*) {})
-    , mDeviceB(nullptr, [](InputT*) {})
-    , mDeviceC(nullptr, [](OutputT*) {})
-    , mDeviceD(nullptr, [](OutputT*) {})
-    , mHostA(nullptr)
-    , mHostB(nullptr)
-    , mHostC(nullptr)
-    , mHostD(nullptr)
+    : mDeviceA(Base::template allocDevice<InputT>(0))
+    , mDeviceB(Base::template allocDevice<InputT>(0))
+    , mDeviceC(Base::template allocDevice<OutputT>(0))
+    , mDeviceD(Base::template allocDevice<OutputT>(0))
+    , mHostA(Base::template allocHost<InputT>(0))
+    , mHostB(Base::template allocHost<InputT>(0))
+    , mHostC(Base::template allocHost<OutputT>(0))
+    , mHostD(Base::template allocHost<OutputT>(0))
     , mCurrentProblemSize({0, 0, 0})
     , mCurrentMatrixSize({0, 0, 0})
 {
 }
 
 template <typename InputT, typename OutputT>
-GemmResource<InputT, OutputT>::~GemmResource()
-{
-}
-
-template <typename InputT, typename OutputT>
-template <typename DataT>
-auto GemmResource<InputT, OutputT>::allocDevice(int64_t numElements) -> DevicePtrT<DataT>
-{
-    DataT* data;
-    CHECK_HIP_ERROR(hipMalloc(&data, numElements * sizeof(DataT)));
-    return DevicePtrT<DataT>(data, [](DataT* d) { CHECK_HIP_ERROR(hipFree(d)); });
-}
-
-template <typename InputT, typename OutputT>
-template <typename DataT>
-auto GemmResource<InputT, OutputT>::allocHost(int64_t numElements) -> HostPtrT<DataT>
-{
-    return HostPtrT<DataT>(new DataT[numElements]);
-}
-
-template <typename InputT, typename OutputT>
-template <typename DataT>
-void GemmResource<InputT, OutputT>::copyData(HostPtrT<DataT>&         dst,
-                                             DevicePtrT<DataT> const& src,
-                                             int64_t                  numElements)
-{
-    CHECK_HIP_ERROR(
-        hipMemcpy(dst.get(), src.get(), numElements * sizeof(DataT), hipMemcpyDeviceToHost));
-}
-
-template <typename InputT, typename OutputT>
-template <typename DataT>
-void GemmResource<InputT, OutputT>::copyData(DevicePtrT<DataT>&     dst,
-                                             HostPtrT<DataT> const& src,
-                                             int64_t                numElements)
-{
-    CHECK_HIP_ERROR(
-        hipMemcpy(dst.get(), src.get(), numElements * sizeof(DataT), hipMemcpyHostToDevice));
-}
-
-template <typename InputT, typename OutputT>
-template <typename DataT>
-void GemmResource<InputT, OutputT>::copyData(HostPtrT<DataT>&       dst,
-                                             HostPtrT<DataT> const& src,
-                                             int64_t                numElements)
-{
-    std::memcpy(dst.get(), src.get(), numElements * sizeof(DataT));
-}
-
-template <typename InputT, typename OutputT>
 void GemmResource<InputT, OutputT>::copyHostToDeviceAll()
 {
-    copyData(mDeviceA, mHostA, std::get<MatrixA>(mCurrentMatrixSize));
-    copyData(mDeviceB, mHostB, std::get<MatrixB>(mCurrentMatrixSize));
-    copyData(mDeviceC, mHostC, std::get<MatrixC>(mCurrentMatrixSize));
-    copyData(mDeviceD, mHostD, std::get<MatrixD>(mCurrentMatrixSize));
+    Base::copyData(mDeviceA, mHostA, std::get<MatrixA>(mCurrentMatrixSize));
+    Base::copyData(mDeviceB, mHostB, std::get<MatrixB>(mCurrentMatrixSize));
+    Base::copyData(mDeviceC, mHostC, std::get<MatrixC>(mCurrentMatrixSize));
+    Base::copyData(mDeviceD, mHostD, std::get<MatrixD>(mCurrentMatrixSize));
 }
 
 template <typename InputT, typename OutputT>
@@ -118,8 +67,8 @@ void GemmResource<InputT, OutputT>::resizeStorage(ProblemSize const& size)
         using HostDataT   = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
         if(currentSize < newSize)
         {
-            devicePtr = std::move(allocDevice<DeviceDataT>(newSize));
-            hostPtr   = std::move(allocHost<HostDataT>(newSize));
+            devicePtr = std::move(Base::template allocDevice<DeviceDataT>(newSize));
+            hostPtr   = std::move(Base::template allocHost<HostDataT>(newSize));
         }
     };
 
