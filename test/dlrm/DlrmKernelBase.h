@@ -61,7 +61,7 @@ struct KernelI
 
 // Typed DLRM kernel that provides the basis for DLRM tests.
 // This class provides common implementation code.
-template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
+template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
 struct DlrmKernelBase : public KernelI
 {
 protected: // Types
@@ -107,13 +107,45 @@ protected: // Types
                                    uint32_t, // row_tiles_per_step
                                    uint32_t); //shared_mem_per_warp_size_byte
 
+    // Defines for hard-coded template parameters
+    enum : uint32_t
+    {
+        // Shared kernel template parameters
+        kWarpSize     = AMDGCN_WAVE_SIZE,
+        kWarpSizeLog2 = Log2<AMDGCN_WAVE_SIZE>::value,
+        kTileDim      = 16,
+        kTileDimLog2  = Log2<kTileDim>::value,
+
+        // Forward kernel template parameters
+        warps_per_threadblock = 128 / kWarpSize,
+        threadblock_size      = warps_per_threadblock * kWarpSize,
+        M_BLOCKS              = 2,
+        K_BLOCKS              = 8,
+        SMEM_STRIDE           = K_BLOCKS * 16 + 8,
+        SMEM_STRIDE_ACC       = M_BLOCKS * 16 + 8,
+
+        // Backwards kernel template parameters
+        kWarpsPerBlock   = 128 / kWarpSize,
+        kNumThreads      = kWarpsPerBlock * kWarpSize,
+        kRowTilesPerStep = 32 / kTileDim,
+        kColTilesPerStep = 1,
+
+        // Data sizes
+        BATCH_SIZE = 64,
+        NUM_ROWS   = 27,
+        NUM_COLS   = 128,
+        PAD        = 0
+    };
+
 protected:
     DlrmKernelBase();
     virtual ~DlrmKernelBase();
 
     // Kernels MUST provide the device kernel function.
-    virtual KernelFwdFunc kernelFwdImpl() const = 0;
-    virtual KernelBwdFunc kernelBwdImpl() const = 0;
+    virtual KernelFwdFunc kernelFwdImpl() const           = 0;
+    virtual KernelFwdFunc kernelFwdNonAlignedImpl() const = 0;
+    virtual KernelBwdFunc kernelBwdImpl() const           = 0;
+    virtual KernelBwdFunc kernelBwdNonAlignedImpl() const = 0;
 
     // Kernel launch parameters
     virtual dim3 gridDim() const;
