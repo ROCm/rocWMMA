@@ -35,7 +35,7 @@ class LazySingleton
 public:
     static std::unique_ptr<T> const& instance()
     {
-        static std::unique_ptr<T> sInstance = std::make_unique<T>();
+        static auto sInstance = std::make_unique<T>();
         return sInstance;
     }
 };
