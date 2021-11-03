@@ -249,10 +249,14 @@ git clone -b <branch> https://github.com/ROCmSoftwarePlatform/WMMA.git .
 |Option|Description|Default Value|
 |---|---|---|
 |AMDGPU_TARGETS|Build code for specific GPU target(s)|gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+|
-|WMMA_BUILD_TESTS|Build validation tests & benchmarks|ON|
+|WMMA_BUILD_TESTS|Build Tests|ON|
 |WMMA_BUILD_DOCS|Build doxygen documentation from code|OFF|
 |WMMA_BUILD_ASSEMBLY|Generate assembly files|OFF|
-|WMMA_VALIDATE_WITH_ROCBLAS|Use rocBLAS for validation tests| ON (requires WMMA_BUILD_TESTS=ON)|
+|WMMA_BUILD_VALIDATION_TESTS|Build validation tests |ON (requires WMMA_BUILD_TESTS=ON)|
+|WMMA_BUILD_BENCHMARK_TESTS|Build benchmark tests |ON (requires WMMA_BUILD_TESTS=ON)|
+|WMMA_BUILD_EXTENDED_TESTS|Build extended testing coverage |OFF (requires WMMA_BUILD_TESTS=ON)|
+|WMMA_VALIDATE_WITH_ROCBLAS|Use rocBLAS for validation tests| ON (requires WMMA_BUILD_VALIDATION_TESTS=ON)|
+|WMMA_BENCHMARK_WITH_ROCBLAS|Include rocBLAS benchmarking data| OFF (requires WMMA_BUILD_BENCHMARK_TESTS=ON)|
 
 ### Example configurations
 By default, the project is configured as Release mode, and is linked against rocBLAS for validating results.
@@ -262,19 +266,25 @@ Here are some of the examples for the configuration:
 |Basic|`CC=hipcc CXX=hipcc cmake -B<build_dir> .`|
 |Targeting MI100|`CC=hipcc CXX=hipcc cmake -B<build_dir> . -DAMDGPU_TARGETS=gfx908:xnack-` |
 |Debug build|`CC=hipcc CXX=hipcc cmake -B<build_dir> . -DCMAKE_BUILD_TYPE=Debug` |
-|Build without rocBLAS (default on)|`CC=hipcc CXX=hipcc cmake -B<build_dir> . -DWMMA_VALIDATE_WITH_ROCBLAS=OFF` |
+|Build without rocBLAS (default on)|`CC=hipcc CXX=hipcc cmake -B<build_dir> . -DWMMA_VALIDATE_WITH_ROCBLAS=OFF -DWMMA_BENCHMARK_WITH_ROCBLAS=OFF` |
 
 After configuration, build with `cmake --build <build_dir> -- -j`
 
 **Warning: Build time for all projects can take several minutes**
 
-Tips to save compiling time:
+### Tips to reduce compile time:
 - Target a specific GPU (default = MI100, MI200+/-)
 - Use lots of threads (e.g. -j64)
-- Manually reduce test(s) and/or test cases
-- Turn assembly generation OFF
+- Select WMMA_BUILD_ASSEMBLY=OFF
+- Select WMMA_BUILD_EXTENDED_TESTS=OFF
+- Manually build specific tests:
+```
+cd <build_dir>
+make <target_name> -j64
+```
+- Manually reduce test(s) and/or test case coverage
 
-## Running Tests
+## Running Unit Tests
 WMMA library features are showcased, validated and benchmarked if applicable in GTest applications.
 
 ### FillFragmentTest
@@ -289,33 +299,6 @@ Tests the load_matrix_sync and store_matrix_sync API functions for all supported
 Run validation:
 ```
 <build_dir>/test/LoadStoreMatrixSyncTest
-```
-
-### GEMM tests
-Implements a GEMM blocking algorithm using wmma for all supported configurations. Validates on CPU algorithm or rocBLAS if available. Validation runs are performed on a reduced subset of matrix sizes. Benchmark runs are on a larger set of matrix sizes. There are currently 3 variants of GEMM kernels. **MmaSyncTest** is the simplest GEMM example which
-targets one output block of matrix multiplication per wave. **MmaSyncTestLds** implements MmaSyncTest with LDS shared
-memory to implement data prefetching and movement pipelining to improve performance. **MmaSyncTestCoopLds** is a
-slightly more complicated GEMM that reduces LDS footprint by sharing LDS data with other waves in the workgroup.
-
-Run CPU validation: **CPU validation can be very slow especially for large matrices**
-```
-<build_dir>/test/MmaSyncTest-cpu
-<build_dir>/test/MmaSyncTestLds-cpu
-<build_dir>/test/MmaSyncTestCoopLds-cpu
-```
-
-Run rocBLAS validation: **rocBLAS validation is much quicker and typically takes 15-20 mins**
-```
-./MmaSyncTest-rocBLAS
-./MmaSyncTestLds-rocBLAS
-./MmaSyncTestCoopLds-rocBLAS
-```
-
-Run benchmark only: **Benchmark runs typically take 3-4 hrs to complete**
-```
-./MmaSyncTest-bench
-./MmaSyncTestLds-bench
-./MmaSyncTestCoopLds-bench
 ```
 
 ### ContaminationTest
@@ -345,3 +328,34 @@ Run validation:
 ```
 <build_dir>/test/VectorIteratorTest
 ```
+
+### GEMM tests
+Implements a GEMM blocking algorithm using wmma for all supported configurations. Validates on CPU algorithm or rocBLAS if available. Validation runs are performed on a reduced subset of matrix sizes. Benchmark runs are on a larger set of matrix sizes. There are currently 3 variants of GEMM kernels. **MmaSyncTest** is the simplest GEMM example which
+targets one output block of matrix multiplication per wave. **MmaSyncTestLds** implements MmaSyncTest with LDS shared
+memory to implement data prefetching and movement pipelining to improve performance. **MmaSyncTestCoopLds** is a
+slightly more complicated GEMM that reduces LDS footprint by sharing LDS data with other waves in the workgroup.
+
+Run validation tests:
+```
+<build_dir>/test/gemm/MmaSyncTest-validate
+<build_dir>/test/gemm/MmaSyncTestLds-validate
+<build_dir>/test/gemm/MmaSyncTestCoopLds-validate
+<build_dir>/test/gemm/MmaSyncMultiTest-validate
+<build_dir>/test/gemm/MmasyncMultiLdsTest-validate
+```
+
+Run benchmark only: **Benchmark runs can take several hours to complete**
+```
+<build_dir>/test/gemm/MmaSyncTest-bench
+<build_dir>/test/gemm/MmaSyncTestLds-bench
+<build_dir>/test/gemm/MmaSyncTestCoopLds-bench
+<build_dir>/test/gemm/MmaSyncMultiTest-bench
+<build_dir>/test/gemm/MmasyncMultiLdsTest-bench
+```
+
+### Tips to reduce run time:
+- Use gtest filters, target specific test names:
+```
+<test_exe> --gtest_filter=*name_filter*
+```
+- Manually adjust the test cases coverage
