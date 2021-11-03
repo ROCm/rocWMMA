@@ -30,8 +30,7 @@
 #include <memory>
 #include <tuple>
 
-#include <hip/hip_runtime_api.h>
-
+#include "HipResource.h"
 #include "Singleton.h"
 
 // GemmResource class is intended to manage a shared pool of resources for
@@ -47,22 +46,25 @@
 // Currently uses HIP as the backend for device allocation.
 
 template <typename InputT, typename OutputT>
-struct GemmResource : public LazySingleton<GemmResource<InputT, OutputT>>
+struct GemmResource : public HipResource, public LazySingleton<GemmResource<InputT, OutputT>>
 {
     // For static initialization
-    friend class LazySingleton<GemmResource<InputT, OutputT>>;
+    friend std::unique_ptr<GemmResource<InputT, OutputT>>
+        std::make_unique<GemmResource<InputT, OutputT>>();
+
+    using Base = HipResource;
+
+    template <typename DataT>
+    using DevicePtrT = Base::DevicePtrT<DataT>;
+
+    template <typename DataT>
+    using HostPtrT = Base::HostPtrT<DataT>;
 
     // M, N, K
     using ProblemSize = std::tuple<int64_t, int64_t, int64_t>;
 
     // MatrixA, MatrixB, MatrixCD (# of elements)
     using MatrixSize = std::tuple<int64_t, int64_t, int64_t>;
-
-    template <typename DataT>
-    using DevicePtrT = std::unique_ptr<DataT, void (*)(DataT*)>;
-
-    template <typename DataT>
-    using HostPtrT = std::unique_ptr<DataT[]>;
 
     enum : uint32_t
     {
@@ -78,25 +80,14 @@ struct GemmResource : public LazySingleton<GemmResource<InputT, OutputT>>
         K = 2
     };
 
-public:
+protected:
+    // Singleton instantiation
     GemmResource();
-    ~GemmResource();
+    GemmResource(GemmResource const&) = delete;
+    GemmResource& operator=(GemmResource const&) = delete;
 
-    template <typename DataT>
-    static DevicePtrT<DataT> allocDevice(int64_t numElements);
-
-    template <typename DataT>
-    static HostPtrT<DataT> allocHost(int64_t numElements);
-
-    template <typename DataT>
-    static void copyData(HostPtrT<DataT>& dst, DevicePtrT<DataT> const& src, int64_t numElements);
-
-    template <typename DataT>
-    static void copyData(DevicePtrT<DataT>& dst, HostPtrT<DataT> const& src, int64_t numElements);
-
-    template <typename DataT>
-    static void copyData(HostPtrT<DataT>& dst, HostPtrT<DataT> const& src, int64_t numElements);
-
+public:
+    ~GemmResource() = default;
     void copyHostToDeviceAll();
     void resizeStorage(ProblemSize const& size);
 
@@ -117,10 +108,6 @@ protected:
     HostPtrT<OutputT>   mHostC, mHostD;
     ProblemSize         mCurrentProblemSize;
     MatrixSize          mCurrentMatrixSize;
-
-private: // No copy
-    GemmResource(GemmResource const&);
-    GemmResource& operator=(GemmResource const&);
 };
 
 #include "GemmResource_impl.h"
