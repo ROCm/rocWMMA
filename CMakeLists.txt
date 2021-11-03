@@ -39,8 +39,9 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "" FORCE )
 project( WMMA LANGUAGES CXX )
 set (CMAKE_CXX_STANDARD 14)
 
+# Top level configs
 if( CMAKE_PROJECT_NAME STREQUAL "WMMA" )
-  option( WMMA_BUILD_TESTS "Build tests & benchmarks" ON )
+  option( WMMA_BUILD_TESTS "Build WMMA tests" ON )
   option( WMMA_BUILD_DOCS "Build doxygen documentation" OFF )
   option( WMMA_BUILD_ASSEMBLY "Output assembly files" OFF )
 endif()
@@ -90,53 +91,17 @@ endif()
 message( VERBOSE "AMDGPU_TARGETS=${AMDGPU_TARGETS}")
 
 find_package( hip REQUIRED )
-
-include( CMakeDependentOption )
-cmake_dependent_option( WMMA_VALIDATE_WITH_ROCBLAS "Use rocBLAS for validation" ON "WMMA_BUILD_TESTS" OFF )
+find_package( OpenMP REQUIRED )
 
 add_library(wmma INTERFACE)
 target_include_directories(wmma INTERFACE ${PROJECT_SOURCE_DIR}/library/include)
-target_link_libraries(wmma INTERFACE hip::device hip::host)
+target_link_libraries(wmma INTERFACE hip::device hip::host OpenMP::OpenMP_CXX)
 target_compile_options(wmma INTERFACE -std=c++14)
 
 if(WMMA_BUILD_TESTS)
-  # Test/benchmark requires additional dependencies
-  include( FetchContent )
-  find_package( OpenMP REQUIRED )
-  FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/609281088cfefc76f9d0ce82e1ff6c30cc3591e5.zip
-  )
-  FetchContent_MakeAvailable(googletest)
-
-  if(WMMA_VALIDATE_WITH_ROCBLAS)
-    find_package( rocblas REQUIRED PATHS /opt/rocm /opt/rocm/rocblas $ENV{ROCBLAS_DIR} )
-  endif()
-
   add_subdirectory(test)
 endif()
 
 if(WMMA_BUILD_DOCS)
-  # Documentation requires doxygen installation
-  find_package( Doxygen REQUIRED )
-
-  set(WMMA_DOCS_ARCHIVE "${CMAKE_CURRENT_SOURCE_DIR}/WMMA-Guide.tar.gz")
-  set(WMMA_DOXYGEN_INPUT "${CMAKE_CURRENT_SOURCE_DIR}/library" "${CMAKE_CURRENT_SOURCE_DIR}/test")
-  set(WMMA_DOXYGEN_OUTPUT "${CMAKE_BINARY_DIR}/docs")
-
-  add_custom_target(
-    BuildDocs ALL
-    DEPENDS ${WMMA_DOCS_ARCHIVE}
-  )
-
-  # Convert input list to space separated string
-  string (REPLACE ";" " " WMMA_DOXYGEN_INPUT "${WMMA_DOXYGEN_INPUT}")
-
-  # Adjust the doxygen inputs and output directories dynamically
-  add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/WMMA-Guide.tar.gz
-    COMMAND bash -c "(cat ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile; echo \"INPUT=${WMMA_DOXYGEN_INPUT}\"; echo \"OUTPUT_DIRECTORY=${WMMA_DOXYGEN_OUTPUT}\") | doxygen -"
-    COMMAND tar -czvf ${WMMA_DOCS_ARCHIVE} ${WMMA_DOXYGEN_OUTPUT}
-    VERBATIM)
-
+  add_subdirectory(docs)
 endif()

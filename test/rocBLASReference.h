@@ -289,13 +289,6 @@ void gemm_rocBLAS(uint32_t       m,
     // copy output from device to CPU
     CHECK_HIP_ERROR(hipMemcpy(&hd[0], dd, sizeof(d_t) * size_d, hipMemcpyDeviceToHost));
 
-    // std::cout << "a_type, b_type, c_type, d_type, m, n, k, alpha, lda, "
-    //              "ldb, beta, ldc, ldd = "
-    //           << rocblas_datatype2string(a_type) << ", " << rocblas_datatype2string(b_type) << ", "
-    //           << rocblas_datatype2string(c_type) << ", " << rocblas_datatype2string(d_type) << ", "
-    //           << m << ", " << n << ", " << k << ", " << alpha << ", " << lda << ", "
-    //           << ldb << ", " << beta << ", " << ldc << ", " << ldd << ", " << std::endl;
-
     CHECK_HIP_ERROR(hipFree(da));
     CHECK_HIP_ERROR(hipFree(db));
     CHECK_HIP_ERROR(hipFree(dc));

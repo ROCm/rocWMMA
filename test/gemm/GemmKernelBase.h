@@ -147,13 +147,14 @@ protected:
     ComputeT mAlpha, mBeta;
 
     // Execution flow control
-    bool   mRunFlag          = true;
-    bool   mValidationResult = false;
-    double mMaxRelativeError;
+    uint32_t mRepeats;
+    bool     mRunFlag          = true;
+    bool     mValidationResult = false;
+    double   mMaxRelativeError;
 
     // Performance
-    float64_t mTotalGFlops, mMeasuredGFlopsPerSec;
-    float64_t mElapsedTimeMs, mEfficiency;
+    float64_t mElapsedTimeMs, mTotalGFlops, mMeasuredGFlopsPerSec;
+    float64_t mEfficiency, mReferenceEfficiency;
 };
 
 #include "GemmKernelBase_impl.h"
