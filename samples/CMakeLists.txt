@@ -37,11 +37,6 @@ function(add_wmma_sample TEST_TARGET TEST_SOURCE)
                              ${CMAKE_CURRENT_SOURCE_DIR}
                              ${WMMA_SAMPLES_INCLUDE_DIR})
 
-  # Add support to include extended test coverage
-  if(WMMA_BUILD_EXTENDED_TESTS)
-    target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_EXTENDED_TESTS)
-  endif()
-
   # Add support to build the target's assembly files
   if(WMMA_BUILD_ASSEMBLY)
     foreach(file_name ${TEST_SOURCE})
