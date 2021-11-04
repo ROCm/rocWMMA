@@ -42,6 +42,7 @@ set (CMAKE_CXX_STANDARD 14)
 # Top level configs
 if( CMAKE_PROJECT_NAME STREQUAL "WMMA" )
   option( WMMA_BUILD_TESTS "Build WMMA tests" ON )
+  option( WMMA_BUILD_SAMPLES "Build WMMA samples" ON )
   option( WMMA_BUILD_DOCS "Build doxygen documentation" OFF )
   option( WMMA_BUILD_ASSEMBLY "Output assembly files" OFF )
 endif()
@@ -98,10 +99,15 @@ target_include_directories(wmma INTERFACE ${PROJECT_SOURCE_DIR}/library/include)
 target_link_libraries(wmma INTERFACE hip::device hip::host OpenMP::OpenMP_CXX)
 target_compile_options(wmma INTERFACE -std=c++14)
 
-if(WMMA_BUILD_TESTS)
-  add_subdirectory(test)
-endif()
-
 if(WMMA_BUILD_DOCS)
   add_subdirectory(docs)
+endif()
+
+if(WMMA_BUILD_SAMPLES)
+  add_subdirectory(samples)
+endif()
+
+
+if(WMMA_BUILD_TESTS)
+  add_subdirectory(test)
 endif()
