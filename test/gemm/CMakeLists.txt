@@ -58,7 +58,7 @@ function(add_gemm_benchmark_test TEST_TARGET TEST_SOURCE)
   list(APPEND TEST_SOURCE ${ARGN})
 
   # Create target
-  add_wmma_validation_test(${TEST_TARGET} ${TEST_SOURCE})
+  add_wmma_benchmark_test(${TEST_TARGET} ${TEST_SOURCE})
 
   # Add gemm include directory
   target_include_directories(${TEST_TARGET} PRIVATE ${WMMA_TEST_GEMM_INCLUDE_DIR})

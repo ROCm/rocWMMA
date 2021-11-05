@@ -320,7 +320,7 @@ namespace wmma
         constexpr auto coopIndex = std::is_base_of<matrix_a, MatrixT>::value ? 1 : 0;
         auto           waveIndex = std::get<coopIndex>(MappingUtil::waveCoord());
         auto           waveCount = std::get<coopIndex>(MappingUtil::workgroupDim());
-        typename CoopLoader::Traits::OutputT unpacked = *frag;
+        typename CoopLoader::Traits::OutputT unpacked;
 
         // Each cooperative wave only loads the portion they are responsible for
         // Note: at this point, the output frag is only partially filled with useful data
