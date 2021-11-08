@@ -1,3 +1,28 @@
+/*******************************************************************************
+ *
+ * MIT License
+ *
+ * Copyright 2021 Advanced Micro Devices, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
 #ifndef WMMA_IO_TRAITS_H
 #define WMMA_IO_TRAITS_H
 
@@ -123,29 +148,25 @@ struct PackTraits<float64_t>
 };
 
 /*
-* The following class is intended to provide insightful suggestions for
-* IO vector widths. Given a certain size of block, there are finite
-* elements to load which will affect appropriate vector widths. We also
-* consider that WMMA uses packed registers. For example in fp16 if the
-* IO count is only 1, the packed reg count is 0.5, which is not useful
-* for WMMA. We need to expect 1 full packed register at a minimum.
+* The following class is intended to provide optimistic suggestions for
+* IO vector widths. Given a certain block size, search for largest
+* vector width that could potentially be used during IO.
 *
-* We start testing at a default width of 8. If we cannot satisfy the
-* minimum requirements, we recurse into a reduced width of 4 and so on
-* until the min reqs are satisfied.
+* Start testing at a default width of BlockK. Keep halving the vector width
+* until it can fit the entire block, or split evenly amongst IO iterations.
 */
 
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t TestWidth = 16>
+template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t TestWidth = BlockK>
 struct VecWidthTraits
 {
     enum : uint32_t
     {
-        IOCount    = (BlockDim * BlockK) / (AMDGCN_WAVE_SIZE * TestWidth),
-        MinIOCount = PackTraits<DataT>::PackRatio,
-        MaxElementsPerThread
-        = IOCount >= MinIOCount
+        ElementCount  = BlockDim * BlockK,
+        ElementsPerIO = TestWidth * AMDGCN_WAVE_SIZE,
+        MaxVectorWidth
+        = (ElementsPerIO <= ElementCount) && (ElementCount % ElementsPerIO == 0)
               ? TestWidth
-              : VecWidthTraits<BlockDim, BlockK, DataT, TestWidth / 2>::MaxElementsPerThread
+              : VecWidthTraits<BlockDim, BlockK, DataT, TestWidth / 2>::MaxVectorWidth
     };
 };
 
@@ -154,9 +175,9 @@ struct VecWidthTraits<BlockDim, BlockK, DataT, 0>
 {
     enum : uint32_t
     {
-        IOCount              = 0,
-        MinIOCount           = 1,
-        MaxElementsPerThread = 0
+        ElementCount   = BlockDim * BlockK,
+        ElementsPerIO  = AMDGCN_WAVE_SIZE,
+        MaxVectorWidth = 1
     };
 };
 
@@ -199,7 +220,7 @@ struct amdgcn_io_traits
     };
 
     static_assert(KPerIO >= 1, "I/O operation must handle at least 1 element in K direction");
-    static_assert((ElementsPerIO % BlockDim) == 0,
+    static_assert((ElementsPerIO % BlockDim) == 0 || (ElementsPerIO % BlockK) == 0,
                   "I/O operation elements not a multiple of BlockDim");
     static_assert((ElementCount % ElementsPerIO) == 0,
                   "I/O element count not divisible into equal operations");

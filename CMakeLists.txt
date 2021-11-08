@@ -1,24 +1,28 @@
-# #############################################################################
-# Copyright 2021 Advanced Micro Devices, Inc. All rights reserved.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-# #############################################################################
+###############################################################################
+ #
+ # MIT License
+ #
+ # Copyright 2021 Advanced Micro Devices, Inc.
+ #
+ # Permission is hereby granted, free of charge, to any person obtaining a copy
+ # of this software and associated documentation files (the "Software"), to deal
+ # in the Software without restriction, including without limitation the rights
+ # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ # copies of the Software, and to permit persons to whom the Software is
+ # furnished to do so, subject to the following conditions:
+ #
+ # The above copyright notice and this permission notice shall be included in
+ # all copies or substantial portions of the Software.
+ #
+ # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ # SOFTWARE.
+ #
+ ###############################################################################
 
 cmake_minimum_required( VERSION 3.5 )
 
@@ -35,8 +39,10 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "" FORCE )
 project( WMMA LANGUAGES CXX )
 set (CMAKE_CXX_STANDARD 14)
 
+# Top level configs
 if( CMAKE_PROJECT_NAME STREQUAL "WMMA" )
-  option( WMMA_BUILD_TESTS "Build tests & benchmarks" ON )
+  option( WMMA_BUILD_TESTS "Build WMMA tests" ON )
+  option( WMMA_BUILD_SAMPLES "Build WMMA samples" ON )
   option( WMMA_BUILD_DOCS "Build doxygen documentation" OFF )
   option( WMMA_BUILD_ASSEMBLY "Output assembly files" OFF )
 endif()
@@ -86,54 +92,22 @@ endif()
 message( VERBOSE "AMDGPU_TARGETS=${AMDGPU_TARGETS}")
 
 find_package( hip REQUIRED )
-
-include( CMakeDependentOption )
-cmake_dependent_option( WMMA_VALIDATE_WITH_ROCBLAS "Use rocBLAS for validation" ON "WMMA_BUILD_TESTS" OFF )
+find_package( OpenMP REQUIRED )
 
 add_library(wmma INTERFACE)
 target_include_directories(wmma INTERFACE ${PROJECT_SOURCE_DIR}/library/include)
-target_link_libraries(wmma INTERFACE hip::device hip::host)
+target_link_libraries(wmma INTERFACE hip::device hip::host OpenMP::OpenMP_CXX)
 target_compile_options(wmma INTERFACE -std=c++14)
 
-if(WMMA_BUILD_TESTS)
-  # Test/benchmark requires additional dependencies
-  include( FetchContent )
-  find_package( OpenMP REQUIRED )
-  FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/609281088cfefc76f9d0ce82e1ff6c30cc3591e5.zip
-  )
-  FetchContent_MakeAvailable(googletest)
-
-  if(WMMA_VALIDATE_WITH_ROCBLAS)
-    find_package( rocblas REQUIRED PATHS /opt/rocm /opt/rocm/rocblas $ENV{ROCBLAS_DIR} )
-  endif()
-
-  enable_testing()
-  add_subdirectory(test)
+if(WMMA_BUILD_DOCS)
+  add_subdirectory(docs)
 endif()
 
-if(WMMA_BUILD_DOCS)
-  # Documentation requires doxygen installation
-  find_package( Doxygen REQUIRED )
+if(WMMA_BUILD_SAMPLES)
+  add_subdirectory(samples)
+endif()
 
-  set(WMMA_DOCS_ARCHIVE "${CMAKE_CURRENT_SOURCE_DIR}/WMMA-Guide.tar.gz")
-  set(WMMA_DOXYGEN_INPUT "${CMAKE_CURRENT_SOURCE_DIR}/library" "${CMAKE_CURRENT_SOURCE_DIR}/test")
-  set(WMMA_DOXYGEN_OUTPUT "${CMAKE_BINARY_DIR}/docs")
 
-  add_custom_target(
-    BuildDocs ALL
-    DEPENDS ${WMMA_DOCS_ARCHIVE}
-  )
-
-  # Convert input list to space separated string
-  string (REPLACE ";" " " WMMA_DOXYGEN_INPUT "${WMMA_DOXYGEN_INPUT}")
-
-  # Adjust the doxygen inputs and output directories dynamically
-  add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/WMMA-Guide.tar.gz
-    COMMAND bash -c "(cat ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile; echo \"INPUT=${WMMA_DOXYGEN_INPUT}\"; echo \"OUTPUT_DIRECTORY=${WMMA_DOXYGEN_OUTPUT}\") | doxygen -"
-    COMMAND tar -czvf ${WMMA_DOCS_ARCHIVE} ${WMMA_DOXYGEN_OUTPUT}
-    VERBATIM)
-
+if(WMMA_BUILD_TESTS)
+  add_subdirectory(test)
 endif()
