@@ -1,3 +1,28 @@
+/*******************************************************************************
+ *
+ * MIT License
+ *
+ * Copyright 2021 Advanced Micro Devices, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
 #ifndef WMMA_MAPPING_UTIL_H
 #define WMMA_MAPPING_UTIL_H
 
@@ -157,31 +182,12 @@ struct MappingUtil
     __device__ static inline auto matrixCoord(CoordT const& blockCoord) -> CoordT;
 
     // Convert from any matrix coord to data offset
-    __device__ static inline auto dataOffset(uint32_t ldm, CoordT const& blockCoord) -> uint32_t;
+    __device__ static inline auto dataOffset(uint32_t ldm, CoordT const& matrixCoord) -> uint32_t;
 
     // Convert from any matrix coord to data address
     __device__ static inline DataT*
         dataCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& matrixCoord);
 };
-
-// template <size_t WaveRows,
-//           size_t WaveCols,
-//           size_t BlockM,
-//           size_t BlockN,
-//           size_t BlockK>
-// struct LaunchUtil
-// {
-//     static inline auto gridDim(uint32_t M, uint32_t N, uint32_t K) -> dim3
-//     {
-//         return dim3(ceilDiv(M, BlockM * WaveRows), ceilDiv(N, BlockM * WaveCols));
-//     }
-
-//     static inline auto blockDim() -> dim3
-//     {
-//         auto threads = _MappingUtil::threadCount(std::make_pair<uint32_t, uint32_t>(WaveRows, WaveCols));
-//         return dim3(std::get<0>(threads), std::get<1>(threads));
-//     }
-// };
 
 #include "MappingUtil_impl.h"
 
