@@ -91,12 +91,5 @@ function(add_wmma_benchmark_test TEST_TARGET TEST_SOURCE)
   target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_BENCHMARK_TESTS)
 endfunction()
 
-# TODO: Move these into a unit test subdir
-add_wmma_test(LoadStoreMatrixSyncTest LoadStoreMatrixSyncTest.cpp)
-add_wmma_test(FillFragmentTest FillFragmentTest.cpp)
-add_wmma_test(MappingUtilTest MappingUtilTest.cpp)
-add_wmma_test(LayoutTest LayoutTest.cpp)
-add_wmma_test(VectorIteratorTest VectorIteratorTest.cpp)
-add_wmma_test(ContaminationTest ContaminationTest.cpp)
-
 add_subdirectory(gemm)
+add_subdirectory(unit)
