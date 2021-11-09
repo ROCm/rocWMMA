@@ -26,10 +26,10 @@
 
 #ifndef DLRM_KERNEL_BASE_IMPL_H
 #define DLRM_KERNEL_BASE_IMPL_H
-#define __HIP_PLATFORM_HCC true
 
 #include "DlrmKernelBase.h"
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <tuple>
 
@@ -41,36 +41,43 @@
 
 #include "Common.hpp"
 #include "Performance.h"
+#include "common.h"
 
 // Library includes
 #include "Constants.h"
 #include "Utils.h"
 
 template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
-DlrmKernelBase<BlockM, BlockN, BlockK, DataT>::DlrmKernelBase()
+DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::DlrmKernelBase()
 {
     reset();
 }
 
 template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
-DlrmKernelBase<BlockM, BlockN, BlockK, DataT>::~DlrmKernelBase();
+DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::~DlrmKernelBase()
 {
 }
 
 template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
-DlrmKernelBase<BlockM, BlockN, BlockK, DataT>::gridDim() const
+uint32_t DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::ldsUsage() const
+{
+    return 0;
+}
+
+template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
+dim3 DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::gridDim() const
 {
     return dim3(ceilDiv(mM, BlockM * mTBlockX / AMDGCN_WAVE_SIZE), ceilDiv(mN, BlockN * mTBlockY));
 }
 
 template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
-DlrmKernelBase<BlockM, BlockN, BlockK, DataT>::blockDim() const
+dim3 DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::blockDim() const
 {
     return dim3(mTBlockX, mTBlockY);
 }
 
 template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
-DlrmKernelBase<BlockM, BlockN, BlockK, DataT>::checkDevice() const
+bool DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::checkDevice() const
 {
     auto deviceArch = DeviceInfo::instance()->getGcnArch();
     return (deviceArch != DeviceInfo::UNKNOWN
@@ -78,14 +85,20 @@ DlrmKernelBase<BlockM, BlockN, BlockK, DataT>::checkDevice() const
 }
 
 template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
-DlrmKernelBase<BlockM, BlockN, BlockK, DataT>::checkSizes() const
+bool DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::checkSizes() const
 {
     return (mM >= (BlockM * mTBlockX / AMDGCN_WAVE_SIZE) && mN >= (BlockN * mTBlockY)
             && mK >= BlockK);
 }
 
 template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
-DlrmKernelBase<BlockM, BlockN, BlockK, DataT>::reset()
+bool DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::checkLds() const
+{
+    return ldsUsage() <= LDS_MAX_BYTES;
+}
+
+template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
+void DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::reset()
 {
     mTBlockX = mTBlockY = 0;
     mM = mN = mK = 0;
@@ -97,7 +110,21 @@ DlrmKernelBase<BlockM, BlockN, BlockK, DataT>::reset()
 }
 
 template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
-DlrmKernelBase<BlockM, BlockN, BlockK, DataT>::setup(ProblemParams const& problem)
+std::ostream&
+    DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::printHeader(std::ostream& stream) const
+{
+    return stream << "test";
+}
+
+template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
+std::ostream&
+    DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::printKernel(std::ostream& stream) const
+{
+    return stream << "kernel";
+}
+
+template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
+void DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::setup(ProblemParams const& problem)
 {
     // Reset the flags in case of multiple runs
     mRunFlag = true;
@@ -112,6 +139,7 @@ DlrmKernelBase<BlockM, BlockN, BlockK, DataT>::setup(ProblemParams const& proble
 
     mRunFlag &= checkDevice();
     mRunFlag &= checkSizes();
+    mRunFlag &= checkLds();
 
     if(mRunFlag)
     {
@@ -133,8 +161,11 @@ DlrmKernelBase<BlockM, BlockN, BlockK, DataT>::setup(ProblemParams const& proble
         // (check for null pointer for reading reference data only once)
         if(!isBwd)
         {
-            int fdInput     = open("dlrmData/input_fp" + fpStr, O_RDONLY);
-            int fdOutputRef = open("dlrmData/output_fp" + fpStr, O_RDONLY);
+            std::string inputFile     = "dlrmData/input_fp" + fpStr;
+            std::string outputRefFile = "dlrmData/output_fp" + fpStr;
+
+            int fdInput     = open(inputFile.c_str(), O_RDONLY);
+            int fdOutputRef = open(outputRefFile.c_str(), O_RDONLY);
 
             pread(fdInput,
                   dataInstance->hostInput().get(),
@@ -149,10 +180,15 @@ DlrmKernelBase<BlockM, BlockN, BlockK, DataT>::setup(ProblemParams const& proble
         }
         else
         {
-            int fdInput            = open("dlrmData/input_fp" + fpStr, O_RDONLY);
-            int fdUpstreamGrad     = open("dlrmData/input_grad_fp" + fpStr, O_RDONLY);
-            int fdGradRef          = open("dlrmData/output_input_grad_fp" + fpStr, O_RDONLY);
-            int fdBottomMlpGradRef = open("dlrmData/output_mlp_input_grad_fp" + fpStr, O_RDONLY);
+            std::string inputFile            = "dlrmData/input_fp" + fpStr;
+            std::string upstreamGradFile     = "dlrmData/input_grad_fp" + fpStr;
+            std::string gradRefFile          = "dlrmData/output_input_grad_fp" + fpStr;
+            std::string bottomMlpGradRefFile = "dlrmData/output_mlp_input_grad_fp" + fpStr;
+
+            int fdInput            = open(inputFile.c_str(), O_RDONLY);
+            int fdUpstreamGrad     = open(upstreamGradFile.c_str(), O_RDONLY);
+            int fdGradRef          = open(gradRefFile.c_str(), O_RDONLY);
+            int fdBottomMlpGradRef = open(bottomMlpGradRefFile.c_str(), O_RDONLY);
 
             pread(fdInput,
                   dataInstance->hostInput().get(),
@@ -176,32 +212,8 @@ DlrmKernelBase<BlockM, BlockN, BlockK, DataT>::setup(ProblemParams const& proble
     }
 }
 
-template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize typename DataT>
-// only pass variable parameters as template params
-// fwd
-warps_per_threadblock, // hard coded
-    threadblock_size, // hard coded
-    M_BLOCKS, // hard coded
-    K_BLOCKS, // hard coded
-    SMEM_STRIDE, // hard coded
-    SMEM_STRIDE_ACC, // hard coded
-    kWarpSize, // shared hard coded
-    kWarpSizeLog2, // shared hard coded
-    kTileDim, // shared hard coded for fwd, 16/32 for bwd
-    kTileDimLog2 // shared hard coded for fwd, ^
-
-        // bwd
-        kWarpsPerBlock, // hard coded
-    kNumThreads, // hard coded
-    kRowTilesPerStep, // hard coded for fwd, 2/1 for bwd
-    kColTilesPerStep, // hard coded
-    kWarpSize, // shared hard coded
-    kWarpSizeLog2, // shared hard coded
-    kTileDim, // shared hard coded for fwd, 16/32 for bwd
-    kTileDimLog2 // shared hard coded for fwd, ^
-    // setup nonaligned kernel calls
-
-    DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::exec()
+template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
+void DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::exec()
 {
     if(mRunFlag)
     {
@@ -258,7 +270,7 @@ warps_per_threadblock, // hard coded
                                       smem_elems_per_warp,
                                       smem_rows_per_warp,
                                       output_size,
-                                      num_row_stemps,
+                                      num_row_steps,
                                       num_col_steps,
                                       PAD);
             }
@@ -282,7 +294,7 @@ warps_per_threadblock, // hard coded
                                       smem_elems_per_warp,
                                       smem_rows_per_warp,
                                       output_size,
-                                      num_row_stemps,
+                                      num_row_steps,
                                       num_col_steps,
                                       PAD);
             }
@@ -292,7 +304,7 @@ warps_per_threadblock, // hard coded
             const uint mem_skew_size      = 8;
             const uint kWarpsPerBlockLog2 = Log2<kWarpsPerBlock>::value;
 
-            uint input_dbytes = amp_train ? sizeof(half) : sizeof(float);
+            uint input_dbytes = sizeof(DataT);
 
             uint row_tiles_per_step = NUM_ROWS > kTileDim ? kRowTilesPerStep : 1;
 
@@ -407,9 +419,12 @@ warps_per_threadblock, // hard coded
             }
         }
 
+        auto timeMs = 0.0f;
+        CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
+
         // Calculate efficiency
         auto& deviceInfo             = DeviceInfo::instance();
-        auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<InputT>();
+        auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
 
         mElapsedTimeMs        = float64_t(timeMs);
         mTotalGFlops          = calculateGFlops(mM, mN, mK);
@@ -418,19 +433,48 @@ warps_per_threadblock, // hard coded
     }
 }
 
-DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::validateResults()
+template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
+void DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::validateResults()
 {
 #ifdef WMMA_VALIDATE_TESTS
     if(mRunFlag)
     {
         auto& dataInstance = DataStorage::instance();
+
+        if(!isBwd)
+        {
+            EXPECT_TRUE(allclose<DataT>(dataInstance->hostOutputRef().get(),
+                                        dataInstance->hostOutput().get(),
+                                        std::get<2>(mCurrentDataSizeFwd) * sizeof(DataT)));
+        }
+        else
+        {
+            EXPECT_TRUE(allclose<DataT>(dataInstance->hostGradRef().get(),
+                                        dataInstance->hostGrad().get(),
+                                        std::get<3>(mCurrentDataSizeBwd) * sizeof(DataT)));
+            EXPECT_TRUE(allclose<DataT>(dataInstance->hostBottomMlpGradRef().get(),
+                                        dataInstance->hostBottomMlpGrad().get(),
+                                        std::get<5>(mCurrentDataSizeBwd) * sizeof(DataT)));
+        }
     }
+#endif
 }
 
-DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::reportResults() {}
+template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
+void DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::reportResults()
+{
+    if(!KernelI::sHeaderPrinted)
+    {
+        printHeader();
+        KernelI::sHeaderPrinted = true;
+    }
 
-DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::tearDown() {}
+    printKernel();
+}
 
-DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::debugStr() {}
+template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
+void DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::tearDown()
+{
+}
 
 #endif // DLRM_KERNEL_BASE_IMPL_H

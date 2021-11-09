@@ -31,12 +31,12 @@
 
 #include "DlrmDot.h"
 
-#include "CommonTestParams.h"
 #include "DlrmKernelBase.h"
+#include "DlrmTestParams.h"
 #include "KernelGenerator.h"
 
 // Wrapper into the actual device function
-template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize typename DataT>
+template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
 struct DlrmDotKernel final : public DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>
 {
 private:
@@ -48,7 +48,8 @@ public:
 
     typename Base::KernelFwdFunc kernelFwdImpl() const final
     {
-        return typename Base::KernelFwdFunc(dotBasedInteractFwdKernel<warps_per_threadblock,
+        return typename Base::KernelFwdFunc(dotBasedInteractFwdKernel<DataT,
+                                                                      warps_per_threadblock,
                                                                       threadblock_size,
                                                                       M_BLOCKS,
                                                                       K_BLOCKS,
@@ -63,7 +64,8 @@ public:
     typename Base::KernelFwdFunc kernelFwdNonAlignedImpl() const final
     {
         return
-            typename Base::KernelFwdFunc(dotBasedInteractFwdKernelNonAligned<warps_per_threadblock,
+            typename Base::KernelFwdFunc(dotBasedInteractFwdKernelNonAligned<DataT,
+                                                                             warps_per_threadblock,
                                                                              threadblock_size,
                                                                              M_BLOCKS,
                                                                              K_BLOCKS,
@@ -78,7 +80,8 @@ public:
     typename Base::KernelBwdFunc kernelBwdImpl() const final
     {
         return
-            typename Base::KernelBwdFunc(dotBasedInteractBwdKernel<kWarpsPerBlock,
+            typename Base::KernelBwdFunc(dotBasedInteractBwdKernel<DataT,
+                                                                   kWarpsPerBlock,
                                                                    kNumThreads,
                                                                    kRowTilesPerStep,
                                                                    kColTilesPerStep,
@@ -91,7 +94,8 @@ public:
     typename Base::KernelBwdFunc kernelBwdNonAlignedImpl() const final
     {
         return typename Base::KernelBwdFunc(
-            dotBasedInteractBwdKernelNonAligned<kWarpsPerBlock,
+            dotBasedInteractBwdKernelNonAligned<DataT,
+                                                kWarpsPerBlock,
                                                 kNumThreads,
                                                 kRowTilesPerStep,
                                                 kColTilesPerStep,
@@ -108,11 +112,12 @@ struct DlrmDotGenerator
     // Indices to test parameters
     enum : uint32_t
     {
-        BlockM   = 0,
-        BlockN   = 1,
-        BlockK   = 2,
-        TileSize = 3,
-        DataT    = 4
+        DataT    = 0,
+        BlockM   = 1,
+        BlockN   = 2,
+        BlockK   = 3,
+        TileSize = 4
+
     };
 
     using ResultT = std::shared_ptr<KernelI>;
@@ -127,7 +132,7 @@ struct DlrmDotGenerator
                             std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
                             std::tuple_element_t<BlockK, TestParamsT>::value, // BlockK
                             std::tuple_element_t<TileSize, TestParamsT>::value, // TileSize
-                            std::tuple_element_t<DataT, TestParamsT>, // DataT
+                            std::tuple_element_t<DataT, TestParamsT> // DataT
                             >;
 
         return std::make_shared<KernelT>();
@@ -136,21 +141,21 @@ struct DlrmDotGenerator
 
 // Needs changes
 struct DlrmDotTest
-    : public ::testing::TestWithParam<std::tuple<typename DlrmDotGenerator::ResultT,
-                                                 typename CommonTestParams::ThreadBlockT,
-                                                 typename CommonTestParams::ProblemSizeT,
-                                                 typename CommonTestParams::AlphaT,
-                                                 typename CommonTestParams::BetaT>>
+    : public ::testing::TestWithParam<std::tuple<typename DlrmTestParams::KernelT,
+                                                 typename DlrmTestParams::ThreadBlockT,
+                                                 typename DlrmTestParams::ProblemSizeT,
+                                                 typename DlrmTestParams::FwdDataSizeT,
+                                                 typename DlrmTestParams::BwdDataSizeT,
+                                                 typename DlrmTestParams::PassDirectionT>>
 {
-    using Base = ::testing::TestWithParam<std::tuple<typename MmaSyncGenerator::ResultT,
-                                                     typename CommonTestParams::ThreadBlockT,
-                                                     typename CommonTestParams::ProblemSizeT,
-                                                     typename CommonTestParams::AlphaT,
-                                                     typename CommonTestParams::BetaT>>;
+    using Base = ::testing::TestWithParam<std::tuple<typename DlrmTestParams::KernelT,
+                                                     typename DlrmTestParams::ThreadBlockT,
+                                                     typename DlrmTestParams::ProblemSizeT,
+                                                     typename DlrmTestParams::FwdDataSizeT,
+                                                     typename DlrmTestParams::BwdDataSizeT,
+                                                     typename DlrmTestParams::PassDirectionT>>;
 
-    void        SetUp() final {}
-    void        TearDown() final {}
-    static void RunKernel()
+    void SetUp() override
     {
         // Construct ProblemParams from
         // incoming gtest parameterization
@@ -158,16 +163,33 @@ struct DlrmDotTest
         auto kernel      = std::get<0>(param);
         auto threadBlock = std::get<1>(param);
         auto problemSize = std::get<2>(param);
-        auto alpha       = std::get<3>(param);
-        auto beta        = std::get<4>(param);
+        auto fwdDataSize = std::get<3>(param);
+        auto bwdDataSize = std::get<4>(param);
+        auto isBwd       = std::get<5>(param);
 
-        ProblemParams params = {threadBlock, problemSize, alpha, beta};
+        ProblemParams params = {threadBlock, problemSize, fwdDataSize, bwdDataSize, isBwd};
 
         // Walk through kernel workflow
         kernel->setup(params);
+    }
+
+    virtual void RunKernel()
+    {
+        // Construct ProblemParams from
+        // incoming gtest parameterization
+        auto param  = Base::GetParam();
+        auto kernel = std::get<0>(param);
         kernel->exec();
         kernel->validateResults();
         kernel->reportResults();
+    }
+
+    void TearDown() override
+    {
+        // Construct ProblemParams from
+        // incoming gtest parameterization
+        auto param  = Base::GetParam();
+        auto kernel = std::get<0>(param);
         kernel->tearDown();
     }
 };
