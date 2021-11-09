@@ -27,8 +27,14 @@
 #ifndef DLRM_KERNEL_BASE_H
 #define DLRM_KERNEL_BASE_H
 
-#include "DlrmResource.h";
+#include <iostream>
+#include <sstream>
+#include <string>
+
+#include "Constants.h"
+#include "DlrmResource.h"
 #include "HipDevice.h"
+#include "common.h"
 
 // Basic structure to hold runtime problem
 // parameters
@@ -43,21 +49,59 @@ struct ProblemParams
     bool                                                             isBwd;
 };
 
+// Defines for hard-coded template parameters
+enum : uint32_t
+{
+    // Shared kernel template parameters
+    kWarpSize     = AMDGCN_WAVE_SIZE,
+    kWarpSizeLog2 = Log2<AMDGCN_WAVE_SIZE>::value,
+    kTileDim      = 16,
+    kTileDimLog2  = Log2<kTileDim>::value,
+
+    // Forward kernel template parameters
+    warps_per_threadblock = 128 / kWarpSize,
+    threadblock_size      = warps_per_threadblock * kWarpSize,
+    M_BLOCKS              = 2,
+    K_BLOCKS              = 8,
+    SMEM_STRIDE           = K_BLOCKS * 16 + 8,
+    SMEM_STRIDE_ACC       = M_BLOCKS * 16 + 8,
+
+    // Backwards kernel template parameters
+    kWarpsPerBlock   = 128 / kWarpSize,
+    kNumThreads      = kWarpsPerBlock * kWarpSize,
+    kRowTilesPerStep = 32 / kTileDim,
+    kColTilesPerStep = 1,
+
+    // Data sizes
+    BATCH_SIZE = 64,
+    NUM_ROWS   = 27,
+    NUM_COLS   = 128,
+    PAD        = 0
+};
+
 // Typeless Kernel interface to use with testing harness.
 struct KernelI
 {
     KernelI() {}
     virtual ~KernelI(){};
 
-    virtual void        setup(ProblemParams const& problem) = 0;
-    virtual void        exec()                              = 0;
-    virtual void        validateResults()                   = 0;
-    virtual void        reportResults()                     = 0;
-    virtual void        tearDown()                          = 0;
-    virtual std::string debugStr() const                    = 0;
+    virtual void          setup(ProblemParams const& problem)                 = 0;
+    virtual void          exec()                                              = 0;
+    virtual void          validateResults()                                   = 0;
+    virtual void          reportResults()                                     = 0;
+    virtual void          tearDown()                                          = 0;
+    virtual std::ostream& printHeader(std::ostream& stream = std::cout) const = 0;
+    virtual std::ostream& printKernel(std::ostream& stream = std::cout) const = 0;
 
     static bool sHeaderPrinted;
 };
+
+inline std::ostream& operator<<(std::ostream& stream, KernelI const& kernel)
+{
+    kernel.printHeader(stream);
+    kernel.printKernel(stream);
+    return stream;
+}
 
 // Typed DLRM kernel that provides the basis for DLRM tests.
 // This class provides common implementation code.
@@ -107,36 +151,6 @@ protected: // Types
                                    uint32_t, // row_tiles_per_step
                                    uint32_t); //shared_mem_per_warp_size_byte
 
-    // Defines for hard-coded template parameters
-    enum : uint32_t
-    {
-        // Shared kernel template parameters
-        kWarpSize     = AMDGCN_WAVE_SIZE,
-        kWarpSizeLog2 = Log2<AMDGCN_WAVE_SIZE>::value,
-        kTileDim      = 16,
-        kTileDimLog2  = Log2<kTileDim>::value,
-
-        // Forward kernel template parameters
-        warps_per_threadblock = 128 / kWarpSize,
-        threadblock_size      = warps_per_threadblock * kWarpSize,
-        M_BLOCKS              = 2,
-        K_BLOCKS              = 8,
-        SMEM_STRIDE           = K_BLOCKS * 16 + 8,
-        SMEM_STRIDE_ACC       = M_BLOCKS * 16 + 8,
-
-        // Backwards kernel template parameters
-        kWarpsPerBlock   = 128 / kWarpSize,
-        kNumThreads      = kWarpsPerBlock * kWarpSize,
-        kRowTilesPerStep = 32 / kTileDim,
-        kColTilesPerStep = 1,
-
-        // Data sizes
-        BATCH_SIZE = 64,
-        NUM_ROWS   = 27,
-        NUM_COLS   = 128,
-        PAD        = 0
-    };
-
 protected:
     DlrmKernelBase();
     virtual ~DlrmKernelBase();
@@ -148,26 +162,29 @@ protected:
     virtual KernelBwdFunc kernelBwdNonAlignedImpl() const = 0;
 
     // Kernel launch parameters
-    virtual dim3 gridDim() const;
-    virtual dim3 blockDim() const;
+    virtual uint32_t ldsUsage() const;
+    virtual dim3     gridDim() const;
+    virtual dim3     blockDim() const;
 
     // Kernel run checks.
     // True = run test
     // False = skip test
     virtual bool checkDevice() const;
     virtual bool checkSizes() const;
+    virtual bool checkLds() const;
 
     // Reset all members to default values
     virtual void reset();
 
 public:
     // KernelI interface fulfillment
-    virtual void        setup(ProblemParams const& problem) override;
-    virtual void        exec() override;
-    virtual void        validateResults() override;
-    virtual void        reportResults() override;
-    virtual void        tearDown() override;
-    virtual std::string debugStr() const override;
+    virtual void          setup(ProblemParams const& problem) override;
+    virtual void          exec() override;
+    virtual void          validateResults() override;
+    virtual void          reportResults() override;
+    virtual void          tearDown() override;
+    virtual std::ostream& printHeader(std::ostream& stream = std::cout) const override;
+    virtual std::ostream& printKernel(std::ostream& stream = std::cout) const override;
 
 protected:
     // Problem params for kernel
@@ -181,7 +198,7 @@ protected:
     // Performance
     float64_t mTotalGFlops, mMeasuredGFlopsPerSec;
     float64_t mElapsedTimeMs, mEfficiency;
-}
+};
 
 #include "DlrmKernelBase_impl.h"
 
