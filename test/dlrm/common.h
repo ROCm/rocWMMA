@@ -1,3 +1,32 @@
+/*******************************************************************************
+ *
+ * MIT License
+ *
+ * Copyright 2021 Advanced Micro Devices, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
+
+#ifndef DLRM_TEST_COMMON_H
+#define DLRM_TEST_COMMON_H
+
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime_api.h>
 
@@ -20,6 +49,23 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <vector>
+
+template <uint x>
+struct Log2
+{
+    static constexpr uint value = 1 + Log2<x / 2>::value;
+};
+template <>
+struct Log2<1>
+{
+    static constexpr uint value = 0;
+};
+
+struct __align__(8) half4
+{
+    half2 vals[2];
+};
 
 struct buff_t
 {
@@ -132,7 +178,7 @@ __global__ __launch_bounds__(THREADBLOCK_SIZE) void allclose_kernel(
 }
 
 template <typename T>
-void allclose(void* a, void* b, size_t bytes, bool verbose = false)
+bool allclose(void* a, void* b, size_t bytes, bool verbose = false)
 {
     size_t num_elm     = bytes / sizeof(T);
     size_t float_bytes = num_elm * sizeof(float);
@@ -210,6 +256,7 @@ void allclose(void* a, void* b, size_t bytes, bool verbose = false)
                   << ">>> Max relative diff: " << max_rel_diff << std::endl
                   << ">>> Tolerance: " << tolerance << std::endl;
     }
+    return !failed;
 }
 
 __device__ static inline void syncwarp()
@@ -356,3 +403,5 @@ void get_options(int argc, char** argv, std::map<int, CmdOption>& options)
         }
     }
 }
+
+#endif // DLRM_TEST_COMMON_H

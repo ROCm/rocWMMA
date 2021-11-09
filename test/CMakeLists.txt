@@ -95,3 +95,4 @@ endfunction()
 
 add_subdirectory(gemm)
 add_subdirectory(unit)
+add_subdirectory(dlrm)

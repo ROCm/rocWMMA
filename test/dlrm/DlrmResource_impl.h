@@ -27,26 +27,26 @@
 #ifndef DLRM_GEMM_RESOURCE_IMPL_H
 #define DLRM_GEMM_RESOURCE_IMPL_H
 
-#include <cstring> // for std::memcpy
+#include "DlrmResource.h"
 
 template <typename DataT>
 DlrmResource<DataT>::DlrmResource()
-    : mDeviceInput(nullptr, [](DataT*) {})
-    , mDeviceOutput(nullptr, [](DataT*) {})
-    , mDeviceOutputRef(nullptr, [](DataT*) {})
-    , mDeviceUpstreamGrad(nullptr, [](DataT*) {})
-    , mDeviceGrad(nullptr, [](DataT*) {})
-    , mDeviceGradRef(nullptr, [](DataT*) {})
-    , mDeviceBottomMlpGrad(nullptr, [](DataT*) {})
-    , mDeviceBottomMlpGradRef(nullptr, [](DataT*) {})
-    , mHostInput(nullptr)
-    , mHostOutput(nullptr)
-    , mHostOutputRef(nullptr)
-    , mHostUpstreamGrad(nullptr)
-    , mHostGrad(nullptr)
-    , mHostGradRef(nullptr)
-    , mHostBottomMlpGrad(nullptr)
-    , mHostBottomMlpGradRef(nullptr)
+    : mDeviceInput(Base::template allocDevice<DataT>(0))
+    , mDeviceOutput(Base::template allocDevice<DataT>(0))
+    , mDeviceOutputRef(Base::template allocDevice<DataT>(0))
+    , mDeviceUpstreamGrad(Base::template allocDevice<DataT>(0))
+    , mDeviceGrad(Base::template allocDevice<DataT>(0))
+    , mDeviceGradRef(Base::template allocDevice<DataT>(0))
+    , mDeviceBottomMlpGrad(Base::template allocDevice<DataT>(0))
+    , mDeviceBottomMlpGradRef(Base::template allocDevice<DataT>(0))
+    , mHostInput(Base::template allocHost<DataT>(0))
+    , mHostOutput(Base::template allocHost<DataT>(0))
+    , mHostOutputRef(Base::template allocHost<DataT>(0))
+    , mHostUpstreamGrad(Base::template allocHost<DataT>(0))
+    , mHostGrad(Base::template allocHost<DataT>(0))
+    , mHostGradRef(Base::template allocHost<DataT>(0))
+    , mHostBottomMlpGrad(Base::template allocHost<DataT>(0))
+    , mHostBottomMlpGradRef(Base::template allocHost<DataT>(0))
     , mCurrentProblemSize({0, 0, 0})
     , mCurrentDataSizeFwd({0, 0, 0})
     , mCurrentDataSizeBwd({0, 0, 0, 0, 0, 0})
@@ -54,74 +54,30 @@ DlrmResource<DataT>::DlrmResource()
 }
 
 template <typename DataT>
-DlrmResource<DataT>::~DlrmResource()
+void DlrmResource<DataT>::copyHostToDeviceFwdAll()
 {
+    Base::copyData(mDeviceInput, mHostInput, std::get<Input>(mCurrentDataSizeFwd));
+    Base::copyData(mDeviceOutput, mHostOutput, std::get<Output>(mCurrentDataSizeFwd));
+    Base::copyData(mDeviceOutputRef, mHostOutputRef, std::get<OutputRef>(mCurrentDataSizeFwd));
 }
 
 template <typename DataT>
-auto DlrmResource<DataT>::allocDevice(int64_t numElements) -> DevicePtrT<DataT>
+void DlrmResource<DataT>::copyHostToDeviceBwdAll()
 {
-    DataT* data;
-    CHECK_HIP_ERROR(hipMalloc(&data, numElements * sizeof(DataT)));
-    return DevicePtrT<DataT>(data, [](DataT* d) { CHECK_HIP_ERROR(hipFree(d)); });
+    Base::copyData(mDeviceInput, mHostInput, std::get<Input>(mCurrentDataSizeBwd));
+    Base::copyData(
+        mDeviceUpstreamGrad, mHostUpstreamGrad, std::get<UpstreamGrad>(mCurrentDataSizeBwd));
+    Base::copyData(mDeviceGrad, mHostGrad, std::get<Grad>(mCurrentDataSizeBwd));
+    Base::copyData(mDeviceGradRef, mHostGradRef, std::get<GradRef>(mCurrentDataSizeBwd));
+    Base::copyData(
+        mDeviceBottomMlpGrad, mHostBottomMlpGrad, std::get<BottomMlpGrad>(mCurrentDataSizeBwd));
+    Base::copyData(mDeviceBottomMlpGradRef,
+                   mHostBottomMlpGradRef,
+                   std::get<BottomMlpGradRef>(mCurrentDataSizeBwd));
 }
 
 template <typename DataT>
-auto DlrmResource<DataT>::allocHost(int64_t numElements) -> HostPtrT<DataT>
-{
-    return HostPtrT<DataT>(new DataT[numElements]);
-}
-
-template <typename DataT>
-void DlrmResource<DataT>::copyData(HostPtrT<DataT>&         dst,
-                                   DevicePtrT<DataT> const& src,
-                                   int64_t                  numElements)
-{
-    CHECK_HIP_ERROR(
-        hipMemcpy(dst.get(), src.get(), numElements * sizeof(DataT), hipMemcpyDeviceToHost));
-}
-
-template <typename DataT>
-void DlrmResource<DataT>::copyData(DevicePtrT<DataT>&     dst,
-                                   HostPtrT<DataT> const& src,
-                                   int64_t                numElements)
-{
-    CHECK_HIP_ERROR(
-        hipMemcpy(dst.get(), src.get(), numElements * sizeof(DataT), hipMemcpyHostToDevice));
-}
-
-template <typename DataT>
-void DlrmResource<DataT>::copyData(HostPtrT<DataT>&       dst,
-                                   HostPtrT<DataT> const& src,
-                                   int64_t                numElements)
-{
-    std::memcpy(dst.get(), src.get(), numElements * sizeof(DataT));
-}
-
-template <typename DataT>
-auto DlrmResource<DataT>::copyHostToDeviceFwdAll()
-{
-    copyData(mDeviceInput, mHostInput, std::get<Input>(mCurrentDataSizeFwd));
-    copyData(mDeviceOutput, mHostOutput, std::get<Output>(mCurrentDataSizeFwd));
-    copyData(mDeviceOutputRef, mHostOutputRef, std::get<OutputRef>(mCurrentDataSizeFwd));
-}
-
-template <typename DataT>
-auto DlrmResource<DataT>::copyHostToDeviceBwdAll()
-{
-    copyData(mDeviceInput, mHostInput, std::get<Input>(mCurrentDataSizeFwd));
-    copyData(mDeviceUpstreamGrad, mHostUpstreamGrad, std::get<UpstreamGrad>(mCurrentDataSizeFwd));
-    copyData(mDeviceGrad, mHostGrad, std::get<Grad>(mCurrentDataSizeFwd));
-    copyData(mDeviceGradRef, mHostGradRef, std::get<GradRef>(mCurrentDataSizeFwd));
-    copyData(
-        mDeviceBottomMlpGrad, mHostBottomMlpGrad, std::get<BottomMlpGrad>(mCurrentDataSizeFwd));
-    copyData(mDeviceBottomMlpGradRef,
-             mHostBottomMlpGradRef,
-             std::get<BottomMlpGradRef>(mCurrentDataSizeFwd));
-}
-
-template <typename DataT>
-auto DlrmResource<DataT>::resizeFwdStorage(DataSizeFwd const& size)
+void DlrmResource<DataT>::resizeFwdStorage(DataSizeFwd const& size)
 {
     auto calcMatrixSizes = [](DataSizeFwd const& size) {
         return std::make_tuple(
@@ -133,8 +89,8 @@ auto DlrmResource<DataT>::resizeFwdStorage(DataSizeFwd const& size)
         using HostDataT   = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
         if(currentSize < newSize)
         {
-            devicePtr = std::move(allocDevice<DeviceDataT>(newSize));
-            hostPtr   = std::move(allocHost<HostDataT>(newSize));
+            devicePtr = std::move(Base::template allocDevice<DeviceDataT>(newSize));
+            hostPtr   = std::move(Base::template allocHost<HostDataT>(newSize));
         }
     };
 
@@ -151,17 +107,19 @@ auto DlrmResource<DataT>::resizeFwdStorage(DataSizeFwd const& size)
                   std::get<OutputRef>(mCurrentDataSizeFwd),
                   std::get<OutputRef>(newSizes));
 
-    mCurrentDataSize = newSizes;
+    mCurrentDataSizeFwd = newSizes;
 }
 
 template <typename DataT>
-auto DlrmResource<DataT>::resizeBwdStorage(DataSizeBwd const& size)
+void DlrmResource<DataT>::resizeBwdStorage(DataSizeBwd const& size)
 {
     auto calcMatrixSizes = [](DataSizeBwd const& size) {
         return std::make_tuple(std::get<Input>(size),
                                std::get<UpstreamGrad>(size),
-                               std::get<Grad>(size) std::get<GradRef>(size)
-                                   std::get<BottomMlpGrad>(size) std::get<BottomMlpGradRef>(size));
+                               std::get<Grad>(size),
+                               std::get<GradRef>(size),
+                               std::get<BottomMlpGrad>(size),
+                               std::get<BottomMlpGradRef>(size));
     };
 
     auto allocIfNeeded = [](auto& devicePtr, auto& hostPtr, int64_t currentSize, int64_t newSize) {
@@ -169,8 +127,8 @@ auto DlrmResource<DataT>::resizeBwdStorage(DataSizeBwd const& size)
         using HostDataT   = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
         if(currentSize < newSize)
         {
-            devicePtr = std::move(allocDevice<DeviceDataT>(newSize));
-            hostPtr   = std::move(allocHost<HostDataT>(newSize));
+            devicePtr = std::move(Base::template allocDevice<DeviceDataT>(newSize));
+            hostPtr   = std::move(Base::template allocHost<HostDataT>(newSize));
         }
     };
 
@@ -197,7 +155,7 @@ auto DlrmResource<DataT>::resizeBwdStorage(DataSizeBwd const& size)
                   std::get<BottomMlpGradRef>(mCurrentDataSizeBwd),
                   std::get<BottomMlpGradRef>(newSizes));
 
-    mCurrentDataSize = newSizes;
+    mCurrentDataSizeBwd = newSizes;
 }
 
 template <typename DataT>
