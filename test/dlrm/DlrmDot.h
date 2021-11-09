@@ -27,27 +27,35 @@
 #ifndef DLRM_DOT_H
 #define DLRM_DOT_H
 
-#include "WMMA.h"
+#include "common.h"
 
-__device__ inline void store(__half* dst, float* src)
+template <typename DataT>
+__device__ inline void store(DataT* dst, float* src)
 {
-    *dst = __float2half(*src);
+    if(std::is_same<DataT, float16_t>::value)
+        *dst = __float2half(*src);
+    else
+        *dst = *src
 }
 
-__device__ inline void store(__half* dst, const float src)
+template <typename DataT>
+__device__ inline void store(DataT* dst, const float src)
 {
-    *dst = __float2half(src);
+    if(std::is_same<DataT, float16_t>::value)
+        *dst = __float2half(*src);
+    else
+        *dst = *src
 }
 
-__device__ inline void store(float* dst, float* src)
-{
-    *dst = *src;
-}
+// __device__ inline void store(float* dst, float* src)
+// {
+//     *dst = *src;
+// }
 
-__device__ inline void store(float* dst, const float src)
-{
-    *dst = src;
-}
+// __device__ inline void store(float* dst, const float src)
+// {
+//     *dst = src;
+// }
 
 template <uint TILE_DIM, uint M_BLOCKS, uint SMEM_STRIDE, uint SMEM_STRIDE_ACC, typename T>
 __device__ inline void bmmTrilPadFwdKernel(T*   shmem,
@@ -223,7 +231,202 @@ __device__ inline void bmmBwdKernel(T*     smem_in,
     }
 }
 
-template <uint WARPS_PER_BLOCK,
+// template <uint WARPS_PER_BLOCK,
+//           uint THREADBLOCK_SIZE,
+//           uint M_BLOCKS,
+//           uint K_BLOCKS,
+//           uint SMEM_STRIDE,
+//           uint SMEM_STRIDE_ACC,
+//           uint WARP_SIZE,
+//           uint WARP_SIZE_LOG_2,
+//           uint TILE_DIM,
+//           uint TILE_DIM_LOG_2>
+// __launch_bounds__(THREADBLOCK_SIZE) __global__
+//     void dotBasedInteractFwdKernelNonAligned(const __half* __restrict input,
+//                                              __half* __restrict output,
+//                                              uint batch_size,
+//                                              uint num_rows,
+//                                              uint num_cols,
+//                                              uint num_rows_after_padding,
+//                                              uint num_cols_after_padding,
+//                                              uint smem_elems_per_warp,
+//                                              uint smem_rows_per_warp,
+//                                              uint output_size,
+//                                              uint num_row_steps,
+//                                              uint num_col_steps,
+//                                              uint pad)
+// {
+//     uint warp_id   = (threadIdx.x >> WARP_SIZE_LOG_2);
+//     int  sample_id = blockIdx.x * WARPS_PER_BLOCK + warp_id;
+//     if(sample_id >= batch_size)
+//     {
+//         return;
+//     }
+//     int lane_id = threadIdx.x & (WARP_SIZE - 1);
+
+//     HIP_DYNAMIC_SHARED(half, shmem_dynamic_half)
+//     half* shmem = shmem_dynamic_half + (warp_id * smem_elems_per_warp);
+
+//     const half* sample_input = input + num_rows * num_cols * sample_id;
+//     for(uint i = 0; i < num_rows; ++i, sample_input += num_cols)
+//     {
+//         for(uint idx = lane_id; idx < num_cols; idx += WARP_SIZE)
+//         {
+//             (shmem + i * SMEM_STRIDE)[idx] = sample_input[idx];
+//         }
+//     }
+
+//     uint idx = lane_id + num_cols;
+//     if(idx < num_cols_after_padding)
+//     {
+//         for(int i = 0; i < num_rows; ++i)
+//         {
+//             (shmem + i * SMEM_STRIDE)[idx] = __float2half(0);
+//         }
+//     }
+
+//     half4 zeros;
+// #ifdef __HIP_PLATFORM_HCC__
+//     zeros.vals[0] = __float2half2_rn(0);
+//     zeros.vals[1] = __float2half2_rn(0);
+// #else
+//     half4 zeros;
+//     zeros.vals[0].x = __float2half(0);
+//     zeros.vals[0].y = __float2half(0);
+//     zeros.vals[1].x = __float2half(0);
+//     zeros.vals[1].y = __float2half(0);
+// #endif
+//     if(lane_id < (num_cols_after_padding >> 2))
+//     {
+//         for(int i = num_rows; i < num_rows_after_padding; i++)
+//         {
+//             ((half4*)(shmem + i * SMEM_STRIDE))[lane_id] = zeros;
+//         }
+//     }
+
+// #ifdef __HIP_PLATFORM_HCC__
+//     __syncthreads();
+// #else
+//     __syncwarp();
+// #endif
+
+//     half* gmem_output = output + output_size * sample_id;
+//     for(uint idx = lane_id; idx < num_cols; idx += WARP_SIZE)
+//     {
+//         gmem_output[idx] = shmem[idx];
+//     }
+
+//     bmmTrilPadFwdKernel<TILE_DIM, M_BLOCKS, SMEM_STRIDE, SMEM_STRIDE_ACC, __half>(
+//         shmem,
+//         gmem_output,
+//         num_rows,
+//         num_cols,
+//         smem_rows_per_warp,
+//         output_size,
+//         num_col_steps,
+//         pad,
+//         lane_id);
+// }
+
+// template <uint WARPS_PER_BLOCK,
+//           uint THREADBLOCK_SIZE,
+//           uint M_BLOCKS,
+//           uint K_BLOCKS,
+//           uint SMEM_STRIDE,
+//           uint SMEM_STRIDE_ACC,
+//           uint WARP_SIZE,
+//           uint WARP_SIZE_LOG_2,
+//           uint TILE_DIM,
+//           uint TILE_DIM_LOG_2>
+// __launch_bounds__(THREADBLOCK_SIZE) __global__
+//     void dotBasedInteractFwdKernel(const __half* __restrict input,
+//                                    __half* __restrict output,
+//                                    uint batch_size,
+//                                    uint num_rows,
+//                                    uint num_cols,
+//                                    uint num_rows_after_padding,
+//                                    uint num_cols_after_padding,
+//                                    uint smem_elems_per_warp,
+//                                    uint smem_rows_per_warp,
+//                                    uint output_size,
+//                                    uint num_row_steps,
+//                                    uint num_col_steps,
+//                                    uint pad)
+// {
+//     uint warp_id   = (threadIdx.x >> WARP_SIZE_LOG_2);
+//     int  sample_id = blockIdx.x * WARPS_PER_BLOCK + warp_id;
+//     if(sample_id >= batch_size)
+//     {
+//         return;
+//     }
+//     int lane_id = threadIdx.x & (WARP_SIZE - 1);
+
+//     HIP_DYNAMIC_SHARED(half, shmem_dynamic_half)
+//     half* shmem = shmem_dynamic_half + (warp_id * smem_elems_per_warp);
+
+//     const half* sample_input = input + num_rows * num_cols * sample_id;
+//     if(lane_id < (num_cols >> 2))
+//     {
+//         for(int i = 0; i < num_rows; ++i, sample_input += num_cols)
+//         {
+//             ((float2*)(shmem + i * SMEM_STRIDE))[lane_id] = ((float2*)sample_input)[lane_id];
+//         }
+//     }
+
+//     uint idx = lane_id + num_cols;
+//     if(idx < num_cols_after_padding)
+//     {
+//         for(int i = 0; i < num_rows; ++i)
+//         {
+//             (shmem + i * SMEM_STRIDE)[idx] = __float2half(0);
+//         }
+//     }
+
+//     half4 zeros;
+// #ifdef __HIP_PLATFORM_HCC__
+//     zeros.vals[0] = __float2half2_rn(0);
+//     zeros.vals[1] = __float2half2_rn(0);
+// #else
+//     zeros.vals[0].x = __float2half(0);
+//     zeros.vals[0].y = __float2half(0);
+//     zeros.vals[1].x = __float2half(0);
+//     zeros.vals[1].y = __float2half(0);
+// #endif
+//     if(lane_id < (num_cols_after_padding >> 2))
+//     {
+//         for(int i = num_rows; i < num_rows_after_padding; i++)
+//         {
+//             ((half4*)(shmem + i * SMEM_STRIDE))[lane_id] = zeros;
+//         }
+//     }
+
+// #ifdef __HIP_PLATFORM_HCC__
+//     __syncthreads();
+// #else
+//     __syncwarp();
+// #endif
+
+//     half* gmem_output = output + output_size * sample_id;
+//     if(lane_id < (num_cols >> 2))
+//     {
+//         ((float2*)gmem_output)[lane_id] = ((float2*)shmem)[lane_id];
+//     }
+
+//     bmmTrilPadFwdKernel<TILE_DIM, M_BLOCKS, SMEM_STRIDE, SMEM_STRIDE_ACC, __half>(
+//         shmem,
+//         gmem_output,
+//         num_rows,
+//         num_cols,
+//         smem_rows_per_warp,
+//         output_size,
+//         num_col_steps,
+//         pad,
+//         lane_id);
+// }
+
+#ifdef __HIP_PLATFORM_HCC__
+template <typename DataT,
+          uint WARPS_PER_BLOCK,
           uint THREADBLOCK_SIZE,
           uint M_BLOCKS,
           uint K_BLOCKS,
@@ -234,8 +437,8 @@ template <uint WARPS_PER_BLOCK,
           uint TILE_DIM,
           uint TILE_DIM_LOG_2>
 __launch_bounds__(THREADBLOCK_SIZE) __global__
-    void dotBasedInteractFwdKernelNonAligned(const __half* __restrict input,
-                                             __half* __restrict output,
+    void dotBasedInteractFwdKernelNonAligned(const DataT* __restrict input,
+                                             DataT* __restrict output,
                                              uint batch_size,
                                              uint num_rows,
                                              uint num_cols,
@@ -256,204 +459,10 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
     }
     int lane_id = threadIdx.x & (WARP_SIZE - 1);
 
-    HIP_DYNAMIC_SHARED(half, shmem_dynamic_half)
-    half* shmem = shmem_dynamic_half + (warp_id * smem_elems_per_warp);
+    HIP_DYNAMIC_SHARED(void*, shmem_dynamic)
+    DataT* shmem = reinterpret_cast<DataT*>(shmem_dynamic) + (warp_id * smem_elems_per_warp);
 
-    const half* sample_input = input + num_rows * num_cols * sample_id;
-    for(uint i = 0; i < num_rows; ++i, sample_input += num_cols)
-    {
-        for(uint idx = lane_id; idx < num_cols; idx += WARP_SIZE)
-        {
-            (shmem + i * SMEM_STRIDE)[idx] = sample_input[idx];
-        }
-    }
-
-    uint idx = lane_id + num_cols;
-    if(idx < num_cols_after_padding)
-    {
-        for(int i = 0; i < num_rows; ++i)
-        {
-            (shmem + i * SMEM_STRIDE)[idx] = __float2half(0);
-        }
-    }
-
-    half4 zeros;
-#ifdef __HIP_PLATFORM_HCC__
-    zeros.vals[0] = __float2half2_rn(0);
-    zeros.vals[1] = __float2half2_rn(0);
-#else
-    half4 zeros;
-    zeros.vals[0].x = __float2half(0);
-    zeros.vals[0].y = __float2half(0);
-    zeros.vals[1].x = __float2half(0);
-    zeros.vals[1].y = __float2half(0);
-#endif
-    if(lane_id < (num_cols_after_padding >> 2))
-    {
-        for(int i = num_rows; i < num_rows_after_padding; i++)
-        {
-            ((half4*)(shmem + i * SMEM_STRIDE))[lane_id] = zeros;
-        }
-    }
-
-#ifdef __HIP_PLATFORM_HCC__
-    __syncthreads();
-#else
-    __syncwarp();
-#endif
-
-    half* gmem_output = output + output_size * sample_id;
-    for(uint idx = lane_id; idx < num_cols; idx += WARP_SIZE)
-    {
-        gmem_output[idx] = shmem[idx];
-    }
-
-    bmmTrilPadFwdKernel<TILE_DIM, M_BLOCKS, SMEM_STRIDE, SMEM_STRIDE_ACC, __half>(
-        shmem,
-        gmem_output,
-        num_rows,
-        num_cols,
-        smem_rows_per_warp,
-        output_size,
-        num_col_steps,
-        pad,
-        lane_id);
-}
-
-template <uint WARPS_PER_BLOCK,
-          uint THREADBLOCK_SIZE,
-          uint M_BLOCKS,
-          uint K_BLOCKS,
-          uint SMEM_STRIDE,
-          uint SMEM_STRIDE_ACC,
-          uint WARP_SIZE,
-          uint WARP_SIZE_LOG_2,
-          uint TILE_DIM,
-          uint TILE_DIM_LOG_2>
-__launch_bounds__(THREADBLOCK_SIZE) __global__
-    void dotBasedInteractFwdKernel(const __half* __restrict input,
-                                   __half* __restrict output,
-                                   uint batch_size,
-                                   uint num_rows,
-                                   uint num_cols,
-                                   uint num_rows_after_padding,
-                                   uint num_cols_after_padding,
-                                   uint smem_elems_per_warp,
-                                   uint smem_rows_per_warp,
-                                   uint output_size,
-                                   uint num_row_steps,
-                                   uint num_col_steps,
-                                   uint pad)
-{
-    uint warp_id   = (threadIdx.x >> WARP_SIZE_LOG_2);
-    int  sample_id = blockIdx.x * WARPS_PER_BLOCK + warp_id;
-    if(sample_id >= batch_size)
-    {
-        return;
-    }
-    int lane_id = threadIdx.x & (WARP_SIZE - 1);
-
-    HIP_DYNAMIC_SHARED(half, shmem_dynamic_half)
-    half* shmem = shmem_dynamic_half + (warp_id * smem_elems_per_warp);
-
-    const half* sample_input = input + num_rows * num_cols * sample_id;
-    if(lane_id < (num_cols >> 2))
-    {
-        for(int i = 0; i < num_rows; ++i, sample_input += num_cols)
-        {
-            ((float2*)(shmem + i * SMEM_STRIDE))[lane_id] = ((float2*)sample_input)[lane_id];
-        }
-    }
-
-    uint idx = lane_id + num_cols;
-    if(idx < num_cols_after_padding)
-    {
-        for(int i = 0; i < num_rows; ++i)
-        {
-            (shmem + i * SMEM_STRIDE)[idx] = __float2half(0);
-        }
-    }
-
-    half4 zeros;
-#ifdef __HIP_PLATFORM_HCC__
-    zeros.vals[0] = __float2half2_rn(0);
-    zeros.vals[1] = __float2half2_rn(0);
-#else
-    zeros.vals[0].x = __float2half(0);
-    zeros.vals[0].y = __float2half(0);
-    zeros.vals[1].x = __float2half(0);
-    zeros.vals[1].y = __float2half(0);
-#endif
-    if(lane_id < (num_cols_after_padding >> 2))
-    {
-        for(int i = num_rows; i < num_rows_after_padding; i++)
-        {
-            ((half4*)(shmem + i * SMEM_STRIDE))[lane_id] = zeros;
-        }
-    }
-
-#ifdef __HIP_PLATFORM_HCC__
-    __syncthreads();
-#else
-    __syncwarp();
-#endif
-
-    half* gmem_output = output + output_size * sample_id;
-    if(lane_id < (num_cols >> 2))
-    {
-        ((float2*)gmem_output)[lane_id] = ((float2*)shmem)[lane_id];
-    }
-
-    bmmTrilPadFwdKernel<TILE_DIM, M_BLOCKS, SMEM_STRIDE, SMEM_STRIDE_ACC, __half>(
-        shmem,
-        gmem_output,
-        num_rows,
-        num_cols,
-        smem_rows_per_warp,
-        output_size,
-        num_col_steps,
-        pad,
-        lane_id);
-}
-
-#ifdef __HIP_PLATFORM_HCC__
-template <uint WARPS_PER_BLOCK,
-          uint THREADBLOCK_SIZE,
-          uint M_BLOCKS,
-          uint K_BLOCKS,
-          uint SMEM_STRIDE,
-          uint SMEM_STRIDE_ACC,
-          uint WARP_SIZE,
-          uint WARP_SIZE_LOG_2,
-          uint TILE_DIM,
-          uint TILE_DIM_LOG_2>
-__launch_bounds__(THREADBLOCK_SIZE) __global__
-    void dotBasedInteractFwdKernelNonAligned(const float* __restrict input,
-                                             float* __restrict output,
-                                             uint batch_size,
-                                             uint num_rows,
-                                             uint num_cols,
-                                             uint num_rows_after_padding,
-                                             uint num_cols_after_padding,
-                                             uint smem_elems_per_warp,
-                                             uint smem_rows_per_warp,
-                                             uint output_size,
-                                             uint num_row_steps,
-                                             uint num_col_steps,
-                                             uint pad)
-{
-    uint warp_id   = (threadIdx.x >> WARP_SIZE_LOG_2);
-    int  sample_id = blockIdx.x * WARPS_PER_BLOCK + warp_id;
-    if(sample_id >= batch_size)
-    {
-        return;
-    }
-    int lane_id = threadIdx.x & (WARP_SIZE - 1);
-
-    HIP_DYNAMIC_SHARED(float, shmem_dynamic)
-    float* shmem = shmem_dynamic + (warp_id * smem_elems_per_warp);
-
-    const float* sample_input = input + num_rows * num_cols * sample_id;
+    const DataT* sample_input = input + num_rows * num_cols * sample_id;
     for(uint i = 0; i < num_rows; ++i, sample_input += num_cols)
     {
         for(uint idx = lane_id; idx < num_cols; idx += WARP_SIZE)
@@ -481,13 +490,13 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
 
     __syncthreads();
 
-    float* gmem_output = output + output_size * sample_id;
+    DataT* gmem_output = output + output_size * sample_id;
     for(uint idx = lane_id; idx < num_cols; idx += WARP_SIZE)
     {
         gmem_output[idx] = shmem[idx];
     }
 
-    bmmTrilPadFwdKernel<TILE_DIM, M_BLOCKS, SMEM_STRIDE, SMEM_STRIDE_ACC, float>(shmem,
+    bmmTrilPadFwdKernel<TILE_DIM, M_BLOCKS, SMEM_STRIDE, SMEM_STRIDE_ACC, DataT>(shmem,
                                                                                  gmem_output,
                                                                                  num_rows,
                                                                                  num_cols,
@@ -498,7 +507,8 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
                                                                                  lane_id);
 }
 
-template <uint WARPS_PER_BLOCK,
+template <typename DataT,
+          uint WARPS_PER_BLOCK,
           uint THREADBLOCK_SIZE,
           uint M_BLOCKS,
           uint K_BLOCKS,
@@ -509,8 +519,8 @@ template <uint WARPS_PER_BLOCK,
           uint TILE_DIM,
           uint TILE_DIM_LOG_2>
 __launch_bounds__(THREADBLOCK_SIZE) __global__
-    void dotBasedInteractFwdKernel(const float* __restrict input,
-                                   float* __restrict output,
+    void dotBasedInteractFwdKernel(const DataT* __restrict input,
+                                   DataT* __restrict output,
                                    uint batch_size,
                                    uint num_rows,
                                    uint num_cols,
@@ -531,10 +541,11 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
     }
     int lane_id = threadIdx.x & (WARP_SIZE - 1);
 
-    HIP_DYNAMIC_SHARED(float, shmem_dynamic)
-    float* shmem = shmem_dynamic + (warp_id * smem_elems_per_warp);
+    HIP_DYNAMIC_SHARED(void*, shmem_dynamic)
+    // reinterpret cast to dataT
+    DataT* shmem = reinterpret_cast<DataT*>(shmem_dynamic) + (warp_id * smem_elems_per_warp);
 
-    const float* sample_input = input + num_rows * num_cols * sample_id;
+    const DataT* sample_input = input + num_rows * num_cols * sample_id;
     if(lane_id < (num_cols >> 1))
     {
         for(int i = 0; i < num_rows; ++i, sample_input += num_cols)
@@ -562,13 +573,13 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
 
     __syncthreads();
 
-    float* gmem_output = output + output_size * sample_id;
+    DataT* gmem_output = output + output_size * sample_id;
     if(lane_id < (num_cols >> 1))
     {
         ((float2*)gmem_output)[lane_id] = ((float2*)shmem)[lane_id];
     }
 
-    bmmTrilPadFwdKernel<TILE_DIM, M_BLOCKS, SMEM_STRIDE, SMEM_STRIDE_ACC, float>(shmem,
+    bmmTrilPadFwdKernel<TILE_DIM, M_BLOCKS, SMEM_STRIDE, SMEM_STRIDE_ACC, DataT>(shmem,
                                                                                  gmem_output,
                                                                                  num_rows,
                                                                                  num_cols,
@@ -580,316 +591,317 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
 }
 #endif // __HIP_PLATFORM_HCC__
 
-template <uint WARPS_PER_BLOCK,
-          uint THREADBLOCK_SIZE,
-          uint ROW_TILES_PER_STEP,
-          uint COL_TILES_PER_STEP,
-          uint WARP_SIZE,
-          uint WARP_SIZE_LOG_2,
-          uint TILE_DIM,
-          uint TILE_DIM_LOG_2>
-__launch_bounds__(THREADBLOCK_SIZE) __global__
-    void dotBasedInteractBwdKernelNonAligned(const __half* __restrict input,
-                                             const __half* __restrict upstream_grad,
-                                             half* __restrict grad,
-                                             half* __restrict bottom_mlp_grad,
-                                             uint batch_size,
-                                             uint num_rows,
-                                             uint num_cols,
-                                             uint num_rows_after_padding,
-                                             uint num_cols_after_padding,
-                                             uint sample_size,
-                                             uint interaction_ugrad_size,
-                                             uint interaction_ugrad_size_with_padding,
-                                             uint interaction_ugrad_2D_size_elems,
-                                             uint interaction_ugrad_2D_stride,
-                                             uint input_size_elems,
-                                             uint input_stride,
-                                             uint num_row_steps,
-                                             uint num_col_steps,
-                                             uint row_tiles_per_step,
-                                             uint shared_mem_per_warp_size_byte)
-{
-    HIP_DYNAMIC_SHARED(half, shared_mem_half)
-    uint warp_id   = (threadIdx.x >> WARP_SIZE_LOG_2);
-    uint sample_id = blockIdx.x * WARPS_PER_BLOCK + warp_id;
-    if(sample_id >= batch_size)
-    {
-        return;
-    }
-    uint lane_id = threadIdx.x & (WARP_SIZE - 1);
-    // ">> 1" to convert to half pointer
-    uint smem_warp_offset = warp_id * (shared_mem_per_warp_size_byte >> 1);
-    uint wmma_offset = num_rows_after_padding * num_rows_after_padding; // matrix_a is row_major
+// template <uint WARPS_PER_BLOCK,
+//           uint THREADBLOCK_SIZE,
+//           uint ROW_TILES_PER_STEP,
+//           uint COL_TILES_PER_STEP,
+//           uint WARP_SIZE,
+//           uint WARP_SIZE_LOG_2,
+//           uint TILE_DIM,
+//           uint TILE_DIM_LOG_2>
+// __launch_bounds__(THREADBLOCK_SIZE) __global__
+//     void dotBasedInteractBwdKernelNonAligned(const __half* __restrict input,
+//                                              const __half* __restrict upstream_grad,
+//                                              half* __restrict grad,
+//                                              half* __restrict bottom_mlp_grad,
+//                                              uint batch_size,
+//                                              uint num_rows,
+//                                              uint num_cols,
+//                                              uint num_rows_after_padding,
+//                                              uint num_cols_after_padding,
+//                                              uint sample_size,
+//                                              uint interaction_ugrad_size,
+//                                              uint interaction_ugrad_size_with_padding,
+//                                              uint interaction_ugrad_2D_size_elems,
+//                                              uint interaction_ugrad_2D_stride,
+//                                              uint input_size_elems,
+//                                              uint input_stride,
+//                                              uint num_row_steps,
+//                                              uint num_col_steps,
+//                                              uint row_tiles_per_step,
+//                                              uint shared_mem_per_warp_size_byte)
+// {
+//     HIP_DYNAMIC_SHARED(half, shared_mem_half)
+//     uint warp_id   = (threadIdx.x >> WARP_SIZE_LOG_2);
+//     uint sample_id = blockIdx.x * WARPS_PER_BLOCK + warp_id;
+//     if(sample_id >= batch_size)
+//     {
+//         return;
+//     }
+//     uint lane_id = threadIdx.x & (WARP_SIZE - 1);
+//     // ">> 1" to convert to half pointer
+//     uint smem_warp_offset = warp_id * (shared_mem_per_warp_size_byte >> 1);
+//     uint wmma_offset = num_rows_after_padding * num_rows_after_padding; // matrix_a is row_major
 
-    half*  smem_in   = shared_mem_half + smem_warp_offset + wmma_offset;
-    half*  smem_temp = smem_in + input_size_elems;
-    float* smem_out  = reinterpret_cast<float*>(smem_temp);
+//     half*  smem_in   = shared_mem_half + smem_warp_offset + wmma_offset;
+//     half*  smem_temp = smem_in + input_size_elems;
+//     float* smem_out  = reinterpret_cast<float*>(smem_temp);
 
-    // Global memory pointers for the current sample
-    // Input
-    uint        gmem_input_sample_offset = sample_id * sample_size;
-    const half* gmem_input               = &input[gmem_input_sample_offset];
+//     // Global memory pointers for the current sample
+//     // Input
+//     uint        gmem_input_sample_offset = sample_id * sample_size;
+//     const half* gmem_input               = &input[gmem_input_sample_offset];
 
-    // Interaction Gradient
-    const uint& gmem_grad_sample_offset = gmem_input_sample_offset;
-    half*       gmem_grad               = &grad[gmem_grad_sample_offset];
+//     // Interaction Gradient
+//     const uint& gmem_grad_sample_offset = gmem_input_sample_offset;
+//     half*       gmem_grad               = &grad[gmem_grad_sample_offset];
 
-    // Bottom MLP gradient
-    half* gmem_mlp_grad = &bottom_mlp_grad[sample_id * num_cols];
+//     // Bottom MLP gradient
+//     half* gmem_mlp_grad = &bottom_mlp_grad[sample_id * num_cols];
 
-    // Upstream gradient vector
-    uint gmem_ugrad_sample_offset = sample_id * (num_cols + interaction_ugrad_size_with_padding);
-    const half* gmem_ugrad        = &upstream_grad[gmem_ugrad_sample_offset];
+//     // Upstream gradient vector
+//     uint gmem_ugrad_sample_offset = sample_id * (num_cols + interaction_ugrad_size_with_padding);
+//     const half* gmem_ugrad        = &upstream_grad[gmem_ugrad_sample_offset];
 
-    // Upstream gradient vector for interactions
-    const half* gmem_ugrad_interactions = &gmem_ugrad[num_cols];
+//     // Upstream gradient vector for interactions
+//     const half* gmem_ugrad_interactions = &gmem_ugrad[num_cols];
 
-    // upstream grad -> shared memory (place in input section temporarily)
-#pragma unroll
-    for(uint idx = lane_id; idx < interaction_ugrad_size; idx += WARP_SIZE)
-    {
-        smem_in[idx] = gmem_ugrad_interactions[idx];
-    }
+//     // upstream grad -> shared memory (place in input section temporarily)
+// #pragma unroll
+//     for(uint idx = lane_id; idx < interaction_ugrad_size; idx += WARP_SIZE)
+//     {
+//         smem_in[idx] = gmem_ugrad_interactions[idx];
+//     }
+
+// #ifdef __HIP_PLATFORM_HCC__
+//     __syncthreads();
+// #else
+//     __syncwarp();
+// #endif
+
+//     // Form the 2D ugrad matrix.
+//     trilBwdKernel(smem_in,
+//                   smem_temp,
+//                   __float2half(0),
+//                   num_rows,
+//                   num_rows_after_padding,
+//                   interaction_ugrad_2D_stride,
+//                   lane_id);
+
+// #ifdef __HIP_PLATFORM_HCC__
+//     __syncthreads();
+// #else
+//     __syncwarp();
+// #endif
+
+//     // Input -> Shared Memory
+
+//     for(uint row = 0; row < num_rows; row++)
+//     {
+//         half*       smem_row_ptr = &smem_in[row * input_stride];
+//         const half* gmem_row_ptr = &gmem_input[row * num_cols];
+//         for(uint idx = lane_id; idx < num_cols; idx += WARP_SIZE)
+//         {
+//             smem_row_ptr[idx] = gmem_row_ptr[idx];
+//         }
+//         uint idx = lane_id + num_cols;
+//         if(idx < num_cols_after_padding)
+//         {
+//             smem_row_ptr[idx] = __float2half(0);
+//         }
+//     }
+
+// #pragma unroll 2
+//     for(uint row = num_rows; row < num_rows_after_padding; row++)
+//     {
+//         half* smem_row_ptr = &smem_in[row * input_stride];
+//         for(uint idx = lane_id; idx < num_cols_after_padding; idx += WARP_SIZE)
+//         {
+//             smem_row_ptr[idx] = __float2half(0);
+//         }
+//     }
+
+// #ifdef __HIP_PLATFORM_HCC__
+//     __syncthreads();
+// #else
+//     __syncwarp();
+// #endif
+
+//     bmmBwdKernel<TILE_DIM, ROW_TILES_PER_STEP, TILE_DIM_LOG_2, __half>(smem_in,
+//                                                                        smem_temp,
+//                                                                        smem_out,
+//                                                                        gmem_grad,
+//                                                                        num_rows,
+//                                                                        num_cols,
+//                                                                        num_col_steps,
+//                                                                        input_stride,
+//                                                                        interaction_ugrad_2D_stride,
+//                                                                        lane_id);
+
+//     for(uint idx = lane_id; idx < num_cols; idx += WARP_SIZE)
+//     {
+//         gmem_mlp_grad[idx] = gmem_ugrad[idx];
+//     }
+// }
+
+// template <uint WARPS_PER_BLOCK,
+//           uint THREADBLOCK_SIZE,
+//           uint ROW_TILES_PER_STEP,
+//           uint COL_TILES_PER_STEP,
+//           uint WARP_SIZE,
+//           uint WARP_SIZE_LOG_2,
+//           uint TILE_DIM,
+//           uint TILE_DIM_LOG_2>
+// __launch_bounds__(THREADBLOCK_SIZE) __global__
+//     void dotBasedInteractBwdKernel(const __half* __restrict input,
+//                                    const __half* __restrict upstream_grad,
+//                                    half* __restrict grad,
+//                                    half* __restrict bottom_mlp_grad,
+//                                    uint batch_size,
+//                                    uint num_rows,
+//                                    uint num_cols,
+//                                    uint num_rows_after_padding,
+//                                    uint num_cols_after_padding,
+//                                    uint sample_size,
+//                                    uint interaction_ugrad_size,
+//                                    uint interaction_ugrad_size_with_padding,
+//                                    uint interaction_ugrad_2D_size_elems,
+//                                    uint interaction_ugrad_2D_stride,
+//                                    uint input_size_elems,
+//                                    uint input_stride,
+//                                    uint num_row_steps,
+//                                    uint num_col_steps,
+//                                    uint row_tiles_per_step,
+//                                    uint shared_mem_per_warp_size_byte)
+// {
+//     HIP_DYNAMIC_SHARED(half, shared_mem_half)
+//     uint warp_id   = (threadIdx.x >> WARP_SIZE_LOG_2);
+//     uint sample_id = blockIdx.x * WARPS_PER_BLOCK + warp_id;
+//     if(sample_id >= batch_size)
+//     {
+//         return;
+//     }
+//     uint lane_id = threadIdx.x & (WARP_SIZE - 1);
+//     // ">> 1" to convert to half pointer
+//     uint smem_warp_offset = warp_id * (shared_mem_per_warp_size_byte >> 1);
+//     uint wmma_offset = num_rows_after_padding * num_rows_after_padding; // matrix_a is row_major
+
+//     half*  smem_in   = shared_mem_half + smem_warp_offset + wmma_offset;
+//     half*  smem_temp = smem_in + input_size_elems;
+//     float* smem_out  = reinterpret_cast<float*>(smem_temp);
+
+//     // Global memory pointers for the current sample
+//     // Input
+//     uint        gmem_input_sample_offset = sample_id * sample_size;
+//     const half* gmem_input               = &input[gmem_input_sample_offset];
+
+//     // Interaction Gradient
+//     const uint& gmem_grad_sample_offset = gmem_input_sample_offset;
+//     half*       gmem_grad               = &grad[gmem_grad_sample_offset];
+
+//     // Bottom MLP gradient
+//     half* gmem_mlp_grad = &bottom_mlp_grad[sample_id * num_cols];
+
+//     // Upstream gradient vector
+//     uint gmem_ugrad_sample_offset = sample_id * (num_cols + interaction_ugrad_size_with_padding);
+//     const half* gmem_ugrad        = &upstream_grad[gmem_ugrad_sample_offset];
+
+//     // Upstream gradient vector for interactions
+//     const half* gmem_ugrad_interactions = &gmem_ugrad[num_cols];
+
+//     // upstream grad -> shared memory (place in input section temporarily)
+// #pragma unroll
+//     for(uint idx = lane_id; idx < (interaction_ugrad_size >> 3); idx += WARP_SIZE)
+//     {
+//         ((float4*)smem_in)[idx] = ((float4*)gmem_ugrad_interactions)[idx];
+//     }
+//     uint offset = (interaction_ugrad_size >> 3) << 3;
+//     for(uint idx = lane_id + offset; idx < interaction_ugrad_size; idx += WARP_SIZE)
+//     {
+//         smem_in[idx] = gmem_ugrad_interactions[idx];
+//     }
+
+// #ifdef __HIP_PLATFORM_HCC__
+//     __syncthreads();
+// #else
+//     __syncwarp();
+// #endif
+
+//     // Form the 2D ugrad matrix.
+//     trilBwdKernel(smem_in,
+//                   smem_temp,
+//                   __float2half(0),
+//                   num_rows,
+//                   num_rows_after_padding,
+//                   interaction_ugrad_2D_stride,
+//                   lane_id);
+
+// #ifdef __HIP_PLATFORM_HCC__
+//     __syncthreads();
+// #else
+//     __syncwarp();
+// #endif
+
+//     // Input -> Shared Memory
+
+//     if(lane_id < (num_cols >> 2))
+//     {
+//         for(uint row = 0; row < num_rows; row++)
+//         {
+//             half*       smem_row_ptr         = &smem_in[row * input_stride];
+//             const half* gmem_row_ptr         = &gmem_input[row * num_cols];
+//             ((float2*)smem_row_ptr)[lane_id] = ((float2*)gmem_row_ptr)[lane_id];
+//         }
+//     }
+
+//     uint idx = lane_id + num_cols;
+//     if(idx < num_cols_after_padding)
+//     {
+//         for(uint row = 0; row < num_rows; row++)
+//         {
+//             half* smem_row_ptr = &smem_in[row * input_stride];
+//             smem_row_ptr[idx]  = __float2half(0);
+//         }
+//     }
+
+//     half4 zeros;
+// #ifdef __HIP_PLATFORM_HCC__
+//     zeros.vals[0] = __float2half2_rn(0);
+//     zeros.vals[1] = __float2half2_rn(0);
+// #else
+//     half4 zeros;
+//     zeros.vals[0].x = __float2half(0);
+//     zeros.vals[0].y = __float2half(0);
+//     zeros.vals[1].x = __float2half(0);
+//     zeros.vals[1].y = __float2half(0);
+// #endif
+
+//     if(lane_id < (num_cols_after_padding >> 2))
+//     {
+// #pragma unroll 2
+//         for(uint row = num_rows; row < num_rows_after_padding; row++)
+//         {
+//             half* smem_row_ptr              = &smem_in[row * input_stride];
+//             ((half4*)smem_row_ptr)[lane_id] = zeros;
+//         }
+//     }
+
+// #ifdef __HIP_PLATFORM_HCC__
+//     __syncthreads();
+// #else
+//     __syncwarp();
+// #endif
+
+//     bmmBwdKernel<TILE_DIM, ROW_TILES_PER_STEP, TILE_DIM_LOG_2, __half>(smem_in,
+//                                                                        smem_temp,
+//                                                                        smem_out,
+//                                                                        gmem_grad,
+//                                                                        num_rows,
+//                                                                        num_cols,
+//                                                                        num_col_steps,
+//                                                                        input_stride,
+//                                                                        interaction_ugrad_2D_stride,
+//                                                                        lane_id);
+
+//     if(lane_id < (num_cols >> 2))
+//     {
+//         ((float2*)gmem_mlp_grad)[lane_id] = ((float2*)gmem_ugrad)[lane_id];
+//     }
+// }
 
 #ifdef __HIP_PLATFORM_HCC__
-    __syncthreads();
-#else
-    __syncwarp();
-#endif
-
-    // Form the 2D ugrad matrix.
-    trilBwdKernel(smem_in,
-                  smem_temp,
-                  __float2half(0),
-                  num_rows,
-                  num_rows_after_padding,
-                  interaction_ugrad_2D_stride,
-                  lane_id);
-
-#ifdef __HIP_PLATFORM_HCC__
-    __syncthreads();
-#else
-    __syncwarp();
-#endif
-
-    // Input -> Shared Memory
-
-    for(uint row = 0; row < num_rows; row++)
-    {
-        half*       smem_row_ptr = &smem_in[row * input_stride];
-        const half* gmem_row_ptr = &gmem_input[row * num_cols];
-        for(uint idx = lane_id; idx < num_cols; idx += WARP_SIZE)
-        {
-            smem_row_ptr[idx] = gmem_row_ptr[idx];
-        }
-        uint idx = lane_id + num_cols;
-        if(idx < num_cols_after_padding)
-        {
-            smem_row_ptr[idx] = __float2half(0);
-        }
-    }
-
-#pragma unroll 2
-    for(uint row = num_rows; row < num_rows_after_padding; row++)
-    {
-        half* smem_row_ptr = &smem_in[row * input_stride];
-        for(uint idx = lane_id; idx < num_cols_after_padding; idx += WARP_SIZE)
-        {
-            smem_row_ptr[idx] = __float2half(0);
-        }
-    }
-
-#ifdef __HIP_PLATFORM_HCC__
-    __syncthreads();
-#else
-    __syncwarp();
-#endif
-
-    bmmBwdKernel<TILE_DIM, ROW_TILES_PER_STEP, TILE_DIM_LOG_2, __half>(smem_in,
-                                                                       smem_temp,
-                                                                       smem_out,
-                                                                       gmem_grad,
-                                                                       num_rows,
-                                                                       num_cols,
-                                                                       num_col_steps,
-                                                                       input_stride,
-                                                                       interaction_ugrad_2D_stride,
-                                                                       lane_id);
-
-    for(uint idx = lane_id; idx < num_cols; idx += WARP_SIZE)
-    {
-        gmem_mlp_grad[idx] = gmem_ugrad[idx];
-    }
-}
-
-template <uint WARPS_PER_BLOCK,
-          uint THREADBLOCK_SIZE,
-          uint ROW_TILES_PER_STEP,
-          uint COL_TILES_PER_STEP,
-          uint WARP_SIZE,
-          uint WARP_SIZE_LOG_2,
-          uint TILE_DIM,
-          uint TILE_DIM_LOG_2>
-__launch_bounds__(THREADBLOCK_SIZE) __global__
-    void dotBasedInteractBwdKernel(const __half* __restrict input,
-                                   const __half* __restrict upstream_grad,
-                                   half* __restrict grad,
-                                   half* __restrict bottom_mlp_grad,
-                                   uint batch_size,
-                                   uint num_rows,
-                                   uint num_cols,
-                                   uint num_rows_after_padding,
-                                   uint num_cols_after_padding,
-                                   uint sample_size,
-                                   uint interaction_ugrad_size,
-                                   uint interaction_ugrad_size_with_padding,
-                                   uint interaction_ugrad_2D_size_elems,
-                                   uint interaction_ugrad_2D_stride,
-                                   uint input_size_elems,
-                                   uint input_stride,
-                                   uint num_row_steps,
-                                   uint num_col_steps,
-                                   uint row_tiles_per_step,
-                                   uint shared_mem_per_warp_size_byte)
-{
-    HIP_DYNAMIC_SHARED(half, shared_mem_half)
-    uint warp_id   = (threadIdx.x >> WARP_SIZE_LOG_2);
-    uint sample_id = blockIdx.x * WARPS_PER_BLOCK + warp_id;
-    if(sample_id >= batch_size)
-    {
-        return;
-    }
-    uint lane_id = threadIdx.x & (WARP_SIZE - 1);
-    // ">> 1" to convert to half pointer
-    uint smem_warp_offset = warp_id * (shared_mem_per_warp_size_byte >> 1);
-    uint wmma_offset = num_rows_after_padding * num_rows_after_padding; // matrix_a is row_major
-
-    half*  smem_in   = shared_mem_half + smem_warp_offset + wmma_offset;
-    half*  smem_temp = smem_in + input_size_elems;
-    float* smem_out  = reinterpret_cast<float*>(smem_temp);
-
-    // Global memory pointers for the current sample
-    // Input
-    uint        gmem_input_sample_offset = sample_id * sample_size;
-    const half* gmem_input               = &input[gmem_input_sample_offset];
-
-    // Interaction Gradient
-    const uint& gmem_grad_sample_offset = gmem_input_sample_offset;
-    half*       gmem_grad               = &grad[gmem_grad_sample_offset];
-
-    // Bottom MLP gradient
-    half* gmem_mlp_grad = &bottom_mlp_grad[sample_id * num_cols];
-
-    // Upstream gradient vector
-    uint gmem_ugrad_sample_offset = sample_id * (num_cols + interaction_ugrad_size_with_padding);
-    const half* gmem_ugrad        = &upstream_grad[gmem_ugrad_sample_offset];
-
-    // Upstream gradient vector for interactions
-    const half* gmem_ugrad_interactions = &gmem_ugrad[num_cols];
-
-    // upstream grad -> shared memory (place in input section temporarily)
-#pragma unroll
-    for(uint idx = lane_id; idx < (interaction_ugrad_size >> 3); idx += WARP_SIZE)
-    {
-        ((float4*)smem_in)[idx] = ((float4*)gmem_ugrad_interactions)[idx];
-    }
-    uint offset = (interaction_ugrad_size >> 3) << 3;
-    for(uint idx = lane_id + offset; idx < interaction_ugrad_size; idx += WARP_SIZE)
-    {
-        smem_in[idx] = gmem_ugrad_interactions[idx];
-    }
-
-#ifdef __HIP_PLATFORM_HCC__
-    __syncthreads();
-#else
-    __syncwarp();
-#endif
-
-    // Form the 2D ugrad matrix.
-    trilBwdKernel(smem_in,
-                  smem_temp,
-                  __float2half(0),
-                  num_rows,
-                  num_rows_after_padding,
-                  interaction_ugrad_2D_stride,
-                  lane_id);
-
-#ifdef __HIP_PLATFORM_HCC__
-    __syncthreads();
-#else
-    __syncwarp();
-#endif
-
-    // Input -> Shared Memory
-
-    if(lane_id < (num_cols >> 2))
-    {
-        for(uint row = 0; row < num_rows; row++)
-        {
-            half*       smem_row_ptr         = &smem_in[row * input_stride];
-            const half* gmem_row_ptr         = &gmem_input[row * num_cols];
-            ((float2*)smem_row_ptr)[lane_id] = ((float2*)gmem_row_ptr)[lane_id];
-        }
-    }
-
-    uint idx = lane_id + num_cols;
-    if(idx < num_cols_after_padding)
-    {
-        for(uint row = 0; row < num_rows; row++)
-        {
-            half* smem_row_ptr = &smem_in[row * input_stride];
-            smem_row_ptr[idx]  = __float2half(0);
-        }
-    }
-
-    half4 zeros;
-#ifdef __HIP_PLATFORM_HCC__
-    zeros.vals[0] = __float2half2_rn(0);
-    zeros.vals[1] = __float2half2_rn(0);
-#else
-    half4 zeros;
-    zeros.vals[0].x = __float2half(0);
-    zeros.vals[0].y = __float2half(0);
-    zeros.vals[1].x = __float2half(0);
-    zeros.vals[1].y = __float2half(0);
-#endif
-
-    if(lane_id < (num_cols_after_padding >> 2))
-    {
-#pragma unroll 2
-        for(uint row = num_rows; row < num_rows_after_padding; row++)
-        {
-            half* smem_row_ptr              = &smem_in[row * input_stride];
-            ((half4*)smem_row_ptr)[lane_id] = zeros;
-        }
-    }
-
-#ifdef __HIP_PLATFORM_HCC__
-    __syncthreads();
-#else
-    __syncwarp();
-#endif
-
-    bmmBwdKernel<TILE_DIM, ROW_TILES_PER_STEP, TILE_DIM_LOG_2, __half>(smem_in,
-                                                                       smem_temp,
-                                                                       smem_out,
-                                                                       gmem_grad,
-                                                                       num_rows,
-                                                                       num_cols,
-                                                                       num_col_steps,
-                                                                       input_stride,
-                                                                       interaction_ugrad_2D_stride,
-                                                                       lane_id);
-
-    if(lane_id < (num_cols >> 2))
-    {
-        ((float2*)gmem_mlp_grad)[lane_id] = ((float2*)gmem_ugrad)[lane_id];
-    }
-}
-
-#ifdef __HIP_PLATFORM_HCC__
-template <uint WARPS_PER_BLOCK,
+template <typename DataT,
+          uint WARPS_PER_BLOCK,
           uint THREADBLOCK_SIZE,
           uint ROW_TILES_PER_STEP,
           uint COL_TILES_PER_STEP,
@@ -1032,7 +1044,8 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
     }
 }
 
-template <uint WARPS_PER_BLOCK,
+template <typename DataT,
+          uint WARPS_PER_BLOCK,
           uint THREADBLOCK_SIZE,
           uint ROW_TILES_PER_STEP,
           uint COL_TILES_PER_STEP,

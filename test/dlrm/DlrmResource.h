@@ -29,9 +29,8 @@
 
 #include <memory>
 #include <tuple>
-
-#include <hip/hip_runtime_api.h>
-
+//#include <hip/hip_runtime_api.h>
+#include "HipResource.h"
 #include "Singleton.h"
 
 // DlrmResource class is intended to manage a shared pool of resources for
@@ -47,10 +46,18 @@
 // Currently uses HIP as the backend for device allocation.
 
 template <typename DataT>
-struct DlrmResource : public LazySingleton<DlrmResource<DataT>>
+struct DlrmResource : public HipResource, public LazySingleton<DlrmResource<DataT>>
 {
     // For static initialization
-    friend class LazySingleton<DlrmResource<DataT>>;
+    friend std::unique_ptr<DlrmResource<DataT>> std::make_unique<DlrmResource<DataT>>();
+
+    using Base = HipResource;
+
+    template <typename T>
+    using DevicePtrT = Base::DevicePtrT<T>;
+
+    template <typename T>
+    using HostPtrT = Base::HostPtrT<T>;
 
     // M, N, K
     using ProblemSize = std::tuple<int64_t, int64_t, int64_t>;
@@ -62,12 +69,6 @@ struct DlrmResource : public LazySingleton<DlrmResource<DataT>>
     // Backward pass data sizes
     // Input, UpstreamGrad, Grad, GradRef, BottomMlpGrad, BottomMlpGradRef
     using DataSizeBwd = std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t>;
-
-    template <typename DataT>
-    using DevicePtrT = std::unique_ptr<DataT, void (*)(DataT*)>;
-
-    template <typename DataT>
-    using HostPtrT = std::unique_ptr<DataT[]>;
 
     enum : uint32_t
     {
@@ -89,25 +90,14 @@ struct DlrmResource : public LazySingleton<DlrmResource<DataT>>
         K = 2
     };
 
-public:
+protected:
+    // Singleton instantiation
     DlrmResource();
-    ~DlrmResource();
+    DlrmResource(DlrmResource const&) = delete;
+    DlrmResource& operator=(DlrmResource const&) = delete;
 
-    template <typename DataT>
-    static DevicePtrT<DataT> allocDevice(int64_t numElements);
-
-    template <typename DataT>
-    static HostPtrT<DataT> allocHost(int64_t numElements);
-
-    template <typename DataT>
-    static void copyData(HostPtrT<DataT>& dst, DevicePtrT<DataT> const& src, int64_t numElements);
-
-    template <typename DataT>
-    static void copyData(DevicePtrT<DataT>& dst, HostPtrT<DataT> const& src, int64_t numElements);
-
-    template <typename DataT>
-    static void copyData(HostPtrT<DataT>& dst, HostPtrT<DataT> const& src, int64_t numElements);
-
+public:
+    ~DlrmResource() = default;
     void copyHostToDeviceFwdAll();
     void copyHostToDeviceBwdAll();
     void resizeFwdStorage(DataSizeFwd const& size);
@@ -149,10 +139,6 @@ protected:
     ProblemSize mCurrentProblemSize;
     DataSizeFwd mCurrentDataSizeFwd;
     DataSizeBwd mCurrentDataSizeBwd;
-
-private: // No copy
-    DlrmResource(DlrmResource const&);
-    DlrmResource& operator=(DlrmResource const&);
 };
 
 #include "DlrmResource_impl.h"
