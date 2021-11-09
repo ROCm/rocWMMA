@@ -60,17 +60,19 @@ function(add_wmma_test TEST_TARGET TEST_SOURCE)
     target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_EXTENDED_TESTS)
   endif()
 
-  get_property(dirs TARGET ${TEST_TARGET} PROPERTY INCLUDE_DIRECTORIES)
-
   # Add support to build the target's assembly files
   if(WMMA_BUILD_ASSEMBLY)
     foreach(file_name ${TEST_SOURCE})
+
+      # Replicate the current source tree in the build output/assembly folder
+      file(RELATIVE_PATH relative_file_path "${CMAKE_CURRENT_SOURCE_DIR}" "${file_name}")
+      string(REPLACE "../" "__/" relative_file_string "${relative_file_path}")
       add_custom_command(TARGET ${TEST_TARGET}
                          POST_BUILD
-                         COMMAND make ARGS ${file_name}.s
+                         COMMAND make ARGS ${relative_file_string}.s
                          COMMAND ${CMAKE_COMMAND} -E copy
-                           "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${TEST_TARGET}.dir/${file_name}.s"
-                           "${CMAKE_CURRENT_BINARY_DIR}/${file_name}.s"
+                           "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${TEST_TARGET}.dir/${relative_file_string}.s"
+                           "${CMAKE_CURRENT_BINARY_DIR}/assembly/${relative_file_string}.s"
                           WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     endforeach()
   endif()

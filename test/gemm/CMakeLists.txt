@@ -72,7 +72,7 @@ endfunction()
 
 # GEMM common test sources
 set(GemmCommonSources ${WMMA_COMMON_TEST_SOURCES}
-                       GemmKernelBase.cpp)
+                      ${CMAKE_CURRENT_SOURCE_DIR}/GemmKernelBase.cpp)
 
 set(BarrierTestSources ${GemmCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/BarrierTest.cpp)
