@@ -136,8 +136,8 @@ struct MatrixUtil
                 else
                 {
                     // Count up in integers, in ascending order for each row.
-                    auto value = (i * n + j) % 13;
-                    mat[idx] = (value % 2) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
+                    auto value = (i * n + j) % 5;
+                    mat[idx] = (value % 3) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
                 }
             }
         }
@@ -167,9 +167,9 @@ struct MatrixUtil
             for(int j = 0; j < n; ++j) // col
             {
                 // Count up in integers, in ascending order for each row.
-                auto value = (i * n + j) % 13;
+                auto value = (i * n + j) % 5;
                 auto idx   = index(i, j, ld);
-                mat[idx]   = (value % 2) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
+                mat[idx]   = (value % 3) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
             }
         }
     }
@@ -237,30 +237,39 @@ std::pair<bool, double> compareEqualPadded(std::vector<DataT> const& a,
             if(i == 0 || j == 0 || i == M + 1 || j == N + 1)
             {
 
-                auto idx       = index(i, j, ldB);
-                auto numerator = fabs(toDouble(b[idx]) - toDouble(padValue));
-                auto divisor   = fabs(toDouble(b[idx])) + fabs(toDouble(padValue)) + 1.0;
+                auto idx  = index(i, j, ldB);
+                numerator = fabs(toDouble(b[idx]) - toDouble(padValue));
+                divisor   = fabs(toDouble(b[idx])) + fabs(toDouble(padValue)) + 1.0;
             }
             else
             {
-                auto idxB      = index(i, j, ldB);
-                auto idxA      = index(i - 1, j - 1, ldA);
-                auto numerator = fabs(toDouble(a[idxA]) - toDouble(b[idxB]));
-                auto divisor   = fabs(toDouble(a[idxA])) + fabs(toDouble(b[idxB])) + 1.0;
+                auto idxB = index(i, j, ldB);
+                auto idxA = index(i - 1, j - 1, ldA);
+                numerator = fabs(toDouble(a[idxA]) - toDouble(b[idxB]));
+                divisor   = fabs(toDouble(a[idxA])) + fabs(toDouble(b[idxB])) + 1.0;
             }
 
-            auto relative_error = numerator / divisor;
-
-            if(relative_error > max_relative_error)
+            if(std::isinf(numerator) || std::isinf(divisor))
             {
-                max_relative_error = relative_error;
-            }
-            // NaN: propagate the error and break
-            else if(relative_error != relative_error)
-            {
-                max_relative_error = relative_error;
+                max_relative_error = std::numeric_limits<float64_t>::infinity();
                 i                  = M;
                 j                  = N;
+            }
+            else
+            {
+                auto relative_error = numerator / divisor;
+
+                if(relative_error > max_relative_error)
+                {
+                    max_relative_error = relative_error;
+                }
+                // NaN: propagate the error and break
+                else if(relative_error != relative_error)
+                {
+                    max_relative_error = relative_error;
+                    i                  = M;
+                    j                  = N;
+                }
             }
         }
     }
@@ -301,19 +310,29 @@ std::pair<bool, double>
             auto indexA = std::is_same<LayoutA, row_major>::value ? (i * lda + j) : (i + j * lda);
             auto indexB = std::is_same<LayoutB, row_major>::value ? (i * ldb + j) : (i + j * ldb);
 
-            auto relative_error = fabs(toDoubleA(a[indexA]) - toDoubleB(b[indexB]))
-                                  / (fabs(toDoubleA(a[indexA])) + fabs(toDoubleB(b[indexB])) + 1.0);
+            auto numerator = fabs(toDoubleA(a[indexA]) - toDoubleB(b[indexB]));
+            auto divisor   = fabs(toDoubleA(a[indexA])) + fabs(toDoubleB(b[indexB])) + 1.0;
 
-            if(relative_error > max_relative_error)
+            if(std::isinf(numerator) || std::isinf(divisor))
             {
-                max_relative_error = relative_error;
-            }
-            // NaN: propagate the error and break
-            else if(relative_error != relative_error)
-            {
-                max_relative_error = relative_error;
+                max_relative_error = std::numeric_limits<float64_t>::infinity();
                 i                  = M;
                 j                  = N;
+            }
+            else
+            {
+                auto relative_error = numerator / divisor;
+                if(relative_error > max_relative_error)
+                {
+                    max_relative_error = relative_error;
+                }
+                // NaN: propagate the error and break
+                else if(std::isnan(relative_error))
+                {
+                    max_relative_error = relative_error;
+                    i                  = M;
+                    j                  = N;
+                }
             }
         }
     }
