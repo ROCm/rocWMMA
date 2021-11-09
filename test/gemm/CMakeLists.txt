@@ -74,6 +74,9 @@ endfunction()
 set(GemmCommonSources ${WMMA_COMMON_TEST_SOURCES}
                        GemmKernelBase.cpp)
 
+set(BarrierTestSources ${GemmCommonSources}
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/BarrierTest.cpp)
+
 set(MmaSyncTestSources ${GemmCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncTest_16x16_NN.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncTest_16x16_NT.cpp
@@ -156,6 +159,7 @@ endif()
 
 # Benchmark GEMM tests
 if(WMMA_BUILD_BENCHMARK_TESTS)
+  add_gemm_benchmark_test(BarrierTest-bench ${BarrierTestSources})
   add_gemm_benchmark_test(MmaSyncTest-bench ${MmaSyncTestSources})
   add_gemm_benchmark_test(MmaSyncMultiTest-bench ${MmaSyncMultiTestSources})
   add_gemm_benchmark_test(MmaSyncMultiLdsTest-bench ${MmaSyncMultiLdsTestSources})
@@ -165,6 +169,7 @@ endif()
 
 # Validation GEMM tests
 if(WMMA_BUILD_VALIDATION_TESTS)
+  add_gemm_validation_test(BarrierTest-validate ${BarrierTestSources})
   add_gemm_validation_test(MmaSyncTest-validate ${MmaSyncTestSources})
   add_gemm_validation_test(MmaSyncMultiTest-validate ${MmaSyncMultiTestSources})
   add_gemm_validation_test(MmaSyncMultiLdsTest-validate ${MmaSyncMultiLdsTestSources})
