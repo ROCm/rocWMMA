@@ -38,16 +38,19 @@
 struct DlrmTestParams
 {
     // Types of parameters
-    using KernelT        = std::shared_ptr<KernelI>;
-    using ThreadBlockT   = std::pair<int64_t, int64_t>;
-    using ProblemSizeT   = std::tuple<int64_t, int64_t, int64_t>;
-    using FwdDataSizeT   = std::tuple<int64_t, int64_t, int64_t>;
+    using KernelT      = std::shared_ptr<KernelI>;
+    using ThreadBlockT = std::pair<int64_t, int64_t>;
+    using ProblemSizeT = std::tuple<int64_t, int64_t, int64_t>;
+    // Input, Output, OutputRef
+    using FwdDataSizeT = std::tuple<int64_t, int64_t, int64_t>;
+    // Input, UpstreamGrad, Grad, GradRef, BottomMlpGrad, BottomMlpGradRef
     using BwdDataSizeT   = std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t>;
     using PassDirectionT = bool;
 
+    //using DataTypes      = std::tuple<std::tuple<float32_t>, std::tuple<float16_t>>;
     using DataTypes      = std::tuple<std::tuple<float32_t>, std::tuple<float16_t>>;
     using TestBlockSizes = std::tuple<std::tuple<I<16>, I<16>, I<16>>>;
-    using TileSizes      = std::tuple<std::tuple<I<16>, I<32>>>;
+    using TileSizes      = std::tuple<std::tuple<I<16>>, std::tuple<I<32>>>;
 
     static inline std::vector<ProblemSizeT> problemSizes()
     {
@@ -61,12 +64,12 @@ struct DlrmTestParams
 
     static inline std::vector<FwdDataSizeT> fwdDataSizes()
     {
-        return {{100, 100, 100}};
+        return {{221184, 30656, 30656}};
     }
 
     static inline std::vector<BwdDataSizeT> bwdDataSizes()
     {
-        return {{100, 100, 100, 100, 100, 100}};
+        return {{221184, 30656, 221184, 221184, 8192, 8192}};
     }
 
     static inline std::vector<PassDirectionT> passDirections()
