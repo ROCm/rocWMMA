@@ -75,63 +75,63 @@ struct buff_t
     std::string file;
 };
 
-bool read_buff(struct buff_t* buff, bool to_device = true, bool verbose = false)
-{
-    const char* filename = buff->file.c_str();
-    void**      hbuff    = &buff->h;
-    void**      dbuff    = &buff->d;
+// bool read_buff(struct buff_t* buff, bool to_device = true, bool verbose = false)
+// {
+//     const char* filename = buff->file.c_str();
+//     void**      hbuff    = &buff->h;
+//     void**      dbuff    = &buff->d;
 
-    int fd = open(filename, O_RDONLY);
-    if(fd < 0)
-    {
-        std::cout << "Invalid file " << filename << std::endl;
-        return false;
-    }
-    struct stat stats;
+//     int fd = open(filename, O_RDONLY);
+//     if(fd < 0)
+//     {
+//         std::cout << "Invalid file " << filename << std::endl;
+//         return false;
+//     }
+//     struct stat stats;
 
-    fstat(fd, &stats);
-    buff->bytes = stats.st_size;
+//     fstat(fd, &stats);
+//     buff->bytes = stats.st_size;
 
-    std::cout << "Read " << filename << " bytes " << buff->bytes << std::endl;
+//     std::cout << "Read " << filename << " bytes " << buff->bytes << std::endl;
 
-    *hbuff = malloc(buff->bytes);
-    hipMalloc(dbuff, buff->bytes);
+//     *hbuff = malloc(buff->bytes);
+//     hipMalloc(dbuff, buff->bytes);
 
-    pread(fd, *hbuff, buff->bytes, 0);
-    if(to_device)
-    {
-        hipMemcpy(*dbuff, *hbuff, buff->bytes, hipMemcpyDefault);
-    }
+//     pread(fd, *hbuff, buff->bytes, 0);
+//     if(to_device)
+//     {
+//         hipMemcpy(*dbuff, *hbuff, buff->bytes, hipMemcpyDefault);
+//     }
 
-    if(verbose)
-    {
-        for(int i = 0; i < buff->bytes / sizeof(float); i++)
-        {
-            std::cout << ((float*)*hbuff)[i] << ", ";
-            if(i != 0 && i % 100 == 0)
-                std::cout << std::endl;
-        }
-        std::cout << std::endl;
-    }
+//     if(verbose)
+//     {
+//         for(int i = 0; i < buff->bytes / sizeof(float); i++)
+//         {
+//             std::cout << ((float*)*hbuff)[i] << ", ";
+//             if(i != 0 && i % 100 == 0)
+//                 std::cout << std::endl;
+//         }
+//         std::cout << std::endl;
+//     }
 
-    close(fd);
-    return true;
-}
+//     close(fd);
+//     return true;
+// }
 
-bool write_buff(const char* filename, void* buff, size_t bytes)
-{
-    int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC);
-    if(fd < 0)
-    {
-        std::cout << "Invalid file " << filename << std::endl;
-        return false;
-    }
+// bool write_buff(const char* filename, void* buff, size_t bytes)
+// {
+//     int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC);
+//     if(fd < 0)
+//     {
+//         std::cout << "Invalid file " << filename << std::endl;
+//         return false;
+//     }
 
-    pwrite(fd, buff, bytes, 0);
+//     pwrite(fd, buff, bytes, 0);
 
-    close(fd);
-    return true;
-}
+//     close(fd);
+//     return true;
+// }
 
 __device__ inline bool is_same(half a, half b)
 {
@@ -268,140 +268,140 @@ __device__ static inline void syncwarp()
 #endif
 }
 
-enum CmdOptionType
-{
-    INT_OPT,
-    LONG_OPT,
-    BOOL_OPT,
-    HELP_OPT,
-};
+// enum CmdOptionType
+// {
+//     INT_OPT,
+//     LONG_OPT,
+//     BOOL_OPT,
+//     HELP_OPT,
+// };
 
-struct CmdOption
-{
-    void*         val;
-    CmdOptionType type;
-    const char*   name;
-    int           has_arg;
-    const char*   description;
-};
+// struct CmdOption
+// {
+//     void*         val;
+//     CmdOptionType type;
+//     const char*   name;
+//     int           has_arg;
+//     const char*   description;
+// };
 
-void print_help(const char* bin, std::map<int, CmdOption>& options)
-{
-    printf("Usage: %s [OPTIONS]\n", bin);
-    for(auto m : options)
-    {
-        auto k = m.first;
-        auto v = m.second;
+// void print_help(const char* bin, std::map<int, CmdOption>& options)
+// {
+//     printf("Usage: %s [OPTIONS]\n", bin);
+//     for(auto m : options)
+//     {
+//         auto k = m.first;
+//         auto v = m.second;
 
-        std::string name = v.name;
-        std::string arg = "", desc = "";
-        int         space_width = 30;
+//         std::string name = v.name;
+//         std::string arg = "", desc = "";
+//         int         space_width = 30;
 
-        if(v.has_arg == required_argument)
-        {
-            arg = " " + name;
-            transform(
-                arg.begin(), arg.end(), arg.begin(), [](unsigned char c) { return toupper(c); });
-            space_width -= arg.size();
-        }
+//         if(v.has_arg == required_argument)
+//         {
+//             arg = " " + name;
+//             transform(
+//                 arg.begin(), arg.end(), arg.begin(), [](unsigned char c) { return toupper(c); });
+//             space_width -= arg.size();
+//         }
 
-        name = "--" + name;
-        if((k >= 'a' && k <= 'z') || (k >= 'A' && k <= 'Z'))
-        {
-            std::string short_opt(1, (char)k);
-            name = "-" + short_opt + " | " + name;
-        }
+//         name = "--" + name;
+//         if((k >= 'a' && k <= 'z') || (k >= 'A' && k <= 'Z'))
+//         {
+//             std::string short_opt(1, (char)k);
+//             name = "-" + short_opt + " | " + name;
+//         }
 
-        space_width -= name.size();
-        if(v.description == nullptr)
-        {
-            space_width = 0;
-        }
-        else
-        {
-            desc = v.description;
-        }
+//         space_width -= name.size();
+//         if(v.description == nullptr)
+//         {
+//             space_width = 0;
+//         }
+//         else
+//         {
+//             desc = v.description;
+//         }
 
-        printf("    %s%s%-*s%s\n", name.c_str(), arg.c_str(), space_width, " ", desc.c_str());
-    }
-    exit(0);
-}
+//         printf("    %s%s%-*s%s\n", name.c_str(), arg.c_str(), space_width, " ", desc.c_str());
+//     }
+//     exit(0);
+// }
 
-void get_options(int argc, char** argv, std::map<int, CmdOption>& options)
-{
-    int c;
-    int option_index = 0;
+// void get_options(int argc, char** argv, std::map<int, CmdOption>& options)
+// {
+//     int c;
+//     int option_index = 0;
 
-    std::vector<struct option> long_options;
-    char**                     help_description;
-    std::string                short_options = "";
+//     std::vector<struct option> long_options;
+//     char**                     help_description;
+//     std::string                short_options = "";
 
-    // Construct options
-    int i = 0;
-    for(auto m : options)
-    {
-        auto        k    = m.first;
-        auto        v    = m.second;
-        const char* name = v.name;
-        long_options.push_back({name, v.has_arg, 0, k});
+//     // Construct options
+//     int i = 0;
+//     for(auto m : options)
+//     {
+//         auto        k    = m.first;
+//         auto        v    = m.second;
+//         const char* name = v.name;
+//         long_options.push_back({name, v.has_arg, 0, k});
 
-        if((k >= 'a' && k <= 'z') || (k >= 'A' && k <= 'Z'))
-        {
-            std::string short_opt(1, (char)k);
-            short_options += short_opt;
-            if(v.has_arg != no_argument)
-            {
-                short_options += ":";
-            }
-        }
-        i++;
-    }
+//         if((k >= 'a' && k <= 'z') || (k >= 'A' && k <= 'Z'))
+//         {
+//             std::string short_opt(1, (char)k);
+//             short_options += short_opt;
+//             if(v.has_arg != no_argument)
+//             {
+//                 short_options += ":";
+//             }
+//         }
+//         i++;
+//     }
 
-    while(true)
-    {
-        c = getopt_long(argc, argv, short_options.c_str(), long_options.data(), &option_index);
-        if(c == -1)
-            break;
+//     while(true)
+//     {
+//         c = getopt_long(argc, argv, short_options.c_str(), long_options.data(), &option_index);
+//         if(c == -1)
+//             break;
 
-        auto item = options.find(c);
-        if(item != options.end())
-        {
-            auto opt = item->second;
-            switch(opt.type)
-            {
-            case HELP_OPT:
-            {
-                print_help(argv[0], options);
-                break;
-            }
-            case INT_OPT:
-            {
-                int val = atoi(optarg);
-                memcpy(opt.val, &val, sizeof(int));
-                printf("Setting %s to %d\n", opt.name, val);
-                break;
-            }
-            case LONG_OPT:
-            {
-                int64_t val = atol(optarg);
-                memcpy(opt.val, &val, sizeof(int64_t));
-                printf("Setting %s to %ld\n", opt.name, val);
-                break;
-            }
-            case BOOL_OPT:
-            {
-                bool val = true;
-                memcpy(opt.val, &val, sizeof(bool));
-                printf("Enabling %s\n", opt.name);
-                break;
-            }
-            }
-        }
-        else
-        {
-            printf("Unknown option %d\n", c);
-        }
-    }
-}
+//         auto item = options.find(c);
+//         if(item != options.end())
+//         {
+//             auto opt = item->second;
+//             switch(opt.type)
+//             {
+//             case HELP_OPT:
+//             {
+//                 print_help(argv[0], options);
+//                 break;
+//             }
+//             case INT_OPT:
+//             {
+//                 int val = atoi(optarg);
+//                 memcpy(opt.val, &val, sizeof(int));
+//                 printf("Setting %s to %d\n", opt.name, val);
+//                 break;
+//             }
+//             case LONG_OPT:
+//             {
+//                 int64_t val = atol(optarg);
+//                 memcpy(opt.val, &val, sizeof(int64_t));
+//                 printf("Setting %s to %ld\n", opt.name, val);
+//                 break;
+//             }
+//             case BOOL_OPT:
+//             {
+//                 bool val = true;
+//                 memcpy(opt.val, &val, sizeof(bool));
+//                 printf("Enabling %s\n", opt.name);
+//                 break;
+//             }
+//             }
+//         }
+//         else
+//         {
+//             printf("Unknown option %d\n", c);
+//         }
+//     }
+// }
 
 #endif // DLRM_TEST_COMMON_H
