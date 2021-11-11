@@ -103,6 +103,13 @@ void DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::reset()
     mTBlockX = mTBlockY = 0;
     mM = mN = mK = 0;
 
+    mRepeats =
+#ifdef WMMA_VALIDATION_TESTS
+        1;
+#else
+        5;
+#endif
+
     mRunFlag = true;
 
     mTotalGFlops = mMeasuredGFlopsPerSec = 0.0;
@@ -113,14 +120,26 @@ template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, 
 std::ostream&
     DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::printHeader(std::ostream& stream) const
 {
-    return stream << "test";
+    return stream << "TileSize, "
+                  << "DataT, "
+                  << "elapsedMs, "
+                  << "GFlops, "
+                  << "GFlops/s, "
+                  << "Efficiency(%)" << std::endl;
 }
 
 template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
 std::ostream&
     DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::printKernel(std::ostream& stream) const
 {
-    return stream << "kernel";
+    return stream << TileSize << ", " << dataTypeToString<DataT>() << ", " << mElapsedTimeMs << ", "
+                  << mTotalGFlops << ", " << mMeasuredGFlopsPerSec << ", " << mEfficiency << ", "
+#if defined(WMMA_VALIDATION_TESTS)
+                  << (mValidationResult ? "PASSED" : "FAILED")
+#else
+                  << "BENCH"
+#endif // WMMA_VALIDATION_TESTS
+                  << std::endl;
 }
 
 template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
@@ -217,12 +236,6 @@ void DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::exec()
 {
     if(mRunFlag)
     {
-        hipEvent_t startEvent, stopEvent;
-        CHECK_HIP_ERROR(hipEventCreate(&startEvent));
-        CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
-
-        auto& dataInstance = DataStorage::instance();
-
         if(!isBwd)
         {
             // num tiles
@@ -248,55 +261,131 @@ void DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::exec()
                                                  : smem_elems_per_warp_acc;
             uint       output_size         = NUM_COLS + (NUM_ROWS * (NUM_ROWS - 1) >> 1) + PAD;
 
-            bool float4_predicate = !((NUM_COLS & 7) || (output_size & 7));
+            bool float4_predicate = !(output_size & 7); // (NUM_COLS & 7) || (output_size & 7));
 
             if(float4_predicate)
             {
-                hipExtLaunchKernelGGL((kernelFwdImpl()),
-                                      (gridDim()),
-                                      (blockDim()),
-                                      (ldsUsage()),
-                                      0,
-                                      startEvent,
-                                      stopEvent,
-                                      0,
-                                      dataInstance->deviceInput().get(),
-                                      dataInstance->deviceOutput().get(),
-                                      BATCH_SIZE,
-                                      NUM_ROWS,
-                                      NUM_COLS,
-                                      num_rows_after_padding,
-                                      num_cols_after_padding,
-                                      smem_elems_per_warp,
-                                      smem_rows_per_warp,
-                                      output_size,
-                                      num_row_steps,
-                                      num_col_steps,
-                                      PAD);
+                auto dlrmKernel = [this,
+                                   num_rows_after_padding,
+                                   num_cols_after_padding,
+                                   smem_elems_per_warp,
+                                   smem_rows_per_warp,
+                                   output_size,
+                                   num_row_steps,
+                                   num_col_steps]() {
+                    auto& dataInstance = DataStorage::instance();
+                    hipExtLaunchKernelGGL((this->kernelFwdImpl()),
+                                          (this->gridDim()),
+                                          (this->blockDim()),
+                                          (this->ldsUsage()),
+                                          0,
+                                          nullptr,
+                                          nullptr,
+                                          0,
+                                          dataInstance->deviceInput().get(),
+                                          dataInstance->deviceOutput().get(),
+                                          BATCH_SIZE,
+                                          NUM_ROWS,
+                                          NUM_COLS,
+                                          num_rows_after_padding,
+                                          num_cols_after_padding,
+                                          smem_elems_per_warp,
+                                          smem_rows_per_warp,
+                                          output_size,
+                                          num_row_steps,
+                                          num_col_steps,
+                                          PAD);
+                };
+
+                hipEvent_t startEvent, stopEvent;
+                CHECK_HIP_ERROR(hipEventCreate(&startEvent));
+                CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
+
+                CHECK_HIP_ERROR(hipEventRecord(startEvent));
+                for(uint32_t i = 0; i < mRepeats; ++i)
+                {
+                    dlrmKernel();
+                }
+                CHECK_HIP_ERROR(hipEventRecord(stopEvent));
+                CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
+
+                auto timeMs = 0.0f;
+                CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
+
+                // Calculate efficiency
+                auto& deviceInfo             = DeviceInfo::instance();
+                auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
+
+                mElapsedTimeMs        = float64_t(timeMs);
+                mTotalGFlops          = calculateGFlops(mM, mN, mK);
+                mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
+                                        * static_cast<float64_t>(mRepeats);
+                mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
+
+                CHECK_HIP_ERROR(hipEventDestroy(startEvent));
+                CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
             }
             else
             {
-                hipExtLaunchKernelGGL((kernelFwdNonAlignedImpl()),
-                                      (gridDim()),
-                                      (blockDim()),
-                                      (ldsUsage()),
-                                      0,
-                                      startEvent,
-                                      stopEvent,
-                                      0,
-                                      dataInstance->deviceInput().get(),
-                                      dataInstance->deviceOutput().get(),
-                                      BATCH_SIZE,
-                                      NUM_ROWS,
-                                      NUM_COLS,
-                                      num_rows_after_padding,
-                                      num_cols_after_padding,
-                                      smem_elems_per_warp,
-                                      smem_rows_per_warp,
-                                      output_size,
-                                      num_row_steps,
-                                      num_col_steps,
-                                      PAD);
+                auto dlrmKernel = [this,
+                                   num_rows_after_padding,
+                                   num_cols_after_padding,
+                                   smem_elems_per_warp,
+                                   smem_rows_per_warp,
+                                   output_size,
+                                   num_row_steps,
+                                   num_col_steps]() {
+                    auto& dataInstance = DataStorage::instance();
+                    hipExtLaunchKernelGGL((this->kernelFwdNonAlignedImpl()),
+                                          (this->gridDim()),
+                                          (this->blockDim()),
+                                          (this->ldsUsage()),
+                                          0,
+                                          nullptr,
+                                          nullptr,
+                                          0,
+                                          dataInstance->deviceInput().get(),
+                                          dataInstance->deviceOutput().get(),
+                                          BATCH_SIZE,
+                                          NUM_ROWS,
+                                          NUM_COLS,
+                                          num_rows_after_padding,
+                                          num_cols_after_padding,
+                                          smem_elems_per_warp,
+                                          smem_rows_per_warp,
+                                          output_size,
+                                          num_row_steps,
+                                          num_col_steps,
+                                          PAD);
+                };
+
+                hipEvent_t startEvent, stopEvent;
+                CHECK_HIP_ERROR(hipEventCreate(&startEvent));
+                CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
+
+                CHECK_HIP_ERROR(hipEventRecord(startEvent));
+                for(uint32_t i = 0; i < mRepeats; ++i)
+                {
+                    dlrmKernel();
+                }
+                CHECK_HIP_ERROR(hipEventRecord(stopEvent));
+                CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
+
+                auto timeMs = 0.0f;
+                CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
+
+                // Calculate efficiency
+                auto& deviceInfo             = DeviceInfo::instance();
+                auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
+
+                mElapsedTimeMs        = float64_t(timeMs);
+                mTotalGFlops          = calculateGFlops(mM, mN, mK);
+                mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
+                                        * static_cast<float64_t>(mRepeats);
+                mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
+
+                CHECK_HIP_ERROR(hipEventDestroy(startEvent));
+                CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
             }
         }
         else
@@ -353,83 +442,182 @@ void DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::exec()
             uint num_row_steps = num_row_tiles / row_tiles_per_step;
             uint num_col_steps = num_col_tiles / kColTilesPerStep;
 
-            bool float4_predicate = !((interaction_ugrad_size_with_padding & 7) || (NUM_COLS & 7));
+            bool float4_predicate
+                = !((interaction_ugrad_size_with_padding & 7)); // || (NUM_COLS & 7));
 
             if(float4_predicate)
             {
-                hipExtLaunchKernelGGL((kernelBwdImpl()),
-                                      (gridDim()),
-                                      (blockDim()),
-                                      (ldsUsage()),
-                                      0,
-                                      startEvent,
-                                      stopEvent,
-                                      0,
-                                      dataInstance->deviceInput().get(),
-                                      dataInstance->deviceUpstreamGrad().get(),
-                                      dataInstance->deviceGrad().get(),
-                                      dataInstance->deviceBottomMlpGrad().get(),
-                                      BATCH_SIZE,
-                                      NUM_ROWS,
-                                      NUM_COLS,
-                                      num_rows_after_padding,
-                                      num_cols_after_padding,
-                                      sample_size,
-                                      interaction_ugrad_size,
-                                      interaction_ugrad_size_with_padding,
-                                      interaction_ugrad_2D_size_elems,
-                                      interaction_ugrad_2D_stride,
-                                      input_size_elems,
-                                      input_stride,
-                                      num_row_steps,
-                                      num_col_steps,
-                                      row_tiles_per_step,
-                                      shared_mem_per_warp_size_byte);
+                auto dlrmKernel = [this,
+                                   num_rows_after_padding,
+                                   num_cols_after_padding,
+                                   sample_size,
+                                   interaction_ugrad_size,
+                                   interaction_ugrad_size_with_padding,
+                                   interaction_ugrad_2D_size_elems,
+                                   interaction_ugrad_2D_stride,
+                                   input_size_elems,
+                                   input_stride,
+                                   num_row_steps,
+                                   num_col_steps,
+                                   row_tiles_per_step,
+                                   shared_mem_per_warp_size_byte]() {
+                    auto& dataInstance = DataStorage::instance();
+                    hipExtLaunchKernelGGL((this->kernelBwdImpl()),
+                                          (this->gridDim()),
+                                          (this->blockDim()),
+                                          (this->ldsUsage()),
+                                          0,
+                                          nullptr,
+                                          nullptr,
+                                          0,
+                                          dataInstance->deviceInput().get(),
+                                          dataInstance->deviceUpstreamGrad().get(),
+                                          dataInstance->deviceGrad().get(),
+                                          dataInstance->deviceBottomMlpGrad().get(),
+                                          BATCH_SIZE,
+                                          NUM_ROWS,
+                                          NUM_COLS,
+                                          num_rows_after_padding,
+                                          num_cols_after_padding,
+                                          sample_size,
+                                          interaction_ugrad_size,
+                                          interaction_ugrad_size_with_padding,
+                                          interaction_ugrad_2D_size_elems,
+                                          interaction_ugrad_2D_stride,
+                                          input_size_elems,
+                                          input_stride,
+                                          num_row_steps,
+                                          num_col_steps,
+                                          row_tiles_per_step,
+                                          shared_mem_per_warp_size_byte);
+                };
+
+                hipEvent_t startEvent, stopEvent;
+                CHECK_HIP_ERROR(hipEventCreate(&startEvent));
+                CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
+
+                CHECK_HIP_ERROR(hipEventRecord(startEvent));
+                for(uint32_t i = 0; i < mRepeats; ++i)
+                {
+                    dlrmKernel();
+                }
+                CHECK_HIP_ERROR(hipEventRecord(stopEvent));
+                CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
+
+                auto timeMs = 0.0f;
+                CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
+
+                // Calculate efficiency
+                auto& deviceInfo             = DeviceInfo::instance();
+                auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
+
+                mElapsedTimeMs        = float64_t(timeMs);
+                mTotalGFlops          = calculateGFlops(mM, mN, mK);
+                mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
+                                        * static_cast<float64_t>(mRepeats);
+                mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
+
+                CHECK_HIP_ERROR(hipEventDestroy(startEvent));
+                CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
             }
             else
             {
-                hipExtLaunchKernelGGL((kernelBwdNonAlignedImpl()),
-                                      (gridDim()),
-                                      (blockDim()),
-                                      (ldsUsage()),
-                                      0,
-                                      startEvent,
-                                      stopEvent,
-                                      0,
-                                      dataInstance->deviceInput().get(),
-                                      dataInstance->deviceUpstreamGrad().get(),
-                                      dataInstance->deviceGrad().get(),
-                                      dataInstance->deviceBottomMlpGrad().get(),
-                                      BATCH_SIZE,
-                                      NUM_ROWS,
-                                      NUM_COLS,
-                                      num_rows_after_padding,
-                                      num_cols_after_padding,
-                                      sample_size,
-                                      interaction_ugrad_size,
-                                      interaction_ugrad_size_with_padding,
-                                      interaction_ugrad_2D_size_elems,
-                                      interaction_ugrad_2D_stride,
-                                      input_size_elems,
-                                      input_stride,
-                                      num_row_steps,
-                                      num_col_steps,
-                                      row_tiles_per_step,
-                                      shared_mem_per_warp_size_byte);
+                auto dlrmKernel = [this,
+                                   num_rows_after_padding,
+                                   num_cols_after_padding,
+                                   sample_size,
+                                   interaction_ugrad_size,
+                                   interaction_ugrad_size_with_padding,
+                                   interaction_ugrad_2D_size_elems,
+                                   interaction_ugrad_2D_stride,
+                                   input_size_elems,
+                                   input_stride,
+                                   num_row_steps,
+                                   num_col_steps,
+                                   row_tiles_per_step,
+                                   shared_mem_per_warp_size_byte]() {
+                    auto& dataInstance = DataStorage::instance();
+                    hipExtLaunchKernelGGL((kernelBwdNonAlignedImpl()),
+                                          (gridDim()),
+                                          (blockDim()),
+                                          (ldsUsage()),
+                                          0,
+                                          nullptr,
+                                          nullptr,
+                                          0,
+                                          dataInstance->deviceInput().get(),
+                                          dataInstance->deviceUpstreamGrad().get(),
+                                          dataInstance->deviceGrad().get(),
+                                          dataInstance->deviceBottomMlpGrad().get(),
+                                          BATCH_SIZE,
+                                          NUM_ROWS,
+                                          NUM_COLS,
+                                          num_rows_after_padding,
+                                          num_cols_after_padding,
+                                          sample_size,
+                                          interaction_ugrad_size,
+                                          interaction_ugrad_size_with_padding,
+                                          interaction_ugrad_2D_size_elems,
+                                          interaction_ugrad_2D_stride,
+                                          input_size_elems,
+                                          input_stride,
+                                          num_row_steps,
+                                          num_col_steps,
+                                          row_tiles_per_step,
+                                          shared_mem_per_warp_size_byte);
+                };
+
+                hipEvent_t startEvent, stopEvent;
+                CHECK_HIP_ERROR(hipEventCreate(&startEvent));
+                CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
+
+                CHECK_HIP_ERROR(hipEventRecord(startEvent));
+                for(uint32_t i = 0; i < mRepeats; ++i)
+                {
+                    dlrmKernel();
+                }
+                CHECK_HIP_ERROR(hipEventRecord(stopEvent));
+                CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
+
+                auto timeMs = 0.0f;
+                CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
+
+                // Calculate efficiency
+                auto& deviceInfo             = DeviceInfo::instance();
+                auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
+
+                mElapsedTimeMs        = float64_t(timeMs);
+                mTotalGFlops          = calculateGFlops(mM, mN, mK);
+                mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
+                                        * static_cast<float64_t>(mRepeats);
+                mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
+
+                CHECK_HIP_ERROR(hipEventDestroy(startEvent));
+                CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
             }
         }
 
-        auto timeMs = 0.0f;
-        CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
+        // hipEvent_t startEvent, stopEvent;
+        // CHECK_HIP_ERROR(hipEventCreate(&startEvent));
+        // CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
 
-        // Calculate efficiency
-        auto& deviceInfo             = DeviceInfo::instance();
-        auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
+        // CHECK_HIP_ERROR(hipEventRecord(startEvent));
+        // dlrmKernel();
+        // CHECK_HIP_ERROR(hipEventRecord(stopEvent));
 
-        mElapsedTimeMs        = float64_t(timeMs);
-        mTotalGFlops          = calculateGFlops(mM, mN, mK);
-        mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs);
-        mEfficiency           = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
+        // CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
+
+        // auto timeMs = 0.0f;
+        // CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
+
+        // // Calculate efficiency
+        // auto& deviceInfo             = DeviceInfo::instance();
+        // auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
+
+        // mElapsedTimeMs        = float64_t(timeMs);
+        // mTotalGFlops          = calculateGFlops(mM, mN, mK);
+        // mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs);
+        // mEfficiency           = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
     }
 }
 
@@ -443,18 +631,21 @@ void DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>::validateResults()
 
         if(!isBwd)
         {
-            EXPECT_TRUE(allclose<DataT>(dataInstance->hostOutputRef().get(),
-                                        dataInstance->hostOutput().get(),
-                                        std::get<2>(mCurrentDataSizeFwd) * sizeof(DataT)));
+            mValidationResult = allclose<DataT>(dataInstance->hostOutputRef().get(),
+                                                dataInstance->hostOutput().get(),
+                                                std::get<2>(mCurrentDataSizeFwd) * sizeof(DataT));
+            EXPECT_TRUE(mValidationResult);
         }
         else
         {
-            EXPECT_TRUE(allclose<DataT>(dataInstance->hostGradRef().get(),
-                                        dataInstance->hostGrad().get(),
-                                        std::get<3>(mCurrentDataSizeBwd) * sizeof(DataT)));
-            EXPECT_TRUE(allclose<DataT>(dataInstance->hostBottomMlpGradRef().get(),
-                                        dataInstance->hostBottomMlpGrad().get(),
-                                        std::get<5>(mCurrentDataSizeBwd) * sizeof(DataT)));
+            mValidationResult = allclose<DataT>(dataInstance->hostGradRef().get(),
+                                                dataInstance->hostGrad().get(),
+                                                std::get<3>(mCurrentDataSizeBwd) * sizeof(DataT));
+            EXPECT_TRUE(mValidationResult);
+            mValidationResult = allclose<DataT>(dataInstance->hostBottomMlpGradRef().get(),
+                                                dataInstance->hostBottomMlpGrad().get(),
+                                                std::get<5>(mCurrentDataSizeBwd) * sizeof(DataT));
+            EXPECT_TRUE(mValidationResult);
         }
     }
 #endif

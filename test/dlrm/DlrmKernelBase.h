@@ -192,8 +192,10 @@ protected:
     uint32_t mM, mN, mK;
 
     // Execution flow control
-    bool mRunFlag = true;
-    bool isBwd    = false;
+    uint32_t mRepeats;
+    bool     mRunFlag          = true;
+    bool     mValidationResult = false;
+    bool     isBwd             = false;
 
     // Performance
     float64_t mTotalGFlops, mMeasuredGFlopsPerSec;
