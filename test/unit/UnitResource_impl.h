@@ -41,11 +41,6 @@ UnitResource<DataT>::UnitResource()
 }
 
 template <typename DataT>
-UnitResource<DataT>::~UnitResource()
-{
-}
-
-template <typename DataT>
 auto UnitResource<DataT>::allocDevice(int64_t numElements) -> DevicePtrT
 {
     DataT* data;
@@ -76,23 +71,13 @@ void UnitResource<DataT>::copyData(DevicePtrT& dst, HostPtrT const& src, int64_t
 template <typename DataT>
 void UnitResource<DataT>::resizeStorage(ProblemSize const& size)
 {
-    auto calcMatrixSizes = [](ProblemSize const& size) {
-        return (std::get<M>(size) * std::get<N>(size)); // M * N = C, D
-    };
-
-    auto allocHostIfNeeded
-        = [](auto& hostPtr, int64_t newSize) { hostPtr = std::move(allocHost(newSize)); };
-
-    auto allocDevIfNeeded
-        = [](auto& devicePtr, int64_t newSize) { devicePtr = std::move(allocDevice(newSize)); };
-
-    auto newSize = calcMatrixSizes(size);
+    auto newSize = std::get<M>(size) * std::get<N>(size); // M * N = C, D
 
     if(mCurrentMatrixSize < newSize)
     {
-        allocHostIfNeeded(mHostIn, newSize);
-        allocDevIfNeeded(mDeviceIn, newSize);
-        allocDevIfNeeded(mDeviceOut, newSize);
+        mHostIn    = std::move(allocHost(newSize));
+        mDeviceIn  = std::move(allocDevice(newSize));
+        mDeviceOut = std::move(allocDevice(newSize));
     }
 
     mCurrentMatrixSize = newSize;

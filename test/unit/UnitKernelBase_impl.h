@@ -196,7 +196,35 @@ void UnitKernelBase<BlockM, BlockN, DataT, Layout>::exec()
 {
     if(mRunFlag)
     {
-        execImpl();
+        hipEvent_t startEvent, stopEvent;
+        CHECK_HIP_ERROR(hipEventCreate(&startEvent));
+        CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
+
+        auto& dataInstance = DataStorage::instance();
+
+        hipExtLaunchKernelGGL((kernelImpl()), // Kernel to launch
+                              (gridDim()), // Wg grid size
+                              (blockDim()), // Thread block size
+                              (ldsUsage()), // sharedMemBytes
+                              0, // stream
+                              startEvent, // Event start
+                              stopEvent, // event stop
+                              0, // flags
+                              mM, // M
+                              mN, // N
+                              dataInstance->deviceIn().get(), // In*
+                              dataInstance->deviceOut().get(), // Out*
+                              mLd, // ld
+                              mParam1, // param1
+                              mParam2); // param2
+
+        auto timeMs = 0.0f;
+        CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
+        CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
+        CHECK_HIP_ERROR(hipEventDestroy(startEvent));
+        CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
+
+        mElapsedTimeMs = float64_t(timeMs);
     }
 }
 
