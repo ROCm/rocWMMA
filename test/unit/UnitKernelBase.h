@@ -51,10 +51,10 @@ struct KernelI
     virtual ~KernelI(){};
 
     virtual void          setup(ProblemParams const& problem)                 = 0;
-    virtual void          exec()                                              = 0;
     virtual void          validateResults()                                   = 0;
     virtual void          reportResults()                                     = 0;
     virtual void          tearDown()                                          = 0;
+    virtual void          exec()                                              = 0;
     virtual std::ostream& printHeader(std::ostream& stream = std::cout) const = 0;
     virtual std::ostream& printKernel(std::ostream& stream = std::cout) const = 0;
 
@@ -97,7 +97,6 @@ protected:
     virtual void       setupImpl(typename DataStorage::ProblemSize const& size) = 0;
     virtual KernelFunc kernelImpl() const                                       = 0;
     virtual void       validateResultsImpl()                                    = 0;
-    virtual void       execImpl()                                               = 0;
 
     // Launch parameters.
     // Base calculations for grid and block dimensions

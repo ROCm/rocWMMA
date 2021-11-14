@@ -32,6 +32,7 @@
 
 #include <hip/hip_runtime_api.h>
 
+#include "HipResource.h"
 #include "Singleton.h"
 
 // UnitResource class is intended to manage a shared pool of resources for
@@ -47,20 +48,22 @@
 // Currently uses HIP as the backend for device allocation.
 
 template <typename DataT>
-struct UnitResource : public LazySingleton<UnitResource<DataT>>
+struct UnitResource : public HipResource, public LazySingleton<UnitResource<DataT>>
 {
     // For static initialization
-    friend class LazySingleton<UnitResource<DataT>>;
+    friend std::unique_ptr<UnitResource<DataT>> std::make_unique<UnitResource<DataT>>();
+
+    using Base = HipResource;
+
+    using DevicePtrT = Base::DevicePtrT<DataT>;
+
+    using HostPtrT = Base::HostPtrT<DataT>;
 
     // M, N
     using ProblemSize = std::tuple<int64_t, int64_t>;
 
     // MatrixInOut(# of elements)
     using MatrixSize = int64_t;
-
-    using DevicePtrT = std::unique_ptr<DataT, void (*)(DataT*)>;
-
-    using HostPtrT = std::unique_ptr<DataT[]>;
 
     enum : uint32_t
     {
@@ -69,22 +72,21 @@ struct UnitResource : public LazySingleton<UnitResource<DataT>>
         N = 1
     };
 
-public:
+protected:
+    // Singleton instantiation
     UnitResource();
-    ~UnitResource();
+    UnitResource(UnitResource const&) = delete;
+    UnitResource& operator=(UnitResource const&) = delete;
 
+public:
+    ~UnitResource() = default;
     static DevicePtrT allocDevice(int64_t numElements);
+    static HostPtrT   allocHost(int64_t numElements);
+    void              resizeStorage(ProblemSize const& size);
+    static void       copyData(HostPtrT& dst, DevicePtrT const& src, int64_t numElements);
+    static void       copyData(DevicePtrT& dst, HostPtrT const& src, int64_t numElements);
 
-    static HostPtrT allocHost(int64_t numElements);
-
-    void resizeStorage(ProblemSize const& size);
-
-    static void copyData(HostPtrT& dst, DevicePtrT const& src, int64_t numElements);
-
-    static void copyData(DevicePtrT& dst, HostPtrT const& src, int64_t numElements);
-
-    HostPtrT& hostIn();
-
+    HostPtrT&   hostIn();
     DevicePtrT& deviceIn();
     DevicePtrT& deviceOut();
 
@@ -93,10 +95,6 @@ protected:
     HostPtrT    mHostIn;
     ProblemSize mCurrentProblemSize;
     MatrixSize  mCurrentMatrixSize;
-
-private: // No copy
-    UnitResource(UnitResource const&);
-    UnitResource& operator=(UnitResource const&);
 };
 
 #include "UnitResource_impl.h"

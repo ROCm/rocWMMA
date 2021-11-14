@@ -45,39 +45,6 @@ public:
 
     void validateResultsImpl() final {}
 
-    void execImpl() final
-    {
-        hipEvent_t startEvent, stopEvent;
-        CHECK_HIP_ERROR(hipEventCreate(&startEvent));
-        CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
-
-        auto& dataInstance = Base::DataStorage::instance();
-
-        hipExtLaunchKernelGGL((kernelImpl()), // Kernel to launch
-                              dim3(1), // Wg grid size
-                              dim3(1), // Thread block size
-                              (Base::ldsUsage()), // sharedMemBytes
-                              0, // stream
-                              startEvent, // Event start
-                              stopEvent, // event stop
-                              0, // flags
-                              Base::mM, // M
-                              Base::mN, // N
-                              dataInstance->deviceIn().get(), // In*
-                              dataInstance->deviceOut().get(), // Out*
-                              Base::mLd, // ld
-                              Base::mParam1, // param1
-                              Base::mParam2); // param2
-
-        auto timeMs = 0.0f;
-        CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
-        CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
-        CHECK_HIP_ERROR(hipEventDestroy(startEvent));
-        CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
-
-        Base::mElapsedTimeMs = float64_t(timeMs);
-    }
-
     typename Base::KernelFunc kernelImpl() const final
     {
         return typename Base::KernelFunc(VectorIterator<BlockM, BlockN, DataT, Layout>);
