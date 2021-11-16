@@ -80,11 +80,7 @@ protected:
 
 public:
     ~UnitResource() = default;
-    static DevicePtrT allocDevice(int64_t numElements);
-    static HostPtrT   allocHost(int64_t numElements);
-    void              resizeStorage(ProblemSize const& size);
-    static void       copyData(HostPtrT& dst, DevicePtrT const& src, int64_t numElements);
-    static void       copyData(DevicePtrT& dst, HostPtrT const& src, int64_t numElements);
+    void resizeStorage(ProblemSize const& size);
 
     HostPtrT&   hostIn();
     DevicePtrT& deviceIn();

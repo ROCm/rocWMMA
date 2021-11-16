@@ -50,7 +50,7 @@ public:
         dataInstance->resizeStorage(probsize);
 
         // Initialize matrix data on host
-        MatrixUtil<Layout>::GenerateLayoutIds(dataInstance->hostIn().get(), Base::mM, Base::mN);
+        MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
 
         dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), sizeD);
     }
@@ -61,21 +61,26 @@ public:
 
         // Allocated managed memory for results on host
         const int64_t sizeD        = Base::mM * Base::mN;
-        auto          kernelResult = dataInstance->allocHost(sizeD);
+        auto          kernelResult = dataInstance->template allocHost<DataT>(sizeD);
 
         // Cache current kernel result from device
         dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
 
-        double errorTolerance = 10.0;
+        if(static_cast<double>(static_cast<float>(kernelResult[0]))
+           != static_cast<double>(ERROR_VALUE))
+        {
+            double errorTolerance = 10.0;
 
-        std::tie(Base::mValidationResult, Base::mMaxRelativeError)
-            = compareEqual<DataT, DataT, Layout, Layout>(kernelResult.get(),
-                                                         dataInstance->hostIn().get(),
-                                                         Base::mM,
-                                                         Base::mN,
-                                                         errorTolerance);
+            std::tie(Base::mValidationResult, Base::mMaxRelativeError)
+                = compareEqual<DataT, DataT, Layout, Layout>(kernelResult.get(),
+                                                             dataInstance->hostIn().get(),
+                                                             Base::mM,
+                                                             Base::mN,
+                                                             errorTolerance);
 
-        EXPECT_TRUE(Base::mValidationResult) << "Max relative error: " << Base::mMaxRelativeError;
+            EXPECT_TRUE(Base::mValidationResult)
+                << "Max relative error: " << Base::mMaxRelativeError;
+        }
     }
 
     typename Base::KernelFunc kernelImpl() const final

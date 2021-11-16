@@ -197,27 +197,6 @@ struct MatrixUtil
         assert(mat.size() == n * m);
         fill(mat.data(), m, n, value);
     }
-
-    template <typename DataT>
-    __host__ static inline void GenerateLayoutIds(DataT* data, int m, int n)
-    {
-        auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
-        auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
-
-        auto index = std::is_same<Layout, row_major>::value ? rowMjr : colMjr;
-        auto ld    = std::is_same<Layout, row_major>::value ? n : m;
-
-#pragma omp parallel for
-        for(int i = 0; i < m; ++i) // row
-        {
-#pragma omp parallel for
-            for(int j = 0; j < n; ++j) // col
-            {
-                auto idx  = index(i, j, ld);
-                data[idx] = static_cast<DataT>(idx);
-            }
-        }
-    }
 };
 
 template <typename DataT, typename DataLayout>

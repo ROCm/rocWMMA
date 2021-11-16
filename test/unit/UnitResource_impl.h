@@ -41,45 +41,16 @@ UnitResource<DataT>::UnitResource()
 }
 
 template <typename DataT>
-auto UnitResource<DataT>::allocDevice(int64_t numElements) -> DevicePtrT
-{
-    DataT* data;
-    CHECK_HIP_ERROR(hipMalloc(&data, numElements * sizeof(DataT)));
-    return DevicePtrT(data, [](DataT* d) { CHECK_HIP_ERROR(hipFree(d)); });
-}
-
-template <typename DataT>
-auto UnitResource<DataT>::allocHost(int64_t numElements) -> HostPtrT
-{
-    return HostPtrT(new DataT[numElements]);
-}
-
-template <typename DataT>
-void UnitResource<DataT>::copyData(HostPtrT& dst, DevicePtrT const& src, int64_t numElements)
-{
-    CHECK_HIP_ERROR(
-        hipMemcpy(dst.get(), src.get(), numElements * sizeof(DataT), hipMemcpyDeviceToHost));
-}
-
-template <typename DataT>
-void UnitResource<DataT>::copyData(DevicePtrT& dst, HostPtrT const& src, int64_t numElements)
-{
-    CHECK_HIP_ERROR(
-        hipMemcpy(dst.get(), src.get(), numElements * sizeof(DataT), hipMemcpyHostToDevice));
-}
-
-template <typename DataT>
 void UnitResource<DataT>::resizeStorage(ProblemSize const& size)
 {
     auto newSize = std::get<M>(size) * std::get<N>(size); // M * N = C, D
 
     if(mCurrentMatrixSize < newSize)
     {
-        mHostIn    = std::move(allocHost(newSize));
-        mDeviceIn  = std::move(allocDevice(newSize));
-        mDeviceOut = std::move(allocDevice(newSize));
+        mHostIn    = std::move(Base::template allocHost<DataT>(newSize));
+        mDeviceIn  = std::move(Base::template allocDevice<DataT>(newSize));
+        mDeviceOut = std::move(Base::template allocDevice<DataT>(newSize));
     }
-
     mCurrentMatrixSize = newSize;
 }
 
