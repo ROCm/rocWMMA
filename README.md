@@ -3,7 +3,7 @@
 AMD's C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications on GPU using MFMA hardware cores.
 
 ## Minimum Requirements
-* Rocm stack minimum version 4.0
+* Rocm stack minimum version 4.3
 * C++ 14
 * CMake >=3.5
 * OpenMP
