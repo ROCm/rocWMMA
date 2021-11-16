@@ -472,6 +472,12 @@ namespace Layout
             using MatrixCoordT = typename MappingUtil::CoordT;
         };
 
+        static_assert(!(std::is_same<DataLayout, col_major>::value && VectorWidth > 1),
+                      "Col4T in column major does not support VectorWidth > 1");
+
+        static_assert(BlockDim <= AMDGCN_WAVE_SIZE,
+                      "Col4T only supports BlockDim <= AMDGCN_WAVE_SIZE");
+
         __device__ static inline typename Traits::MatrixCoordT baseOffset()
         {
             return std::make_pair(threadIdx.x % BlockDim,
@@ -691,6 +697,16 @@ namespace Layout
                                       VectorWidth,
                                       MaxVectorWidth>;
         };
+
+        static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
+                      "Row4T in row major does not support VectorWidth > 1");
+
+        static_assert(BlockDim <= AMDGCN_WAVE_SIZE,
+                      "Row4T only supports BlockDim <= AMDGCN_WAVE_SIZE");
+
+        static_assert(BlockK >= MaxVectorWidth, "BlockK must be at least MaxVectorWidth");
+
+        static_assert(BlockK % MaxVectorWidth == 0, "BlockK must be a multiple of MaxVectorWidth");
 
         __device__ static inline typename Traits::MatrixCoordT baseOffset()
         {
