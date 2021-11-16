@@ -47,18 +47,10 @@ set(LayoutTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/ColLayout_16x16_T.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/ColLayout_32x32_N.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/ColLayout_32x32_T.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/ColNTLayout_16x16_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/ColNTLayout_16x16_T.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/ColNTLayout_32x32_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/ColNTLayout_32x32_T.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/RowLayout_16x16_N.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/RowLayout_16x16_T.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/RowLayout_32x32_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/RowLayout_32x32_T.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/RowNTLayout_16x16_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/RowNTLayout_16x16_T.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/RowNTLayout_32x32_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/RowNTLayout_32x32_T.cpp)
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/RowLayout_32x32_T.cpp)
 
 set(MapUtilTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapBlockToMatrix_16x16_N.cpp
