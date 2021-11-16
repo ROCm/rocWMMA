@@ -31,6 +31,8 @@
 #include "Layout.h"
 #include "MappingUtil.h"
 
+#define ERROR_VALUE 12
+
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename LayoutP>
 __global__ void RowNTLayout(
     uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld, DataT param1, DataT param2)
@@ -40,9 +42,14 @@ __global__ void RowNTLayout(
         MaxVectorWidth    = VecWidthTraits<BlockM, BlockN, DataT>::MaxVectorWidth,
         ElementsPerThread = std::is_same<LayoutP, row_major>::value ? MaxVectorWidth : 1
     };
-#if 0
-    if((std::is_same<LayoutP, row_major>::value && ElementsPerThread > 1))
+
+    if((std::is_same<LayoutP, row_major>::value && ElementsPerThread > 1)
+       || (BlockM > AMDGCN_WAVE_SIZE) || (BlockN < MaxVectorWidth)
+       || (BlockN % MaxVectorWidth != 0))
+    {
+        out[0] = static_cast<DataT>(ERROR_VALUE);
         return;
+    }
 
     using IOTraits = amdgcn_io_traits<BlockM, BlockN, DataT, ElementsPerThread>;
     using LayoutT
@@ -66,10 +73,9 @@ __global__ void RowNTLayout(
             auto index
                 = (std::get<MajorIndex>(matrixCoord) * ld + std::get<MinorIndex>(matrixCoord))
                   + baseOffset + j;
-            out[index] = index;
+            out[index] = in[index];
         }
         baseOffset += LayoutT::dataOffsetIncrement(i, ld);
     }
-#endif
 }
 #endif // WMMA_DEVICE_ROWNT_LAYOUT_H

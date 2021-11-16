@@ -69,14 +69,6 @@ set(MapUtilTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapMatrixToData_16x16_T.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapMatrixToData_32x32_N.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapMatrixToData_32x32_T.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapMatrixToDataOverrideM_16x16_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapMatrixToDataOverrideM_16x16_T.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapMatrixToDataOverrideM_32x32_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapMatrixToDataOverrideM_32x32_T.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapMatrixToDataOverrideN_16x16_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapMatrixToDataOverrideN_16x16_T.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapMatrixToDataOverrideN_32x32_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapMatrixToDataOverrideN_32x32_T.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapThreadToMatrix_16x16_N.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapThreadToMatrix_16x16_T.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapThreadToMatrix_32x32_N.cpp

@@ -62,7 +62,7 @@ public:
         // Allocated managed memory for results on host
         const int64_t sizeD = Base::mM * Base::mN;
 
-        auto kernelResult = dataInstance->allocHost(sizeD);
+        auto kernelResult = dataInstance->template allocHost<DataT>(sizeD);
 
         // Cache current kernel result from device
         dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);

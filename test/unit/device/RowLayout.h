@@ -62,7 +62,7 @@ __global__ void RowLayout(
             auto index
                 = (std::get<MajorIndex>(matrixCoord) * ld + std::get<MinorIndex>(matrixCoord))
                   + baseOffset + j;
-            out[index] = index;
+            out[index] = in[index];
         }
         baseOffset += LayoutT::dataOffsetIncrement(i, ld);
     }
