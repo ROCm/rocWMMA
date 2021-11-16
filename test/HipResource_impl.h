@@ -27,6 +27,7 @@
 #ifndef WMMA_HIP_RESOURCE_IMPL_H
 #define WMMA_HIP_RESOURCE_IMPL_H
 
+#include "Common.hpp"
 #include "HipResource.h"
 #include <hip/hip_runtime_api.h>
 

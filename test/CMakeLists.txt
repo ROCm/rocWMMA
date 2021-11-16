@@ -92,3 +92,4 @@ function(add_wmma_benchmark_test TEST_TARGET TEST_SOURCE)
 endfunction()
 
 add_subdirectory(gemm)
+add_subdirectory(unit)
