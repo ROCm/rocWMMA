@@ -43,15 +43,18 @@ struct UnitTestParams
     ///
 
     // Testing types as Input/Output/Compute (IOC)
-    using TestTypesIOC = std::tuple<
-        // Native int8
-        float32_t,
-        float16_t,
-        hfloat16_t,
-        int8_t,
-        int32_t,
-        uint8_t,
-        uint32_t>;
+    using TestTypesIOC = std::tuple<bfloat16_t,
+                                    float16_t,
+                                    hfloat16_t,
+                                    float32_t,
+                                    int8_t
+#ifdef WMMA_EXTENDED_TESTS
+                                    ,
+                                    int32_t,
+                                    uint8_t,
+                                    uint32_t
+#endif // WMMA_EXTENDED_TESTS
+                                    >;
 
     // Native double
     using TestTypeDouble = float64_t;
@@ -68,20 +71,63 @@ struct UnitTestParams
 
     // BlockK variances for particular BlockM, BlockN
     using TestBlockSizes16x16 = std::tuple<std::tuple<I<16>, I<16>>,
-                                           std::tuple<I<16>, I<16>>,
-                                           std::tuple<I<16>, I<16>>,
-                                           std::tuple<I<16>, I<16>>,
-                                           std::tuple<I<16>, I<16>>>;
+                                           std::tuple<I<16>, I<32>>,
+                                           std::tuple<I<16>, I<64>>
+#ifdef WMMA_EXTENDED_TESTS
+                                           ,
+                                           std::tuple<I<16>, I<128>>,
+                                           std::tuple<I<16>, I<256>>
+#endif // WMMA_EXTENDED_TESTS
+                                           >;
 
-    using TestBlockSizes32x32 = std::tuple<std::tuple<I<32>, I<32>>,
+    using TestBlockSizes32x32 = std::tuple<std::tuple<I<32>, I<8>>,
+                                           std::tuple<I<32>, I<16>>,
                                            std::tuple<I<32>, I<32>>,
-                                           std::tuple<I<32>, I<32>>,
-                                           std::tuple<I<32>, I<32>>,
-                                           std::tuple<I<32>, I<32>>>;
+                                           std::tuple<I<32>, I<64>>
+#ifdef WMMA_EXTENDED_TESTS
+                                           ,
+                                           std::tuple<I<32>, I<128>>,
+                                           std::tuple<I<32>, I<256>>
+#endif // WMMA_EXTENDED_TESTS
+                                           >;
+
+    using TestBlockSizes64 = std::tuple<std::tuple<I<64>, I<8>>,
+                                        std::tuple<I<64>, I<16>>,
+                                        std::tuple<I<64>, I<32>>,
+                                        std::tuple<I<64>, I<64>>
+#ifdef WMMA_EXTENDED_TESTS
+                                        ,
+                                        std::tuple<I<64>, I<128>>,
+                                        std::tuple<I<64>, I<256>>
+#endif // WMMA_EXTENDED_TESTS
+                                        >;
+
+    using TestBlockSizes128 = std::tuple<std::tuple<I<128>, I<8>>,
+                                         std::tuple<I<128>, I<16>>,
+                                         std::tuple<I<128>, I<32>>,
+                                         std::tuple<I<128>, I<64>>
+#ifdef WMMA_EXTENDED_TESTS
+                                         ,
+                                         std::tuple<I<128>, I<128>>,
+                                         std::tuple<I<128>, I<256>>
+#endif // WMMA_EXTENDED_TESTS
+                                         >;
+
+    using TestBlockSizes256 = std::tuple<std::tuple<I<256>, I<8>>,
+                                         std::tuple<I<256>, I<16>>,
+                                         std::tuple<I<256>, I<32>>,
+                                         std::tuple<I<256>, I<64>>
+#ifdef WMMA_EXTENDED_TESTS
+                                         ,
+                                         std::tuple<I<256>, I<128>>,
+                                         std::tuple<I<256>, I<256>>
+#endif // WMMA_EXTENDED_TESTS
+                                         >;
 
     // Layout groupings
-    using TestLayoutsN = col_major;
-    using TestLayoutsT = row_major;
+    using TestLayoutsN   = col_major;
+    using TestLayoutsT   = row_major;
+    using TestLayoutsAll = typename CombineLists<TestLayoutsN, TestLayoutsT>::Result;
 
     ///
     /// Run-time kernel argument parameters
@@ -96,30 +142,41 @@ struct UnitTestParams
 
     static inline std::vector<ThreadBlockT> threadBlocks()
     {
-        return {{64, 1}, {64, 2}, {64, 4}, {128, 1}, {128, 2}, {256, 1}};
+        // clang-format off
+        return { {64, 1},  // 1 Wave
+                 {64, 2}, {128, 1}, // 2 Waves
+                 {64, 4}, {128, 2}, {256, 1}, // 4 Waves
+#ifdef WMMA_EXTENDED_TESTS
+                 {64, 8}, {128, 4}, {256, 2}, {512, 1} // 8 waves
+#endif // WMMA_EXTENDED_TESTS
+            };
+        // clang-format on
     }
 
     static inline std::vector<ProblemSizeT> problemSizes()
     {
-        return {{64, 64},
-                {32, 64},
-                {64, 32},
-                {256, 256},
-                {2048, 64},
-                {64, 2048},
-                {1024, 1024}
-#ifndef WMMA_VALIDATE_TESTS
-                ,
-                {2048, 2048},
-                {2560, 2560},
-                {3072, 3072},
-                {3584, 3584},
-                {4096, 4096},
-                {5120, 5120},
-                {6144, 6144},
-                {7168, 7168},
-                {8192, 8192}
-#endif // WMMA_VALIDATE_TESTS
+        // clang-format off
+        // Test at least all the 1-wave and rectangular sizes
+        return { {16, 16},  {16, 32},   {16, 64},   {16, 128},  {16, 256},
+                 {32, 8},   {32, 16},   {32, 32},   {32, 64},   {32, 128},   {32, 256},
+                 {64, 8},   {64, 16},   {64, 32},   {64, 64},   {64, 128},   {64, 256},
+                 {128, 8},  {128, 16},  {128, 32},  {128, 64},  {128, 128},  {128, 256},
+                 {256, 8},  {256, 16},  {256, 32},  {256, 64},  {256, 128},  {256, 256},
+                 {512, 8},  {512, 16},  {512, 32},  {512, 64},  {512, 128},  {512, 256},  {512, 512},
+                 {1024, 8}, {1024, 16}, {1024, 32}, {1024, 64}, {1024, 128}, {1024, 256}, {1024, 512}, {1024, 1024},
+
+#ifdef WMMA_EXTENDED_TESTS
+                 {2048, 2048},
+                 {2560, 2560},
+                 {3072, 3072},
+                 {3584, 3584},
+                 {4096, 4096},
+                 {5120, 5120},
+                 {6144, 6144},
+                 {7168, 7168},
+                 {8192, 8192}
+#endif // WMMA_EXTENDED_TESTS \
+    // clang-format on
         };
     }
 

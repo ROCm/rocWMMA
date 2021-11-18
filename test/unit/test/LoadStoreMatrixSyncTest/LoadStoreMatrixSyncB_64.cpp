@@ -29,22 +29,23 @@
 #include "KernelGenerator.h"
 #include "detail/LoadStoreMatrixSync.h"
 #include "test/UnitTest.h"
+#include "test/UnitTestParams.h"
 
 struct TestParams : public UnitTestParams
 {
     using Base = UnitTestParams;
 
     // Types: ALL + double
-    // Block Sizes: 16 x 16 x BlockK
-    // Layouts: T
-    using Types        = typename Base::TestTypes16x16;
-    using BlockSizes   = typename Base::TestBlockSizes16x16;
-    using Layouts      = typename Base::TestLayoutsT;
+    // Block Sizes: 64 x BlockK
+    // Layouts: N, T
+    using Types        = typename Base::TestTypes32x32;
+    using BlockSizes   = typename Base::TestBlockSizes64;
+    using Layouts      = typename Base::TestLayoutsAll;
     using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
 
     // Assemble the kernel generator
-    // Kernel: LoadStoreMatrixSync
-    using GeneratorImpl   = LoadStoreMatrixSyncGenerator;
+    // Kernel: LoadStoreMatrixSyncB
+    using GeneratorImpl   = LoadStoreMatrixSyncGeneratorB;
     using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
     // Sanity check for kernel generator
@@ -58,17 +59,17 @@ struct TestParams : public UnitTestParams
 };
 
 // Test suite for unique parameterization
-class LoadStoreMatrixSyncTest16x16T : public UnitTest
+class LoadStoreMatrixSyncBTest64 : public UnitTest
 {
 };
 
-TEST_P(LoadStoreMatrixSyncTest16x16T, RunKernel)
+TEST_P(LoadStoreMatrixSyncBTest64, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(KernelTests,
-                         LoadStoreMatrixSyncTest16x16T,
+                         LoadStoreMatrixSyncBTest64,
                          ::testing::Combine(::testing::ValuesIn(TestParams::kernels()),
                                             ::testing::ValuesIn(TestParams::threadBlocks()),
                                             ::testing::ValuesIn(TestParams::problemSizes()),
