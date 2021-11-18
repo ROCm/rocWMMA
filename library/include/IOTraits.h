@@ -219,7 +219,7 @@ struct amdgcn_io_traits
         UnpackedVRegCount = PackedVRegCount * PackTraits<DataT>::PackRatio
     };
 
-    static_assert(KPerIO >= 1, "I/O operation must handle at least 1 element in K direction");
+    static_assert(PackedVRegCount >= 1, "Partial registers are not supported");
     static_assert((ElementsPerIO % BlockDim) == 0 || (ElementsPerIO % BlockK) == 0,
                   "I/O operation elements not a multiple of BlockDim");
     static_assert((ElementCount % ElementsPerIO) == 0,
