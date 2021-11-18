@@ -152,13 +152,26 @@ namespace Layout
 
         __device__ static inline typename Traits::MatrixCoordT baseOffset()
         {
-            return std::make_pair(threadIdx.x % BlockDim,
-                                  ((threadIdx.x / BlockDim) * VectorWidth) % IOTraits::KPerIO);
+            return std::make_pair(
+                threadIdx.x % std::min((uint32_t)BlockDim, (uint32_t)IOTraits::ThreadsPerIO),
+                ((threadIdx.x / BlockDim) * VectorWidth)
+                    % std::max((uint32_t)IOTraits::KPerIO, (uint32_t)1));
         }
 
         __device__ static inline typename Traits::MatrixCoordT offsetIncrement(uint32_t iteration)
         {
-            return std::make_pair(0, IOTraits::KPerIO);
+            if(BlockDim > IOTraits::ThreadsPerIO)
+            {
+                constexpr auto blockDimSegs = BlockDim / IOTraits::ThreadsPerIO;
+                return ((iteration + 1) % blockDimSegs)
+                           ? std::make_pair(IOTraits::ThreadsPerIO, 0)
+                           : std::make_pair(-IOTraits::ThreadsPerIO * (blockDimSegs - 1),
+                                            (int32_t)IOTraits::KPerIO);
+            }
+            else
+            {
+                return std::make_pair((uint32_t)0, IOTraits::KPerIO); // Shift K
+            }
         }
 
         __device__ static inline typename Traits::MatrixCoordT blockOffset()
@@ -204,13 +217,26 @@ namespace Layout
 
         __device__ static inline typename Traits::MatrixCoordT baseOffset()
         {
-            return std::make_pair((threadIdx.x * VectorWidth) % BlockDim,
-                                  ((threadIdx.x * VectorWidth) / BlockDim) % IOTraits::KPerIO);
+            return std::make_pair(
+                (threadIdx.x * VectorWidth)
+                    % std::min((uint32_t)BlockDim, (uint32_t)IOTraits::ElementsPerIO),
+                ((threadIdx.x * VectorWidth) / BlockDim)
+                    % std::max((uint32_t)IOTraits::KPerIO, (uint32_t)1));
         }
 
         __device__ static inline typename Traits::MatrixCoordT offsetIncrement(uint32_t iteration)
         {
-            return std::make_pair(0, IOTraits::KPerIO); // Shift K
+            if(BlockDim > IOTraits::ElementsPerIO)
+            {
+                constexpr auto blockDimSegs = BlockDim / IOTraits::ElementsPerIO;
+                return ((iteration + 1) % blockDimSegs)
+                           ? std::make_pair(IOTraits::ElementsPerIO, 0)
+                           : std::make_pair(-IOTraits::ElementsPerIO * (blockDimSegs - 1), 1);
+            }
+            else
+            {
+                return std::make_pair((uint32_t)0, IOTraits::KPerIO); // Shift K
+            }
         }
 
         __device__ static inline typename Traits::MatrixCoordT blockOffset()
@@ -473,10 +499,10 @@ namespace Layout
         };
 
         static_assert(!(std::is_same<DataLayout, col_major>::value && VectorWidth > 1),
-                      "Col4T in column major does not support VectorWidth > 1");
+                      "ColNT in column major does not support VectorWidth > 1");
 
-        static_assert(BlockDim <= AMDGCN_WAVE_SIZE,
-                      "Col4T only supports BlockDim <= AMDGCN_WAVE_SIZE");
+        static_assert(BlockDim < AMDGCN_WAVE_SIZE,
+                      "ColNT only supports BlockDim <= AMDGCN_WAVE_SIZE");
 
         __device__ static inline typename Traits::MatrixCoordT baseOffset()
         {
@@ -565,20 +591,6 @@ namespace Layout
         {
             return Traits::MappingUtil::dataOffset(ldm, blockOffset());
         }
-    };
-
-    // ColNT with BlockDim = 64, is the same as Col layout.
-    // Note: col_major only supported for VW = 1
-    template <uint32_t BlockK, typename DataT, uint32_t MaxVectorWidth>
-    struct ColNT<AMDGCN_WAVE_SIZE, BlockK, DataT, col_major, 1, MaxVectorWidth>
-        : public Col<AMDGCN_WAVE_SIZE, BlockK, DataT, col_major, 1>
-    {
-    };
-
-    template <uint32_t BlockK, typename DataT, uint32_t VectorWidth, uint32_t MaxVectorWidth>
-    struct ColNT<AMDGCN_WAVE_SIZE, BlockK, DataT, row_major, VectorWidth, MaxVectorWidth>
-        : public Col<AMDGCN_WAVE_SIZE, BlockK, DataT, row_major, VectorWidth>
-    {
     };
 
     /**
@@ -699,10 +711,10 @@ namespace Layout
         };
 
         static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
-                      "Row4T in row major does not support VectorWidth > 1");
+                      "RowNT in row major does not support VectorWidth > 1");
 
-        static_assert(BlockDim <= AMDGCN_WAVE_SIZE,
-                      "Row4T only supports BlockDim <= AMDGCN_WAVE_SIZE");
+        static_assert(BlockDim < AMDGCN_WAVE_SIZE,
+                      "RowNT only supports BlockDim <= AMDGCN_WAVE_SIZE");
 
         static_assert(BlockK >= MaxVectorWidth, "BlockK must be at least MaxVectorWidth");
 

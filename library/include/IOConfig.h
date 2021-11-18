@@ -87,8 +87,13 @@ struct IOConfig<matrix_a, BlockDim, BlockK, DataT, DataLayout>
     using Packer   = Pack<DataT, IOTraits::UnpackedSize>;
     using Unpacker = Unpack<DataT, IOTraits::PackedSize>;
 
+    // ColNT enforces MFMA ordering for supported BlockDim sizes.
+    // Outside this range, MFMA ordering is not guaranteed.
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using MatrixLayout = Layout::ColNT<BlkDim, BlkK, DT, DL, EPT, MaxVectorWidth>;
+    using MatrixLayout =
+        typename std::conditional_t<(BlockDim < AMDGCN_WAVE_SIZE),
+                                    Layout::ColNT<BlkDim, BlkK, DT, DL, EPT, MaxVectorWidth>,
+                                    Layout::Col<BlkDim, BlkK, DT, DL, EPT>>;
 
     using Loader
         = amdgcn_opaque_load_DxK<BlockDim, BlockK, DataT, DataLayout, MatrixLayout, VectorWidth>;
@@ -154,8 +159,13 @@ struct IOConfig<matrix_b, BlockDim, BlockK, DataT, DataLayout>
     using Packer   = Pack<DataT, IOTraits::UnpackedSize>;
     using Unpacker = Unpack<DataT, IOTraits::PackedSize>;
 
+    // RowNT enforces MFMA ordering for supported BlockDim sizes.
+    // Outside this range, MFMA ordering is not guaranteed.
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using MatrixLayout = Layout::RowNT<BlkDim, BlkK, DT, DL, EPT, MaxVectorWidth>;
+    using MatrixLayout =
+        typename std::conditional_t<(BlockDim < AMDGCN_WAVE_SIZE),
+                                    Layout::RowNT<BlkDim, BlkK, DT, DL, EPT, MaxVectorWidth>,
+                                    Layout::Row<BlkDim, BlkK, DT, DL, EPT>>;
 
     using Loader
         = amdgcn_opaque_load_DxK<BlockDim, BlockK, DataT, DataLayout, MatrixLayout, VectorWidth>;
@@ -222,7 +232,10 @@ struct IOConfig<accumulator, BlockDim, BlockK, DataT, DataLayout>
     using Unpacker = Unpack<DataT, IOTraits::PackedSize>;
 
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using MatrixLayout = Layout::RowNT<BlkDim, BlkK, DT, DL, EPT, MaxVectorWidth>;
+    using MatrixLayout =
+        typename std::conditional_t<(BlockDim < AMDGCN_WAVE_SIZE),
+                                    Layout::RowNT<BlkDim, BlkK, DT, DL, EPT, MaxVectorWidth>,
+                                    Layout::Row<BlkDim, BlkK, DT, DL, EPT>>;
 
     using Loader
         = amdgcn_opaque_load_DxK<BlockDim, BlockK, DataT, DataLayout, MatrixLayout, VectorWidth>;
