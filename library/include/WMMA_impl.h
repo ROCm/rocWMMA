@@ -293,13 +293,14 @@ namespace wmma
     __device__ void
         load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                               const DataT*                                                  data,
-                              uint32_t                                                      ldm)
+                              uint32_t                                                      ldm,
+                              uint32_t splitIndex,
+                              uint32_t splitCount)
     {
         using FragT  = typename std::decay<decltype(frag)>::type;
         using Config = io_config<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
         using Packer = typename Config::Packer;
-        using CoopLoader  = typename Config::CoopLoader;
-        using MappingUtil = MappingUtil<FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+        using CoopLoader = typename Config::CoopLoader;
 
         // Sanity checks
         static_assert(!std::is_same<DataLayout, void>::value,
@@ -309,6 +310,59 @@ namespace wmma
         static_assert(
             std::is_same<typename FragT::Traits::StorageT, typename Packer::Traits::OutputT>::value,
             "Fragment storage type and packed types do not match");
+
+        typename CoopLoader::Traits::OutputT unpacked;
+
+        // Each cooperative wave only loads the portion they are responsible for
+        // Note: at this point, the output frag is only partially filled with useful data
+        CoopLoader::exec(unpacked, data, ldm, splitIndex, splitCount);
+        (*frag) = Packer::exec(unpacked);
+    }
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout>
+    __device__ void store_matrix_coop_sync(
+        DataT*                                                              data,
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
+        uint32_t                                                            ldm,
+        uint32_t                                                            splitIndex,
+        uint32_t                                                            splitCount)
+    {
+
+        using FragT  = typename std::decay<decltype(frag)>::type;
+        using Config = io_config<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+        using CoopStorer = typename Config::CoopStorer;
+        using Unpacker   = typename Config::Unpacker;
+
+        // Sanity checks
+        static_assert(!std::is_same<DataLayout, void>::value,
+                      "Must provide data layout. Either statically assign data layout in "
+                      "fragment declaration or use the run-time function overload.");
+
+        static_assert(std::is_same<typename FragT::Traits::StorageT,
+                                   typename Unpacker::Traits::InputT>::value,
+                      "Fragment storage type and packed types do not match");
+
+        CoopStorer::exec(data, Unpacker::exec(*frag), ldm, splitIndex, splitCount);
+    }
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout>
+    __device__ void
+        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
+                              const DataT*                                                  data,
+                              uint32_t                                                      ldm)
+    {
+        using FragT       = typename std::decay<decltype(frag)>::type;
+        using MappingUtil = MappingUtil<FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
 
         // Splitting the K direction:
         // Matrix A:
@@ -320,12 +374,7 @@ namespace wmma
         constexpr auto coopIndex = std::is_base_of<matrix_a, MatrixT>::value ? 1 : 0;
         auto           waveIndex = std::get<coopIndex>(MappingUtil::waveCoord());
         auto           waveCount = std::get<coopIndex>(MappingUtil::workgroupDim());
-        typename CoopLoader::Traits::OutputT unpacked;
-
-        // Each cooperative wave only loads the portion they are responsible for
-        // Note: at this point, the output frag is only partially filled with useful data
-        CoopLoader::exec(unpacked, data, ldm, waveIndex, waveCount);
-        (*frag) = Packer::exec(unpacked);
+        load_matrix_coop_sync(frag, data, ldm, waveIndex, waveCount);
     }
 
     template <typename MatrixT,
@@ -340,20 +389,8 @@ namespace wmma
         uint32_t                                                            ldm)
     {
 
-        using FragT  = typename std::decay<decltype(frag)>::type;
-        using Config = io_config<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
-        using CoopStorer  = typename Config::CoopStorer;
-        using Unpacker    = typename Config::Unpacker;
+        using FragT       = typename std::decay<decltype(frag)>::type;
         using MappingUtil = MappingUtil<FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
-
-        // Sanity checks
-        static_assert(!std::is_same<DataLayout, void>::value,
-                      "Must provide data layout. Either statically assign data layout in "
-                      "fragment declaration or use the run-time function overload.");
-
-        static_assert(std::is_same<typename FragT::Traits::StorageT,
-                                   typename Unpacker::Traits::InputT>::value,
-                      "Fragment storage type and packed types do not match");
 
         // Splitting the K direction:
         // Matrix A:
@@ -366,7 +403,7 @@ namespace wmma
         auto           waveIndex = std::get<coopIndex>(MappingUtil::waveCoord());
         auto           waveCount = std::get<coopIndex>(MappingUtil::workgroupDim());
 
-        CoopStorer::exec(data, Unpacker::exec(*frag), ldm, waveIndex, waveCount);
+        store_matrix_coop_sync(frag, ldm, waveIndex, waveCount);
     }
 
     template <uint32_t BlockM,

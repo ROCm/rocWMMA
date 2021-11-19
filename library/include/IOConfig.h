@@ -242,7 +242,18 @@ struct IOConfig<accumulator, BlockDim, BlockK, DataT, DataLayout>
     using Storer
         = amdgcn_opaque_store_DxK<BlockDim, BlockK, DataT, DataLayout, MatrixLayout, VectorWidth>;
 
-    // Coop not applicable for C/D
+    using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
+                                                   BlockK,
+                                                   DataT,
+                                                   DataLayout,
+                                                   MatrixLayout,
+                                                   VectorWidth>;
+    using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
+                                                    BlockK,
+                                                    DataT,
+                                                    DataLayout,
+                                                    MatrixLayout,
+                                                    VectorWidth>;
 };
 
 /************************************************
