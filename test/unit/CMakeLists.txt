@@ -88,6 +88,24 @@ set(LoadStoreMatrixSyncTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncAcc_256.cpp
                     )
 
+set(LoadStoreMatrixCoopSyncTestSources ${UnitCommonSources}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixCoopSyncTest/LoadStoreMatrixCoopSyncA_16.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixCoopSyncTest/LoadStoreMatrixCoopSyncA_32.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixCoopSyncTest/LoadStoreMatrixCoopSyncA_64.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixCoopSyncTest/LoadStoreMatrixCoopSyncA_128.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixCoopSyncTest/LoadStoreMatrixCoopSyncA_256.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixCoopSyncTest/LoadStoreMatrixCoopSyncAcc_16.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixCoopSyncTest/LoadStoreMatrixCoopSyncAcc_32.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixCoopSyncTest/LoadStoreMatrixCoopSyncAcc_64.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixCoopSyncTest/LoadStoreMatrixCoopSyncAcc_128.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixCoopSyncTest/LoadStoreMatrixCoopSyncAcc_256.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixCoopSyncTest/LoadStoreMatrixCoopSyncB_16.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixCoopSyncTest/LoadStoreMatrixCoopSyncB_32.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixCoopSyncTest/LoadStoreMatrixCoopSyncB_64.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixCoopSyncTest/LoadStoreMatrixCoopSyncB_128.cpp
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixCoopSyncTest/LoadStoreMatrixCoopSyncB_256.cpp
+                 )
+
 set(FillFragmentTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragment_16x16_N.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragment_16x16_T.cpp
@@ -102,6 +120,7 @@ add_wmma_test(ContaminationTest ${ContaminationTestSources})
 add_wmma_test(LayoutTest ${LayoutTestSources})
 add_wmma_test(MapUtilTest ${MapUtilTestSources})
 add_wmma_test(LoadStoreMatrixSyncTest ${LoadStoreMatrixSyncTestSources})
+add_wmma_test(LoadStoreMatrixCoopSyncTest ${LoadStoreMatrixCoopSyncTestSources})
 add_wmma_test(FillFragmentTest ${FillFragmentTestSources})
 add_wmma_test(VectorIteratorTest ${VectorIteratorTestSources})
 
