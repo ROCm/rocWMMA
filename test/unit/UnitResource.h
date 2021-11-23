@@ -62,9 +62,6 @@ struct UnitResource : public HipResource, public LazySingleton<UnitResource<Data
     // M, N
     using ProblemSize = std::tuple<int64_t, int64_t>;
 
-    // MatrixInOut(# of elements)
-    using MatrixSize = int64_t;
-
     enum : uint32_t
     {
         // Problem size indices
@@ -86,11 +83,14 @@ public:
     DevicePtrT& deviceIn();
     DevicePtrT& deviceOut();
 
+    ProblemSize problemSize() const;
+    int64_t     maxCapacity() const;
+
 protected:
     DevicePtrT  mDeviceIn, mDeviceOut;
     HostPtrT    mHostIn;
     ProblemSize mCurrentProblemSize;
-    MatrixSize  mCurrentMatrixSize;
+    int64_t     mMaxCapacity;
 };
 
 #include "UnitResource_impl.h"
