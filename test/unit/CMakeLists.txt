@@ -33,14 +33,37 @@ set(UnitCommonSources ${WMMA_COMMON_TEST_SOURCES}
                        UnitKernelBase.cpp)
 
 set(ContaminationTestSources ${UnitCommonSources}
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContamination_16x16_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContamination_16x16_T.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContamination_32x32_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContamination_32x32_T.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContamination_16x16_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContamination_16x16_T.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContamination_32x32_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContamination_32x32_T.cpp)
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationA_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationA_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationA_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationA_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationA_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationB_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationB_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationB_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationB_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationB_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationAcc_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationAcc_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationAcc_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationAcc_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationAcc_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContaminationA_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContaminationA_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContaminationA_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContaminationA_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContaminationA_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContaminationAcc_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContaminationAcc_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContaminationAcc_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContaminationAcc_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContaminationAcc_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContaminationB_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContaminationB_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContaminationB_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContaminationB_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/StoreContaminationB_256.cpp
+                     )
 
 set(LayoutTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/ColLayout_16x16_N.cpp
