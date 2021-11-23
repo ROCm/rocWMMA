@@ -230,38 +230,47 @@ std::pair<bool, double> compareEqual(TypeA const* matrixA,
     std::mutex writeMutex;
 
 #pragma omp parallel for
-    for(int i = 0; (i < n) && !(isInf || isNaN); ++i) // Row
+    for(int i = 0; i < n; ++i) // Row
     {
-#pragma omp parallel for
-        for(int j = 0; (j < n) && !(isInf || isNaN); ++j) // Col
+        if(!isInf && !isNaN)
         {
-            auto indexA = std::is_same<LayoutA, row_major>::value ? (i * lda + j) : (i + j * lda);
-            auto indexB = std::is_same<LayoutB, row_major>::value ? (i * ldb + j) : (i + j * ldb);
 
-            auto numerator = fabs(toDoubleA(matrixA[indexA]) - toDoubleB(matrixB[indexB]));
-            auto divisor
-                = fabs(toDoubleA(matrixA[indexA])) + fabs(toDoubleB(matrixB[indexB])) + 1.0;
+#pragma omp parallel for
+            for(int j = 0; j < n; ++j) // Col
+            {
+                if(!isInf && !isNaN)
+                {
+                    auto indexA
+                        = std::is_same<LayoutA, row_major>::value ? (i * lda + j) : (i + j * lda);
+                    auto indexB
+                        = std::is_same<LayoutB, row_major>::value ? (i * ldb + j) : (i + j * ldb);
 
-            if(std::isinf(numerator) || std::isinf(divisor))
-            {
-#pragma omp atomic
-                isInf |= true;
-            }
-            else
-            {
-                auto relative_error = numerator / divisor;
-                if(std::isnan(relative_error))
-                {
-#pragma omp atomic
-                    isNaN |= true;
-                }
-                else if(relative_error > max_relative_error)
-                {
-                    const std::lock_guard<std::mutex> guard(writeMutex);
-                    // Double check in case of stall
-                    if(relative_error > max_relative_error)
+                    auto numerator = fabs(toDoubleA(matrixA[indexA]) - toDoubleB(matrixB[indexB]));
+                    auto divisor
+                        = fabs(toDoubleA(matrixA[indexA])) + fabs(toDoubleB(matrixB[indexB])) + 1.0;
+
+                    if(std::isinf(numerator) || std::isinf(divisor))
                     {
-                        max_relative_error = relative_error;
+#pragma omp atomic
+                        isInf |= true;
+                    }
+                    else
+                    {
+                        auto relative_error = numerator / divisor;
+                        if(std::isnan(relative_error))
+                        {
+#pragma omp atomic
+                            isNaN |= true;
+                        }
+                        else if(relative_error > max_relative_error)
+                        {
+                            const std::lock_guard<std::mutex> guard(writeMutex);
+                            // Double check in case of stall
+                            if(relative_error > max_relative_error)
+                            {
+                                max_relative_error = relative_error;
+                            }
+                        }
                     }
                 }
             }
@@ -272,12 +281,12 @@ std::pair<bool, double> compareEqual(TypeA const* matrixA,
     if(isInf)
     {
         retval             = false;
-        max_relative_error = std::numeric_limits<TypeA>::inf();
+        max_relative_error = std::numeric_limits<TypeA>::infinity();
     }
     else if(isNaN)
     {
         retval             = false;
-        max_relative_error = std::numeric_limits<TypeA>::nan();
+        max_relative_error = std::numeric_limits<TypeA>::signaling_NaN();
     }
     else if(max_relative_error > (eps * tolerance))
     {
