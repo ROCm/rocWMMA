@@ -36,11 +36,11 @@
 #include "KernelGenerator.h"
 
 // Wrapper into the actual device function
-template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
-struct DlrmDotKernel final : public DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>
+template <uint32_t TileSize, typename DataT>
+struct DlrmDotKernel final : public DlrmKernelBase<TileSize, DataT>
 {
 private:
-    using Base = DlrmKernelBase<BlockM, BlockN, BlockK, TileSize, DataT>;
+    using Base = DlrmKernelBase<TileSize, DataT>;
 
 public:
     DlrmDotKernel() {}
@@ -79,16 +79,15 @@ public:
 
     typename Base::KernelBwdFunc kernelBwdImpl() const final
     {
-        return
-            typename Base::KernelBwdFunc(dotBasedInteractBwdKernel<DataT,
-                                                                   kWarpsPerBlock,
-                                                                   kNumThreads,
-                                                                   kRowTilesPerStep,
-                                                                   kColTilesPerStep,
-                                                                   kWarpSize,
-                                                                   kWarpSizeLog2,
-                                                                   (TileSize ? TileSize : kTileDim),
-                                                                   kTileDimLog2>);
+        return typename Base::KernelBwdFunc(dotBasedInteractBwdKernel<DataT,
+                                                                      kWarpsPerBlock,
+                                                                      kNumThreads,
+                                                                      32 / TileSize,
+                                                                      kColTilesPerStep,
+                                                                      kWarpSize,
+                                                                      kWarpSizeLog2,
+                                                                      TileSize,
+                                                                      Log2<TileSize>::value>);
     }
 
     typename Base::KernelBwdFunc kernelBwdNonAlignedImpl() const final
@@ -97,12 +96,12 @@ public:
             dotBasedInteractBwdKernelNonAligned<DataT,
                                                 kWarpsPerBlock,
                                                 kNumThreads,
-                                                kRowTilesPerStep,
+                                                32 / TileSize,
                                                 kColTilesPerStep,
                                                 kWarpSize,
                                                 kWarpSizeLog2,
-                                                (TileSize ? TileSize : kTileDim),
-                                                kTileDimLog2>);
+                                                TileSize,
+                                                Log2<TileSize>::value>);
     }
 };
 
@@ -113,11 +112,7 @@ struct DlrmDotGenerator
     enum : uint32_t
     {
         DataT    = 0,
-        BlockM   = 1,
-        BlockN   = 2,
-        BlockK   = 3,
-        TileSize = 4
-
+        TileSize = 1
     };
 
     using ResultT = std::shared_ptr<KernelI>;
@@ -128,10 +123,7 @@ struct DlrmDotGenerator
         // Map GTest params to Kernel params
         using TestParamsT = std::tuple<Ts...>;
         using KernelT
-            = DlrmDotKernel<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
-                            std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
-                            std::tuple_element_t<BlockK, TestParamsT>::value, // BlockK
-                            std::tuple_element_t<TileSize, TestParamsT>::value, // TileSize
+            = DlrmDotKernel<std::tuple_element_t<TileSize, TestParamsT>::value, // TileSize
                             std::tuple_element_t<DataT, TestParamsT> // DataT
                             >;
 
@@ -139,7 +131,6 @@ struct DlrmDotGenerator
     }
 };
 
-// Needs changes
 struct DlrmDotTest
     : public ::testing::TestWithParam<std::tuple<typename DlrmTestParams::KernelT,
                                                  typename DlrmTestParams::ThreadBlockT,
@@ -171,6 +162,8 @@ struct DlrmDotTest
 
         // Walk through kernel workflow
         kernel->setup(params);
+
+        // run warm-up iteration based on static bool (runkernel)
     }
 
     virtual void RunKernel()
@@ -182,6 +175,13 @@ struct DlrmDotTest
         kernel->exec();
         kernel->validateResults();
         kernel->reportResults();
+    }
+
+    virtual void Warmup()
+    {
+        auto param  = Base::GetParam();
+        auto kernel = std::get<0>(param);
+        kernel->exec();
     }
 
     void TearDown() override

@@ -67,16 +67,18 @@ enum : uint32_t
     SMEM_STRIDE_ACC       = M_BLOCKS * 16 + 8,
 
     // Backwards kernel template parameters
-    kWarpsPerBlock   = 128 / kWarpSize,
-    kNumThreads      = kWarpsPerBlock * kWarpSize,
-    kRowTilesPerStep = 32 / kTileDim,
-    kColTilesPerStep = 1,
+    kWarpsPerBlock     = 128 / kWarpSize,
+    kWarpsPerBlockLog2 = Log2<kWarpsPerBlock>::value,
+    kNumThreads        = kWarpsPerBlock * kWarpSize,
+    kRowTilesPerStep   = 32 / kTileDim,
+    kColTilesPerStep   = 1,
 
     // Data sizes
-    BATCH_SIZE = 64,
-    NUM_ROWS   = 27,
-    NUM_COLS   = 128,
-    PAD        = 0
+    BATCH_SIZE    = 64,
+    NUM_ROWS      = 27,
+    NUM_COLS      = 128,
+    PAD           = 0,
+    MEM_SKEW_SIZE = 8
 };
 
 // Typeless Kernel interface to use with testing harness.
@@ -105,7 +107,7 @@ inline std::ostream& operator<<(std::ostream& stream, KernelI const& kernel)
 
 // Typed DLRM kernel that provides the basis for DLRM tests.
 // This class provides common implementation code.
-template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, uint32_t TileSize, typename DataT>
+template <uint32_t TileSize, typename DataT>
 struct DlrmKernelBase : public KernelI
 {
 protected: // Types
@@ -188,14 +190,13 @@ public:
 
 protected:
     // Problem params for kernel
-    uint32_t mTBlockX, mTBlockY;
     uint32_t mM, mN, mK;
 
     // Execution flow control
-    uint32_t mRepeats;
-    bool     mRunFlag          = true;
-    bool     mValidationResult = false;
-    bool     isBwd             = false;
+    uint32_t        mRepeats;
+    bool            mRunFlag = true;
+    bool            isBwd    = false;
+    validate_data_t mValidationResult;
 
     // Performance
     float64_t mTotalGFlops, mMeasuredGFlopsPerSec;
