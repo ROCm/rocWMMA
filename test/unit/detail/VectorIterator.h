@@ -38,8 +38,8 @@ private:
     using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
 public:
-    VectorIteratorKernel() {}
-    ~VectorIteratorKernel() final {}
+    VectorIteratorKernel()        = default;
+    ~VectorIteratorKernel() final = default;
 
     void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final {}
 

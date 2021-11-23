@@ -38,8 +38,8 @@ private:
     using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
 public:
-    LoadStoreMatrixSyncKernel() {}
-    virtual ~LoadStoreMatrixSyncKernel() {}
+    LoadStoreMatrixSyncKernel()          = default;
+    virtual ~LoadStoreMatrixSyncKernel() = default;
 
     void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
     {
@@ -75,8 +75,6 @@ public:
                                                          Base::mM,
                                                          Base::mN,
                                                          errorTolerance);
-
-        EXPECT_TRUE(Base::mValidationResult) << "Max relative error: " << Base::mMaxRelativeError;
     }
 
     virtual typename Base::KernelFunc kernelImpl() const = 0;
