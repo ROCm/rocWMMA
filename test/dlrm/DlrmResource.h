@@ -125,6 +125,10 @@ public:
     DevicePtrT<DataT>& deviceBottomMlpGrad();
     DevicePtrT<DataT>& deviceBottomMlpGradRef();
 
+    // Data sizes
+    DataSizeFwd& currentDataSizeFwd();
+    DataSizeBwd& currentDataSizeBwd();
+
 protected:
     // Forward pass data
     DevicePtrT<DataT> mDeviceInput, mDeviceOutput, mDeviceOutputRef;

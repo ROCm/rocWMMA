@@ -254,4 +254,15 @@ auto DlrmResource<DataT>::deviceBottomMlpGradRef() -> DevicePtrT<DataT>&
     return mDeviceBottomMlpGradRef;
 }
 
+template <typename DataT>
+auto DlrmResource<DataT>::currentDataSizeFwd() -> DataSizeFwd&
+{
+    return mCurrentDataSizeFwd;
+}
+
+template <typename DataT>
+auto DlrmResource<DataT>::currentDataSizeBwd() -> DataSizeBwd&
+{
+    return mCurrentDataSizeBwd;
+}
 #endif // DLRM_GEMM_RESOURCE_IMPL_H

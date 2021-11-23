@@ -47,14 +47,12 @@ struct DlrmTestParams
     using BwdDataSizeT   = std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t>;
     using PassDirectionT = bool;
 
-    //using DataTypes      = std::tuple<std::tuple<float32_t>, std::tuple<float16_t>>;
-    using DataTypes      = std::tuple<std::tuple<float32_t>, std::tuple<float16_t>>;
-    using TestBlockSizes = std::tuple<std::tuple<I<16>, I<16>, I<16>>>;
-    using TileSizes      = std::tuple<std::tuple<I<16>>, std::tuple<I<32>>>;
+    using DataTypes = std::tuple<std::tuple<float32_t>, std::tuple<float16_t>>;
+    using TileSizes = std::tuple<std::tuple<I<16>>, std::tuple<I<32>>>;
 
     static inline std::vector<ProblemSizeT> problemSizes()
     {
-        return {{64, 64, 64}};
+        return {{32, 32, 128}};
     }
     static inline std::vector<ThreadBlockT> threadBlocks()
     {
