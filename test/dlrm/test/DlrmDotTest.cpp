@@ -35,9 +35,8 @@ struct TestParams : public DlrmTestParams
     // Block Sizes: 16 x 16 x 16
     using Base         = DlrmTestParams;
     using Types        = typename Base::DataTypes;
-    using BlockSizes   = typename Base::TestBlockSizes;
     using TileSizes    = typename Base::TileSizes;
-    using KernelParams = typename CombineLists<Types, BlockSizes, TileSizes>::Result;
+    using KernelParams = typename CombineLists<Types, TileSizes>::Result;
 
     using GeneratorImpl   = DlrmDotGenerator;
     using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
@@ -58,6 +57,12 @@ class DlrmDotTestBasic : public DlrmDotTest
 
 TEST_P(DlrmDotTestBasic, RunKernel)
 {
+    static bool ranWarmup = false;
+    if(!ranWarmup)
+    {
+        this->Warmup();
+        ranWarmup = true;
+    }
     this->RunKernel();
 }
 
