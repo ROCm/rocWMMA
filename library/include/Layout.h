@@ -160,10 +160,12 @@ namespace Layout
 
         __device__ static inline typename Traits::MatrixCoordT offsetIncrement(uint32_t iteration)
         {
+            // TODO: constexpr if c++17
+            // Silence DIV/0 warning, remove the need for std::max
             if(BlockDim > IOTraits::ThreadsPerIO)
             {
                 constexpr auto blockDimSegs = BlockDim / IOTraits::ThreadsPerIO;
-                return ((iteration + 1) % blockDimSegs)
+                return ((iteration + 1) % std::max(blockDimSegs, (uint32_t)1))
                            ? std::make_pair(IOTraits::ThreadsPerIO, 0)
                            : std::make_pair(-IOTraits::ThreadsPerIO * (blockDimSegs - 1),
                                             (int32_t)IOTraits::KPerIO);
@@ -226,10 +228,12 @@ namespace Layout
 
         __device__ static inline typename Traits::MatrixCoordT offsetIncrement(uint32_t iteration)
         {
+            // TODO: constexpr if c++17
+            // Silence DIV/0 warning, remove the need for std::max
             if(BlockDim > IOTraits::ElementsPerIO)
             {
                 constexpr auto blockDimSegs = BlockDim / IOTraits::ElementsPerIO;
-                return ((iteration + 1) % blockDimSegs)
+                return ((iteration + 1) % std::max(blockDimSegs, (uint32_t)1))
                            ? std::make_pair(IOTraits::ElementsPerIO, 0)
                            : std::make_pair(-IOTraits::ElementsPerIO * (blockDimSegs - 1), 1);
             }
