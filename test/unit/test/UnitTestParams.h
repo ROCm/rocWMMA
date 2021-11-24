@@ -175,9 +175,9 @@ struct UnitTestParams
                  {6144, 6144},
                  {7168, 7168},
                  {8192, 8192}
-#endif // WMMA_EXTENDED_TESTS \
-    // clang-format on
+#endif // WMMA_EXTENDED_TESTS
         };
+        // clang-format on
     }
 
     static inline std::vector<Param1T> param1s()
