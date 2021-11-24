@@ -56,8 +56,6 @@ public:
 
         // Initialize matrix data on host
         MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN, Base::mParam1);
-
-        dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), sizeD);
     }
 
     void validateResultsImpl() final
