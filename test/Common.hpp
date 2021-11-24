@@ -208,7 +208,12 @@ struct MatrixUtil
     }
 };
 
-template <typename TypeA, typename TypeB, typename LayoutA, typename LayoutB>
+// compareEqual on two different layouts: must calculate index offsets
+template <typename TypeA,
+          typename TypeB,
+          typename LayoutA,
+          typename LayoutB,
+          typename std::enable_if_t<!std::is_same<LayoutA, LayoutB>::value, int> = 0>
 std::pair<bool, double> compareEqual(TypeA const* matrixA,
                                      TypeB const* matrixB,
                                      uint32_t     m,
@@ -225,6 +230,12 @@ std::pair<bool, double> compareEqual(TypeA const* matrixA,
     auto toDoubleA = [](TypeA const& val) { return static_cast<double>(static_cast<float>(val)); };
     auto toDoubleB = [](TypeB const& val) { return static_cast<double>(static_cast<float>(val)); };
 
+    auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
+    auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
+
+    auto indexA = std::is_same<LayoutA, row_major>::value ? rowMjr : colMjr;
+    auto indexB = std::is_same<LayoutB, row_major>::value ? rowMjr : colMjr;
+
     bool       isInf = false;
     bool       isNaN = false;
     std::mutex writeMutex;
@@ -232,47 +243,43 @@ std::pair<bool, double> compareEqual(TypeA const* matrixA,
 #pragma omp parallel for
     for(int i = 0; i < m; ++i) // Row
     {
-        if(!isInf && !isNaN)
-        {
-
 #pragma omp parallel for
-            for(int j = 0; j < n; ++j) // Col
+        for(int j = 0; j < n; ++j) // Col
+        {
+            auto valA = matrixA[indexA(i, j, lda)];
+            auto valB = matrixB[indexB(i, j, ldb)];
+
+            auto numerator = fabs(toDoubleA(valA) - toDoubleB(valB));
+            auto divisor   = fabs(toDoubleA(valA)) + fabs(toDoubleB(valB)) + 1.0;
+
+            if(std::isinf(numerator) || std::isinf(divisor))
             {
-                if(!isInf && !isNaN)
+#pragma omp atomic
+                isInf |= true;
+            }
+            else
+            {
+                auto relative_error = numerator / divisor;
+                if(std::isnan(relative_error))
                 {
-                    auto indexA
-                        = std::is_same<LayoutA, row_major>::value ? (i * lda + j) : (i + j * lda);
-                    auto indexB
-                        = std::is_same<LayoutB, row_major>::value ? (i * ldb + j) : (i + j * ldb);
-
-                    auto numerator = fabs(toDoubleA(matrixA[indexA]) - toDoubleB(matrixB[indexB]));
-                    auto divisor
-                        = fabs(toDoubleA(matrixA[indexA])) + fabs(toDoubleB(matrixB[indexB])) + 1.0;
-
-                    if(std::isinf(numerator) || std::isinf(divisor))
-                    {
 #pragma omp atomic
-                        isInf |= true;
-                    }
-                    else
+                    isNaN |= true;
+                }
+                else if(relative_error > max_relative_error)
+                {
+                    const std::lock_guard<std::mutex> guard(writeMutex);
+                    // Double check in case of stall
+                    if(relative_error > max_relative_error)
                     {
-                        auto relative_error = numerator / divisor;
-                        if(std::isnan(relative_error))
-                        {
-#pragma omp atomic
-                            isNaN |= true;
-                        }
-                        else if(relative_error > max_relative_error)
-                        {
-                            const std::lock_guard<std::mutex> guard(writeMutex);
-                            // Double check in case of stall
-                            if(relative_error > max_relative_error)
-                            {
-                                max_relative_error = relative_error;
-                            }
-                        }
+                        max_relative_error = relative_error;
                     }
                 }
+            }
+
+            if(isInf || isNaN)
+            {
+                i = m;
+                j = n;
             }
         }
     }
@@ -290,8 +297,93 @@ std::pair<bool, double> compareEqual(TypeA const* matrixA,
     }
     else if(max_relative_error > (eps * tolerance))
     {
-        std::cout << "BAD NEWS BRAH\n";
-        std::cout << "MAX RELATIVENESS: " << max_relative_error << std::endl;
+        retval = false;
+    }
+
+    return std::make_pair(retval, max_relative_error);
+}
+
+// compareEqual on two equal layouts: index offsets are identical
+// can use slightly faster 1D compare
+template <typename TypeA,
+          typename TypeB,
+          typename LayoutA,
+          typename LayoutB,
+          typename std::enable_if_t<std::is_same<LayoutA, LayoutB>::value, int> = 0>
+std::pair<bool, double> compareEqual(TypeA const* matrixA,
+                                     TypeB const* matrixB,
+                                     uint32_t     m,
+                                     uint32_t     n,
+                                     uint32_t     lda,
+                                     uint32_t     ldb,
+                                     double       tolerance = 10.0)
+{
+    assert(lda == ldb && "Leading dims must match");
+
+    bool   retval             = true;
+    double max_relative_error = 0.0;
+
+    // Some types don't have direct conversion to double.
+    // Convert to float first then to double.
+    auto toDoubleA = [](TypeA const& val) { return static_cast<double>(static_cast<float>(val)); };
+    auto toDoubleB = [](TypeB const& val) { return static_cast<double>(static_cast<float>(val)); };
+
+    bool       isInf = false;
+    bool       isNaN = false;
+    std::mutex writeMutex;
+
+#pragma omp parallel for
+    for(int i = 0; i < m * n; ++i) // Row
+    {
+        auto valA = matrixA[i];
+        auto valB = matrixB[i];
+
+        auto numerator = fabs(toDoubleA(valA) - toDoubleB(valB));
+        auto divisor   = fabs(toDoubleA(valA)) + fabs(toDoubleB(valB)) + 1.0;
+
+        if(std::isinf(numerator) || std::isinf(divisor))
+        {
+#pragma omp atomic
+            isInf |= true;
+        }
+        else
+        {
+            auto relative_error = numerator / divisor;
+            if(std::isnan(relative_error))
+            {
+#pragma omp atomic
+                isNaN |= true;
+            }
+            else if(relative_error > max_relative_error)
+            {
+                const std::lock_guard<std::mutex> guard(writeMutex);
+                // Double check in case of stall
+                if(relative_error > max_relative_error)
+                {
+                    max_relative_error = relative_error;
+                }
+            }
+        }
+
+        if(isInf || isNaN)
+        {
+            i = m * n;
+        }
+    }
+
+    auto eps = toDoubleA(std::numeric_limits<TypeA>::epsilon());
+    if(isInf)
+    {
+        retval             = false;
+        max_relative_error = std::numeric_limits<TypeA>::infinity();
+    }
+    else if(isNaN)
+    {
+        retval             = false;
+        max_relative_error = std::numeric_limits<TypeA>::signaling_NaN();
+    }
+    else if(max_relative_error > (eps * tolerance))
+    {
         retval = false;
     }
 
