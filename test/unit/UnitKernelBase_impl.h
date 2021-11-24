@@ -110,7 +110,7 @@ void UnitKernelBase<BlockM, BlockN, DataT, Layout>::reset()
     mTBlockX = mTBlockY = 0;
     mM = mN = 0;
     mLd     = 0;
-    mParam1 = mParam2 = DataT(0.0f);
+    mParam1 = mParam2 = DataT(0);
 
     mRunFlag          = true;
     mValidationResult = false;
@@ -136,10 +136,8 @@ std::ostream& UnitKernelBase<BlockM, BlockN, DataT, Layout>::printKernel(
     std::ostream& stream /* = std::cout */) const
 {
     stream << mTBlockX << ", " << mTBlockY << ", " << BlockM << ", " << BlockN << ", " << mM << ", "
-           << mN << ", "
-           << ", " << mLd << ", " << mParam1 << ", " << mParam2 << ", "
-           << (std::is_same<Layout, row_major>::value ? "R" : "C") << ", "
-           << dataTypeToString<DataT>() << ", ";
+           << mN << ", " << mLd << ", " << mParam1 << ", " << mParam2 << ", "
+           << dataTypeToString<Layout>() << ", " << dataTypeToString<DataT>() << ", ";
 
     if(!mRunFlag)
     {
@@ -231,7 +229,6 @@ void UnitKernelBase<BlockM, BlockN, DataT, Layout>::exec()
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
 void UnitKernelBase<BlockM, BlockN, DataT, Layout>::validateResults()
 {
-
     if(mRunFlag)
     {
         validateResultsImpl();
@@ -241,7 +238,6 @@ void UnitKernelBase<BlockM, BlockN, DataT, Layout>::validateResults()
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
 void UnitKernelBase<BlockM, BlockN, DataT, Layout>::reportResults()
 {
-
     if(!KernelI::sHeaderPrinted)
     {
         printHeader();
