@@ -71,10 +71,22 @@ set(MapUtilTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapWaveToMatrix_32x32_T.cpp)
 
 set(LoadStoreMatrixSyncTestSources ${UnitCommonSources}
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSync_16x16_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSync_16x16_T.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSync_32x32_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSync_32x32_T.cpp)
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncA_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncA_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncA_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncA_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncA_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncB_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncB_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncB_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncB_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncB_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncAcc_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncAcc_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncAcc_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncAcc_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LoadStoreMatrixSyncTest/LoadStoreMatrixSyncAcc_256.cpp
+                    )
 
 set(FillFragmentTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragment_16x16_N.cpp
