@@ -31,7 +31,7 @@
 #include "WMMA.h"
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-__global__ void LoadStoreMatrixSyncA(
+__global__ void __launch_bounds__(256) LoadStoreMatrixSyncA(
     uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld, DataT param1, DataT param2)
 {
     using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
@@ -51,7 +51,7 @@ __global__ void LoadStoreMatrixSyncA(
 }
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-__global__ void LoadStoreMatrixSyncB(
+__global__ void __launch_bounds__(256) LoadStoreMatrixSyncB(
     uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld, DataT param1, DataT param2)
 {
     using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
@@ -71,7 +71,7 @@ __global__ void LoadStoreMatrixSyncB(
 }
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-__global__ void LoadStoreMatrixSyncAcc(
+__global__ void __launch_bounds__(256) LoadStoreMatrixSyncAcc(
     uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld, DataT param1, DataT param2)
 {
     using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
