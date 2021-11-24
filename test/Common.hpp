@@ -230,7 +230,7 @@ std::pair<bool, double> compareEqual(TypeA const* matrixA,
     std::mutex writeMutex;
 
 #pragma omp parallel for
-    for(int i = 0; i < n; ++i) // Row
+    for(int i = 0; i < m; ++i) // Row
     {
         if(!isInf && !isNaN)
         {
@@ -290,6 +290,8 @@ std::pair<bool, double> compareEqual(TypeA const* matrixA,
     }
     else if(max_relative_error > (eps * tolerance))
     {
+        std::cout << "BAD NEWS BRAH\n";
+        std::cout << "MAX RELATIVENESS: " << max_relative_error << std::endl;
         retval = false;
     }
 
