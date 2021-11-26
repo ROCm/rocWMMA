@@ -27,6 +27,7 @@
 #define WMMA_IMPL_H_
 
 #include <type_traits>
+#include <utility>
 
 #include "Convert.h"
 #include "CoopLoad.h"
@@ -403,7 +404,7 @@ namespace wmma
         auto           waveIndex = std::get<coopIndex>(MappingUtil::waveCoord());
         auto           waveCount = std::get<coopIndex>(MappingUtil::workgroupDim());
 
-        store_matrix_coop_sync(frag, ldm, waveIndex, waveCount);
+        store_matrix_coop_sync(data, frag, ldm, waveIndex, waveCount);
     }
 
     template <uint32_t BlockM,

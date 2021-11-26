@@ -27,7 +27,7 @@
 #include <type_traits>
 
 #include "KernelGenerator.h"
-#include "detail/StoreContamination.h"
+#include "detail/LoadContamination.h"
 #include "test/UnitTest.h"
 
 struct TestParams : public UnitTestParams
@@ -35,16 +35,16 @@ struct TestParams : public UnitTestParams
     using Base = UnitTestParams;
 
     // Types: ALL + double
-    // Block Sizes: 32 x 32 x BlockK
-    // Layouts: T
+    // Block Sizes: 128 x BlockK
+    // Layouts: N, T
     using Types        = typename Base::TestTypes32x32;
-    using BlockSizes   = typename Base::TestBlockSizes32x32;
-    using Layouts      = typename Base::TestLayoutsT;
+    using BlockSizes   = typename Base::TestBlockSizes128;
+    using Layouts      = typename Base::TestLayoutsAll;
     using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
 
     // Assemble the kernel generator
-    // Kernel: StoreContamination
-    using GeneratorImpl   = StoreContaminationGenerator;
+    // Kernel: LoadContaminationB
+    using GeneratorImpl   = LoadContaminationGeneratorB;
     using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
     // Sanity check for kernel generator
@@ -55,20 +55,30 @@ struct TestParams : public UnitTestParams
     {
         return KernelGenerator::generate();
     }
+
+    static inline std::vector<Param1T> param1s()
+    {
+        return {4.0, 3.0};
+    }
+
+    static inline std::vector<Param2T> param2s()
+    {
+        return {8.0, 1.0};
+    }
 };
 
 // Test suite for unique parameterization
-class StoreContaminationTest32x32T : public UnitTest
+class LoadContaminationBTest128 : public UnitTest
 {
 };
 
-TEST_P(StoreContaminationTest32x32T, RunKernel)
+TEST_P(LoadContaminationBTest128, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(KernelTests,
-                         StoreContaminationTest32x32T,
+                         LoadContaminationBTest128,
                          ::testing::Combine(::testing::ValuesIn(TestParams::kernels()),
                                             ::testing::ValuesIn(TestParams::threadBlocks()),
                                             ::testing::ValuesIn(TestParams::problemSizes()),

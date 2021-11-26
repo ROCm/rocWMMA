@@ -47,8 +47,8 @@ struct ProblemParams
 // Typeless Kernel interface to use with testing harness.
 struct KernelI
 {
-    KernelI() {}
-    virtual ~KernelI(){};
+    KernelI()          = default;
+    virtual ~KernelI() = default;
 
     virtual void          setup(ProblemParams const& problem)                 = 0;
     virtual void          validateResults()                                   = 0;
@@ -58,7 +58,19 @@ struct KernelI
     virtual std::ostream& printHeader(std::ostream& stream = std::cout) const = 0;
     virtual std::ostream& printKernel(std::ostream& stream = std::cout) const = 0;
 
+    bool runFlag() const
+    {
+        return mRunFlag;
+    }
+    bool validationResult() const
+    {
+        return mValidationResult;
+    }
+
+protected:
     static bool sHeaderPrinted;
+    bool        mRunFlag          = true;
+    bool        mValidationResult = false;
 };
 
 inline std::ostream& operator<<(std::ostream& stream, KernelI const& kernel)
@@ -134,8 +146,6 @@ protected:
     DataT    mParam1, mParam2;
 
     // Execution flow control
-    bool   mRunFlag          = true;
-    bool   mValidationResult = false;
     double mMaxRelativeError;
 
     // Performance

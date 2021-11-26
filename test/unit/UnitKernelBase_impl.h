@@ -34,8 +34,6 @@
 #include <hip/hip_ext.h>
 #include <hip/hip_runtime_api.h>
 
-#include <gtest/gtest.h>
-
 #include "Common.hpp"
 
 // Library includes

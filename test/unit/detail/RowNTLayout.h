@@ -38,8 +38,8 @@ private:
     using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
 public:
-    RowNTLayoutKernel() {}
-    ~RowNTLayoutKernel() final {}
+    RowNTLayoutKernel()        = default;
+    ~RowNTLayoutKernel() final = default;
 
     void setupImpl(typename Base::DataStorage::ProblemSize const& probsize)
     {
@@ -77,9 +77,6 @@ public:
                                                              Base::mM,
                                                              Base::mN,
                                                              errorTolerance);
-
-            EXPECT_TRUE(Base::mValidationResult)
-                << "Max relative error: " << Base::mMaxRelativeError;
         }
     }
 

@@ -32,63 +32,118 @@
 
 // Wrapper into the actual device function
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-struct LoadContaminationKernel final : public UnitKernelBase<BlockM, BlockN, DataT, Layout>
+struct LoadContaminationKernel : public UnitKernelBase<BlockM, BlockN, DataT, Layout>
 {
 private:
     using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
 public:
-    LoadContaminationKernel() {}
-    ~LoadContaminationKernel() final {}
+    LoadContaminationKernel()          = default;
+    virtual ~LoadContaminationKernel() = default;
 
-    void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
+protected:
+    void setupImpl(typename Base::DataStorage::ProblemSize const& probSize) final
     {
         auto& dataInstance = Base::DataStorage::instance();
 
-        Base::mParam1 = Base::mM + 2;
-        Base::mParam2 = Base::mN + 2;
+        // Make some rectangular padding around the area of interest
+        // Param1 = padM
+        // Param2 = padN
+        using SizeT  = typename Base::DataStorage::ProblemSize;
+        using IndexT = typename std::tuple_element<0, SizeT>::type;
+        auto paddedProbSize
+            = std::make_pair(std::get<0>(probSize) + 2 * static_cast<IndexT>(Base::mParam1),
+                             std::get<1>(probSize) + 2 * static_cast<IndexT>(Base::mParam2));
 
-        // Initialize matrix storage
-        const int64_t sizeD = Base::mM * Base::mN;
-        dataInstance->resizeStorage(probsize);
+        // Initialize matrix storage with padded size.
+        // Padded size >= MxN
+        dataInstance->resizeStorage(paddedProbSize);
 
-        // Initialize matrix data on host
-        MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
+        // Initialize input data on host.
+        // Initialize padding with contamination values
+        MatrixUtil<Layout>::fill_with_padding(dataInstance->hostIn().get(),
+                                              Base::mM,
+                                              Base::mN,
+                                              Base::mParam1,
+                                              Base::mParam2,
+                                              std::numeric_limits<DataT>::max());
 
-        dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), sizeD);
+        // Padded MxN goes in for read, MxN result comes out
+        dataInstance->copyData(dataInstance->deviceIn(),
+                               dataInstance->hostIn(),
+                               std::get<0>(paddedProbSize) * std::get<1>(paddedProbSize));
     }
 
     void validateResultsImpl() final
     {
         auto& dataInstance = Base::DataStorage::instance();
 
-        // Allocated managed memory for results on host
-        const int64_t sizeD = Base::mM * Base::mN;
-
-        auto kernelResult = dataInstance->template allocHost<DataT>(sizeD);
+        // Re-use host in memory for result
+        // Use M x N as output is not padded
+        const int64_t sizeD        = Base::mM * Base::mN;
+        auto&         kernelResult = dataInstance->hostIn();
 
         // Cache current kernel result from device
         dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
 
-        double errorTolerance = 10.0;
+        double errorTolerance = 1.0;
 
-        std::tie(Base::mValidationResult, Base::mMaxRelativeError)
-            = compareEqual<DataT, DataT, Layout, Layout>(kernelResult.get(),
-                                                         dataInstance->hostIn().get(),
-                                                         Base::mM,
-                                                         Base::mN,
-                                                         errorTolerance);
+        // See if our output contains any contamination
+        auto result = countVal(kernelResult.get(),
+                               Base::mM * Base::mN,
+                               std::numeric_limits<DataT>::max(),
+                               errorTolerance);
 
-        EXPECT_TRUE(Base::mValidationResult) << "Max relative error: " << Base::mMaxRelativeError;
+        // We want no contamination
+        Base::mValidationResult = (result == 0);
     }
 
+    typename Base::KernelFunc kernelImpl() const = 0;
+};
+
+template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+struct LoadContaminationKernelA final
+    : public LoadContaminationKernel<BlockM, BlockN, DataT, Layout>
+{
+private:
+    using Base = LoadContaminationKernel<BlockM, BlockN, DataT, Layout>;
+
+protected:
     typename Base::KernelFunc kernelImpl() const final
     {
-        return typename Base::KernelFunc(loadContamination<BlockM, BlockN, DataT, Layout>);
+        return typename Base::KernelFunc(loadContaminationA<BlockM, BlockN, DataT, Layout>);
     }
 };
 
-// This is the GeneratorImpl class
+template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+struct LoadContaminationKernelB final
+    : public LoadContaminationKernel<BlockM, BlockN, DataT, Layout>
+{
+private:
+    using Base = LoadContaminationKernel<BlockM, BlockN, DataT, Layout>;
+
+protected:
+    typename Base::KernelFunc kernelImpl() const final
+    {
+        return typename Base::KernelFunc(loadContaminationB<BlockM, BlockN, DataT, Layout>);
+    }
+};
+
+template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+struct LoadContaminationKernelAcc final
+    : public LoadContaminationKernel<BlockM, BlockN, DataT, Layout>
+{
+private:
+    using Base = LoadContaminationKernel<BlockM, BlockN, DataT, Layout>;
+
+protected:
+    typename Base::KernelFunc kernelImpl() const final
+    {
+        return typename Base::KernelFunc(loadContaminationAcc<BlockM, BlockN, DataT, Layout>);
+    }
+};
+
+template <template <uint32_t, uint32_t, typename, typename> class KernelClass>
 struct LoadContaminationGenerator
 {
     // Indices to test parameters
@@ -107,14 +162,17 @@ struct LoadContaminationGenerator
     {
         // Map GTest params to Kernel params
         using TestParamsT = std::tuple<Ts...>;
-        using KernelT
-            = LoadContaminationKernel<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
-                                      std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
-                                      std::tuple_element_t<DataT, TestParamsT>, // DataT
-                                      std::tuple_element_t<Layout, TestParamsT> // Layout
-                                      >;
+        using KernelT     = KernelClass<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
+                                    std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
+                                    std::tuple_element_t<DataT, TestParamsT>, // DataT
+                                    std::tuple_element_t<Layout, TestParamsT> // Layout
+                                    >;
         return std::make_shared<KernelT>();
     }
 };
+
+using LoadContaminationGeneratorA   = LoadContaminationGenerator<LoadContaminationKernelA>;
+using LoadContaminationGeneratorB   = LoadContaminationGenerator<LoadContaminationKernelB>;
+using LoadContaminationGeneratorAcc = LoadContaminationGenerator<LoadContaminationKernelAcc>;
 
 #endif // WMMA_DETAIL_LOAD_CONTAMINATION_H
