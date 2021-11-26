@@ -38,26 +38,24 @@ private:
     using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
 public:
-    FillFragmentKernel() {}
-    ~FillFragmentKernel() final {}
+    FillFragmentKernel()        = default;
+    ~FillFragmentKernel() final = default;
 
     void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
     {
         auto& dataInstance = Base::DataStorage::instance();
 
         srand((unsigned)time(0));
-        DataT fillValue = (rand() % 600);
+        float32_t fillValue = static_cast<float32_t>(rand() % 600);
 
-        Base::mParam1 = fillValue;
+        Base::mParam1 = static_cast<DataT>(fillValue);
 
         // Initialize matrix storage
         const int64_t sizeD = Base::mM * Base::mN;
         dataInstance->resizeStorage(probsize);
 
         // Initialize matrix data on host
-        MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN, fillValue);
-
-        dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), sizeD);
+        MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN, Base::mParam1);
     }
 
     void validateResultsImpl() final
@@ -80,8 +78,6 @@ public:
                                                          Base::mM,
                                                          Base::mN,
                                                          errorTolerance);
-
-        EXPECT_TRUE(Base::mValidationResult) << "Max relative error: " << Base::mMaxRelativeError;
     }
 
     typename Base::KernelFunc kernelImpl() const final

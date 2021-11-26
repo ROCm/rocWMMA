@@ -35,16 +35,16 @@ struct TestParams : public UnitTestParams
     using Base = UnitTestParams;
 
     // Types: ALL + double
-    // Block Sizes: 32 x 32 x BlockK
-    // Layouts: N
+    // Block Sizes: 64 x BlockN
+    // Layouts: N, T
     using Types        = typename Base::TestTypes32x32;
-    using BlockSizes   = typename Base::TestBlockSizes32x32;
-    using Layouts      = typename Base::TestLayoutsN;
+    using BlockSizes   = typename Base::TestBlockSizes64;
+    using Layouts      = typename Base::TestLayoutsAll;
     using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
 
     // Assemble the kernel generator
-    // Kernel: StoreContamination
-    using GeneratorImpl   = StoreContaminationGenerator;
+    // Kernel: StoreContaminationAcc
+    using GeneratorImpl   = StoreContaminationGeneratorAcc;
     using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
     // Sanity check for kernel generator
@@ -55,20 +55,30 @@ struct TestParams : public UnitTestParams
     {
         return KernelGenerator::generate();
     }
+
+    static inline std::vector<Param1T> param1s()
+    {
+        return {4.0, 3.0};
+    }
+
+    static inline std::vector<Param2T> param2s()
+    {
+        return {8.0, 1.0};
+    }
 };
 
 // Test suite for unique parameterization
-class StoreContaminationTest32x32N : public UnitTest
+class StoreContaminationAccTest64 : public UnitTest
 {
 };
 
-TEST_P(StoreContaminationTest32x32N, RunKernel)
+TEST_P(StoreContaminationAccTest64, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(KernelTests,
-                         StoreContaminationTest32x32N,
+                         StoreContaminationAccTest64,
                          ::testing::Combine(::testing::ValuesIn(TestParams::kernels()),
                                             ::testing::ValuesIn(TestParams::threadBlocks()),
                                             ::testing::ValuesIn(TestParams::problemSizes()),

@@ -88,9 +88,44 @@ namespace std
     }
 
     template <>
+    __host__ __device__ constexpr float16_t numeric_limits<float16_t>::infinity() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x7C00));
+        return eps.f16;
+    }
+
+    template <>
+    __host__ __device__ constexpr float16_t numeric_limits<float16_t>::lowest() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0xFBFF));
+        return eps.f16;
+    }
+
+    template <>
+    __host__ __device__ constexpr float16_t numeric_limits<float16_t>::max() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x7BFF));
+        return eps.f16;
+    }
+
+    template <>
     __host__ __device__ constexpr float16_t numeric_limits<float16_t>::min() noexcept
     {
         ::Fp16Bits eps(static_cast<uint16_t>(0x0400));
+        return eps.f16;
+    }
+
+    template <>
+    __host__ __device__ constexpr float16_t numeric_limits<float16_t>::quiet_NaN() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x7FFF));
+        return eps.f16;
+    }
+
+    template <>
+    __host__ __device__ constexpr float16_t numeric_limits<float16_t>::signaling_NaN() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x7DFF));
         return eps.f16;
     }
 
@@ -102,9 +137,44 @@ namespace std
     }
 
     template <>
+    __host__ __device__ constexpr hfloat16_t numeric_limits<hfloat16_t>::infinity() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x7C00));
+        return eps.h16;
+    }
+
+    template <>
+    __host__ __device__ constexpr hfloat16_t numeric_limits<hfloat16_t>::lowest() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0xFBFF));
+        return eps.h16;
+    }
+
+    template <>
+    __host__ __device__ constexpr hfloat16_t numeric_limits<hfloat16_t>::max() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x7BFF));
+        return eps.h16;
+    }
+
+    template <>
     __host__ __device__ constexpr hfloat16_t numeric_limits<hfloat16_t>::min() noexcept
     {
         ::Fp16Bits eps(static_cast<uint16_t>(0x0400));
+        return eps.h16;
+    }
+
+    template <>
+    __host__ __device__ constexpr hfloat16_t numeric_limits<hfloat16_t>::quiet_NaN() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x7FFF));
+        return eps.h16;
+    }
+
+    template <>
+    __host__ __device__ constexpr hfloat16_t numeric_limits<hfloat16_t>::signaling_NaN() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x7DFF));
         return eps.h16;
     }
 
@@ -116,11 +186,47 @@ namespace std
     }
 
     template <>
+    __host__ __device__ constexpr bfloat16_t numeric_limits<bfloat16_t>::infinity() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x7F80));
+        return eps.b16;
+    }
+
+    template <>
+    __host__ __device__ constexpr bfloat16_t numeric_limits<bfloat16_t>::lowest() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0xFF7F));
+        return eps.b16;
+    }
+
+    template <>
+    __host__ __device__ constexpr bfloat16_t numeric_limits<bfloat16_t>::max() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x7F7F));
+        return eps.b16;
+    }
+
+    template <>
     __host__ __device__ constexpr bfloat16_t numeric_limits<bfloat16_t>::min() noexcept
     {
         ::Fp16Bits eps(static_cast<uint16_t>(0x007F));
         return eps.b16;
     }
+
+    template <>
+    __host__ __device__ constexpr bfloat16_t numeric_limits<bfloat16_t>::quiet_NaN() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x7FC0));
+        return eps.b16;
+    }
+
+    template <>
+    __host__ __device__ constexpr bfloat16_t numeric_limits<bfloat16_t>::signaling_NaN() noexcept
+    {
+        ::Fp16Bits eps(static_cast<uint16_t>(0x7FC0));
+        return eps.b16;
+    }
+
 #if !(__cplusplus >= 201703L)
     template <typename F, typename Tuple, size_t... I>
     auto apply_impl(F fn, Tuple t, std::index_sequence<I...>)

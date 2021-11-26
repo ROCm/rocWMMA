@@ -38,8 +38,8 @@ private:
     using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
 public:
-    RowLayoutKernel() {}
-    ~RowLayoutKernel() final {}
+    RowLayoutKernel()        = default;
+    ~RowLayoutKernel() final = default;
 
     void setupImpl(typename Base::DataStorage::ProblemSize const& probsize)
     {
@@ -74,8 +74,6 @@ public:
                                                          Base::mM,
                                                          Base::mN,
                                                          errorTolerance);
-
-        EXPECT_TRUE(Base::mValidationResult) << "Max relative error: " << Base::mMaxRelativeError;
     }
 
     typename Base::KernelFunc kernelImpl() const final

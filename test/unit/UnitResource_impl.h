@@ -36,7 +36,7 @@ UnitResource<DataT>::UnitResource()
     , mDeviceOut(nullptr, [](DataT*) {})
     , mHostIn(nullptr)
     , mCurrentProblemSize({0, 0})
-    , mCurrentMatrixSize(0)
+    , mMaxCapacity(0)
 {
 }
 
@@ -45,13 +45,14 @@ void UnitResource<DataT>::resizeStorage(ProblemSize const& size)
 {
     auto newSize = std::get<M>(size) * std::get<N>(size); // M * N = C, D
 
-    if(mCurrentMatrixSize < newSize)
+    if(mMaxCapacity < newSize)
     {
-        mHostIn    = std::move(Base::template allocHost<DataT>(newSize));
-        mDeviceIn  = std::move(Base::template allocDevice<DataT>(newSize));
-        mDeviceOut = std::move(Base::template allocDevice<DataT>(newSize));
+        mMaxCapacity = newSize;
+        mHostIn      = std::move(Base::template allocHost<DataT>(mMaxCapacity));
+        mDeviceIn    = std::move(Base::template allocDevice<DataT>(mMaxCapacity));
+        mDeviceOut   = std::move(Base::template allocDevice<DataT>(mMaxCapacity));
     }
-    mCurrentMatrixSize = newSize;
+    mCurrentProblemSize = size;
 }
 
 template <typename DataT>
@@ -70,6 +71,18 @@ template <typename DataT>
 auto UnitResource<DataT>::deviceOut() -> DevicePtrT&
 {
     return mDeviceOut;
+}
+
+template <typename DataT>
+auto UnitResource<DataT>::problemSize() const -> ProblemSize
+{
+    return mCurrentProblemSize;
+}
+
+template <typename DataT>
+int64_t UnitResource<DataT>::maxCapacity() const
+{
+    return mMaxCapacity;
 }
 
 #endif // WMMA_UNIT_RESOURCE_IMPL_H

@@ -58,6 +58,12 @@ struct UnitTest : public ::testing::TestWithParam<std::tuple<typename UnitTestPa
 
         // Walk through kernel workflow
         kernel->setup(params);
+
+        // Mark skipped tests in GTest
+        if(!kernel->runFlag())
+        {
+            GTEST_SKIP();
+        }
     }
 
     virtual void RunKernel()
@@ -70,6 +76,9 @@ struct UnitTest : public ::testing::TestWithParam<std::tuple<typename UnitTestPa
         kernel->exec();
         kernel->validateResults();
         kernel->reportResults();
+
+        // Mark test failures in GTest
+        EXPECT_TRUE(kernel->validationResult());
     }
 
     void TearDown() override
