@@ -632,12 +632,21 @@ void DlrmKernelBase<TileSize, DataT>::validateResults()
                                   std::get<3>(dataInstance->currentDataSizeBwd()) * sizeof(DataT),
                                   false);
             EXPECT_TRUE(mValidationResult.pass);
+
+            uint64_t numElements     = mValidationResult.numElements;
+            float    maxAbsoluteDiff = mValidationResult.maxAbsoluteDiff;
+            float    maxRelativeDiff = mValidationResult.maxRelativeDiff;
+
             mValidationResult
                 = allclose<DataT>(dataInstance->deviceBottomMlpGradRef().get(),
                                   dataInstance->deviceBottomMlpGrad().get(),
                                   std::get<5>(dataInstance->currentDataSizeBwd()) * sizeof(DataT),
                                   false);
             EXPECT_TRUE(mValidationResult.pass);
+
+            mValidationResult.numElements += numElements;
+            mValidationResult.maxAbsoluteDiff += maxAbsoluteDiff;
+            mValidationResult.maxRelativeDiff += maxRelativeDiff;
         }
     }
 #endif
