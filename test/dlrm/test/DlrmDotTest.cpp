@@ -25,9 +25,9 @@
  *******************************************************************************/
 
 #include "DlrmDotTest.h"
-#include "DlrmDot.h"
 #include "DlrmTestParams.h"
 #include "KernelGenerator.h"
+#include "detail/DlrmDot.h"
 
 struct TestParams : public DlrmTestParams
 {
