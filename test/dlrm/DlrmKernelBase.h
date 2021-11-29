@@ -31,10 +31,10 @@
 #include <sstream>
 #include <string>
 
+#include "Common.h"
 #include "Constants.h"
 #include "DlrmResource.h"
 #include "HipDevice.h"
-#include "common.h"
 
 // Basic structure to hold runtime problem
 // parameters

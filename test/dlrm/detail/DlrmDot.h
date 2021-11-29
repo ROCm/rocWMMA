@@ -24,16 +24,12 @@
  *
  *******************************************************************************/
 
-#ifndef DLRM_DOT_TEST_H
-#define DLRM_DOT_TEST_H
-
-#include <gtest/gtest.h>
-
-#include "DlrmDot.h"
+#ifndef DLRM_DOT_DETAIL_H
+#define DLRM_DOT_DETAIL_H
 
 #include "DlrmKernelBase.h"
-#include "DlrmTestParams.h"
-#include "KernelGenerator.h"
+#include "device/DlrmDotBwd.h"
+#include "device/DlrmDotFwd.h"
 
 // Wrapper into the actual device function
 template <uint32_t TileSize, typename DataT>
@@ -131,68 +127,4 @@ struct DlrmDotGenerator
     }
 };
 
-struct DlrmDotTest
-    : public ::testing::TestWithParam<std::tuple<typename DlrmTestParams::KernelT,
-                                                 typename DlrmTestParams::ThreadBlockT,
-                                                 typename DlrmTestParams::ProblemSizeT,
-                                                 typename DlrmTestParams::FwdDataSizeT,
-                                                 typename DlrmTestParams::BwdDataSizeT,
-                                                 typename DlrmTestParams::PassDirectionT>>
-{
-    using Base = ::testing::TestWithParam<std::tuple<typename DlrmTestParams::KernelT,
-                                                     typename DlrmTestParams::ThreadBlockT,
-                                                     typename DlrmTestParams::ProblemSizeT,
-                                                     typename DlrmTestParams::FwdDataSizeT,
-                                                     typename DlrmTestParams::BwdDataSizeT,
-                                                     typename DlrmTestParams::PassDirectionT>>;
-
-    void SetUp() override
-    {
-        // Construct ProblemParams from
-        // incoming gtest parameterization
-        auto param       = Base::GetParam();
-        auto kernel      = std::get<0>(param);
-        auto threadBlock = std::get<1>(param);
-        auto problemSize = std::get<2>(param);
-        auto fwdDataSize = std::get<3>(param);
-        auto bwdDataSize = std::get<4>(param);
-        auto isBwd       = std::get<5>(param);
-
-        ProblemParams params = {threadBlock, problemSize, fwdDataSize, bwdDataSize, isBwd};
-
-        // Walk through kernel workflow
-        kernel->setup(params);
-
-        // run warm-up iteration based on static bool (runkernel)
-    }
-
-    virtual void RunKernel()
-    {
-        // Construct ProblemParams from
-        // incoming gtest parameterization
-        auto param  = Base::GetParam();
-        auto kernel = std::get<0>(param);
-        kernel->exec();
-        kernel->validateResults();
-        kernel->reportResults();
-    }
-
-    virtual void Warmup()
-    {
-        auto param  = Base::GetParam();
-        auto kernel = std::get<0>(param);
-        kernel->exec();
-    }
-
-    void TearDown() override
-    {
-        // Construct ProblemParams from
-        // incoming gtest parameterization
-        auto param  = Base::GetParam();
-        auto kernel = std::get<0>(param);
-        kernel->tearDown();
-    }
-};
-// pass enum template values through Base::<name>
-
-#endif // DLRM_DOT_TEST_H
+#endif // DLRM_DOT_DETAIL_H
