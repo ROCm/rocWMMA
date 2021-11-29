@@ -86,6 +86,24 @@ __device__ inline bool is_same(float a, float b)
     return a == b;
 }
 
+template <typename DataT>
+__device__ inline void store(DataT* dst, float* src)
+{
+    if(std::is_same<DataT, float16_t>::value)
+        *dst = __float2half(*src);
+    else
+        *dst = *src;
+}
+
+template <typename DataT>
+__device__ inline void store(DataT* dst, const float src)
+{
+    if(std::is_same<DataT, float16_t>::value)
+        *dst = __float2half(src);
+    else
+        *dst = src;
+}
+
 static void checkFileOpen(FILE* fp, std::string filename)
 {
     if(fp == NULL)
@@ -207,15 +225,6 @@ validate_data_t allclose(void* a, void* b, size_t bytes, bool verbose = false)
     return_data.tolerance       = tolerance;
 
     return return_data;
-}
-
-__device__ static inline void syncwarp()
-{
-#ifdef __HIP_PLATFORM_HCC__
-    __builtin_amdgcn_wave_barrier();
-#else
-    __syncwarp();
-#endif
 }
 
 #endif // DLRM_TEST_COMMON_H
