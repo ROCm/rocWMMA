@@ -128,6 +128,8 @@ public:
     // Data sizes
     DataSizeFwd& currentDataSizeFwd();
     DataSizeBwd& currentDataSizeBwd();
+    DataSizeFwd& maxFwdCapacity();
+    DataSizeBwd& maxBwdCapacity();
 
 protected:
     // Forward pass data
@@ -143,6 +145,9 @@ protected:
     ProblemSize mCurrentProblemSize;
     DataSizeFwd mCurrentDataSizeFwd;
     DataSizeBwd mCurrentDataSizeBwd;
+
+    DataSizeFwd mMaxFwdCapacity;
+    DataSizeBwd mMaxBwdCapacity;
 };
 
 #include "DlrmResource_impl.h"
