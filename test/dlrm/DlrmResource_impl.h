@@ -50,6 +50,8 @@ DlrmResource<DataT>::DlrmResource()
     , mCurrentProblemSize({0, 0, 0})
     , mCurrentDataSizeFwd({0, 0, 0})
     , mCurrentDataSizeBwd({0, 0, 0, 0, 0, 0})
+    , mMaxFwdCapacity({0, 0, 0})
+    , mMaxBwdCapacity({0, 0, 0, 0, 0, 0})
 {
 }
 
@@ -84,27 +86,26 @@ void DlrmResource<DataT>::resizeFwdStorage(DataSizeFwd const& size)
             std::get<Input>(size), std::get<Output>(size), std::get<OutputRef>(size));
     };
 
-    auto allocIfNeeded = [](auto& devicePtr, auto& hostPtr, int64_t currentSize, int64_t newSize) {
+    auto allocIfNeeded = [](auto& devicePtr, auto& hostPtr, int64_t& currentMax, int64_t newSize) {
         using DeviceDataT = typename std::remove_reference_t<decltype(devicePtr)>::element_type;
         using HostDataT   = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
-        if(currentSize < newSize)
+        if(currentMax < newSize)
         {
-            devicePtr = std::move(Base::template allocDevice<DeviceDataT>(newSize));
-            hostPtr   = std::move(Base::template allocHost<HostDataT>(newSize));
+            currentMax = newSize;
+            devicePtr  = std::move(Base::template allocDevice<DeviceDataT>(newSize));
+            hostPtr    = std::move(Base::template allocHost<HostDataT>(newSize));
         }
     };
 
     auto newSizes = calcMatrixSizes(size);
 
     allocIfNeeded(
-        mDeviceInput, mHostInput, std::get<Input>(mCurrentDataSizeFwd), std::get<Input>(newSizes));
-    allocIfNeeded(mDeviceOutput,
-                  mHostOutput,
-                  std::get<Output>(mCurrentDataSizeFwd),
-                  std::get<Output>(newSizes));
+        mDeviceInput, mHostInput, std::get<Input>(mMaxFwdCapacity), std::get<Input>(newSizes));
+    allocIfNeeded(
+        mDeviceOutput, mHostOutput, std::get<Output>(mMaxFwdCapacity), std::get<Output>(newSizes));
     allocIfNeeded(mDeviceOutputRef,
                   mHostOutputRef,
-                  std::get<OutputRef>(mCurrentDataSizeFwd),
+                  std::get<OutputRef>(mMaxFwdCapacity),
                   std::get<OutputRef>(newSizes));
 
     mCurrentDataSizeFwd = newSizes;
@@ -122,37 +123,38 @@ void DlrmResource<DataT>::resizeBwdStorage(DataSizeBwd const& size)
                                std::get<BottomMlpGradRef>(size));
     };
 
-    auto allocIfNeeded = [](auto& devicePtr, auto& hostPtr, int64_t currentSize, int64_t newSize) {
+    auto allocIfNeeded = [](auto& devicePtr, auto& hostPtr, int64_t& currentMax, int64_t newSize) {
         using DeviceDataT = typename std::remove_reference_t<decltype(devicePtr)>::element_type;
         using HostDataT   = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
-        if(currentSize < newSize)
+        if(currentMax < newSize)
         {
-            devicePtr = std::move(Base::template allocDevice<DeviceDataT>(newSize));
-            hostPtr   = std::move(Base::template allocHost<HostDataT>(newSize));
+            currentMax = newSize;
+            devicePtr  = std::move(Base::template allocDevice<DeviceDataT>(newSize));
+            hostPtr    = std::move(Base::template allocHost<HostDataT>(newSize));
         }
     };
 
     auto newSizes = calcMatrixSizes(size);
 
     allocIfNeeded(
-        mDeviceInput, mHostInput, std::get<Input>(mCurrentDataSizeBwd), std::get<Input>(newSizes));
+        mDeviceInput, mHostInput, std::get<Input>(mMaxBwdCapacity), std::get<Input>(newSizes));
     allocIfNeeded(mDeviceUpstreamGrad,
                   mHostUpstreamGrad,
                   std::get<UpstreamGrad>(mCurrentDataSizeBwd),
                   std::get<UpstreamGrad>(newSizes));
     allocIfNeeded(
-        mDeviceGrad, mHostGrad, std::get<Grad>(mCurrentDataSizeBwd), std::get<Grad>(newSizes));
+        mDeviceGrad, mHostGrad, std::get<Grad>(mMaxBwdCapacity), std::get<Grad>(newSizes));
     allocIfNeeded(mDeviceGradRef,
                   mHostGradRef,
-                  std::get<GradRef>(mCurrentDataSizeBwd),
+                  std::get<GradRef>(mMaxBwdCapacity),
                   std::get<GradRef>(newSizes));
     allocIfNeeded(mDeviceBottomMlpGrad,
                   mHostBottomMlpGrad,
-                  std::get<BottomMlpGrad>(mCurrentDataSizeBwd),
+                  std::get<BottomMlpGrad>(mMaxBwdCapacity),
                   std::get<BottomMlpGrad>(newSizes));
     allocIfNeeded(mDeviceBottomMlpGradRef,
                   mHostBottomMlpGradRef,
-                  std::get<BottomMlpGradRef>(mCurrentDataSizeBwd),
+                  std::get<BottomMlpGradRef>(mMaxBwdCapacity),
                   std::get<BottomMlpGradRef>(newSizes));
 
     mCurrentDataSizeBwd = newSizes;
@@ -264,5 +266,17 @@ template <typename DataT>
 auto DlrmResource<DataT>::currentDataSizeBwd() -> DataSizeBwd&
 {
     return mCurrentDataSizeBwd;
+}
+
+template <typename DataT>
+auto DlrmResource<DataT>::maxFwdCapacity() -> DataSizeFwd&
+{
+    return mMaxFwdCapacity;
+}
+
+template <typename DataT>
+auto DlrmResource<DataT>::maxBwdCapacity() -> DataSizeBwd&
+{
+    return mMaxBwdCapacity;
 }
 #endif // DLRM_GEMM_RESOURCE_IMPL_H
