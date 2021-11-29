@@ -41,9 +41,9 @@
 
 #include <gtest/gtest.h>
 
+#include "Common.h"
 #include "Common.hpp"
 #include "Performance.h"
-#include "common.h"
 
 // Library includes
 #include "Constants.h"
@@ -119,7 +119,9 @@ dim3 DlrmKernelBase<TileSize, DataT>::gridDim() const
         return dim3((BATCH_SIZE + warps_per_threadblock - 1) / warps_per_threadblock);
     }
     else
+    {
         return dim3((BATCH_SIZE + kWarpsPerBlock - 1) >> kWarpsPerBlockLog2);
+    }
 }
 
 template <uint32_t TileSize, typename DataT>
@@ -131,7 +133,9 @@ dim3 DlrmKernelBase<TileSize, DataT>::blockDim() const
         return dim3(threadblock_size);
     }
     else
+    {
         return dim3(kNumThreads);
+    }
 }
 
 template <uint32_t TileSize, typename DataT>
@@ -241,9 +245,13 @@ void DlrmKernelBase<TileSize, DataT>::setup(ProblemParams const& problem)
 
         // Initialize matrix storage
         if(!isBwd)
+        {
             dataInstance->resizeFwdStorage(problem.fwdDataSize);
+        }
         else
+        {
             dataInstance->resizeBwdStorage(problem.bwdDataSize);
+        }
 
         // Initialize matrix data on host and transfer to device
         // (check for null pointer for reading reference data only once)
@@ -318,6 +326,7 @@ void DlrmKernelBase<TileSize, DataT>::exec()
 {
     if(mRunFlag)
     {
+        std::function<void()> dlrmKernel;
         if(!isBwd)
         {
             // num tiles
@@ -346,14 +355,14 @@ void DlrmKernelBase<TileSize, DataT>::exec()
 
             if(float4_predicate)
             {
-                auto dlrmKernel = [this,
-                                   num_rows_after_padding,
-                                   num_cols_after_padding,
-                                   smem_elems_per_warp,
-                                   smem_rows_per_warp,
-                                   output_size,
-                                   num_row_steps,
-                                   num_col_steps]() {
+                dlrmKernel = [this,
+                              num_rows_after_padding,
+                              num_cols_after_padding,
+                              smem_elems_per_warp,
+                              smem_rows_per_warp,
+                              output_size,
+                              num_row_steps,
+                              num_col_steps]() {
                     auto& dataInstance = DataStorage::instance();
                     hipExtLaunchKernelGGL((this->kernelFwdImpl()),
                                           (this->gridDim()),
@@ -377,45 +386,17 @@ void DlrmKernelBase<TileSize, DataT>::exec()
                                           num_col_steps,
                                           PAD);
                 };
-
-                hipEvent_t startEvent, stopEvent;
-                CHECK_HIP_ERROR(hipEventCreate(&startEvent));
-                CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
-
-                CHECK_HIP_ERROR(hipEventRecord(startEvent));
-                for(uint32_t i = 0; i < mRepeats; ++i)
-                {
-                    dlrmKernel();
-                }
-                CHECK_HIP_ERROR(hipEventRecord(stopEvent));
-                CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
-
-                auto timeMs = 0.0f;
-                CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
-
-                // Calculate efficiency
-                auto& deviceInfo             = DeviceInfo::instance();
-                auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
-
-                mElapsedTimeMs        = float64_t(timeMs);
-                mTotalGFlops          = calculateGFlops(mM, mN, mK);
-                mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
-                                        * static_cast<float64_t>(mRepeats);
-                mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
-
-                CHECK_HIP_ERROR(hipEventDestroy(startEvent));
-                CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
             }
             else
             {
-                auto dlrmKernel = [this,
-                                   num_rows_after_padding,
-                                   num_cols_after_padding,
-                                   smem_elems_per_warp,
-                                   smem_rows_per_warp,
-                                   output_size,
-                                   num_row_steps,
-                                   num_col_steps]() {
+                dlrmKernel = [this,
+                              num_rows_after_padding,
+                              num_cols_after_padding,
+                              smem_elems_per_warp,
+                              smem_rows_per_warp,
+                              output_size,
+                              num_row_steps,
+                              num_col_steps]() {
                     auto& dataInstance = DataStorage::instance();
                     hipExtLaunchKernelGGL((this->kernelFwdNonAlignedImpl()),
                                           (this->gridDim()),
@@ -439,34 +420,6 @@ void DlrmKernelBase<TileSize, DataT>::exec()
                                           num_col_steps,
                                           PAD);
                 };
-
-                hipEvent_t startEvent, stopEvent;
-                CHECK_HIP_ERROR(hipEventCreate(&startEvent));
-                CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
-
-                CHECK_HIP_ERROR(hipEventRecord(startEvent));
-                for(uint32_t i = 0; i < mRepeats; ++i)
-                {
-                    dlrmKernel();
-                }
-                CHECK_HIP_ERROR(hipEventRecord(stopEvent));
-                CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
-
-                auto timeMs = 0.0f;
-                CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
-
-                // Calculate efficiency
-                auto& deviceInfo             = DeviceInfo::instance();
-                auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
-
-                mElapsedTimeMs        = float64_t(timeMs);
-                mTotalGFlops          = calculateGFlops(mM, mN, mK);
-                mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
-                                        * static_cast<float64_t>(mRepeats);
-                mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
-
-                CHECK_HIP_ERROR(hipEventDestroy(startEvent));
-                CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
             }
         }
         else
@@ -531,20 +484,20 @@ void DlrmKernelBase<TileSize, DataT>::exec()
 
             if(float4_predicate)
             {
-                auto dlrmKernel = [this,
-                                   num_rows_after_padding,
-                                   num_cols_after_padding,
-                                   sample_size,
-                                   interaction_ugrad_size,
-                                   interaction_ugrad_size_with_padding,
-                                   interaction_ugrad_2D_size_elems,
-                                   interaction_ugrad_2D_stride,
-                                   input_size_elems,
-                                   input_stride,
-                                   num_row_steps,
-                                   num_col_steps,
-                                   row_tiles_per_step,
-                                   shared_mem_per_warp_size_byte]() {
+                dlrmKernel = [this,
+                              num_rows_after_padding,
+                              num_cols_after_padding,
+                              sample_size,
+                              interaction_ugrad_size,
+                              interaction_ugrad_size_with_padding,
+                              interaction_ugrad_2D_size_elems,
+                              interaction_ugrad_2D_stride,
+                              input_size_elems,
+                              input_stride,
+                              num_row_steps,
+                              num_col_steps,
+                              row_tiles_per_step,
+                              shared_mem_per_warp_size_byte]() {
                     auto& dataInstance = DataStorage::instance();
                     hipExtLaunchKernelGGL((this->kernelBwdImpl()),
                                           (this->gridDim()),
@@ -575,51 +528,23 @@ void DlrmKernelBase<TileSize, DataT>::exec()
                                           row_tiles_per_step,
                                           shared_mem_per_warp_size_byte);
                 };
-
-                hipEvent_t startEvent, stopEvent;
-                CHECK_HIP_ERROR(hipEventCreate(&startEvent));
-                CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
-
-                CHECK_HIP_ERROR(hipEventRecord(startEvent));
-                for(uint32_t i = 0; i < mRepeats; ++i)
-                {
-                    dlrmKernel();
-                }
-                CHECK_HIP_ERROR(hipEventRecord(stopEvent));
-                CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
-
-                auto timeMs = 0.0f;
-                CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
-
-                // Calculate efficiency
-                auto& deviceInfo             = DeviceInfo::instance();
-                auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
-
-                mElapsedTimeMs        = float64_t(timeMs);
-                mTotalGFlops          = calculateGFlops(mM, mN, mK);
-                mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
-                                        * static_cast<float64_t>(mRepeats);
-                mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
-
-                CHECK_HIP_ERROR(hipEventDestroy(startEvent));
-                CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
             }
             else
             {
-                auto dlrmKernel = [this,
-                                   num_rows_after_padding,
-                                   num_cols_after_padding,
-                                   sample_size,
-                                   interaction_ugrad_size,
-                                   interaction_ugrad_size_with_padding,
-                                   interaction_ugrad_2D_size_elems,
-                                   interaction_ugrad_2D_stride,
-                                   input_size_elems,
-                                   input_stride,
-                                   num_row_steps,
-                                   num_col_steps,
-                                   row_tiles_per_step,
-                                   shared_mem_per_warp_size_byte]() {
+                dlrmKernel = [this,
+                              num_rows_after_padding,
+                              num_cols_after_padding,
+                              sample_size,
+                              interaction_ugrad_size,
+                              interaction_ugrad_size_with_padding,
+                              interaction_ugrad_2D_size_elems,
+                              interaction_ugrad_2D_stride,
+                              input_size_elems,
+                              input_stride,
+                              num_row_steps,
+                              num_col_steps,
+                              row_tiles_per_step,
+                              shared_mem_per_warp_size_byte]() {
                     auto& dataInstance = DataStorage::instance();
                     hipExtLaunchKernelGGL((this->kernelBwdNonAlignedImpl()),
                                           (this->gridDim()),
@@ -650,36 +575,36 @@ void DlrmKernelBase<TileSize, DataT>::exec()
                                           row_tiles_per_step,
                                           shared_mem_per_warp_size_byte);
                 };
-
-                hipEvent_t startEvent, stopEvent;
-                CHECK_HIP_ERROR(hipEventCreate(&startEvent));
-                CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
-
-                CHECK_HIP_ERROR(hipEventRecord(startEvent));
-                for(uint32_t i = 0; i < mRepeats; ++i)
-                {
-                    dlrmKernel();
-                }
-                CHECK_HIP_ERROR(hipEventRecord(stopEvent));
-                CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
-
-                auto timeMs = 0.0f;
-                CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
-
-                // Calculate efficiency
-                auto& deviceInfo             = DeviceInfo::instance();
-                auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
-
-                mElapsedTimeMs        = float64_t(timeMs);
-                mTotalGFlops          = calculateGFlops(mM, mN, mK);
-                mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
-                                        * static_cast<float64_t>(mRepeats);
-                mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
-
-                CHECK_HIP_ERROR(hipEventDestroy(startEvent));
-                CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
             }
         }
+
+        hipEvent_t startEvent, stopEvent;
+        CHECK_HIP_ERROR(hipEventCreate(&startEvent));
+        CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
+
+        CHECK_HIP_ERROR(hipEventRecord(startEvent));
+        for(uint32_t i = 0; i < mRepeats; ++i)
+        {
+            dlrmKernel();
+        }
+        CHECK_HIP_ERROR(hipEventRecord(stopEvent));
+        CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
+
+        auto timeMs = 0.0f;
+        CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
+
+        // Calculate efficiency
+        auto& deviceInfo             = DeviceInfo::instance();
+        auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
+
+        mElapsedTimeMs = float64_t(timeMs);
+        mTotalGFlops   = calculateGFlops(mM, mN, mK);
+        mMeasuredGFlopsPerSec
+            = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs) * static_cast<float64_t>(mRepeats);
+        mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
+
+        CHECK_HIP_ERROR(hipEventDestroy(startEvent));
+        CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
     }
 }
 
