@@ -269,13 +269,13 @@ auto DlrmResource<DataT>::currentDataSizeBwd() -> DataSizeBwd&
 }
 
 template <typename DataT>
-auto DlrmResource<DataT>::maxFwdCapacity() -> DataSizeFwd&
+auto DlrmResource<DataT>::maxFwdCapacity() const -> DataSizeFwd
 {
     return mMaxFwdCapacity;
 }
 
 template <typename DataT>
-auto DlrmResource<DataT>::maxBwdCapacity() -> DataSizeBwd&
+auto DlrmResource<DataT>::maxBwdCapacity() const -> DataSizeBwd
 {
     return mMaxBwdCapacity;
 }

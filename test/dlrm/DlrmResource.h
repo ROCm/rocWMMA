@@ -128,8 +128,8 @@ public:
     // Data sizes
     DataSizeFwd& currentDataSizeFwd();
     DataSizeBwd& currentDataSizeBwd();
-    DataSizeFwd& maxFwdCapacity();
-    DataSizeBwd& maxBwdCapacity();
+    DataSizeFwd  maxFwdCapacity() const;
+    DataSizeBwd  maxBwdCapacity() const;
 
 protected:
     // Forward pass data
