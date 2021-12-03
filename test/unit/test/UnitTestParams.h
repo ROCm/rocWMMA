@@ -127,7 +127,7 @@ struct UnitTestParams
     // Layout groupings
     using TestLayoutsN   = col_major;
     using TestLayoutsT   = row_major;
-    using TestLayoutsAll = typename CombineLists<TestLayoutsN, TestLayoutsT>::Result;
+    using TestLayoutsAll = typename Concat<TestLayoutsN, TestLayoutsT>::Result;
 
     ///
     /// Run-time kernel argument parameters
