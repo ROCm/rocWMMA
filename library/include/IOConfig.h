@@ -80,12 +80,16 @@ struct IOConfig<matrix_a, BlockDim, BlockK, DataT, DataLayout>
     enum : uint32_t
     {
         MaxVectorWidth = VecWidthTraits<BlockDim, BlockK, DataT>::MaxVectorWidth,
-        VectorWidth    = std::is_same<DataLayout, row_major>::value ? MaxVectorWidth : 1
+        VectorWidth
+        = (std::is_same<DataLayout, row_major>::value && BlockDim <= 64) ? MaxVectorWidth : 1
     };
 
     using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
     using Packer   = Pack<DataT, IOTraits::UnpackedSize>;
     using Unpacker = Unpack<DataT, IOTraits::PackedSize>;
+
+    static_assert(!(std::is_same<DataLayout, col_major>::value && VectorWidth > 1),
+                  "matrix_a in col_major currently does not support VectorWidth > 1");
 
     // ColNT enforces MFMA ordering for supported BlockDim sizes.
     // Outside this range, MFMA ordering is not guaranteed.
@@ -152,12 +156,16 @@ struct IOConfig<matrix_b, BlockDim, BlockK, DataT, DataLayout>
     enum : uint32_t
     {
         MaxVectorWidth = VecWidthTraits<BlockDim, BlockK, DataT>::MaxVectorWidth,
-        VectorWidth    = std::is_same<DataLayout, col_major>::value ? MaxVectorWidth : 1
+        VectorWidth
+        = (std::is_same<DataLayout, col_major>::value && BlockDim <= 64) ? MaxVectorWidth : 1
     };
 
     using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
     using Packer   = Pack<DataT, IOTraits::UnpackedSize>;
     using Unpacker = Unpack<DataT, IOTraits::PackedSize>;
+
+    static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
+                  "matrix_b in row_major currently does not support VectorWidth > 1");
 
     // RowNT enforces MFMA ordering for supported BlockDim sizes.
     // Outside this range, MFMA ordering is not guaranteed.
@@ -230,6 +238,9 @@ struct IOConfig<accumulator, BlockDim, BlockK, DataT, DataLayout>
     using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
     using Packer   = Pack<DataT, IOTraits::UnpackedSize>;
     using Unpacker = Unpack<DataT, IOTraits::PackedSize>;
+
+    static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
+                  "accumulator in row_major currently does not support VectorWidth > 1");
 
     template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
     using MatrixLayout =
@@ -323,6 +334,15 @@ struct IOConfig<register_file, BlockDim, BlockK, DataT, DataLayout>
                                                     DataLayout,
                                                     MatrixLayout,
                                                     VectorWidth>;
+};
+
+template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
+struct IOConfig<accumulator, BlockDim, BlockK, DataT, void>
+{
+    // These don't depend on VectorWidth, we can use VW=1
+    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT>;
+    using Packer   = Pack<DataT, IOTraits::UnpackedSize>;
+    using Unpacker = Unpack<DataT, IOTraits::PackedSize>;
 };
 
 template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
