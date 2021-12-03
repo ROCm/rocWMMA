@@ -27,7 +27,7 @@
 #ifndef DLRM_DOT_BWD_H
 #define DLRM_DOT_BWD_H
 
-#include "Common.h"
+#include "./Common.h"
 
 template <typename T>
 __device__ inline void trilBwdKernel(T*   smem_in,
@@ -193,7 +193,6 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
     const DataT* gmem_ugrad_interactions = &gmem_ugrad[num_cols];
 
     // upstream grad -> shared memory (place in input section temporarily)
-#pragma unroll
     for(uint idx = lane_id; idx < interaction_ugrad_size; idx += WARP_SIZE)
     {
         smem_in[idx] = gmem_ugrad_interactions[idx];
@@ -331,7 +330,6 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
     const DataT* gmem_ugrad_interactions = &gmem_ugrad[num_cols];
 
     // upstream grad -> shared memory (place in input section temporarily)
-#pragma unroll
     for(uint idx = lane_id; idx < (interaction_ugrad_size >> 2); idx += WARP_SIZE)
     {
         ((float4*)smem_in)[idx] = ((float4*)gmem_ugrad_interactions)[idx];

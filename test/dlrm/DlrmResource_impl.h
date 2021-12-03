@@ -257,13 +257,13 @@ auto DlrmResource<DataT>::deviceBottomMlpGradRef() -> DevicePtrT<DataT>&
 }
 
 template <typename DataT>
-auto DlrmResource<DataT>::currentDataSizeFwd() -> DataSizeFwd&
+auto DlrmResource<DataT>::currentDataSizeFwd() const -> DataSizeFwd
 {
     return mCurrentDataSizeFwd;
 }
 
 template <typename DataT>
-auto DlrmResource<DataT>::currentDataSizeBwd() -> DataSizeBwd&
+auto DlrmResource<DataT>::currentDataSizeBwd() const -> DataSizeBwd
 {
     return mCurrentDataSizeBwd;
 }

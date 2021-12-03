@@ -27,7 +27,7 @@
 #ifndef DLRM_DOT_FWD_H
 #define DLRM_DOT_FWD_H
 
-#include "Common.h"
+#include "./Common.h"
 
 template <uint TILE_DIM, uint M_BLOCKS, uint SMEM_STRIDE, uint SMEM_STRIDE_ACC, typename T>
 __device__ inline void bmmTrilPadFwdKernel(T*   shmem,
