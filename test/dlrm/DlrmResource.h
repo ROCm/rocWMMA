@@ -27,11 +27,10 @@
 #ifndef DLRM_RESOURCE_H
 #define DLRM_RESOURCE_H
 
-#include <memory>
-#include <tuple>
-//#include <hip/hip_runtime_api.h>
 #include "HipResource.h"
 #include "Singleton.h"
+#include <memory>
+#include <tuple>
 
 // DlrmResource class is intended to manage a shared pool of resources for
 // testing DLRM kernels on the GPU.
@@ -126,10 +125,10 @@ public:
     DevicePtrT<DataT>& deviceBottomMlpGradRef();
 
     // Data sizes
-    DataSizeFwd& currentDataSizeFwd();
-    DataSizeBwd& currentDataSizeBwd();
-    DataSizeFwd  maxFwdCapacity() const;
-    DataSizeBwd  maxBwdCapacity() const;
+    DataSizeFwd currentDataSizeFwd() const;
+    DataSizeBwd currentDataSizeBwd() const;
+    DataSizeFwd maxFwdCapacity() const;
+    DataSizeBwd maxBwdCapacity() const;
 
 protected:
     // Forward pass data

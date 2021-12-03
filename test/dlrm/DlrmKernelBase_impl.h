@@ -63,7 +63,6 @@ DlrmKernelBase<TileSize, DataT>::~DlrmKernelBase()
 template <uint32_t TileSize, typename DataT>
 uint32_t DlrmKernelBase<TileSize, DataT>::ldsUsage() const
 {
-    // return 0;
     if(!isBwd)
     {
         const uint smem_rows_per_warp      = M_BLOCKS << 4;
@@ -105,7 +104,6 @@ uint32_t DlrmKernelBase<TileSize, DataT>::ldsUsage() const
         uint wmma_smem_byte = num_rows_after_padding * num_rows_after_padding * input_dbytes;
         uint shared_mem_per_warp_size_byte
             = input_size_bytes + staging_area_size_bytes + wmma_smem_byte;
-        uint shared_mem_size_bytes = kWarpsPerBlock * shared_mem_per_warp_size_byte;
 
         return kWarpsPerBlock * shared_mem_per_warp_size_byte;
     }
@@ -127,7 +125,6 @@ dim3 DlrmKernelBase<TileSize, DataT>::gridDim() const
 template <uint32_t TileSize, typename DataT>
 dim3 DlrmKernelBase<TileSize, DataT>::blockDim() const
 {
-    // return dim3(mTBlockX, mTBlockY);
     if(!isBwd)
     {
         return dim3(threadblock_size);
@@ -149,8 +146,6 @@ bool DlrmKernelBase<TileSize, DataT>::checkDevice() const
 template <uint32_t TileSize, typename DataT>
 bool DlrmKernelBase<TileSize, DataT>::checkSizes() const
 {
-    // return (mM >= (BlockM * mTBlockX / AMDGCN_WAVE_SIZE) && mN >= (BlockN * mTBlockY)
-    //         && mK >= BlockK);
     return true;
 }
 
@@ -176,6 +171,8 @@ void DlrmKernelBase<TileSize, DataT>::reset()
 
     mTotalGFlops = mMeasuredGFlopsPerSec = 0.0;
     mElapsedTimeMs = mEfficiency = 0.0;
+
+    isBwd = 0;
 }
 
 template <uint32_t TileSize, typename DataT>
@@ -473,7 +470,6 @@ void DlrmKernelBase<TileSize, DataT>::exec()
             uint wmma_smem_byte = num_rows_after_padding * num_rows_after_padding * input_dbytes;
             uint shared_mem_per_warp_size_byte
                 = input_size_bytes + staging_area_size_bytes + wmma_smem_byte;
-            uint shared_mem_size_bytes = kWarpsPerBlock * shared_mem_per_warp_size_byte;
 
             uint num_blocks    = (BATCH_SIZE + kWarpsPerBlock - 1) >> kWarpsPerBlockLog2;
             uint num_row_steps = num_row_tiles / row_tiles_per_step;
