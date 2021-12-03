@@ -356,9 +356,9 @@ constexpr const char* dataTypeToString<col_major>()
 namespace std
 {
     template <typename T>
-    __device__ inline pair<T, T> reverse(pair<T, T> const& p)
+    __device__ inline pair<T, T> swap(pair<T, T> const& p)
     {
-        return make_pair(p.second, p.first);
+        return std::make_pair(std::get<1>(p), std::get<0>(p));
     }
 
     inline pair<uint32_t, uint32_t> operator+(pair<uint32_t, uint32_t> const& lhs,
