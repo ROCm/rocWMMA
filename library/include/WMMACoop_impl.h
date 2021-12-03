@@ -85,7 +85,7 @@ namespace wmma
                               uint32_t waveIndex,
                               uint32_t waveCount)
     {
-        loadMatrixCoopSync(frag, data, ldm, waveIndex, waveCount, waveCount);
+        load_matrix_coop_sync(frag, data, ldm, waveIndex, waveCount, waveCount);
     }
 
     template <typename MatrixT,
@@ -189,7 +189,7 @@ namespace wmma
         auto           waveIndex = std::get<coopIndex>(MappingUtil::waveCoord());
         auto           waveCount = std::get<coopIndex>(MappingUtil::workgroupDim());
 
-        store_matrix_coop_sync(frag, ldm, waveIndex, waveCount);
+        store_matrix_coop_sync(data, frag, ldm, waveIndex, waveCount);
     }
 } // namespace wmma
 
