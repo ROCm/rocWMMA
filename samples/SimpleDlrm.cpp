@@ -86,20 +86,86 @@ struct Log2<1>
 
 // Matrix data initialization
 template <typename DataT>
-__host__ static inline void fill(DataT* mat, uint32_t rows, uint32_t cols, uint32_t batchSize)
+__host__ static inline void fill(DataT* mat, uint32_t numRows, uint32_t numCols, uint32_t batchSize)
 {
-    auto rowOffset   = rows;
-    auto batchOffset = rows * cols;
+    auto batchOffset = numRows * numCols;
     for(int k = 0; k < batchSize; ++k)
     {
-        for(int i = 0; i < rows; ++i)
+        for(int i = 0; i < numRows; ++i)
         {
-            for(int j = 0; j < cols; ++j)
+            for(int j = 0; j < numCols; ++j)
             {
-                // Random values between 0 and 1
-                auto value
-                    = __float2half(static_cast<float>(rand()) / static_cast<float>(RAND_MAX));
-                mat[k * batchOffset + i * rowOffset + j] = static_cast<DataT>(value);
+                // Random values normalized such that output is between 0 and 1
+                auto value = __float2half(static_cast<float>(rand() / numCols)
+                                          / static_cast<float>(RAND_MAX));
+                mat[k * batchOffset + i * numRows + j] = static_cast<DataT>(value);
+            }
+        }
+    }
+}
+
+// Element-wise comparison
+__host__ void
+    compareEqual(float16_t const* a, float16_t const* b, uint32_t size, double tolerance = 10.0)
+{
+    bool   retval;
+    double max_relative_error = 0.0;
+
+    for(int i = 0; i < size; i++)
+    {
+        auto valA           = a[i];
+        auto valB           = b[i];
+        auto relative_error = fabs(valA - valB) / (fabs(valA) + fabs(valB) + 1.0);
+
+        if(relative_error > max_relative_error || relative_error != relative_error)
+        {
+            max_relative_error = relative_error;
+        }
+    }
+    auto eps = std::numeric_limits<float16_t>::epsilon();
+    if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
+    {
+        std::cout << "FAILED\n";
+    }
+    else
+    {
+        std::cout << "PASSED\n";
+    }
+
+    std::cout << "Max relative error: " << max_relative_error << std::endl;
+}
+
+__host__ void bmmTrillPadCPU(
+    float16_t* input, float16_t* output, uint32_t numRows, uint32_t numCols, uint32_t batchSize)
+{
+    auto batchOffset = numRows * numCols;
+    uint outputIdx   = 0;
+    uint j;
+    for(int k = 0; k < batchSize; k++)
+    {
+        for(int i = 0; i < numRows; i++)
+        {
+            for(j = 0; j < numCols; j++)
+            {
+                float16_t accum = 0.0f;
+                for(int h = 0; h < numCols; h++)
+                {
+                    accum += static_cast<float16_t>(input[k * batchOffset + i * numRows + h])
+                             * static_cast<float16_t>(input[k * batchOffset + j * numCols + h]);
+                }
+                // Copy MLP to output
+                if(i == 0)
+                {
+                    //output[k * batchOffset + j] = input[k * batchOffset + j];
+                    output[outputIdx] = input[k * batchOffset + j];
+                    outputIdx++;
+                }
+                if(j < i)
+                {
+                    //output[k * batchOffset + outputIdx] = accum;
+                    output[outputIdx] = accum;
+                    outputIdx++;
+                }
             }
         }
     }
@@ -424,8 +490,7 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
     // Upstream gradient vector for interactions
     const half* gmem_ugrad_interactions = &gmem_ugrad[numCols];
 
-// upstream grad -> shared memory (place in input section temporarily)
-#pragma unroll
+    // upstream grad -> shared memory (place in input section temporarily)
     for(uint idx = lane_id; idx < (interactionUgradSize >> 3); idx += WARP_SIZE)
     {
         ((float4*)smem_in)[idx] = ((float4*)gmem_ugrad_interactions)[idx];
@@ -507,9 +572,9 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
 enum : uint32_t
 {
     // Data size parameters
-    numRows   = 256,
-    numCols   = 256,
-    batchSize = 1,
+    numRows   = 16,
+    numCols   = 32,
+    batchSize = 2,
 
     // Shared kernel template parameters
     K_WARP_SIZE      = AMDGCN_WAVE_SIZE,
@@ -624,34 +689,34 @@ __host__ void dlrm_test(bool isBwd)
                       outputSize,
                       numRowSteps,
                       numColSteps]() {
-            hipLaunchKernelGGL(
-                (dotBasedInteractFwdKernel<WARPS_PER_THREADBLOCK,
-                                           THREADBLOCK_SIZE,
-                                           M_BLOCKS,
-                                           K_BLOCKS,
-                                           SMEM_STRIDE,
-                                           SMEM_STRIDE_ACC,
-                                           K_WARP_SIZE,
-                                           K_WARP_SIZE_LOG2,
-                                           K_TILE_DIM,
-                                           K_TILE_DIM_LOG2>),
-                dim3((batchSize + WARPS_PER_THREADBLOCK - 1) / WARPS_PER_THREADBLOCK),
-                dim3(THREADBLOCK_SIZE),
-                WARPS_PER_THREADBLOCK * smemElemsPerWarp * sizeof(__half),
-                0,
-                (const __half*)d_input,
-                (half*)d_output,
-                batchSize,
-                numRows,
-                numCols,
-                numRowsAfterPadding,
-                numColsAfterPadding,
-                smemElemsPerWarp,
-                smemRowsPerWarp,
-                outputSize,
-                numRowSteps,
-                numColSteps,
-                PAD);
+            hipLaunchKernelGGL((dotBasedInteractFwdKernel<WARPS_PER_THREADBLOCK,
+                                                          THREADBLOCK_SIZE,
+                                                          M_BLOCKS,
+                                                          K_BLOCKS,
+                                                          SMEM_STRIDE,
+                                                          SMEM_STRIDE_ACC,
+                                                          K_WARP_SIZE,
+                                                          K_WARP_SIZE_LOG2,
+                                                          K_TILE_DIM,
+                                                          K_TILE_DIM_LOG2>),
+                               dim3(ceilDiv(static_cast<uint>(batchSize),
+                                            static_cast<uint>(WARPS_PER_THREADBLOCK))),
+                               dim3(THREADBLOCK_SIZE),
+                               WARPS_PER_THREADBLOCK * smemElemsPerWarp * sizeof(__half),
+                               0,
+                               (const __half*)d_input,
+                               (half*)d_output,
+                               batchSize,
+                               numRows,
+                               numCols,
+                               numRowsAfterPadding,
+                               numColsAfterPadding,
+                               smemElemsPerWarp,
+                               smemRowsPerWarp,
+                               outputSize,
+                               numRowSteps,
+                               numColSteps,
+                               PAD);
         };
     }
     else
@@ -761,7 +826,7 @@ __host__ void dlrm_test(bool isBwd)
         };
     }
 
-    std::cout << "Launching GEMM kernel..." << std::endl;
+    std::cout << "Launching " << (isBwd ? "Bwd" : "Fwd") << " Dlrm kernel..." << std::endl;
 
     hipEvent_t startEvent, stopEvent;
     CHECK_HIP_ERROR(hipEventCreate(&startEvent));
@@ -776,11 +841,29 @@ __host__ void dlrm_test(bool isBwd)
     CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
     CHECK_HIP_ERROR(hipEventDestroy(startEvent));
     CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
+
+    if(!isBwd)
+    {
+        CHECK_HIP_ERROR(hipMemcpy(h_output.data(), d_output, outputBytes, hipMemcpyDeviceToHost));
+
+        std::vector<float16_t> outputRef;
+        outputRef.resize(h_output.size());
+
+        bmmTrillPadCPU(h_input.data(), outputRef.data(), numRows, numCols, batchSize);
+
+        // for (int i = 0; i < h_input.size(); i++)
+        //     std::cout << "Host: " << h_input[i] << '\n';
+
+        for(int i = 0; i < outputRef.size(); i++)
+            std::cout << "Host: " << outputRef[i] << ", Device: " << h_output[i] << '\n';
+
+        compareEqual(h_output.data(), outputRef.data(), h_output.size());
+    }
 }
 
 int main()
 {
-    dlrm_test(true);
     dlrm_test(false);
+    dlrm_test(true);
     return 0;
 }
