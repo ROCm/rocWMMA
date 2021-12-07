@@ -28,22 +28,8 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
+#include "Common.h"
 #include "WMMA.h"
-
-// Helper macro for HIP errors
-#ifndef CHECK_HIP_ERROR
-#define CHECK_HIP_ERROR(status)                   \
-    if(status != hipSuccess)                      \
-    {                                             \
-        fprintf(stderr,                           \
-                "hip error: '%s'(%d) at %s:%d\n", \
-                hipGetErrorString(status),        \
-                status,                           \
-                __FILE__,                         \
-                __LINE__);                        \
-        exit(EXIT_FAILURE);                       \
-    }
-#endif
 
 // Host GEMM validation
 __host__ void gemm_cpu_h(uint32_t         m,
@@ -90,44 +76,6 @@ __host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n)
             mat[i * ld + j] = (value % 2) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
         }
     }
-}
-
-// Element-wise comparison
-__host__ void
-    compareEqual(float32_t const* a, float32_t const* b, int m, int n, double tolerance = 10.0)
-{
-    bool retval;
-    int  lda = n;
-    int  ldb = lda;
-
-    double max_relative_error = 0.0;
-
-    for(int i = 0; i < m; ++i)
-    {
-        for(int j = 0; j < n; ++j)
-        {
-            auto valA           = a[i * lda + j];
-            auto valB           = b[i * ldb + j];
-            auto relative_error = fabs(valA - valB) / (fabs(valA) + fabs(valB) + 1.0);
-
-            if(relative_error > max_relative_error || relative_error != relative_error)
-            {
-                max_relative_error = relative_error;
-            }
-        }
-    }
-
-    auto eps = std::numeric_limits<float32_t>::epsilon();
-    if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
-    {
-        std::cout << "FAILED\n";
-    }
-    else
-    {
-        std::cout << "PASSED\n";
-    }
-
-    std::cout << "Max relative error: " << max_relative_error << std::endl;
 }
 
 // Supports WMMA_M/N square sizes of
@@ -354,7 +302,7 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
                alpha,
                beta);
 
-    compareEqual(matrixD.data(), matrixD_ref.data(), m, n);
+    compareEqual<float32_t>(matrixD.data(), matrixD_ref.data(), m * n);
 
     // Release device memory
     CHECK_HIP_ERROR(hipFree(d_a));
