@@ -28,24 +28,10 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
+#include "Common.h"
 #include "WMMA.h"
 #include <functional>
 #include <sys/types.h>
-
-// Helper macro for HIP errors
-#ifndef CHECK_HIP_ERROR
-#define CHECK_HIP_ERROR(status)                   \
-    if(status != hipSuccess)                      \
-    {                                             \
-        fprintf(stderr,                           \
-                "hip error: '%s'(%d) at %s:%d\n", \
-                hipGetErrorString(status),        \
-                status,                           \
-                __FILE__,                         \
-                __LINE__);                        \
-        exit(EXIT_FAILURE);                       \
-    }
-#endif
 
 struct __align__(8) half4
 {
@@ -62,16 +48,6 @@ __device__ inline void store(__half* dst, const float src)
     *dst = __float2half(src);
 }
 
-__device__ inline void store(float* dst, float* src)
-{
-    *dst = *src;
-}
-
-__device__ inline void store(float* dst, const float src)
-{
-    *dst = src;
-}
-
 template <uint x>
 struct Log2
 {
@@ -82,6 +58,34 @@ template <>
 struct Log2<1>
 {
     static constexpr uint value = 0;
+};
+
+enum : uint32_t
+{
+    // Data size parameters
+    numRows   = 32,
+    numCols   = 64,
+    batchSize = 2,
+
+    // Shared kernel template parameters
+    WARP_SIZE             = AMDGCN_WAVE_SIZE,
+    WARP_SIZE_LOG2        = Log2<WARP_SIZE>::value,
+    TILE_DIM              = 16,
+    TILE_DIM_LOG2         = Log2<TILE_DIM>::value,
+    PAD                   = 0,
+    MEM_SKEW_SIZE         = 8,
+    WARPS_PER_THREADBLOCK = 128 / WARP_SIZE,
+    THREADBLOCK_SIZE      = WARPS_PER_THREADBLOCK * WARP_SIZE,
+
+    // Forward kernel template parameters
+    M_BLOCKS        = numRows / TILE_DIM,
+    K_BLOCKS        = numCols / TILE_DIM,
+    SMEM_STRIDE     = K_BLOCKS * 16 + 8,
+    SMEM_STRIDE_ACC = M_BLOCKS * 16 + 8,
+
+    // Backward kernel template parameters
+    ROW_TILES_PER_STEP = 32 / TILE_DIM,
+    COL_TILES_PER_STEP = 1
 };
 
 // Matrix data initialization
@@ -98,41 +102,10 @@ __host__ static inline void fill(DataT* mat, uint32_t numRows, uint32_t numCols,
                 // Random values normalized such that output is between 0 and 1
                 auto value = __float2half(static_cast<float>(rand() / numCols)
                                           / static_cast<float>(RAND_MAX));
-                mat[k * batchOffset + i * numRows + j] = static_cast<DataT>(value);
+                mat[k * batchOffset + i * numCols + j] = static_cast<DataT>(value);
             }
         }
     }
-}
-
-// Element-wise comparison
-__host__ void
-    compareEqual(float16_t const* a, float16_t const* b, uint32_t size, double tolerance = 10.0)
-{
-    bool   retval;
-    double max_relative_error = 0.0;
-
-    for(int i = 0; i < size; i++)
-    {
-        auto valA           = a[i];
-        auto valB           = b[i];
-        auto relative_error = fabs(valA - valB) / (fabs(valA) + fabs(valB) + 1.0);
-
-        if(relative_error > max_relative_error || relative_error != relative_error)
-        {
-            max_relative_error = relative_error;
-        }
-    }
-    auto eps = std::numeric_limits<float16_t>::epsilon();
-    if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
-    {
-        std::cout << "FAILED\n";
-    }
-    else
-    {
-        std::cout << "PASSED\n";
-    }
-
-    std::cout << "Max relative error: " << max_relative_error << std::endl;
 }
 
 __host__ void bmmTrillPadCPU(
@@ -140,17 +113,16 @@ __host__ void bmmTrillPadCPU(
 {
     auto batchOffset = numRows * numCols;
     uint outputIdx   = 0;
-    uint j;
     for(int k = 0; k < batchSize; k++)
     {
         for(int i = 0; i < numRows; i++)
         {
-            for(j = 0; j < numCols; j++)
+            for(int j = 0; j < numCols; j++)
             {
                 float16_t accum = 0.0f;
                 for(int h = 0; h < numCols; h++)
                 {
-                    accum += static_cast<float16_t>(input[k * batchOffset + i * numRows + h])
+                    accum += static_cast<float16_t>(input[k * batchOffset + i * numCols + h])
                              * static_cast<float16_t>(input[k * batchOffset + j * numCols + h]);
                 }
                 // Copy MLP to output
@@ -171,7 +143,76 @@ __host__ void bmmTrillPadCPU(
     }
 }
 
-template <uint TILE_DIM, uint M_BLOCKS, uint SMEM_STRIDE, uint SMEM_STRIDE_ACC>
+/*
+* deconcat bottom_mlp_grad = grad[0:numCols]
+           interaction_grad = gard[numCols:]
+*
+* deflatten into tril (trilbwdkernel does this)
+*
+* copy bottom tril to top (flip i & j)
+*   (pad to 32)
+*
+* reverse mm interaction_grad_2d * input = output_grad
+             [27x27]               [27x128]
+             (bmmBwdkernel does this)
+*
+*/
+
+__host__ void bmmBwdCPU(float16_t* input,
+                        float16_t* upstreamGrad,
+                        float16_t* bottomMlpGrad,
+                        float16_t* output,
+                        uint32_t   numRows,
+                        uint32_t   numCols,
+                        uint32_t   batchSize)
+{
+    auto batchOffset = numRows * numCols;
+    auto trilSize    = ((numRows * (numRows - 1)) / 2) + numCols;
+    for(int k = 0; k < batchSize; k++)
+    {
+        // Copy bottom MLP grad
+        for(int j = 0; j < numCols; j++)
+        {
+            bottomMlpGrad[k * numCols + j] = upstreamGrad[k * trilSize + j];
+        }
+
+        // Remake tril
+        float16_t temp[numRows * numRows];
+        uint32_t  tempIdx = k * trilSize + numCols;
+        for(int i = 0; i < numRows; i++)
+        {
+            for(int j = 0; j <= i; j++)
+            {
+                if(i == j)
+                {
+                    temp[i * numRows + j] = 0;
+                }
+                else
+                {
+                    temp[i * numRows + j] = upstreamGrad[tempIdx];
+                    temp[j * numRows + i] = upstreamGrad[tempIdx];
+                    tempIdx++;
+                }
+            }
+        }
+
+        // Perform reverse bmm
+        for(int i = 0; i < numRows; i++)
+        {
+            for(int j = 0; j < numCols; j++)
+            {
+                float16_t accum = 0.0f;
+                for(int h = 0; h < numRows; h++)
+                {
+                    accum += static_cast<float16_t>(temp[i * numRows + h])
+                             * static_cast<float16_t>(input[k * batchOffset + h * numCols + j]);
+                }
+                output[k * batchOffset + i * numCols + j] = accum;
+            }
+        }
+    }
+}
+
 __device__ inline void bmmTrilPadFwdKernel(half* shmem,
                                            half* gmem_output,
                                            uint  numRows,
@@ -278,7 +319,6 @@ __device__ inline void trilBwdKernel(half* smem_in,
     }
 }
 
-template <uint TILE_DIM, uint ROW_TILES_PER_STEP, uint TILE_DIM_LOG_2>
 __device__ inline void bmmBwdKernel(half*  smem_in,
                                     half*  smem_temp,
                                     float* smem_out,
@@ -297,7 +337,7 @@ __device__ inline void bmmBwdKernel(half*  smem_in,
         for(uint j = 0; j < ROW_TILES_PER_STEP; j++)
         {
             const half* tile_ptr
-                = smem_temp + ((i * interactionUgrad2DStride + j) << TILE_DIM_LOG_2);
+                = smem_temp + ((i * interactionUgrad2DStride + j) << TILE_DIM_LOG2);
             wmma::load_matrix_sync(a[i][j], tile_ptr, interactionUgrad2DStride);
         }
     }
@@ -309,7 +349,7 @@ __device__ inline void bmmBwdKernel(half*  smem_in,
     {
         for(uint i = 0; i < ROW_TILES_PER_STEP; i++)
         {
-            const half* tile_ptr = smem_in + ((i * inputStride + col_step) << TILE_DIM_LOG_2);
+            const half* tile_ptr = smem_in + ((i * inputStride + col_step) << TILE_DIM_LOG2);
             wmma::fill_fragment(acc[i], 0.0f);
             wmma::load_matrix_sync(b[i], tile_ptr, inputStride);
         }
@@ -328,28 +368,18 @@ __device__ inline void bmmBwdKernel(half*  smem_in,
 
         __syncthreads();
 
-        uint gmem_grad_col = (col_step << TILE_DIM_LOG_2) + lane_id;
+        uint gmem_grad_col = (col_step << TILE_DIM_LOG2) + lane_id;
         if(gmem_grad_col < numCols)
         {
             for(uint i = 0; i < numRows; i++)
             {
                 store(&gmem_grad[i * numCols + gmem_grad_col],
-                      &smem_out[(i << TILE_DIM_LOG_2) + lane_id]);
+                      &smem_out[(i << TILE_DIM_LOG2) + lane_id]);
             }
         }
     }
 }
 
-template <uint WARPS_PER_BLOCK,
-          uint THREADBLOCK_SIZE,
-          uint M_BLOCKS,
-          uint K_BLOCKS,
-          uint SMEM_STRIDE,
-          uint SMEM_STRIDE_ACC,
-          uint WARP_SIZE,
-          uint WARP_SIZE_LOG_2,
-          uint TILE_DIM,
-          uint TILE_DIM_LOG_2>
 __launch_bounds__(THREADBLOCK_SIZE) __global__
     void dotBasedInteractFwdKernel(const __half* __restrict input,
                                    __half* __restrict output,
@@ -365,8 +395,8 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
                                    uint numColSteps,
                                    uint PAD)
 {
-    uint warp_id   = (threadIdx.x >> WARP_SIZE_LOG_2);
-    int  sample_id = blockIdx.x * WARPS_PER_BLOCK + warp_id;
+    uint warp_id   = (threadIdx.x >> WARP_SIZE_LOG2);
+    int  sample_id = blockIdx.x * WARPS_PER_THREADBLOCK + warp_id;
     if(sample_id >= batchSize)
     {
         return;
@@ -414,25 +444,17 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
         ((float2*)gmem_output)[lane_id] = ((float2*)shmem)[lane_id];
     }
 
-    bmmTrilPadFwdKernel<TILE_DIM, M_BLOCKS, SMEM_STRIDE, SMEM_STRIDE_ACC>(shmem,
-                                                                          gmem_output,
-                                                                          numRows,
-                                                                          numCols,
-                                                                          smemRowsPerWarp,
-                                                                          outputSize,
-                                                                          numColSteps,
-                                                                          PAD,
-                                                                          lane_id);
+    bmmTrilPadFwdKernel(shmem,
+                        gmem_output,
+                        numRows,
+                        numCols,
+                        smemRowsPerWarp,
+                        outputSize,
+                        numColSteps,
+                        PAD,
+                        lane_id);
 }
 
-template <uint WARPS_PER_BLOCK,
-          uint THREADBLOCK_SIZE,
-          uint ROW_TILES_PER_STEP,
-          uint COL_TILES_PER_STEP,
-          uint WARP_SIZE,
-          uint WARP_SIZE_LOG_2,
-          uint TILE_DIM,
-          uint TILE_DIM_LOG_2>
 __launch_bounds__(THREADBLOCK_SIZE) __global__
     void dotBasedInteractBwdKernel(const __half* __restrict input,
                                    const __half* __restrict upstream_grad,
@@ -456,8 +478,8 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
                                    uint sharedMemPerWarpSizeByte)
 {
     HIP_DYNAMIC_SHARED(half, shared_mem_half)
-    uint warp_id   = (threadIdx.x >> WARP_SIZE_LOG_2);
-    uint sample_id = blockIdx.x * WARPS_PER_BLOCK + warp_id;
+    uint warp_id   = (threadIdx.x >> WARP_SIZE_LOG2);
+    uint sample_id = blockIdx.x * WARPS_PER_THREADBLOCK + warp_id;
     if(sample_id >= batchSize)
     {
         return;
@@ -542,7 +564,6 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
 
     if(lane_id < (numColsAfterPadding >> 2))
     {
-#pragma unroll 2
         for(uint row = numRows; row < numRowsAfterPadding; row++)
         {
             half* smem_row_ptr              = &smem_in[row * inputStride];
@@ -552,16 +573,16 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
 
     __syncthreads();
 
-    bmmBwdKernel<TILE_DIM, ROW_TILES_PER_STEP, TILE_DIM_LOG_2>(smem_in,
-                                                               smem_temp,
-                                                               smem_out,
-                                                               gmem_grad,
-                                                               numRows,
-                                                               numCols,
-                                                               numColSteps,
-                                                               inputStride,
-                                                               interactionUgrad2DStride,
-                                                               lane_id);
+    bmmBwdKernel(smem_in,
+                 smem_temp,
+                 smem_out,
+                 gmem_grad,
+                 numRows,
+                 numCols,
+                 numColSteps,
+                 inputStride,
+                 interactionUgrad2DStride,
+                 lane_id);
 
     if(lane_id < (numCols >> 2))
     {
@@ -569,59 +590,27 @@ __launch_bounds__(THREADBLOCK_SIZE) __global__
     }
 }
 
-enum : uint32_t
-{
-    // Data size parameters
-    numRows   = 16,
-    numCols   = 32,
-    batchSize = 2,
-
-    // Shared kernel template parameters
-    K_WARP_SIZE      = AMDGCN_WAVE_SIZE,
-    K_WARP_SIZE_LOG2 = Log2<K_WARP_SIZE>::value,
-    K_TILE_DIM       = 16,
-    K_TILE_DIM_LOG2  = Log2<K_TILE_DIM>::value,
-    PAD              = 0,
-    MEM_SKEW_SIZE    = 8,
-
-    // Forward kernel template parameters
-    M_BLOCKS              = numRows / K_TILE_DIM,
-    K_BLOCKS              = numCols / K_TILE_DIM,
-    SMEM_STRIDE           = K_BLOCKS * 16 + 8,
-    SMEM_STRIDE_ACC       = M_BLOCKS * 16 + 8,
-    WARPS_PER_THREADBLOCK = 128 / K_WARP_SIZE,
-    THREADBLOCK_SIZE      = WARPS_PER_THREADBLOCK * K_WARP_SIZE,
-
-    // Backward kernel template parameters
-    TILE_SIZE            = K_TILE_DIM,
-    K_WARPS_PER_BLOCK    = 128 / K_WARP_SIZE,
-    K_NUM_THREADS        = K_WARPS_PER_BLOCK * K_WARP_SIZE,
-    K_ROW_TILES_PER_STEP = 32 / K_TILE_DIM,
-    K_COL_TILES_PER_STEP = 1
-};
-
 __host__ void dlrm_test(bool isBwd)
 {
     // Allocate and initialize host matrices
     std::vector<float16_t> h_input, h_output, h_upstreamGrad, h_grad, h_bottomMlpGrad;
 
-    const size_t tril_size = ((numCols * (numCols - 1)) / 2) + numRows;
-
     h_input.resize(numRows * numCols * batchSize);
 
     fill<float16_t>(h_input.data(), numRows, numCols, batchSize);
 
+    const size_t trilSize = ((numRows * (numRows - 1)) / 2) + numCols;
     if(!isBwd)
     {
-        h_output.resize(tril_size * batchSize);
+        h_output.resize(trilSize * batchSize);
     }
     else
     {
-        h_upstreamGrad.resize(tril_size * batchSize);
+        h_upstreamGrad.resize(trilSize * batchSize);
         h_grad.resize(numRows * numCols * batchSize);
-        h_bottomMlpGrad.resize(numRows * batchSize);
+        h_bottomMlpGrad.resize(numCols * batchSize);
 
-        fill<float16_t>(h_upstreamGrad.data(), 1, tril_size, batchSize);
+        fill<float16_t>(h_upstreamGrad.data(), 1, trilSize, batchSize);
     }
 
     // Allocate and copy device memory
@@ -658,27 +647,25 @@ __host__ void dlrm_test(bool isBwd)
     {
         // Forward kernel argument parameters
         // num tiles
-        uint numRowTiles = (numRows + K_TILE_DIM - 1) >> K_TILE_DIM_LOG2;
-        uint numColTiles = (numCols + K_TILE_DIM - 1) >> K_TILE_DIM_LOG2;
+        uint numRowTiles = ceilDiv(static_cast<uint>(numRows), static_cast<uint>(TILE_DIM));
+        uint numColTiles = ceilDiv(static_cast<uint>(numCols), static_cast<uint>(TILE_DIM));
 
         // number of rows and columns after padding
-        uint numRowsAfterPadding = K_TILE_DIM << 1;
-        uint numColsAfterPadding = numColTiles << K_TILE_DIM_LOG2;
+        uint numRowsAfterPadding = numRowTiles << TILE_DIM_LOG2;
+        uint numColsAfterPadding = numColTiles << TILE_DIM_LOG2;
 
-        uint numRowSteps = numRowTiles / K_ROW_TILES_PER_STEP;
-        uint numColSteps = numColTiles / K_COL_TILES_PER_STEP;
+        uint numRowSteps = numRowTiles / ROW_TILES_PER_STEP;
+        uint numColSteps = numColTiles / COL_TILES_PER_STEP;
 
         // multiple of 2 to guarantee 256-bit alignment for start of the row, at least 16 to safeload a tile
         const uint smemRowsPerWarp     = M_BLOCKS << 4;
         const uint smemElemsPerWarpMat = smemRowsPerWarp * SMEM_STRIDE;
 
         // output in FP32
-        const uint smemElemsPerWarpAcc = M_BLOCKS * K_TILE_DIM * SMEM_STRIDE_ACC * 2;
+        const uint smemElemsPerWarpAcc = M_BLOCKS * TILE_DIM * SMEM_STRIDE_ACC * 2;
         const uint smemElemsPerWarp    = (smemElemsPerWarpMat > smemElemsPerWarpAcc)
                                              ? smemElemsPerWarpMat
                                              : smemElemsPerWarpAcc;
-
-        uint outputSize = numCols + (numRows * (numRows - 1) >> 1) + PAD;
 
         dlrmKernel = [d_input,
                       d_output,
@@ -686,19 +673,10 @@ __host__ void dlrm_test(bool isBwd)
                       numColsAfterPadding,
                       smemElemsPerWarp,
                       smemRowsPerWarp,
-                      outputSize,
+                      trilSize,
                       numRowSteps,
                       numColSteps]() {
-            hipLaunchKernelGGL((dotBasedInteractFwdKernel<WARPS_PER_THREADBLOCK,
-                                                          THREADBLOCK_SIZE,
-                                                          M_BLOCKS,
-                                                          K_BLOCKS,
-                                                          SMEM_STRIDE,
-                                                          SMEM_STRIDE_ACC,
-                                                          K_WARP_SIZE,
-                                                          K_WARP_SIZE_LOG2,
-                                                          K_TILE_DIM,
-                                                          K_TILE_DIM_LOG2>),
+            hipLaunchKernelGGL((dotBasedInteractFwdKernel),
                                dim3(ceilDiv(static_cast<uint>(batchSize),
                                             static_cast<uint>(WARPS_PER_THREADBLOCK))),
                                dim3(THREADBLOCK_SIZE),
@@ -713,7 +691,7 @@ __host__ void dlrm_test(bool isBwd)
                                numColsAfterPadding,
                                smemElemsPerWarp,
                                smemRowsPerWarp,
-                               outputSize,
+                               trilSize,
                                numRowSteps,
                                numColSteps,
                                PAD);
@@ -722,16 +700,16 @@ __host__ void dlrm_test(bool isBwd)
     else
     {
         // Backward kernel argument parameters
-        const uint kWarpsPerBlockLog2 = Log2<K_WARPS_PER_BLOCK>::value;
-        const uint tileSizeLog2       = Log2<TILE_SIZE>::value;
+        const uint kWarpsPerBlockLog2 = Log2<WARPS_PER_THREADBLOCK>::value;
+        const uint tileSizeLog2       = Log2<TILE_DIM>::value;
 
         uint inputDataBytes = sizeof(half);
 
-        uint rowTilesPerStep = numRows > TILE_SIZE ? K_ROW_TILES_PER_STEP : 1;
+        uint rowTilesPerStep = numRows > TILE_DIM ? ROW_TILES_PER_STEP : 1;
 
         // num tiles
-        uint numRowTiles = (numRows + TILE_SIZE - 1) >> tileSizeLog2;
-        uint numColTiles = (numCols + TILE_SIZE - 1) >> tileSizeLog2;
+        uint numRowTiles = (numRows + TILE_DIM - 1) >> tileSizeLog2;
+        uint numColTiles = (numCols + TILE_DIM - 1) >> tileSizeLog2;
 
         // number of rows and columns after padding
         uint numRowsAfterPadding = numRowTiles << tileSizeLog2;
@@ -755,7 +733,7 @@ __host__ void dlrm_test(bool isBwd)
         uint sampleSize = numRows * numCols;
 
         // output size
-        uint outputSizeElems = TILE_SIZE * TILE_SIZE * K_ROW_TILES_PER_STEP * K_COL_TILES_PER_STEP;
+        uint outputSizeElems = TILE_DIM * TILE_DIM * ROW_TILES_PER_STEP * COL_TILES_PER_STEP;
         uint outputSizeBytes = outputSizeElems * sizeof(float);
 
         // staging area size
@@ -766,11 +744,11 @@ __host__ void dlrm_test(bool isBwd)
         // Shared memory size
         uint wmmaSmemBytes            = numRowsAfterPadding * numRowsAfterPadding * inputDataBytes;
         uint sharedMemPerWarpSizeByte = inputSizeBytes + stagingAreaSizeBytes + wmmaSmemBytes;
-        uint sharedMemSizeBytes       = K_WARPS_PER_BLOCK * sharedMemPerWarpSizeByte;
+        uint sharedMemSizeBytes       = WARPS_PER_THREADBLOCK * sharedMemPerWarpSizeByte;
 
-        uint numBlocks   = (batchSize + K_WARPS_PER_BLOCK - 1) >> kWarpsPerBlockLog2;
+        uint numBlocks   = (batchSize + WARPS_PER_THREADBLOCK - 1) >> kWarpsPerBlockLog2;
         uint numRowSteps = numRowTiles / rowTilesPerStep;
-        uint numColSteps = numColTiles / K_COL_TILES_PER_STEP;
+        uint numColSteps = numColTiles / COL_TILES_PER_STEP;
 
         dlrmKernel = [d_input,
                       d_upstreamGrad,
@@ -791,16 +769,9 @@ __host__ void dlrm_test(bool isBwd)
                       numColSteps,
                       rowTilesPerStep,
                       sharedMemPerWarpSizeByte]() {
-            hipLaunchKernelGGL((dotBasedInteractBwdKernel<K_WARPS_PER_BLOCK,
-                                                          K_NUM_THREADS,
-                                                          K_ROW_TILES_PER_STEP,
-                                                          K_COL_TILES_PER_STEP,
-                                                          K_WARP_SIZE,
-                                                          K_WARP_SIZE_LOG2,
-                                                          K_TILE_DIM,
-                                                          K_TILE_DIM_LOG2>),
+            hipLaunchKernelGGL((dotBasedInteractBwdKernel),
                                dim3(numBlocks),
-                               dim3(K_NUM_THREADS),
+                               dim3(THREADBLOCK_SIZE),
                                sharedMemSizeBytes,
                                0,
                                (const half*)d_input,
@@ -851,13 +822,39 @@ __host__ void dlrm_test(bool isBwd)
 
         bmmTrillPadCPU(h_input.data(), outputRef.data(), numRows, numCols, batchSize);
 
-        // for (int i = 0; i < h_input.size(); i++)
-        //     std::cout << "Host: " << h_input[i] << '\n';
+        // for(int i = 0; i < outputRef.size(); i++)
+        //     std::cout << "Host: " << outputRef[i] << ", Device: " << h_output[i] << '\n';
 
-        for(int i = 0; i < outputRef.size(); i++)
-            std::cout << "Host: " << outputRef[i] << ", Device: " << h_output[i] << '\n';
+        compareEqual<float16_t>(h_output.data(), outputRef.data(), h_output.size(), 1.0);
+    }
+    else
+    {
+        CHECK_HIP_ERROR(hipMemcpy(h_grad.data(), d_grad, gradBytes, hipMemcpyDeviceToHost));
+        CHECK_HIP_ERROR(hipMemcpy(
+            h_bottomMlpGrad.data(), d_bottomMlpGrad, bottomMlpGradBytes, hipMemcpyDeviceToHost));
 
-        compareEqual(h_output.data(), outputRef.data(), h_output.size());
+        std::vector<float16_t> gradRef, bottomMlpGradRef;
+        gradRef.resize(h_grad.size());
+        bottomMlpGradRef.resize(h_bottomMlpGrad.size());
+
+        bmmBwdCPU(h_input.data(),
+                  h_upstreamGrad.data(),
+                  bottomMlpGradRef.data(),
+                  gradRef.data(),
+                  numRows,
+                  numCols,
+                  batchSize);
+
+        // for (int i = 0; i < h_grad.size(); i++)
+        //     std::cout << "Host: " << gradRef[i] << ", Device: " << h_grad[i] << '\n';
+
+        compareEqual<float16_t>(h_grad.data(), gradRef.data(), h_grad.size(), 1.0);
+
+        // for (int i = 0; i < h_bottomMlpGrad.size(); i++)
+        //     std::cout << "Host: " << bottomMlpGradRef[i] << ", Device: " << h_bottomMlpGrad[i] << '\n';
+
+        compareEqual<float16_t>(
+            h_bottomMlpGrad.data(), bottomMlpGradRef.data(), h_bottomMlpGrad.size(), 1.0);
     }
 }
 
