@@ -277,13 +277,6 @@ namespace Layout
         {
             return Traits::MappingUtil::dataOffset(ldm, blockOffset());
         }
-
-        // __device__ static inline uint32_t dataBlockOffset(uint32_t blocks, uint32_t ldm)
-        // {
-        //     auto boffset = blockOffset();
-        //     std::get<1>(boffset) *= blocks;
-        //     return Traits::MappingUtil::dataOffset(ldm, boffset);
-        // }
     };
 
     /**
@@ -412,13 +405,6 @@ namespace Layout
         {
             return Traits::MappingUtil::dataOffset(ldm, blockOffset());
         }
-
-        // __device__ static inline uint32_t dataBlockOffset(uint32_t blocks, uint32_t ldm)
-        // {
-        //     auto boffset = blockOffset();
-        //     std::get<0>(boffset) *= blocks;
-        //     return Traits::MappingUtil::dataOffset(ldm, boffset);
-        // }
     };
 
     /**
@@ -618,13 +604,6 @@ namespace Layout
         {
             return Traits::MappingUtil::dataOffset(ldm, blockOffset());
         }
-
-        // __device__ static inline uint32_t dataBlockOffset(uint32_t blocks, uint32_t ldm)
-        // {
-        //     auto boffset = blockOffset();
-        //     std::get<1>(boffset) *= blocks;
-        //     return Traits::MappingUtil::dataOffset(ldm, boffset);
-        // }
     };
 
     /**
@@ -780,13 +759,6 @@ namespace Layout
         {
             return Traits::MappingUtil::dataOffset(ldm, blockOffset());
         }
-
-        // __device__ static inline uint32_t dataBlockOffset(uint32_t blocks, uint32_t ldm)
-        // {
-        //     auto boffset = blockOffset();
-        //     std::get<0>(boffset) *= blocks;
-        //     return Traits::MappingUtil::dataOffset(ldm, boffset);
-        // }
     };
 
 } // namespace Layout
