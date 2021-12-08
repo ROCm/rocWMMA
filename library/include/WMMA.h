@@ -165,8 +165,6 @@
  * with Fragment B rows and added to the accumulator fragment.
  */
 
-template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
-struct IOConfig;
 namespace wmma
 {
     // MatrixT tags
@@ -251,9 +249,11 @@ namespace wmma
         private:
             using PackedT   = typename PackTraits<DataT>::PackedT;
             using UnpackedT = typename PackTraits<DataT>::UnpackedT;
+            using IOTraits =
+                typename io_config<MatrixT, Traits::LeadingDim, Traits::KDim, DataT, LayoutT>::
+                    IOTraits;
 
         public:
-            using IOTraits = typename IOConfig<MatrixT, LeadingDim, KDim, DataT, LayoutT>::IOTraits;
             using AccessT  = VecT<UnpackedT, IOTraits::UnpackedSize>;
             using StorageT = VecT<PackedT, IOTraits::PackedSize>;
 
@@ -262,6 +262,8 @@ namespace wmma
             static_assert(IOTraits::UnpackedSize % IOTraits::PackedSize == 0,
                           "Unable to pack fragment elements");
         };
+
+        using IOConfig = io_config<MatrixT, Traits::LeadingDim, Traits::KDim, DataT, LayoutT>;
 
         __device__           fragment() = default;
         __device__           fragment(const fragment& other);
