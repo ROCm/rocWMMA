@@ -31,6 +31,7 @@
 
 #include "MappingUtil.h"
 #include "WMMA.h"
+#include "WMMACoop.h"
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
 __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncA(

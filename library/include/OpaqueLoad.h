@@ -30,15 +30,15 @@
 #include "Layout.h"
 #include "Types.h"
 
-template <typename DataT, uint32_t ElementsPerThread>
+template <typename DataT, uint32_t VectorWidth>
 struct amdgcn_opaque_load
 {
-    static_assert(ElementsPerThread > 0, "Elements per thread must be greater than 0");
+    static_assert(VectorWidth > 0, "Vector width must be greater than 0");
 
-    using LoadT = VecT<typename PackTraits<DataT>::UnpackedT, ElementsPerThread>;
-    __device__ static inline auto exec(DataT const* localPtr, index_t offset) -> LoadT
+    using LoadT = VecT<typename PackTraits<DataT>::UnpackedT, VectorWidth>;
+    __device__ static inline auto exec(DataT const* dataPtr, index_t offset = 0) -> LoadT
     {
-        return LoadT(*reinterpret_cast<typename LoadT::StorageT const*>(&(localPtr[offset])));
+        return LoadT(*reinterpret_cast<typename LoadT::StorageT const*>(&(dataPtr[offset])));
     }
 };
 
@@ -48,18 +48,18 @@ template <uint32_t BlockDim,
           typename DataLayout,
           template <uint32_t, uint32_t, typename, typename, uint32_t>
           class LoadLayout,
-          uint32_t ElementsPerThread>
+          uint32_t VectorWidth>
 struct amdgcn_opaque_load_DxK
 {
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, ElementsPerThread>;
+    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
 
     struct Traits
     {
         // Matrix space thread offsets
-        using LayoutT = LoadLayout<BlockDim, BlockK, DataT, DataLayout, ElementsPerThread>;
+        using LayoutT = LoadLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
 
         // Raw IO that produce unpacked register data.
-        using Loader  = amdgcn_opaque_load<DataT, ElementsPerThread>;
+        using Loader  = amdgcn_opaque_load<DataT, VectorWidth>;
         using LoadT   = typename Loader::LoadT;
         using OutputT = VecT<DataT, IOTraits::UnpackedSize>;
     };

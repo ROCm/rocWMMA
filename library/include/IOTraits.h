@@ -219,14 +219,12 @@ struct amdgcn_io_traits
         UnpackedVRegCount = PackedVRegCount * PackTraits<DataT>::PackRatio
     };
 
-    static_assert(PackedVRegCount >= 1, "Partial registers are not supported");
     static_assert((ElementsPerIO % BlockDim) == 0 || (ElementsPerIO % BlockK) == 0,
                   "I/O operation elements not a multiple of BlockDim");
     static_assert((ElementCount % ElementsPerIO) == 0,
                   "I/O element count not divisible into equal operations");
-    static_assert((ElementCount % ThreadsPerIO) == 0, "Threads must fetch even element counts");
-    static_assert((UnpackedSize % PackTraits<DataT>::PackRatio) == 0,
-                  "Packed elements do not fit equally into registers");
+    static_assert((ElementCount % ThreadsPerIO) == 0,
+                  "Element count must be divisible by threads per wave");
 };
 
 #endif // WMMA_IO_TRAITS_H
