@@ -56,8 +56,6 @@ __host__ void gemv_cpu_h(uint32_t         m,
                          float32_t        beta)
 {
     uint32_t lda = m;
-    uint32_t ldb = k;
-    uint32_t ldc = m;
 
     for(int i = 0; i < m; ++i)
     {
@@ -162,15 +160,28 @@ const int WAVE_SIZE = 64;
 const int T_BLOCK_X = 16 * WAVE_SIZE;
 const int T_BLOCK_Y = 1;
 
-// device gemv computation
-__global__ void gemv_wmma_d(uint32_t         m,
-                            uint32_t         n,
-                            uint32_t         k,
-                            float16_t const* a,
-                            float16_t const* b,
-                            float32_t*       c,
-                            float32_t        alpha,
-                            float32_t        beta)
+// The following device kernel is a naive implementation
+// of blocked GEMV. Each wave will compute one BLOCK_M x BLOCK_N
+// output block of the m x k x 1 GEMV, generalized as:
+// y = alpha * (A) * x + beta * y
+//
+// In this simplified example, we assume:
+//  A - Matrix of size m * k (row-major)
+//  x - Vector of size k * 1 (col-major)
+//  y - accumulator of size m * 1 (row-major)
+// : Multiplication is NOT in-place, output is written to D matrix
+// : No LDS required
+//
+// Note: This is a simplified implementation to demonstrate API usage in
+// context of wave-level GEMV computation, and is not optimized.
+_ __global__ void gemv_wmma_d(uint32_t         m,
+                              uint32_t         n,
+                              uint32_t         k,
+                              float16_t const* a,
+                              float16_t const* b,
+                              float32_t*       c,
+                              float32_t        alpha,
+                              float32_t        beta)
 {
     uint32_t lda = m;
     uint32_t ldb = k;
