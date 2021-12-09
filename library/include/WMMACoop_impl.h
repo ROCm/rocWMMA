@@ -50,9 +50,9 @@ namespace wmma
                               uint32_t waveCount,
                               uint32_t splitCount)
     {
-        using FragT  = typename std::decay<decltype(frag)>::type;
-        using Config = io_config<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
-        using Packer = typename Config::Packer;
+        using FragT      = typename std::decay<decltype(frag)>::type;
+        using Config     = typename FragT::IOConfig;
+        using Packer     = typename Config::Packer;
         using CoopLoader = typename Config::CoopLoader;
 
         // Sanity checks
@@ -67,7 +67,7 @@ namespace wmma
         typename CoopLoader::Traits::OutputT unpacked;
 
         // Each cooperative wave only loads the portion they are responsible for
-        // Note: at this point, the output frag is only partially filled with useful data
+        // Note: the read frag will only be partially filled with useful data
         CoopLoader::exec(unpacked, data, ldm, waveIndex, waveCount, splitCount);
         (*frag) = Packer::exec(unpacked);
     }
@@ -100,18 +100,18 @@ namespace wmma
                               uint32_t                                                      ldm)
     {
         using FragT       = typename std::decay<decltype(frag)>::type;
-        using MappingUtil = MappingUtil<FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+        using Config      = typename FragT::IOConfig;
+        using MappingUtil = typename Config::MappingUtil;
 
-        // Splitting the K direction:
         // Matrix A:
         // - shares work with waves on same row (different col).
         // - waves in different rows work on different blocks
-        // Matrix B:
+        //
+        // Matrix B / Accumulator:
         // - shares work with waves on same col (different row)
         // - waves in different cols work on different blocks
-        constexpr auto coopIndex = std::is_base_of<matrix_a, MatrixT>::value ? 1 : 0;
-        auto           waveIndex = std::get<coopIndex>(MappingUtil::waveCoord());
-        auto           waveCount = std::get<coopIndex>(MappingUtil::workgroupDim());
+        auto waveIndex = std::get<Config::CoopIndex>(MappingUtil::waveCoord());
+        auto waveCount = std::get<Config::CoopIndex>(MappingUtil::workgroupDim());
         load_matrix_coop_sync(frag, data, ldm, waveIndex, waveCount);
     }
 
@@ -130,8 +130,8 @@ namespace wmma
         uint32_t                                                            splitCount)
     {
 
-        using FragT  = typename std::decay<decltype(frag)>::type;
-        using Config = io_config<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+        using FragT      = typename std::decay<decltype(frag)>::type;
+        using Config     = typename FragT::IOConfig;
         using CoopStorer = typename Config::CoopStorer;
         using Unpacker   = typename Config::Unpacker;
 
@@ -144,6 +144,8 @@ namespace wmma
                                    typename Unpacker::Traits::InputT>::value,
                       "Fragment storage type and packed types do not match");
 
+        // Each cooperative wave only stores the portion they are responsible for
+        // Note: the write frag is only partially filled with useful data
         CoopStorer::exec(data, Unpacker::exec(*frag), ldm, waveIndex, waveCount, splitCount);
     }
 
@@ -174,21 +176,19 @@ namespace wmma
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
         uint32_t                                                            ldm)
     {
-
         using FragT       = typename std::decay<decltype(frag)>::type;
-        using MappingUtil = MappingUtil<FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+        using Config      = typename FragT::IOConfig;
+        using MappingUtil = typename Config::MappingUtil;
 
-        // Splitting the K direction:
         // Matrix A:
         // - shares work with waves on same row (different col).
         // - waves in different rows work on different blocks
-        // Matrix B:
+        //
+        // Matrix B / Accumulator:
         // - shares work with waves on same col (different row)
         // - waves in different cols work on different blocks
-        constexpr auto coopIndex = std::is_base_of<matrix_a, MatrixT>::value ? 1 : 0;
-        auto           waveIndex = std::get<coopIndex>(MappingUtil::waveCoord());
-        auto           waveCount = std::get<coopIndex>(MappingUtil::workgroupDim());
-
+        auto waveIndex = std::get<Config::CoopIndex>(MappingUtil::waveCoord());
+        auto waveCount = std::get<Config::CoopIndex>(MappingUtil::workgroupDim());
         store_matrix_coop_sync(data, frag, ldm, waveIndex, waveCount);
     }
 } // namespace wmma
