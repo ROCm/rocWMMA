@@ -140,10 +140,15 @@ namespace Layout
         {
             enum : uint32_t
             {
-                // This is the minimum K needed to correctly implement this layout.
+                // Minimum K to implement this layout
+                // MinK = ceilDiv(AMDGCN_WAVE_SIZE, BlockDim) * VectorWidth,
                 MinK = ceilDiv(AMDGCN_WAVE_SIZE
                                    * std::max(VectorWidth, (uint32_t)PackTraits<DataT>::PackRatio),
-                               BlockDim)
+                               BlockDim),
+
+                // Minimum IOCount to implement this layout.
+                // Iteration offsets may have periods > 1
+                MinIOCount = ceilDiv(BlockDim, (uint32_t)IOTraits::ThreadsPerIO)
             };
 
             using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, row_major>;
@@ -160,14 +165,11 @@ namespace Layout
 
         __device__ static inline typename Traits::MatrixCoordT offsetIncrement(uint32_t iteration)
         {
-            // TODO: constexpr if c++17
-            // Silence DIV/0 warning, remove the need for std::max
-            if(BlockDim > IOTraits::ThreadsPerIO)
+            if(BlockDim >= IOTraits::ThreadsPerIO)
             {
-                constexpr auto blockDimSegs = BlockDim / IOTraits::ThreadsPerIO;
-                return ((iteration + 1) % std::max(blockDimSegs, (uint32_t)1))
+                return ((iteration + 1) % Traits::MinIOCount)
                            ? std::make_pair(IOTraits::ThreadsPerIO, 0)
-                           : std::make_pair(-IOTraits::ThreadsPerIO * (blockDimSegs - 1),
+                           : std::make_pair(-IOTraits::ThreadsPerIO * (Traits::MinIOCount - 1),
                                             (int32_t)IOTraits::KPerIO);
             }
             else
@@ -195,6 +197,13 @@ namespace Layout
         {
             return Traits::MappingUtil::dataOffset(ldm, blockOffset());
         }
+
+        // __device__ static inline uint32_t dataBlockOffset(uint32_t blocks, uint32_t ldm)
+        // {
+        //     auto boffset = blockOffset();
+        //     std::get<1>(boffset) *= blocks;
+        //     return Traits::MappingUtil::dataOffset(ldm, boffset);
+        // }
     };
 
     template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t VectorWidth>
@@ -205,16 +214,23 @@ namespace Layout
         {
             enum : uint32_t
             {
-                // This is the minimum K needed to correctly implement this layout.
+                // Minimum K to implement this layout.
+                //MinK = ceilDiv(AMDGCN_WAVE_SIZE * VectorWidth, BlockDim),
                 MinK = ceilDiv(AMDGCN_WAVE_SIZE
                                    * std::max(VectorWidth, (uint32_t)PackTraits<DataT>::PackRatio),
-                               BlockDim)
+                               BlockDim),
+
+                // Minimum IOCount to implement this layout.
+                // Iteration offsets may have periods > 1
+                MinIOCount = ceilDiv(BlockDim, (uint32_t)IOTraits::ElementsPerIO)
             };
 
             using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, col_major>;
             using MatrixCoordT = typename MappingUtil::CoordT;
 
             static_assert(MinK >= 1, "MinK must be >= 1");
+            static_assert(BlockK >= MinK, "MinK not satisfied");
+            static_assert(BlockK % MinK == 0, "BlockK must be divisible by MinK");
         };
 
         __device__ static inline typename Traits::MatrixCoordT baseOffset()
@@ -232,10 +248,9 @@ namespace Layout
             // Silence DIV/0 warning, remove the need for std::max
             if(BlockDim > IOTraits::ElementsPerIO)
             {
-                constexpr auto blockDimSegs = BlockDim / IOTraits::ElementsPerIO;
-                return ((iteration + 1) % std::max(blockDimSegs, (uint32_t)1))
+                return ((iteration + 1) % Traits::MinIOCount)
                            ? std::make_pair(IOTraits::ElementsPerIO, 0)
-                           : std::make_pair(-IOTraits::ElementsPerIO * (blockDimSegs - 1), 1);
+                           : std::make_pair(-IOTraits::ElementsPerIO * (Traits::MinIOCount - 1), 1);
             }
             else
             {
@@ -262,6 +277,13 @@ namespace Layout
         {
             return Traits::MappingUtil::dataOffset(ldm, blockOffset());
         }
+
+        // __device__ static inline uint32_t dataBlockOffset(uint32_t blocks, uint32_t ldm)
+        // {
+        //     auto boffset = blockOffset();
+        //     std::get<1>(boffset) *= blocks;
+        //     return Traits::MappingUtil::dataOffset(ldm, boffset);
+        // }
     };
 
     /**
@@ -342,41 +364,38 @@ namespace Layout
     {
         struct Traits
         {
-            enum : uint32_t
-            {
-                // This is the minimum K needed to correctly implement this layout.
-                MinK = ceilDiv(AMDGCN_WAVE_SIZE
-                                   * std::max(VectorWidth, (uint32_t)PackTraits<DataT>::PackRatio),
-                               BlockDim)
-            };
-
-            using MappingUtil  = MappingUtil<BlockK, BlockDim, DataT, DataLayout>;
-            using MatrixCoordT = typename MappingUtil::CoordT;
-            using OrthoLayout  = Col<BlockDim,
+            // Orthogonal layout has mirrored coordinates
+            // and
+            using OrthoLayout = Col<BlockDim,
                                     BlockK,
                                     DataT,
                                     std::conditional_t<std::is_same<DataLayout, row_major>::value,
                                                        col_major,
                                                        row_major>,
                                     VectorWidth>;
+            enum : uint32_t
+            {
+                MinK       = OrthoLayout::Traits::MinK,
+                MinIOCount = OrthoLayout::Traits::MinIOCount
+            };
+
+            using MappingUtil  = MappingUtil<BlockK, BlockDim, DataT, DataLayout>;
+            using MatrixCoordT = typename MappingUtil::CoordT;
         };
 
         __device__ static inline typename Traits::MatrixCoordT baseOffset()
         {
-            // Orthogonalize coord
-            return std::reverse(Traits::OrthoLayout::baseOffset());
+            return std::swap(Traits::OrthoLayout::baseOffset());
         }
 
         __device__ static inline typename Traits::MatrixCoordT offsetIncrement(uint32_t iteration)
         {
-            // Orthogonalize coord
-            return std::reverse(Traits::OrthoLayout::offsetIncrement(iteration));
+            return std::swap(Traits::OrthoLayout::offsetIncrement(iteration));
         }
 
         __device__ static inline typename Traits::MatrixCoordT blockOffset()
         {
-            // Orthogonalize coord
-            return std::reverse(Traits::OrthoLayout::blockOffset());
+            return std::swap(Traits::OrthoLayout::blockOffset());
         }
 
         __device__ static inline uint32_t baseDataOffset(uint32_t ldm)
@@ -393,6 +412,13 @@ namespace Layout
         {
             return Traits::MappingUtil::dataOffset(ldm, blockOffset());
         }
+
+        // __device__ static inline uint32_t dataBlockOffset(uint32_t blocks, uint32_t ldm)
+        // {
+        //     auto boffset = blockOffset();
+        //     std::get<0>(boffset) *= blocks;
+        //     return Traits::MappingUtil::dataOffset(ldm, boffset);
+        // }
     };
 
     /**
@@ -473,13 +499,6 @@ namespace Layout
  * Is NOT implemented due to incorrect mapping with col_major and VW = 4
  */
     ////////////// ColNT /////////////////////////
-    template <uint32_t BlockDim,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout,
-              uint32_t VectorWidth,
-              uint32_t MaxVectorWidth>
-    struct ColNT;
 
     template <uint32_t BlockDim,
               uint32_t BlockK,
@@ -496,7 +515,11 @@ namespace Layout
             {
                 // This is the minimum K needed to correctly implement this layout.
                 // Based on MaxVectorWidth due to iteration model.
-                MinK = ceilDiv(AMDGCN_WAVE_SIZE * MaxVectorWidth, BlockDim)
+                MinK = ceilDiv(IOTraits::ThreadsPerIO * MaxVectorWidth, BlockDim),
+
+                BlockDimSegs = ceilDiv(BlockDim, (uint32_t)IOTraits::ThreadsPerIO),
+
+                MinIOCount = (MaxVectorWidth / VectorWidth) * BlockDimSegs
             };
             using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
             using MatrixCoordT = typename MappingUtil::CoordT;
@@ -505,7 +528,7 @@ namespace Layout
         static_assert(!(std::is_same<DataLayout, col_major>::value && VectorWidth > 1),
                       "ColNT in column major does not support VectorWidth > 1");
 
-        static_assert(BlockDim < AMDGCN_WAVE_SIZE,
+        static_assert(BlockDim <= AMDGCN_WAVE_SIZE,
                       "ColNT only supports BlockDim <= AMDGCN_WAVE_SIZE");
 
         __device__ static inline typename Traits::MatrixCoordT baseOffset()
@@ -595,6 +618,13 @@ namespace Layout
         {
             return Traits::MappingUtil::dataOffset(ldm, blockOffset());
         }
+
+        // __device__ static inline uint32_t dataBlockOffset(uint32_t blocks, uint32_t ldm)
+        // {
+        //     auto boffset = blockOffset();
+        //     std::get<1>(boffset) *= blocks;
+        //     return Traits::MappingUtil::dataOffset(ldm, boffset);
+        // }
     };
 
     /**
@@ -681,30 +711,13 @@ namespace Layout
               typename DataLayout,
               uint32_t VectorWidth,
               uint32_t MaxVectorWidth>
-    struct RowNT;
-
-    template <uint32_t BlockDim,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout,
-              uint32_t VectorWidth,
-              uint32_t MaxVectorWidth>
     struct RowNT
     {
         // RowNT is orthogonal to ColNT, therefore we can use reversed coordinates
         // and opposite DataLayout from ColNT
         struct Traits
         {
-            enum : uint32_t
-            {
-                // This is the minimum K needed to correctly implement this layout.
-                // Based on MaxVectorWidth due to iteration model.
-                MinK = ceilDiv(AMDGCN_WAVE_SIZE * MaxVectorWidth, BlockDim)
-            };
-
-            using MappingUtil  = MappingUtil<BlockK, BlockDim, DataT, DataLayout>;
-            using MatrixCoordT = typename MappingUtil::CoordT;
-            using OrthoLayout  = ColNT<BlockDim,
+            using OrthoLayout = ColNT<BlockDim,
                                       BlockK,
                                       DataT,
                                       std::conditional_t<std::is_same<DataLayout, row_major>::value,
@@ -712,6 +725,17 @@ namespace Layout
                                                          row_major>,
                                       VectorWidth,
                                       MaxVectorWidth>;
+
+            enum : uint32_t
+            {
+                // This is the minimum K needed to correctly implement this layout.
+                // Based on MaxVectorWidth due to iteration model.
+                MinK       = OrthoLayout::Traits::MinK,
+                MinIOCount = OrthoLayout::Traits::MinIOCount
+            };
+
+            using MappingUtil  = MappingUtil<BlockK, BlockDim, DataT, DataLayout>;
+            using MatrixCoordT = typename MappingUtil::CoordT;
         };
 
         static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
@@ -727,19 +751,19 @@ namespace Layout
         __device__ static inline typename Traits::MatrixCoordT baseOffset()
         {
             // Orthogonalize coord
-            return std::reverse(Traits::OrthoLayout::baseOffset());
+            return std::swap(Traits::OrthoLayout::baseOffset());
         }
 
         __device__ static inline typename Traits::MatrixCoordT offsetIncrement(uint32_t iteration)
         {
             // Orthogonalize coord
-            return std::reverse(Traits::OrthoLayout::offsetIncrement(iteration));
+            return std::swap(Traits::OrthoLayout::offsetIncrement(iteration));
         }
 
         __device__ static inline typename Traits::MatrixCoordT blockOffset()
         {
             // Orthogonalize coord
-            return std::reverse(Traits::OrthoLayout::blockOffset());
+            return std::swap(Traits::OrthoLayout::blockOffset());
         }
 
         __device__ static inline uint32_t baseDataOffset(uint32_t ldm)
@@ -756,6 +780,13 @@ namespace Layout
         {
             return Traits::MappingUtil::dataOffset(ldm, blockOffset());
         }
+
+        // __device__ static inline uint32_t dataBlockOffset(uint32_t blocks, uint32_t ldm)
+        // {
+        //     auto boffset = blockOffset();
+        //     std::get<0>(boffset) *= blocks;
+        //     return Traits::MappingUtil::dataOffset(ldm, boffset);
+        // }
     };
 
 } // namespace Layout

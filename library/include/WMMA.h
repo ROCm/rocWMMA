@@ -28,8 +28,9 @@
 
 #include <type_traits>
 
+#include "IOConfig.h"
 #include "IOTraits.h"
-#include "IOUnpack.h"
+
 #include "Types.h"
 
 /**
@@ -168,11 +169,7 @@ template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, 
 struct IOConfig;
 namespace wmma
 {
-    // Meta-tags
-
-    // Fragments
-    using row_major            = ::row_major;
-    using col_major            = ::col_major;
+    // MatrixT tags
     using matrix_a             = ::matrix_a;
     using matrix_b             = ::matrix_b;
     using accumulator          = ::accumulator;
@@ -180,23 +177,23 @@ namespace wmma
     using register_file_coop_a = ::register_file_coop_a;
     using register_file_coop_b = ::register_file_coop_b;
 
-    // Configuration used in wmma calls
-    template <typename MatrixT,
-              uint32_t BlockDim,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout>
-    using io_config = ::IOConfig<MatrixT, BlockDim, BlockK, DataT, DataLayout>;
-
-    // Memory
-    using globalMem = ::globalMem;
-    using ldsMem    = ::ldsMem;
+    // DataLayout tags
+    using row_major = ::row_major;
+    using col_major = ::col_major;
 
     enum layout_t : uint32_t
     {
         mem_row_major,
         mem_col_major
     };
+
+    // Configuration profile used in wmma calls
+    template <typename MatrixT,
+              uint32_t BlockDim,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout>
+    using io_config = ::IOConfig<MatrixT, BlockDim, BlockK, DataT, DataLayout>;
 
     /**
  * \ingroup wmma
@@ -218,6 +215,11 @@ namespace wmma
  *
  * KDim -  Matrix C loads BlockM rows size BlockN
  *          Matrix A and B load BlockK strides of leading dim.
+ *
+ * PackedT - The type of the vector register holding packed element data
+ * UnpackedT - The type of the vector register holding unpacked element data
+ *
+ * IOTraits - Input/output related specifically to AMDGCN architecture
  *
  * AccessT - Unpacked data storage
  *
@@ -247,17 +249,22 @@ namespace wmma
             };
 
         private:
-            using IOTraits  = amdgcn_io_traits<LeadingDim, KDim, DataT>;
             using PackedT   = typename PackTraits<DataT>::PackedT;
             using UnpackedT = typename PackTraits<DataT>::UnpackedT;
 
         public:
+            using IOTraits = typename IOConfig<MatrixT, LeadingDim, KDim, DataT, LayoutT>::IOTraits;
             using AccessT  = VecT<UnpackedT, IOTraits::UnpackedSize>;
             using StorageT = VecT<PackedT, IOTraits::PackedSize>;
+
+            static_assert(IOTraits::PackedVRegCount >= 1,
+                          "Fragments must occupy at least one packed register");
+            static_assert(IOTraits::UnpackedSize % IOTraits::PackedSize == 0,
+                          "Unable to pack fragment elements");
         };
 
-        __device__ fragment() = default;
-        __device__ fragment(const fragment& other);
+        __device__           fragment() = default;
+        __device__           fragment(const fragment& other);
         __device__ fragment& operator=(const fragment& other);
 
         // Accessors
@@ -293,7 +300,7 @@ namespace wmma
  * @param frag - Fragment of type MatrixT with its associated block sizes, data type and layout
  * @param value - Value of type DataT
  *
- * Fills the entire fragment with the desired value
+ * Fills the entire fragment with the desired value.
  */
 
     template <typename MatrixT,
@@ -315,9 +322,8 @@ namespace wmma
  * @param data - Data pointer to global/local memory
  * @param ldm - Leading dimension size
  *
- *
- * Loads the entire fragment with data from global device memory according to
- * the matrix layouts
+ * Loads the entire fragment from the data pointer according to its matrix and data layouts.
+ * Data pointer may point to either local or global memory.
  *
  */
     template <typename MatrixT,
@@ -343,8 +349,10 @@ namespace wmma
  * @param layout - Matrix layout
  *
  *
- * Loads the entire fragment with data from global device memory according to
- * the matrix layouts
+ * Loads the entire fragment from the data pointer according to its matrix layout.
+ * Data pointer may point to either local or global memory.
+ *
+ * This overload provides a run-time ability to choose the data layout of the target fragment.
  *
  */
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
@@ -352,32 +360,7 @@ namespace wmma
                                      const DataT*                                      data,
                                      uint32_t                                          ldm,
                                      layout_t                                          layout);
-    /**
- * \ingroup WMMA APIs
- * @{
- */
-    /**
- * Cooperative Load Matrix
- *
- * @param frag - Fragment of type MatrixT with its associated block sizes, data type and layout
- * @param data - Data pointer to global/local memory
- * @param ldm - Leading dimension size
- *
- * Loads the entire fragment with data from global device memory cooperatively
- * across waves. Each cooperative wave is responsible in loading a piece
- * of the final output.
- *
- */
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout>
-    __device__ void
-        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
-                              const DataT*                                                  data,
-                              uint32_t                                                      ldm);
+
     /**
  * \ingroup Fragment & APIs
  * @{
@@ -389,9 +372,8 @@ namespace wmma
  * @param data - Data pointer to global/local memory
  * @param ldm - Leading dimension size
  *
- *
- * Stores the entire fragment into a global/local datapointer according to
- * the matrix layouts
+ * Stores the entire fragment to the data pointer according to its matrix and data layouts.
+ * Data pointer may point to either local or global memory.
  *
  */
     template <typename MatrixT,
@@ -415,41 +397,19 @@ namespace wmma
  * @param frag - Fragment of type MatrixT with its associated block sizes, data type and layout
  * @param data - Data pointer to global/local memory
  * @param ldm - Leading dimension size
- * @param layout - Matrix layout
+ * @param layout - Data layout
  *
+ * Stores the entire fragment to the data pointer according to its matrix layout.
+ * Data pointer may point to either local or global memory.
  *
- * Stores the entire fragment into a global/local datapointer according to
- * the matrix layouts
+ * This overload provides a run-time ability to choose the data layout of the target fragment.
  *
  */
-
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
     __device__ void store_matrix_sync(DataT*                                                  data,
                                       fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag,
                                       uint32_t                                                ldm,
                                       layout_t layout);
-
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout>
-    __device__ void
-        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
-                              const DataT*                                                  data,
-                              uint32_t                                                      ldm);
-
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout>
-    __device__ void store_matrix_coop_sync(
-        DataT*                                                              data,
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
-        uint32_t                                                            ldm);
 
     /**
  * \ingroup WMMA APIs
@@ -462,9 +422,8 @@ namespace wmma
  * @param b - Input fragment B
  * @param c - Input/Accumulator fragment C
  *
- *
  * Performs the Multiply-Accumulate operation on the fragments A, B, C and D(D = A * B + C)
- *
+ * Note: Frag c = d is allowed
  */
     template <uint32_t BlockM,
               uint32_t BlockN,

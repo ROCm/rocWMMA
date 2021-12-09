@@ -28,10 +28,9 @@
 
 #include "IOTraits.h"
 #include "Layout.h"
-#include "MappingUtil.h"
 #include "OpaqueLoad.h"
-#include "OpaqueStore.h"
 #include "Types.h"
+#include "Utils.h"
 
 template <uint32_t BlockDim,
           uint32_t BlockK,
@@ -48,73 +47,62 @@ struct amdgcn_cooperative_load_DxK
     {
         enum : uint32_t
         {
-            SplitCount = SpCount,
+            SplitCount   = SpCount,
+            SplitIOCount = IOTraits::IOCount / SplitCount
         };
 
-        static_assert(SplitCount > 0, "Split count must be greater than 0");
-        static_assert(BlockK % SplitCount == 0, "BlockK size is not divisible by SplitCount");
+        // Matrix-space thread offsets
+        using LayoutT = LoadLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
 
-        // Each cooperative wave will load a piece of the final output
+        // Load implementation
+        // Iteratively loads the entire block
+        using Loader = amdgcn_opaque_load<DataT, VectorWidth>;
+        using LoadT  = typename Loader::LoadT;
+
+        // Block output vector
         using OutputT = VecT<DataT, IOTraits::UnpackedSize>;
+
+        static_assert(SplitCount > 0 && SplitCount <= IOTraits::IOCount,
+                      "Invalid SplitCount range");
+        static_assert(IOTraits::IOCount % SplitCount == 0,
+                      "IOCount must be divisible by SplitCount");
         static_assert(OutputT::size() % SplitCount == 0,
                       "Register count not divisible by SplitCount");
-
-        // Partial loader
-        using Loader = amdgcn_opaque_load_DxK<BlockDim,
-                                              BlockK / Traits::SplitCount,
-                                              DataT,
-                                              DataLayout,
-                                              LoadLayout,
-                                              VectorWidth>;
-
-        using LoadLayoutT
-            = LoadLayout<BlockDim, BlockK / Traits::SplitCount, DataT, DataLayout, VectorWidth>;
+        static_assert(OutputT::size() / SplitCount >= 1, "Partial registers not supported");
     };
 
     __device__ static inline void exec(typename Traits::OutputT& output,
-                                       DataT const*              dataPtr,
+                                       DataT const*              loadPtr,
                                        uint32_t                  ldm,
                                        uint32_t                  waveIndex,
                                        uint32_t                  waveCount)
     {
-        using Loader      = typename Traits::Loader;
-        using LoadLayoutT = typename Traits::LoadLayoutT;
+        using Loader  = typename Traits::Loader;
+        using LayoutT = typename Traits::LayoutT;
 
         // For the cases where there are more groups than splits.
         if(waveIndex >= Traits::SplitCount)
             return;
 
-        // Determine offset for the current wave, and
-        // emplace the partial load into the output.
-        auto loadOffset = LoadLayoutT::dataBlockOffset(ldm) * waveIndex;
+        // Align threads to starting positions
+        auto ptrOffset = LayoutT::baseDataOffset(ldm);
 
-        auto it = output.template begin<Traits::OutputT::size() / Traits::SplitCount>();
-
-        // This next part is important for optimization.
-        // The goal is to do a partial load and write only one part of the fragment.
-        // However, from the compiler perspective it does not optimize assembly
-        // correctly if we load only the part of the fragment without referencing the rest of the fragment.
-        // For example, we could easily do the following:
-        //
-        //  auto it =
-        //      typename Traits::OutputT::template Iterator<Traits::OutputT::size() / Traits::SplitCount>(
-        //        input, waveIndex);
-        //  *it = *Loader::exec(dataPtr + loadOffset, ldm);
-        //
-        // However we didn't touch the rest of the fragment, so the compiler may decide to dump the fragment
-        // to memory as it will treat this as a sub-array access.
-        //
-        // To keep it in registers, iterate over the entire fragment and load only when we reach our intended
-        // offset.
+        // Break down block into iterable loads
+        auto it = output.template begin<Traits::LoadT::size()>();
 
 #pragma unroll
         for(uint32_t i = 0; i < Traits::SplitCount; ++i)
         {
-            if(i == waveIndex)
+#pragma unroll
+            for(uint32_t j = 0; j < Traits::SplitIOCount; ++j)
             {
-                *it = *Loader::exec(dataPtr + loadOffset, ldm);
+                if(i % waveCount == waveIndex) // In case there are more splits than waves
+                {
+                    *it = *Loader::exec(loadPtr, ptrOffset);
+                }
+                it++;
+                ptrOffset += LayoutT::dataOffsetIncrement(i * Traits::SplitIOCount + j, ldm);
             }
-            it++;
         }
     }
 };
@@ -140,24 +128,24 @@ struct amdgcn_cooperative_load_DxK<BlockDim, BlockK, DataT, DataLayout, LoadLayo
 
     struct Traits
     {
+        using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
+
+        enum : uint32_t
+        {
+            MaxSplit = IOTraits::IOCount
+        };
+
         // All loads will have the same result type
         using OutputT = typename CooperativeLoad<1>::Traits::OutputT;
 
         // Determine the allowable split count from the layout
         using LoadLayoutT = LoadLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
-        enum : uint32_t
-        {
-            MaxSplit = std::max(BlockK / LoadLayoutT::Traits::MinK, 1u),
-        };
     };
-
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
 
     /*
     * While we try to do the runtime dispatching, we need to make sure that we only
-    * instantiate splitting functions that make sense. The maximum possible split is 8
-    * but this only makes sense if the packed IOCount is divisible by 8. Otherwise we
-    * will have an explosion of static asserts from the IOTraits class during compile time.
+    * instantiate splitting functions that make sense. The maximum possible split is the
+    * same value as IOCount, which for now we will limit to 8.
     *
     * Note: The additional template parameter OutgoingT sets us up for proper forwarding
     * technique while allowing us to use it as the dependent parameter to exploit SFINAE
@@ -175,24 +163,25 @@ struct amdgcn_cooperative_load_DxK<BlockDim, BlockK, DataT, DataLayout, LoadLayo
                                        DataT const* dataPtr,
                                        uint32_t     ldm,
                                        uint32_t     waveIndex,
-                                       uint32_t     waveCount)
+                                       uint32_t     waveCount,
+                                       uint32_t     splitCount)
     {
-        if(waveCount >= 8)
+        if(splitCount >= 8)
         {
             CooperativeLoad<8>::exec(
                 std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
-        else if(waveCount == 4)
+        else if(splitCount == 4)
         {
             CooperativeLoad<4>::exec(
                 std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
-        else if(waveCount == 2)
+        else if(splitCount == 2)
         {
             CooperativeLoad<2>::exec(
                 std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
-        else if(waveCount == 1)
+        else if(splitCount == 1)
         {
             CooperativeLoad<1>::exec(
                 std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
@@ -203,7 +192,6 @@ struct amdgcn_cooperative_load_DxK<BlockDim, BlockK, DataT, DataLayout, LoadLayo
         }
     }
 
-    // IOCount of 8+ can potentially split work between 8 waves
     template <typename OutgoingT,
               typename std::enable_if<std::is_same<typename Traits::OutputT,
                                                    typename std::decay<OutgoingT>::type>::value
@@ -214,19 +202,20 @@ struct amdgcn_cooperative_load_DxK<BlockDim, BlockK, DataT, DataLayout, LoadLayo
                                        DataT const* dataPtr,
                                        uint32_t     ldm,
                                        uint32_t     waveIndex,
-                                       uint32_t     waveCount)
+                                       uint32_t     waveCount,
+                                       uint32_t     splitCount)
     {
-        if(waveCount >= 4)
+        if(splitCount >= 4)
         {
             CooperativeLoad<4>::exec(
                 std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
-        else if(waveCount == 2)
+        else if(splitCount == 2)
         {
             CooperativeLoad<2>::exec(
                 std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
-        else if(waveCount == 1)
+        else if(splitCount == 1)
         {
             CooperativeLoad<1>::exec(
                 std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
@@ -237,7 +226,6 @@ struct amdgcn_cooperative_load_DxK<BlockDim, BlockK, DataT, DataLayout, LoadLayo
         }
     }
 
-    // IOCount of 4 can potentially split work between 4 waves
     template <typename OutgoingT,
               typename std::enable_if<std::is_same<typename Traits::OutputT,
                                                    typename std::decay<OutgoingT>::type>::value
@@ -248,14 +236,15 @@ struct amdgcn_cooperative_load_DxK<BlockDim, BlockK, DataT, DataLayout, LoadLayo
                                        DataT const* dataPtr,
                                        uint32_t     ldm,
                                        uint32_t     waveIndex,
-                                       uint32_t     waveCount)
+                                       uint32_t     waveCount,
+                                       uint32_t     splitCount)
     {
-        if(waveCount >= 2)
+        if(splitCount >= 2)
         {
             CooperativeLoad<2>::exec(
                 std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
         }
-        else if(waveCount == 1)
+        else if(splitCount == 1)
         {
             CooperativeLoad<1>::exec(
                 std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
@@ -266,7 +255,6 @@ struct amdgcn_cooperative_load_DxK<BlockDim, BlockK, DataT, DataLayout, LoadLayo
         }
     }
 
-    // IOCount of 2 can potentially split work between 2 waves
     template <typename OutgoingT,
               typename std::enable_if<std::is_same<typename Traits::OutputT,
                                                    typename std::decay<OutgoingT>::type>::value
@@ -277,9 +265,10 @@ struct amdgcn_cooperative_load_DxK<BlockDim, BlockK, DataT, DataLayout, LoadLayo
                                        DataT const* dataPtr,
                                        uint32_t     ldm,
                                        uint32_t     waveIndex,
-                                       uint32_t     waveCount)
+                                       uint32_t     waveCount,
+                                       uint32_t     splitCount)
     {
-        if(waveCount >= 1)
+        if(splitCount >= 1)
         {
             CooperativeLoad<1>::exec(
                 std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
@@ -289,19 +278,6 @@ struct amdgcn_cooperative_load_DxK<BlockDim, BlockK, DataT, DataLayout, LoadLayo
             assert(0 && "Unsupported split count. Try reducing workgroup waves.");
         }
     }
-
-    // Intentionally left undefined. If you have 0 IO count, there are other problems!
-    template <typename OutgoingT,
-              typename std::enable_if<std::is_same<typename Traits::OutputT,
-                                                   typename std::decay<OutgoingT>::type>::value
-                                          && Traits::MaxSplit == 0,
-                                      int>::type
-              = 0>
-    __device__ static inline void exec(OutgoingT&&  output,
-                                       DataT const* dataPtr,
-                                       uint32_t     ldm,
-                                       uint32_t     waveIndex,
-                                       uint32_t     waveCount);
 };
 
 #endif // WMMA_COOP_LOAD_H

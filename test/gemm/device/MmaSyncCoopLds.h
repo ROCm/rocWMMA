@@ -36,6 +36,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "WMMA.h"
+#include "WMMACoop.h"
 #pragma GCC diagnostic pop
 
 template <uint32_t BlockM,
