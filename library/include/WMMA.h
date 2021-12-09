@@ -156,7 +156,7 @@
  * Matrix C layout loads / stores matrix rows in vector width of 4
  * (Matrix C = M x N, fragAcc = BlockM x BlockN)
  *
- * Fragments are stored in packed registers in optimal load / store patterns. In-register elements have no guaranteed order, which have been optimized for loading / storing efficiency.
+ * @note Fragments are stored in packed registers, however elements have no guaranteed order.
  *
  * \n
  * **mma_sync**
@@ -168,12 +168,9 @@
 namespace wmma
 {
     // MatrixT tags
-    using matrix_a             = ::matrix_a;
-    using matrix_b             = ::matrix_b;
-    using accumulator          = ::accumulator;
-    using register_file        = ::register_file;
-    using register_file_coop_a = ::register_file_coop_a;
-    using register_file_coop_b = ::register_file_coop_b;
+    using matrix_a    = ::matrix_a;
+    using matrix_b    = ::matrix_b;
+    using accumulator = ::accumulator;
 
     // DataLayout tags
     using row_major = ::row_major;
@@ -187,11 +184,12 @@ namespace wmma
 
     // Configuration profile used in wmma calls
     template <typename MatrixT,
-              uint32_t BlockDim,
+              uint32_t BlockM,
+              uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    using io_config = ::IOConfig<MatrixT, BlockDim, BlockK, DataT, DataLayout>;
+    using io_config = ::IOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
 
     /**
  * \ingroup wmma
@@ -208,50 +206,35 @@ namespace wmma
     /*! \class fragment
  *  \brief Definition of MFMA Fragment
  *
- * LeadingDim - Matrix A loads by col size BlockM
- *              Matrix B / C load by row size BlockN
- *
- * KDim -  Matrix C loads BlockM rows size BlockN
- *          Matrix A and B load BlockK strides of leading dim.
+ * @tparam MatrixT - fragment context
+ * @tparam BlockM/N/K - block dimensions
+ * @tparam DataT - data type
+ * @tparam DataLayout - in-memory layout as col_major or row_major
  *
  * PackedT - The type of the vector register holding packed element data
  * UnpackedT - The type of the vector register holding unpacked element data
- *
- * IOTraits - Input/output related specifically to AMDGCN architecture
- *
+ * IOTraits - Input/output traits specific to AMDGCN architecture
  * AccessT - Unpacked data storage
+ * StorageT = Packed data storage required for MFMA
  *
- * StorageT = Packed data storage accepted by MFMA
- *
+ * @note Fragments are stored in packed registers, however elements have no guaranteed order.
  */
     template <typename MatrixT,
               uint32_t BlockM,
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename LayoutT = void>
+              typename DataLayout = void>
     class __align__(4) fragment
     {
     public:
         struct Traits
         {
-            enum : uint32_t
-            {
-                // Matrix A loads by col size BlockM
-                // Matrix B / C load by row size BlockN
-                LeadingDim = std::is_same<MatrixT, matrix_a>::value ? BlockM : BlockN,
-
-                // Matrix C loads BlockM rows size BlockN
-                // Matrix A and B load BlockK strides of leading dim.
-                KDim = std::is_same<MatrixT, accumulator>::value ? BlockM : BlockK,
-            };
-
         private:
             using PackedT   = typename PackTraits<DataT>::PackedT;
             using UnpackedT = typename PackTraits<DataT>::UnpackedT;
             using IOTraits =
-                typename io_config<MatrixT, Traits::LeadingDim, Traits::KDim, DataT, LayoutT>::
-                    IOTraits;
+                typename io_config<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>::IOTraits;
 
         public:
             using AccessT  = VecT<UnpackedT, IOTraits::UnpackedSize>;
@@ -263,7 +246,7 @@ namespace wmma
                           "Unable to pack fragment elements");
         };
 
-        using IOConfig = io_config<MatrixT, Traits::LeadingDim, Traits::KDim, DataT, LayoutT>;
+        using IOConfig = io_config<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
 
         __device__           fragment() = default;
         __device__           fragment(const fragment& other);
@@ -276,7 +259,7 @@ namespace wmma
         __device__ inline typename Traits::StorageT const& operator*() const;
 
         // Traits
-        __device__ constexpr static inline uint32_t leadingDim();
+        __device__ constexpr static inline uint32_t blockDim();
         __device__ constexpr static inline uint32_t kDim();
         __device__ constexpr static inline uint32_t size();
 
@@ -298,6 +281,10 @@ namespace wmma
  * @{
  */
     /**
+ * @tparam MatrixT - fragment context
+ * @tparam BlockM/N/K - block dimensions
+ * @tparam DataT - data type
+ * @tparam DataLayout - in-memory layout as col_major or row_major
  *
  * @param frag - Fragment of type MatrixT with its associated block sizes, data type and layout
  * @param value - Value of type DataT
@@ -319,6 +306,10 @@ namespace wmma
  * @{
  */
     /**
+ * @tparam MatrixT - fragment context
+ * @tparam BlockM/N/K - block dimensions
+ * @tparam DataT - data type
+ * @tparam DataLayout - in-memory layout as col_major or row_major
  *
  * @param frag - Fragment of type MatrixT with its associated block sizes, data type and layout
  * @param data - Data pointer to global/local memory
@@ -344,6 +335,9 @@ namespace wmma
  * @{
  */
     /**
+ * @tparam MatrixT - fragment context
+ * @tparam BlockM/N/K - block dimensions
+ * @tparam DataT - data type
  *
  * @param frag - Fragment of type MatrixT with its associated block sizes, data type and layout
  * @param data - Data pointer to global/local memory
@@ -368,7 +362,10 @@ namespace wmma
  * @{
  */
     /**
- *
+ * @tparam MatrixT - fragment context
+ * @tparam BlockM/N/K - block dimensions
+ * @tparam DataT - data type
+ * @tparam DataLayout - in-memory layout as col_major or row_major
  *
  * @param frag - Fragment of type MatrixT with its associated block sizes, data type and layout
  * @param data - Data pointer to global/local memory
@@ -395,6 +392,9 @@ namespace wmma
  */
     /**
  *
+ * @tparam MatrixT - fragment context
+ * @tparam BlockM/N/K - block dimensions
+ * @tparam DataT - data type
  *
  * @param frag - Fragment of type MatrixT with its associated block sizes, data type and layout
  * @param data - Data pointer to global/local memory
@@ -418,14 +418,19 @@ namespace wmma
  * @{
  */
     /**
+ * @tparam BlockM/N/K - block dimensions
+ * @tparam InputT - data type of input frags A and B
+ * @tparam ComputeT - data type of accumulator fragment C / D
+ * @tparam LayoutA - in-memory layout of frag A as col_major or row_major
+ * @tparam LayoutB - in-memory layout of frag B as col_major or row_major
  *
- * @param d - Accumulator fragment D
+ * @param d - Accumulator output D
  * @param a - Input fragment A
  * @param b - Input fragment B
- * @param c - Input/Accumulator fragment C
+ * @param c - Input accumulator fragment C
  *
  * Performs the Multiply-Accumulate operation on the fragments A, B, C and D(D = A * B + C)
- * Note: Frag c = d is allowed
+ * @note Frag c = d is valid
  */
     template <uint32_t BlockM,
               uint32_t BlockN,
@@ -445,7 +450,7 @@ namespace wmma
  */
     /**
  *
- * Performs synchronization across multiple wavefronts in a workgroup.
+ * Synchronization point for all wavefronts in a workgroup.
  *
  */
     __device__ void synchronize_workgroup();

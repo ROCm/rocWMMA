@@ -87,10 +87,10 @@ public:
     // Lds memory usage in bytes
     uint32_t ldsUsage() const final
     {
-        auto blockDims = this->blockDim();
-        return sizeof(InputT)
-               * (blockDims.x / AMDGCN_WAVE_SIZE * BlocksX * BlockM * BlockK
-                  + blockDims.y * BlocksY * BlockK * BlockN);
+        // Uses 2 lds blocks for prefetch loop
+        return 2 * sizeof(InputT)
+               * (Base::mTBlockX / AMDGCN_WAVE_SIZE * BlocksX * BlockM * BlockK
+                  + Base::mTBlockY * BlocksY * BlockK * BlockN);
     }
 
     typename Base::KernelFunc kernelImpl() const final

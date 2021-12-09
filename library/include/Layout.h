@@ -96,7 +96,7 @@ namespace Layout
  * E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
  *
  *      Elements 0.....31 32.....64
- *               _______________
+ *                _______________
  *       Reg0    |  C0   |   C4  |
  *       Reg1    |  C1   |   C5  |
  *       Reg2    |  C2   |   C6  |
@@ -107,7 +107,7 @@ namespace Layout
  * E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = col_major
  *
  *       Elements 0.....31 32.....64
- *               _______________
+ *                _______________
  *       Reg0    |  C0   |   C1  |
  *        ...       ...      ...
  *
