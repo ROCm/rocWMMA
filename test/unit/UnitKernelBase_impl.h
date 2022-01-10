@@ -38,6 +38,7 @@
 
 // Library includes
 #include "Constants.h"
+#include "Types.h"
 #include "Utils.h"
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>

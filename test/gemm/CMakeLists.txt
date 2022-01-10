@@ -97,16 +97,6 @@ set(MmaSyncLdsTestSources ${GemmCommonSources}
                           ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncLdsTest_32x32_TN.cpp
                           ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncLdsTest_32x32_TT.cpp)
 
-set(MmaSyncCoopLdsTestSources ${GemmCommonSources}
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncCoopLdsTest_16x16_NN.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncCoopLdsTest_16x16_NT.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncCoopLdsTest_16x16_TN.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncCoopLdsTest_16x16_TT.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncCoopLdsTest_32x32_NN.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncCoopLdsTest_32x32_NT.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncCoopLdsTest_32x32_TN.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncCoopLdsTest_32x32_TT.cpp)
-
 set(MmaSyncMultiTestSources ${GemmCommonSources}
                             ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NN.cpp
                             ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NT.cpp
@@ -118,6 +108,14 @@ set(MmaSyncMultiTestSources ${GemmCommonSources}
                             ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_TT.cpp)
 
 set(MmaSyncMultiLdsTestSources ${GemmCommonSources}
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NN_1x1.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NT_1x1.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_TN_1x1.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_TT_1x1.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_NN_1x1.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_NT_1x1.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_TN_1x1.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_TT_1x1.cpp
                                ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NN_2x2.cpp
                                ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NT_2x2.cpp
                                ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_TN_2x2.cpp
@@ -129,31 +127,26 @@ set(MmaSyncMultiLdsTestSources ${GemmCommonSources}
 
 if(WMMA_BUILD_EXTENDED_TESTS)
   set(MmaSyncMultiLdsTestSources ${MmaSyncMultiLdsTestSources}
-                                 ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NN_1x1.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NN_1x2.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NN_2x1.cpp
-                                 ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NT_1x1.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NT_1x2.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NT_2x1.cpp
-                                 ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_TN_1x1.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_TN_1x2.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_TN_2x1.cpp
-                                 ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_TT_1x1.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_TT_1x2.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_TT_2x1.cpp
-                                 ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_NN_1x1.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_NN_1x2.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_NN_2x1.cpp
-                                 ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_NT_1x1.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_NT_1x2.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_NT_2x1.cpp
-                                 ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_TN_1x1.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_TN_1x2.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_TN_2x1.cpp
-                                 ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_TT_1x1.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_TT_1x2.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_TT_2x1.cpp)
 endif()
+
+set(MmaSyncAdHocTestSources ${GemmCommonSources}
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncAdhoc.cpp)
 
 ### GEMM tests are built as either benchmark or validation
 
@@ -164,7 +157,6 @@ if(WMMA_BUILD_BENCHMARK_TESTS)
   add_gemm_benchmark_test(MmaSyncMultiTest-bench ${MmaSyncMultiTestSources})
   add_gemm_benchmark_test(MmaSyncMultiLdsTest-bench ${MmaSyncMultiLdsTestSources})
   add_gemm_benchmark_test(MmaSyncLdsTest-bench ${MmaSyncLdsTestSources})
-  add_gemm_benchmark_test(MmaSyncCoopLdsTest-bench ${MmaSyncCoopLdsTestSources})
 endif()
 
 # Validation GEMM tests
@@ -174,5 +166,5 @@ if(WMMA_BUILD_VALIDATION_TESTS)
   add_gemm_validation_test(MmaSyncMultiTest-validate ${MmaSyncMultiTestSources})
   add_gemm_validation_test(MmaSyncMultiLdsTest-validate ${MmaSyncMultiLdsTestSources})
   add_gemm_validation_test(MmaSyncLdsTest-validate ${MmaSyncLdsTestSources})
-  add_gemm_validation_test(MmaSyncCoopLdsTest-validate ${MmaSyncCoopLdsTestSources})
+  add_gemm_validation_test(MmaSyncAdHocTest ${MmaSyncAdHocTestSources})
 endif()
