@@ -67,7 +67,6 @@ struct Pack
         std::is_same<typename std::decay<IncomingT>::type, typename Traits::InputT>::value
             && (Traits::PackRatio > 1),
         typename Traits::OutputT&>::type
-
     {
         using InputT  = typename Traits::InputT;
         using OutputT = typename Traits::OutputT;

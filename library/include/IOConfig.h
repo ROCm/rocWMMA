@@ -29,6 +29,7 @@
 #include "Constants.h"
 #include "CoopLoad.h"
 #include "CoopStore.h"
+#include "IOBroadcast.h"
 #include "IOPack.h"
 #include "IOTraits.h"
 #include "IOUnpack.h"
@@ -37,8 +38,48 @@
 #include "OpaqueStore.h"
 #include "Types.h"
 
-// Default IO config
-template <typename MatrixT, uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
+/**
+ * \ingroup wmma
+ * \defgroup WMMA IOConfig
+ *
+ * @brief WMMA fragment input and output configurations leveraging amdgcn architecture
+ */
+
+/**
+ * \ingroup WMMA IOConfig
+ * @{
+ */
+
+/*! \class IOConfig
+ *  \brief Definition of WMMA fragment input / output configurations
+ *         in specific matrix context.
+ *
+ * @tparam MatrixT - fragment context
+ * @tparam BlockM/N/K - block dimensions
+ * @tparam DataT - data type
+ * @tparam DataLayout - in-memory layout as col_major or row_major
+ *
+ * BlockDim - leading block dimension (row / col size)
+ * KDim - minor block dimension (row / col count)
+ * MaxVectorWidth - maximum allowable vector width
+ * VectorWidth - currently used vector width
+ * CoopIndex - shared wave index (0 = row, 1 = col)
+ * IOTraits - Input/output traits specific to AMDGCN architecture
+ * Packer - Packs raw fragment data into register
+ * Unpacker - Unpacks registers to raw fragment data
+ * Broadcaster - Sets all fragment data to a desired value
+ * MatrixLayout - Maps GPU threads to matrix shape or geometry
+ * Loader - Issues load instructions for raw fragment data
+ * Storer - Issues store instructions for raw fragment data
+ * CoopLoader - Issues cooperative load instructions for raw fragment data
+ * CoopStorer - Issues cooperative store instructions for raw fragment data
+ */
+template <typename MatrixT,
+          uint32_t BlockM,
+          uint32_t BlockN,
+          uint32_t BlockK,
+          typename DataT,
+          typename DataLayout>
 struct IOConfig;
 
 /************************************************
@@ -74,19 +115,27 @@ struct IOConfig;
  * For as many groups of N registers to hold BlockDim x BlockK elements.
  *
  ***********************************************/
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
-struct IOConfig<matrix_a, BlockDim, BlockK, DataT, DataLayout>
+template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename DataLayout>
+struct IOConfig<matrix_a, BlockM, BlockN, BlockK, DataT, DataLayout>
 {
     enum : uint32_t
     {
-        MaxVectorWidth = VecWidthTraits<BlockDim, BlockK, DataT>::MaxVectorWidth,
-        VectorWidth
-        = (std::is_same<DataLayout, row_major>::value && BlockDim <= 64) ? MaxVectorWidth : 1
+        BlockDim = BlockM,
+        KDim     = BlockK,
+
+        MaxVectorWidth = VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth,
+        VectorWidth    = (std::is_same<DataLayout, row_major>::value && BlockDim < AMDGCN_WAVE_SIZE)
+                             ? MaxVectorWidth
+                             : 1,
+
+        CoopIndex = 1 // Shares data with waves in columns of same row
     };
 
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
-    using Packer   = Pack<DataT, IOTraits::UnpackedSize>;
-    using Unpacker = Unpack<DataT, IOTraits::PackedSize>;
+    using IOTraits    = amdgcn_io_traits<BlockDim, KDim, DataT, VectorWidth>;
+    using Packer      = Pack<DataT, IOTraits::UnpackedSize>;
+    using Unpacker    = Unpack<DataT, IOTraits::PackedSize>;
+    using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
+    using MappingUtil = MappingUtil<BlockDim, KDim, DataT, DataLayout>;
 
     static_assert(!(std::is_same<DataLayout, col_major>::value && VectorWidth > 1),
                   "matrix_a in col_major currently does not support VectorWidth > 1");
@@ -100,17 +149,13 @@ struct IOConfig<matrix_a, BlockDim, BlockK, DataT, DataLayout>
                                     Layout::Col<BlkDim, BlkK, DT, DL, EPT>>;
 
     using Loader
-        = amdgcn_opaque_load_DxK<BlockDim, BlockK, DataT, DataLayout, MatrixLayout, VectorWidth>;
+        = amdgcn_opaque_load_DxK<BlockDim, KDim, DataT, DataLayout, MatrixLayout, VectorWidth>;
     using Storer
-        = amdgcn_opaque_store_DxK<BlockDim, BlockK, DataT, DataLayout, MatrixLayout, VectorWidth>;
-    using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
-                                                   BlockK,
-                                                   DataT,
-                                                   DataLayout,
-                                                   MatrixLayout,
-                                                   VectorWidth>;
+        = amdgcn_opaque_store_DxK<BlockDim, KDim, DataT, DataLayout, MatrixLayout, VectorWidth>;
+    using CoopLoader
+        = amdgcn_cooperative_load_DxK<BlockDim, KDim, DataT, DataLayout, MatrixLayout, VectorWidth>;
     using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
-                                                    BlockK,
+                                                    KDim,
                                                     DataT,
                                                     DataLayout,
                                                     MatrixLayout,
@@ -150,19 +195,27 @@ struct IOConfig<matrix_a, BlockDim, BlockK, DataT, DataLayout>
  * For as many groups of N registers to hold BlockDim x BlockK elements.
  *
  ***********************************************/
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
-struct IOConfig<matrix_b, BlockDim, BlockK, DataT, DataLayout>
+template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename DataLayout>
+struct IOConfig<matrix_b, BlockM, BlockN, BlockK, DataT, DataLayout>
 {
     enum : uint32_t
     {
-        MaxVectorWidth = VecWidthTraits<BlockDim, BlockK, DataT>::MaxVectorWidth,
-        VectorWidth
-        = (std::is_same<DataLayout, col_major>::value && BlockDim <= 64) ? MaxVectorWidth : 1
+        BlockDim = BlockN,
+        KDim     = BlockK,
+
+        MaxVectorWidth = VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth,
+        VectorWidth    = (std::is_same<DataLayout, col_major>::value && BlockDim < AMDGCN_WAVE_SIZE)
+                             ? MaxVectorWidth
+                             : 1,
+
+        CoopIndex = 0 // Shares data with waves in rows of same column
     };
 
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
-    using Packer   = Pack<DataT, IOTraits::UnpackedSize>;
-    using Unpacker = Unpack<DataT, IOTraits::PackedSize>;
+    using IOTraits    = amdgcn_io_traits<BlockDim, KDim, DataT, VectorWidth>;
+    using Packer      = Pack<DataT, IOTraits::UnpackedSize>;
+    using Unpacker    = Unpack<DataT, IOTraits::PackedSize>;
+    using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
+    using MappingUtil = MappingUtil<KDim, BlockDim, DataT, DataLayout>;
 
     static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
                   "matrix_b in row_major currently does not support VectorWidth > 1");
@@ -176,17 +229,13 @@ struct IOConfig<matrix_b, BlockDim, BlockK, DataT, DataLayout>
                                     Layout::Row<BlkDim, BlkK, DT, DL, EPT>>;
 
     using Loader
-        = amdgcn_opaque_load_DxK<BlockDim, BlockK, DataT, DataLayout, MatrixLayout, VectorWidth>;
+        = amdgcn_opaque_load_DxK<BlockDim, KDim, DataT, DataLayout, MatrixLayout, VectorWidth>;
     using Storer
-        = amdgcn_opaque_store_DxK<BlockDim, BlockK, DataT, DataLayout, MatrixLayout, VectorWidth>;
-    using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
-                                                   BlockK,
-                                                   DataT,
-                                                   DataLayout,
-                                                   MatrixLayout,
-                                                   VectorWidth>;
+        = amdgcn_opaque_store_DxK<BlockDim, KDim, DataT, DataLayout, MatrixLayout, VectorWidth>;
+    using CoopLoader
+        = amdgcn_cooperative_load_DxK<BlockDim, KDim, DataT, DataLayout, MatrixLayout, VectorWidth>;
     using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
-                                                    BlockK,
+                                                    KDim,
                                                     DataT,
                                                     DataLayout,
                                                     MatrixLayout,
@@ -194,7 +243,7 @@ struct IOConfig<matrix_b, BlockDim, BlockK, DataT, DataLayout>
 };
 
 /************************************************
- * Matrix C/D default configuration: Row4T
+ * Matrix C/D (accumulator) default configuration: Row4T
  *
  * Dimensions: (rows x cols) = BlockK x BlockDim
  *
@@ -213,7 +262,7 @@ struct IOConfig<matrix_b, BlockDim, BlockK, DataT, DataLayout>
  *
  *
  *  Register layout:
- *  4 = Max VectorWidth
+ *  4 = Fixed MaxVectorWidth
  *  Elements 0...........................64
  *            ________________
  *  Reg0     |  R0    |  R4   |  ...
@@ -225,19 +274,26 @@ struct IOConfig<matrix_b, BlockDim, BlockK, DataT, DataLayout>
  * For as many groups of 4 registers to hold BlockDim x BlockK elements.
  *
  ***********************************************/
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
-struct IOConfig<accumulator, BlockDim, BlockK, DataT, DataLayout>
+template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, typename DataLayout>
+struct IOConfig<accumulator, BlockM, BlockN, BlockK, DataT, DataLayout>
 {
     enum : uint32_t
     {
+        BlockDim = BlockN,
+        KDim     = BlockM,
+
         MaxVectorWidth
         = std::is_same<DataT, float64_t>::value ? 1 : 4, // Actual output of the mfma hardware
-        VectorWidth = std::is_same<DataLayout, col_major>::value ? MaxVectorWidth : 1
+        VectorWidth = std::is_same<DataLayout, col_major>::value ? MaxVectorWidth : 1,
+
+        CoopIndex = 0 // Shares data with waves in rows of same column
     };
 
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
-    using Packer   = Pack<DataT, IOTraits::UnpackedSize>;
-    using Unpacker = Unpack<DataT, IOTraits::PackedSize>;
+    using IOTraits    = amdgcn_io_traits<BlockDim, KDim, DataT, VectorWidth>;
+    using Packer      = Pack<DataT, IOTraits::UnpackedSize>;
+    using Unpacker    = Unpack<DataT, IOTraits::PackedSize>;
+    using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
+    using MappingUtil = MappingUtil<KDim, BlockDim, DataT, DataLayout>;
 
     static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
                   "accumulator in row_major currently does not support VectorWidth > 1");
@@ -249,18 +305,13 @@ struct IOConfig<accumulator, BlockDim, BlockK, DataT, DataLayout>
                                     Layout::Row<BlkDim, BlkK, DT, DL, EPT>>;
 
     using Loader
-        = amdgcn_opaque_load_DxK<BlockDim, BlockK, DataT, DataLayout, MatrixLayout, VectorWidth>;
+        = amdgcn_opaque_load_DxK<BlockDim, KDim, DataT, DataLayout, MatrixLayout, VectorWidth>;
     using Storer
-        = amdgcn_opaque_store_DxK<BlockDim, BlockK, DataT, DataLayout, MatrixLayout, VectorWidth>;
-
-    using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
-                                                   BlockK,
-                                                   DataT,
-                                                   DataLayout,
-                                                   MatrixLayout,
-                                                   VectorWidth>;
+        = amdgcn_opaque_store_DxK<BlockDim, KDim, DataT, DataLayout, MatrixLayout, VectorWidth>;
+    using CoopLoader
+        = amdgcn_cooperative_load_DxK<BlockDim, KDim, DataT, DataLayout, MatrixLayout, VectorWidth>;
     using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
-                                                    BlockK,
+                                                    KDim,
                                                     DataT,
                                                     DataLayout,
                                                     MatrixLayout,
@@ -268,93 +319,26 @@ struct IOConfig<accumulator, BlockDim, BlockK, DataT, DataLayout>
 };
 
 /************************************************
- * Register file default configuration: Row (Continguous)
+ * Matrix C/D (accumulator) with undetermined DataLayout
  *
- * Best used with BlockDim = 64, such that there is
- * 1:1 mapping between registers and matrix coords.
+ * No specific indications for matrix geometry I/O, however
+ * general IOTraits, Pack/Unpack, Broadcast still available.
  *
- * Dimensions: (rows x cols) = BlockK x BlockDim
- *
- * Matrix Layout:
- * BlockDim = row size
- * BlockK = row count
- *
- *  kDim    (0, 0)                 (0, 63)
- *    |     v______________  ...  _v__
- *    v     |__________R0__  ...  ____|
- *          |__________R1__  ...  ____|
- *          |__________R2__  ...  ____|
- *          |          ...   ...      |
- *          |__________Rk__  ...  ____|
- *          ^(BlockK - 1, 0)       ^(BlockK - 1, 63)
- *
- *
- *  Register layout:
- *
- *  Elements 0.........64
- *            ________
- *  Reg0     |   R0   |
- *  Reg1     |   R1   |
- *  Reg2     |   R2   |
- *  Reg3     |   R3   |
- *   ...        ...       ...      ...
- *
- * For as many registers to hold BlockDim x BlockK elements.
- *
- ***********************************************/
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
-struct IOConfig<register_file, BlockDim, BlockK, DataT, DataLayout>
+ * */
+template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
+struct IOConfig<accumulator, BlockM, BlockN, BlockK, DataT, void>
 {
     enum : uint32_t
     {
-        MaxVectorWidth = VecWidthTraits<BlockDim, BlockK, DataT>::MaxVectorWidth,
-        VectorWidth    = std::is_same<DataLayout, col_major>::value ? MaxVectorWidth : 1
+        BlockDim = BlockN,
+        KDim     = BlockM,
     };
 
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
-    using Packer   = Pack<DataT, IOTraits::UnpackedSize>;
-    using Unpacker = Unpack<DataT, IOTraits::PackedSize>;
-
-    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using MatrixLayout = Layout::Row<BlkDim, BlkK, DT, DL, EPT>;
-
-    using Loader
-        = amdgcn_opaque_load_DxK<BlockDim, BlockK, DataT, DataLayout, MatrixLayout, VectorWidth>;
-    using Storer
-        = amdgcn_opaque_store_DxK<BlockDim, BlockK, DataT, DataLayout, MatrixLayout, VectorWidth>;
-    using CoopLoader = amdgcn_cooperative_load_DxK<BlockDim,
-                                                   BlockK,
-                                                   DataT,
-                                                   DataLayout,
-                                                   MatrixLayout,
-                                                   VectorWidth>;
-    using CoopStorer = amdgcn_cooperative_store_DxK<BlockDim,
-                                                    BlockK,
-                                                    DataT,
-                                                    DataLayout,
-                                                    MatrixLayout,
-                                                    VectorWidth>;
-};
-
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-struct IOConfig<accumulator, BlockDim, BlockK, DataT, void>
-{
-    // These don't depend on VectorWidth, we can use VW=1
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT>;
-    using Packer   = Pack<DataT, IOTraits::UnpackedSize>;
-    using Unpacker = Unpack<DataT, IOTraits::PackedSize>;
-};
-
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
-struct IOConfig<register_file_coop_a, BlockDim, BlockK, DataT, DataLayout>
-    : public IOConfig<register_file, BlockDim, BlockK, DataT, DataLayout>
-{
-};
-
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename DataLayout>
-struct IOConfig<register_file_coop_b, BlockDim, BlockK, DataT, DataLayout>
-    : public IOConfig<register_file, BlockDim, BlockK, DataT, DataLayout>
-{
+    // These don't depend on VectorWidth, we can use VW = 1
+    using IOTraits    = amdgcn_io_traits<BlockDim, KDim, DataT>;
+    using Packer      = Pack<DataT, IOTraits::UnpackedSize>;
+    using Unpacker    = Unpack<DataT, IOTraits::PackedSize>;
+    using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
 };
 
 #endif // IO_CONFIG_H

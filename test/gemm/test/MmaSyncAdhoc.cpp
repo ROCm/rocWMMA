@@ -28,7 +28,8 @@
 
 #include "GemmTest.h"
 #include "KernelGenerator.h"
-#include "detail/MmaSyncCoopLds.h"
+#include "LdsMappingUtil.h"
+#include "detail/MmaSyncMultiLds.h"
 
 struct TestParams : public CommonTestParams
 {
@@ -36,15 +37,21 @@ struct TestParams : public CommonTestParams
 
     // Types: ALL + double
     // Block Sizes: 16 x 16 x BlockK
-    // Layouts: TN
-    using Types        = typename Base::TestTypes16x16;
-    using BlockSizes   = typename Base::TestBlockSizes16x16;
-    using Layouts      = typename Base::TestLayoutsTN;
-    using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
+    // Layouts: NT
+    using Types      = std::tuple<std::tuple<float16_t, float32_t, float32_t>>;
+    using BlockSizes = std::tuple<std::tuple<I<16>, I<16>, I<16>>>;
+    using Layouts
+        = std::tuple<std::tuple<row_major, row_major, row_major>>; //typename Base::TestLayoutsNT;
+    using LayoutsLds  = std::tuple<row_major>; //typename Base::TestLayoutTypes;
+    using MappingsLds = typename Base::TestMappingsLds;
+    using BlocksXY    = std::tuple<std::tuple<I<2>, I<2>>>;
+    using KernelParams =
+        typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
+            Result;
 
     // Assemble the kernel generator
-    // Kernel: MmaSyncCoopLds
-    using GeneratorImpl   = MmaSyncCoopLdsGenerator;
+    // Kernel: MmaSyncMulti
+    using GeneratorImpl   = MmaSyncMultiLdsGenerator;
     using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
     // Sanity check for kernel generator
@@ -55,20 +62,43 @@ struct TestParams : public CommonTestParams
     {
         return KernelGenerator::generate();
     }
-};
 
+    static inline std::vector<ThreadBlockT> threadBlocks()
+    {
+        return {
+            //{64, 1},
+            {128, 2},
+            //{64, 4}, {128, 1}, {128, 2}, {256, 1}
+        };
+    }
+
+    static inline std::vector<ProblemSizeT> problemSizes()
+    {
+        return {
+            //{64, 64, 1024},
+            //         {32, 64, 1024},
+            // {64, 32, 1024},
+            // {256, 256, 1024},
+            //{1024, 1024, 1024},
+            {64, 64, 64},
+            //{2048, 2048, 2048},
+            //{8192, 8192, 8192}
+
+        };
+    }
+};
 // Test suite for unique parameterization
-class MmaSyncCoopLdsTest16x16TN : public GemmTest
+class MmaSyncMultiLdsTestAdHoc : public GemmTest
 {
 };
 
-TEST_P(MmaSyncCoopLdsTest16x16TN, RunKernel)
+TEST_P(MmaSyncMultiLdsTestAdHoc, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(GemmKernelTests,
-                         MmaSyncCoopLdsTest16x16TN,
+                         MmaSyncMultiLdsTestAdHoc,
                          ::testing::Combine(::testing::ValuesIn(TestParams::kernels()),
                                             ::testing::ValuesIn(TestParams::threadBlocks()),
                                             ::testing::ValuesIn(TestParams::problemSizes()),

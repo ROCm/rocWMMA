@@ -26,29 +26,12 @@
 #ifndef WMMA_IMPL_H_
 #define WMMA_IMPL_H_
 
-// #include <type_traits>
-
-// #include "IOBarrier.h"
-// #include "IOBroadcast.h"
-// #include "IOConfig.h"
-// #include "IOPack.h"
-// #include "IOUnpack.h"
-// #include "MFMA.h"
-// #include "OpaqueLoad.h"
-// #include "OpaqueStore.h"
-// #include "WMMA.h"
-
-// #include "Types.h"
-
 #include <type_traits>
 #include <utility>
 
 #include "Convert.h"
-#include "CoopLoad.h"
-#include "CoopStore.h"
 #include "IOBarrier.h"
 #include "IOBroadcast.h"
-#include "IOConfig.h"
 #include "MFMA.h"
 #include "MappingUtil.h"
 #include "OpaqueLoad.h"
@@ -142,9 +125,9 @@ namespace wmma
               typename DataT,
               typename LayoutT>
     __device__ constexpr inline uint32_t
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::leadingDim()
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::blockDim()
     {
-        return Traits::LeadingDim;
+        return IOConfig::BlockDim;
     }
 
     template <typename MatrixT,
@@ -156,7 +139,7 @@ namespace wmma
     __device__ constexpr inline uint32_t
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::kDim()
     {
-        return Traits::KDim;
+        return IOConfig::KDim;
     }
 
     template <typename MatrixT,
@@ -181,9 +164,9 @@ namespace wmma
         fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                       DataT                                                         value)
     {
-        using FragT  = typename std::decay<decltype(frag)>::type;
-        using Config = io_config<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
-        using Broadcaster = Broadcast<DataT, Config::IOTraits::UnpackedSize>;
+        using FragT       = typename std::decay<decltype(frag)>::type;
+        using Config      = typename FragT::IOConfig;
+        using Broadcaster = typename Config::Broadcaster;
         using Packer      = typename Config::Packer;
 
         // Sanity checks
@@ -211,7 +194,7 @@ namespace wmma
                          uint32_t                                                      ldm)
     {
         using FragT  = typename std::decay<decltype(frag)>::type;
-        using Config = io_config<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+        using Config = typename FragT::IOConfig;
         using Loader = typename Config::Loader;
         using Packer = typename Config::Packer;
 
@@ -239,13 +222,11 @@ namespace wmma
 
         if(layout == layout_t::mem_row_major)
         {
-            load_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, row_major>(
-                reinterpret_cast<FragRowMajor&>(frag), data, ldm);
+            load_matrix_sync(reinterpret_cast<FragRowMajor&>(frag), data, ldm);
         }
         else
         {
-            load_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, col_major>(
-                reinterpret_cast<FragColMajor&>(frag), data, ldm);
+            load_matrix_sync(reinterpret_cast<FragColMajor&>(frag), data, ldm);
         }
     }
 
@@ -261,7 +242,7 @@ namespace wmma
                           uint32_t                                                            ldm)
     {
         using FragT    = typename std::decay<decltype(frag)>::type;
-        using Config   = io_config<MatrixT, FragT::leadingDim(), FragT::kDim(), DataT, DataLayout>;
+        using Config   = typename FragT::IOConfig;
         using Storer   = typename Config::Storer;
         using Unpacker = typename Config::Unpacker;
 
@@ -289,13 +270,11 @@ namespace wmma
 
         if(layout == layout_t::mem_row_major)
         {
-            store_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, row_major>(
-                data, reinterpret_cast<FragRowMajor const&>(frag), ldm);
+            store_matrix_sync(data, reinterpret_cast<FragRowMajor const&>(frag), ldm);
         }
         else
         {
-            store_matrix_sync<MatrixT, BlockM, BlockN, BlockK, DataT, col_major>(
-                data, reinterpret_cast<FragColMajor const&>(frag), ldm);
+            store_matrix_sync(data, reinterpret_cast<FragColMajor const&>(frag), ldm);
         }
     }
 
