@@ -105,7 +105,7 @@ struct amdgcn_cooperative_store_DxK
                         storePtr,
                         *ioIter,
                         MappingUtil::dataOffset(
-                            ldm, baseOffset + MatrixLayout::cumulativeOffset(ioIter.mIndex)));
+                            ldm, baseOffset + MatrixLayout::cumulativeOffset(ioIter.index())));
                     ioIter++;
                 }
             }

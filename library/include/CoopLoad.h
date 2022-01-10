@@ -104,7 +104,7 @@ struct amdgcn_cooperative_load_DxK
                     *ioIter = *Loader::exec(
                         loadPtr,
                         MappingUtil::dataOffset(
-                            ldm, baseOffset + MatrixLayout::cumulativeOffset(ioIter.mIndex)));
+                            ldm, baseOffset + MatrixLayout::cumulativeOffset(ioIter.index())));
                     ioIter++;
                 }
             }

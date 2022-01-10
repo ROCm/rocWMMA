@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -56,9 +56,10 @@ struct amdgcn_opaque_store_DxK
     struct Traits
     {
         // Matrix space thread offsets
-        using LayoutT = StoreLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
+        using MatrixLayout = StoreLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
+        using MappingUtil  = typename MatrixLayout::Traits::MappingUtil;
 
-        // These traits are per-io
+        // Raw IO on unpacked register data.
         using Storer = amdgcn_opaque_store<DataT, VectorWidth>;
         using StoreT = typename Storer::StoreT;
         using InputT = VecT<DataT, IOTraits::UnpackedSize>;
@@ -68,24 +69,25 @@ struct amdgcn_opaque_store_DxK
         exec(DataT* localPtr, typename Traits::InputT const& incoming, uint32_t ldm)
     {
         // Extract traits
-        using Storer  = typename Traits::Storer;
-        using StoreT  = typename Traits::StoreT;
-        using LayoutT = typename Traits::LayoutT;
+        using Storer       = typename Traits::Storer;
+        using StoreT       = typename Traits::StoreT;
+        using MatrixLayout = typename Traits::MatrixLayout;
+        using MappingUtil  = typename Traits::MappingUtil;
 
         // Arrange wave threads to starting data offsets due to layout.
         // In this case, the LDS contains only block data.
-        auto baseOffset = LayoutT::baseDataOffset(ldm);
+        auto baseOffset = MatrixLayout::baseOffset();
 
         auto it = incoming.template begin<StoreT::size()>();
-        static_assert(decltype(it)::Range == IOTraits::IOCount,
+        static_assert(decltype(it)::range() == IOTraits::IOCount,
                       "IOCount inconsistent with iterator range");
 
 #pragma unroll
         for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
         {
-            Storer::exec(localPtr, *it, baseOffset);
+            Storer::exec(localPtr, *it, MappingUtil::dataOffset(ldm, baseOffset));
             it++;
-            baseOffset += LayoutT::dataOffsetIncrement(i, ldm);
+            baseOffset += MatrixLayout::incrementalOffset(i);
         }
     }
 };

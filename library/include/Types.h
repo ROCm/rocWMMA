@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -197,10 +197,20 @@ struct __align__(4) VecT
     template <uint32_t SubVecSize>
     struct Iterator
     {
-        using ItVecT = _VecT<DataT, SubVecSize>;
-        enum : uint32_t
+    private:
+        int32_t               mIndex = 0;
+        VecT<DataT, VecSize>& mParent;
+
+    public:
+        struct Traits
         {
-            Range = VecSize / SubVecSize
+            // Vector type pointed to by current iterator
+            using ItVecT = _VecT<DataT, SubVecSize>;
+
+            enum : int32_t
+            {
+                Range = VecSize / SubVecSize
+            };
         };
 
         static_assert(VecSize % SubVecSize == 0, "VecSize not iterable by ItVecSize");
@@ -217,17 +227,25 @@ struct __align__(4) VecT
         {
         }
 
-        int32_t               mIndex = 0;
-        VecT<DataT, VecSize>& mParent;
-
-        __device__ inline ItVecT const& operator*() const
+        __device__ constexpr static inline int32_t range()
         {
-            return *reinterpret_cast<ItVecT const*>(&(mParent[mIndex * SubVecSize]));
+            return Traits::Range;
         }
 
-        __device__ inline ItVecT& operator*()
+        __device__ inline int32_t index() const
         {
-            return *reinterpret_cast<ItVecT*>(&(mParent[mIndex * SubVecSize]));
+            return mIndex;
+        }
+
+        __device__ inline typename Traits::ItVecT const& operator*() const
+        {
+            return *reinterpret_cast<typename Traits::ItVecT const*>(
+                &(mParent[mIndex * SubVecSize]));
+        }
+
+        __device__ inline typename Traits::ItVecT& operator*()
+        {
+            return *reinterpret_cast<typename Traits::ItVecT*>(&(mParent[mIndex * SubVecSize]));
         }
 
         __device__ inline Iterator<SubVecSize>& operator++(int)
@@ -239,6 +257,12 @@ struct __align__(4) VecT
         __device__ inline Iterator<SubVecSize>& operator++()
         {
             mIndex++;
+            return *this;
+        }
+
+        __device__ inline Iterator<SubVecSize>& operator+=(int i)
+        {
+            mIndex += i;
             return *this;
         }
 
@@ -254,6 +278,12 @@ struct __align__(4) VecT
             return *this;
         }
 
+        __device__ inline Iterator<SubVecSize>& operator-=(int i)
+        {
+            mIndex -= i;
+            return *this;
+        }
+
         __device__ inline Iterator<SubVecSize> next() const
         {
             return Iterator<SubVecSize>(mParent, mIndex + 1);
@@ -266,7 +296,7 @@ struct __align__(4) VecT
 
         __device__ bool valid() const
         {
-            return (mIndex >= 0) && (mIndex < Range);
+            return (mIndex >= 0) && (mIndex < Traits::Range);
         }
     };
 
@@ -285,13 +315,13 @@ struct __align__(4) VecT
     template <uint32_t SubVecSize = 1>
     __device__ inline Iterator<SubVecSize> end()
     {
-        return Iterator<SubVecSize>(*this, Iterator<SubVecSize>::Range);
+        return Iterator<SubVecSize>(*this, Iterator<SubVecSize>::range());
     }
 
     template <uint32_t SubVecSize = 1>
     __device__ inline Iterator<SubVecSize> end() const
     {
-        return Iterator<SubVecSize>(*this, Iterator<SubVecSize>::Range);
+        return Iterator<SubVecSize>(*this, Iterator<SubVecSize>::range());
     }
 
     template <uint32_t SubVecSize = 1>
