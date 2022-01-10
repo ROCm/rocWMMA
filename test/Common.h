@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -176,7 +176,7 @@ struct MatrixUtil
             for(int j = 0; j < n; ++j) // col
             {
                 // Count up in integers, in ascending order for each row.
-                auto value = (i * n + j) % 32;
+                auto value = (i * n + j) % 3;
                 auto idx   = index(i, j, ld);
                 mat[idx]   = (value % 3) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
             }
