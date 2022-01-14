@@ -429,10 +429,6 @@ struct matrix_a{};
 struct matrix_b{};
 struct accumulator{};
 
-struct register_file{};
-struct register_file_coop_a : public register_file, public matrix_a{};
-struct register_file_coop_b : public register_file, public matrix_b{};
-
 // Memory meta-tags
 struct globalMem{};
 struct ldsMem{};
