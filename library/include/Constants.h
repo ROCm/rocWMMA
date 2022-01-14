@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,8 @@ static constexpr uint32_t AMDGCN_WAVE_SIZE        = 64;
 static constexpr uint32_t BYTES_PER_REGISTER      = 256;
 static constexpr uint32_t MAX_ELEMENTS_PER_THREAD = 4;
 
-static constexpr uint32_t LDS_MAX_BYTES = 65536;
+static constexpr uint32_t LDS_MAX_BYTES    = 65536;
+static constexpr uint32_t CACHE_LINE_BYTES = 64;
 
 template <typename DataT>
 static constexpr uint32_t elementsPerRegister()
