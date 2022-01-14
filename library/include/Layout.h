@@ -36,16 +36,18 @@ struct amdgcn_io_traits;
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
 struct MappingUtil;
 
+#include "Layout_impl.h"
+
 /**
  * \ingroup wmma
- * \defgroup dataLayouts
+ * \defgroup matrixLayouts
  *
- * @brief Definition and metadata on supported data layout of matrices.
+ * @brief Definition and metadata on supported matrix layouts.
  *
- * These layouts are based in Matrix Space. They map each of the wavefront lanes
+ * These layouts are based in matrix coordinate space. They map each of the wavefront lanes
  * into corresponding (X , Y) = (row,  col) coordinates for a particular memory layout.
  *
- * Layouts are based on an iterative indexing model such that block sizes are flexible.
+ * Layouts are based on an iterative indexing model.
  *
  * Three matrix offsets are calculated:
  * - Base offset: initial thread offset for layout pattern
@@ -62,21 +64,22 @@ struct MappingUtil;
 namespace Layout
 {
     /**
-     * \ingroup dataLayouts
+     * \ingroup matrixLayouts
      * @{
      */
     /**
      * ColNT Layout
      *
-     * ColNT signifies that this layout will align contiguous threads
-     * in preference of matrix columns. The 'NT' signifies that
-     * given a particular Vector Width, column ordering in register will
-     * match that of the full Max Vector Width over the course of iteration.
+     * The ColNT layout will align contiguous threads to matrix columns,
+     * which map to contiguous in-register column data. The 'NT' signifies
+     * this mapping is identical for both col_major (N) or row_major (T)
+     * data layouts. The in-register data locality is favorable for MFMA.
      *
      * - Column Height = BlockDim
      * - Column Count = BlockK
      *
-     *      Matrix Coords
+     * Matrix Coords:
+     *
      *      kDim ->
      *      (0, 0)              (0, BlockK - 1)
      *      v______________  ... v____
@@ -87,12 +90,58 @@ namespace Layout
      *      |___ |___ |____  ... |____|
      *      ^(BlockDim - 1, 0)   ^(BlockDim - 1, BlockK - 1)
      *
-     * In this particular layout, columns are iterated over in the kDim direction
-     * until the entire block has been visited.
+     * Column order mapping to registers is affected by MaxVectorWidth
+     * and BlockDim.
      *
-     * The order that columns map to registers is affected by DataLayout, MaxVectorWidth
-     * and BlockDim. However it is important to note that this order is fixed for
-     * 1 <= VectorWidth <= MaxVectorWidth, given MaxVectorWidth % VectorWidth = 0.
+     * Register Mapping (BlockDim < 64):
+     *
+     *      N = Max VectorWidth
+     *
+     *               (BlockDim)
+     *      Elements |0.......|.........|.....63|
+     *                __________________________
+     *      Reg0     |  C0    |  CN+0   |  ...  |
+     *      Reg1     |  C1    |  CN+1   |  ...  |
+     *      Reg2     |  C2    |  CN+2   |  ...  |
+     *       ...     |  ...   |   ...   |  ...  |
+     *      RegN-1   |  CN-1  |  C2N-1  |  ...  |
+     *       ...        ...       ...      ...
+     *
+     * Register Mapping (BlockDim == 64):
+     *
+     *      N = Max Vector Width
+     *
+     *               (BlockDim)
+     *      Elements |0.....63|
+     *                ________
+     *      Reg0     |  C0    |
+     *      Reg1     |  C1    |
+     *      Reg2     |  C2    |
+     *       ...     |  ...   |
+     *      RegN     |  CN    |
+     *       ...        ...
+     *
+     * Register Mapping (BlockDim > 64):
+     *
+     *      Priority 1: Visit MaxVW Segments
+     *      Priority 2: Visit BlockDim Segments
+     *
+     *      N = Max Vector Width
+     *      S = Segment count = BlockDim / 64
+     *      CX_Y: Column X, BlockDim Segment Y
+     *
+     *      Elements |0......63|
+     *                ________
+     *      Reg0     |  C0_0   |
+     *      Reg1     |  C1_0   |
+     *      Reg2     |  C2_0   |
+     *       ...     |   ...   |
+     *      RegN-1   |  CN-1_0 |
+     *      RegN+0   |  C0_1   |
+     *      RegN+1   |  C1_1   |
+     *       ...     |   ...   |
+     *      RegN*S   |  CN_S   |
+     *       ...     |   ...   |
      */
 
     template <uint32_t BlockDim,
@@ -101,51 +150,42 @@ namespace Layout
               typename DataLayout,
               uint32_t VectorWidth,
               uint32_t MaxVectorWidth>
-    struct ColNT
+    struct ColNT : public std::conditional_t<
+                       std::is_same<DataLayout, col_major>::value,
+                       detail::ColOrthoVW<BlockDim, BlockK, DataT, 1, MaxVectorWidth>,
+                       detail::ColOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>
     {
-        using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
         struct Traits
         {
-            enum : uint32_t
-            {
-                // Internal Meta-data, E.g.
-
-                // Number of threads per wave
-                WaveSize,
-
-                // Flag for large BlockDim
-                LargeDim,
-
-                //...
-            };
-
-            // Matrix coords and mapping util are used to find the final data coord
             using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
             using MatrixCoordT = typename MappingUtil::CoordT;
-        };
 
-        // Matrix coord offsets
-        __device__ static inline typename Traits::MatrixCoordT baseOffset();
-        __device__ static inline typename Traits::MatrixCoordT
-            incrementalOffset(uint32_t iteration);
-        __device__ static inline typename Traits::MatrixCoordT cumulativeOffset(uint32_t iteration);
+            // ColNT enforces consistent in-register alignment of contiguous matrix column
+            // elements in both row_major or col_major data layouts.
+            // This layout cannot support for VW > 1 in col_major data layout otherwise the
+            // ordering is broken.
+            static_assert(!(std::is_same<DataLayout, col_major>::value && VectorWidth > 1),
+                          "ColNT in col_major does not support VectorWidth > 1");
+        };
     };
 
     /**
-     * \ingroup dataLayouts
+     * \ingroup matrixLayouts
      * @{
      */
     /**
-     *
      * RowNT Layout
-     * This layout aligns contiguous threads in preference of matrix rows.
-     * The 'NT' signifies that given a particular Vector Width, column ordering in register will
-     * match that of the full Max Vector Width over the course of iteration.
+     *
+     * The RowNT layout will align contiguous threads to matrix rows,
+     * which map to contiguous in-register row data. The 'NT' signifies
+     * this mapping is identical for both col_major (N) or row_major (T)
+     * data layouts. The in-register data locality is favorable for MFMA.
      *
      * - Row Width = BlockDim
      * - Row Count = BlockK
      *
-     *      Matrix Coords
+     * Matrix Coords:
+     *
      *      BlockDim ->
      *      (0, 0)                 (0, BlockDim - 1)
      *      v______________  ...  _v__
@@ -156,15 +196,58 @@ namespace Layout
      *      |__________Rk__  ...  ____|
      *      ^(BlockK - 1, 0)       ^(BlockK - 1, BlockDim - 1)
      *
-     * In this particular layout, rows are iterated over in the kDim direction
-     * until the entire block has been visited.
+     * Row order mapping to registers is affected by MaxVectorWidth
+     * and BlockDim.
      *
-     * The order that rows map to registers is affected by DataLayout, MaxVectorWidth
-     * and BlockDim. However it is important to note that this order is fixed for
-     * 1 <= VectorWidth <= MaxVectorWidth, given MaxVectorWidth % VectorWidth = 0.
+     * Register Mapping (BlockDim < 64):
      *
-     * This layout is orthogonal to the ColNT class, so the coordinates are
-     * mirrored.
+     *      N = Max VectorWidth
+     *
+     *               (BlockDim)
+     *      Elements |0.......|.........|.....63|
+     *                __________________________
+     *      Reg0     |  R0    |  RN+0   |  ...  |
+     *      Reg1     |  R1    |  RN+1   |  ...  |
+     *      Reg2     |  R2    |  RN+2   |  ...  |
+     *       ...     |  ...   |   ...   |  ...  |
+     *      RegN-1   |  RN-1  |  R2N-1  |  ...  |
+     *       ...        ...       ...      ...
+     *
+     * Register Mapping (BlockDim == 64):
+     *
+     *      N = Max Vector Width
+     *
+     *               (BlockDim)
+     *      Elements |0.....63|
+     *                ________
+     *      Reg0     |  R0    |
+     *      Reg1     |  R1    |
+     *      Reg2     |  R2    |
+     *       ...     |  ...   |
+     *      RegN     |  RN    |
+     *       ...        ...
+     *
+     * Register Mapping (BlockDim > 64):
+     *
+     *      Priority 1: Visit MaxVW Segments
+     *      Priority 2: Visit BlockDim Segments
+     *
+     *      N = Max Vector Width
+     *      S = Segment count = BlockDim / 64
+     *      RX_Y: Row X, BlockDim Segment Y
+     *
+     *      Elements |0......63|
+     *                ________
+     *      Reg0     |  R0_0   |
+     *      Reg1     |  R1_0   |
+     *      Reg2     |  R2_0   |
+     *       ...     |   ...   |
+     *      RegN-1   |  RN-1_0 |
+     *      RegN+0   |  R0_1   |
+     *      RegN+1   |  R1_1   |
+     *       ...     |   ...   |
+     *      RegN*S   |  RN_S   |
+     *       ...     |   ...   |
      */
     template <uint32_t BlockDim,
               uint32_t BlockK,
@@ -172,39 +255,23 @@ namespace Layout
               typename DataLayout,
               uint32_t VectorWidth,
               uint32_t MaxVectorWidth>
-    struct RowNT
+    struct RowNT : public std::conditional_t<
+                       std::is_same<DataLayout, col_major>::value,
+                       detail::RowOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
+                       detail::RowOrthoVW<BlockDim, BlockK, DataT, 1, MaxVectorWidth>>
     {
-        // RowNT is orthogonal to ColNT, therefore we can use reversed coordinates
-        // and opposite DataLayout from ColNT
         struct Traits
         {
-            using OrthoLayout = ColNT<BlockDim,
-                                      BlockK,
-                                      DataT,
-                                      std::conditional_t<std::is_same<DataLayout, row_major>::value,
-                                                         col_major,
-                                                         row_major>,
-                                      VectorWidth,
-                                      MaxVectorWidth>;
-
-            // enum : uint32_t
-            // {
-            //     // This is the minimum K needed to correctly implement this layout.
-            //     // Based on MaxVectorWidth due to iteration model.
-            //     MinK       = OrthoLayout::Traits::MinK,
-            //     MinIOCount = OrthoLayout::Traits::MinIOCount
-            // };
-
-            // Matrix coords and mapping util are used to find the final data coord
-            using MappingUtil  = MappingUtil<BlockK, BlockDim, DataT, DataLayout>;
+            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
             using MatrixCoordT = typename MappingUtil::CoordT;
-        };
 
-        // Matrix coord offsets
-        __device__ static inline typename Traits::MatrixCoordT baseOffset();
-        __device__ static inline typename Traits::MatrixCoordT
-            incrementalOffset(uint32_t iteration);
-        __device__ static inline typename Traits::MatrixCoordT cumulativeOffset(uint32_t iteration);
+            // RowNT enforces consistent in-register alignment of contiguous matrix row
+            // elements in both in row_major or col_major data layouts.
+            // This layout cannot support for VW > 1 in row_major data layout otherwise the
+            // ordering is broken.
+            static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
+                          "RowNT in row_major does not support VectorWidth > 1");
+        };
     };
 
     /**
@@ -243,9 +310,18 @@ namespace Layout
               uint32_t BlockK,
               typename DataT,
               typename DataLayout,
-              uint32_t VectorWidth>
-    struct Col : public ColNT<BlockDim, BlockK, DataT, DataLayout, VectorWidth, VectorWidth>
+              uint32_t VectorWidth,
+              uint32_t MaxVectorWidth>
+    struct Col : public std::conditional_t<
+                     std::is_same<DataLayout, col_major>::value,
+                     detail::ColInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
+                     detail::ColOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>
     {
+        struct Traits
+        {
+            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+            using MatrixCoordT = typename MappingUtil::CoordT;
+        };
     };
 
     /**
@@ -279,18 +355,24 @@ namespace Layout
      * The order that rows map to registers is affected by DataLayout, VectorWidth
      * and BlockDim.
      */
-
     template <uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
               typename DataLayout,
-              uint32_t VectorWidth>
-    struct Row : public RowNT<BlockDim, BlockK, DataT, DataLayout, VectorWidth, VectorWidth>
+              uint32_t VectorWidth,
+              uint32_t MaxVectorWidth>
+    struct Row : public std::conditional_t<
+                     std::is_same<DataLayout, row_major>::value,
+                     detail::RowInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
+                     detail::RowOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>
     {
+        struct Traits
+        {
+            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+            using MatrixCoordT = typename MappingUtil::CoordT;
+        };
     };
 
 } // namespace Layout
-
-#include "Layout_impl.h"
 
 #endif // WMMA_LAYOUT_H

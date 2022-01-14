@@ -2,7 +2,7 @@
  #
  # MIT License
  #
- # Copyright 2021 Advanced Micro Devices, Inc.
+ # Copyright 2021-2022 Advanced Micro Devices, Inc.
  #
  # Permission is hereby granted, free of charge, to any person obtaining a copy
  # of this software and associated documentation files (the "Software"), to deal
@@ -75,6 +75,26 @@ set(LayoutTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/RowLayout_32x32_N.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/LayoutTest/RowLayout_32x32_T.cpp)
 
+#set(LdsMappingTestSources ${UnitCommonSources}
+#                       ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingA_16_N_LdsKW.cpp
+                     #  ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingA_16_T_LdsKW.cpp
+                     #  ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingA_32_N_LdsKW.cpp
+                     #  ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingA_32_T_LdsKW.cpp
+                     #  ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingB_16_N_LdsKW.cpp
+                     #  ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingB_16_T_LdsKW.cpp
+                     #  ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingB_32_N_LdsKW.cpp
+                     #  ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingB_32_T_LdsKW.cpp
+                     #  ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingA_16_N_LdsKH.cpp
+                     #  ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingA_16_T_LdsKH.cpp
+                     #  ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingA_32_N_LdsKH.cpp
+                     #  ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingA_32_T_LdsKH.cpp
+                     #  ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingB_16_N_LdsKH.cpp
+                     #  ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingB_16_T_LdsKH.cpp
+                     #  ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingB_32_N_LdsKH.cpp
+                     #  ${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingB_32_T_LdsKH.cpp
+                     #${CMAKE_CURRENT_SOURCE_DIR}/test/LdsMappingTest/LdsMappingA_16_N_LdsRF.cpp
+#)
+
 set(MapUtilTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapBlockToMatrix_16x16_N.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/MapUtilTest/MapBlockToMatrix_16x16_T.cpp
@@ -141,6 +161,7 @@ set(VectorIteratorTestSources ${UnitCommonSources}
 # Benchmark Unit
 add_wmma_test(ContaminationTest ${ContaminationTestSources})
 add_wmma_test(LayoutTest ${LayoutTestSources})
+#add_wmma_test(LdsMappingTest ${LdsMappingTestSources})
 add_wmma_test(MapUtilTest ${MapUtilTestSources})
 add_wmma_test(LoadStoreMatrixSyncTest ${LoadStoreMatrixSyncTestSources})
 add_wmma_test(LoadStoreMatrixCoopSyncTest ${LoadStoreMatrixCoopSyncTestSources})
