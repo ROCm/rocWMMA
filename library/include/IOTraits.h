@@ -156,7 +156,10 @@ struct PackTraits<float64_t>
 * until it can fit the entire block, or split evenly amongst IO iterations.
 */
 
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t TestWidth = BlockK>
+template <uint32_t BlockDim,
+          uint32_t BlockK,
+          typename DataT,
+          uint32_t TestWidth = CACHE_LINE_BYTES / sizeof(DataT)>
 struct VecWidthTraits
 {
     enum : uint32_t
