@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@
 #include <tuple>
 #include <vector>
 
-#include "Common.hpp"
+#include "Common.h"
 #include "GemmKernelBase.h"
 #include "KernelGenerator.h"
 #include "LdsMappingUtil.h"
@@ -157,7 +157,7 @@ struct CommonTestParams
                 {2048, 64, 1024},
                 {64, 2048, 1024},
                 {1024, 1024, 1024}
-#ifndef WMMA_VALIDATE_TESTS
+#ifndef WMMA_VALIDATION_TESTS
                 ,
                 {2048, 2048, 2048},
                 {2560, 2560, 2560},
@@ -168,7 +168,7 @@ struct CommonTestParams
                 {6144, 6144, 6144},
                 {7168, 7168, 7168},
                 {8192, 8192, 8192}
-#endif // WMMA_VALIDATE_TESTS
+#endif // WMMA_VALIDATION_TESTS
         };
     }
 

@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@
 #ifndef WMMA_HIP_RESOURCE_IMPL_H
 #define WMMA_HIP_RESOURCE_IMPL_H
 
-#include "Common.hpp"
+#include "Common.h"
 #include "HipResource.h"
 #include <hip/hip_runtime_api.h>
 

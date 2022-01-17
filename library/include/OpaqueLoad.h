@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,7 @@
 #include "IOTraits.h"
 #include "Layout.h"
 #include "Types.h"
+#include "Utils.h"
 
 template <typename DataT, uint32_t VectorWidth>
 struct amdgcn_opaque_load
@@ -56,9 +57,10 @@ struct amdgcn_opaque_load_DxK
     struct Traits
     {
         // Matrix space thread offsets
-        using LayoutT = LoadLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
+        using MatrixLayout = LoadLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
+        using MappingUtil  = typename MatrixLayout::Traits::MappingUtil;
 
-        // Raw IO that produce unpacked register data.
+        // Raw IO on unpacked register data.
         using Loader  = amdgcn_opaque_load<DataT, VectorWidth>;
         using LoadT   = typename Loader::LoadT;
         using OutputT = VecT<DataT, IOTraits::UnpackedSize>;
@@ -67,27 +69,28 @@ struct amdgcn_opaque_load_DxK
     __device__ static auto exec(DataT const* localPtr, uint32_t ldm) -> typename Traits::OutputT
     {
         // Extract traits
-        using LayoutT = typename Traits::LayoutT;
-        using Loader  = typename Traits::Loader;
-        using LoadT   = typename Traits::LoadT;
-        using OutputT = typename Traits::OutputT;
+        using MatrixLayout = typename Traits::MatrixLayout;
+        using MappingUtil  = typename Traits::MappingUtil;
+        using Loader       = typename Traits::Loader;
+        using LoadT        = typename Traits::LoadT;
+        using OutputT      = typename Traits::OutputT;
 
         // Arrange wave threads to starting data offsets due to layout.
-        auto baseOffset = LayoutT::baseDataOffset(ldm);
+        auto baseOffset = MatrixLayout::baseOffset();
 
         // Loop over loads to fill BlockDim * BlockK for each wave.
         OutputT result;
         auto    it = result.template begin<LoadT::size()>();
 
-        static_assert(decltype(it)::Range == IOTraits::IOCount,
+        static_assert(decltype(it)::range() == IOTraits::IOCount,
                       "IOCount inconsistent with iterator range");
 
 #pragma unroll
         for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
         {
-            *it = *Loader::exec(localPtr, baseOffset);
+            *it = *Loader::exec(localPtr, MappingUtil::dataOffset(ldm, baseOffset));
             it++;
-            baseOffset += LayoutT::dataOffsetIncrement(i, ldm);
+            baseOffset += MatrixLayout::incrementalOffset(i);
         }
         return result;
     }

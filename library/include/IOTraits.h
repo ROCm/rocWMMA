@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -156,7 +156,10 @@ struct PackTraits<float64_t>
 * until it can fit the entire block, or split evenly amongst IO iterations.
 */
 
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t TestWidth = BlockK>
+template <uint32_t BlockDim,
+          uint32_t BlockK,
+          typename DataT,
+          uint32_t TestWidth = CACHE_LINE_BYTES / sizeof(DataT)>
 struct VecWidthTraits
 {
     enum : uint32_t
@@ -164,7 +167,8 @@ struct VecWidthTraits
         ElementCount  = BlockDim * BlockK,
         ElementsPerIO = TestWidth * AMDGCN_WAVE_SIZE,
         MaxVectorWidth
-        = (ElementsPerIO <= ElementCount) && (ElementCount % ElementsPerIO == 0)
+        = (TestWidth <= BlockDim) && (TestWidth <= BlockK) && (ElementsPerIO <= ElementCount)
+                  && (ElementCount % ElementsPerIO == 0)
               ? TestWidth
               : VecWidthTraits<BlockDim, BlockK, DataT, TestWidth / 2>::MaxVectorWidth
     };

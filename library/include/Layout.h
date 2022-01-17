@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,31 +26,36 @@
 #ifndef WMMA_LAYOUT_H
 #define WMMA_LAYOUT_H
 
-#include <hip/hip_runtime.h>
-
 #include "Types.h"
 #include <tuple>
 
+// FWD decl.
 template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t VectorWidth>
 struct amdgcn_io_traits;
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
 struct MappingUtil;
 
+#include "Layout_impl.h"
+
 /**
  * \ingroup wmma
- * \defgroup dataLayouts
+ * \defgroup matrixLayouts
  *
- * @brief Definition and metadata on supported data layout of matrices.
+ * @brief Definition and metadata on supported matrix layouts.
  *
- * These layouts are based in Matrix Space. They are to map each of the wave lanes
- * into corresponding row / col coordinates for a particular memory layout.
- * For example, the A matrix loads columns of size BlockDim in the K direction.
- * The B matrix loads rows of size BlockDim in the K direction.
+ * These layouts are based in matrix coordinate space. They map each of the wavefront lanes
+ * into corresponding (X , Y) = (row,  col) coordinates for a particular memory layout.
  *
- * Each of these layouts is indexed differently, especially when different datatypes
- * and load widths are used. These classes are intended to address these matrix
- * space indexing challenges.
+ * Layouts are based on an iterative indexing model.
+ *
+ * Three matrix offsets are calculated:
+ * - Base offset: initial thread offset for layout pattern
+ *
+ * - Incremental offset: the thread offset increment for next iteration
+ *
+ * - Cumulative offset: the cumulative offset for a particular iteration,
+ *   E.g. Sum of incremental offsets for [i = 0, iteration)
  */
 
 /**
@@ -59,432 +64,85 @@ struct MappingUtil;
 namespace Layout
 {
     /**
- * \ingroup dataLayouts
- * @{
- */
+     * \ingroup matrixLayouts
+     * @{
+     */
     /**
- *
- * *Matrix layout:*
- *
- * BlockDim = column size
- *
- * BlockK = column count
- *
- *
- *      kDim ->
- *      (0, 0)              (0, BlockK - 1)
- *      v______________  ... v____
- *      |    |    |          |    |
- *      |    |    |          |    |
- *      | C0 | C1 | C2       | Ck |
- *      |    |    |          |    |
- *      |___ |___ |____  ... |____|
- *      ^(BlockDim - 1, 0)   ^(BlockDim - 1, BlockK - 1)
- *
- * *Register layout:*
- *
- * KPerIO == # of columns per IO (either load or store)
- *
- * E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = row_major
- *
- *      Elements 0.....31 32.....64
- *               _______________
- *      Reg0    |  C0   |   C1  |
- *       ...       ...      ...
- *
- *
- * E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
- *
- *      Elements 0.....31 32.....64
- *                _______________
- *       Reg0    |  C0   |   C4  |
- *       Reg1    |  C1   |   C5  |
- *       Reg2    |  C2   |   C6  |
- *       Reg3    |  C3   |   C7  |
- *        ...       ...      ...
- *
- *
- * E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = col_major
- *
- *       Elements 0.....31 32.....64
- *                _______________
- *       Reg0    |  C0   |   C1  |
- *        ...       ...      ...
- *
- *
- *  E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
- *
- *       Elements 0.............1    ...    7...........8..........9....  ...     64
- *               ___________________    _______________________________   ...  _________
- *       Reg0    |  C0E0   |   C0E4  ...   C0E28   |   C1E0   |   C1E4  |  ... |  C8E28  |
- *       Reg1    |  C0E1   |   C0E5  ...   C0E29   |   C1E1   |   C1E5  |  ... |  C8E29  |
- *       Reg2    |  C0E2   |   C0E6  ...   C0E30   |   C1E2   |   C1E6  |  ... |  C8E30  |
- *       Reg3    |  C0E3   |   C0E7  ...   C0E31   |   C1E3   |   C1E7  |  ... |  C8E31  |
- *        ...       ...      ...
- *
- *
- */
-    ////////////// Col /////////////////////////
-    template <uint32_t BlockDim,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout,
-              uint32_t VectorWidth>
-    struct Col;
-
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t VectorWidth>
-    struct Col<BlockDim, BlockK, DataT, row_major, VectorWidth>
-    {
-        using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
-        struct Traits
-        {
-            enum : uint32_t
-            {
-                // Minimum K to implement this layout
-                // MinK = ceilDiv(AMDGCN_WAVE_SIZE, BlockDim) * VectorWidth,
-                MinK = ceilDiv(AMDGCN_WAVE_SIZE
-                                   * std::max(VectorWidth, (uint32_t)PackTraits<DataT>::PackRatio),
-                               BlockDim),
-
-                // Minimum IOCount to implement this layout.
-                // Iteration offsets may have periods > 1
-                MinIOCount = ceilDiv(BlockDim, (uint32_t)IOTraits::ThreadsPerIO)
-            };
-
-            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, row_major>;
-            using MatrixCoordT = typename MappingUtil::CoordT;
-        };
-
-        __device__ static inline typename Traits::MatrixCoordT baseOffset()
-        {
-            return std::make_pair(
-                threadIdx.x % std::min((uint32_t)BlockDim, (uint32_t)IOTraits::ThreadsPerIO),
-                ((threadIdx.x / BlockDim) * VectorWidth)
-                    % std::max((uint32_t)IOTraits::KPerIO, (uint32_t)1));
-        }
-
-        __device__ static inline typename Traits::MatrixCoordT offsetIncrement(uint32_t iteration)
-        {
-            if(BlockDim >= IOTraits::ThreadsPerIO)
-            {
-                return ((iteration + 1) % Traits::MinIOCount)
-                           ? std::make_pair(IOTraits::ThreadsPerIO, 0)
-                           : std::make_pair(-IOTraits::ThreadsPerIO * (Traits::MinIOCount - 1),
-                                            (int32_t)IOTraits::KPerIO);
-            }
-            else
-            {
-                return std::make_pair((uint32_t)0, IOTraits::KPerIO); // Shift K
-            }
-        }
-
-        __device__ static inline typename Traits::MatrixCoordT blockOffset()
-        {
-            return std::make_pair(0, BlockK);
-        }
-
-        __device__ static inline uint32_t baseDataOffset(uint32_t ldm)
-        {
-            return Traits::MappingUtil::dataOffset(ldm, baseOffset());
-        }
-
-        __device__ static inline uint32_t dataOffsetIncrement(uint32_t iteration, uint32_t ldm)
-        {
-            return Traits::MappingUtil::dataOffset(ldm, offsetIncrement(iteration));
-        }
-
-        __device__ static inline uint32_t dataBlockOffset(uint32_t ldm)
-        {
-            return Traits::MappingUtil::dataOffset(ldm, blockOffset());
-        }
-
-        // __device__ static inline uint32_t dataBlockOffset(uint32_t blocks, uint32_t ldm)
-        // {
-        //     auto boffset = blockOffset();
-        //     std::get<1>(boffset) *= blocks;
-        //     return Traits::MappingUtil::dataOffset(ldm, boffset);
-        // }
-    };
-
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t VectorWidth>
-    struct Col<BlockDim, BlockK, DataT, col_major, VectorWidth>
-    {
-        using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
-        struct Traits
-        {
-            enum : uint32_t
-            {
-                // Minimum K to implement this layout.
-                //MinK = ceilDiv(AMDGCN_WAVE_SIZE * VectorWidth, BlockDim),
-                MinK = ceilDiv(AMDGCN_WAVE_SIZE
-                                   * std::max(VectorWidth, (uint32_t)PackTraits<DataT>::PackRatio),
-                               BlockDim),
-
-                // Minimum IOCount to implement this layout.
-                // Iteration offsets may have periods > 1
-                MinIOCount = ceilDiv(BlockDim, (uint32_t)IOTraits::ElementsPerIO)
-            };
-
-            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, col_major>;
-            using MatrixCoordT = typename MappingUtil::CoordT;
-
-            static_assert(MinK >= 1, "MinK must be >= 1");
-            static_assert(BlockK >= MinK, "MinK not satisfied");
-            static_assert(BlockK % MinK == 0, "BlockK must be divisible by MinK");
-        };
-
-        __device__ static inline typename Traits::MatrixCoordT baseOffset()
-        {
-            return std::make_pair(
-                (threadIdx.x * VectorWidth)
-                    % std::min((uint32_t)BlockDim, (uint32_t)IOTraits::ElementsPerIO),
-                ((threadIdx.x * VectorWidth) / BlockDim)
-                    % std::max((uint32_t)IOTraits::KPerIO, (uint32_t)1));
-        }
-
-        __device__ static inline typename Traits::MatrixCoordT offsetIncrement(uint32_t iteration)
-        {
-            // TODO: constexpr if c++17
-            // Silence DIV/0 warning, remove the need for std::max
-            if(BlockDim > IOTraits::ElementsPerIO)
-            {
-                return ((iteration + 1) % Traits::MinIOCount)
-                           ? std::make_pair(IOTraits::ElementsPerIO, 0)
-                           : std::make_pair(-IOTraits::ElementsPerIO * (Traits::MinIOCount - 1), 1);
-            }
-            else
-            {
-                return std::make_pair((uint32_t)0, IOTraits::KPerIO); // Shift K
-            }
-        }
-
-        __device__ static inline typename Traits::MatrixCoordT blockOffset()
-        {
-            return std::make_pair(0, BlockK); // Shift K
-        }
-
-        __device__ static inline uint32_t baseDataOffset(uint32_t ldm)
-        {
-            return Traits::MappingUtil::dataOffset(ldm, baseOffset());
-        }
-
-        __device__ static inline uint32_t dataOffsetIncrement(uint32_t iteration, uint32_t ldm)
-        {
-            return Traits::MappingUtil::dataOffset(ldm, offsetIncrement(iteration));
-        }
-
-        __device__ static inline uint32_t dataBlockOffset(uint32_t ldm)
-        {
-            return Traits::MappingUtil::dataOffset(ldm, blockOffset());
-        }
-    };
-
-    /**
- * \ingroup dataLayouts
- * @{
- */
-    /**
- *
- * *Matrix layout:*
- *
- * Common usage: Matrix B, C
- *
- * BlockDim = row size
- *
- * BlockK = row count
- *
- *      BlockDim ->
- *      (0, 0)                 (0, BlockDim - 1)
- *      v______________  ...  _v__
- *      |__________R0__  ...  ____|
- *      |__________R1__  ...  ____|
- *      |__________R2__  ...  ____|
- *      |          ...   ...      |
- *      |__________Rk__  ...  ____|
- *      ^(BlockK - 1, 0)       ^(BlockK - 1, BlockDim - 1)
- *
- * *Register layout:*
- *
- * ElementsPerThread == VectorWidth
- *
- * KPerIO == # of rows per IO (either load or store)
- *
- * E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = col_major
- *
- *      Elements 0.....31 32.....64
- *               _______________
- *      Reg0    |  R0   |   R1  |
- *      ...       ...      ...
- *
- *
- * E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
- *
- *      Elements 0.....31 32.....64
- *               _______________
- *      Reg0    |  R0   |   R4  |
- *      Reg1    |  R1   |   R5  |
- *      Reg2    |  R2   |   R6  |
- *      Reg3    |  R3   |   R7  |
- *       ...       ...      ...
- *
- *
- * E.g. BlockDim = 32, VW = 1, KPerIO = 2, DataT = f32, DataLayout = row_major
- *
- *      Elements 0.....31 32.....64
- *               _______________
- *      Reg0    |  R0   |   R1
- *      ...       ...      ...
- *
- *
- * E.g. BlockDim = 32, VW = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
- *
- *      Elements 0.............1    ...    7...........8..........9....   ...     64
- *               ___________________    _______________________________   ...  _________
- *      Reg0    |  R0E0   |   R0E4  ...   R0E28   |   R1E0   |   R1E4  |  ... |  R8E28  |
- *      Reg1    |  R0E1   |   R0E5  ...   R0E29   |   R1E1   |   R1E5  |  ... |  R8E29  |
- *      Reg2    |  R0E2   |   R0E6  ...   R0E30   |   R1E2   |   R1E6  |  ... |  R8E30  |
- *      Reg3    |  R0E3   |   R0E7  ...   R0E31   |   R1E3   |   R1E7  |  ... |  R8E31  |
- *       ...       ...      ...
- *
- */
-    ////////////// Row /////////////////////////
-    template <uint32_t BlockDim,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout,
-              uint32_t VectorWidth>
-    struct Row
-    {
-        struct Traits
-        {
-            // Orthogonal layout has mirrored coordinates
-            // and
-            using OrthoLayout = Col<BlockDim,
-                                    BlockK,
-                                    DataT,
-                                    std::conditional_t<std::is_same<DataLayout, row_major>::value,
-                                                       col_major,
-                                                       row_major>,
-                                    VectorWidth>;
-            enum : uint32_t
-            {
-                MinK       = OrthoLayout::Traits::MinK,
-                MinIOCount = OrthoLayout::Traits::MinIOCount
-            };
-
-            using MappingUtil  = MappingUtil<BlockK, BlockDim, DataT, DataLayout>;
-            using MatrixCoordT = typename MappingUtil::CoordT;
-        };
-
-        __device__ static inline typename Traits::MatrixCoordT baseOffset()
-        {
-            return std::swap(Traits::OrthoLayout::baseOffset());
-        }
-
-        __device__ static inline typename Traits::MatrixCoordT offsetIncrement(uint32_t iteration)
-        {
-            return std::swap(Traits::OrthoLayout::offsetIncrement(iteration));
-        }
-
-        __device__ static inline typename Traits::MatrixCoordT blockOffset()
-        {
-            return std::swap(Traits::OrthoLayout::blockOffset());
-        }
-
-        __device__ static inline uint32_t baseDataOffset(uint32_t ldm)
-        {
-            return Traits::MappingUtil::dataOffset(ldm, baseOffset());
-        }
-
-        __device__ static inline uint32_t dataOffsetIncrement(uint32_t iteration, uint32_t ldm)
-        {
-            return Traits::MappingUtil::dataOffset(ldm, offsetIncrement(iteration));
-        }
-
-        __device__ static inline uint32_t dataBlockOffset(uint32_t ldm)
-        {
-            return Traits::MappingUtil::dataOffset(ldm, blockOffset());
-        }
-    };
-
-    /**
- * \ingroup dataLayouts
- * @{
- */
-    /**
- * *Matrix layout:*
- *
- * BlockDim = column size
- *
- * BlockK = column count
- *
- * N = Max vector width
- *
- * VW = Actual vector width
- *
- *      kDim ->
- *      (0, 0)              (0, BlockK - 1)
- *      v______________  ... v____
- *      |    |    |          |    |
- *      |    |    |          |    |
- *      | C0 | C1 | C2       | Ck |
- *      |    |    |          |    |
- *      |___ |___ |____  ... |____|
- *      ^(BlockDim - 1, 0)   ^(BlockDim - 1, BlockK - 1)
- *
- * *Register layout:*
- *
- * *Guarantees:*
- *
- * ColNT guarantees the following register format, regardless of VW and data layout.
- *
- * Register 0 to contain Cols (i % N) == 0
- *
- * Register 1 to contain Cols (i % N) == 1
- *
- * Register 2 to contain Cols (i % N) == 2
- *
- * ...
- *
- * *Limitations:*
- *
- * col_major data format is not supported for VW > 1, as it produces
- * incorrect mapping
- *
- * KPerIO == # of columns per IO (either load or store)
- *
- *
- * E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = row_major
- *
- *      Elements 0.....31 32.....64
- *               _______________
- *      Reg0    |  C0   |   C4  |
- *       ...       ...      ...
- *
- *
- * E.g. BlockDim = 32, VW = 4, N = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
- *
- *      Elements 0.....31 32.....64
- *               _______________
- *      Reg0    |  C0   |   C4  |
- *      Reg1    |  C1   |   C5  |
- *      Reg2    |  C2   |   C6  |
- *      Reg3    |  C3   |   C7  |
- *       ...       ...      ...
- *
- *
- * E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = col_major
- *
- *      Elements 0.....31 32.....64
- *               _______________
- *      Reg0    |  C0   |   C4  |
- *       ...       ...      ...
- *
- * @note
- * E.g. BlockDim = 32, VW = 4, N = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
- * Is NOT implemented due to incorrect mapping with col_major and VW = 4
- */
-    ////////////// ColNT /////////////////////////
+     * ColNT Layout
+     *
+     * The ColNT layout will align contiguous threads to matrix columns,
+     * which map to contiguous in-register column data. The 'NT' signifies
+     * this mapping is identical for both col_major (N) or row_major (T)
+     * data layouts. The in-register data locality is favorable for MFMA.
+     *
+     * - Column Height = BlockDim
+     * - Column Count = BlockK
+     *
+     * Matrix Coords:
+     *
+     *      kDim ->
+     *      (0, 0)              (0, BlockK - 1)
+     *      v______________  ... v____
+     *      |    |    |          |    |
+     *      |    |    |          |    |
+     *      | C0 | C1 | C2       | Ck |
+     *      |    |    |          |    |
+     *      |___ |___ |____  ... |____|
+     *      ^(BlockDim - 1, 0)   ^(BlockDim - 1, BlockK - 1)
+     *
+     * Column order mapping to registers is affected by MaxVectorWidth
+     * and BlockDim.
+     *
+     * Register Mapping (BlockDim < 64):
+     *
+     *      N = Max VectorWidth
+     *
+     *               (BlockDim)
+     *      Elements |0.......|.........|.....63|
+     *                __________________________
+     *      Reg0     |  C0    |  CN+0   |  ...  |
+     *      Reg1     |  C1    |  CN+1   |  ...  |
+     *      Reg2     |  C2    |  CN+2   |  ...  |
+     *       ...     |  ...   |   ...   |  ...  |
+     *      RegN-1   |  CN-1  |  C2N-1  |  ...  |
+     *       ...        ...       ...      ...
+     *
+     * Register Mapping (BlockDim == 64):
+     *
+     *      N = Max Vector Width
+     *
+     *               (BlockDim)
+     *      Elements |0.....63|
+     *                ________
+     *      Reg0     |  C0    |
+     *      Reg1     |  C1    |
+     *      Reg2     |  C2    |
+     *       ...     |  ...   |
+     *      RegN     |  CN    |
+     *       ...        ...
+     *
+     * Register Mapping (BlockDim > 64):
+     *
+     *      Priority 1: Visit MaxVW Segments
+     *      Priority 2: Visit BlockDim Segments
+     *
+     *      N = Max Vector Width
+     *      S = Segment count = BlockDim / 64
+     *      CX_Y: Column X, BlockDim Segment Y
+     *
+     *      Elements |0......63|
+     *                ________
+     *      Reg0     |  C0_0   |
+     *      Reg1     |  C1_0   |
+     *      Reg2     |  C2_0   |
+     *       ...     |   ...   |
+     *      RegN-1   |  CN-1_0 |
+     *      RegN+0   |  C0_1   |
+     *      RegN+1   |  C1_1   |
+     *       ...     |   ...   |
+     *      RegN*S   |  CN_S   |
+     *       ...     |   ...   |
+     */
 
     template <uint32_t BlockDim,
               uint32_t BlockK,
@@ -492,273 +150,227 @@ namespace Layout
               typename DataLayout,
               uint32_t VectorWidth,
               uint32_t MaxVectorWidth>
-    struct ColNT
+    struct ColNT : public std::conditional_t<
+                       std::is_same<DataLayout, col_major>::value,
+                       detail::ColOrthoVW<BlockDim, BlockK, DataT, 1, MaxVectorWidth>,
+                       detail::ColOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>
     {
-        using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
         struct Traits
         {
-            enum : uint32_t
-            {
-                // This is the minimum K needed to correctly implement this layout.
-                // Based on MaxVectorWidth due to iteration model.
-                MinK = ceilDiv(IOTraits::ThreadsPerIO * MaxVectorWidth, BlockDim),
+            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+            using MatrixCoordT = typename MappingUtil::CoordT;
 
-                BlockDimSegs = ceilDiv(BlockDim, (uint32_t)IOTraits::ThreadsPerIO),
+            // ColNT enforces consistent in-register alignment of contiguous matrix column
+            // elements in both row_major or col_major data layouts.
+            // This layout cannot support for VW > 1 in col_major data layout otherwise the
+            // ordering is broken.
+            static_assert(!(std::is_same<DataLayout, col_major>::value && VectorWidth > 1),
+                          "ColNT in col_major does not support VectorWidth > 1");
+        };
+    };
 
-                MinIOCount = (MaxVectorWidth / VectorWidth) * BlockDimSegs
-            };
+    /**
+     * \ingroup matrixLayouts
+     * @{
+     */
+    /**
+     * RowNT Layout
+     *
+     * The RowNT layout will align contiguous threads to matrix rows,
+     * which map to contiguous in-register row data. The 'NT' signifies
+     * this mapping is identical for both col_major (N) or row_major (T)
+     * data layouts. The in-register data locality is favorable for MFMA.
+     *
+     * - Row Width = BlockDim
+     * - Row Count = BlockK
+     *
+     * Matrix Coords:
+     *
+     *      BlockDim ->
+     *      (0, 0)                 (0, BlockDim - 1)
+     *      v______________  ...  _v__
+     *      |__________R0__  ...  ____|
+     *      |__________R1__  ...  ____|
+     *      |__________R2__  ...  ____|
+     *      |          ...   ...      |
+     *      |__________Rk__  ...  ____|
+     *      ^(BlockK - 1, 0)       ^(BlockK - 1, BlockDim - 1)
+     *
+     * Row order mapping to registers is affected by MaxVectorWidth
+     * and BlockDim.
+     *
+     * Register Mapping (BlockDim < 64):
+     *
+     *      N = Max VectorWidth
+     *
+     *               (BlockDim)
+     *      Elements |0.......|.........|.....63|
+     *                __________________________
+     *      Reg0     |  R0    |  RN+0   |  ...  |
+     *      Reg1     |  R1    |  RN+1   |  ...  |
+     *      Reg2     |  R2    |  RN+2   |  ...  |
+     *       ...     |  ...   |   ...   |  ...  |
+     *      RegN-1   |  RN-1  |  R2N-1  |  ...  |
+     *       ...        ...       ...      ...
+     *
+     * Register Mapping (BlockDim == 64):
+     *
+     *      N = Max Vector Width
+     *
+     *               (BlockDim)
+     *      Elements |0.....63|
+     *                ________
+     *      Reg0     |  R0    |
+     *      Reg1     |  R1    |
+     *      Reg2     |  R2    |
+     *       ...     |  ...   |
+     *      RegN     |  RN    |
+     *       ...        ...
+     *
+     * Register Mapping (BlockDim > 64):
+     *
+     *      Priority 1: Visit MaxVW Segments
+     *      Priority 2: Visit BlockDim Segments
+     *
+     *      N = Max Vector Width
+     *      S = Segment count = BlockDim / 64
+     *      RX_Y: Row X, BlockDim Segment Y
+     *
+     *      Elements |0......63|
+     *                ________
+     *      Reg0     |  R0_0   |
+     *      Reg1     |  R1_0   |
+     *      Reg2     |  R2_0   |
+     *       ...     |   ...   |
+     *      RegN-1   |  RN-1_0 |
+     *      RegN+0   |  R0_1   |
+     *      RegN+1   |  R1_1   |
+     *       ...     |   ...   |
+     *      RegN*S   |  RN_S   |
+     *       ...     |   ...   |
+     */
+    template <uint32_t BlockDim,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout,
+              uint32_t VectorWidth,
+              uint32_t MaxVectorWidth>
+    struct RowNT : public std::conditional_t<
+                       std::is_same<DataLayout, col_major>::value,
+                       detail::RowOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
+                       detail::RowOrthoVW<BlockDim, BlockK, DataT, 1, MaxVectorWidth>>
+    {
+        struct Traits
+        {
+            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+            using MatrixCoordT = typename MappingUtil::CoordT;
+
+            // RowNT enforces consistent in-register alignment of contiguous matrix row
+            // elements in both in row_major or col_major data layouts.
+            // This layout cannot support for VW > 1 in row_major data layout otherwise the
+            // ordering is broken.
+            static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
+                          "RowNT in row_major does not support VectorWidth > 1");
+        };
+    };
+
+    /**
+     * \ingroup dataLayouts
+     * @{
+     */
+    /**
+     * Col Layout
+     *
+     * Col signifies that this layout will align contiguous threads
+     * in preference of matrix columns. This is a specific case of ColNT
+     * where VectorWidth = MaxVectorWidth.
+     *
+     * - Column Height = BlockDim
+     * - Column Count = BlockK
+     *
+     *      Matrix Coords
+     *      kDim ->
+     *      (0, 0)              (0, BlockK - 1)
+     *      v______________  ... v____
+     *      |    |    |          |    |
+     *      |    |    |          |    |
+     *      | C0 | C1 | C2       | Ck |
+     *      |    |    |          |    |
+     *      |___ |___ |____  ... |____|
+     *      ^(BlockDim - 1, 0)   ^(BlockDim - 1, BlockK - 1)
+     *
+     * In this particular layout, columns are iterated over in the kDim direction
+     * until the entire block has been visited.
+     *
+     * The order that columns map to registers is affected by DataLayout, VectorWidth
+     * and BlockDim.
+     */
+
+    template <uint32_t BlockDim,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout,
+              uint32_t VectorWidth,
+              uint32_t MaxVectorWidth>
+    struct Col : public std::conditional_t<
+                     std::is_same<DataLayout, col_major>::value,
+                     detail::ColInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
+                     detail::ColOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>
+    {
+        struct Traits
+        {
             using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
             using MatrixCoordT = typename MappingUtil::CoordT;
         };
-
-        static_assert(!(std::is_same<DataLayout, col_major>::value && VectorWidth > 1),
-                      "ColNT in column major does not support VectorWidth > 1");
-
-        static_assert(BlockDim <= AMDGCN_WAVE_SIZE,
-                      "ColNT only supports BlockDim <= AMDGCN_WAVE_SIZE");
-
-        __device__ static inline typename Traits::MatrixCoordT baseOffset()
-        {
-            return std::make_pair(threadIdx.x % BlockDim,
-                                  ((threadIdx.x / BlockDim) * MaxVectorWidth) % Traits::MinK);
-        }
-
-        __device__ static inline typename Traits::MatrixCoordT offsetIncrement(uint32_t iteration)
-        {
-            /*
-            E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = row_major
-
-            Elements 0.....31 32.....64
-                    _______________
-            Reg0    |  C0   |   C4  |
-            Reg1    |  C1   |   C5  |
-            Reg2    |  C2   |   C6  |
-            Reg3    |  C3   |   C7  |
-            ...       ...      ...
-
-            The startCoord points threads 0-31 at elements of C0, threads 32-63 at elements of C4.
-
-            If not a full load, there are two increment cycles, one major step size and one minor step size.
-            The minor cycle increments every iteration.
-            The major cycle increments on every iteration that has loaded 4 registers.
-
-            major = 4
-            minor = 1
-
-            i = 0:
-            Reg0    |  C0   |   C4  |
-            Reg1    |  --   |   --  |
-            Reg2    |  --   |   --  |
-            Reg3    |  --   |   --  |
-            inc: 0 * majorStep + minor = 1 Col
-
-            i = 1:
-            Reg0    |  C0   |   C4  |
-            Reg1    |  C1   |   C5  |
-            Reg2    |  --   |   --  |
-            Reg3    |  --   |   --  |
-            inc: 0 * majorStep + minor = 1 Col
-
-            i = 2:
-            Reg0    |  C0   |   C4  |
-            Reg1    |  C1   |   C5  |
-            Reg2    |  C2   |   C6  |
-            Reg3    |  --   |   --  |
-            inc: 0 * majorStep + minor = 1 Col
-
-            i = 3:
-            Reg0    |  C0   |   C4  |
-            Reg1    |  C1   |   C5  |
-            Reg2    |  C2   |   C6  |
-            Reg3    |  C3   |   C7  |
-            inc: 1 * majorStep + minor = 5 Col
-            */
-
-            static_assert(IOTraits::KPerIO <= Traits::MinK, "");
-            constexpr auto fullLoad = (IOTraits::KPerIO == Traits::MinK);
-
-            constexpr auto majorStepSize = fullLoad ? Traits::MinK : Traits::MinK - MaxVectorWidth;
-            constexpr auto minorStepSize = fullLoad ? 0 : VectorWidth;
-            auto           doMajorStep   = ((iteration + 1) % (MaxVectorWidth / VectorWidth)) == 0;
-
-            return std::make_pair(
-                0, static_cast<uint32_t>(doMajorStep) * majorStepSize + minorStepSize);
-        }
-
-        __device__ static inline typename Traits::MatrixCoordT blockOffset()
-        {
-            return std::make_pair(0, BlockK); // Next block
-        }
-
-        __device__ static inline uint32_t baseDataOffset(uint32_t ldm)
-        {
-            return Traits::MappingUtil::dataOffset(ldm, baseOffset());
-        }
-
-        __device__ static inline uint32_t dataOffsetIncrement(uint32_t iteration, uint32_t ldm)
-        {
-            return Traits::MappingUtil::dataOffset(ldm, offsetIncrement(iteration));
-        }
-
-        __device__ static inline uint32_t dataBlockOffset(uint32_t ldm)
-        {
-            return Traits::MappingUtil::dataOffset(ldm, blockOffset());
-        }
     };
 
     /**
- * \ingroup dataLayouts
- * @{
- */
+     * \ingroup dataLayouts
+     * @{
+     */
     /**
- * *Matrix layout:*
- *
- * BlockDim = row size
- *
- * BlockK = row count
- *
- * VW = actual vector width
- *
- * N = max vector width
- *
- *
- *      (0, 0)                 (0, BlockDim - 1)
- *      v______________  ...  _v__
- *      |__________R0__  ...  ____|
- *      |__________R1__  ...  ____|
- *      |__________R2__  ...  ____|
- *      |          ...   ...      |
- *      |__________Rk__  ...  ____|
- *      ^(BlockK - 1, 0)       ^(BlockK - 1, BlockDim - 1)
- *
- * *Register layout:*
- *
- * *Guarantees:*
- *
- * RowNT guarantees the following register format, regardless of VW and data layout.
- *
- * Register 0 to contain Rows (i % N) == 0
- *
- * Register 1 to contain Rows (i % N) == 1
- *
- * Register 2 to contain Rows (i % N) == 2
- *
- * ...
- *
- * *Limitations:*
- *
- * row_major data format is not supported for VW > 1, as it produces
- * incorrect mapping
- *
- * KPerIO == # of rows per IO (either load or store)
- *
- * E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = col_major
- *
- *      Elements 0.....31 32.....64
- *               _______________
- *      Reg0    |  R0   |   R4  |
- *       ...       ...      ...
- *
- *
- * E.g. BlockDim = 32, VW = 4, N = 4, KPerIO = 8, DataT = f32, DataLayout = col_major
- *
- *      Elements 0.....31 32.....64
- *               _______________
- *      Reg0    |  R0   |   R4  |
- *      Reg1    |  R1   |   R5  |
- *      Reg2    |  R2   |   R6  |
- *      Reg3    |  R3   |   R7  |
- *      ...       ...      ...
- *
- *
- * E.g. BlockDim = 32, VW = 1, N = 4, KPerIO = 2, DataT = f32, DataLayout = row_major
- *
- *      Elements 0.....31 32.....64
- *               _______________
- *       Reg0    |  R0   |   R4  |
- *        ...       ...      ...
- *
- * @note
- * E.g. BlockDim = 32, VW = 4,  N = 4, KPerIO = 8, DataT = f32, DataLayout = row_major
- * Is NOT implemented due to incorrect mapping with row_major and VW = 4
- *
-*/
-    ////////////// RowNT /////////////////////////
+     * Row Layout
+     *
+     * Row signifies that this layout will align contiguous threads
+     * in preference of matrix rows. This is a specific case of RowNT
+     * where VectorWidth = MaxVectorWidth.
+     *
+     * - Row Width = BlockDim
+     * - Row Count = BlockK
+     *
+     *      Matrix Coords
+     *      BlockDim ->
+     *      (0, 0)                 (0, BlockDim - 1)
+     *      v______________  ...  _v__
+     *      |__________R0__  ...  ____|
+     *      |__________R1__  ...  ____|
+     *      |__________R2__  ...  ____|
+     *      |          ...   ...      |
+     *      |__________Rk__  ...  ____|
+     *      ^(BlockK - 1, 0)       ^(BlockK - 1, BlockDim - 1)
+     *
+     * In this particular layout, rows are iterated over in the kDim direction
+     * until the entire block has been visited.
+     *
+     * The order that rows map to registers is affected by DataLayout, VectorWidth
+     * and BlockDim.
+     */
     template <uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
               typename DataLayout,
               uint32_t VectorWidth,
               uint32_t MaxVectorWidth>
-    struct RowNT
+    struct Row : public std::conditional_t<
+                     std::is_same<DataLayout, row_major>::value,
+                     detail::RowInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
+                     detail::RowOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>
     {
-        // RowNT is orthogonal to ColNT, therefore we can use reversed coordinates
-        // and opposite DataLayout from ColNT
         struct Traits
         {
-            using OrthoLayout = ColNT<BlockDim,
-                                      BlockK,
-                                      DataT,
-                                      std::conditional_t<std::is_same<DataLayout, row_major>::value,
-                                                         col_major,
-                                                         row_major>,
-                                      VectorWidth,
-                                      MaxVectorWidth>;
-
-            enum : uint32_t
-            {
-                // This is the minimum K needed to correctly implement this layout.
-                // Based on MaxVectorWidth due to iteration model.
-                MinK       = OrthoLayout::Traits::MinK,
-                MinIOCount = OrthoLayout::Traits::MinIOCount
-            };
-
-            using MappingUtil  = MappingUtil<BlockK, BlockDim, DataT, DataLayout>;
+            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
             using MatrixCoordT = typename MappingUtil::CoordT;
         };
-
-        static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
-                      "RowNT in row major does not support VectorWidth > 1");
-
-        static_assert(BlockDim < AMDGCN_WAVE_SIZE,
-                      "RowNT only supports BlockDim <= AMDGCN_WAVE_SIZE");
-
-        static_assert(BlockK >= MaxVectorWidth, "BlockK must be at least MaxVectorWidth");
-
-        static_assert(BlockK % MaxVectorWidth == 0, "BlockK must be a multiple of MaxVectorWidth");
-
-        __device__ static inline typename Traits::MatrixCoordT baseOffset()
-        {
-            // Orthogonalize coord
-            return std::swap(Traits::OrthoLayout::baseOffset());
-        }
-
-        __device__ static inline typename Traits::MatrixCoordT offsetIncrement(uint32_t iteration)
-        {
-            // Orthogonalize coord
-            return std::swap(Traits::OrthoLayout::offsetIncrement(iteration));
-        }
-
-        __device__ static inline typename Traits::MatrixCoordT blockOffset()
-        {
-            // Orthogonalize coord
-            return std::swap(Traits::OrthoLayout::blockOffset());
-        }
-
-        __device__ static inline uint32_t baseDataOffset(uint32_t ldm)
-        {
-            return Traits::MappingUtil::dataOffset(ldm, baseOffset());
-        }
-
-        __device__ static inline uint32_t dataOffsetIncrement(uint32_t iteration, uint32_t ldm)
-        {
-            return Traits::MappingUtil::dataOffset(ldm, offsetIncrement(iteration));
-        }
-
-        __device__ static inline uint32_t dataBlockOffset(uint32_t ldm)
-        {
-            return Traits::MappingUtil::dataOffset(ldm, blockOffset());
-        }
     };
 
 } // namespace Layout

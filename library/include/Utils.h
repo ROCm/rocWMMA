@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -356,38 +356,93 @@ constexpr const char* dataTypeToString<col_major>()
 namespace std
 {
     template <typename T>
-    __device__ inline pair<T, T> swap(pair<T, T> const& p)
+    __host__ __device__ inline pair<T, T> swap(pair<T, T> const& p)
     {
         return std::make_pair(std::get<1>(p), std::get<0>(p));
     }
 
-    inline pair<uint32_t, uint32_t> operator+(pair<uint32_t, uint32_t> const& lhs,
-                                              pair<uint32_t, uint32_t> const& rhs)
+    template <typename T>
+    __host__ __device__ inline pair<T, T>& swap(pair<T, T>& p)
+    {
+        std::swap(std::get<0>(p), std::get<1>(p));
+        return p;
+    }
+
+    template <typename T>
+    __host__ __device__ inline pair<T, T> operator+(pair<T, T> const& lhs, pair<T, T> const& rhs)
     {
         return make_pair(get<0>(lhs) + get<0>(rhs), get<1>(lhs) + get<1>(rhs));
     }
 
-    inline pair<uint32_t, uint32_t>& operator+=(pair<uint32_t, uint32_t>&       lhs,
-                                                pair<uint32_t, uint32_t> const& rhs)
+    template <typename T>
+    __host__ __device__ inline pair<T, T>& operator+=(pair<T, T>& lhs, pair<T, T> const& rhs)
     {
         get<0>(lhs) += get<0>(rhs);
         get<1>(lhs) += get<1>(rhs);
         return lhs;
     }
 
-    inline pair<uint32_t, uint32_t> operator-(pair<uint32_t, uint32_t> const& lhs,
-                                              pair<uint32_t, uint32_t> const& rhs)
+    template <typename T>
+    __host__ __device__ inline pair<T, T> operator-(pair<T, T> const& lhs, pair<T, T> const& rhs)
     {
         return make_pair(get<0>(lhs) - get<0>(rhs), get<1>(lhs) - get<1>(rhs));
     }
 
-    inline pair<uint32_t, uint32_t>& operator-=(pair<uint32_t, uint32_t>&       lhs,
-                                                pair<uint32_t, uint32_t> const& rhs)
+    template <typename T>
+    __host__ __device__ inline pair<T, T>& operator-=(pair<T, T>& lhs, pair<T, T> const& rhs)
     {
         get<0>(lhs) -= get<0>(rhs);
         get<1>(lhs) -= get<1>(rhs);
         return lhs;
     }
 } // namespace std
+
+template <uint32_t x>
+struct Log2
+{
+    static constexpr uint32_t value = 1 + Log2<(x >> 1)>::value;
+};
+
+template <>
+struct Log2<1>
+{
+    static constexpr uint32_t value = 0;
+};
+
+template <>
+struct Log2<0>
+{
+    static constexpr uint32_t value = 0;
+};
+
+template <uint32_t BitCount>
+struct LsbMask;
+
+template <>
+struct LsbMask<1>
+{
+    enum : uint32_t
+    {
+        value = 0x1
+    };
+};
+
+template <>
+struct LsbMask<0>
+{
+    enum : uint32_t
+    {
+        value = 0x0
+    };
+};
+
+template <uint32_t BitCount>
+struct LsbMask
+{
+    enum : uint32_t
+    {
+        value = LsbMask<1>::value << (BitCount - 1) | LsbMask<BitCount - 1>::value
+    };
+};
 
 #endif // WMMA_UTILS_H
