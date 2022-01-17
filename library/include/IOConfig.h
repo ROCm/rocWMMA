@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -126,27 +126,24 @@ struct IOConfig<matrix_a, BlockM, BlockN, BlockK, DataT, DataLayout>
         MaxVectorWidth = VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth,
         VectorWidth    = (std::is_same<DataLayout, row_major>::value && BlockDim < AMDGCN_WAVE_SIZE)
                              ? MaxVectorWidth
-                             : 1,
-
-        CoopIndex = 1 // Shares data with waves in columns of same row
+                             : 1
     };
 
     using IOTraits    = amdgcn_io_traits<BlockDim, KDim, DataT, VectorWidth>;
     using Packer      = Pack<DataT, IOTraits::UnpackedSize>;
     using Unpacker    = Unpack<DataT, IOTraits::PackedSize>;
     using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
-    using MappingUtil = MappingUtil<BlockDim, KDim, DataT, DataLayout>;
 
     static_assert(!(std::is_same<DataLayout, col_major>::value && VectorWidth > 1),
                   "matrix_a in col_major currently does not support VectorWidth > 1");
 
     // ColNT enforces MFMA ordering for supported BlockDim sizes.
     // Outside this range, MFMA ordering is not guaranteed.
-    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t VW>
     using MatrixLayout =
         typename std::conditional_t<(BlockDim < AMDGCN_WAVE_SIZE),
-                                    Layout::ColNT<BlkDim, BlkK, DT, DL, EPT, MaxVectorWidth>,
-                                    Layout::Col<BlkDim, BlkK, DT, DL, EPT>>;
+                                    Layout::ColNT<BlkDim, BlkK, DT, DL, VW, MaxVectorWidth>,
+                                    Layout::Col<BlkDim, BlkK, DT, DL, VW, MaxVectorWidth>>;
 
     using Loader
         = amdgcn_opaque_load_DxK<BlockDim, KDim, DataT, DataLayout, MatrixLayout, VectorWidth>;
@@ -206,27 +203,24 @@ struct IOConfig<matrix_b, BlockM, BlockN, BlockK, DataT, DataLayout>
         MaxVectorWidth = VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth,
         VectorWidth    = (std::is_same<DataLayout, col_major>::value && BlockDim < AMDGCN_WAVE_SIZE)
                              ? MaxVectorWidth
-                             : 1,
-
-        CoopIndex = 0 // Shares data with waves in rows of same column
+                             : 1
     };
 
     using IOTraits    = amdgcn_io_traits<BlockDim, KDim, DataT, VectorWidth>;
     using Packer      = Pack<DataT, IOTraits::UnpackedSize>;
     using Unpacker    = Unpack<DataT, IOTraits::PackedSize>;
     using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
-    using MappingUtil = MappingUtil<KDim, BlockDim, DataT, DataLayout>;
 
     static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
                   "matrix_b in row_major currently does not support VectorWidth > 1");
 
     // RowNT enforces MFMA ordering for supported BlockDim sizes.
     // Outside this range, MFMA ordering is not guaranteed.
-    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t VW>
     using MatrixLayout =
         typename std::conditional_t<(BlockDim < AMDGCN_WAVE_SIZE),
-                                    Layout::RowNT<BlkDim, BlkK, DT, DL, EPT, MaxVectorWidth>,
-                                    Layout::Row<BlkDim, BlkK, DT, DL, EPT>>;
+                                    Layout::RowNT<BlkDim, BlkK, DT, DL, VW, MaxVectorWidth>,
+                                    Layout::Row<BlkDim, BlkK, DT, DL, VW, MaxVectorWidth>>;
 
     using Loader
         = amdgcn_opaque_load_DxK<BlockDim, KDim, DataT, DataLayout, MatrixLayout, VectorWidth>;
@@ -285,24 +279,18 @@ struct IOConfig<accumulator, BlockM, BlockN, BlockK, DataT, DataLayout>
         MaxVectorWidth
         = std::is_same<DataT, float64_t>::value ? 1 : 4, // Actual output of the mfma hardware
         VectorWidth = std::is_same<DataLayout, col_major>::value ? MaxVectorWidth : 1,
-
-        CoopIndex = 0 // Shares data with waves in rows of same column
     };
 
     using IOTraits    = amdgcn_io_traits<BlockDim, KDim, DataT, VectorWidth>;
     using Packer      = Pack<DataT, IOTraits::UnpackedSize>;
     using Unpacker    = Unpack<DataT, IOTraits::PackedSize>;
     using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
-    using MappingUtil = MappingUtil<KDim, BlockDim, DataT, DataLayout>;
 
     static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
                   "accumulator in row_major currently does not support VectorWidth > 1");
 
-    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t EPT>
-    using MatrixLayout =
-        typename std::conditional_t<(BlockDim < AMDGCN_WAVE_SIZE),
-                                    Layout::RowNT<BlkDim, BlkK, DT, DL, EPT, MaxVectorWidth>,
-                                    Layout::Row<BlkDim, BlkK, DT, DL, EPT>>;
+    template <uint32_t BlkDim, uint32_t BlkK, typename DT, typename DL, uint32_t VW>
+    using MatrixLayout = Layout::RowNT<BlkDim, BlkK, DT, DL, VW, MaxVectorWidth>;
 
     using Loader
         = amdgcn_opaque_load_DxK<BlockDim, KDim, DataT, DataLayout, MatrixLayout, VectorWidth>;

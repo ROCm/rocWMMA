@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,7 @@
 #include <hip/hip_ext.h>
 #include <hip/hip_runtime_api.h>
 
-#include "Common.hpp"
+#include "Common.h"
 
 // Library includes
 #include "Constants.h"
