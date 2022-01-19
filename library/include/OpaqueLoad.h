@@ -28,6 +28,7 @@
 
 #include "IOTraits.h"
 #include "Layout.h"
+#include "MappingUtil.h"
 #include "Types.h"
 #include "Utils.h"
 
@@ -58,7 +59,6 @@ struct amdgcn_opaque_load_DxK
     {
         // Matrix space thread offsets
         using MatrixLayout = LoadLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
-        using MappingUtil  = typename MatrixLayout::Traits::MappingUtil;
 
         // Raw IO on unpacked register data.
         using Loader  = amdgcn_opaque_load<DataT, VectorWidth>;
@@ -70,7 +70,7 @@ struct amdgcn_opaque_load_DxK
     {
         // Extract traits
         using MatrixLayout = typename Traits::MatrixLayout;
-        using MappingUtil  = typename Traits::MappingUtil;
+        using DataSpace    = rocwmma::detail::DataSpace<DataLayout>;
         using Loader       = typename Traits::Loader;
         using LoadT        = typename Traits::LoadT;
         using OutputT      = typename Traits::OutputT;
@@ -88,7 +88,7 @@ struct amdgcn_opaque_load_DxK
 #pragma unroll
         for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
         {
-            *it = *Loader::exec(localPtr, MappingUtil::dataOffset(ldm, baseOffset));
+            *it = *Loader::exec(localPtr, DataSpace::fromMatrixCoord(baseOffset, ldm));
             it++;
             baseOffset += MatrixLayout::incrementalOffset(i);
         }

@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,168 +26,170 @@
 #ifndef WMMA_MAPPING_UTIL_H
 #define WMMA_MAPPING_UTIL_H
 
-#include <hip/hip_runtime.h>
-
 #include <utility>
 
-namespace _MappingUtil
+namespace rocwmma
 {
-    /*
-    This mapping utility is intended to map from workgroup configuration into
-    functional wave units. Depending on how the workgroup threads are grouped,
-    threads are mapped to their work differently, so it is best to assume a
-    particular configuration.
 
-    ***Important assumption: ***
+    // 2D Coordinate
+    using Coord2d = std::pair<uint32_t, uint32_t>;
 
-    This particular mapping assumes that the major dimension for
-    threadcount is in the blockDim.x element.
-
-    This means that blockSize.x threadcounts are multiples of 64,
-    and blockSize.y threadcounts are in multiples of 1.
-
-    blockDim = (waveRows * 64, waveCols).
-
-    Wave rows and cols map directly to scaled matrix rows and cols for processing.
-
-    ***
-
-    E.g.
-    BlockDim of (64, 1) will give a grid of (1, 1) waves, or 1 total wave in the workgroup.
-    localWaveId of (1, 1) is the wave corresponding to threads ([0 - 63], 1) in the
-    workgroup.
-
-    E.g.
-    BlockDim of (256, 4) will give a grid of (4, 4) waves, or 16 total waves in the workgroup.
-    localWaveId of (2, 3) is the wave corresponding to threads ([128 - 191], 3) in the
-    workgroup.
-    */
-
-    // Workgroup configuration: These three functions define how block dimensions are handled.
-
-    __device__ static inline uint32_t laneId();
-
-    // Convert from thread count to wave count
-    __device__ constexpr static inline auto
-        waveCount(std::pair<uint32_t, uint32_t> const& threadCount)
-            -> std::pair<uint32_t, uint32_t>;
-
-    // Convert from wave count to thread count
-    __device__ constexpr static inline auto
-        threadCount(std::pair<uint32_t, uint32_t> const& waveCount)
-            -> std::pair<uint32_t, uint32_t>;
-
-    // Coordinate spaces
-
-    struct WaveSpace
+    // Fwd declaration
+    namespace detail
     {
-        using CoordT = std::pair<uint32_t, uint32_t>;
+        struct WaveSpace
+        {
+            using WaveCoordT      = Coord2d;
+            using WorkgroupCoordT = Coord2d;
+            using WorkgroupDimT   = Coord2d;
 
-        // Size of workgroup, normalized to wave count.
-        __device__ static inline auto workgroupDim() -> CoordT;
+            // Current lane normalized to [0, 63].
+            __device__ static inline uint32_t localLaneId();
 
-        // Global workgroup Id
-        __device__ static inline auto workgroupCoord() -> CoordT;
+            // Local wave coordinate relative to current workgroup.
+            __device__ static inline WaveCoordT localWaveCoord();
 
-        // Grid coordinate of the current wave local to the workgroup.
-        __device__ static inline auto localWaveCoord() -> CoordT;
+            // Global wave grid coordinate relative to all workgroups.
+            __device__ static inline WaveCoordT globalWaveCoord();
 
-        // Grid coordinate of the current wave in global context of all waves from
-        // all workgroups.
-        __device__ static inline auto globalWaveCoord() -> CoordT;
+            // Global workgroup Id
+            __device__ static inline WorkgroupCoordT workgroupCoord();
 
-        // Each wave has 64 lanes normalized to [0, 63] to do work.
-        __device__ static inline uint32_t localLaneId();
-    };
+            // Size of workgroup, normalized to wave count.
+            __device__ static inline WorkgroupDimT workgroupDim();
+        };
 
-    /*
-    Calculate the matrix coordinate space (row, col) for a given block coordinate.
+        /*
     Matrix coordinate space is analogous to global block space scaled by BlockM and BlockN.
     */
-    template <uint32_t BlockM, uint32_t BlockN>
-    struct MatrixSpace
-    {
-        using CoordT = std::pair<uint32_t, uint32_t>;
+        template <uint32_t BlockHeight, uint32_t BlockWidth>
+        struct MatrixSpace
+        {
+            using MatrixCoordT = Coord2d;
+            using BlockCoordT  = Coord2d;
 
-        __device__ static inline auto fromBlockCoord(CoordT const& blockCoord) -> CoordT;
-    };
+            // Global matrix coordinate space (row, col) transform for a given block grid coordinate.
+            __device__ static inline MatrixCoordT fromBlockCoord(BlockCoordT const& blockCoord);
+        };
 
-    /*
+        /*
     Calculate the memory offsets and addresses for a given matrix coordinate or block coordinate.
     */
-    template <typename DataT, uint32_t BlockM, uint32_t BlockN, typename DataLayout>
-    struct DataSpace
+        template <typename DataLayout>
+        struct DataSpace
+        {
+            using MatrixCoordT = Coord2d;
+
+            // Global data coordinate space (1d element) transform for a matrix coordinate.
+            __device__ static inline uint32_t fromMatrixCoord(MatrixCoordT const& matrixCoord,
+                                                              uint32_t            leadingDim);
+        };
+
+        template <>
+        struct DataSpace<void>;
+        // {
+        //     using MatrixCoordT = Coord2d;
+
+        //     // Global data coordinate space (1d element) transform for a matrix coordinate.
+        //     __device__
+        //     static inline uint32_t fromMatrixCoord(MatrixCoordT const& matrixCoord, uint32_t leadingDim);
+        // };
+    } // namespace detail;
+
+    /*
+This mapping utility is intended to map from workgroup configuration into
+functional wave units. Depending on how the workgroup threads are grouped,
+threads are mapped to their work differently, so it is best to assume a
+particular configuration.
+
+***Important assumption: ***
+
+This particular mapping assumes that the major dimension for
+threadcount is in the blockDim.x element.
+
+This means that blockSize.x threadcounts are multiples of 64,
+and blockSize.y threadcounts are in multiples of 1.
+
+blockDim = (waveRows * 64, waveCols).
+
+Wave rows and cols map directly to scaled matrix rows and cols for processing.
+
+***
+
+E.g.
+BlockDim of (64, 1) will give a grid of (1, 1) waves, or 1 total wave in the workgroup.
+localWaveId of (1, 1) is the wave corresponding to threads ([0 - 63], 1) in the
+workgroup.
+
+E.g.
+BlockDim of (256, 4) will give a grid of (4, 4) waves, or 16 total waves in the workgroup.
+localWaveId of (2, 3) is the wave corresponding to threads ([128 - 191], 3) in the
+workgroup.
+*/
+    template <uint32_t BlockHeight, uint32_t BlockWidth, typename DataT, typename DataLayout>
+    struct MappingUtil
     {
-        using CoordT = std::pair<uint32_t, uint32_t>;
+        using WaveSpace   = detail::WaveSpace;
+        using MatrixSpace = detail::MatrixSpace<BlockHeight, BlockWidth>;
+        using DataSpace   = detail::DataSpace<DataLayout>;
 
-        __device__ static inline uint32_t offsetFromMatrixCoord(uint32_t      ldm,
-                                                                CoordT const& matrixCoord);
-        __device__ static inline uint32_t offsetFromBlockCoord(uint32_t      ldm,
-                                                               CoordT const& blockCoord);
+        using WaveCoordT    = typename WaveSpace::WaveCoordT;
+        using BlockCoordT   = typename MatrixSpace::BlockCoordT;
+        using MatrixCoordT  = typename MatrixSpace::MatrixCoordT;
+        using WorkgroupDimT = typename WaveSpace::WorkgroupDimT;
 
+        /// Current wave perspective
+
+        // Current lane of current wave
+        __device__ static inline uint32_t laneId();
+
+        // Local wave coordinate relative to workgroup
+        __device__ static inline WaveCoordT waveCoord();
+
+        // Global block (grid) coordinate of current wave
+        __device__ static inline BlockCoordT blockCoord();
+
+        // Matrix coordinate of current wave
+        __device__ static inline MatrixCoordT matrixCoord();
+
+        // Data address of current wave
+        __device__ static inline DataT const* dataCoord(DataT const* baseAddr, uint32_t ldm);
+        __device__ static inline DataT*       dataCoord(DataT* baseAddr, uint32_t ldm);
+
+        /// Current workgroup perspective
+
+        __device__ static inline WorkgroupDimT workgroupDim();
+
+        /// Coordinate override helpers
+
+        // Current global wave coordinate with row override
+        __device__ static inline BlockCoordT blockCoordM(uint32_t m);
+
+        // Current global wave coordinate with col override
+        __device__ static inline BlockCoordT blockCoordN(uint32_t n);
+
+        // Matrix coordinate of current wave with row override
+        __device__ static inline MatrixCoordT matrixCoordM(uint32_t m);
+
+        // Matrix coordinate of current wave with col override
+        __device__ static inline MatrixCoordT matrixCoordN(uint32_t n);
+
+        /// Conversion helpers
+
+        // Convert from any block coord to matrix coord
+        __device__ static inline MatrixCoordT matrixCoord(BlockCoordT const& blockCoord);
+
+        // Convert from any matrix coord to data offset
+        __device__ static inline uint32_t dataOffset(MatrixCoordT const& matrixCoord, uint32_t ldm);
+
+        // Convert from any matrix coord to data address
+        __device__ static inline DataT const*
+            dataCoord(DataT const* baseAddr, MatrixCoordT const& matrixCoord, uint32_t ldm);
         __device__ static inline DataT*
-            fromMatrixCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& matrixCoord);
-        __device__ static inline DataT*
-            fromBlockCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& blockCoord);
+            dataCoord(DataT* baseAddr, MatrixCoordT const& matrixCoord, uint32_t ldm);
     };
 
-} // namespace _MappingUtil
-
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
-struct MappingUtil
-{
-    using WaveSpace   = _MappingUtil::WaveSpace;
-    using MatrixSpace = _MappingUtil::MatrixSpace<BlockM, BlockN>;
-    using DataSpace   = _MappingUtil::DataSpace<DataT, BlockM, BlockN, DataLayout>;
-    using CoordT      = std::pair<uint32_t, uint32_t>;
-
-    /// Current wave perspective
-
-    // Current lane of current wave
-    __device__ static inline uint32_t laneId();
-
-    // Current local wave coordinate
-    __device__ static inline auto waveCoord() -> CoordT;
-
-    // Current global wave coordinate
-    __device__ static inline auto blockCoord() -> CoordT;
-
-    // Matrix coordinate of current wave
-    __device__ static inline auto matrixCoord() -> CoordT;
-
-    // Data address of current wave
-    __device__ static inline DataT* dataCoord(DataT const* baseAddr, uint32_t ldm);
-
-    /// Current workgroup perspective
-
-    __device__ static inline auto workgroupDim() -> CoordT;
-
-    /// Coordinate override helpers
-
-    // Current global wave coordinate with row override
-    __device__ static inline auto blockCoordM(uint32_t m) -> CoordT;
-
-    // Current global wave coordinate with col override
-    __device__ static inline auto blockCoordN(uint32_t n) -> CoordT;
-
-    // Matrix coordinate of current wave with row override
-    __device__ static inline auto matrixCoordM(uint32_t m) -> CoordT;
-
-    // Matrix coordinate of current wave with col override
-    __device__ static inline auto matrixCoordN(uint32_t n) -> CoordT;
-
-    /// Conversion helpers
-
-    // Convert from any block coord to matrix coord
-    __device__ static inline auto matrixCoord(CoordT const& blockCoord) -> CoordT;
-
-    // Convert from any matrix coord to data offset
-    __device__ static inline auto dataOffset(uint32_t ldm, CoordT const& matrixCoord) -> uint32_t;
-
-    // Convert from any matrix coord to data address
-    __device__ static inline DataT*
-        dataCoord(DataT const* baseAddr, uint32_t ldm, CoordT const& matrixCoord);
-};
+} // namespace rocwmma
 
 #include "MappingUtil_impl.h"
 
