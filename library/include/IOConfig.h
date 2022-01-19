@@ -310,33 +310,33 @@ namespace rocwmma
         using MappingUtil
             = MappingUtil<IOShape::BlockHeight, IOShape::BlockWidth, DataT, DataLayout>;
 
-        using Loader = amdgcn_opaque_load_DxK<IOShape::BlockDim,
-                                              IOShape::KDim,
-                                              DataT,
-                                              typename IOShape::DataMapper,
-                                              typename IOShape::MatrixMapper,
-                                              IOShape::VectorWidth>;
+        using Loader = OpaqueLoad<IOShape::BlockDim,
+                                  IOShape::KDim,
+                                  DataT,
+                                  typename IOShape::DataMapper,
+                                  typename IOShape::MatrixMapper,
+                                  IOShape::VectorWidth>;
 
-        using Storer = amdgcn_opaque_store_DxK<IOShape::BlockDim,
-                                               IOShape::KDim,
-                                               DataT,
-                                               typename IOShape::DataMapper,
-                                               typename IOShape::MatrixMapper,
-                                               IOShape::VectorWidth>;
+        using Storer = OpaqueStore<IOShape::BlockDim,
+                                   IOShape::KDim,
+                                   DataT,
+                                   typename IOShape::DataMapper,
+                                   typename IOShape::MatrixMapper,
+                                   IOShape::VectorWidth>;
 
-        using CoopLoader = amdgcn_cooperative_load_DxK<IOShape::BlockDim,
-                                                       IOShape::KDim,
-                                                       DataT,
-                                                       typename IOShape::DataMapper,
-                                                       typename IOShape::MatrixMapper,
-                                                       IOShape::VectorWidth>;
+        using CoopLoader = CooperativeLoad<IOShape::BlockDim,
+                                           IOShape::KDim,
+                                           DataT,
+                                           typename IOShape::DataMapper,
+                                           typename IOShape::MatrixMapper,
+                                           IOShape::VectorWidth>;
 
-        using CoopStorer = amdgcn_cooperative_store_DxK<IOShape::BlockDim,
-                                                        IOShape::KDim,
-                                                        DataT,
-                                                        typename IOShape::DataMapper,
-                                                        typename IOShape::MatrixMapper,
-                                                        IOShape::VectorWidth>;
+        using CoopStorer = CooperativeStore<IOShape::BlockDim,
+                                            IOShape::KDim,
+                                            DataT,
+                                            typename IOShape::DataMapper,
+                                            typename IOShape::MatrixMapper,
+                                            IOShape::VectorWidth>;
     };
 
     /************************************************
