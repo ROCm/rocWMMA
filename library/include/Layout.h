@@ -314,7 +314,7 @@ namespace Layout
               typename DataT,
               typename DataLayout,
               uint32_t VectorWidth,
-              uint32_t MaxVectorWidth>
+              uint32_t MaxVectorWidth = VectorWidth>
     struct Col : public std::conditional_t<
                      std::is_same<DataLayout, col_major>::value,
                      detail::ColInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
@@ -363,7 +363,7 @@ namespace Layout
               typename DataT,
               typename DataLayout,
               uint32_t VectorWidth,
-              uint32_t MaxVectorWidth>
+              uint32_t MaxVectorWidth = VectorWidth>
     struct Row : public std::conditional_t<
                      std::is_same<DataLayout, row_major>::value,
                      detail::RowInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,

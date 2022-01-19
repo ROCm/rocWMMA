@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,7 @@
 #include "IOPack.h"
 #include "WMMA.h"
 
-namespace wmma
+namespace rocwmma
 {
     template <typename MatrixT,
               uint32_t BlockM,
@@ -191,6 +191,7 @@ namespace wmma
         auto waveCount = std::get<Config::CoopIndex>(MappingUtil::workgroupDim());
         store_matrix_coop_sync(data, frag, ldm, waveIndex, waveCount);
     }
-} // namespace wmma
+
+} // namespace rocwmma
 
 #endif // WMMA_COOP_IMPL_H_
