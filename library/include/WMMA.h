@@ -165,7 +165,7 @@
  * with Fragment B rows and added to the accumulator fragment.
  */
 
-namespace wmma
+namespace rocwmma
 {
     // MatrixT tags
     using matrix_a    = ::matrix_a;
@@ -455,7 +455,7 @@ namespace wmma
  */
     __device__ void synchronize_workgroup();
 
-} // namespace wmma
+} // namespace rocwmma
 
 #include "WMMA_impl.h"
 
