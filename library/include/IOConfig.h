@@ -133,6 +133,7 @@ struct IOConfig<matrix_a, BlockM, BlockN, BlockK, DataT, DataLayout>
     using Packer      = Pack<DataT, IOTraits::UnpackedSize>;
     using Unpacker    = Unpack<DataT, IOTraits::PackedSize>;
     using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
+    using MappingUtil = rocwmma::MappingUtil<BlockDim, KDim, DataT, DataLayout>;
 
     static_assert(!(std::is_same<DataLayout, col_major>::value && VectorWidth > 1),
                   "matrix_a in col_major currently does not support VectorWidth > 1");
@@ -210,6 +211,7 @@ struct IOConfig<matrix_b, BlockM, BlockN, BlockK, DataT, DataLayout>
     using Packer      = Pack<DataT, IOTraits::UnpackedSize>;
     using Unpacker    = Unpack<DataT, IOTraits::PackedSize>;
     using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
+    using MappingUtil = rocwmma::MappingUtil<KDim, BlockDim, DataT, DataLayout>;
 
     static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
                   "matrix_b in row_major currently does not support VectorWidth > 1");
@@ -286,6 +288,8 @@ struct IOConfig<accumulator, BlockM, BlockN, BlockK, DataT, DataLayout>
     using Unpacker    = Unpack<DataT, IOTraits::PackedSize>;
     using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
 
+    using MappingUtil = rocwmma::MappingUtil<KDim, BlockDim, DataT, DataLayout>;
+
     static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
                   "accumulator in row_major currently does not support VectorWidth > 1");
 
@@ -322,7 +326,6 @@ struct IOConfig<accumulator, BlockM, BlockN, BlockK, DataT, void>
         KDim     = BlockM,
     };
 
-    // These don't depend on VectorWidth, we can use VW = 1
     using IOTraits    = amdgcn_io_traits<BlockDim, KDim, DataT>;
     using Packer      = Pack<DataT, IOTraits::UnpackedSize>;
     using Unpacker    = Unpack<DataT, IOTraits::PackedSize>;

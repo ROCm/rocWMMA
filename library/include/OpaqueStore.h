@@ -85,7 +85,7 @@ struct amdgcn_opaque_store_DxK
 #pragma unroll
         for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
         {
-            Storer::exec(localPtr, *it, MappingUtil::dataOffset(ldm, baseOffset));
+            Storer::exec(localPtr, *it, MappingUtil::dataOffset(baseOffset, ldm));
             it++;
             baseOffset += MatrixLayout::incrementalOffset(i);
         }

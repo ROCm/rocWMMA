@@ -135,7 +135,7 @@ namespace Layout
                     Log2WaveSegs     = Log2<WaveSegs>::value
                 };
 
-                using MatrixCoordT = std::pair<int32_t, int32_t>;
+                using MatrixCoordT = std::pair<uint32_t, uint32_t>;
             };
 
             __device__ static inline typename Traits::MatrixCoordT baseOffset()
