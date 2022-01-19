@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -62,15 +62,15 @@ __global__ void __launch_bounds__(256, 1) mmaSync(uint32_t       m,
                                                   ComputeT       alpha,
                                                   ComputeT       beta)
 {
-    using MappingA = MappingUtil<BlockM, BlockK, InputT, LayoutA>;
-    using MappingB = MappingUtil<BlockK, BlockN, InputT, LayoutB>;
-    using MappingC = MappingUtil<BlockM, BlockN, OutputT, LayoutC>;
-    using MappingD = MappingUtil<BlockM, BlockN, OutputT, LayoutD>;
-
     using FragA   = wmma::fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA>;
     using FragB   = wmma::fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB>;
     using FragC   = wmma::fragment<accumulator, BlockM, BlockN, BlockK, OutputT>;
     using FragAcc = wmma::fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>;
+
+    using MappingA = rocwmma::MappingUtil<BlockM, BlockK, InputT, LayoutA>;
+    using MappingB = rocwmma::MappingUtil<BlockK, BlockN, InputT, LayoutB>;
+    using MappingC = rocwmma::MappingUtil<BlockM, BlockN, OutputT, LayoutC>;
+    using MappingD = rocwmma::MappingUtil<BlockM, BlockN, OutputT, LayoutD>;
 
     // Target C / D block on 2D grid
     auto matrixCoordC = MappingC::matrixCoord();
@@ -85,14 +85,16 @@ __global__ void __launch_bounds__(256, 1) mmaSync(uint32_t       m,
         if(alpha)
         {
             // Setup starting addresses
-            auto* addrA = MappingA::dataCoord(a, lda, std::make_pair(std::get<0>(matrixCoordC), 0));
-            auto* addrB = MappingB::dataCoord(b, ldb, std::make_pair(0, std::get<1>(matrixCoordC)));
+            // Offset A to col 0
+            // Offset B to row 0
+            auto* addrA = MappingA::dataCoord(a, MappingC::matrixCoordN(0), lda);
+            auto* addrB = MappingB::dataCoord(b, MappingC::matrixCoordM(0), ldb);
 
             // Setup address increments.
             // A steps BlockK through m x k
             // B steps BlockK through k x n
-            auto incrA = MappingA::dataOffset(lda, std::make_pair(0, BlockK));
-            auto incrB = MappingB::dataOffset(ldb, std::make_pair(BlockK, 0));
+            auto incrA = MappingA::dataOffset(std::make_pair(0, BlockK), lda);
+            auto incrB = MappingB::dataOffset(std::make_pair(BlockK, 0), ldb);
 
             auto count = k / BlockK;
             for(int i = 0; i < count; i++)
@@ -121,7 +123,7 @@ __global__ void __launch_bounds__(256, 1) mmaSync(uint32_t       m,
         if(beta)
         {
             // Setup address
-            auto* addrC = MappingC::dataCoord(c, ldc, matrixCoordC);
+            auto* addrC = MappingC::dataCoord(c, matrixCoordC, ldc);
             wmma::load_matrix_sync(fragC,
                                    addrC,
                                    ldc,
@@ -137,7 +139,7 @@ __global__ void __launch_bounds__(256, 1) mmaSync(uint32_t       m,
         }
 
         // Output addresss
-        auto* addrD = MappingD::dataCoord(d, ldd, matrixCoordC);
+        auto* addrD = MappingD::dataCoord(d, matrixCoordC, ldd);
 
         // Store the output
         wmma::store_matrix_sync(addrD,
