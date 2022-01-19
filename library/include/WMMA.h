@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -189,7 +189,7 @@ namespace wmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    using io_config = ::IOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
+    using io_config = rocwmma::IOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
 
     /**
  * \ingroup wmma

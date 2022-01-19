@@ -33,8 +33,11 @@
 template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t VectorWidth>
 struct amdgcn_io_traits;
 
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
-struct MappingUtil;
+namespace rocwmma
+{
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
+    struct MappingUtil;
+} // namespace rocwmma
 
 #include "Layout_impl.h"
 
@@ -157,8 +160,8 @@ namespace Layout
     {
         struct Traits
         {
-            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
-            using MatrixCoordT = typename MappingUtil::CoordT;
+            using MappingUtil  = rocwmma::MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+            using MatrixCoordT = typename MappingUtil::MatrixCoordT;
 
             // ColNT enforces consistent in-register alignment of contiguous matrix column
             // elements in both row_major or col_major data layouts.
@@ -262,8 +265,8 @@ namespace Layout
     {
         struct Traits
         {
-            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
-            using MatrixCoordT = typename MappingUtil::CoordT;
+            using MappingUtil  = rocwmma::MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+            using MatrixCoordT = typename MappingUtil::MatrixCoordT;
 
             // RowNT enforces consistent in-register alignment of contiguous matrix row
             // elements in both in row_major or col_major data layouts.
@@ -319,8 +322,8 @@ namespace Layout
     {
         struct Traits
         {
-            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
-            using MatrixCoordT = typename MappingUtil::CoordT;
+            using MappingUtil  = rocwmma::MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+            using MatrixCoordT = typename MappingUtil::MatrixCoordT;
         };
     };
 
@@ -368,8 +371,8 @@ namespace Layout
     {
         struct Traits
         {
-            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
-            using MatrixCoordT = typename MappingUtil::CoordT;
+            using MappingUtil  = rocwmma::MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+            using MatrixCoordT = typename MappingUtil::MatrixCoordT;
         };
     };
 

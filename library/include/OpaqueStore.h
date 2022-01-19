@@ -45,9 +45,8 @@ struct amdgcn_opaque_store
 template <uint32_t BlockDim,
           uint32_t BlockK,
           typename DataT,
-          typename DataLayout,
-          template <uint32_t, uint32_t, typename, typename, uint32_t>
-          class StoreLayout,
+          class DataMapper,
+          class MatrixMapper,
           uint32_t VectorWidth>
 struct amdgcn_opaque_store_DxK
 {
@@ -55,10 +54,6 @@ struct amdgcn_opaque_store_DxK
 
     struct Traits
     {
-        // Matrix space thread offsets
-        using MatrixLayout = StoreLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
-        using MappingUtil  = typename MatrixLayout::Traits::MappingUtil;
-
         // Raw IO on unpacked register data.
         using Storer = amdgcn_opaque_store<DataT, VectorWidth>;
         using StoreT = typename Storer::StoreT;
@@ -69,25 +64,23 @@ struct amdgcn_opaque_store_DxK
         exec(DataT* localPtr, typename Traits::InputT const& incoming, uint32_t ldm)
     {
         // Extract traits
-        using Storer       = typename Traits::Storer;
-        using StoreT       = typename Traits::StoreT;
-        using MatrixLayout = typename Traits::MatrixLayout;
-        using MappingUtil  = typename Traits::MappingUtil;
+        using Storer = typename Traits::Storer;
+        using StoreT = typename Traits::StoreT;
 
-        // Arrange wave threads to starting data offsets due to layout.
-        // In this case, the LDS contains only block data.
-        auto baseOffset = MatrixLayout::baseOffset();
+        // Arrange wave threads to starting matrix layout offsets.
+        auto baseOffset = MatrixMapper::baseOffset();
 
         auto it = incoming.template begin<StoreT::size()>();
         static_assert(decltype(it)::range() == IOTraits::IOCount,
                       "IOCount inconsistent with iterator range");
 
+        // Loop through entire block
 #pragma unroll
         for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
         {
-            Storer::exec(localPtr, *it, MappingUtil::dataOffset(baseOffset, ldm));
+            Storer::exec(localPtr, *it, DataMapper::fromMatrixCoord(baseOffset, ldm));
             it++;
-            baseOffset += MatrixLayout::incrementalOffset(i);
+            baseOffset += MatrixMapper::incrementalOffset(i);
         }
     }
 };

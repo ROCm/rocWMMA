@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,7 +44,7 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncA(
     // BlockN -> BlockK
     auto frag = wmma::fragment<matrix_a, BlockM, 1, BlockN, DataT, Layout>();
 
-    using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
+    using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
 
     auto workgroupDim      = Mapping::workgroupDim();
     auto waveCoord         = Mapping::waveCoord();
@@ -58,8 +58,8 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncA(
     // 0 = row/col 0 waves will cooperate
     // 1 = row/col 1 waves will cooperate
     // ...
-    auto getFirst  = [](typename Mapping::CoordT const& coord) { return coord.first; };
-    auto getSecond = [](typename Mapping::CoordT const& coord) { return coord.second; };
+    auto getFirst  = [](typename Mapping::WaveCoordT const& coord) { return coord.first; };
+    auto getSecond = [](typename Mapping::WaveCoordT const& coord) { return coord.second; };
 
     auto sharingDim   = (uint32_t)param1;
     auto shareElement = (sharingDim == 0 ? getFirst : getSecond);
@@ -86,8 +86,8 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncA(
                 // Map, load and store.
                 auto  blockCoord = std::make_pair(std::get<0>(startBlockCoord) + i,
                                                   std::get<1>(startBlockCoord) + j);
-                auto* read       = Mapping::dataCoord(in, ld, Mapping::matrixCoord(blockCoord));
-                auto* write      = Mapping::dataCoord(out, ld, Mapping::matrixCoord(blockCoord));
+                auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
+                auto* write      = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
                 wmma::load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
                 wmma::store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
             }
@@ -106,7 +106,7 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncB(
     // BlockM -> BlockK
     auto frag = wmma::fragment<matrix_b, 1, BlockN, BlockM, DataT, Layout>();
 
-    using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
+    using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
 
     auto workgroupDim      = Mapping::workgroupDim();
     auto waveCoord         = Mapping::waveCoord();
@@ -120,8 +120,8 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncB(
     // 0 = row/col 0 waves will cooperate
     // 1 = row/col 1 waves will cooperate
     // ...
-    auto getFirst  = [](typename Mapping::CoordT const& coord) { return coord.first; };
-    auto getSecond = [](typename Mapping::CoordT const& coord) { return coord.second; };
+    auto getFirst  = [](typename Mapping::WaveCoordT const& coord) { return coord.first; };
+    auto getSecond = [](typename Mapping::WaveCoordT const& coord) { return coord.second; };
 
     auto sharingDim   = (uint32_t)param1;
     auto shareElement = (sharingDim == 0 ? getFirst : getSecond);
@@ -148,8 +148,8 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncB(
                 // Map, load and store.
                 auto  blockCoord = std::make_pair(std::get<0>(startBlockCoord) + i,
                                                   std::get<1>(startBlockCoord) + j);
-                auto* read       = Mapping::dataCoord(in, ld, Mapping::matrixCoord(blockCoord));
-                auto* write      = Mapping::dataCoord(out, ld, Mapping::matrixCoord(blockCoord));
+                auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
+                auto* write      = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
                 wmma::load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
                 wmma::store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
             }
@@ -168,7 +168,7 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncAcc(
     // <Dummy> -> BlockK
     auto frag = wmma::fragment<accumulator, BlockM, BlockN, 1, DataT, Layout>();
 
-    using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
+    using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
 
     auto workgroupDim      = Mapping::workgroupDim();
     auto waveCoord         = Mapping::waveCoord();
@@ -182,8 +182,8 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncAcc(
     // 0 = row/col 0 waves will cooperate
     // 1 = row/col 1 waves will cooperate
     // ...
-    auto getFirst  = [](typename Mapping::CoordT const& coord) { return coord.first; };
-    auto getSecond = [](typename Mapping::CoordT const& coord) { return coord.second; };
+    auto getFirst  = [](typename Mapping::WaveCoordT const& coord) { return coord.first; };
+    auto getSecond = [](typename Mapping::WaveCoordT const& coord) { return coord.second; };
 
     auto sharingDim   = (uint32_t)param1;
     auto shareElement = (sharingDim == 0 ? getFirst : getSecond);
@@ -209,8 +209,8 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncAcc(
                 // Map, load and store.
                 auto  blockCoord = std::make_pair(std::get<0>(startBlockCoord) + i,
                                                   std::get<1>(startBlockCoord) + j);
-                auto* read       = Mapping::dataCoord(in, ld, Mapping::matrixCoord(blockCoord));
-                auto* write      = Mapping::dataCoord(out, ld, Mapping::matrixCoord(blockCoord));
+                auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
+                auto* write      = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
                 wmma::load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
                 wmma::store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
             }

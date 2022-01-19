@@ -47,9 +47,8 @@ struct amdgcn_opaque_load
 template <uint32_t BlockDim,
           uint32_t BlockK,
           typename DataT,
-          typename DataLayout,
-          template <uint32_t, uint32_t, typename, typename, uint32_t>
-          class LoadLayout,
+          class DataMapper,
+          class MatrixMapper,
           uint32_t VectorWidth>
 struct amdgcn_opaque_load_DxK
 {
@@ -57,9 +56,6 @@ struct amdgcn_opaque_load_DxK
 
     struct Traits
     {
-        // Matrix space thread offsets
-        using MatrixLayout = LoadLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
-
         // Raw IO on unpacked register data.
         using Loader  = amdgcn_opaque_load<DataT, VectorWidth>;
         using LoadT   = typename Loader::LoadT;
@@ -69,28 +65,26 @@ struct amdgcn_opaque_load_DxK
     __device__ static auto exec(DataT const* localPtr, uint32_t ldm) -> typename Traits::OutputT
     {
         // Extract traits
-        using MatrixLayout = typename Traits::MatrixLayout;
-        using DataSpace    = rocwmma::detail::DataSpace<DataLayout>;
-        using Loader       = typename Traits::Loader;
-        using LoadT        = typename Traits::LoadT;
-        using OutputT      = typename Traits::OutputT;
+        using Loader  = typename Traits::Loader;
+        using LoadT   = typename Traits::LoadT;
+        using OutputT = typename Traits::OutputT;
 
-        // Arrange wave threads to starting data offsets due to layout.
-        auto baseOffset = MatrixLayout::baseOffset();
+        // Arrange wave threads to starting matrix layout offsets.
+        auto baseOffset = MatrixMapper::baseOffset();
 
-        // Loop over loads to fill BlockDim * BlockK for each wave.
         OutputT result;
         auto    it = result.template begin<LoadT::size()>();
 
         static_assert(decltype(it)::range() == IOTraits::IOCount,
                       "IOCount inconsistent with iterator range");
 
+        // Loop through entire block
 #pragma unroll
         for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
         {
-            *it = *Loader::exec(localPtr, DataSpace::fromMatrixCoord(baseOffset, ldm));
+            *it = *Loader::exec(localPtr, DataMapper::fromMatrixCoord(baseOffset, ldm));
             it++;
-            baseOffset += MatrixLayout::incrementalOffset(i);
+            baseOffset += MatrixMapper::incrementalOffset(i);
         }
         return result;
     }
