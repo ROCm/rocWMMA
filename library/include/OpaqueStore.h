@@ -30,59 +30,70 @@
 #include "Layout.h"
 #include "Types.h"
 
-template <typename DataT, uint32_t VectorWidth>
-struct amdgcn_opaque_store
+namespace rocwmma
 {
-    static_assert(VectorWidth > 0, "Vector width must be greater than 0");
 
-    using StoreT = VecT<typename PackTraits<DataT>::UnpackedT, VectorWidth>;
-    __device__ static inline void exec(DataT* dataPtr, StoreT const& data, index_t offset = 0)
+    namespace detail
     {
-        *reinterpret_cast<typename StoreT::StorageT*>(&(dataPtr[offset])) = *data;
-    }
-};
 
-template <uint32_t BlockDim,
-          uint32_t BlockK,
-          typename DataT,
-          class DataMapper,
-          class MatrixMapper,
-          uint32_t VectorWidth>
-struct amdgcn_opaque_store_DxK
-{
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
+        template <typename DataT, uint32_t VectorWidth>
+        struct amdgcn_opaque_store
+        {
+            static_assert(VectorWidth > 0, "Vector width must be greater than 0");
 
-    struct Traits
+            using StoreT = VecT<typename PackTraits<DataT>::UnpackedT, VectorWidth>;
+            __device__ static inline void
+                exec(DataT* dataPtr, StoreT const& data, index_t offset = 0)
+            {
+                *reinterpret_cast<typename StoreT::StorageT*>(&(dataPtr[offset])) = *data;
+            }
+        };
+
+    } // namespace detail
+
+    template <uint32_t BlockDim,
+              uint32_t BlockK,
+              typename DataT,
+              class DataMapper,
+              class MatrixMapper,
+              uint32_t VectorWidth>
+    struct OpaqueStore
     {
-        // Raw IO on unpacked register data.
-        using Storer = amdgcn_opaque_store<DataT, VectorWidth>;
-        using StoreT = typename Storer::StoreT;
-        using InputT = VecT<DataT, IOTraits::UnpackedSize>;
+        using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
+
+        struct Traits
+        {
+            // Raw IO on unpacked register data.
+            using Storer = detail::amdgcn_opaque_store<DataT, VectorWidth>;
+            using StoreT = typename Storer::StoreT;
+            using InputT = VecT<DataT, IOTraits::UnpackedSize>;
+        };
+
+        __device__ static void
+            exec(DataT* localPtr, typename Traits::InputT const& incoming, uint32_t ldm)
+        {
+            // Extract traits
+            using Storer = typename Traits::Storer;
+            using StoreT = typename Traits::StoreT;
+
+            // Arrange wave threads to starting matrix layout offsets.
+            auto baseOffset = MatrixMapper::baseOffset();
+
+            auto it = incoming.template begin<StoreT::size()>();
+            static_assert(decltype(it)::range() == IOTraits::IOCount,
+                          "IOCount inconsistent with iterator range");
+
+            // Loop through entire block
+#pragma unroll
+            for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
+            {
+                Storer::exec(localPtr, *it, DataMapper::fromMatrixCoord(baseOffset, ldm));
+                it++;
+                baseOffset += MatrixMapper::incrementalOffset(i);
+            }
+        }
     };
 
-    __device__ static void
-        exec(DataT* localPtr, typename Traits::InputT const& incoming, uint32_t ldm)
-    {
-        // Extract traits
-        using Storer = typename Traits::Storer;
-        using StoreT = typename Traits::StoreT;
-
-        // Arrange wave threads to starting matrix layout offsets.
-        auto baseOffset = MatrixMapper::baseOffset();
-
-        auto it = incoming.template begin<StoreT::size()>();
-        static_assert(decltype(it)::range() == IOTraits::IOCount,
-                      "IOCount inconsistent with iterator range");
-
-        // Loop through entire block
-#pragma unroll
-        for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
-        {
-            Storer::exec(localPtr, *it, DataMapper::fromMatrixCoord(baseOffset, ldm));
-            it++;
-            baseOffset += MatrixMapper::incrementalOffset(i);
-        }
-    }
-};
+} // namespace rocwmma
 
 #endif // WMMA_OPAQUE_STORE_H
