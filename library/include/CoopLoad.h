@@ -35,9 +35,8 @@
 template <uint32_t BlockDim,
           uint32_t BlockK,
           typename DataT,
-          typename DataLayout,
-          template <uint32_t, uint32_t, typename, typename, uint32_t>
-          class LoadLayout,
+          class DataMapper,
+          class MatrixMapper,
           uint32_t VectorWidth,
           uint32_t SpCount = 0>
 struct amdgcn_cooperative_load_DxK
@@ -50,10 +49,6 @@ struct amdgcn_cooperative_load_DxK
             SplitCount   = SpCount,
             SplitIOCount = IOTraits::IOCount / SplitCount
         };
-
-        // Matrix-space thread offsets
-        using MatrixLayout = LoadLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
-        using MappingUtil  = typename MatrixLayout::Traits::MappingUtil;
 
         // Load implementation
         // Iteratively loads the entire block
@@ -78,16 +73,14 @@ struct amdgcn_cooperative_load_DxK
                                        uint32_t                  waveIndex,
                                        uint32_t                  waveCount)
     {
-        using Loader       = typename Traits::Loader;
-        using MatrixLayout = typename Traits::MatrixLayout;
-        using MappingUtil  = typename Traits::MappingUtil;
+        using Loader = typename Traits::Loader;
 
         // For the cases where there are more groups than splits.
         if(waveIndex >= Traits::SplitCount)
             return;
 
         // Align threads to starting positions
-        auto baseOffset = MatrixLayout::baseOffset();
+        auto baseOffset = MatrixMapper::baseOffset();
 
         // Break down block into iterable loads
         auto splitIter = output.template begin<Traits::LoadT::size()>();
@@ -103,8 +96,8 @@ struct amdgcn_cooperative_load_DxK
                 {
                     *ioIter = *Loader::exec(
                         loadPtr,
-                        MappingUtil::dataOffset(
-                            ldm, baseOffset + MatrixLayout::cumulativeOffset(ioIter.index())));
+                        DataMapper::fromMatrixCoord(
+                            baseOffset + MatrixMapper::cumulativeOffset(ioIter.index()), ldm));
                     ioIter++;
                 }
             }
@@ -117,18 +110,23 @@ struct amdgcn_cooperative_load_DxK
 template <uint32_t BlockDim,
           uint32_t BlockK,
           typename DataT,
-          typename DataLayout,
-          template <uint32_t, uint32_t, typename, typename, uint32_t>
-          class LoadLayout,
+          class DataMapper,
+          class MatrixMapper,
           uint32_t VectorWidth>
-struct amdgcn_cooperative_load_DxK<BlockDim, BlockK, DataT, DataLayout, LoadLayout, VectorWidth, 0>
+struct amdgcn_cooperative_load_DxK<BlockDim,
+                                   BlockK,
+                                   DataT,
+                                   DataMapper,
+                                   MatrixMapper,
+                                   VectorWidth,
+                                   0>
 {
     template <uint32_t SplitCount>
     using CooperativeLoad = amdgcn_cooperative_load_DxK<BlockDim,
                                                         BlockK,
                                                         DataT,
-                                                        DataLayout,
-                                                        LoadLayout,
+                                                        DataMapper,
+                                                        MatrixMapper,
                                                         VectorWidth,
                                                         SplitCount>;
 
@@ -143,9 +141,6 @@ struct amdgcn_cooperative_load_DxK<BlockDim, BlockK, DataT, DataLayout, LoadLayo
 
         // All loads will have the same result type
         using OutputT = typename CooperativeLoad<1>::Traits::OutputT;
-
-        // Determine the allowable split count from the layout
-        using LoadLayoutT = LoadLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
     };
 
     /*

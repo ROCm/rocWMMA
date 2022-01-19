@@ -35,9 +35,8 @@
 template <uint32_t BlockDim,
           uint32_t BlockK,
           typename DataT,
-          typename DataLayout,
-          template <uint32_t, uint32_t, typename, typename, uint32_t>
-          class StoreLayout,
+          class DataMapper,
+          class MatrixMapper,
           uint32_t VectorWidth,
           uint32_t SpCount = 0>
 struct amdgcn_cooperative_store_DxK
@@ -50,10 +49,6 @@ struct amdgcn_cooperative_store_DxK
             SplitCount   = SpCount,
             SplitIOCount = IOTraits::IOCount / SplitCount
         };
-
-        // Matrix-space thread offsets
-        using MatrixLayout = StoreLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
-        using MappingUtil  = typename MatrixLayout::Traits::MappingUtil;
 
         // Store implementation
         // Iteratively stores the entire block
@@ -78,16 +73,14 @@ struct amdgcn_cooperative_store_DxK
                                        uint32_t                       waveIndex,
                                        uint32_t                       waveCount)
     {
-        using Storer       = typename Traits::Storer;
-        using MatrixLayout = typename Traits::MatrixLayout;
-        using MappingUtil  = typename Traits::MappingUtil;
+        using Storer = typename Traits::Storer;
 
         // For the cases where there are more waves than splits.
         if(waveIndex >= Traits::SplitCount)
             return;
 
         // Align threads to starting positions
-        auto baseOffset = MatrixLayout::baseOffset();
+        auto baseOffset = MatrixMapper::baseOffset();
 
         // Break down block into iterable stores
         auto splitIter = input.template begin<Traits::StoreT::size()>();
@@ -104,8 +97,8 @@ struct amdgcn_cooperative_store_DxK
                     Storer::exec(
                         storePtr,
                         *ioIter,
-                        MappingUtil::dataOffset(
-                            ldm, baseOffset + MatrixLayout::cumulativeOffset(ioIter.index())));
+                        DataMapper::fromMatrixCoord(
+                            baseOffset + MatrixMapper::cumulativeOffset(ioIter.index()), ldm));
                     ioIter++;
                 }
             }
@@ -118,15 +111,14 @@ struct amdgcn_cooperative_store_DxK
 template <uint32_t BlockDim,
           uint32_t BlockK,
           typename DataT,
-          typename DataLayout,
-          template <uint32_t, uint32_t, typename, typename, uint32_t>
-          class StoreLayout,
+          class DataMapper,
+          class MatrixMapper,
           uint32_t VectorWidth>
 struct amdgcn_cooperative_store_DxK<BlockDim,
                                     BlockK,
                                     DataT,
-                                    DataLayout,
-                                    StoreLayout,
+                                    DataMapper,
+                                    MatrixMapper,
                                     VectorWidth,
                                     0>
 {
@@ -134,8 +126,8 @@ struct amdgcn_cooperative_store_DxK<BlockDim,
     using CooperativeStore = amdgcn_cooperative_store_DxK<BlockDim,
                                                           BlockK,
                                                           DataT,
-                                                          DataLayout,
-                                                          StoreLayout,
+                                                          DataMapper,
+                                                          MatrixMapper,
                                                           VectorWidth,
                                                           SplitCount>;
 
@@ -150,9 +142,6 @@ struct amdgcn_cooperative_store_DxK<BlockDim,
 
         // All stores will have the same input block type
         using InputT = typename CooperativeStore<1>::Traits::InputT;
-
-        // Determine the allowable split count from the layout
-        using StoreLayoutT = StoreLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
     };
 
     /*

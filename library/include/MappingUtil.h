@@ -75,7 +75,7 @@ namespace rocwmma
         /*
     Calculate the memory offsets and addresses for a given matrix coordinate or block coordinate.
     */
-        template <typename DataLayout>
+        template <typename DataOrientation>
         struct DataSpace
         {
             using MatrixCoordT = Coord2d;
@@ -87,13 +87,7 @@ namespace rocwmma
 
         template <>
         struct DataSpace<void>;
-        // {
-        //     using MatrixCoordT = Coord2d;
 
-        //     // Global data coordinate space (1d element) transform for a matrix coordinate.
-        //     __device__
-        //     static inline uint32_t fromMatrixCoord(MatrixCoordT const& matrixCoord, uint32_t leadingDim);
-        // };
     } // namespace detail;
 
     /*

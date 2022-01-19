@@ -98,15 +98,15 @@ namespace rocwmma
         }
 
         /// DataSpace
-        template <typename DataLayout>
+        template <typename DataOrientation>
         __device__ inline uint32_t
-            DataSpace<DataLayout>::fromMatrixCoord(MatrixCoordT const& matrixCoord,
-                                                   uint32_t            leadingDim)
+            DataSpace<DataOrientation>::fromMatrixCoord(MatrixCoordT const& matrixCoord,
+                                                        uint32_t            leadingDim)
         {
             enum : uint32_t
             {
-                MajorIndex = std::is_same<DataLayout, row_major>::value ? 0 : 1,
-                MinorIndex = std::is_same<DataLayout, row_major>::value ? 1 : 0
+                MajorIndex = std::is_same<DataOrientation, row_major>::value ? 0 : 1,
+                MinorIndex = std::is_same<DataOrientation, row_major>::value ? 1 : 0
             };
 
             // 1D data element offset transform
