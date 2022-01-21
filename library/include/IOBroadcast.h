@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,34 +26,36 @@
 #ifndef WMMA_IO_BROADCAST_H
 #define WMMA_IO_BROADCAST_H
 
-#include "IOPack.h"
-#include "IOTraits.h"
 #include "Types.h"
-#include "Utils.h"
 
-// Broadcast generates vectors of desired values
-template <typename DataT, uint32_t VectorSize>
-struct Broadcast
+namespace rocwmma
 {
-    struct Traits
-    {
-        using OutputT = VecT<DataT, VectorSize>;
-    };
 
-    __device__ static inline auto exec(DataT val) -> typename Traits::OutputT
+    // Broadcast generates vectors of desired values
+    template <typename DataT, uint32_t VectorSize>
+    struct Broadcast
     {
-        using OutputT = typename Traits::OutputT;
+        struct Traits
+        {
+            using OutputT = VecT<DataT, VectorSize>;
+        };
 
-        OutputT output;
+        __device__ static inline auto exec(DataT val) -> typename Traits::OutputT
+        {
+            using OutputT = typename Traits::OutputT;
+
+            OutputT output;
 
 #pragma unroll
-        for(unsigned int i = 0; i < OutputT::size(); i++)
-        {
-            output[i] = val;
-        }
+            for(unsigned int i = 0; i < OutputT::size(); i++)
+            {
+                output[i] = val;
+            }
 
-        return output;
-    }
-};
+            return output;
+        }
+    };
+
+} // namespace rocwmma
 
 #endif // WMMA_IO_BROADCAST_H

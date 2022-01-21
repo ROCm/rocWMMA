@@ -44,7 +44,7 @@ namespace rocwmma
               uint32_t SpCount = 0>
     struct CooperativeLoad
     {
-        using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
+        using IOTraits = IOTraits<BlockDim, BlockK, DataT, VectorWidth>;
         struct Traits
         {
             enum : uint32_t
@@ -129,7 +129,7 @@ namespace rocwmma
 
         struct Traits
         {
-            using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
+            using IOTraits = IOTraits<BlockDim, BlockK, DataT, VectorWidth>;
 
             enum : uint32_t
             {

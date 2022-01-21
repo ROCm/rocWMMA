@@ -26,24 +26,26 @@
 #ifndef WMMA_LAYOUT_IMPL_H
 #define WMMA_LAYOUT_IMPL_H
 
+#include "IOTraits.h"
 #include "Layout.h"
 #include "MappingUtil.h"
 #include "Utils.h"
 
-/**
- * Layout
- */
-namespace Layout
+namespace rocwmma
 {
-    namespace detail
+
+    namespace MatrixLayout
     {
 
-        /**
+        namespace detail
+        {
+
+            /**
      * \ingroup ColNT
      * \defgroup Row Major ColNT
      * @{
      */
-        /*
+            /*
      * Iterative thread offset cycles: Fill MaxVW => Fill BlockDim => Fill K
      *
      * Index on VW segments first, BlockDimSegs second. Below shows the indexing
@@ -94,143 +96,145 @@ namespace Layout
      *  Reg15   |  C15 |
     }*/
 
-        template <uint32_t BlockDim,
-                  uint32_t BlockK,
-                  typename DataT,
-                  uint32_t VectorWidth,
-                  uint32_t MaxVectorWidth>
-        struct ColOrthoVW
-        {
-            using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
-            struct Traits
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      uint32_t VectorWidth,
+                      uint32_t MaxVectorWidth>
+            struct ColOrthoVW
             {
-                enum : uint32_t
+                using IOTraits = IOTraits<BlockDim, BlockK, DataT, VectorWidth>;
+                struct Traits
                 {
-                    // Number of threads per wave
-                    WaveSize = IOTraits::ThreadsPerIO,
+                    enum : uint32_t
+                    {
+                        // Number of threads per wave
+                        WaveSize = IOTraits::ThreadsPerIO,
 
-                    // Number of BlockDim columns gathered per cycle of MaxVW
-                    MaxKPerIO = WaveSize * MaxVectorWidth / BlockDim,
+                        // Number of BlockDim columns gathered per cycle of MaxVW
+                        MaxKPerIO = WaveSize * MaxVectorWidth / BlockDim,
 
-                    // Flag for large BlockDim
-                    LargeDim = BlockDim >= WaveSize,
+                        // Flag for large BlockDim
+                        LargeDim = BlockDim >= WaveSize,
 
-                    // Number of column segments (> 0 if LargeDim )
-                    BlockDimSegs = BlockDim / WaveSize,
+                        // Number of column segments (> 0 if LargeDim )
+                        BlockDimSegs = BlockDim / WaveSize,
 
-                    // Number of vector width segments
-                    VWSegs = MaxVectorWidth / VectorWidth,
+                        // Number of vector width segments
+                        VWSegs = MaxVectorWidth / VectorWidth,
 
-                    // Number of columns per wave (> 0 if !LargeDim)
-                    WaveSegs = WaveSize / BlockDim,
+                        // Number of columns per wave (> 0 if !LargeDim)
+                        WaveSegs = WaveSize / BlockDim,
 
-                    // Log2 Values
-                    Log2BlockDim     = Log2<BlockDim>::value,
-                    Log2MaxKPerIO    = Log2<MaxKPerIO>::value,
-                    Log2MaxVW        = Log2<MaxVectorWidth>::value,
-                    Log2VW           = Log2<VectorWidth>::value,
-                    Log2WaveSize     = Log2<WaveSize>::value,
-                    Log2BlockDimSegs = Log2<BlockDimSegs>::value,
-                    Log2VWSegs       = Log2<VWSegs>::value,
-                    Log2WaveSegs     = Log2<WaveSegs>::value
+                        // Log2 Values
+                        Log2BlockDim     = Log2<BlockDim>::value,
+                        Log2MaxKPerIO    = Log2<MaxKPerIO>::value,
+                        Log2MaxVW        = Log2<MaxVectorWidth>::value,
+                        Log2VW           = Log2<VectorWidth>::value,
+                        Log2WaveSize     = Log2<WaveSize>::value,
+                        Log2BlockDimSegs = Log2<BlockDimSegs>::value,
+                        Log2VWSegs       = Log2<VWSegs>::value,
+                        Log2WaveSegs     = Log2<WaveSegs>::value
+                    };
+
+                    using MatrixCoordT = std::pair<uint32_t, uint32_t>;
                 };
 
-                using MatrixCoordT = std::pair<uint32_t, uint32_t>;
+                __device__ static inline typename Traits::MatrixCoordT baseOffset()
+                {
+                    // TODO: Use constexpr if on C++17
+                    if(Traits::LargeDim)
+                    {
+                        return std::make_pair(threadIdx.x % Traits::WaveSize, 0u);
+                    }
+                    else
+                    {
+                        return std::make_pair(threadIdx.x % BlockDim,
+                                              (threadIdx.x / BlockDim) * MaxVectorWidth
+                                                  % Traits::MaxKPerIO);
+                    }
+                }
+                __device__ static inline typename Traits::MatrixCoordT
+                    incrementalOffset(uint32_t iteration)
+                {
+                    // TODO: Use constexpr if on C++ 17
+                    if(Traits::LargeDim)
+                    {
+                        // incOffsetX:
+                        // Minor cycle (VWSegs): = (iteration + 1) % VWSegs ? 0 : Wave size
+                        // Major cycle (VWSegs * BlockDim):
+                        // = (iteration + 1) % (VWSegs * BlockDimSegs) ? 0 : -BlockDim
+                        constexpr int32_t IncXMinorStep = Traits::WaveSize;
+                        constexpr int32_t IncXMajorStep = -BlockDim;
+
+                        // incOffsetY:
+                        // Minor cycle (VWSegs): = (iteration + 1) % VWSegs ? VW : -MaxVW
+                        // Major cycle (VWSegs * BlockDim):
+                        // = (iteration + 1) % (VWSegs * BlockDimSegs) ? MinorCycle : VW
+                        constexpr int32_t IncYMinorStep = VectorWidth;
+                        constexpr int32_t IncYMajorStep = -MaxVectorWidth;
+
+                        // Bit masking for modulus operation
+                        constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
+                        constexpr int32_t TotalSegsModMask
+                            = LsbMask<Traits::Log2VWSegs + Traits::Log2BlockDimSegs>::value;
+
+                        // Any remainder bits detected, mask = 0x0
+                        // No remainder bits detected, mask = 0xFFFFFFFF
+                        int32_t minorStepMask
+                            = static_cast<bool>((iteration + 1) & VWSegsModMask) - 1;
+                        int32_t majorStepMask
+                            = static_cast<bool>((iteration + 1) & TotalSegsModMask) - 1;
+
+                        return std::make_pair(
+                            (IncXMinorStep & minorStepMask) + (majorStepMask & IncXMajorStep),
+                            IncYMinorStep + ((minorStepMask ^ majorStepMask) & IncYMajorStep));
+                    }
+                    else
+                    {
+                        // incOffsetX: 0
+                        // incOffsetY:
+                        // Minor cycle (Every iteration): = VW
+                        // Major cycle (VWSegs): = (iteration + 1) % VWSegs ? 0 : MaxVW * (WaveSegs - 1)
+                        constexpr int32_t IncYMinorStep = VectorWidth;
+                        constexpr int32_t IncYMajorStep = MaxVectorWidth * (Traits::WaveSegs - 1);
+                        constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
+
+                        // Any remainder bits detected, mask = 0x0
+                        // No remainder bits detected, mask = 0xFFFFFFFF
+                        int32_t majorStepMask
+                            = static_cast<bool>((iteration + 1) & VWSegsModMask) - 1;
+
+                        return std::make_pair(0, IncYMinorStep + (majorStepMask & IncYMajorStep));
+                    }
+                }
+                __device__ static inline typename Traits::MatrixCoordT
+                    cumulativeOffset(uint32_t iteration)
+                {
+                    // TODO: Use constexpr if on C++17
+                    if(Traits::LargeDim)
+                    {
+                        return std::make_pair(
+                            iteration / Traits::VWSegs % Traits::BlockDimSegs * Traits::WaveSize,
+                            iteration / (Traits::VWSegs * Traits::BlockDimSegs) * MaxVectorWidth
+                                + iteration % Traits::VWSegs * VectorWidth);
+                    }
+                    else
+                    {
+                        return std::make_pair(0,
+                                              iteration / Traits::VWSegs
+                                                      * (MaxVectorWidth * Traits::WaveSegs)
+                                                  + iteration % Traits::VWSegs * VectorWidth);
+                    }
+                }
             };
 
-            __device__ static inline typename Traits::MatrixCoordT baseOffset()
-            {
-                // TODO: Use constexpr if on C++17
-                if(Traits::LargeDim)
-                {
-                    return std::make_pair(threadIdx.x % Traits::WaveSize, 0u);
-                }
-                else
-                {
-                    return std::make_pair(threadIdx.x % BlockDim,
-                                          (threadIdx.x / BlockDim) * MaxVectorWidth
-                                              % Traits::MaxKPerIO);
-                }
-            }
-            __device__ static inline typename Traits::MatrixCoordT
-                incrementalOffset(uint32_t iteration)
-            {
-                // TODO: Use constexpr if on C++ 17
-                if(Traits::LargeDim)
-                {
-                    // incOffsetX:
-                    // Minor cycle (VWSegs): = (iteration + 1) % VWSegs ? 0 : Wave size
-                    // Major cycle (VWSegs * BlockDim):
-                    // = (iteration + 1) % (VWSegs * BlockDimSegs) ? 0 : -BlockDim
-                    constexpr int32_t IncXMinorStep = Traits::WaveSize;
-                    constexpr int32_t IncXMajorStep = -BlockDim;
-
-                    // incOffsetY:
-                    // Minor cycle (VWSegs): = (iteration + 1) % VWSegs ? VW : -MaxVW
-                    // Major cycle (VWSegs * BlockDim):
-                    // = (iteration + 1) % (VWSegs * BlockDimSegs) ? MinorCycle : VW
-                    constexpr int32_t IncYMinorStep = VectorWidth;
-                    constexpr int32_t IncYMajorStep = -MaxVectorWidth;
-
-                    // Bit masking for modulus operation
-                    constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
-                    constexpr int32_t TotalSegsModMask
-                        = LsbMask<Traits::Log2VWSegs + Traits::Log2BlockDimSegs>::value;
-
-                    // Any remainder bits detected, mask = 0x0
-                    // No remainder bits detected, mask = 0xFFFFFFFF
-                    int32_t minorStepMask = static_cast<bool>((iteration + 1) & VWSegsModMask) - 1;
-                    int32_t majorStepMask
-                        = static_cast<bool>((iteration + 1) & TotalSegsModMask) - 1;
-
-                    return std::make_pair(
-                        (IncXMinorStep & minorStepMask) + (majorStepMask & IncXMajorStep),
-                        IncYMinorStep + ((minorStepMask ^ majorStepMask) & IncYMajorStep));
-                }
-                else
-                {
-                    // incOffsetX: 0
-                    // incOffsetY:
-                    // Minor cycle (Every iteration): = VW
-                    // Major cycle (VWSegs): = (iteration + 1) % VWSegs ? 0 : MaxVW * (WaveSegs - 1)
-                    constexpr int32_t IncYMinorStep = VectorWidth;
-                    constexpr int32_t IncYMajorStep = MaxVectorWidth * (Traits::WaveSegs - 1);
-                    constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
-
-                    // Any remainder bits detected, mask = 0x0
-                    // No remainder bits detected, mask = 0xFFFFFFFF
-                    int32_t majorStepMask = static_cast<bool>((iteration + 1) & VWSegsModMask) - 1;
-
-                    return std::make_pair(0, IncYMinorStep + (majorStepMask & IncYMajorStep));
-                }
-            }
-            __device__ static inline typename Traits::MatrixCoordT
-                cumulativeOffset(uint32_t iteration)
-            {
-                // TODO: Use constexpr if on C++17
-                if(Traits::LargeDim)
-                {
-                    return std::make_pair(
-                        iteration / Traits::VWSegs % Traits::BlockDimSegs * Traits::WaveSize,
-                        iteration / (Traits::VWSegs * Traits::BlockDimSegs) * MaxVectorWidth
-                            + iteration % Traits::VWSegs * VectorWidth);
-                }
-                else
-                {
-                    return std::make_pair(0,
-                                          iteration / Traits::VWSegs
-                                                  * (MaxVectorWidth * Traits::WaveSegs)
-                                              + iteration % Traits::VWSegs * VectorWidth);
-                }
-            }
-        };
-
-        /**
+            /**
      * \ingroup ColNT
      * \defgroup Row Major ColNT
      * @{
      */
-        /*
+            /*
      * Iterative thread offset cycles: Fill MaxVW => Fill BlockDim => Fill K
      *
      * Index on VW segments first, BlockDimSegs second. Below shows the indexing
@@ -292,228 +296,230 @@ namespace Layout
      * Reg15  |  C14E1 | C14E3 | ... | C14E63 | C15E1 | C15E3 | ... | C15E63 |  (MaxVW elements 1 of C14, C15)
     */
 
-        template <uint32_t BlockDim,
-                  uint32_t BlockK,
-                  typename DataT,
-                  uint32_t VectorWidth,
-                  uint32_t MaxVectorWidth>
-        struct ColInlineVW
-        {
-            using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
-            struct Traits
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      uint32_t VectorWidth,
+                      uint32_t MaxVectorWidth>
+            struct ColInlineVW
             {
-                enum : uint32_t
+                using IOTraits = IOTraits<BlockDim, BlockK, DataT, VectorWidth>;
+                struct Traits
                 {
-                    // Number of threads per wave
-                    WaveSize = IOTraits::ThreadsPerIO,
+                    enum : uint32_t
+                    {
+                        // Number of threads per wave
+                        WaveSize = IOTraits::ThreadsPerIO,
 
-                    // Number of elements per IO of MaxVW
-                    MaxElementsPerIO = WaveSize * MaxVectorWidth,
+                        // Number of elements per IO of MaxVW
+                        MaxElementsPerIO = WaveSize * MaxVectorWidth,
 
-                    // Number of BlockDim columns gathered per cycle of MaxVW
-                    MaxKPerIO = MaxElementsPerIO / BlockDim,
+                        // Number of BlockDim columns gathered per cycle of MaxVW
+                        MaxKPerIO = MaxElementsPerIO / BlockDim,
 
-                    // Flag for large BlockDim
-                    LargeDim = BlockDim >= MaxElementsPerIO,
+                        // Flag for large BlockDim
+                        LargeDim = BlockDim >= MaxElementsPerIO,
 
-                    // Number of column segments (> 0 if LargeDim )
-                    BlockDimSegs = BlockDim / MaxElementsPerIO,
+                        // Number of column segments (> 0 if LargeDim )
+                        BlockDimSegs = BlockDim / MaxElementsPerIO,
 
-                    // Number of vector width segments
-                    VWSegs = MaxVectorWidth / VectorWidth,
+                        // Number of vector width segments
+                        VWSegs = MaxVectorWidth / VectorWidth,
 
-                    // Log2 Values
-                    Log2BlockDim         = Log2<BlockDim>::value,
-                    Log2MaxElementsPerIO = Log2<MaxElementsPerIO>::value,
-                    Log2MaxKPerIO        = Log2<MaxKPerIO>::value,
-                    Log2MaxVW            = Log2<MaxVectorWidth>::value,
-                    Log2VW               = Log2<VectorWidth>::value,
-                    Log2WaveSize         = Log2<WaveSize>::value,
-                    Log2BlockDimSegs     = Log2<BlockDimSegs>::value,
-                    Log2VWSegs           = Log2<VWSegs>::value,
+                        // Log2 Values
+                        Log2BlockDim         = Log2<BlockDim>::value,
+                        Log2MaxElementsPerIO = Log2<MaxElementsPerIO>::value,
+                        Log2MaxKPerIO        = Log2<MaxKPerIO>::value,
+                        Log2MaxVW            = Log2<MaxVectorWidth>::value,
+                        Log2VW               = Log2<VectorWidth>::value,
+                        Log2WaveSize         = Log2<WaveSize>::value,
+                        Log2BlockDimSegs     = Log2<BlockDimSegs>::value,
+                        Log2VWSegs           = Log2<VWSegs>::value,
+                    };
+
+                    static_assert(BlockK >= MaxVectorWidth,
+                                  "BlockK must be at least MaxVectorWidth");
+                    static_assert(BlockK % MaxVectorWidth == 0,
+                                  "BlockK must be a multiple of MaxVectorWidth");
+
+                    using MatrixCoordT = std::pair<int32_t, int32_t>;
                 };
 
-                static_assert(BlockK >= MaxVectorWidth, "BlockK must be at least MaxVectorWidth");
-                static_assert(BlockK % MaxVectorWidth == 0,
-                              "BlockK must be a multiple of MaxVectorWidth");
+                __device__ static inline typename Traits::MatrixCoordT baseOffset()
+                {
+                    // TODO: Use constexpr if when C++ 17
+                    if(Traits::LargeDim)
+                    {
+                        return std::make_pair(
+                            threadIdx.x * MaxVectorWidth % Traits::MaxElementsPerIO, 0);
+                    }
+                    else
+                    {
+                        return std::make_pair(threadIdx.x * MaxVectorWidth % BlockDim,
+                                              threadIdx.x * MaxVectorWidth / BlockDim
+                                                  % Traits::MaxKPerIO);
+                    }
+                }
 
-                using MatrixCoordT = std::pair<int32_t, int32_t>;
+                // Incremental iteration offset
+                __device__ static inline typename Traits::MatrixCoordT
+                    incrementalOffset(uint32_t iteration)
+                {
+                    // TODO: Use constexpr if when C++ 17
+                    if(Traits::LargeDim)
+                    {
+                        constexpr int32_t IncX0MinorStep = VectorWidth;
+                        constexpr int32_t IncX0MajorStep = MaxVectorWidth;
+
+                        constexpr int32_t IncX1MinorStep = Traits::MaxElementsPerIO;
+                        constexpr int32_t IncX1MajorStep = BlockDim;
+
+                        constexpr int32_t IncYMinorStep = 0;
+                        constexpr int32_t IncYMajorStep = 1;
+
+                        constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
+                        constexpr int32_t TotalSegsModMask
+                            = LsbMask<Traits::Log2BlockDimSegs + Traits::Log2VWSegs>::value;
+
+                        // Any remainder bits detected, mask = 0x0
+                        // No remainder bits detected, mask = 0xFFFFFFFF
+                        int32_t VWSegsStepMask
+                            = static_cast<bool>((iteration + 1) & VWSegsModMask) - 1;
+                        int32_t TotalSegsStepMask
+                            = static_cast<bool>((iteration + 1) & TotalSegsModMask) - 1;
+
+                        return std::make_pair(IncX0MinorStep - (VWSegsStepMask & IncX0MajorStep)
+                                                  + (VWSegsStepMask & IncX1MinorStep)
+                                                  - (TotalSegsStepMask & IncX1MajorStep),
+                                              TotalSegsStepMask & IncYMajorStep);
+                    }
+                    else
+                    {
+                        constexpr int32_t IncXMinorStep = VectorWidth;
+                        constexpr int32_t IncXMajorStep = MaxVectorWidth;
+                        constexpr int32_t IncYMinorStep = 0;
+                        constexpr int32_t IncYMajorStep = Traits::MaxKPerIO;
+                        constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
+
+                        // Any remainder bits detected, mask = 0x0
+                        // No remainder bits detected, mask = 0xFFFFFFFF
+                        int32_t majorStepMask
+                            = static_cast<bool>((iteration + 1) & VWSegsModMask) - 1;
+
+                        // Reference calculation:
+                        // Iterative offsetX = VW - ((iteration + 1) % (MaxVectorWidth / VectorWidth) == 0) * MaxVW
+                        // Iterative offsetY = ((iteration + 1) % (MaxVectorWidth / VectorWidth) == 0) * MaxKPerIO
+                        return std::make_pair(IncXMinorStep - (majorStepMask & IncXMajorStep),
+                                              majorStepMask & IncYMajorStep);
+                    }
+                }
+
+                // Cumulative iteration offset
+                __device__ static inline typename Traits::MatrixCoordT
+                    cumulativeOffset(uint32_t iteration)
+                {
+                    // TODO: Use constexpr if when C++ 17
+                    if(Traits::LargeDim)
+                    {
+                        constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
+                        constexpr int32_t BlockDimSegsModMask
+                            = LsbMask<Traits::Log2BlockDimSegs>::value;
+
+                        // Cumulative offsetX = (iteration / VWSegs) % BlockDimSegs * MaxElementsPerIO +
+                        //                      (iteration % VWSegs) * VW,
+                        // Cumulative offsetY = iteration / TotalSegs;
+                        return std::make_pair(
+                            (iteration << (Traits::Log2MaxElementsPerIO - Traits::Log2VWSegs))
+                                & (BlockDimSegsModMask << Traits::Log2MaxElementsPerIO)
+                                          + (iteration & VWSegsModMask)
+                                      << Traits::Log2VW,
+                            iteration >> (Traits::Log2VWSegs + Traits::Log2BlockDimSegs));
+                    }
+                    else
+                    {
+                        constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
+
+                        // Cumulative offsetX = (iteration % VWSegs) * VW
+                        // Cumulative offsetY = iteration / VWSegs * (MaxKPerIO)
+                        return std::make_pair((iteration & VWSegsModMask) << Traits::Log2VW,
+                                              iteration >> Traits::Log2VWSegs
+                                                               << Traits::Log2MaxKPerIO);
+                    }
+                }
             };
 
-            __device__ static inline typename Traits::MatrixCoordT baseOffset()
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      uint32_t VectorWidth,
+                      uint32_t MaxVectorWidth>
+            struct RowInlineVW
             {
-                // TODO: Use constexpr if when C++ 17
-                if(Traits::LargeDim)
+                struct Traits
                 {
-                    return std::make_pair(threadIdx.x * MaxVectorWidth % Traits::MaxElementsPerIO,
-                                          0);
-                }
-                else
+                    using OrthoLayout
+                        = ColInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>;
+                    using MatrixCoordT = std::pair<int32_t, int32_t>;
+                };
+
+                // Matrix coord offsets
+                __device__ static inline typename Traits::MatrixCoordT baseOffset()
                 {
-                    return std::make_pair(threadIdx.x * MaxVectorWidth % BlockDim,
-                                          threadIdx.x * MaxVectorWidth / BlockDim
-                                              % Traits::MaxKPerIO);
+                    return std::swap(Traits::OrthoLayout::baseOffset());
                 }
-            }
-
-            // Incremental iteration offset
-            __device__ static inline typename Traits::MatrixCoordT
-                incrementalOffset(uint32_t iteration)
-            {
-                // TODO: Use constexpr if when C++ 17
-                if(Traits::LargeDim)
+                __device__ static inline typename Traits::MatrixCoordT
+                    incrementalOffset(uint32_t iteration)
                 {
-                    constexpr int32_t IncX0MinorStep = VectorWidth;
-                    constexpr int32_t IncX0MajorStep = MaxVectorWidth;
-
-                    constexpr int32_t IncX1MinorStep = Traits::MaxElementsPerIO;
-                    constexpr int32_t IncX1MajorStep = BlockDim;
-
-                    constexpr int32_t IncYMinorStep = 0;
-                    constexpr int32_t IncYMajorStep = 1;
-
-                    constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
-                    constexpr int32_t TotalSegsModMask
-                        = LsbMask<Traits::Log2BlockDimSegs + Traits::Log2VWSegs>::value;
-
-                    // Any remainder bits detected, mask = 0x0
-                    // No remainder bits detected, mask = 0xFFFFFFFF
-                    int32_t VWSegsStepMask = static_cast<bool>((iteration + 1) & VWSegsModMask) - 1;
-                    int32_t TotalSegsStepMask
-                        = static_cast<bool>((iteration + 1) & TotalSegsModMask) - 1;
-
-                    return std::make_pair(IncX0MinorStep - (VWSegsStepMask & IncX0MajorStep)
-                                              + (VWSegsStepMask & IncX1MinorStep)
-                                              - (TotalSegsStepMask & IncX1MajorStep),
-                                          TotalSegsStepMask & IncYMajorStep);
+                    return std::swap(Traits::OrthoLayout::incrementalOffset(iteration));
                 }
-                else
+                __device__ static inline typename Traits::MatrixCoordT
+                    cumulativeOffset(uint32_t iteration)
                 {
-                    constexpr int32_t IncXMinorStep = VectorWidth;
-                    constexpr int32_t IncXMajorStep = MaxVectorWidth;
-                    constexpr int32_t IncYMinorStep = 0;
-                    constexpr int32_t IncYMajorStep = Traits::MaxKPerIO;
-                    constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
-
-                    // Any remainder bits detected, mask = 0x0
-                    // No remainder bits detected, mask = 0xFFFFFFFF
-                    int32_t majorStepMask = static_cast<bool>((iteration + 1) & VWSegsModMask) - 1;
-
-                    // Reference calculation:
-                    // Iterative offsetX = VW - ((iteration + 1) % (MaxVectorWidth / VectorWidth) == 0) * MaxVW
-                    // Iterative offsetY = ((iteration + 1) % (MaxVectorWidth / VectorWidth) == 0) * MaxKPerIO
-                    return std::make_pair(IncXMinorStep - (majorStepMask & IncXMajorStep),
-                                          majorStepMask & IncYMajorStep);
+                    return std::swap(Traits::OrthoLayout::cumulativeOffset(iteration));
                 }
-            }
-
-            // Cumulative iteration offset
-            __device__ static inline typename Traits::MatrixCoordT
-                cumulativeOffset(uint32_t iteration)
-            {
-                // TODO: Use constexpr if when C++ 17
-                if(Traits::LargeDim)
-                {
-                    constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
-                    constexpr int32_t BlockDimSegsModMask
-                        = LsbMask<Traits::Log2BlockDimSegs>::value;
-
-                    // Cumulative offsetX = (iteration / VWSegs) % BlockDimSegs * MaxElementsPerIO +
-                    //                      (iteration % VWSegs) * VW,
-                    // Cumulative offsetY = iteration / TotalSegs;
-                    return std::make_pair(
-                        (iteration << (Traits::Log2MaxElementsPerIO - Traits::Log2VWSegs))
-                            & (BlockDimSegsModMask << Traits::Log2MaxElementsPerIO)
-                                      + (iteration & VWSegsModMask)
-                                  << Traits::Log2VW,
-                        iteration >> (Traits::Log2VWSegs + Traits::Log2BlockDimSegs));
-                }
-                else
-                {
-                    constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
-
-                    // Cumulative offsetX = (iteration % VWSegs) * VW
-                    // Cumulative offsetY = iteration / VWSegs * (MaxKPerIO)
-                    return std::make_pair((iteration & VWSegsModMask) << Traits::Log2VW,
-                                          iteration >> Traits::Log2VWSegs << Traits::Log2MaxKPerIO);
-                }
-            }
-        };
-
-        template <uint32_t BlockDim,
-                  uint32_t BlockK,
-                  typename DataT,
-                  uint32_t VectorWidth,
-                  uint32_t MaxVectorWidth>
-        struct RowInlineVW
-        {
-            struct Traits
-            {
-                using OrthoLayout
-                    = ColInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>;
-                using MatrixCoordT = std::pair<int32_t, int32_t>;
             };
 
-            // Matrix coord offsets
-            __device__ static inline typename Traits::MatrixCoordT baseOffset()
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      uint32_t VectorWidth,
+                      uint32_t MaxVectorWidth>
+            struct RowOrthoVW
             {
-                return std::swap(Traits::OrthoLayout::baseOffset());
-            }
-            __device__ static inline typename Traits::MatrixCoordT
-                incrementalOffset(uint32_t iteration)
-            {
-                return std::swap(Traits::OrthoLayout::incrementalOffset(iteration));
-            }
-            __device__ static inline typename Traits::MatrixCoordT
-                cumulativeOffset(uint32_t iteration)
-            {
-                return std::swap(Traits::OrthoLayout::cumulativeOffset(iteration));
-            }
-        };
+                // RowNT is orthogonal to ColNT, therefore we can use reversed coordinates
+                // and opposite DataLayout from ColNT
+                struct Traits
+                {
+                    using OrthoLayout
+                        = ColOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>;
 
-        template <uint32_t BlockDim,
-                  uint32_t BlockK,
-                  typename DataT,
-                  uint32_t VectorWidth,
-                  uint32_t MaxVectorWidth>
-        struct RowOrthoVW
-        {
-            // RowNT is orthogonal to ColNT, therefore we can use reversed coordinates
-            // and opposite DataLayout from ColNT
-            struct Traits
-            {
-                using OrthoLayout
-                    = ColOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>;
+                    using MatrixCoordT = std::pair<int32_t, int32_t>;
+                };
 
-                using MatrixCoordT = std::pair<int32_t, int32_t>;
+                // Matrix coord offsets
+                __device__ static inline typename Traits::MatrixCoordT baseOffset()
+                {
+                    return std::swap(Traits::OrthoLayout::baseOffset());
+                }
+                __device__ static inline typename Traits::MatrixCoordT
+                    incrementalOffset(uint32_t iteration)
+                {
+                    return std::swap(Traits::OrthoLayout::incrementalOffset(iteration));
+                }
+                __device__ static inline typename Traits::MatrixCoordT
+                    cumulativeOffset(uint32_t iteration)
+                {
+                    return std::swap(Traits::OrthoLayout::cumulativeOffset(iteration));
+                }
             };
 
-            // Matrix coord offsets
-            __device__ static inline typename Traits::MatrixCoordT baseOffset()
-            {
-                return std::swap(Traits::OrthoLayout::baseOffset());
-            }
-            __device__ static inline typename Traits::MatrixCoordT
-                incrementalOffset(uint32_t iteration)
-            {
-                return std::swap(Traits::OrthoLayout::incrementalOffset(iteration));
-            }
-            __device__ static inline typename Traits::MatrixCoordT
-                cumulativeOffset(uint32_t iteration)
-            {
-                return std::swap(Traits::OrthoLayout::cumulativeOffset(iteration));
-            }
-        };
-
-    }
-
-    /**
+            /**
      * \ingroup dataLayouts
      * \defgroup Col
      * @{
      */
 
-    /**
+            /**
      *
      * ColNT
      *
@@ -573,6 +579,10 @@ namespace Layout
      * are more conducive to MFMA alignment.
      }*/
 
-} // namespace Layout
+        } // namespace detail
+
+    } // namespace MatrixLayout
+
+} // namespace rocwmma
 
 #endif // WMMA_LAYOUT_IMPL_H

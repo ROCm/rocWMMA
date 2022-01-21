@@ -61,7 +61,7 @@ namespace rocwmma
               uint32_t VectorWidth>
     struct OpaqueLoad
     {
-        using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
+        using IOTraits = IOTraits<BlockDim, BlockK, DataT, VectorWidth>;
 
         struct Traits
         {

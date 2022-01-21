@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,13 +26,25 @@
 #ifndef WMMA_IO_BARRIER_H
 #define WMMA_IO_BARRIER_H
 
-//Perform synchronization across fragments(wavefronts) in a workgroup
-struct amdgcn_barrier
+namespace rocwmma
 {
-    __device__ static inline auto exec()
+
+    namespace detail
     {
-        return __builtin_amdgcn_s_barrier();
-    }
-};
+
+        // Perform synchronization across fragments(wavefronts) in a workgroup
+        struct amdgcn_barrier
+        {
+            __device__ static inline auto exec()
+            {
+                return __builtin_amdgcn_s_barrier();
+            }
+        };
+
+    } // namespace detail
+
+    using Barrier = detail::amdgcn_barrier;
+
+} // namespace rocwmma
 
 #endif // WMMA_IO_BARRIER_H
