@@ -167,21 +167,6 @@
 
 namespace rocwmma
 {
-    // MatrixT tags
-    using matrix_a    = ::matrix_a;
-    using matrix_b    = ::matrix_b;
-    using accumulator = ::accumulator;
-
-    // DataLayout tags
-    using row_major = ::row_major;
-    using col_major = ::col_major;
-
-    enum layout_t : uint32_t
-    {
-        mem_row_major,
-        mem_col_major
-    };
-
     // Configuration profile used in wmma calls
     template <typename MatrixT,
               uint32_t BlockM,
@@ -231,8 +216,8 @@ namespace rocwmma
         struct Traits
         {
         private:
-            using PackedT   = typename PackTraits<DataT>::PackedT;
-            using UnpackedT = typename PackTraits<DataT>::UnpackedT;
+            using PackedT   = typename detail::PackTraits<DataT>::PackedT;
+            using UnpackedT = typename detail::PackTraits<DataT>::UnpackedT;
             using IOTraits =
                 typename io_config<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>::IOTraits;
 
@@ -277,7 +262,7 @@ namespace rocwmma
     };
 
     /**
- * \ingroup WMMA APIs
+ * \ingroup rocwmma APIs
  * @{
  */
     /**

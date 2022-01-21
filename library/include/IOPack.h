@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,56 +23,61 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef _IO_PACK_H
-#define _IO_PACK_H
+#ifndef WMMA_IO_PACK_H
+#define WMMA_IO_PACK_H
 
 #include "IOTraits.h"
 #include "Types.h"
 
-template <typename DataT, uint32_t RegisterCount>
-struct Pack
+namespace rocwmma
 {
-    using BaseTraits = PackTraits<DataT>;
-    struct Traits : public BaseTraits
+
+    template <typename DataT, uint32_t RegisterCount>
+    struct Pack
     {
-        enum : uint32_t
+        using BaseTraits = detail::PackTraits<DataT>;
+        struct Traits : public BaseTraits
         {
-            UnpackedRegisterCount = RegisterCount,
-            PackedRegisterCount   = RegisterCount / BaseTraits::PackRatio
+            enum : uint32_t
+            {
+                UnpackedRegisterCount = RegisterCount,
+                PackedRegisterCount   = RegisterCount / BaseTraits::PackRatio
+            };
+
+            static_assert(RegisterCount % BaseTraits::PackRatio == 0,
+                          "RegisterCount must be divisible by PackRatio");
+
+            using InputT  = VecT<typename BaseTraits::UnpackedT, UnpackedRegisterCount>;
+            using OutputT = VecT<typename BaseTraits::PackedT, PackedRegisterCount>;
         };
 
-        static_assert(RegisterCount % BaseTraits::PackRatio == 0,
-                      "RegisterCount must be divisible by PackRatio");
+        // Pass-thru for no compression
+        // SFINAE on the return type
+        template <typename IncomingT>
+        __device__ static inline auto exec(IncomingT&& input) -> typename std::enable_if<
+            std::is_same<typename std::decay<IncomingT>::type, typename Traits::InputT>::value
+                && (Traits::PackRatio == 1),
+            decltype(std::forward<IncomingT>(input))>::type
+        {
+            static_assert(std::is_same<typename Traits::InputT, typename Traits::OutputT>::value,
+                          "Passthru requires same input and result types");
+            return std::forward<IncomingT>(input);
+        }
 
-        using InputT  = VecT<typename BaseTraits::UnpackedT, UnpackedRegisterCount>;
-        using OutputT = VecT<typename BaseTraits::PackedT, PackedRegisterCount>;
+        // Actual compression needed
+        template <typename IncomingT>
+        __device__ static inline auto exec(IncomingT&& input) -> typename std::enable_if<
+            std::is_same<typename std::decay<IncomingT>::type, typename Traits::InputT>::value
+                && (Traits::PackRatio > 1),
+            typename Traits::OutputT&>::type
+        {
+            using InputT  = typename Traits::InputT;
+            using OutputT = typename Traits::OutputT;
+
+            return *reinterpret_cast<OutputT*>(&(const_cast<InputT&>(input)));
+        }
     };
 
-    // Pass-thru for no compression
-    // SFINAE on the return type
-    template <typename IncomingT>
-    __device__ static inline auto exec(IncomingT&& input) -> typename std::enable_if<
-        std::is_same<typename std::decay<IncomingT>::type, typename Traits::InputT>::value
-            && (Traits::PackRatio == 1),
-        decltype(std::forward<IncomingT>(input))>::type
-    {
-        static_assert(std::is_same<typename Traits::InputT, typename Traits::OutputT>::value,
-                      "Passthru requires same input and result types");
-        return std::forward<IncomingT>(input);
-    }
+} // namespace rocwmma
 
-    // Actual compression needed
-    template <typename IncomingT>
-    __device__ static inline auto exec(IncomingT&& input) -> typename std::enable_if<
-        std::is_same<typename std::decay<IncomingT>::type, typename Traits::InputT>::value
-            && (Traits::PackRatio > 1),
-        typename Traits::OutputT&>::type
-    {
-        using InputT  = typename Traits::InputT;
-        using OutputT = typename Traits::OutputT;
-
-        return *reinterpret_cast<OutputT*>(&(const_cast<InputT&>(input)));
-    }
-};
-
-#endif // _IO_PACK_H
+#endif // WMMA_IO_PACK_H

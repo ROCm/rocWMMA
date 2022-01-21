@@ -290,13 +290,12 @@ namespace rocwmma
                              fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB> const& b,
                              fragment<accumulator, BlockM, BlockN, BlockK, ComputeT> const&     c)
     {
-        using MFMA = amdgcn_mfma_MxNxK<InputT, ComputeT, BlockM, BlockN, BlockK>;
+        using MFMA = Mfma<InputT, ComputeT, BlockM, BlockN, BlockK>;
         (*d)       = MFMA::exec(*a, *b, *c);
     }
 
     __device__ void synchronize_workgroup()
     {
-        using Barrier = struct amdgcn_barrier;
         Barrier::exec();
     }
 

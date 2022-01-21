@@ -28,12 +28,13 @@
 
 #include <hip/hip_bfloat16.h>
 #include <hip/hip_fp16.h>
-#include <hip/hip_runtime.h>
-#include <iomanip>
-#include <iostream>
+
 #include <type_traits>
 
-/**
+namespace rocwmma
+{
+
+    /**
  * \ingroup wmma
  * \defgroup DataTypes
  *
@@ -55,384 +56,268 @@
  * bf16 = bfloat16
  *
  */
-// Native types
-using float32_t = float;
-using float16_t = _Float16;
-using float64_t = double;
-using int8_t    = signed char;
-using uint8_t   = unsigned char;
-using int16_t   = short;
-using int32_t   = int;
-using uint32_t  = unsigned int;
-using index_t   = int32_t;
 
-// Non-native types
-using bfloat16_t = hip_bfloat16;
-using hfloat16_t = __half;
+    // Native types
+    using float32_t = float;
+    using float16_t = _Float16;
+    using float64_t = double;
+    using int8_t    = signed char;
+    using uint8_t   = unsigned char;
+    using int16_t   = short;
+    using int32_t   = int;
+    using uint32_t  = unsigned int;
+    using index_t   = int32_t;
 
-namespace std
-{
-    inline ostream& operator<<(ostream& stream, float16_t const& val)
+    // Non-native types
+    using bfloat16_t = hip_bfloat16;
+    using hfloat16_t = __half;
+
+    // Data layout meta-tags
+    struct row_major
     {
-        return stream << static_cast<float>(val);
-    }
-
-    inline ostream& operator<<(ostream& stream, hfloat16_t const& val)
+    };
+    struct col_major
     {
-        return stream << __half2float(val);
-    }
-} // namespace std
-
-// Vector internal storage
-template <typename T, int Elements, typename IsNativeType = typename std::is_fundamental<T>::type>
-struct VectorStorage;
-
-// Native types can use explicit vector extension
-template <typename T, int Elements>
-struct VectorStorage<T, Elements, std::true_type>
-{
-    using type = T __attribute__((ext_vector_type(Elements)));
-};
-
-// Non-native types can use std::arrays.
-// std::arrays has the same memory footprint as C-arrays
-// but carry extra useful functionality.
-// This allows us to use non-native data types as "vectors".
-template <typename T, int Elements>
-struct VectorStorage<T, Elements, std::false_type>
-{
-    using type = std::array<T, Elements>;
-};
-
-// Only vectorize for elements > 1
-template <typename T, int Elements>
-using _VecT =
-    typename std::conditional<Elements == 1, T, typename VectorStorage<T, Elements>::type>::type;
-
-// Vectors of f16
-using v2_f16_t  = _VecT<float16_t, 2>;
-using v4_f16_t  = _VecT<float16_t, 4>;
-using v8_f16_t  = _VecT<float16_t, 8>;
-using v16_f16_t = _VecT<float16_t, 16>;
-using v32_f16_t = _VecT<float16_t, 32>;
-using v64_f16_t = _VecT<float16_t, 64>;
-
-// Vectors of f32
-using v2_f32_t  = _VecT<float32_t, 2>;
-using v4_f32_t  = _VecT<float32_t, 4>;
-using v8_f32_t  = _VecT<float32_t, 8>;
-using v16_f32_t = _VecT<float32_t, 16>;
-using v32_f32_t = _VecT<float32_t, 32>;
-using v64_f32_t = _VecT<float32_t, 64>;
-
-// Vectors of ints
-using v2_i32_t  = _VecT<int32_t, 2>;
-using v4_i32_t  = _VecT<int32_t, 4>;
-using v16_i32_t = _VecT<int32_t, 16>;
-using v32_i32_t = _VecT<int32_t, 32>;
-using v64_i32_t = _VecT<int32_t, 64>;
-
-// Vector wrapper for element access.
-template <typename T, uint32_t VecSize>
-struct VecT;
-
-template <typename T, uint32_t VecSize>
-struct __align__(4) VecT
-{
-    using StorageT                 = _VecT<T, VecSize>;
-    using DataT                    = T;
-    constexpr static uint32_t Size = VecSize;
-
-    union
-    {
-        static_assert(sizeof(StorageT) == sizeof(DataT[VecSize]),
-                      "Unable to vectorize with StorageT");
-        StorageT v; // Vector representation
-        DataT    e[VecSize]; // Element array representation
     };
 
-    __device__ VecT()  = default;
-    __device__ ~VecT() = default;
-
-    __device__ inline VecT(VecT const& other)
+    // Fragment usage meta-tags
+    struct matrix_a
     {
-        v = other.v;
-    }
-
-    __device__ inline VecT(StorageT const& other)
+    };
+    struct matrix_b
     {
-        v = other;
-    }
-
-    __device__ VecT(StorageT && other)
+    };
+    struct accumulator
     {
-        v = std::move(other);
-    }
+    };
 
-    __device__ DataT& operator[](uint32_t index)
+    // Memory meta-tags
+    struct globalMem
     {
-        return e[index];
-    }
-
-    __device__ StorageT& operator*()
+    };
+    struct ldsMem
     {
-        return v;
-    }
+    };
 
-    __device__ DataT const& operator[](uint32_t index) const
+    // Runtime data layout flags
+    enum layout_t : uint32_t
     {
-        return e[index];
-    }
+        mem_row_major,
+        mem_col_major
+    };
 
-    __device__ StorageT const& operator*() const
+    namespace detail
     {
-        return v;
-    }
 
-    __device__ constexpr static inline uint32_t size()
-    {
-        return VecSize;
-    }
+        // Vectorized internal storage.
+        template <typename T,
+                  int Elements,
+                  typename IsNativeType = typename std::is_fundamental<T>::type>
+        struct VectorStorage;
 
-    template <uint32_t SubVecSize>
-    struct Iterator
-    {
-    private:
-        int32_t               mIndex = 0;
-        VecT<DataT, VecSize>& mParent;
-
-    public:
-        struct Traits
+        // Native types can use explicit vector extension
+        template <typename T, int Elements>
+        struct VectorStorage<T, Elements, std::true_type>
         {
-            // Vector type pointed to by current iterator
-            using ItVecT = _VecT<DataT, SubVecSize>;
-
-            enum : int32_t
-            {
-                Range = VecSize / SubVecSize
-            };
+            using Type = T __attribute__((ext_vector_type(Elements)));
         };
 
-        static_assert(VecSize % SubVecSize == 0, "VecSize not iterable by ItVecSize");
-
-        __device__ Iterator(VecT<DataT, VecSize>& parent, uint32_t startIndex = 0)
-            : mIndex(startIndex)
-            , mParent(parent)
+        // Non-native types can use std::arrays.
+        // std::arrays has the same memory footprint as C-arrays
+        // but carry extra useful functionality.
+        // This allows us to use non-native data types as "vectors".
+        template <typename T, int Elements>
+        struct VectorStorage<T, Elements, std::false_type>
         {
-        }
+            using Type = std::array<T, Elements>;
+        };
 
-        __device__ Iterator(VecT<DataT, VecSize> const& parent, uint32_t startIndex = 0)
-            : mIndex(startIndex)
-            , mParent(const_cast<VecT<DataT, VecSize>&>(parent))
-        {
-        }
+        // Finally, internal vector storage
+        // shall only vectorize for elements > 1
+        template <typename T, int Elements>
+        using VectorStorage_internal = typename std::
+            conditional<Elements == 1, T, typename VectorStorage<T, Elements>::Type>::type;
 
-        __device__ constexpr static inline int32_t range()
-        {
-            return Traits::Range;
-        }
+    } // namespace detail
 
-        __device__ inline int32_t index() const
-        {
-            return mIndex;
-        }
+    // Vector wrapper for element access.
+    template <typename T, uint32_t VecSize>
+    class __align__(4) VecT
+    {
+    public: // Types
+        using StorageT                 = detail::VectorStorage_internal<T, VecSize>;
+        using DataT                    = T;
+        constexpr static uint32_t Size = VecSize;
 
-        __device__ inline typename Traits::ItVecT const& operator*() const
+    private: // Actual vector storage
+        union
         {
-            return *reinterpret_cast<typename Traits::ItVecT const*>(
-                &(mParent[mIndex * SubVecSize]));
-        }
+            StorageT v; // Vectorized representation
+            DataT    e[VecSize]; // Element array representation
 
-        __device__ inline typename Traits::ItVecT& operator*()
-        {
-            return *reinterpret_cast<typename Traits::ItVecT*>(&(mParent[mIndex * SubVecSize]));
-        }
+            static_assert(sizeof(StorageT) == sizeof(DataT[VecSize]),
+                          "Unable to vectorize with StorageT");
+        };
 
-        __device__ inline Iterator<SubVecSize>& operator++(int)
+    private: // Vector iterator class
+        template <uint32_t SubVecSize, bool IsConst>
+        class Iterator
         {
-            mIndex++;
-            return *this;
-        }
+        private:
+            using ParentT = typename std::
+                conditional_t<IsConst, VecT<DataT, VecSize> const, VecT<DataT, VecSize>>;
 
-        __device__ inline Iterator<SubVecSize>& operator++()
-        {
-            mIndex++;
-            return *this;
-        }
+            int32_t  mIndex = 0;
+            ParentT& mParent;
 
-        __device__ inline Iterator<SubVecSize>& operator+=(int i)
-        {
-            mIndex += i;
-            return *this;
-        }
+        public:
+            struct Traits
+            {
+                // Iterates over sub-vector type (may be > 1)
+                using ItVecT = typename std::conditional_t<
+                    IsConst,
+                    detail::VectorStorage_internal<DataT, SubVecSize> const,
+                    detail::VectorStorage_internal<DataT, SubVecSize>>;
 
-        __device__ inline Iterator<SubVecSize>& operator--()
-        {
-            mIndex--;
-            return *this;
-        }
+                enum : int32_t
+                {
+                    Range = VecSize / SubVecSize
+                };
+            };
 
-        __device__ inline Iterator<SubVecSize>& operator--(int)
-        {
-            mIndex--;
-            return *this;
-        }
+            static_assert(VecSize % SubVecSize == 0, "VecSize not iterable by ItVecSize");
 
-        __device__ inline Iterator<SubVecSize>& operator-=(int i)
-        {
-            mIndex -= i;
-            return *this;
-        }
+            __device__ Iterator(ParentT& parent, uint32_t startIndex = 0);
+            __device__ ~Iterator() = default;
 
-        __device__ inline Iterator<SubVecSize> next() const
-        {
-            return Iterator<SubVecSize>(mParent, mIndex + 1);
-        }
+            __device__ inline typename Traits::ItVecT&       operator*() const;
+            __device__ inline typename Traits::ItVecT&       operator*();
+            __device__ inline Iterator<SubVecSize, IsConst>& operator++();
+            __device__ inline Iterator<SubVecSize, IsConst>& operator++(int);
+            __device__ inline Iterator<SubVecSize, IsConst>& operator+=(int i);
+            __device__ inline Iterator<SubVecSize, IsConst>& operator--();
+            __device__ inline Iterator<SubVecSize, IsConst>& operator--(int);
+            __device__ inline Iterator<SubVecSize, IsConst>& operator-=(int i);
 
-        __device__ inline Iterator<SubVecSize> prev() const
-        {
-            return Iterator<SubVecSize>(mParent, mIndex - 1);
-        }
+            __device__ inline Iterator<SubVecSize, IsConst> next() const;
+            __device__ inline Iterator<SubVecSize, IsConst> prev() const;
+            __device__ inline int32_t                       index() const;
+            __device__ bool                                 valid() const;
 
-        __device__ bool valid() const
-        {
-            return (mIndex >= 0) && (mIndex < Traits::Range);
-        }
+            __device__ constexpr static inline int32_t range();
+            __device__ constexpr static inline bool    isConst();
+        };
+
+    public: // Vector iterator aliases
+        template <uint32_t SubVecSize>
+        using iterator = Iterator<SubVecSize, false>;
+
+        template <uint32_t SubVecSize>
+        using const_iterator = Iterator<SubVecSize, true>;
+
+    public:
+        // Ctor / dtor / copy
+        __device__ VecT() = default;
+        __device__ inline VecT(VecT const& other);
+        __device__ inline VecT(StorageT const& other);
+        __device__ VecT(StorageT && other);
+        __device__ ~VecT() = default;
+
+        // Accessors
+        __device__ inline DataT&          operator[](uint32_t index);
+        __device__ inline DataT const&    operator[](uint32_t index) const;
+        __device__ inline StorageT&       operator*();
+        __device__ inline StorageT const& operator*() const;
+
+        __device__ constexpr static inline uint32_t size();
+
+        // mutable iterators
+        template <uint32_t SubVecSize = 1>
+        __device__ inline iterator<SubVecSize> begin();
+        template <uint32_t SubVecSize = 1>
+        __device__ inline iterator<SubVecSize> end();
+        template <uint32_t SubVecSize = 1>
+        __device__ inline iterator<SubVecSize> it(uint32_t startIndex = 0);
+
+        // const iterators
+        template <uint32_t SubVecSize = 1>
+        __device__ inline const_iterator<SubVecSize> end() const;
+        template <uint32_t SubVecSize = 1>
+        __device__ inline const_iterator<SubVecSize> begin() const;
+        template <uint32_t SubVecSize = 1>
+        __device__ inline const_iterator<SubVecSize> it(uint32_t startIndex = 0) const;
+        template <uint32_t SubVecSize = 1>
+        __device__ inline const_iterator<SubVecSize> cend() const;
+        template <uint32_t SubVecSize = 1>
+        __device__ inline const_iterator<SubVecSize> cbegin() const;
+        template <uint32_t SubVecSize = 1>
+        __device__ inline const_iterator<SubVecSize> cit(uint32_t startIndex = 0) const;
     };
 
-    template <uint32_t SubVecSize = 1>
-    __device__ inline Iterator<SubVecSize> begin()
-    {
-        return Iterator<SubVecSize>(*this);
-    }
+    // V registers
+    using VRegI8x1  = VecT<int8_t, 1>; // Single i8 register
+    using VRegI8x2  = VecT<int8_t, 2>; // Two i8 registers
+    using VRegI8x4  = VecT<int8_t, 4>; // ...
+    using VRegI8x8  = VecT<int8_t, 8>; //
+    using VRegI8x16 = VecT<int8_t, 16>; //
+    using VRegI8x32 = VecT<int8_t, 32>; // 32 i8 registers
 
-    template <uint32_t SubVecSize = 1>
-    __device__ inline Iterator<SubVecSize> begin() const
-    {
-        return Iterator<SubVecSize>(*this);
-    }
+    using VRegI32x1  = VecT<int32_t, 1>; // Single i32 register
+    using VRegI32x2  = VecT<int32_t, 2>; // Two i32 registers
+    using VRegI32x4  = VecT<int32_t, 4>; // ...
+    using VRegI32x8  = VecT<int32_t, 8>; //
+    using VRegI32x16 = VecT<int32_t, 16>; //
+    using VRegI32x32 = VecT<int32_t, 32>; // 32 i32 registers
 
-    template <uint32_t SubVecSize = 1>
-    __device__ inline Iterator<SubVecSize> end()
-    {
-        return Iterator<SubVecSize>(*this, Iterator<SubVecSize>::range());
-    }
+    using VRegF16x1  = VecT<float16_t, 1>; // Single f16 register
+    using VRegF16x2  = VecT<float16_t, 2>; // Two f16 registers
+    using VRegF16x4  = VecT<float16_t, 4>; // ...
+    using VRegF16x8  = VecT<float16_t, 8>; //
+    using VRegF16x16 = VecT<float16_t, 16>; //
+    using VRegF16x32 = VecT<float16_t, 32>; // 32 f16 registers
 
-    template <uint32_t SubVecSize = 1>
-    __device__ inline Iterator<SubVecSize> end() const
-    {
-        return Iterator<SubVecSize>(*this, Iterator<SubVecSize>::range());
-    }
+    using VRegF32x1  = VecT<float32_t, 1>; // Single f32 register
+    using VRegF32x2  = VecT<float32_t, 2>; // Two f32 registers
+    using VRegF32x4  = VecT<float32_t, 4>; // ...
+    using VRegF32x8  = VecT<float32_t, 8>; //
+    using VRegF32x16 = VecT<float32_t, 16>; //
+    using VRegF32x32 = VecT<float32_t, 32>; // 32 f32 registers
 
-    template <uint32_t SubVecSize = 1>
-    __device__ inline Iterator<SubVecSize> iterator(uint32_t startIndex = 0)
-    {
-        return Iterator<SubVecSize>(*this, startIndex);
-    }
+    // Note: In assembly, fp64 registers are actually 2 x fp32 regs
+    using VRegF64x1  = VecT<float64_t, 1>; // Single f64 register
+    using VRegF64x2  = VecT<float64_t, 2>; // Two f64 registers
+    using VRegF64x4  = VecT<float64_t, 4>; // ...
+    using VRegF64x8  = VecT<float64_t, 8>; //
+    using VRegF64x16 = VecT<float64_t, 16>; //
+    using VRegF64x32 = VecT<float64_t, 32>; // 32 f64 registers
 
-    template <uint32_t SubVecSize = 1>
-    __device__ inline Iterator<SubVecSize> iterator(uint32_t startIndex = 0) const
-    {
-        return Iterator<SubVecSize>(*this, startIndex);
-    }
-};
+    // Acc registers
+    using AccRegI32x1  = VecT<int32_t, 1>;
+    using AccRegI32x2  = VecT<int32_t, 2>;
+    using AccRegI32x4  = VecT<int32_t, 4>;
+    using AccRegI32x8  = VecT<int32_t, 8>;
+    using AccRegI32x16 = VecT<int32_t, 16>;
+    using AccRegI32x32 = VecT<int32_t, 32>;
 
-// V registers
-using VRegI8x1  = VecT<int8_t, 1>; // Single i8 register
-using VRegI8x2  = VecT<int8_t, 2>; // Two i8 registers
-using VRegI8x4  = VecT<int8_t, 4>; // ...
-using VRegI8x8  = VecT<int8_t, 8>; //
-using VRegI8x16 = VecT<int8_t, 16>; //
-using VRegI8x32 = VecT<int8_t, 32>; // 32 i8 registers
+    using AccRegF32x1  = VecT<float32_t, 1>;
+    using AccRegF32x2  = VecT<float32_t, 2>;
+    using AccRegF32x4  = VecT<float32_t, 4>;
+    using AccRegF32x8  = VecT<float32_t, 8>;
+    using AccRegF32x16 = VecT<float32_t, 16>;
+    using AccRegF32x32 = VecT<float32_t, 32>;
 
-using VRegU8x1  = VecT<uint8_t, 1>; // Single u8 register
-using VRegU8x2  = VecT<uint8_t, 2>; // Two ui8 registers
-using VRegU8x4  = VecT<uint8_t, 4>; // ...
-using VRegU8x8  = VecT<uint8_t, 8>; //
-using VRegU8x16 = VecT<uint8_t, 16>; //
-using VRegU8x32 = VecT<uint8_t, 32>; // 32 u8 registers
+    // Note: In assembly, fp64 registers are actually 2 x fp32 regs
+    using AccRegF64x1  = VecT<float64_t, 1>;
+    using AccRegF64x2  = VecT<float64_t, 2>;
+    using AccRegF64x4  = VecT<float64_t, 4>;
+    using AccRegF64x8  = VecT<float64_t, 8>;
+    using AccRegF64x16 = VecT<float64_t, 16>;
+    using AccRegF64x32 = VecT<float64_t, 32>;
 
-using VRegI32x1  = VecT<int32_t, 1>; // Single i32 register
-using VRegI32x2  = VecT<int32_t, 2>; // Two i32 registers
-using VRegI32x4  = VecT<int32_t, 4>; // ...
-using VRegI32x8  = VecT<int32_t, 8>; //
-using VRegI32x16 = VecT<int32_t, 16>; //
-using VRegI32x32 = VecT<int32_t, 32>; // 32 i32 registers
+} // namespace rocwmma
 
-using VRegU32x1  = VecT<uint32_t, 1>; // Single u32 register
-using VRegU32x2  = VecT<uint32_t, 2>; // Two u32 registers
-using VRegU32x4  = VecT<uint32_t, 4>; // ...
-using VRegU32x8  = VecT<uint32_t, 8>; //
-using VRegU32x16 = VecT<uint32_t, 16>; //
-using VRegU32x32 = VecT<uint32_t, 32>; // 32 u32 registers
+#include "Types_impl.h"
 
-using VRegF16x1  = VecT<float16_t, 1>; // Single f16 register
-using VRegF16x2  = VecT<float16_t, 2>; // Two f16 registers
-using VRegF16x4  = VecT<float16_t, 4>; // ...
-using VRegF16x8  = VecT<float16_t, 8>; //
-using VRegF16x16 = VecT<float16_t, 16>; //
-using VRegF16x32 = VecT<float16_t, 32>; // 32 f16 registers
-
-using VRegF32x1  = VecT<float32_t, 1>; // Single f32 register
-using VRegF32x2  = VecT<float32_t, 2>; // Two f32 registers
-using VRegF32x4  = VecT<float32_t, 4>; // ...
-using VRegF32x8  = VecT<float32_t, 8>; //
-using VRegF32x16 = VecT<float32_t, 16>; //
-using VRegF32x32 = VecT<float32_t, 32>; // 32 f32 registers
-
-// Note: In assembly, fp64 registers are actually 2 x fp32 regs
-using VRegF64x1  = VecT<float64_t, 1>; // Single f64 register
-using VRegF64x2  = VecT<float64_t, 2>; // Two f64 registers
-using VRegF64x4  = VecT<float64_t, 4>; // ...
-using VRegF64x8  = VecT<float64_t, 8>; //
-using VRegF64x16 = VecT<float64_t, 16>; //
-using VRegF64x32 = VecT<float64_t, 32>; // 32 f64 registers
-
-// Acc registers
-using AccRegI32x1  = VecT<int32_t, 1>;
-using AccRegI32x2  = VecT<int32_t, 2>;
-using AccRegI32x4  = VecT<int32_t, 4>;
-using AccRegI32x8  = VecT<int32_t, 8>;
-using AccRegI32x16 = VecT<int32_t, 16>;
-using AccRegI32x32 = VecT<int32_t, 32>;
-
-using AccRegU32x1  = VecT<uint32_t, 1>;
-using AccRegU32x2  = VecT<uint32_t, 2>;
-using AccRegU32x4  = VecT<uint32_t, 4>;
-using AccRegU32x8  = VecT<uint32_t, 8>;
-using AccRegU32x16 = VecT<uint32_t, 16>;
-using AccRegU32x32 = VecT<uint32_t, 32>;
-
-using AccRegF32x1  = VecT<float32_t, 1>;
-using AccRegF32x2  = VecT<float32_t, 2>;
-using AccRegF32x4  = VecT<float32_t, 4>;
-using AccRegF32x8  = VecT<float32_t, 8>;
-using AccRegF32x16 = VecT<float32_t, 16>;
-using AccRegF32x32 = VecT<float32_t, 32>;
-
-// Note: In assembly, fp64 registers are actually 2 x fp32 regs
-using AccRegF64x1  = VecT<float64_t, 1>;
-using AccRegF64x2  = VecT<float64_t, 2>;
-using AccRegF64x4  = VecT<float64_t, 4>;
-using AccRegF64x8  = VecT<float64_t, 8>;
-using AccRegF64x16 = VecT<float64_t, 16>;
-using AccRegF64x32 = VecT<float64_t, 32>;
-
-// clang-format off
-
-// Data layout meta-tags
-struct row_major{};
-struct col_major{};
-
-// Fragment usage meta-tags
-struct matrix_a{};
-struct matrix_b{};
-struct accumulator{};
-
-// Memory meta-tags
-struct globalMem{};
-struct ldsMem{};
-
-// clang-format on
+#include "Types_ext.h"
 
 #endif // WMMA_TYPES_H

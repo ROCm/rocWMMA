@@ -108,9 +108,9 @@ namespace rocwmma
             static_assert(!(std::is_same<DataLayout, col_major>::value && VectorWidth > 1),
                           "matrix_a in col_major currently does not support VectorWidth > 1");
 
-            using DataMapper = detail::DataSpace<DataLayout>;
-            using MatrixMapper
-                = Layout::ColNT<BlockDim, KDim, DataT, DataLayout, VectorWidth, MaxVectorWidth>;
+            using DataMapper   = detail::DataSpace<DataLayout>;
+            using MatrixMapper = MatrixLayout::
+                ColNT<BlockDim, KDim, DataT, DataLayout, VectorWidth, MaxVectorWidth>;
         };
 
         /************************************************
@@ -171,9 +171,9 @@ namespace rocwmma
             static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
                           "matrix_b in row_major currently does not support VectorWidth > 1");
 
-            using DataMapper = detail::DataSpace<DataLayout>;
-            using MatrixMapper
-                = Layout::RowNT<BlockDim, KDim, DataT, DataLayout, VectorWidth, MaxVectorWidth>;
+            using DataMapper   = detail::DataSpace<DataLayout>;
+            using MatrixMapper = MatrixLayout::
+                RowNT<BlockDim, KDim, DataT, DataLayout, VectorWidth, MaxVectorWidth>;
         };
 
         /************************************************
@@ -233,9 +233,9 @@ namespace rocwmma
             static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
                           "accumulator in row_major currently does not support VectorWidth > 1");
 
-            using DataMapper = detail::DataSpace<DataLayout>;
-            using MatrixMapper
-                = Layout::RowNT<BlockDim, KDim, DataT, DataLayout, VectorWidth, MaxVectorWidth>;
+            using DataMapper   = detail::DataSpace<DataLayout>;
+            using MatrixMapper = MatrixLayout::
+                RowNT<BlockDim, KDim, DataT, DataLayout, VectorWidth, MaxVectorWidth>;
         };
 
         template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
@@ -300,9 +300,8 @@ namespace rocwmma
               typename DataLayout>
     struct IOConfig
     {
-        using IOShape = detail::IOShape<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
-        using IOTraits
-            = amdgcn_io_traits<IOShape::BlockDim, IOShape::KDim, DataT, IOShape::VectorWidth>;
+        using IOShape     = detail::IOShape<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
+        using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT, IOShape::VectorWidth>;
         using Packer      = Pack<DataT, IOTraits::UnpackedSize>;
         using Unpacker    = Unpack<DataT, IOTraits::PackedSize>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
@@ -350,7 +349,7 @@ namespace rocwmma
     struct IOConfig<accumulator, BlockM, BlockN, BlockK, DataT, void>
     {
         using IOShape     = detail::IOShape<accumulator, BlockM, BlockN, BlockK, DataT, void>;
-        using IOTraits    = amdgcn_io_traits<IOShape::BlockDim, IOShape::KDim, DataT>;
+        using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT>;
         using Packer      = Pack<DataT, IOTraits::UnpackedSize>;
         using Unpacker    = Unpack<DataT, IOTraits::PackedSize>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
