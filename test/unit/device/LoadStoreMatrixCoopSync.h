@@ -42,7 +42,7 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncA(
     // BlockM -> BlockM
     // <Dummy> -> BlockN
     // BlockN -> BlockK
-    auto frag = wmma::fragment<matrix_a, BlockM, 1, BlockN, DataT, Layout>();
+    auto frag = rocwmma::fragment<rocwmma::matrix_a, BlockM, 1, BlockN, DataT, Layout>();
 
     using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
 
@@ -88,8 +88,8 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncA(
                                                   std::get<1>(startBlockCoord) + j);
                 auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
                 auto* write      = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
-                wmma::load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
-                wmma::store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
+                rocwmma::load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
+                rocwmma::store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
             }
         }
     }
@@ -104,7 +104,7 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncB(
     // <Dummy> -> BlockM
     // BlockN -> BlockN
     // BlockM -> BlockK
-    auto frag = wmma::fragment<matrix_b, 1, BlockN, BlockM, DataT, Layout>();
+    auto frag = rocwmma::fragment<rocwmma::matrix_b, 1, BlockN, BlockM, DataT, Layout>();
 
     using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
 
@@ -150,8 +150,8 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncB(
                                                   std::get<1>(startBlockCoord) + j);
                 auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
                 auto* write      = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
-                wmma::load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
-                wmma::store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
+                rocwmma::load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
+                rocwmma::store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
             }
         }
     }
@@ -166,7 +166,7 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncAcc(
     // BlockM -> BlockM
     // BlockN -> BlockN
     // <Dummy> -> BlockK
-    auto frag = wmma::fragment<accumulator, BlockM, BlockN, 1, DataT, Layout>();
+    auto frag = rocwmma::fragment<rocwmma::accumulator, BlockM, BlockN, 1, DataT, Layout>();
 
     using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
 
@@ -211,8 +211,8 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncAcc(
                                                   std::get<1>(startBlockCoord) + j);
                 auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
                 auto* write      = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
-                wmma::load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
-                wmma::store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
+                rocwmma::load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
+                rocwmma::store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
             }
         }
     }

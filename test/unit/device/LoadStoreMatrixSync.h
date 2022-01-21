@@ -41,13 +41,13 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixSyncA(
     // BlockM -> BlockM
     // <Dummy> -> BlockN
     // BlockN -> BlockK
-    auto frag = wmma::fragment<matrix_a, BlockM, 1, BlockN, DataT, Layout>();
+    auto frag = rocwmma::fragment<rocwmma::matrix_a, BlockM, 1, BlockN, DataT, Layout>();
 
     // Map, load and store.
     auto* read  = Mapping::dataCoord(in, ld);
     auto* write = Mapping::dataCoord(out, ld);
-    wmma::load_matrix_sync(frag, read, ld);
-    wmma::store_matrix_sync(write, frag, ld);
+    rocwmma::load_matrix_sync(frag, read, ld);
+    rocwmma::store_matrix_sync(write, frag, ld);
 }
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
@@ -61,13 +61,13 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixSyncB(
     // <Dummy> -> BlockM
     // BlockN -> BlockN
     // BlockM -> BlockK
-    auto frag = wmma::fragment<matrix_b, 1, BlockN, BlockM, DataT, Layout>();
+    auto frag = rocwmma::fragment<rocwmma::matrix_b, 1, BlockN, BlockM, DataT, Layout>();
 
     // Map, load and store.
     auto* read  = Mapping::dataCoord(in, ld);
     auto* write = Mapping::dataCoord(out, ld);
-    wmma::load_matrix_sync(frag, read, ld);
-    wmma::store_matrix_sync(write, frag, ld);
+    rocwmma::load_matrix_sync(frag, read, ld);
+    rocwmma::store_matrix_sync(write, frag, ld);
 }
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
@@ -81,13 +81,13 @@ __global__ void __launch_bounds__(256) LoadStoreMatrixSyncAcc(
     // BlockM -> BlockM
     // BlockN -> BlockN
     // <Dummy> -> BlockK
-    auto frag = wmma::fragment<accumulator, BlockM, BlockN, 1, DataT, Layout>();
+    auto frag = rocwmma::fragment<rocwmma::accumulator, BlockM, BlockN, 1, DataT, Layout>();
 
     // Map, load and store.
     auto* read  = Mapping::dataCoord(in, ld);
     auto* write = Mapping::dataCoord(out, ld);
-    wmma::load_matrix_sync(frag, read, ld);
-    wmma::store_matrix_sync(write, frag, ld);
+    rocwmma::load_matrix_sync(frag, read, ld);
+    rocwmma::store_matrix_sync(write, frag, ld);
 }
 
 #endif // WMMA_DEVICE_LOAD_STORE_MATRIX_SYNC_H

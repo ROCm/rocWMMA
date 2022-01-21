@@ -61,7 +61,8 @@ uint32_t UnitKernelBase<BlockM, BlockN, DataT, Layout>::ldsUsage() const
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
 dim3 UnitKernelBase<BlockM, BlockN, DataT, Layout>::gridDim() const
 {
-    return dim3(ceilDiv(mM, BlockM * mTBlockX / AMDGCN_WAVE_SIZE), ceilDiv(mN, BlockN * mTBlockY));
+    return dim3(ceilDiv(mM, BlockM * mTBlockX / rocwmma::AMDGCN_WAVE_SIZE),
+                ceilDiv(mN, BlockN * mTBlockY));
 }
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
@@ -84,13 +85,13 @@ bool UnitKernelBase<BlockM, BlockN, DataT, Layout>::checkDevice() const
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
 bool UnitKernelBase<BlockM, BlockN, DataT, Layout>::checkSizes() const
 {
-    return (mM >= (BlockM * mTBlockX / AMDGCN_WAVE_SIZE) && mN >= (BlockN * mTBlockY));
+    return (mM >= (BlockM * mTBlockX / rocwmma::AMDGCN_WAVE_SIZE) && mN >= (BlockN * mTBlockY));
 }
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
 bool UnitKernelBase<BlockM, BlockN, DataT, Layout>::checkLds() const
 {
-    return ldsUsage() <= LDS_MAX_BYTES;
+    return ldsUsage() <= rocwmma::AMDGCN_LDS_MAX_SIZE_BYTES;
 }
 
 template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
