@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,15 +34,15 @@ template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
 __global__ void FillFragment(
     uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld, DataT param1, DataT param2)
 {
-    using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
+    using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
 
     // Create frag and fill
-    auto frag = wmma::fragment<accumulator, BlockM, BlockN, 1, DataT, Layout>();
+    auto frag = rocwmma::fragment<rocwmma::accumulator, BlockM, BlockN, 1, DataT, Layout>();
 
-    wmma::fill_fragment(frag, param1);
+    rocwmma::fill_fragment(frag, param1);
 
     // Map and store
     auto* offset = Mapping::dataCoord(out, ld);
-    wmma::store_matrix_sync(offset, frag, ld);
+    rocwmma::store_matrix_sync(offset, frag, ld);
 }
 #endif // WMMA_DEVICE_FILL_FRAGMENT_H
