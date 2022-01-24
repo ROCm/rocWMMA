@@ -29,7 +29,9 @@
 #include <hip/hip_bfloat16.h>
 #include <hip/hip_fp16.h>
 
+#include <array>
 #include <type_traits>
+#include <utility>
 
 namespace rocwmma
 {
@@ -58,8 +60,8 @@ namespace rocwmma
  */
 
     // Native types
-    using float32_t = float;
     using float16_t = _Float16;
+    using float32_t = float;
     using float64_t = double;
     using int8_t    = signed char;
     using uint8_t   = unsigned char;
@@ -72,32 +74,18 @@ namespace rocwmma
     using bfloat16_t = hip_bfloat16;
     using hfloat16_t = __half;
 
+    // clang-format off
+
     // Data layout meta-tags
-    struct row_major
-    {
-    };
-    struct col_major
-    {
-    };
+    struct row_major{};
+    struct col_major{};
 
     // Fragment usage meta-tags
-    struct matrix_a
-    {
-    };
-    struct matrix_b
-    {
-    };
-    struct accumulator
-    {
-    };
+    struct matrix_a{};
+    struct matrix_b{};
+    struct accumulator{};
 
-    // Memory meta-tags
-    struct globalMem
-    {
-    };
-    struct ldsMem
-    {
-    };
+    // clang-format on
 
     // Runtime data layout flags
     enum layout_t : uint32_t
@@ -140,7 +128,7 @@ namespace rocwmma
 
     } // namespace detail
 
-    // Vector wrapper for element access.
+    // Functional vector class
     template <typename T, uint32_t VecSize>
     class __align__(4) VecT
     {
@@ -159,7 +147,8 @@ namespace rocwmma
                           "Unable to vectorize with StorageT");
         };
 
-    private: // Vector iterator class
+    private:
+        // Vector iterator class: handles for const and non-const vectors
         template <uint32_t SubVecSize, bool IsConst>
         class Iterator
         {
@@ -254,7 +243,7 @@ namespace rocwmma
         __device__ inline const_iterator<SubVecSize> cit(uint32_t startIndex = 0) const;
     };
 
-    // V registers
+    // MFMA vector registers
     using VRegI8x1  = VecT<int8_t, 1>; // Single i8 register
     using VRegI8x2  = VecT<int8_t, 2>; // Two i8 registers
     using VRegI8x4  = VecT<int8_t, 4>; // ...
@@ -283,7 +272,6 @@ namespace rocwmma
     using VRegF32x16 = VecT<float32_t, 16>; //
     using VRegF32x32 = VecT<float32_t, 32>; // 32 f32 registers
 
-    // Note: In assembly, fp64 registers are actually 2 x fp32 regs
     using VRegF64x1  = VecT<float64_t, 1>; // Single f64 register
     using VRegF64x2  = VecT<float64_t, 2>; // Two f64 registers
     using VRegF64x4  = VecT<float64_t, 4>; // ...
@@ -306,13 +294,16 @@ namespace rocwmma
     using AccRegF32x16 = VecT<float32_t, 16>;
     using AccRegF32x32 = VecT<float32_t, 32>;
 
-    // Note: In assembly, fp64 registers are actually 2 x fp32 regs
     using AccRegF64x1  = VecT<float64_t, 1>;
     using AccRegF64x2  = VecT<float64_t, 2>;
     using AccRegF64x4  = VecT<float64_t, 4>;
     using AccRegF64x8  = VecT<float64_t, 8>;
     using AccRegF64x16 = VecT<float64_t, 16>;
     using AccRegF64x32 = VecT<float64_t, 32>;
+
+    // Helper for string representations of types
+    template <typename DataT>
+    constexpr const char* dataTypeToString();
 
 } // namespace rocwmma
 
