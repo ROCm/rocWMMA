@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,15 +29,20 @@
 
 #include <memory>
 
-template <typename T>
-class LazySingleton
+namespace rocwmma
 {
-public:
-    static std::unique_ptr<T> const& instance()
+
+    template <typename T>
+    class LazySingleton
     {
-        static auto sInstance = std::make_unique<T>();
-        return sInstance;
-    }
-};
+    public:
+        static std::unique_ptr<T> const& instance()
+        {
+            static auto sInstance = std::make_unique<T>();
+            return sInstance;
+        }
+    };
+
+} // namespace rocwmma
 
 #endif // WMMA_TEST_SINGLETON_H

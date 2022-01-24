@@ -31,62 +31,72 @@
 #include "HipResource.h"
 #include <hip/hip_runtime_api.h>
 
-template <typename DataT>
-auto HipResource::allocDevice(int64_t numElements) -> DevicePtrT<DataT>
+namespace rocwmma
 {
-    if(numElements <= 0)
+
+    template <typename DataT>
+    auto HipResource::allocDevice(int64_t numElements) -> DevicePtrT<DataT>
     {
-        return {nullptr, [](DataT*) {}};
+        if(numElements <= 0)
+        {
+            return {nullptr, [](DataT*) {}};
+        }
+        else
+        {
+            DataT* data;
+            CHECK_HIP_ERROR(hipMalloc(&data, numElements * sizeof(DataT)));
+            return DevicePtrT<DataT>(data, [](DataT* d) { CHECK_HIP_ERROR(hipFree(d)); });
+        }
     }
-    else
+
+    template <typename DataT>
+    auto HipResource::allocHost(int64_t numElements) -> HostPtrT<DataT>
     {
-        DataT* data;
-        CHECK_HIP_ERROR(hipMalloc(&data, numElements * sizeof(DataT)));
-        return DevicePtrT<DataT>(data, [](DataT* d) { CHECK_HIP_ERROR(hipFree(d)); });
+        if(numElements <= 0)
+        {
+            return {nullptr};
+        }
+        else
+        {
+            return HostPtrT<DataT>(new DataT[numElements]);
+        }
     }
-}
 
-template <typename DataT>
-auto HipResource::allocHost(int64_t numElements) -> HostPtrT<DataT>
-{
-    if(numElements <= 0)
+    template <typename DataT>
+    void HipResource::copyData(HostPtrT<DataT>&         dst,
+                               DevicePtrT<DataT> const& src,
+                               int64_t                  numElements)
     {
-        return {nullptr};
+        CHECK_HIP_ERROR(
+            hipMemcpy(dst.get(), src.get(), numElements * sizeof(DataT), hipMemcpyDeviceToHost));
     }
-    else
+
+    template <typename DataT>
+    void HipResource::copyData(DevicePtrT<DataT>&     dst,
+                               HostPtrT<DataT> const& src,
+                               int64_t                numElements)
     {
-        return HostPtrT<DataT>(new DataT[numElements]);
+        CHECK_HIP_ERROR(
+            hipMemcpy(dst.get(), src.get(), numElements * sizeof(DataT), hipMemcpyHostToDevice));
     }
-}
 
-template <typename DataT>
-void HipResource::copyData(HostPtrT<DataT>& dst, DevicePtrT<DataT> const& src, int64_t numElements)
-{
-    CHECK_HIP_ERROR(
-        hipMemcpy(dst.get(), src.get(), numElements * sizeof(DataT), hipMemcpyDeviceToHost));
-}
+    template <typename DataT>
+    void
+        HipResource::copyData(HostPtrT<DataT>& dst, HostPtrT<DataT> const& src, int64_t numElements)
+    {
+        CHECK_HIP_ERROR(
+            hipMemcpy(dst.get(), src.get(), numElements * sizeof(DataT), hipMemcpyHostToHost));
+    }
 
-template <typename DataT>
-void HipResource::copyData(DevicePtrT<DataT>& dst, HostPtrT<DataT> const& src, int64_t numElements)
-{
-    CHECK_HIP_ERROR(
-        hipMemcpy(dst.get(), src.get(), numElements * sizeof(DataT), hipMemcpyHostToDevice));
-}
+    template <typename DataT>
+    void HipResource::copyData(DevicePtrT<DataT>&       dst,
+                               DevicePtrT<DataT> const& src,
+                               int64_t                  numElements)
+    {
+        CHECK_HIP_ERROR(
+            hipMemcpy(dst.get(), src.get(), numElements * sizeof(DataT), hipMemcpyDeviceToDevice));
+    }
 
-template <typename DataT>
-void HipResource::copyData(HostPtrT<DataT>& dst, HostPtrT<DataT> const& src, int64_t numElements)
-{
-    CHECK_HIP_ERROR(
-        hipMemcpy(dst.get(), src.get(), numElements * sizeof(DataT), hipMemcpyHostToHost));
-}
-
-template <typename DataT>
-void HipResource::copyData(DevicePtrT<DataT>&       dst,
-                           DevicePtrT<DataT> const& src,
-                           int64_t                  numElements)
-{
-    CHECK_HIP_ERROR(
-        hipMemcpy(dst.get(), src.get(), numElements * sizeof(DataT), hipMemcpyDeviceToDevice));
-}
+} // namespace rocwmma
 
 #endif //WMMA_HIP_RESOURCE_IMPL_H
