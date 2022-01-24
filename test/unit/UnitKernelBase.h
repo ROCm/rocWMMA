@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,124 +34,129 @@
 #include "HipDevice.h"
 #include "UnitResource.h"
 
-// Basic structure to hold runtime problem
-// parameters
-struct ProblemParams
+namespace rocwmma
 {
-    std::pair<int64_t, int64_t> threadBlockSize;
-    std::pair<int64_t, int64_t> problemSize;
-    double                      param1;
-    double                      param2;
-};
 
-// Typeless Kernel interface to use with testing harness.
-struct KernelI
-{
-    KernelI()          = default;
-    virtual ~KernelI() = default;
-
-    virtual void          setup(ProblemParams const& problem)                 = 0;
-    virtual void          validateResults()                                   = 0;
-    virtual void          reportResults()                                     = 0;
-    virtual void          tearDown()                                          = 0;
-    virtual void          exec()                                              = 0;
-    virtual std::ostream& printHeader(std::ostream& stream = std::cout) const = 0;
-    virtual std::ostream& printKernel(std::ostream& stream = std::cout) const = 0;
-
-    bool runFlag() const
+    // Basic structure to hold runtime problem
+    // parameters
+    struct ProblemParams
     {
-        return mRunFlag;
-    }
-    bool validationResult() const
+        std::pair<int64_t, int64_t> threadBlockSize;
+        std::pair<int64_t, int64_t> problemSize;
+        double                      param1;
+        double                      param2;
+    };
+
+    // Typeless Kernel interface to use with testing harness.
+    struct KernelI
     {
-        return mValidationResult;
+        KernelI()          = default;
+        virtual ~KernelI() = default;
+
+        virtual void          setup(ProblemParams const& problem)                 = 0;
+        virtual void          validateResults()                                   = 0;
+        virtual void          reportResults()                                     = 0;
+        virtual void          tearDown()                                          = 0;
+        virtual void          exec()                                              = 0;
+        virtual std::ostream& printHeader(std::ostream& stream = std::cout) const = 0;
+        virtual std::ostream& printKernel(std::ostream& stream = std::cout) const = 0;
+
+        bool runFlag() const
+        {
+            return mRunFlag;
+        }
+        bool validationResult() const
+        {
+            return mValidationResult;
+        }
+
+    protected:
+        static bool sHeaderPrinted;
+        bool        mRunFlag          = true;
+        bool        mValidationResult = false;
+    };
+
+    inline std::ostream& operator<<(std::ostream& stream, KernelI const& kernel)
+    {
+        kernel.printHeader(stream);
+        kernel.printKernel(stream);
+        return stream;
     }
 
-protected:
-    static bool sHeaderPrinted;
-    bool        mRunFlag          = true;
-    bool        mValidationResult = false;
-};
+    // Typed Unit test kernel that provides the basis for Unit tests.
+    // This class provides common implementation code.
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    struct UnitKernelBase : public KernelI
+    {
+    protected: // Types
+        // Shared access to Test storage
+        using DataStorage = UnitResource<DataT>;
 
-inline std::ostream& operator<<(std::ostream& stream, KernelI const& kernel)
-{
-    kernel.printHeader(stream);
-    kernel.printKernel(stream);
-    return stream;
-}
+        // Using Hip device backend
+        using DeviceInfo = HipDevice;
 
-// Typed Unit test kernel that provides the basis for Unit tests.
-// This class provides common implementation code.
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-struct UnitKernelBase : public KernelI
-{
-protected: // Types
-    // Shared access to Test storage
-    using DataStorage = UnitResource<DataT>;
+        // Interface to device kernel
+        using KernelFunc = void (*)(uint32_t, // M
+                                    uint32_t, // N
+                                    DataT const*, // In
+                                    DataT*, // Out
+                                    uint32_t, // ld
+                                    DataT, // param1
+                                    DataT); // param2
 
-    // Using Hip device backend
-    using DeviceInfo = HipDevice;
+    protected:
+        UnitKernelBase();
+        virtual ~UnitKernelBase();
 
-    // Interface to device kernel
-    using KernelFunc = void (*)(uint32_t, // M
-                                uint32_t, // N
-                                DataT const*, // In
-                                DataT*, // Out
-                                uint32_t, // ld
-                                DataT, // param1
-                                DataT); // param2
+        // Kernels MUST provide the device kernel function.
+        virtual void       setupImpl(typename DataStorage::ProblemSize const& size) = 0;
+        virtual KernelFunc kernelImpl() const                                       = 0;
+        virtual void       validateResultsImpl()                                    = 0;
 
-protected:
-    UnitKernelBase();
-    virtual ~UnitKernelBase();
+        // Launch parameters.
+        // Base calculations for grid and block dimensions
+        // assume one output block per wave.
+        virtual uint32_t ldsUsage() const;
+        virtual dim3     gridDim() const;
+        virtual dim3     blockDim() const;
 
-    // Kernels MUST provide the device kernel function.
-    virtual void       setupImpl(typename DataStorage::ProblemSize const& size) = 0;
-    virtual KernelFunc kernelImpl() const                                       = 0;
-    virtual void       validateResultsImpl()                                    = 0;
+        // Kernel run checks.
+        // True = run test
+        // False = skip test
+        virtual bool checkDevice() const;
+        virtual bool checkSizes() const;
+        virtual bool checkLds() const;
+        virtual bool checkQuirks() const;
 
-    // Launch parameters.
-    // Base calculations for grid and block dimensions
-    // assume one output block per wave.
-    virtual uint32_t ldsUsage() const;
-    virtual dim3     gridDim() const;
-    virtual dim3     blockDim() const;
+        // Reset all members to default values
+        virtual void reset();
 
-    // Kernel run checks.
-    // True = run test
-    // False = skip test
-    virtual bool checkDevice() const;
-    virtual bool checkSizes() const;
-    virtual bool checkLds() const;
-    virtual bool checkQuirks() const;
+    public:
+        // KernelI interface fulfillment
+        virtual void          setup(ProblemParams const& problem) override;
+        virtual void          exec() override;
+        virtual void          validateResults() override;
+        virtual void          reportResults() override;
+        virtual void          tearDown() override;
+        virtual std::ostream& printHeader(std::ostream& stream = std::cout) const override;
+        virtual std::ostream& printKernel(std::ostream& stream = std::cout) const override;
 
-    // Reset all members to default values
-    virtual void reset();
+    protected:
+        // Problem params for kernel
+        uint32_t mTBlockX, mTBlockY;
+        uint32_t mM, mN;
+        uint32_t mLd;
+        DataT    mParam1, mParam2;
 
-public:
-    // KernelI interface fulfillment
-    virtual void          setup(ProblemParams const& problem) override;
-    virtual void          exec() override;
-    virtual void          validateResults() override;
-    virtual void          reportResults() override;
-    virtual void          tearDown() override;
-    virtual std::ostream& printHeader(std::ostream& stream = std::cout) const override;
-    virtual std::ostream& printKernel(std::ostream& stream = std::cout) const override;
+        // Execution flow control
+        double mMaxRelativeError;
 
-protected:
-    // Problem params for kernel
-    uint32_t mTBlockX, mTBlockY;
-    uint32_t mM, mN;
-    uint32_t mLd;
-    DataT    mParam1, mParam2;
+        // Performance
+        float64_t mTotalGFlops, mMeasuredGFlopsPerSec;
+        float64_t mElapsedTimeMs, mEfficiency;
+    };
 
-    // Execution flow control
-    double mMaxRelativeError;
-
-    // Performance
-    float64_t mTotalGFlops, mMeasuredGFlopsPerSec;
-    float64_t mElapsedTimeMs, mEfficiency;
-};
+} // namespace rocwmma
 
 #include "UnitKernelBase_impl.h"
 
