@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,55 +30,60 @@
 #include "UnitKernelBase.h"
 #include "device/VectorIterator.h"
 
-// Wrapper into the actual device function
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-struct VectorIteratorKernel final : public UnitKernelBase<BlockM, BlockN, DataT, Layout>
+namespace rocwmma
 {
-private:
-    using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
-public:
-    VectorIteratorKernel()        = default;
-    ~VectorIteratorKernel() final = default;
-
-    void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final {}
-
-    void validateResultsImpl() final {}
-
-    typename Base::KernelFunc kernelImpl() const final
+    // Wrapper into the actual device function
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    struct VectorIteratorKernel final : public UnitKernelBase<BlockM, BlockN, DataT, Layout>
     {
-        return typename Base::KernelFunc(VectorIterator<BlockM, BlockN, DataT, Layout>);
-    }
-};
+    private:
+        using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
-// This is the GeneratorImpl class
-struct VectorIteratorGenerator
-{
-    // Indices to test parameters
-    enum : uint32_t
-    {
-        DataT  = 0,
-        BlockM = 1,
-        BlockN = 2,
-        Layout = 3
+    public:
+        VectorIteratorKernel()        = default;
+        ~VectorIteratorKernel() final = default;
+
+        void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final {}
+
+        void validateResultsImpl() final {}
+
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return typename Base::KernelFunc(VectorIterator<BlockM, BlockN, DataT, Layout>);
+        }
     };
 
-    using ResultT = std::shared_ptr<KernelI>;
-
-    template <typename... Ts>
-    static ResultT generate(std::tuple<Ts...> testParams)
+    // This is the GeneratorImpl class
+    struct VectorIteratorGenerator
     {
-        // Map GTest params to Kernel params
-        using TestParamsT = std::tuple<Ts...>;
-        using KernelT
-            = VectorIteratorKernel<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
-                                   std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
-                                   std::tuple_element_t<DataT, TestParamsT>, // DataT
-                                   std::tuple_element_t<Layout, TestParamsT> // Layout
-                                   >;
+        // Indices to test parameters
+        enum : uint32_t
+        {
+            DataT  = 0,
+            BlockM = 1,
+            BlockN = 2,
+            Layout = 3
+        };
 
-        return std::make_shared<KernelT>();
-    }
-};
+        using ResultT = std::shared_ptr<KernelI>;
+
+        template <typename... Ts>
+        static ResultT generate(std::tuple<Ts...> testParams)
+        {
+            // Map GTest params to Kernel params
+            using TestParamsT = std::tuple<Ts...>;
+            using KernelT
+                = VectorIteratorKernel<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
+                                       std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
+                                       std::tuple_element_t<DataT, TestParamsT>, // DataT
+                                       std::tuple_element_t<Layout, TestParamsT> // Layout
+                                       >;
+
+            return std::make_shared<KernelT>();
+        }
+    };
+
+} // namespace rocwmma
 
 #endif // WMMA_DETAIL_VECTOR_ITERATOR_H
