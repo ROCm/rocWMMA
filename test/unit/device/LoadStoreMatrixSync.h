@@ -30,64 +30,84 @@
 #include "MappingUtil.h"
 #include "WMMA.h"
 
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-__global__ void __launch_bounds__(256) LoadStoreMatrixSyncA(
-    uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld, DataT param1, DataT param2)
+namespace rocwmma
 {
-    using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
 
-    // Mapping:
-    // Incoming -> Matrix A (ColNT)
-    // BlockM -> BlockM
-    // <Dummy> -> BlockN
-    // BlockN -> BlockK
-    auto frag = rocwmma::fragment<rocwmma::matrix_a, BlockM, 1, BlockN, DataT, Layout>();
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    __global__ void __launch_bounds__(256) LoadStoreMatrixSyncA(uint32_t     m,
+                                                                uint32_t     n,
+                                                                DataT const* in,
+                                                                DataT*       out,
+                                                                uint32_t     ld,
+                                                                DataT        param1,
+                                                                DataT        param2)
+    {
+        using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
 
-    // Map, load and store.
-    auto* read  = Mapping::dataCoord(in, ld);
-    auto* write = Mapping::dataCoord(out, ld);
-    rocwmma::load_matrix_sync(frag, read, ld);
-    rocwmma::store_matrix_sync(write, frag, ld);
-}
+        // Mapping:
+        // Incoming -> Matrix A (ColNT)
+        // BlockM -> BlockM
+        // <Dummy> -> BlockN
+        // BlockN -> BlockK
+        auto frag = rocwmma::fragment<rocwmma::matrix_a, BlockM, 1, BlockN, DataT, Layout>();
 
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-__global__ void __launch_bounds__(256) LoadStoreMatrixSyncB(
-    uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld, DataT param1, DataT param2)
-{
-    using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
+        // Map, load and store.
+        auto* read  = Mapping::dataCoord(in, ld);
+        auto* write = Mapping::dataCoord(out, ld);
+        rocwmma::load_matrix_sync(frag, read, ld);
+        rocwmma::store_matrix_sync(write, frag, ld);
+    }
 
-    // Mapping:
-    // Incoming -> Matrix B (RowNT)
-    // <Dummy> -> BlockM
-    // BlockN -> BlockN
-    // BlockM -> BlockK
-    auto frag = rocwmma::fragment<rocwmma::matrix_b, 1, BlockN, BlockM, DataT, Layout>();
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    __global__ void __launch_bounds__(256) LoadStoreMatrixSyncB(uint32_t     m,
+                                                                uint32_t     n,
+                                                                DataT const* in,
+                                                                DataT*       out,
+                                                                uint32_t     ld,
+                                                                DataT        param1,
+                                                                DataT        param2)
+    {
+        using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
 
-    // Map, load and store.
-    auto* read  = Mapping::dataCoord(in, ld);
-    auto* write = Mapping::dataCoord(out, ld);
-    rocwmma::load_matrix_sync(frag, read, ld);
-    rocwmma::store_matrix_sync(write, frag, ld);
-}
+        // Mapping:
+        // Incoming -> Matrix B (RowNT)
+        // <Dummy> -> BlockM
+        // BlockN -> BlockN
+        // BlockM -> BlockK
+        auto frag = rocwmma::fragment<rocwmma::matrix_b, 1, BlockN, BlockM, DataT, Layout>();
 
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-__global__ void __launch_bounds__(256) LoadStoreMatrixSyncAcc(
-    uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld, DataT param1, DataT param2)
-{
-    using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
+        // Map, load and store.
+        auto* read  = Mapping::dataCoord(in, ld);
+        auto* write = Mapping::dataCoord(out, ld);
+        rocwmma::load_matrix_sync(frag, read, ld);
+        rocwmma::store_matrix_sync(write, frag, ld);
+    }
 
-    // Mapping:
-    // Incoming -> Matrix C (Row4T)
-    // BlockM -> BlockM
-    // BlockN -> BlockN
-    // <Dummy> -> BlockK
-    auto frag = rocwmma::fragment<rocwmma::accumulator, BlockM, BlockN, 1, DataT, Layout>();
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    __global__ void __launch_bounds__(256) LoadStoreMatrixSyncAcc(uint32_t     m,
+                                                                  uint32_t     n,
+                                                                  DataT const* in,
+                                                                  DataT*       out,
+                                                                  uint32_t     ld,
+                                                                  DataT        param1,
+                                                                  DataT        param2)
+    {
+        using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
 
-    // Map, load and store.
-    auto* read  = Mapping::dataCoord(in, ld);
-    auto* write = Mapping::dataCoord(out, ld);
-    rocwmma::load_matrix_sync(frag, read, ld);
-    rocwmma::store_matrix_sync(write, frag, ld);
-}
+        // Mapping:
+        // Incoming -> Matrix C (Row4T)
+        // BlockM -> BlockM
+        // BlockN -> BlockN
+        // <Dummy> -> BlockK
+        auto frag = rocwmma::fragment<rocwmma::accumulator, BlockM, BlockN, 1, DataT, Layout>();
+
+        // Map, load and store.
+        auto* read  = Mapping::dataCoord(in, ld);
+        auto* write = Mapping::dataCoord(out, ld);
+        rocwmma::load_matrix_sync(frag, read, ld);
+        rocwmma::store_matrix_sync(write, frag, ld);
+    }
+
+} // namespace rocwmma
 
 #endif // WMMA_DEVICE_LOAD_STORE_MATRIX_SYNC_H
