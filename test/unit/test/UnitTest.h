@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,64 +31,70 @@
 #include "UnitTestParams.h"
 #include <gtest/gtest.h>
 
-struct UnitTest : public ::testing::TestWithParam<std::tuple<typename UnitTestParams::KernelT,
-                                                             typename UnitTestParams::ThreadBlockT,
-                                                             typename UnitTestParams::ProblemSizeT,
-                                                             typename UnitTestParams::Param1T,
-                                                             typename UnitTestParams::Param2T>>
+namespace rocwmma
 {
-    using Base = ::testing::TestWithParam<std::tuple<typename UnitTestParams::KernelT,
+
+    struct UnitTest
+        : public ::testing::TestWithParam<std::tuple<typename UnitTestParams::KernelT,
                                                      typename UnitTestParams::ThreadBlockT,
                                                      typename UnitTestParams::ProblemSizeT,
                                                      typename UnitTestParams::Param1T,
-                                                     typename UnitTestParams::Param2T>>;
-
-    void SetUp() override
+                                                     typename UnitTestParams::Param2T>>
     {
-        // Construct ProblemParams from
-        // incoming gtest parameterization
-        auto param       = Base::GetParam();
-        auto kernel      = std::get<0>(param);
-        auto threadBlock = std::get<1>(param);
-        auto problemSize = std::get<2>(param);
-        auto param1      = std::get<3>(param);
-        auto param2      = std::get<4>(param);
+        using Base = ::testing::TestWithParam<std::tuple<typename UnitTestParams::KernelT,
+                                                         typename UnitTestParams::ThreadBlockT,
+                                                         typename UnitTestParams::ProblemSizeT,
+                                                         typename UnitTestParams::Param1T,
+                                                         typename UnitTestParams::Param2T>>;
 
-        ProblemParams params = {threadBlock, problemSize, param1, param2};
-
-        // Walk through kernel workflow
-        kernel->setup(params);
-
-        // Mark skipped tests in GTest
-        if(!kernel->runFlag())
+        void SetUp() override
         {
-            GTEST_SKIP();
+            // Construct ProblemParams from
+            // incoming gtest parameterization
+            auto param       = Base::GetParam();
+            auto kernel      = std::get<0>(param);
+            auto threadBlock = std::get<1>(param);
+            auto problemSize = std::get<2>(param);
+            auto param1      = std::get<3>(param);
+            auto param2      = std::get<4>(param);
+
+            ProblemParams params = {threadBlock, problemSize, param1, param2};
+
+            // Walk through kernel workflow
+            kernel->setup(params);
+
+            // Mark skipped tests in GTest
+            if(!kernel->runFlag())
+            {
+                GTEST_SKIP();
+            }
         }
-    }
 
-    virtual void RunKernel()
-    {
-        // Construct ProblemParams from
-        // incoming gtest parameterization
-        auto param  = Base::GetParam();
-        auto kernel = std::get<0>(param);
+        virtual void RunKernel()
+        {
+            // Construct ProblemParams from
+            // incoming gtest parameterization
+            auto param  = Base::GetParam();
+            auto kernel = std::get<0>(param);
 
-        kernel->exec();
-        kernel->validateResults();
-        kernel->reportResults();
+            kernel->exec();
+            kernel->validateResults();
+            kernel->reportResults();
 
-        // Mark test failures in GTest
-        EXPECT_TRUE(kernel->validationResult());
-    }
+            // Mark test failures in GTest
+            EXPECT_TRUE(kernel->validationResult());
+        }
 
-    void TearDown() override
-    {
-        // Construct ProblemParams from
-        // incoming gtest parameterization
-        auto param  = Base::GetParam();
-        auto kernel = std::get<0>(param);
-        kernel->tearDown();
-    }
-};
+        void TearDown() override
+        {
+            // Construct ProblemParams from
+            // incoming gtest parameterization
+            auto param  = Base::GetParam();
+            auto kernel = std::get<0>(param);
+            kernel->tearDown();
+        }
+    };
+
+} // namespace rocwmma
 
 #endif // WMMA_UNIT_TEST_BASE_H
