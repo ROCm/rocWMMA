@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,90 +30,95 @@
 #include "UnitKernelBase.h"
 #include "device/ColNTLayout.h"
 
-// Wrapper into the actual device function
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-struct ColNTLayoutKernel final : public UnitKernelBase<BlockM, BlockN, DataT, Layout>
+namespace rocwmma
 {
-private:
-    using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
-public:
-    ColNTLayoutKernel()        = default;
-    ~ColNTLayoutKernel() final = default;
-
-    void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
+    // Wrapper into the actual device function
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    struct ColNTLayoutKernel final : public UnitKernelBase<BlockM, BlockN, DataT, Layout>
     {
-        auto& dataInstance = Base::DataStorage::instance();
+    private:
+        using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
-        // Initialize matrix storage
-        const int64_t sizeD = Base::mM * Base::mN;
-        dataInstance->resizeStorage(probsize);
+    public:
+        ColNTLayoutKernel()        = default;
+        ~ColNTLayoutKernel() final = default;
 
-        // Initialize matrix data on host
-        MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
-
-        dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), sizeD);
-    }
-
-    void validateResultsImpl() final
-    {
-        auto& dataInstance = Base::DataStorage::instance();
-
-        // Allocated managed memory for results on host
-        const int64_t sizeD        = Base::mM * Base::mN;
-        auto          kernelResult = dataInstance->template allocHost<DataT>(sizeD);
-
-        // Cache current kernel result from device
-        dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
-
-        if(static_cast<double>(static_cast<float>(kernelResult[0]))
-           != static_cast<double>(ERROR_VALUE))
+        void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
         {
-            double errorTolerance = 10.0;
+            auto& dataInstance = Base::DataStorage::instance();
 
-            std::tie(Base::mValidationResult, Base::mMaxRelativeError)
-                = compareEqual<DataT, DataT, Layout, Layout>(kernelResult.get(),
-                                                             dataInstance->hostIn().get(),
-                                                             Base::mM,
-                                                             Base::mN,
-                                                             errorTolerance);
+            // Initialize matrix storage
+            const int64_t sizeD = Base::mM * Base::mN;
+            dataInstance->resizeStorage(probsize);
+
+            // Initialize matrix data on host
+            MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
+
+            dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), sizeD);
         }
-    }
 
-    typename Base::KernelFunc kernelImpl() const final
-    {
-        return typename Base::KernelFunc(ColNTLayout<BlockM, BlockN, DataT, Layout>);
-    }
-};
+        void validateResultsImpl() final
+        {
+            auto& dataInstance = Base::DataStorage::instance();
 
-// This is the GeneratorImpl class
-struct ColNTLayoutGenerator
-{
-    // Indices to test parameters
-    enum : uint32_t
-    {
-        DataT  = 0,
-        BlockM = 1,
-        BlockN = 2,
-        Layout = 3
+            // Allocated managed memory for results on host
+            const int64_t sizeD        = Base::mM * Base::mN;
+            auto          kernelResult = dataInstance->template allocHost<DataT>(sizeD);
+
+            // Cache current kernel result from device
+            dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
+
+            if(static_cast<double>(static_cast<float>(kernelResult[0]))
+               != static_cast<double>(ERROR_VALUE))
+            {
+                double errorTolerance = 10.0;
+
+                std::tie(Base::mValidationResult, Base::mMaxRelativeError)
+                    = compareEqual<DataT, DataT, Layout, Layout>(kernelResult.get(),
+                                                                 dataInstance->hostIn().get(),
+                                                                 Base::mM,
+                                                                 Base::mN,
+                                                                 errorTolerance);
+            }
+        }
+
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return typename Base::KernelFunc(ColNTLayout<BlockM, BlockN, DataT, Layout>);
+        }
     };
 
-    using ResultT = std::shared_ptr<KernelI>;
-
-    template <typename... Ts>
-    static ResultT generate(std::tuple<Ts...> testParams)
+    // This is the GeneratorImpl class
+    struct ColNTLayoutGenerator
     {
-        // Map GTest params to Kernel params
-        using TestParamsT = std::tuple<Ts...>;
-        using KernelT
-            = ColNTLayoutKernel<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
-                                std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
-                                std::tuple_element_t<DataT, TestParamsT>, // DataT
-                                std::tuple_element_t<Layout, TestParamsT> // Layout
-                                >;
+        // Indices to test parameters
+        enum : uint32_t
+        {
+            DataT  = 0,
+            BlockM = 1,
+            BlockN = 2,
+            Layout = 3
+        };
 
-        return std::make_shared<KernelT>();
-    }
-};
+        using ResultT = std::shared_ptr<KernelI>;
+
+        template <typename... Ts>
+        static ResultT generate(std::tuple<Ts...> testParams)
+        {
+            // Map GTest params to Kernel params
+            using TestParamsT = std::tuple<Ts...>;
+            using KernelT
+                = ColNTLayoutKernel<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
+                                    std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
+                                    std::tuple_element_t<DataT, TestParamsT>, // DataT
+                                    std::tuple_element_t<Layout, TestParamsT> // Layout
+                                    >;
+
+            return std::make_shared<KernelT>();
+        }
+    };
+
+} // namespace rocwmma
 
 #endif // WMMA_DETAIL_COLNT_LAYOUT_H

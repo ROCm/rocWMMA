@@ -31,40 +31,51 @@
 #include "Layout.h"
 #include "MappingUtil.h"
 
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename LayoutP>
-__global__ void ColLayout(
-    uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld, DataT param1, DataT param2)
+namespace rocwmma
 {
-    enum : uint32_t
+
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename LayoutP>
+    __global__ void ColLayout(uint32_t     m,
+                              uint32_t     n,
+                              DataT const* in,
+                              DataT*       out,
+                              uint32_t     ld,
+                              DataT        param1,
+                              DataT        param2)
     {
-        MaxVectorWidth = rocwmma::detail::VecWidthTraits<BlockM, BlockN, DataT>::MaxVectorWidth,
-        VectorWidth    = std::is_same<LayoutP, rocwmma::row_major>::value ? MaxVectorWidth : 1
-    };
-
-    using IOTraits = rocwmma::IOTraits<BlockM, BlockN, DataT, VectorWidth>;
-    using LayoutT  = rocwmma::MatrixLayout::Col<BlockM, BlockN, DataT, LayoutP, VectorWidth>;
-    using Mapping  = rocwmma::MappingUtil<BlockM, BlockN, DataT, LayoutP>;
-
-    auto baseOffset  = LayoutT::baseOffset();
-    auto iocount     = IOTraits::IOCount;
-    auto matrixCoord = Mapping::matrixCoord();
-
-    enum : uint32_t
-    {
-        MajorIndex = std::is_same<LayoutP, rocwmma::row_major>::value ? 0 : 1,
-        MinorIndex = std::is_same<LayoutP, rocwmma::row_major>::value ? 1 : 0
-    };
-
-    for(uint32_t i = 0; i < iocount; ++i)
-    {
-        for(int j = 0; j < VectorWidth; j++)
+        enum : uint32_t
         {
-            auto index
-                = (std::get<MajorIndex>(matrixCoord) * ld + std::get<MinorIndex>(matrixCoord))
-                  + Mapping::dataOffset(baseOffset, ld) + j;
-            out[index] = in[index];
+            MaxVectorWidth = rocwmma::detail::VecWidthTraits<BlockM, BlockN, DataT>::MaxVectorWidth,
+            VectorWidth    = std::is_same<LayoutP, rocwmma::row_major>::value ? MaxVectorWidth : 1
+        };
+
+        using IOTraits = rocwmma::IOTraits<BlockM, BlockN, DataT, VectorWidth>;
+        using LayoutT  = rocwmma::MatrixLayout::Col<BlockM, BlockN, DataT, LayoutP, VectorWidth>;
+        using Mapping  = rocwmma::MappingUtil<BlockM, BlockN, DataT, LayoutP>;
+
+        auto baseOffset  = LayoutT::baseOffset();
+        auto iocount     = IOTraits::IOCount;
+        auto matrixCoord = Mapping::matrixCoord();
+
+        enum : uint32_t
+        {
+            MajorIndex = std::is_same<LayoutP, rocwmma::row_major>::value ? 0 : 1,
+            MinorIndex = std::is_same<LayoutP, rocwmma::row_major>::value ? 1 : 0
+        };
+
+        for(uint32_t i = 0; i < iocount; ++i)
+        {
+            for(int j = 0; j < VectorWidth; j++)
+            {
+                auto index
+                    = (std::get<MajorIndex>(matrixCoord) * ld + std::get<MinorIndex>(matrixCoord))
+                      + Mapping::dataOffset(baseOffset, ld) + j;
+                out[index] = in[index];
+            }
+            baseOffset += LayoutT::incrementalOffset(i);
         }
-        baseOffset += LayoutT::incrementalOffset(i);
     }
-}
+
+} // namespace rocwmma
+
 #endif // WMMA_DEVICE_COL_LAYOUT_H
