@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,129 +30,136 @@
 #include "UnitKernelBase.h"
 #include "device/LoadStoreMatrixSync.h"
 
-// Wrapper into the actual device function
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-struct LoadStoreMatrixSyncKernel : public UnitKernelBase<BlockM, BlockN, DataT, Layout>
+namespace rocwmma
 {
-private:
-    using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
-public:
-    LoadStoreMatrixSyncKernel()          = default;
-    virtual ~LoadStoreMatrixSyncKernel() = default;
-
-    void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
+    // Wrapper into the actual device function
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    struct LoadStoreMatrixSyncKernel : public UnitKernelBase<BlockM, BlockN, DataT, Layout>
     {
-        auto& dataInstance = Base::DataStorage::instance();
+    private:
+        using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
-        // Initialize matrix storage
-        const int64_t matrixElements = Base::mM * Base::mN;
-        dataInstance->resizeStorage(probsize);
+    public:
+        LoadStoreMatrixSyncKernel()          = default;
+        virtual ~LoadStoreMatrixSyncKernel() = default;
 
-        // Initialize matrix data on host
-        MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
+        void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
+        {
+            auto& dataInstance = Base::DataStorage::instance();
 
-        dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), matrixElements);
-    }
+            // Initialize matrix storage
+            const int64_t matrixElements = Base::mM * Base::mN;
+            dataInstance->resizeStorage(probsize);
 
-    void validateResultsImpl() final
-    {
-        auto& dataInstance = Base::DataStorage::instance();
+            // Initialize matrix data on host
+            MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
 
-        // Allocated managed memory for results on host
-        const int64_t matrixElements = Base::mM * Base::mN;
+            dataInstance->copyData(
+                dataInstance->deviceIn(), dataInstance->hostIn(), matrixElements);
+        }
 
-        auto kernelResult = dataInstance->template allocHost<DataT>(matrixElements);
+        void validateResultsImpl() final
+        {
+            auto& dataInstance = Base::DataStorage::instance();
 
-        // Cache current kernel result from device
-        dataInstance->copyData(kernelResult, dataInstance->deviceOut(), matrixElements);
+            // Allocated managed memory for results on host
+            const int64_t matrixElements = Base::mM * Base::mN;
 
-        double errorTolerance = 10.0;
+            auto kernelResult = dataInstance->template allocHost<DataT>(matrixElements);
 
-        std::tie(Base::mValidationResult, Base::mMaxRelativeError)
-            = compareEqual<DataT, DataT, Layout, Layout>(kernelResult.get(),
-                                                         dataInstance->hostIn().get(),
-                                                         Base::mM,
-                                                         Base::mN,
-                                                         errorTolerance);
-    }
+            // Cache current kernel result from device
+            dataInstance->copyData(kernelResult, dataInstance->deviceOut(), matrixElements);
 
-    virtual typename Base::KernelFunc kernelImpl() const = 0;
-};
+            double errorTolerance = 10.0;
 
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-struct LoadStoreMatrixSyncKernelA final
-    : public LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>
-{
-private:
-    using Base = LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>;
+            std::tie(Base::mValidationResult, Base::mMaxRelativeError)
+                = compareEqual<DataT, DataT, Layout, Layout>(kernelResult.get(),
+                                                             dataInstance->hostIn().get(),
+                                                             Base::mM,
+                                                             Base::mN,
+                                                             errorTolerance);
+        }
 
-protected:
-    typename Base::KernelFunc kernelImpl() const final
-    {
-        return typename Base::KernelFunc(LoadStoreMatrixSyncA<BlockM, BlockN, DataT, Layout>);
-    }
-};
-
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-struct LoadStoreMatrixSyncKernelB final
-    : public LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>
-{
-private:
-    using Base = LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>;
-
-protected:
-    typename Base::KernelFunc kernelImpl() const final
-    {
-        return typename Base::KernelFunc(LoadStoreMatrixSyncB<BlockM, BlockN, DataT, Layout>);
-    }
-};
-
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-struct LoadStoreMatrixSyncKernelAcc final
-    : public LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>
-{
-private:
-    using Base = LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>;
-
-protected:
-    typename Base::KernelFunc kernelImpl() const final
-    {
-        return typename Base::KernelFunc(LoadStoreMatrixSyncAcc<BlockM, BlockN, DataT, Layout>);
-    }
-};
-
-template <template <uint32_t, uint32_t, typename, typename> class KernelClass>
-struct LoadStoreMatrixSyncGenerator
-{
-    // Indices to test parameters
-    enum : uint32_t
-    {
-        DataT  = 0,
-        BlockM = 1,
-        BlockN = 2,
-        Layout = 3
+        virtual typename Base::KernelFunc kernelImpl() const = 0;
     };
 
-    using ResultT = std::shared_ptr<KernelI>;
-
-    template <typename... Ts>
-    static ResultT generate(std::tuple<Ts...> testParams)
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    struct LoadStoreMatrixSyncKernelA final
+        : public LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>
     {
-        // Map GTest params to Kernel params
-        using TestParamsT = std::tuple<Ts...>;
-        using KernelT     = KernelClass<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
-                                    std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
-                                    std::tuple_element_t<DataT, TestParamsT>, // DataT
-                                    std::tuple_element_t<Layout, TestParamsT> // Layout
-                                    >;
+    private:
+        using Base = LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>;
 
-        return std::make_shared<KernelT>();
-    }
-};
+    protected:
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return typename Base::KernelFunc(LoadStoreMatrixSyncA<BlockM, BlockN, DataT, Layout>);
+        }
+    };
 
-using LoadStoreMatrixSyncGeneratorA   = LoadStoreMatrixSyncGenerator<LoadStoreMatrixSyncKernelA>;
-using LoadStoreMatrixSyncGeneratorB   = LoadStoreMatrixSyncGenerator<LoadStoreMatrixSyncKernelB>;
-using LoadStoreMatrixSyncGeneratorAcc = LoadStoreMatrixSyncGenerator<LoadStoreMatrixSyncKernelAcc>;
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    struct LoadStoreMatrixSyncKernelB final
+        : public LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>
+    {
+    private:
+        using Base = LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>;
+
+    protected:
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return typename Base::KernelFunc(LoadStoreMatrixSyncB<BlockM, BlockN, DataT, Layout>);
+        }
+    };
+
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    struct LoadStoreMatrixSyncKernelAcc final
+        : public LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>
+    {
+    private:
+        using Base = LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>;
+
+    protected:
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return typename Base::KernelFunc(LoadStoreMatrixSyncAcc<BlockM, BlockN, DataT, Layout>);
+        }
+    };
+
+    template <template <uint32_t, uint32_t, typename, typename> class KernelClass>
+    struct LoadStoreMatrixSyncGenerator
+    {
+        // Indices to test parameters
+        enum : uint32_t
+        {
+            DataT  = 0,
+            BlockM = 1,
+            BlockN = 2,
+            Layout = 3
+        };
+
+        using ResultT = std::shared_ptr<KernelI>;
+
+        template <typename... Ts>
+        static ResultT generate(std::tuple<Ts...> testParams)
+        {
+            // Map GTest params to Kernel params
+            using TestParamsT = std::tuple<Ts...>;
+            using KernelT = KernelClass<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
+                                        std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
+                                        std::tuple_element_t<DataT, TestParamsT>, // DataT
+                                        std::tuple_element_t<Layout, TestParamsT> // Layout
+                                        >;
+
+            return std::make_shared<KernelT>();
+        }
+    };
+
+    using LoadStoreMatrixSyncGeneratorA = LoadStoreMatrixSyncGenerator<LoadStoreMatrixSyncKernelA>;
+    using LoadStoreMatrixSyncGeneratorB = LoadStoreMatrixSyncGenerator<LoadStoreMatrixSyncKernelB>;
+    using LoadStoreMatrixSyncGeneratorAcc
+        = LoadStoreMatrixSyncGenerator<LoadStoreMatrixSyncKernelAcc>;
+
+} // namespace rocwmma
 
 #endif // WMMA_DETAIL_LOAD_STORE_MATRIX_SYNC_H
