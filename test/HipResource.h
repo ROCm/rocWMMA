@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,37 +33,45 @@
 // between host and device resources using the HIP backend.
 // Memory is treated as a 1D array, and is managed through the std::unique_ptr class.
 
-struct HipResource
+namespace rocwmma
 {
-    HipResource()                   = default;
-    ~HipResource()                  = default;
-    HipResource(const HipResource&) = delete;
-    HipResource& operator=(const HipResource&) = delete;
 
-    // Types
-    template <typename DataT>
-    using DevicePtrT = std::unique_ptr<DataT, void (*)(DataT*)>;
+    struct HipResource
+    {
+        HipResource()                   = default;
+        ~HipResource()                  = default;
+        HipResource(const HipResource&) = delete;
+        HipResource& operator=(const HipResource&) = delete;
 
-    template <typename DataT>
-    using HostPtrT = std::unique_ptr<DataT[]>;
+        // Types
+        template <typename DataT>
+        using DevicePtrT = std::unique_ptr<DataT, void (*)(DataT*)>;
 
-    // Alloc
-    template <typename DataT>
-    static DevicePtrT<DataT> allocDevice(int64_t numElements);
+        template <typename DataT>
+        using HostPtrT = std::unique_ptr<DataT[]>;
 
-    template <typename DataT>
-    static HostPtrT<DataT> allocHost(int64_t numElements);
+        // Alloc
+        template <typename DataT>
+        static DevicePtrT<DataT> allocDevice(int64_t numElements);
 
-    // Transfer wrappers
-    template <typename DataT>
-    static void copyData(HostPtrT<DataT>& dst, DevicePtrT<DataT> const& src, int64_t numElements);
-    template <typename DataT>
-    static void copyData(DevicePtrT<DataT>& dst, HostPtrT<DataT> const& src, int64_t numElements);
-    template <typename DataT>
-    static void copyData(HostPtrT<DataT>& dst, HostPtrT<DataT> const& src, int64_t numElements);
-    template <typename DataT>
-    static void copyData(DevicePtrT<DataT>& dst, DevicePtrT<DataT> const& src, int64_t numElements);
-};
+        template <typename DataT>
+        static HostPtrT<DataT> allocHost(int64_t numElements);
+
+        // Transfer wrappers
+        template <typename DataT>
+        static void
+            copyData(HostPtrT<DataT>& dst, DevicePtrT<DataT> const& src, int64_t numElements);
+        template <typename DataT>
+        static void
+            copyData(DevicePtrT<DataT>& dst, HostPtrT<DataT> const& src, int64_t numElements);
+        template <typename DataT>
+        static void copyData(HostPtrT<DataT>& dst, HostPtrT<DataT> const& src, int64_t numElements);
+        template <typename DataT>
+        static void
+            copyData(DevicePtrT<DataT>& dst, DevicePtrT<DataT> const& src, int64_t numElements);
+    };
+
+} // namespace rocwmma
 
 #include "HipResource_impl.h"
 
