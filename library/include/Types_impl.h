@@ -26,12 +26,9 @@
 #ifndef WMMA_TYPES_IMPL_H
 #define WMMA_TYPES_IMPL_H
 
-#include <hip/hip_bfloat16.h>
-#include <hip/hip_fp16.h>
-#include <hip/hip_runtime.h>
-
 #include <array>
 #include <type_traits>
+#include <utility>
 
 namespace rocwmma
 {

@@ -337,6 +337,76 @@ namespace rocwmma
         return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) + static_cast<float16_t>(y));
     }
 
+    ///////////////////////////////////////////////////////////
+    ///////////  rocwmma::dataTypeToString overloads  /////////
+    ///////////////////////////////////////////////////////////
+
+    template <>
+    constexpr const char* dataTypeToString<float16_t>()
+    {
+        return "f16";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<hfloat16_t>()
+    {
+        return "h16";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<bfloat16_t>()
+    {
+        return "bf16";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<float32_t>()
+    {
+        return "f32";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<float64_t>()
+    {
+        return "f64";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<int8_t>()
+    {
+        return "i8";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<uint8_t>()
+    {
+        return "u8";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<int32_t>()
+    {
+        return "i32";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<uint32_t>()
+    {
+        return "u32";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<row_major>()
+    {
+        return "T";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<col_major>()
+    {
+        return "N";
+    }
+
 } // namespace rocwmma
 
 #endif // WMMA_TYPES_EXT_H
