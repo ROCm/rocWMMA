@@ -30,23 +30,34 @@
 #include "MappingUtil.h"
 #include "WMMA.h"
 
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-__global__ void MapMatrixToData(
-    uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld, DataT param1, DataT param2)
+namespace rocwmma
 {
-    using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
-    auto aCoord   = Mapping::matrixCoord();
 
-    enum : uint32_t
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    __global__ void MapMatrixToData(uint32_t     m,
+                                    uint32_t     n,
+                                    DataT const* in,
+                                    DataT*       out,
+                                    uint32_t     ld,
+                                    DataT        param1,
+                                    DataT        param2)
     {
-        MajorIndex = std::is_same<Layout, rocwmma::row_major>::value ? 0 : 1,
-        MinorIndex = std::is_same<Layout, rocwmma::row_major>::value ? 1 : 0
-    };
+        using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
+        auto aCoord   = Mapping::matrixCoord();
 
-    uint32_t col = std::get<MajorIndex>(aCoord);
-    uint32_t row = std::get<MinorIndex>(aCoord);
-    for(int i = 0; i < BlockM; i++)
-        for(int j = 0; j < BlockN; j++)
-            out[(col + j) * ld + (row + i)] = in[(col + j) * ld + (row + i)];
-}
+        enum : uint32_t
+        {
+            MajorIndex = std::is_same<Layout, rocwmma::row_major>::value ? 0 : 1,
+            MinorIndex = std::is_same<Layout, rocwmma::row_major>::value ? 1 : 0
+        };
+
+        uint32_t col = std::get<MajorIndex>(aCoord);
+        uint32_t row = std::get<MinorIndex>(aCoord);
+        for(int i = 0; i < BlockM; i++)
+            for(int j = 0; j < BlockN; j++)
+                out[(col + j) * ld + (row + i)] = in[(col + j) * ld + (row + i)];
+    }
+
+} // namespace rocwmma
+
 #endif // WMMA_DEVICE_MAP_MATRIX_TO_DATA_H
