@@ -51,19 +51,19 @@ namespace rocwmma
               typename LayoutB,
               typename LayoutC,
               typename LayoutD>
-    __global__ void __launch_bounds__(256, 1) Barrier(uint32_t       m,
-                                                      uint32_t       n,
-                                                      uint32_t       k,
-                                                      InputT const*  a,
-                                                      InputT const*  b,
-                                                      OutputT const* c,
-                                                      OutputT*       d,
-                                                      uint32_t       lda,
-                                                      uint32_t       ldb,
-                                                      uint32_t       ldc,
-                                                      uint32_t       ldd,
-                                                      ComputeT       alpha,
-                                                      ComputeT       beta)
+    __global__ void __launch_bounds__(256, 1) barrierTest(uint32_t       m,
+                                                          uint32_t       n,
+                                                          uint32_t       k,
+                                                          InputT const*  a,
+                                                          InputT const*  b,
+                                                          OutputT const* c,
+                                                          OutputT*       d,
+                                                          uint32_t       lda,
+                                                          uint32_t       ldb,
+                                                          uint32_t       ldc,
+                                                          uint32_t       ldd,
+                                                          ComputeT       alpha,
+                                                          ComputeT       beta)
     {
         // Setup global mapping
         using MappingA = MappingUtil<BlockM, BlockK, InputT, LayoutA>;

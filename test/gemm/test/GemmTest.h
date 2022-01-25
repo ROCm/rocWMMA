@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,56 +31,61 @@
 #include "GemmKernelBase.h"
 #include <gtest/gtest.h>
 
-struct GemmTest
-    : public ::testing::TestWithParam<std::tuple<typename CommonTestParams::KernelT,
-                                                 typename CommonTestParams::ThreadBlockT,
-                                                 typename CommonTestParams::ProblemSizeT,
-                                                 typename CommonTestParams::AlphaT,
-                                                 typename CommonTestParams::BetaT>>
+namespace rocwmma
 {
-    using Base = ::testing::TestWithParam<std::tuple<typename CommonTestParams::KernelT,
+
+    struct GemmTest
+        : public ::testing::TestWithParam<std::tuple<typename CommonTestParams::KernelT,
                                                      typename CommonTestParams::ThreadBlockT,
                                                      typename CommonTestParams::ProblemSizeT,
                                                      typename CommonTestParams::AlphaT,
-                                                     typename CommonTestParams::BetaT>>;
-
-    void SetUp() override
+                                                     typename CommonTestParams::BetaT>>
     {
-        // Construct ProblemParams from
-        // incoming gtest parameterization
-        auto param       = Base::GetParam();
-        auto kernel      = std::get<0>(param);
-        auto threadBlock = std::get<1>(param);
-        auto problemSize = std::get<2>(param);
-        auto alpha       = std::get<3>(param);
-        auto beta        = std::get<4>(param);
+        using Base = ::testing::TestWithParam<std::tuple<typename CommonTestParams::KernelT,
+                                                         typename CommonTestParams::ThreadBlockT,
+                                                         typename CommonTestParams::ProblemSizeT,
+                                                         typename CommonTestParams::AlphaT,
+                                                         typename CommonTestParams::BetaT>>;
 
-        ProblemParams params = {threadBlock, problemSize, alpha, beta};
+        void SetUp() override
+        {
+            // Construct ProblemParams from
+            // incoming gtest parameterization
+            auto param       = Base::GetParam();
+            auto kernel      = std::get<0>(param);
+            auto threadBlock = std::get<1>(param);
+            auto problemSize = std::get<2>(param);
+            auto alpha       = std::get<3>(param);
+            auto beta        = std::get<4>(param);
 
-        // Walk through kernel workflow
-        kernel->setup(params);
-    }
+            ProblemParams params = {threadBlock, problemSize, alpha, beta};
 
-    virtual void RunKernel()
-    {
-        // Construct ProblemParams from
-        // incoming gtest parameterization
-        auto param  = Base::GetParam();
-        auto kernel = std::get<0>(param);
+            // Walk through kernel workflow
+            kernel->setup(params);
+        }
 
-        kernel->exec();
-        kernel->validateResults();
-        kernel->reportResults();
-    }
+        virtual void RunKernel()
+        {
+            // Construct ProblemParams from
+            // incoming gtest parameterization
+            auto param  = Base::GetParam();
+            auto kernel = std::get<0>(param);
 
-    void TearDown() override
-    {
-        // Construct ProblemParams from
-        // incoming gtest parameterization
-        auto param  = Base::GetParam();
-        auto kernel = std::get<0>(param);
-        kernel->tearDown();
-    }
-};
+            kernel->exec();
+            kernel->validateResults();
+            kernel->reportResults();
+        }
+
+        void TearDown() override
+        {
+            // Construct ProblemParams from
+            // incoming gtest parameterization
+            auto param  = Base::GetParam();
+            auto kernel = std::get<0>(param);
+            kernel->tearDown();
+        }
+    };
+
+} // namespace rocwmma
 
 #endif // WMMA_GEMM_TEST_BASE_H

@@ -73,16 +73,16 @@ namespace rocwmma
 
         typename Base::KernelFunc kernelImpl() const final
         {
-            return typename Base::KernelFunc(Barrier<BlockM,
-                                                     BlockN,
-                                                     BlockK,
-                                                     InputT,
-                                                     OutputT,
-                                                     ComputeT,
-                                                     LayoutA,
-                                                     LayoutB,
-                                                     LayoutC,
-                                                     LayoutD>);
+            return typename Base::KernelFunc(barrierTest<BlockM,
+                                                         BlockN,
+                                                         BlockK,
+                                                         InputT,
+                                                         OutputT,
+                                                         ComputeT,
+                                                         LayoutA,
+                                                         LayoutB,
+                                                         LayoutC,
+                                                         LayoutD>);
         }
     };
 
