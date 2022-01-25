@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,97 +30,103 @@
 #include "GemmKernelBase.h"
 #include "device/Barrier.h"
 
-// Wrapper into the actual device function
-template <uint32_t BlockM,
-          uint32_t BlockN,
-          uint32_t BlockK,
-          typename InputT,
-          typename OutputT,
-          typename ComputeT,
-          typename LayoutA,
-          typename LayoutB,
-          typename LayoutC,
-          typename LayoutD = LayoutC>
-struct BarrierKernel final : public GemmKernelBase<BlockM,
-                                                   BlockN,
-                                                   BlockK,
-                                                   InputT,
-                                                   OutputT,
-                                                   ComputeT,
-                                                   LayoutA,
-                                                   LayoutB,
-                                                   LayoutC,
-                                                   LayoutD>
+namespace rocwmma
 {
-private:
-    using Base = GemmKernelBase<BlockM,
-                                BlockN,
-                                BlockK,
-                                InputT,
-                                OutputT,
-                                ComputeT,
-                                LayoutA,
-                                LayoutB,
-                                LayoutC,
-                                LayoutD>;
 
-public:
-    BarrierKernel() {}
-    ~BarrierKernel() final {}
-
-    typename Base::KernelFunc kernelImpl() const final
+    // Wrapper into the actual device function
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename InputT,
+              typename OutputT,
+              typename ComputeT,
+              typename LayoutA,
+              typename LayoutB,
+              typename LayoutC,
+              typename LayoutD = LayoutC>
+    struct BarrierKernel final : public GemmKernelBase<BlockM,
+                                                       BlockN,
+                                                       BlockK,
+                                                       InputT,
+                                                       OutputT,
+                                                       ComputeT,
+                                                       LayoutA,
+                                                       LayoutB,
+                                                       LayoutC,
+                                                       LayoutD>
     {
-        return typename Base::KernelFunc(Barrier<BlockM,
-                                                 BlockN,
-                                                 BlockK,
-                                                 InputT,
-                                                 OutputT,
-                                                 ComputeT,
-                                                 LayoutA,
-                                                 LayoutB,
-                                                 LayoutC,
-                                                 LayoutD>);
-    }
-};
+    private:
+        using Base = GemmKernelBase<BlockM,
+                                    BlockN,
+                                    BlockK,
+                                    InputT,
+                                    OutputT,
+                                    ComputeT,
+                                    LayoutA,
+                                    LayoutB,
+                                    LayoutC,
+                                    LayoutD>;
 
-// This is the GeneratorImpl class
-struct BarrierGenerator
-{
-    // Indices to test parameters
-    enum : uint32_t
-    {
-        InputT   = 0,
-        OutputT  = 1,
-        ComputeT = 2,
-        BlockM   = 3,
-        BlockN   = 4,
-        BlockK   = 5,
-        LayoutA  = 6,
-        LayoutB  = 7,
-        LayoutCD = 8
+    public:
+        BarrierKernel() {}
+        ~BarrierKernel() final {}
+
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return typename Base::KernelFunc(Barrier<BlockM,
+                                                     BlockN,
+                                                     BlockK,
+                                                     InputT,
+                                                     OutputT,
+                                                     ComputeT,
+                                                     LayoutA,
+                                                     LayoutB,
+                                                     LayoutC,
+                                                     LayoutD>);
+        }
     };
 
-    using ResultT = std::shared_ptr<KernelI>;
-
-    template <typename... Ts>
-    static ResultT generate(std::tuple<Ts...> testParams)
+    // This is the GeneratorImpl class
+    struct BarrierGenerator
     {
-        // Map GTest params to Kernel params
-        using TestParamsT = std::tuple<Ts...>;
-        using KernelT = BarrierKernel<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
-                                      std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
-                                      std::tuple_element_t<BlockK, TestParamsT>::value, // BlockK
-                                      std::tuple_element_t<InputT, TestParamsT>, // InputT
-                                      std::tuple_element_t<OutputT, TestParamsT>, // OutputT
-                                      std::tuple_element_t<ComputeT, TestParamsT>, // ComputeT
-                                      std::tuple_element_t<LayoutA, TestParamsT>, // LayoutA
-                                      std::tuple_element_t<LayoutB, TestParamsT>, // LayoutB
-                                      std::tuple_element_t<LayoutCD, TestParamsT>, // LayoutC
-                                      std::tuple_element_t<LayoutCD, TestParamsT> // LayoutD
-                                      >;
+        // Indices to test parameters
+        enum : uint32_t
+        {
+            InputT   = 0,
+            OutputT  = 1,
+            ComputeT = 2,
+            BlockM   = 3,
+            BlockN   = 4,
+            BlockK   = 5,
+            LayoutA  = 6,
+            LayoutB  = 7,
+            LayoutCD = 8
+        };
 
-        return std::make_shared<KernelT>();
-    }
-};
+        using ResultT = std::shared_ptr<KernelI>;
+
+        template <typename... Ts>
+        static ResultT generate(std::tuple<Ts...> testParams)
+        {
+            // Map GTest params to Kernel params
+            using TestParamsT = std::tuple<Ts...>;
+            using KernelT
+                = BarrierKernel<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
+                                std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
+                                std::tuple_element_t<BlockK, TestParamsT>::value, // BlockK
+                                std::tuple_element_t<InputT, TestParamsT>, // InputT
+                                std::tuple_element_t<OutputT, TestParamsT>, // OutputT
+                                std::tuple_element_t<ComputeT, TestParamsT>, // ComputeT
+                                std::tuple_element_t<LayoutA, TestParamsT>, // LayoutA
+                                std::tuple_element_t<LayoutB, TestParamsT>, // LayoutB
+                                std::tuple_element_t<LayoutCD, TestParamsT>, // LayoutC
+                                std::tuple_element_t<LayoutCD, TestParamsT> // LayoutD
+                                >;
+
+            return std::make_shared<KernelT>();
+        }
+    };
+
+} // namespace rocwmma
 
 #endif // WMMA_DETAIL_BARRIER_H
