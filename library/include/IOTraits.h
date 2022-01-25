@@ -27,6 +27,7 @@
 #define WMMA_IO_TRAITS_H
 
 #include "Constants.h"
+#include "Types.h"
 #include "Utils.h"
 
 namespace rocwmma
