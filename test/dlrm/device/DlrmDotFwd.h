@@ -30,6 +30,9 @@
 #include "./Common.h"
 #include "Utils.h"
 
+namespace rocwmma
+{
+
 template <typename DataT, uint TILE_DIM>
 __global__ void __launch_bounds__(128, 1) dlrmDotFwd(const DataT* __restrict input,
                                                      DataT* __restrict output,
@@ -129,5 +132,7 @@ __global__ void __launch_bounds__(128, 1) dlrmDotFwd(const DataT* __restrict inp
         }
     }
 }
+
+} // namespace rocwmma
 
 #endif // DLRM_DOT_FWD_H
