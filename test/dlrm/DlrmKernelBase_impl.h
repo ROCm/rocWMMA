@@ -42,7 +42,7 @@
 #include <gtest/gtest.h>
 
 #include "../Common.h"
-#include "Common.h"
+#include "./Common.h"
 #include "Performance.h"
 
 // Library includes
@@ -53,12 +53,14 @@
 #include "Reference.h" // Vanilla CPU kernel
 #endif // WMMA_VALIDATION_TESTS
 
+namespace rocwmma
+{
+    
 template <uint32_t TileSize, typename DataT>
 DlrmKernelBase<TileSize, DataT>::DlrmKernelBase()
 {
     reset();
 }
-
 template <uint32_t TileSize, typename DataT>
 DlrmKernelBase<TileSize, DataT>::~DlrmKernelBase()
 {
@@ -102,8 +104,8 @@ bool DlrmKernelBase<TileSize, DataT>::checkDevice() const
 template <uint32_t TileSize, typename DataT>
 bool DlrmKernelBase<TileSize, DataT>::checkSizes() const
 {
-    return (mM >= TileSize && mM % TileSize == 0 && mK >= TileSize && mK % TileSize == 0
-            && mTBlockX % TileSize == 0);
+    return (mM >= TileSize && (mM % TileSize == 0) && mK >= TileSize && (mK % TileSize == 0)
+            && (mTBlockX % TileSize == 0));
 }
 
 template <uint32_t TileSize, typename DataT>
@@ -119,9 +121,9 @@ void DlrmKernelBase<TileSize, DataT>::reset()
     mMPadded = mKPadded = 0;
     mRepeats =
 #ifdef WMMA_VALIDATION_TESTS
-        1;
+            1;
 #else
-        5;
+            5;
 #endif
 
     mRunFlag = true;
@@ -163,14 +165,14 @@ std::ostream& DlrmKernelBase<TileSize, DataT>::printKernel(std::ostream& stream)
                   << mValidationResult.maxRelativeDiff << ", " << mValidationResult.tolerance
                   << ", "
 #endif
-                  << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredGFlopsPerSec << ", "
-                  << mEfficiency << ", "
+                    << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredGFlopsPerSec
+                    << ", " << mEfficiency << ", "
 #if defined(WMMA_VALIDATION_TESTS)
-                  << (mValidationResult.pass ? "PASSED" : "FAILED")
+                      << (mValidationResult.pass ? "PASSED" : "FAILED")
 #else
-                  << "BENCH"
+                      << "BENCH"
 #endif // WMMA_VALIDATION_TESTS
-                  << std::endl;
+                      << std::endl;
 }
 
 template <uint32_t TileSize, typename DataT>
@@ -182,7 +184,7 @@ void DlrmKernelBase<TileSize, DataT>::setup(ProblemParams const& problem)
     // Format incoming problem parameters
     std::tie(mTBlockX, mTBlockY)
         = std::tie(static_cast<uint32_t const&>(std::get<0>(problem.threadBlockSize)),
-                   static_cast<uint32_t const&>(std::get<1>(problem.threadBlockSize)));
+                    static_cast<uint32_t const&>(std::get<1>(problem.threadBlockSize)));
     std::tie(mM, mK, mB) = std::tie(static_cast<uint32_t const&>(std::get<0>(problem.problemSize)),
                                     static_cast<uint32_t const&>(std::get<1>(problem.problemSize)),
                                     static_cast<uint32_t const&>(std::get<2>(problem.problemSize)));
@@ -247,22 +249,22 @@ void DlrmKernelBase<TileSize, DataT>::exec()
                 dlrmKernel = [this, inputBatchOffset, outputBatchOffset, accBatchOffset]() {
                     auto& dataInstance = DataStorage::instance();
                     hipExtLaunchKernelGGL((this->kernelFwdImpl()),
-                                          (this->gridDim()),
-                                          (this->blockDim()),
-                                          (this->ldsUsage()),
-                                          0,
-                                          nullptr,
-                                          nullptr,
-                                          0,
-                                          dataInstance->deviceInput().get(),
-                                          dataInstance->deviceOutput().get(),
-                                          dataInstance->deviceAccFwd().get(),
-                                          mM,
-                                          mK,
-                                          mB,
-                                          inputBatchOffset,
-                                          outputBatchOffset,
-                                          accBatchOffset);
+                                            (this->gridDim()),
+                                            (this->blockDim()),
+                                            (this->ldsUsage()),
+                                            0,
+                                            nullptr,
+                                            nullptr,
+                                            0,
+                                            dataInstance->deviceInput().get(),
+                                            dataInstance->deviceOutput().get(),
+                                            dataInstance->deviceAccFwd().get(),
+                                            mM,
+                                            mK,
+                                            mB,
+                                            inputBatchOffset,
+                                            outputBatchOffset,
+                                            accBatchOffset);
                 };
             }
         }
@@ -284,45 +286,46 @@ void DlrmKernelBase<TileSize, DataT>::exec()
                     hipEvent_t syncEvent;
                     CHECK_HIP_ERROR(hipEventCreate(&syncEvent));
                     hipExtLaunchKernelGGL((this->kernelTrilImpl()),
-                                          trilGridDim,
-                                          this->blockDim(),
-                                          0,
-                                          0,
-                                          nullptr,
-                                          nullptr,
-                                          0,
-                                          dataInstance->deviceUpstreamGrad().get(),
-                                          dataInstance->deviceAccBwd().get(),
-                                          mM,
-                                          mK,
-                                          mB,
-                                          upstreamBatchOffset,
-                                          accBatchOffset);
+                                            trilGridDim,
+                                            this->blockDim(),
+                                            0,
+                                            0,
+                                            nullptr,
+                                            nullptr,
+                                            0,
+                                            dataInstance->deviceUpstreamGrad().get(),
+                                            dataInstance->deviceAccBwd().get(),
+                                            mM,
+                                            mK,
+                                            mB,
+                                            upstreamBatchOffset,
+                                            accBatchOffset);
                     CHECK_HIP_ERROR(hipEventRecord(syncEvent));
                     CHECK_HIP_ERROR(hipEventSynchronize(syncEvent));
 
                     hipExtLaunchKernelGGL((this->kernelBwdImpl()),
-                                          (this->gridDim()),
-                                          (this->blockDim()),
-                                          (this->ldsUsage()),
-                                          0,
-                                          nullptr,
-                                          nullptr,
-                                          0,
-                                          dataInstance->deviceInput().get(),
-                                          dataInstance->deviceUpstreamGrad().get(),
-                                          dataInstance->deviceGrad().get(),
-                                          dataInstance->deviceBottomMlpGrad().get(),
-                                          dataInstance->deviceAccBwd().get(),
-                                          mM,
-                                          mK,
-                                          mB,
-                                          inputBatchOffset,
-                                          upstreamBatchOffset,
-                                          accBatchOffset);
+                                            (this->gridDim()),
+                                            (this->blockDim()),
+                                            (this->ldsUsage()),
+                                            0,
+                                            nullptr,
+                                            nullptr,
+                                            0,
+                                            dataInstance->deviceInput().get(),
+                                            dataInstance->deviceUpstreamGrad().get(),
+                                            dataInstance->deviceGrad().get(),
+                                            dataInstance->deviceBottomMlpGrad().get(),
+                                            dataInstance->deviceAccBwd().get(),
+                                            mM,
+                                            mK,
+                                            mB,
+                                            inputBatchOffset,
+                                            upstreamBatchOffset,
+                                            accBatchOffset);
                 };
             }
         }
+    
 
         hipEvent_t startEvent, stopEvent;
         CHECK_HIP_ERROR(hipEventCreate(&startEvent));
@@ -398,9 +401,9 @@ void DlrmKernelBase<TileSize, DataT>::validateResults()
 
             uint batchSize    = ((mM * (mM - 1)) / 2) + mK;
             mValidationResult = compareEqual(dataInstance->hostOutputRef().get(),
-                                             dataInstance->hostOutput().get(),
-                                             batchSize,
-                                             mB);
+                                                dataInstance->hostOutput().get(),
+                                                batchSize,
+                                                mB);
 
             EXPECT_TRUE(mValidationResult.pass);
         }
@@ -417,9 +420,9 @@ void DlrmKernelBase<TileSize, DataT>::validateResults()
             float maxRelativeDiff = mValidationResult.maxRelativeDiff;
 
             mValidationResult = compareEqual(dataInstance->hostBottomMlpGradRef().get(),
-                                             dataInstance->hostBottomMlpGrad().get(),
-                                             mK,
-                                             mB);
+                                                dataInstance->hostBottomMlpGrad().get(),
+                                                mK,
+                                                mB);
 
             EXPECT_TRUE(mValidationResult.pass);
 
@@ -439,7 +442,6 @@ void DlrmKernelBase<TileSize, DataT>::reportResults()
         printHeader();
         KernelI::sHeaderPrinted = true;
     }
-
     printKernel();
 }
 
@@ -447,5 +449,7 @@ template <uint32_t TileSize, typename DataT>
 void DlrmKernelBase<TileSize, DataT>::tearDown()
 {
 }
+
+} // namespace rocwmma
 
 #endif // DLRM_KERNEL_BASE_IMPL_H

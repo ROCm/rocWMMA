@@ -32,6 +32,9 @@
 #include <memory>
 #include <tuple>
 
+namespace rocwmma
+{
+
 // DlrmResource class is intended to manage a shared pool of resources for
 // testing DLRM kernels on the GPU.
 //
@@ -43,7 +46,6 @@
 // used to access for read/write purposes.
 //
 // Currently uses HIP as the backend for device allocation.
-
 template <typename DataT>
 struct DlrmResource : public HipResource, public LazySingleton<DlrmResource<DataT>>
 {
@@ -150,6 +152,8 @@ protected:
     DataSizeFwd mMaxFwdCapacity;
     DataSizeBwd mMaxBwdCapacity;
 };
+
+} // namespace rocwmma
 
 #include "DlrmResource_impl.h"
 

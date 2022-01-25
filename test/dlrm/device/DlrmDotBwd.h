@@ -29,6 +29,9 @@
 
 #include "./Common.h"
 
+namespace rocwmma
+{
+
 template <typename DataT>
 __global__ void trilReconstruct(const DataT* __restrict upstreamGrad,
                                 DataT* __restrict acc,
@@ -202,5 +205,7 @@ __global__ void __launch_bounds__(128, 1) dlrmDotBwd(const DataT* __restrict inp
         wmma::store_matrix_sync(addrGrad, fragC, k, wmma::mem_row_major);
     }
 }
+
+} // namespace rocwmma
 
 #endif // DLRM_DOT_BWD_H
