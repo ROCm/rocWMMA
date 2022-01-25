@@ -26,29 +26,12 @@
 #ifndef WMMA_UTILS_H
 #define WMMA_UTILS_H
 
-#include <array>
-#include <assert.h>
-#include <iostream>
 #include <tuple>
-#include <vector>
+#include <utility>
 
-#include <hip/hip_fp16.h>
-#include <hip/hip_runtime.h>
-
-#include "Constants.h"
-#include "Types.h"
-#include "Utils.h"
-
-// Computes ceil(numerator/divisor) for integer types.
-template <typename intT1,
-          class = typename std::enable_if<std::is_integral<intT1>::value>::type,
-          typename intT2,
-          class = typename std::enable_if<std::is_integral<intT2>::value>::type>
-static constexpr intT1 ceilDiv(const intT1 numerator, const intT2 divisor)
-{
-    return (numerator + divisor - 1) / divisor;
-}
-
+///////////////////////////////////////////////////////////
+////////  std::apply fold expressions (<= C++14)  /////////
+///////////////////////////////////////////////////////////
 namespace std
 {
 
@@ -65,86 +48,16 @@ namespace std
         return apply_impl(fn, t, std::make_index_sequence<size>());
     }
 #endif
-}
 
-// Define host side hfloat16_t operators that we need for validation
+} // namespace std
 
-// Needed for compareEqual
-
-template <typename DataT>
-constexpr const char* dataTypeToString()
-{
-    return "invalid";
-}
-
-template <>
-constexpr const char* dataTypeToString<float16_t>()
-{
-    return "f16";
-}
-
-template <>
-constexpr const char* dataTypeToString<hfloat16_t>()
-{
-    return "h16";
-}
-
-template <>
-constexpr const char* dataTypeToString<bfloat16_t>()
-{
-    return "bf16";
-}
-
-template <>
-constexpr const char* dataTypeToString<float32_t>()
-{
-    return "f32";
-}
-
-template <>
-constexpr const char* dataTypeToString<float64_t>()
-{
-    return "f64";
-}
-
-template <>
-constexpr const char* dataTypeToString<int8_t>()
-{
-    return "i8";
-}
-
-template <>
-constexpr const char* dataTypeToString<uint8_t>()
-{
-    return "u8";
-}
-
-template <>
-constexpr const char* dataTypeToString<int32_t>()
-{
-    return "i32";
-}
-
-template <>
-constexpr const char* dataTypeToString<uint32_t>()
-{
-    return "u32";
-}
-
-template <>
-constexpr const char* dataTypeToString<row_major>()
-{
-    return "T";
-}
-
-template <>
-constexpr const char* dataTypeToString<col_major>()
-{
-    return "N";
-}
-
+///////////////////////////////////////////////////////////
+/////////////  std::pair<T, T> extensions  ////////////////
+///////////////////////////////////////////////////////////
 namespace std
 {
+
+    // Single operand for swap
     template <typename T>
     __host__ __device__ inline pair<T, T> swap(pair<T, T> const& p)
     {
@@ -158,6 +71,7 @@ namespace std
         return p;
     }
 
+    // Add, sub operators
     template <typename T>
     __host__ __device__ inline pair<T, T> operator+(pair<T, T> const& lhs, pair<T, T> const& rhs)
     {
@@ -185,54 +99,73 @@ namespace std
         get<1>(lhs) -= get<1>(rhs);
         return lhs;
     }
+
 } // namespace std
 
-template <uint32_t x>
-struct Log2
+namespace rocwmma
 {
-    static constexpr uint32_t value = 1 + Log2<(x >> 1)>::value;
-};
 
-template <>
-struct Log2<1>
-{
-    static constexpr uint32_t value = 0;
-};
-
-template <>
-struct Log2<0>
-{
-    static constexpr uint32_t value = 0;
-};
-
-template <uint32_t BitCount>
-struct LsbMask;
-
-template <>
-struct LsbMask<1>
-{
-    enum : uint32_t
+    // Computes ceil(numerator/divisor) for integer types.
+    template <typename intT1,
+              class = typename std::enable_if<std::is_integral<intT1>::value>::type,
+              typename intT2,
+              class = typename std::enable_if<std::is_integral<intT2>::value>::type>
+    static constexpr intT1 ceilDiv(const intT1 numerator, const intT2 divisor)
     {
-        value = 0x1
-    };
-};
+        return (numerator + divisor - 1) / divisor;
+    }
 
-template <>
-struct LsbMask<0>
-{
-    enum : uint32_t
+    // Calculate integer Log base 2
+    template <uint32_t x>
+    struct Log2
     {
-        value = 0x0
+        static constexpr uint32_t value = 1 + Log2<(x >> 1)>::value;
+        static_assert(x % 2 == 0, "Integer input must be a multiple of 2");
     };
-};
 
-template <uint32_t BitCount>
-struct LsbMask
-{
-    enum : uint32_t
+    template <>
+    struct Log2<1>
     {
-        value = LsbMask<1>::value << (BitCount - 1) | LsbMask<BitCount - 1>::value
+        static constexpr uint32_t value = 0;
     };
-};
+
+    template <>
+    struct Log2<0>
+    {
+        static constexpr uint32_t value = 0;
+    };
+
+    // Create a bitmask of size BitCount, starting from the LSB bit
+    template <uint32_t BitCount>
+    struct LsbMask;
+
+    template <>
+    struct LsbMask<1>
+    {
+        enum : uint32_t
+        {
+            value = 0x1
+        };
+    };
+
+    template <>
+    struct LsbMask<0>
+    {
+        enum : uint32_t
+        {
+            value = 0x0
+        };
+    };
+
+    template <uint32_t BitCount>
+    struct LsbMask
+    {
+        enum : uint32_t
+        {
+            value = LsbMask<1>::value << (BitCount - 1) | LsbMask<BitCount - 1>::value
+        };
+    };
+
+} // namespace rocwmma
 
 #endif // WMMA_UTILS_H
