@@ -2,7 +2,7 @@
  #
  # MIT License
  #
- # Copyright 2021 Advanced Micro Devices, Inc.
+ # Copyright 2021-2022 Advanced Micro Devices, Inc.
  #
  # Permission is hereby granted, free of charge, to any person obtaining a copy
  # of this software and associated documentation files (the "Software"), to deal
@@ -85,17 +85,8 @@ set(MmaSyncTestSources ${GemmCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncTest_32x32_NN.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncTest_32x32_NT.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncTest_32x32_TN.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncTest_32x32_TT.cpp)
-
-set(MmaSyncLdsTestSources ${GemmCommonSources}
-                          ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncLdsTest_16x16_NN.cpp
-                          ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncLdsTest_16x16_NT.cpp
-                          ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncLdsTest_16x16_TN.cpp
-                          ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncLdsTest_16x16_TT.cpp
-                          ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncLdsTest_32x32_NN.cpp
-                          ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncLdsTest_32x32_NT.cpp
-                          ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncLdsTest_32x32_TN.cpp
-                          ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncLdsTest_32x32_TT.cpp)
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncTest_32x32_TT.cpp
+                       )
 
 set(MmaSyncMultiTestSources ${GemmCommonSources}
                             ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NN.cpp
@@ -123,7 +114,8 @@ set(MmaSyncMultiLdsTestSources ${GemmCommonSources}
                                ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_NN_2x2.cpp
                                ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_NT_2x2.cpp
                                ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_TN_2x2.cpp
-                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_TT_2x2.cpp)
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_TT_2x2.cpp
+                               )
 
 if(WMMA_BUILD_EXTENDED_TESTS)
   set(MmaSyncMultiLdsTestSources ${MmaSyncMultiLdsTestSources}
@@ -156,7 +148,6 @@ if(WMMA_BUILD_BENCHMARK_TESTS)
   add_gemm_benchmark_test(MmaSyncTest-bench ${MmaSyncTestSources})
   add_gemm_benchmark_test(MmaSyncMultiTest-bench ${MmaSyncMultiTestSources})
   add_gemm_benchmark_test(MmaSyncMultiLdsTest-bench ${MmaSyncMultiLdsTestSources})
-  add_gemm_benchmark_test(MmaSyncLdsTest-bench ${MmaSyncLdsTestSources})
 endif()
 
 # Validation GEMM tests
@@ -165,6 +156,5 @@ if(WMMA_BUILD_VALIDATION_TESTS)
   add_gemm_validation_test(MmaSyncTest-validate ${MmaSyncTestSources})
   add_gemm_validation_test(MmaSyncMultiTest-validate ${MmaSyncMultiTestSources})
   add_gemm_validation_test(MmaSyncMultiLdsTest-validate ${MmaSyncMultiLdsTestSources})
-  add_gemm_validation_test(MmaSyncLdsTest-validate ${MmaSyncLdsTestSources})
   add_gemm_validation_test(MmaSyncAdHocTest ${MmaSyncAdHocTestSources})
 endif()
