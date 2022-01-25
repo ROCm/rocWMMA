@@ -49,8 +49,6 @@ namespace rocwmma
 template <typename DataT>
 struct DlrmResource : public HipResource, public LazySingleton<DlrmResource<DataT>>
 {
-    // For static initialization
-    friend std::unique_ptr<DlrmResource<DataT>> std::make_unique<DlrmResource<DataT>>();
 
     using Base = HipResource;
 

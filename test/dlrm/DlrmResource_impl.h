@@ -60,7 +60,6 @@ DlrmResource<DataT>::DlrmResource()
     , mMaxFwdCapacity({0, 0, 0})
     , mMaxBwdCapacity({0, 0, 0, 0, 0})
 {
-}
 
 template <typename DataT>
 void DlrmResource<DataT>::copyHostToDeviceFwdAll()
