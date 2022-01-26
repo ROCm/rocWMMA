@@ -41,12 +41,15 @@ namespace rocwmma
                                    DataT        param1,
                                    DataT        param2)
     {
-        // defaultConstructorTest
-        rocwmma::VecT<DataT, BlockM> vectD;
-        static_assert(vectD.size() == BlockM, " Allocation Error");
+        // default ConstructorTest
+        VecT<DataT, BlockM> vectD;
+        static_assert(vectD.size() == BlockM, "Bad size");
+
+        // copy ctor test
+        VecT<DataT, BlockM> vectDCopy(vectD);
 
         // otherConstructorTest
-        rocwmma::VecT<DataT, BlockM>* otherVectD(&vectD);
+        VecT<DataT, BlockM>* otherVectD(&vectD);
         assert(otherVectD != NULL);
         assert(otherVectD->size() == vectD.size());
 
@@ -56,21 +59,20 @@ namespace rocwmma
             ind = vectD[i];
 
         // dereference
-        rocwmma::VecT<DataT, BlockM> deref = *otherVectD;
+        VecT<DataT, BlockM> deref = *otherVectD;
         static_assert(deref.size() == BlockM, " Allocation Error");
 
         // vectIteratorAccess
-        rocwmma::VecT<DataT, BlockM> accessVectD;
+        VecT<DataT, BlockM> accessVectD;
         static_assert(accessVectD.size() == BlockM, " Allocation Error");
-        auto iter =
-            typename rocwmma::VecT<DataT, BlockM>::template iterator<BlockM / 2>(accessVectD);
+        auto iter = typename VecT<DataT, BlockM>::template iterator<BlockM / 2>(accessVectD);
         assert(accessVectD.size() == sizeof(iter));
 
         // vectIteratorInc
-        rocwmma::VecT<DataT, BlockM> incVectD;
+        VecT<DataT, BlockM> incVectD;
         for(uint32_t i = 0; i < BlockM; i++)
             incVectD[i] = DataT(i);
-        auto iti = typename rocwmma::VecT<DataT, BlockM>::template iterator<BlockM / 2>(incVectD);
+        auto iti = typename VecT<DataT, BlockM>::template iterator<BlockM / 2>(incVectD);
         assert(incVectD.size() == sizeof(iti));
         for(int i = 0; i < BlockM; i += BlockM / 2)
         {
@@ -80,7 +82,7 @@ namespace rocwmma
         }
 
         // vectIteratorDec
-        rocwmma::VecT<DataT, BlockM> decVectD;
+        VecT<DataT, BlockM> decVectD;
         for(uint32_t i = 0; i < BlockM; i++)
             decVectD[i] = DataT(i);
         auto itd = decVectD.template end<BlockM / 2>();
@@ -93,10 +95,10 @@ namespace rocwmma
         }
 
         // vectIteratorNext
-        rocwmma::VecT<DataT, BlockM> nextVectD;
+        VecT<DataT, BlockM> nextVectD;
         for(uint32_t i = 0; i < BlockM; i++)
             nextVectD[i] = DataT(i);
-        auto itn = typename rocwmma::VecT<DataT, BlockM>::template iterator<BlockM / 2>(nextVectD);
+        auto itn = typename VecT<DataT, BlockM>::template iterator<BlockM / 2>(nextVectD);
         assert(itn.valid());
         assert(nextVectD.size() == sizeof(itn));
         auto nextitn = itn.next();
@@ -104,7 +106,7 @@ namespace rocwmma
         assert(nextitn.mParent[(BlockM / 2)] == nextVectD[(*nextitn)[0]]);
 
         // vectIteratorPrev
-        rocwmma::VecT<DataT, BlockM> prevVectD;
+        VecT<DataT, BlockM> prevVectD;
         for(uint32_t i = 0; i < BlockM; i++)
             prevVectD[i] = DataT(i);
         auto itp = prevVectD.template end<BlockM / 2>();

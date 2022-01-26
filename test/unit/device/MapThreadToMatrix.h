@@ -42,20 +42,19 @@ namespace rocwmma
                                       DataT        param1,
                                       DataT        param2)
     {
-        using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
 
         enum : uint32_t
         {
-            MajorIndex = std::is_same<Layout, rocwmma::row_major>::value ? 0 : 1,
-            MinorIndex = std::is_same<Layout, rocwmma::row_major>::value ? 1 : 0
+            MajorIndex = std::is_same<Layout, row_major>::value ? 0 : 1,
+            MinorIndex = std::is_same<Layout, row_major>::value ? 1 : 0
         };
 
-        uint32_t minor
-            = std::is_same<Layout, rocwmma::row_major>::value
-                  ? (threadIdx.y + blockDim.y * blockIdx.y)
-                  : ((threadIdx.x + blockDim.x * blockIdx.x) / rocwmma::AMDGCN_WAVE_SIZE);
-        uint32_t major = std::is_same<Layout, rocwmma::row_major>::value
-                             ? ((threadIdx.x + blockDim.x * blockIdx.x) / rocwmma::AMDGCN_WAVE_SIZE)
+        uint32_t minor = std::is_same<Layout, row_major>::value
+                             ? (threadIdx.y + blockDim.y * blockIdx.y)
+                             : ((threadIdx.x + blockDim.x * blockIdx.x) / AMDGCN_WAVE_SIZE);
+        uint32_t major = std::is_same<Layout, row_major>::value
+                             ? ((threadIdx.x + blockDim.x * blockIdx.x) / AMDGCN_WAVE_SIZE)
                              : (threadIdx.y + blockDim.y * blockIdx.y);
 
         for(int i = 0; i < BlockM; i++)

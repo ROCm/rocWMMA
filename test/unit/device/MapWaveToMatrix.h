@@ -42,15 +42,15 @@ namespace rocwmma
                                     DataT        param1,
                                     DataT        param2)
     {
-        using Mapping     = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
+        using Mapping     = MappingUtil<BlockM, BlockN, DataT, Layout>;
         auto aCoord       = Mapping::waveCoord();
         auto aCoord_wg    = Mapping::WaveSpace::workgroupCoord();
         auto aCoord_wgdim = Mapping::WaveSpace::workgroupDim();
 
         enum : uint32_t
         {
-            MajorIndex = std::is_same<Layout, rocwmma::row_major>::value ? 0 : 1,
-            MinorIndex = std::is_same<Layout, rocwmma::row_major>::value ? 1 : 0
+            MajorIndex = std::is_same<Layout, row_major>::value ? 0 : 1,
+            MinorIndex = std::is_same<Layout, row_major>::value ? 1 : 0
         };
 
         uint32_t col = std::get<MajorIndex>(aCoord)

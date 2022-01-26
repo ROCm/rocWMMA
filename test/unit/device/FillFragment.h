@@ -42,16 +42,16 @@ namespace rocwmma
                                  DataT        param1,
                                  DataT        param2)
     {
-        using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
 
         // Create frag and fill
-        auto frag = rocwmma::fragment<rocwmma::accumulator, BlockM, BlockN, 1, DataT, Layout>();
+        auto frag = fragment<accumulator, BlockM, BlockN, 1, DataT, Layout>();
 
-        rocwmma::fill_fragment(frag, param1);
+        fill_fragment(frag, param1);
 
         // Map and store
         auto* offset = Mapping::dataCoord(out, ld);
-        rocwmma::store_matrix_sync(offset, frag, ld);
+        store_matrix_sync(offset, frag, ld);
     }
 
 } // namespace rocwmma
