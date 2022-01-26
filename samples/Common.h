@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,11 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+
+#ifndef COMMON_H_SAMPLES
+#define COMMON_H_SAMPLES
+
+#include <iostream>
 
 // Helper macro for HIP errors
 #ifndef CHECK_HIP_ERROR
@@ -57,7 +62,7 @@ __host__ void compareEqual(T const* a, T const* b, uint32_t size, double toleran
             max_relative_error = relative_error;
         }
     }
-    auto eps = std::numeric_limits<float16_t>::epsilon();
+    auto eps = std::numeric_limits<T>::epsilon();
     if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
     {
         std::cout << "FAILED\n";
@@ -69,3 +74,5 @@ __host__ void compareEqual(T const* a, T const* b, uint32_t size, double toleran
 
     std::cout << "Max relative error: " << max_relative_error << std::endl;
 }
+
+#endif
