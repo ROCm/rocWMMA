@@ -29,7 +29,6 @@
 
 #include <algorithm>
 #include <array>
-#include <functional>
 #include <utility>
 
 // The testing interface instantiates fp64 typed tests for all
@@ -87,39 +86,38 @@ namespace rocwmma
               typename LayoutD,
               typename LayoutLds,
               typename LdsMapping,
-              uint32_t BlocksPerWaveX,
-              uint32_t BlocksPerWaveY,
-              uint32_t WgSizeX,
-              uint32_t WgSizeY>
-    __device__ void mmaSyncMultiLds(uint32_t       m,
-                                    uint32_t       n,
-                                    uint32_t       k,
-                                    InputT const*  a,
-                                    InputT const*  b,
-                                    OutputT const* c,
-                                    OutputT*       d,
-                                    uint32_t       lda,
-                                    uint32_t       ldb,
-                                    uint32_t       ldc,
-                                    uint32_t       ldd,
-                                    ComputeT       alpha,
-                                    ComputeT       beta)
+              uint32_t BlocksX = 1,
+              uint32_t BlocksY = 1>
+    __global__ void __launch_bounds__(256, 1) mmaSyncMultiLds(uint32_t       m,
+                                                              uint32_t       n,
+                                                              uint32_t       k,
+                                                              InputT const*  a,
+                                                              InputT const*  b,
+                                                              OutputT const* c,
+                                                              OutputT*       d,
+                                                              uint32_t       lda,
+                                                              uint32_t       ldb,
+                                                              uint32_t       ldc,
+                                                              uint32_t       ldd,
+                                                              ComputeT       alpha,
+                                                              ComputeT       beta)
     {
-        // Fragment types
-        using FragA   = fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA>;
-        using FragB   = fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB>;
-        using FragC   = fragment<accumulator, BlockM, BlockN, BlockK, OutputT, LayoutC>;
-        using FragAcc = fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>;
-
-        using MappingA = typename FragA::IOConfig::MappingUtil;
-        using MappingB = typename FragB::IOConfig::MappingUtil;
-        using MappingC = typename FragC::IOConfig::MappingUtil;
-        using MappingD = MappingC;
+        // Setup global mapping
+        using MappingA = MappingUtil<BlockM, BlockK, InputT, LayoutA>;
+        using MappingB = MappingUtil<BlockK, BlockN, InputT, LayoutB>;
+        using MappingC = MappingUtil<BlockM, BlockN, OutputT, LayoutC>;
+        using MappingD = MappingUtil<BlockM, BlockN, OutputT, LayoutD>;
         using CoordT   = typename MappingA::MatrixCoordT;
 
-        ///
-        /// Run-time configuration of data movement
-        ///
+        using FragA   = fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA>;
+        using FragB   = fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB>;
+        using FragC   = fragment<accumulator, BlockM, BlockN, BlockK, OutputT>;
+        using FragAcc = fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>;
+
+        // Will store to LDS as though it were a register file.
+        // Rows = register count
+        // Cols = unpacked register elements = 64
+        // Row major to minimize bank conflicts
 
         using MappingLds = LdsMappingUtil<BlockM,
                                           BlockN,
@@ -129,56 +127,44 @@ namespace rocwmma
                                           LayoutB,
                                           LayoutLds,
                                           LdsMapping,
-                                          WgSizeX * BlocksPerWaveX,
-                                          WgSizeY * BlocksPerWaveY>;
+                                          BlocksX,
+                                          BlocksY>;
 
-        // Target starting C / D block on 2D grid.
-        // MappingC maps each wave to one BlockM x BlockN block as 1:1,
-        // so we must scale this coordinate by BlocksX and BlocksY
+        using GlobalReadFragA = typename MappingLds::GlobalReadFragA;
+        using GlobalReadFragB = typename MappingLds::GlobalReadFragB;
+
+        using LocalWriteFragA = typename MappingLds::LocalWriteFragA;
+        using LocalWriteFragB = typename MappingLds::LocalWriteFragB;
+
+        using LocalReadFragA = typename MappingLds::LocalReadFragA;
+        using LocalReadFragB = typename MappingLds::LocalReadFragB;
+
+        // Target starting C / D block on 2D grid, offset by blocks per wave
         auto matrixCoordC = MappingC::matrixCoord();
-        std::get<0>(matrixCoordC) *= BlocksPerWaveX;
-        std::get<1>(matrixCoordC) *= BlocksPerWaveY;
+        std::get<0>(matrixCoordC) *= BlocksX;
+        std::get<1>(matrixCoordC) *= BlocksY;
 
-        if((std::get<0>(matrixCoordC) + BlocksPerWaveX * BlockM) <= m
-           && (std::get<1>(matrixCoordC) + BlocksPerWaveY * BlockN) <= n && (BlockK < k))
+        if((std::get<0>(matrixCoordC) + BlocksX * BlockM) <= m
+           && (std::get<1>(matrixCoordC) + BlocksY * BlockN) <= n && (BlockK < k))
         {
-            ///
-            /// Setup global coordinates to start at the first block of the workgroup.
-            /// Global load for all blocks will be shared by all waves.
-            ///
-            auto waveCoord      = MappingC::waveCoord();
-            auto wgMatrixCoordC = matrixCoordC;
-            std::get<0>(wgMatrixCoordC) -= std::get<0>(waveCoord) * BlockM * BlocksPerWaveX;
-            std::get<1>(wgMatrixCoordC) -= std::get<1>(waveCoord) * BlockN * BlocksPerWaveY;
+            typename MappingC::MatrixCoordT subMatrixCoordsC[BlocksX][BlocksY];
+            FragAcc                         fragsAccum[BlocksX][BlocksY];
 
+            /// Setup LDS addressing and start writing pre-fetch to LDS
             ///
-            /// Setup LDS addressing and start first global prefetch of A and B to LDS
-            ///
+
             HIP_DYNAMIC_SHARED(void*, localMemPtr);
             auto* ldsPtrLo = reinterpret_cast<InputT*>(localMemPtr);
             auto* ldsPtrHi = ldsPtrLo + MappingLds::ldsWidth() * MappingLds::ldsHeight();
 
-            MappingLds::prefetchGlobalA(
-                ldsPtrLo,
-                MappingA::dataCoord(a, std::make_pair(std::get<0>(wgMatrixCoordC), 0), lda),
-                lda);
-
-            MappingLds::prefetchGlobalB(
-                ldsPtrLo,
-                MappingB::dataCoord(b, std::make_pair(0, std::get<1>(wgMatrixCoordC)), ldb),
-                ldb);
-
             ///
-            /// Initialize sub matrix C coords and accum frags
+            /// Initialize sub matrix coords and accum frags
             ///
-            typename MappingC::MatrixCoordT subMatrixCoordsC[BlocksPerWaveX][BlocksPerWaveY];
-            FragAcc                         fragsAccum[BlocksPerWaveX][BlocksPerWaveY];
-
 #pragma unroll
-            for(int i = 0; i < BlocksPerWaveX; ++i)
+            for(int i = 0; i < BlocksX; ++i)
             {
 #pragma unroll
-                for(int j = 0; j < BlocksPerWaveY; ++j)
+                for(int j = 0; j < BlocksY; ++j)
                 {
                     // Initialize sub matrix coordinates
                     auto subMatCoordC = matrixCoordC;
@@ -193,6 +179,16 @@ namespace rocwmma
                 }
             }
 
+            MappingLds::prefetchGlobalA(
+                ldsPtrLo,
+                MappingA::dataCoord(a, std::make_pair(std::get<0>(subMatrixCoordsC[0][0]), 0), lda),
+                lda);
+
+            MappingLds::prefetchGlobalB(
+                ldsPtrLo,
+                MappingB::dataCoord(b, std::make_pair(0, std::get<1>(subMatrixCoordsC[0][0])), ldb),
+                ldb);
+
             ///
             /// Accumulate A * B
             ///
@@ -206,54 +202,34 @@ namespace rocwmma
                 ///
                 for(int currentK = BlockK; currentK < k; currentK += BlockK)
                 {
-                    //                 FragA cachedFragsA[BlocksPerWaveX];
-                    //                 FragB cachedFragsB[BlocksPerWaveY];
+                    FragA cachedFragsA[BlocksX];
+                    FragB cachedFragsB[BlocksY];
 
-                    // #pragma unroll
-                    //                 for(int i = 0; i < BlocksPerWaveX; i++)
-                    //                 {
-                    //                     MappingLds::prefetchLocalA(cachedFragsA[i], ldsPtrLo, std::get<0>(waveCoord) * BlocksPerWaveX + i);
-                    //                 }
-
-                    // #pragma unroll
-                    //                 for(int j = 0; j < BlocksPerWaveY; j++)
-                    //                 {
-                    //                     MappingLds::prefetchLocalB(cachedFragsB[j], ldsPtrLo, std::get<1>(waveCoord) * BlocksPerWaveY + j);
-                    //                 }
-
-                    FragB cachedFragsB[BlocksPerWaveY];
-#pragma unroll
-                    for(int j = 0; j < BlocksPerWaveY; j++)
-                    {
-                        MappingLds::prefetchLocalB(
-                            cachedFragsB[j], ldsPtrLo, std::get<1>(waveCoord) * BlocksPerWaveY + j);
-                    }
+                    // Cache lds blocks to register
+                    MappingLds::prefetchLocalA(cachedFragsA, ldsPtrLo);
+                    MappingLds::prefetchLocalB(cachedFragsB, ldsPtrLo);
 
                     MappingLds::prefetchGlobalA(
                         ldsPtrHi,
                         MappingA::dataCoord(
-                            a, std::make_pair(std::get<0>(wgMatrixCoordC), currentK), lda),
+                            a, std::make_pair(std::get<0>(subMatrixCoordsC[0][0]), currentK), lda),
                         lda);
 
                     MappingLds::prefetchGlobalB(
                         ldsPtrHi,
                         MappingB::dataCoord(
-                            b, std::make_pair(currentK, std::get<1>(wgMatrixCoordC)), ldb),
+                            b, std::make_pair(currentK, std::get<1>(subMatrixCoordsC[0][0])), ldb),
                         ldb);
 
                     // A * B
 #pragma unroll
-                    for(int i = 0; i < BlocksPerWaveX; i++)
+                    for(int i = 0; i < BlocksX; i++)
                     {
-                        FragA cachedFragsA;
-                        MappingLds::prefetchLocalA(
-                            cachedFragsA, ldsPtrLo, std::get<0>(waveCoord) * BlocksPerWaveX + i);
-
 #pragma unroll
-                        for(int j = 0; j < BlocksPerWaveY; j++)
+                        for(int j = 0; j < BlocksY; j++)
                         {
                             mma_sync(const_cast<FragAcc&>(fragsAccum[i][j]),
-                                     cachedFragsA,
+                                     cachedFragsA[i],
                                      cachedFragsB[j],
                                      fragsAccum[i][j]);
                         }
@@ -273,30 +249,19 @@ namespace rocwmma
                 ///
 
                 // Tail A * B
-                FragA cachedFragsA[BlocksPerWaveX];
-                FragB cachedFragsB[BlocksPerWaveY];
+                FragA cachedFragsA[BlocksX];
+                FragB cachedFragsB[BlocksY];
 
                 // Cache lds blocks to register
-#pragma unroll
-                for(int i = 0; i < BlocksPerWaveX; i++)
-                {
-                    MappingLds::prefetchLocalA(
-                        cachedFragsA[i], ldsPtrLo, std::get<0>(waveCoord) * BlocksPerWaveX + i);
-                }
-
-#pragma unroll
-                for(int j = 0; j < BlocksPerWaveY; j++)
-                {
-                    MappingLds::prefetchLocalB(
-                        cachedFragsB[j], ldsPtrLo, std::get<1>(waveCoord) * BlocksPerWaveY + j);
-                }
+                MappingLds::prefetchLocalA(cachedFragsA, ldsPtrLo);
+                MappingLds::prefetchLocalB(cachedFragsB, ldsPtrLo);
 
                 // A * B
 #pragma unroll
-                for(int i = 0; i < BlocksPerWaveX; i++)
+                for(int i = 0; i < BlocksX; i++)
                 {
 #pragma unroll
-                    for(int j = 0; j < BlocksPerWaveY; j++)
+                    for(int j = 0; j < BlocksY; j++)
                     {
                         mma_sync(
                             fragsAccum[i][j], cachedFragsA[i], cachedFragsB[j], fragsAccum[i][j]);
@@ -308,13 +273,13 @@ namespace rocwmma
             /// Initialize C frags
             ///
 
-            FragC fragsC[BlocksPerWaveX][BlocksPerWaveY];
+            FragC fragsC[BlocksX][BlocksY];
 
 #pragma unroll
-            for(int i = 0; i < BlocksPerWaveX; ++i)
+            for(int i = 0; i < BlocksX; ++i)
             {
 #pragma unroll
-                for(int j = 0; j < BlocksPerWaveY; ++j)
+                for(int j = 0; j < BlocksY; ++j)
                 {
                     // Initialize C frags
                     auto fragC = FragC();
@@ -326,23 +291,27 @@ namespace rocwmma
             if(beta)
             {
 #pragma unroll
-                for(int i = 0; i < BlocksPerWaveX; i++)
+                for(int i = 0; i < BlocksX; i++)
                 {
 #pragma unroll
-                    for(int j = 0; j < BlocksPerWaveY; j++)
+                    for(int j = 0; j < BlocksY; j++)
                     {
                         auto* addrC = MappingC::dataCoord(c, subMatrixCoordsC[i][j], ldc);
-                        load_matrix_sync(fragsC[i][j], addrC, ldc);
+                        load_matrix_sync(fragsC[i][j],
+                                         addrC,
+                                         ldc,
+                                         std::is_same<LayoutC, row_major>::value ? mem_row_major
+                                                                                 : mem_col_major);
                     }
                 }
             }
 
 // D = alpha * accumAB + beta * C
 #pragma unroll
-            for(int i = 0; i < BlocksPerWaveX; i++)
+            for(int i = 0; i < BlocksX; i++)
             {
 #pragma unroll
-                for(int j = 0; j < BlocksPerWaveY; j++)
+                for(int j = 0; j < BlocksY; j++)
                 {
                     auto& fragAcc = fragsAccum[i][j];
                     auto& fragC   = fragsC[i][j];
@@ -358,362 +327,13 @@ namespace rocwmma
                     auto* addrD = MappingD::dataCoord(d, subMatrixCoordsC[i][j], ldd);
 
                     // Store the output
-                    store_matrix_sync(addrD, fragC, ldd);
+                    store_matrix_sync(addrD,
+                                      fragC,
+                                      ldd,
+                                      std::is_same<LayoutD, row_major>::value ? mem_row_major
+                                                                              : mem_col_major);
                 }
             }
-        }
-    }
-
-    // template <uint32_t BlockM,
-    //           uint32_t BlockN,
-    //           uint32_t BlockK,
-    //           typename InputT,
-    //           typename OutputT,
-    //           typename ComputeT,
-    //           typename LayoutA,
-    //           typename LayoutB,
-    //           typename LayoutC,
-    //           typename LayoutD,
-    //           typename LayoutLds,
-    //           typename LdsMapping,
-    //           uint32_t BlocksPerWaveX,
-    //           uint32_t BlocksPerWaveY,
-    //           uint32_t WgSizeX,
-    //           uint32_t WgSizeY,
-    //           uint32_t WaveCoordX>
-    // __device__ void inline mmaSyncMultiLds(uint32_t       m,
-    //                                         uint32_t       n,
-    //                                         uint32_t       k,
-    //                                         InputT const*  a,
-    //                                         InputT const*  b,
-    //                                         OutputT const* c,
-    //                                         OutputT*       d,
-    //                                         uint32_t       lda,
-    //                                         uint32_t       ldb,
-    //                                         uint32_t       ldc,
-    //                                         uint32_t       ldd,
-    //                                         ComputeT       alpha,
-    //                                         ComputeT       beta,
-    //                                         uint32_t        waveCoordY)
-    // {
-    //     if(waveCoordY == 4)
-    //     {
-    //         mmaSyncMultiLds<BlockM, BlockN, BlockK,
-    //                         InputT, OutputT, ComputeT,
-    //                         LayoutA, LayoutB, LayoutC, LayoutD,
-    //                         LayoutLds, LdsMapping,
-    //                         BlocksPerWaveX, BlocksPerWaveY,
-    //                         WgSizeX, WgSizeY,
-    //                         WaveCoordX, 4>
-    //                         (m, n, k,
-    //                          a, b, c, d,
-    //                          lda, ldb, ldc, ldd,
-    //                          alpha, beta);
-
-    //     }
-    //     else if(waveCoordY == 2)
-    //     {
-    //         mmaSyncMultiLds<BlockM, BlockN, BlockK,
-    //                         InputT, OutputT, ComputeT,
-    //                         LayoutA, LayoutB, LayoutC, LayoutD,
-    //                         LayoutLds, LdsMapping,
-    //                         BlocksPerWaveX, BlocksPerWaveY,
-    //                         WgSizeX, WgSizeY,
-    //                         WaveCoordX, 2>
-    //                         (m, n, k,
-    //                          a, b, c, d,
-    //                          lda, ldb, ldc, ldd,
-    //                          alpha, beta);
-    //     }
-    //     else if(waveCoordY == 1)
-    //     {
-    //         mmaSyncMultiLds<BlockM, BlockN, BlockK,
-    //                         InputT, OutputT, ComputeT,
-    //                         LayoutA, LayoutB, LayoutC, LayoutD,
-    //                         LayoutLds, LdsMapping,
-    //                         BlocksPerWaveX, BlocksPerWaveY,
-    //                         WgSizeX, WgSizeY,
-    //                         WaveCoordX, 1>
-    //                         (m, n, k,
-    //                          a, b, c, d,
-    //                          lda, ldb, ldc, ldd,
-    //                          alpha, beta);
-    //     }
-    //     else
-    //     {
-    //         assert(0);
-    //     }
-    // }
-
-    // template <uint32_t BlockM,
-    //           uint32_t BlockN,
-    //           uint32_t BlockK,
-    //           typename InputT,
-    //           typename OutputT,
-    //           typename ComputeT,
-    //           typename LayoutA,
-    //           typename LayoutB,
-    //           typename LayoutC,
-    //           typename LayoutD,
-    //           typename LayoutLds,
-    //           typename LdsMapping,
-    //           uint32_t BlocksPerWaveX,
-    //           uint32_t BlocksPerWaveY,
-    //           uint32_t WgSizeX,
-    //           uint32_t WgSizeY>
-    // __device__ void inline mmaSyncMultiLds(uint32_t       m,
-    //                                         uint32_t       n,
-    //                                         uint32_t       k,
-    //                                         InputT const*  a,
-    //                                         InputT const*  b,
-    //                                         OutputT const* c,
-    //                                         OutputT*       d,
-    //                                         uint32_t       lda,
-    //                                         uint32_t       ldb,
-    //                                         uint32_t       ldc,
-    //                                         uint32_t       ldd,
-    //                                         ComputeT       alpha,
-    //                                         ComputeT       beta)
-    // {
-    //     // Runtime dispatching for wave coordinate
-    //     auto waveCoord = MappingUtil<BlockM, BlockN, OutputT, LayoutC>::waveCoord();
-
-    //     if(std::get<0>(waveCoord) == 4)
-    //     {
-    //         mmaSyncMultiLds<BlockM, BlockN, BlockK,
-    //                         InputT, OutputT, ComputeT,
-    //                         LayoutA, LayoutB, LayoutC, LayoutD,
-    //                         LayoutLds, LdsMapping,
-    //                         BlocksPerWaveX, BlocksPerWaveY,
-    //                         WgSizeX, WgSizeY,
-    //                         4>
-    //                         (m, n, k,
-    //                          a, b, c, d,
-    //                          lda, ldb, ldc, ldd,
-    //                          alpha, beta,
-    //                          std::get<1>(waveCoord));
-
-    //     }
-    //     else if(std::get<0>(waveCoord) == 2)
-    //     {
-    //         mmaSyncMultiLds<BlockM, BlockN, BlockK,
-    //                         InputT, OutputT, ComputeT,
-    //                         LayoutA, LayoutB, LayoutC, LayoutD,
-    //                         LayoutLds, LdsMapping,
-    //                         BlocksPerWaveX, BlocksPerWaveY,
-    //                         WgSizeX, WgSizeY,
-    //                         2>
-    //                         (m, n, k,
-    //                          a, b, c, d,
-    //                          lda, ldb, ldc, ldd,
-    //                          alpha, beta,
-    //                          std::get<1>(waveCoord));
-    //     }
-    //     else if(std::get<0>(waveCoord) == 1)
-    //     {
-    //         mmaSyncMultiLds<BlockM, BlockN, BlockK,
-    //                         InputT, OutputT, ComputeT,
-    //                         LayoutA, LayoutB, LayoutC, LayoutD,
-    //                         LayoutLds, LdsMapping,
-    //                         BlocksPerWaveX, BlocksPerWaveY,
-    //                         WgSizeX, WgSizeY,
-    //                         1>
-    //                         (m, n, k,
-    //                          a, b, c, d,
-    //                          lda, ldb, ldc, ldd,
-    //                          alpha, beta,
-    //                          std::get<1>(waveCoord));
-    //     }
-    //     else
-    //     {
-    //         assert(0);
-    //     }
-    // }
-
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename InputT,
-              typename OutputT,
-              typename ComputeT,
-              typename LayoutA,
-              typename LayoutB,
-              typename LayoutC,
-              typename LayoutD,
-              typename LayoutLds,
-              typename LdsMapping,
-              uint32_t BlocksPerWaveX,
-              uint32_t BlocksPerWaveY,
-              uint32_t WgSizeX>
-    __device__ void inline mmaSyncMultiLds(uint32_t       m,
-                                           uint32_t       n,
-                                           uint32_t       k,
-                                           InputT const*  a,
-                                           InputT const*  b,
-                                           OutputT const* c,
-                                           OutputT*       d,
-                                           uint32_t       lda,
-                                           uint32_t       ldb,
-                                           uint32_t       ldc,
-                                           uint32_t       ldd,
-                                           ComputeT       alpha,
-                                           ComputeT       beta,
-                                           uint32_t       workgroupSizeY)
-    {
-        if(workgroupSizeY == 4)
-        {
-            mmaSyncMultiLds<BlockM,
-                            BlockN,
-                            BlockK,
-                            InputT,
-                            OutputT,
-                            ComputeT,
-                            LayoutA,
-                            LayoutB,
-                            LayoutC,
-                            LayoutD,
-                            LayoutLds,
-                            LdsMapping,
-                            BlocksPerWaveX,
-                            BlocksPerWaveY,
-                            WgSizeX,
-                            4>(m, n, k, a, b, c, d, lda, ldb, ldc, ldd, alpha, beta);
-        }
-        else if(workgroupSizeY == 2)
-        {
-            mmaSyncMultiLds<BlockM,
-                            BlockN,
-                            BlockK,
-                            InputT,
-                            OutputT,
-                            ComputeT,
-                            LayoutA,
-                            LayoutB,
-                            LayoutC,
-                            LayoutD,
-                            LayoutLds,
-                            LdsMapping,
-                            BlocksPerWaveX,
-                            BlocksPerWaveY,
-                            WgSizeX,
-                            2>(m, n, k, a, b, c, d, lda, ldb, ldc, ldd, alpha, beta);
-        }
-        else if(workgroupSizeY == 1)
-        {
-            mmaSyncMultiLds<BlockM,
-                            BlockN,
-                            BlockK,
-                            InputT,
-                            OutputT,
-                            ComputeT,
-                            LayoutA,
-                            LayoutB,
-                            LayoutC,
-                            LayoutD,
-                            LayoutLds,
-                            LdsMapping,
-                            BlocksPerWaveX,
-                            BlocksPerWaveY,
-                            WgSizeX,
-                            1>(m, n, k, a, b, c, d, lda, ldb, ldc, ldd, alpha, beta);
-        }
-        else
-        {
-            assert(0);
-        }
-    }
-
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename InputT,
-              typename OutputT,
-              typename ComputeT,
-              typename LayoutA,
-              typename LayoutB,
-              typename LayoutC,
-              typename LayoutD,
-              typename LayoutLds,
-              typename LdsMapping,
-              uint32_t BlocksPerWaveX,
-              uint32_t BlocksPerWaveY>
-    __global__ void __launch_bounds__(256, 1) mmaSyncMultiLds(uint32_t       m,
-                                                              uint32_t       n,
-                                                              uint32_t       k,
-                                                              InputT const*  a,
-                                                              InputT const*  b,
-                                                              OutputT const* c,
-                                                              OutputT*       d,
-                                                              uint32_t       lda,
-                                                              uint32_t       ldb,
-                                                              uint32_t       ldc,
-                                                              uint32_t       ldd,
-                                                              ComputeT       alpha,
-                                                              ComputeT       beta)
-    {
-        // Runtime dispatching for WG size
-        auto workgroupDim = MappingUtil<BlockM, BlockN, OutputT, LayoutC>::workgroupDim();
-
-        if(std::get<0>(workgroupDim) == 4)
-        {
-            mmaSyncMultiLds<BlockM,
-                            BlockN,
-                            BlockK,
-                            InputT,
-                            OutputT,
-                            ComputeT,
-                            LayoutA,
-                            LayoutB,
-                            LayoutC,
-                            LayoutD,
-                            LayoutLds,
-                            LdsMapping,
-                            BlocksPerWaveX,
-                            BlocksPerWaveY,
-                            4>(
-                m, n, k, a, b, c, d, lda, ldb, ldc, ldd, alpha, beta, std::get<1>(workgroupDim));
-        }
-        else if(std::get<0>(workgroupDim) == 2)
-        {
-            mmaSyncMultiLds<BlockM,
-                            BlockN,
-                            BlockK,
-                            InputT,
-                            OutputT,
-                            ComputeT,
-                            LayoutA,
-                            LayoutB,
-                            LayoutC,
-                            LayoutD,
-                            LayoutLds,
-                            LdsMapping,
-                            BlocksPerWaveX,
-                            BlocksPerWaveY,
-                            2>(
-                m, n, k, a, b, c, d, lda, ldb, ldc, ldd, alpha, beta, std::get<1>(workgroupDim));
-        }
-        else if(std::get<0>(workgroupDim) == 1)
-        {
-            mmaSyncMultiLds<BlockM,
-                            BlockN,
-                            BlockK,
-                            InputT,
-                            OutputT,
-                            ComputeT,
-                            LayoutA,
-                            LayoutB,
-                            LayoutC,
-                            LayoutD,
-                            LayoutLds,
-                            LdsMapping,
-                            BlocksPerWaveX,
-                            BlocksPerWaveY,
-                            1>(
-                m, n, k, a, b, c, d, lda, ldb, ldc, ldd, alpha, beta, std::get<1>(workgroupDim));
-        }
-        else
-        {
-            assert(0);
         }
     }
 
