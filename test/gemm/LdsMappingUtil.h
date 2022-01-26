@@ -133,15 +133,15 @@ namespace rocwmma
         static constexpr uint32_t registerFileWidth = AMDGCN_WAVE_SIZE;
 
         // Global read - individual block size
-        using GlobalReadFragA = rocwmma::fragment<matrix_a, BlockM, BlockN, BlockK, DataT, LayoutA>;
-        using GlobalReadFragB = rocwmma::fragment<matrix_b, BlockM, BlockN, BlockK, DataT, LayoutB>;
+        using GlobalReadFragA = fragment<matrix_a, BlockM, BlockN, BlockK, DataT, LayoutA>;
+        using GlobalReadFragB = fragment<matrix_b, BlockM, BlockN, BlockK, DataT, LayoutB>;
 
         // Local Write
         // Vertical register file fulfilled by matrix_b with BlockN = 64
-        using LocalWriteFragA = rocwmma::
-            fragment<matrix_b, 1, registerFileWidth, GlobalReadFragA::size(), DataT, LayoutLds>;
-        using LocalWriteFragB = rocwmma::
-            fragment<matrix_b, 1, registerFileWidth, GlobalReadFragB::size(), DataT, LayoutLds>;
+        using LocalWriteFragA
+            = fragment<matrix_b, 1, registerFileWidth, GlobalReadFragA::size(), DataT, LayoutLds>;
+        using LocalWriteFragB
+            = fragment<matrix_b, 1, registerFileWidth, GlobalReadFragB::size(), DataT, LayoutLds>;
 
         // Sanity checks
         static_assert(GlobalReadFragA::size() == LocalWriteFragA::size(),
@@ -248,7 +248,7 @@ namespace rocwmma
             {
                 // Issue global read
                 GlobalReadFragA fetchA;
-                rocwmma::load_matrix_coop_sync(
+                load_matrix_coop_sync(
                     fetchA,
                     baseA + GlobalAOffsets::dataOffset(lda, std::make_pair(BlockM * i, 0)),
                     lda,
@@ -257,13 +257,12 @@ namespace rocwmma
                     splitCount);
 
                 // Issue local store
-                rocwmma::store_matrix_coop_sync(baseLds + baseOffsetA() + waveOffsetA()
-                                                    + blockOffsetA(i),
-                                                reinterpret_cast<LocalWriteFragA&>(fetchA),
-                                                ld(),
-                                                waveIndex,
-                                                waveCount,
-                                                splitCount);
+                store_matrix_coop_sync(baseLds + baseOffsetA() + waveOffsetA() + blockOffsetA(i),
+                                       reinterpret_cast<LocalWriteFragA&>(fetchA),
+                                       ld(),
+                                       waveIndex,
+                                       waveCount,
+                                       splitCount);
             }
         }
 
@@ -291,7 +290,7 @@ namespace rocwmma
             {
                 // Issue global read
                 GlobalReadFragB fetchB;
-                rocwmma::load_matrix_coop_sync(
+                load_matrix_coop_sync(
                     fetchB,
                     baseB + GlobalBOffsets::dataOffset(ldb, std::make_pair(0, BlockN * i)),
                     ldb,
@@ -300,32 +299,29 @@ namespace rocwmma
                     splitCount);
 
                 // Issue local store
-                rocwmma::store_matrix_coop_sync(baseLds + baseOffsetB() + waveOffsetB()
-                                                    + blockOffsetB(i),
-                                                reinterpret_cast<LocalWriteFragB&>(fetchB),
-                                                ld(),
-                                                waveIndex,
-                                                waveCount,
-                                                splitCount);
+                store_matrix_coop_sync(baseLds + baseOffsetB() + waveOffsetB() + blockOffsetB(i),
+                                       reinterpret_cast<LocalWriteFragB&>(fetchB),
+                                       ld(),
+                                       waveIndex,
+                                       waveCount,
+                                       splitCount);
             }
         }
 
         __device__ static inline void
             prefetchLocalA(FragA& fragA, DataT const* baseLds, uint32_t blockX)
         {
-            rocwmma::load_matrix_sync(reinterpret_cast<LocalReadFragA&>(fragA),
-                                      baseLds + baseOffsetA() + waveOffsetA()
-                                          + blockOffsetA(blockX),
-                                      ld());
+            load_matrix_sync(reinterpret_cast<LocalReadFragA&>(fragA),
+                             baseLds + baseOffsetA() + waveOffsetA() + blockOffsetA(blockX),
+                             ld());
         }
 
         __device__ static inline void
             prefetchLocalB(FragB& fragB, DataT const* baseLds, uint32_t blockY)
         {
-            rocwmma::load_matrix_sync(reinterpret_cast<LocalReadFragB&>(fragB),
-                                      baseLds + baseOffsetB() + waveOffsetB()
-                                          + blockOffsetB(blockY),
-                                      ld());
+            load_matrix_sync(reinterpret_cast<LocalReadFragB&>(fragB),
+                             baseLds + baseOffsetB() + waveOffsetB() + blockOffsetB(blockY),
+                             ld());
         }
 
         __device__ static inline void prefetchLocalA(FragA* fragsA, DataT const* baseLds)
@@ -410,33 +406,31 @@ namespace rocwmma
         // A matrix extends across BlocksX
         // B matrix extends across BlocksY
         using GlobalReadFragA
-            = rocwmma::fragment<matrix_a, BlockM * BlocksX, BlockN, BlockK, DataT, LayoutA>;
+            = fragment<matrix_a, BlockM * BlocksX, BlockN, BlockK, DataT, LayoutA>;
         using GlobalReadFragB
-            = rocwmma::fragment<matrix_b, BlockM, BlockN * BlocksY, BlockK, DataT, LayoutB>;
+            = fragment<matrix_b, BlockM, BlockN * BlocksY, BlockK, DataT, LayoutB>;
 
         // Local Write
         // A matrix already aligned
         // B matrix is transposed
         using LocalWriteFragA
-            = rocwmma::fragment<matrix_a, BlockM * BlocksX, BlockN, BlockK, DataT, LayoutLds>;
-        using LocalWriteFragB = rocwmma::fragment<matrix_a,
-                                                  BlockN * BlocksY,
-                                                  BlockM,
-                                                  BlockK,
-                                                  DataT,
-                                                  LayoutLds>; // Exchange rows / cols
+            = fragment<matrix_a, BlockM * BlocksX, BlockN, BlockK, DataT, LayoutLds>;
+        using LocalWriteFragB = fragment<matrix_a,
+                                         BlockN * BlocksY,
+                                         BlockM,
+                                         BlockK,
+                                         DataT,
+                                         LayoutLds>; // Exchange rows / cols
 
         // Local Read - smaller block size target loads
         // A matrix reads BlockM x BlockK
         // B matrix reads BlockK x BlockN (transposed)
-        using LocalReadFragA
-            = rocwmma::fragment<matrix_a, BlockM, BlockN, BlockK, DataT, LayoutLds>;
-        using LocalReadFragB
-            = rocwmma::fragment<matrix_a, BlockN, BlockM, BlockK, DataT, LayoutLds>;
+        using LocalReadFragA = fragment<matrix_a, BlockM, BlockN, BlockK, DataT, LayoutLds>;
+        using LocalReadFragB = fragment<matrix_a, BlockN, BlockM, BlockK, DataT, LayoutLds>;
 
         // Final in-register fragment from LDS load
-        using FragA = rocwmma::fragment<matrix_a, BlockM, BlockN, BlockK, DataT, LayoutA>;
-        using FragB = rocwmma::fragment<matrix_b, BlockM, BlockN, BlockK, DataT, LayoutB>;
+        using FragA = fragment<matrix_a, BlockM, BlockN, BlockK, DataT, LayoutA>;
+        using FragB = fragment<matrix_b, BlockM, BlockN, BlockK, DataT, LayoutB>;
 
         using MappingUtil = MappingUtil<BlockM, BlockN, DataT, LayoutLds>;
 
@@ -517,15 +511,15 @@ namespace rocwmma
 
             // Issue global read
             GlobalReadFragA fetchA;
-            rocwmma::load_matrix_coop_sync(fetchA, baseA, lda, waveIndex, waveCount, splitCount);
+            load_matrix_coop_sync(fetchA, baseA, lda, waveIndex, waveCount, splitCount);
 
             // Issue local store
-            rocwmma::store_matrix_coop_sync(baseLds + baseOffsetA() + waveOffsetA(),
-                                            reinterpret_cast<LocalWriteFragA&>(fetchA),
-                                            ld(),
-                                            waveIndex,
-                                            waveCount,
-                                            splitCount);
+            store_matrix_coop_sync(baseLds + baseOffsetA() + waveOffsetA(),
+                                   reinterpret_cast<LocalWriteFragA&>(fetchA),
+                                   ld(),
+                                   waveIndex,
+                                   waveCount,
+                                   splitCount);
         }
 
         __device__ static inline void
@@ -550,33 +544,31 @@ namespace rocwmma
 
             // Issue global read
             GlobalReadFragB fetchB;
-            rocwmma::load_matrix_coop_sync(fetchB, baseB, ldb, waveIndex, waveCount, splitCount);
+            load_matrix_coop_sync(fetchB, baseB, ldb, waveIndex, waveCount, splitCount);
 
             // Issue local store
-            rocwmma::store_matrix_coop_sync(baseLds + baseOffsetB() + waveOffsetB(),
-                                            reinterpret_cast<LocalWriteFragB&>(fetchB),
-                                            ld(),
-                                            waveIndex,
-                                            waveCount,
-                                            splitCount);
+            store_matrix_coop_sync(baseLds + baseOffsetB() + waveOffsetB(),
+                                   reinterpret_cast<LocalWriteFragB&>(fetchB),
+                                   ld(),
+                                   waveIndex,
+                                   waveCount,
+                                   splitCount);
         }
 
         __device__ static inline void
             prefetchLocalA(FragA& fragA, DataT const* baseLds, uint32_t blockX)
         {
-            rocwmma::load_matrix_sync(reinterpret_cast<LocalReadFragA&>(fragA),
-                                      baseLds + baseOffsetA() + waveOffsetA()
-                                          + blockOffsetA(blockX),
-                                      ld());
+            load_matrix_sync(reinterpret_cast<LocalReadFragA&>(fragA),
+                             baseLds + baseOffsetA() + waveOffsetA() + blockOffsetA(blockX),
+                             ld());
         }
 
         __device__ static inline void
             prefetchLocalB(FragB& fragB, DataT const* baseLds, uint32_t blockY)
         {
-            rocwmma::load_matrix_sync(reinterpret_cast<LocalReadFragB&>(fragB),
-                                      baseLds + baseOffsetB() + waveOffsetB()
-                                          + blockOffsetB(blockY),
-                                      ld());
+            load_matrix_sync(reinterpret_cast<LocalReadFragB&>(fragB),
+                             baseLds + baseOffsetB() + waveOffsetB() + blockOffsetB(blockY),
+                             ld());
         }
 
         __device__ static inline void prefetchLocalA(FragA* fragsA, DataT const* baseLds)
@@ -649,29 +641,27 @@ namespace rocwmma
         // A matrix extends across BlocksX
         // B matrix extends across BlocksY
         using GlobalReadFragA
-            = rocwmma::fragment<matrix_a, BlockM * BlocksX, BlockN, BlockK, DataT, LayoutA>;
+            = fragment<matrix_a, BlockM * BlocksX, BlockN, BlockK, DataT, LayoutA>;
         using GlobalReadFragB
-            = rocwmma::fragment<matrix_b, BlockM, BlockN * BlocksY, BlockK, DataT, LayoutB>;
+            = fragment<matrix_b, BlockM, BlockN * BlocksY, BlockK, DataT, LayoutB>;
 
         // Local Write - extended leading dimension across all blocks
         // A matrix is transposed
         // B matrix already aligned
         using LocalWriteFragA
-            = rocwmma::fragment<matrix_b, BlockN, BlockM * BlocksX, BlockK, DataT, LayoutLds>;
+            = fragment<matrix_b, BlockN, BlockM * BlocksX, BlockK, DataT, LayoutLds>;
         using LocalWriteFragB
-            = rocwmma::fragment<matrix_b, BlockM, BlockN * BlocksY, BlockK, DataT, LayoutLds>;
+            = fragment<matrix_b, BlockM, BlockN * BlocksY, BlockK, DataT, LayoutLds>;
 
         // Local Read - smaller block size target loads
         // A matrix reads BlockM x BlockK (transposed)
         // B matrix reads BlockK x BlockN
-        using LocalReadFragA
-            = rocwmma::fragment<matrix_b, BlockN, BlockM, BlockK, DataT, LayoutLds>;
-        using LocalReadFragB
-            = rocwmma::fragment<matrix_b, BlockM, BlockN, BlockK, DataT, LayoutLds>;
+        using LocalReadFragA = fragment<matrix_b, BlockN, BlockM, BlockK, DataT, LayoutLds>;
+        using LocalReadFragB = fragment<matrix_b, BlockM, BlockN, BlockK, DataT, LayoutLds>;
 
         // General purpose fragment type
-        using FragA = rocwmma::fragment<matrix_a, BlockM, BlockN, BlockK, DataT, LayoutA>;
-        using FragB = rocwmma::fragment<matrix_b, BlockM, BlockN, BlockK, DataT, LayoutB>;
+        using FragA = fragment<matrix_a, BlockM, BlockN, BlockK, DataT, LayoutA>;
+        using FragB = fragment<matrix_b, BlockM, BlockN, BlockK, DataT, LayoutB>;
 
         using MappingUtil = MappingUtil<BlockM, BlockN, DataT, LayoutLds>;
 
@@ -754,15 +744,15 @@ namespace rocwmma
             //for(int32_t i = 0; i < std::get<0>(workgroupDim); ++i)
             //{
             GlobalReadFragA fetchA;
-            rocwmma::load_matrix_coop_sync(fetchA, baseA, lda, waveIndex, waveCount, splitCount);
+            load_matrix_coop_sync(fetchA, baseA, lda, waveIndex, waveCount, splitCount);
 
             // Issue local store
-            rocwmma::store_matrix_coop_sync(baseLds + baseOffsetA() + waveOffsetA(),
-                                            reinterpret_cast<LocalWriteFragA&>(fetchA),
-                                            ld(),
-                                            waveIndex,
-                                            waveCount,
-                                            splitCount);
+            store_matrix_coop_sync(baseLds + baseOffsetA() + waveOffsetA(),
+                                   reinterpret_cast<LocalWriteFragA&>(fetchA),
+                                   ld(),
+                                   waveIndex,
+                                   waveCount,
+                                   splitCount);
             //}
         }
 
@@ -788,33 +778,31 @@ namespace rocwmma
 
             // Issue global read
             GlobalReadFragB fetchB;
-            rocwmma::load_matrix_coop_sync(fetchB, baseB, ldb, waveIndex, waveCount, splitCount);
+            load_matrix_coop_sync(fetchB, baseB, ldb, waveIndex, waveCount, splitCount);
 
             // Issue local store
-            rocwmma::store_matrix_coop_sync(baseLds + baseOffsetB() + waveOffsetB(),
-                                            reinterpret_cast<LocalWriteFragB&>(fetchB),
-                                            ld(),
-                                            waveIndex,
-                                            waveCount,
-                                            splitCount);
+            store_matrix_coop_sync(baseLds + baseOffsetB() + waveOffsetB(),
+                                   reinterpret_cast<LocalWriteFragB&>(fetchB),
+                                   ld(),
+                                   waveIndex,
+                                   waveCount,
+                                   splitCount);
         }
 
         __device__ static inline void
             prefetchLocalA(FragA& fragA, DataT const* baseLds, uint32_t blockX)
         {
-            rocwmma::load_matrix_sync(reinterpret_cast<LocalReadFragA&>(fragA),
-                                      baseLds + baseOffsetA() + waveOffsetA()
-                                          + blockOffsetA(blockX),
-                                      ld());
+            load_matrix_sync(reinterpret_cast<LocalReadFragA&>(fragA),
+                             baseLds + baseOffsetA() + waveOffsetA() + blockOffsetA(blockX),
+                             ld());
         }
 
         __device__ static inline void
             prefetchLocalB(FragB& fragB, DataT const* baseLds, uint32_t blockY)
         {
-            rocwmma::load_matrix_sync(reinterpret_cast<LocalReadFragB&>(fragB),
-                                      baseLds + baseOffsetB() + waveOffsetB()
-                                          + blockOffsetB(blockY),
-                                      ld());
+            load_matrix_sync(reinterpret_cast<LocalReadFragB&>(fragB),
+                             baseLds + baseOffsetB() + waveOffsetB() + blockOffsetB(blockY),
+                             ld());
         }
 
         __device__ static inline void prefetchLocalA(FragA* fragsA, DataT const* baseLds)
@@ -886,29 +874,27 @@ namespace rocwmma
         // A matrix extends across BlocksX
         // B matrix extends across BlocksY
         using GlobalReadFragA
-            = rocwmma::fragment<matrix_a, BlockM * BlockSpanX, BlockN, BlockK, DataT, LayoutA>;
+            = fragment<matrix_a, BlockM * BlockSpanX, BlockN, BlockK, DataT, LayoutA>;
         using GlobalReadFragB
-            = rocwmma::fragment<matrix_b, BlockM, BlockN * BlockSpanY, BlockK, DataT, LayoutB>;
+            = fragment<matrix_b, BlockM, BlockN * BlockSpanY, BlockK, DataT, LayoutB>;
 
         // Local Write - extended leading dimension across all blocks
         // A matrix is transposed
         // B matrix already aligned
         using LocalWriteFragA
-            = rocwmma::fragment<matrix_b, BlockN, BlockM * BlockSpanX, BlockK, DataT, LayoutLds>;
+            = fragment<matrix_b, BlockN, BlockM * BlockSpanX, BlockK, DataT, LayoutLds>;
         using LocalWriteFragB
-            = rocwmma::fragment<matrix_b, BlockM, BlockN * BlockSpanY, BlockK, DataT, LayoutLds>;
+            = fragment<matrix_b, BlockM, BlockN * BlockSpanY, BlockK, DataT, LayoutLds>;
 
         // Local Read - smaller block size target loads
         // A matrix reads BlockM x BlockK (transposed)
         // B matrix reads BlockK x BlockN
-        using LocalReadFragA
-            = rocwmma::fragment<matrix_b, BlockN, BlockM, BlockK, DataT, LayoutLds>;
-        using LocalReadFragB
-            = rocwmma::fragment<matrix_b, BlockM, BlockN, BlockK, DataT, LayoutLds>;
+        using LocalReadFragA = fragment<matrix_b, BlockN, BlockM, BlockK, DataT, LayoutLds>;
+        using LocalReadFragB = fragment<matrix_b, BlockM, BlockN, BlockK, DataT, LayoutLds>;
 
         // General purpose fragment type
-        using FragA = rocwmma::fragment<matrix_a, BlockM, BlockN, BlockK, DataT, LayoutA>;
-        using FragB = rocwmma::fragment<matrix_b, BlockM, BlockN, BlockK, DataT, LayoutB>;
+        using FragA = fragment<matrix_a, BlockM, BlockN, BlockK, DataT, LayoutA>;
+        using FragB = fragment<matrix_b, BlockM, BlockN, BlockK, DataT, LayoutB>;
 
         using MappingUtil = MappingUtil<BlockM, BlockN, DataT, LayoutLds>;
 
@@ -975,15 +961,15 @@ namespace rocwmma
 
             // Share the load across all waves, we must do so for each row
             GlobalReadFragA fetchA;
-            rocwmma::load_matrix_coop_sync(fetchA, baseA, lda, waveIndex, waveCount, splitCount);
+            load_matrix_coop_sync(fetchA, baseA, lda, waveIndex, waveCount, splitCount);
 
             // Issue local store
-            rocwmma::store_matrix_coop_sync(baseLds + baseOffsetA(),
-                                            reinterpret_cast<LocalWriteFragA&>(fetchA),
-                                            ld(),
-                                            waveIndex,
-                                            waveCount,
-                                            splitCount);
+            store_matrix_coop_sync(baseLds + baseOffsetA(),
+                                   reinterpret_cast<LocalWriteFragA&>(fetchA),
+                                   ld(),
+                                   waveIndex,
+                                   waveCount,
+                                   splitCount);
         }
 
         __device__ static inline void
@@ -1010,31 +996,31 @@ namespace rocwmma
 
             // Issue global read
             GlobalReadFragB fetchB;
-            rocwmma::load_matrix_coop_sync(fetchB, baseB, ldb, waveIndex, waveCount, splitCount);
+            load_matrix_coop_sync(fetchB, baseB, ldb, waveIndex, waveCount, splitCount);
 
             // Issue local store
-            rocwmma::store_matrix_coop_sync(baseLds + baseOffsetB(),
-                                            reinterpret_cast<LocalWriteFragB&>(fetchB),
-                                            ld(),
-                                            waveIndex,
-                                            waveCount,
-                                            splitCount);
+            store_matrix_coop_sync(baseLds + baseOffsetB(),
+                                   reinterpret_cast<LocalWriteFragB&>(fetchB),
+                                   ld(),
+                                   waveIndex,
+                                   waveCount,
+                                   splitCount);
         }
 
         __device__ static inline void
             prefetchLocalA(FragA& fragA, DataT const* baseLds, uint32_t blockX)
         {
-            rocwmma::load_matrix_sync(reinterpret_cast<LocalReadFragA&>(fragA),
-                                      baseLds + baseOffsetA() + blockOffsetA(blockX),
-                                      ld());
+            load_matrix_sync(reinterpret_cast<LocalReadFragA&>(fragA),
+                             baseLds + baseOffsetA() + blockOffsetA(blockX),
+                             ld());
         }
 
         __device__ static inline void
             prefetchLocalB(FragB& fragB, DataT const* baseLds, uint32_t blockY)
         {
-            rocwmma::load_matrix_sync(reinterpret_cast<LocalReadFragB&>(fragB),
-                                      baseLds + baseOffsetB() + blockOffsetB(blockY),
-                                      ld());
+            load_matrix_sync(reinterpret_cast<LocalReadFragB&>(fragB),
+                             baseLds + baseOffsetB() + blockOffsetB(blockY),
+                             ld());
         }
     };
 
