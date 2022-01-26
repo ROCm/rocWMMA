@@ -42,22 +42,20 @@ namespace rocwmma
                                              DataT        param1,
                                              DataT        param2)
     {
-        using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
 
         enum : uint32_t
         {
-            MajorIndex = std::is_same<Layout, rocwmma::row_major>::value ? 0 : 1,
-            MinorIndex = std::is_same<Layout, rocwmma::row_major>::value ? 1 : 0
+            MajorIndex = std::is_same<Layout, row_major>::value ? 0 : 1,
+            MinorIndex = std::is_same<Layout, row_major>::value ? 1 : 0
         };
 
         auto aCoord = Mapping::matrixCoordM(param1);
 
-        uint32_t col = std::is_same<Layout, rocwmma::row_major>::value
-                           ? std::get<MajorIndex>(aCoord)
-                           : std::get<MinorIndex>(aCoord);
-        uint32_t row = std::is_same<Layout, rocwmma::row_major>::value
-                           ? std::get<MinorIndex>(aCoord)
-                           : std::get<MajorIndex>(aCoord);
+        uint32_t col = std::is_same<Layout, row_major>::value ? std::get<MajorIndex>(aCoord)
+                                                              : std::get<MinorIndex>(aCoord);
+        uint32_t row = std::is_same<Layout, row_major>::value ? std::get<MinorIndex>(aCoord)
+                                                              : std::get<MajorIndex>(aCoord);
 
         for(int i = 0; i < BlockM; i++)
             for(int j = 0; j < BlockN; j++)

@@ -42,21 +42,19 @@ namespace rocwmma
                                        DataT        param1,
                                        DataT        param2)
     {
-        using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
         // Mapping:
         // Incoming -> Matrix A (ColNT)
         // BlockM -> BlockM
         // <Dummy> -> BlockN
         // BlockN -> BlockK
-        auto frag = rocwmma::fragment<rocwmma::matrix_a, BlockM, 1, BlockN, DataT, Layout>();
+        auto frag = fragment<matrix_a, BlockM, 1, BlockN, DataT, Layout>();
 
         // Input is padded.
         // Make sure to offset read coords and extend reading ld.
         uint32_t paddedLd
             = ld
-              + 2
-                    * static_cast<uint32_t>(
-                        std::is_same<Layout, rocwmma::row_major>::value ? param2 : param1);
+              + 2 * static_cast<uint32_t>(std::is_same<Layout, row_major>::value ? param2 : param1);
         auto readMatCoord = Mapping::matrixCoord();
         auto readMatCoordPadded
             = std::make_pair(std::get<0>(readMatCoord) + static_cast<uint32_t>(param1),
@@ -64,8 +62,8 @@ namespace rocwmma
         // Map, load and store.
         auto* read  = Mapping::dataCoord(in, readMatCoordPadded, paddedLd);
         auto* write = Mapping::dataCoord(out, ld);
-        rocwmma::load_matrix_sync(frag, read, paddedLd);
-        rocwmma::store_matrix_sync(write, frag, ld);
+        load_matrix_sync(frag, read, paddedLd);
+        store_matrix_sync(write, frag, ld);
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
@@ -77,22 +75,20 @@ namespace rocwmma
                                        DataT        param1,
                                        DataT        param2)
     {
-        using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
 
         // Mapping:
         // Incoming -> Matrix B (RowNT)
         // <Dummy> -> BlockM
         // BlockN -> BlockN
         // BlockM -> BlockK
-        auto frag = rocwmma::fragment<rocwmma::matrix_b, 1, BlockN, BlockM, DataT, Layout>();
+        auto frag = fragment<matrix_b, 1, BlockN, BlockM, DataT, Layout>();
 
         // Input is padded.
         // Make sure to offset read coords and extend reading ld.
         uint32_t paddedLd
             = ld
-              + 2
-                    * static_cast<uint32_t>(
-                        std::is_same<Layout, rocwmma::row_major>::value ? param2 : param1);
+              + 2 * static_cast<uint32_t>(std::is_same<Layout, row_major>::value ? param2 : param1);
         auto readMatCoord = Mapping::matrixCoord();
         auto readMatCoordPadded
             = std::make_pair(std::get<0>(readMatCoord) + static_cast<uint32_t>(param1),
@@ -100,8 +96,8 @@ namespace rocwmma
         // Map, load and store.
         auto* read  = Mapping::dataCoord(in, readMatCoordPadded, paddedLd);
         auto* write = Mapping::dataCoord(out, ld);
-        rocwmma::load_matrix_sync(frag, read, paddedLd);
-        rocwmma::store_matrix_sync(write, frag, ld);
+        load_matrix_sync(frag, read, paddedLd);
+        store_matrix_sync(write, frag, ld);
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
@@ -113,22 +109,20 @@ namespace rocwmma
                                          DataT        param1,
                                          DataT        param2)
     {
-        using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
 
         // Mapping:
         // Incoming -> Matrix C (Row4T)
         // BlockM -> BlockM
         // BlockN -> BlockN
         // <Dummy> -> BlockK
-        auto frag = rocwmma::fragment<rocwmma::accumulator, BlockM, BlockN, 1, DataT, Layout>();
+        auto frag = fragment<accumulator, BlockM, BlockN, 1, DataT, Layout>();
 
         // Input is padded.
         // Make sure to offset read coords and extend reading ld.
         uint32_t paddedLd
             = ld
-              + 2
-                    * static_cast<uint32_t>(
-                        std::is_same<Layout, rocwmma::row_major>::value ? param2 : param1);
+              + 2 * static_cast<uint32_t>(std::is_same<Layout, row_major>::value ? param2 : param1);
         auto readMatCoord = Mapping::matrixCoord();
         auto readMatCoordPadded
             = std::make_pair(std::get<0>(readMatCoord) + static_cast<uint32_t>(param1),
@@ -136,8 +130,8 @@ namespace rocwmma
         // Map, load and store.
         auto* read  = Mapping::dataCoord(in, readMatCoordPadded, paddedLd);
         auto* write = Mapping::dataCoord(out, ld);
-        rocwmma::load_matrix_sync(frag, read, paddedLd);
-        rocwmma::store_matrix_sync(write, frag, ld);
+        load_matrix_sync(frag, read, paddedLd);
+        store_matrix_sync(write, frag, ld);
     }
 
 } // namespace rocwmma

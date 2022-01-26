@@ -50,9 +50,9 @@ namespace rocwmma
         // BlockM -> BlockM
         // <Dummy> -> BlockN
         // BlockN -> BlockK
-        auto frag = rocwmma::fragment<rocwmma::matrix_a, BlockM, 1, BlockN, DataT, Layout>();
+        auto frag = fragment<matrix_a, BlockM, 1, BlockN, DataT, Layout>();
 
-        using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
 
         auto workgroupDim      = Mapping::workgroupDim();
         auto waveCoord         = Mapping::waveCoord();
@@ -96,8 +96,8 @@ namespace rocwmma
                                                       std::get<1>(startBlockCoord) + j);
                     auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
                     auto* write = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
-                    rocwmma::load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
-                    rocwmma::store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
+                    load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
+                    store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
                 }
             }
         }
@@ -117,9 +117,9 @@ namespace rocwmma
         // <Dummy> -> BlockM
         // BlockN -> BlockN
         // BlockM -> BlockK
-        auto frag = rocwmma::fragment<rocwmma::matrix_b, 1, BlockN, BlockM, DataT, Layout>();
+        auto frag = fragment<matrix_b, 1, BlockN, BlockM, DataT, Layout>();
 
-        using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
 
         auto workgroupDim      = Mapping::workgroupDim();
         auto waveCoord         = Mapping::waveCoord();
@@ -163,8 +163,8 @@ namespace rocwmma
                                                       std::get<1>(startBlockCoord) + j);
                     auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
                     auto* write = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
-                    rocwmma::load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
-                    rocwmma::store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
+                    load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
+                    store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
                 }
             }
         }
@@ -184,9 +184,9 @@ namespace rocwmma
         // BlockM -> BlockM
         // BlockN -> BlockN
         // <Dummy> -> BlockK
-        auto frag = rocwmma::fragment<rocwmma::accumulator, BlockM, BlockN, 1, DataT, Layout>();
+        auto frag = fragment<accumulator, BlockM, BlockN, 1, DataT, Layout>();
 
-        using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, Layout>;
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
 
         auto workgroupDim      = Mapping::workgroupDim();
         auto waveCoord         = Mapping::waveCoord();
@@ -229,8 +229,8 @@ namespace rocwmma
                                                       std::get<1>(startBlockCoord) + j);
                     auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
                     auto* write = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
-                    rocwmma::load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
-                    rocwmma::store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
+                    load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
+                    store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
                 }
             }
         }

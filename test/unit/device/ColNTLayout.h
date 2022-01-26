@@ -47,21 +47,21 @@ namespace rocwmma
     {
         enum : uint32_t
         {
-            MaxVectorWidth = rocwmma::detail::VecWidthTraits<BlockM, BlockN, DataT>::MaxVectorWidth,
-            VectorWidth    = std::is_same<LayoutP, rocwmma::row_major>::value ? MaxVectorWidth : 1
+            MaxVectorWidth = detail::VecWidthTraits<BlockM, BlockN, DataT>::MaxVectorWidth,
+            VectorWidth    = std::is_same<LayoutP, row_major>::value ? MaxVectorWidth : 1
         };
 
-        if((std::is_same<LayoutP, rocwmma::col_major>::value && ElementsPerThread > 1)
+        if((std::is_same<LayoutP, col_major>::value && ElementsPerThread > 1)
            || (BlockM > AMDGCN_WAVE_SIZE))
         {
             out[0] = static_cast<DataT>(ERROR_VALUE);
             return;
         }
 
-        using IOTraits = rocwmma::IOTraits<BlockM, BlockN, DataT, VectorWidth>;
-        using LayoutT  = rocwmma::MatrixLayout::
-            ColNT<BlockM, BlockN, DataT, LayoutP, VectorWidth, MaxVectorWidth>;
-        using Mapping = rocwmma::MappingUtil<BlockM, BlockN, DataT, LayoutP>;
+        using IOTraits = IOTraits<BlockM, BlockN, DataT, VectorWidth>;
+        using LayoutT
+            = MatrixLayout::ColNT<BlockM, BlockN, DataT, LayoutP, VectorWidth, MaxVectorWidth>;
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, LayoutP>;
 
         auto baseOffset  = LayoutT::baseOffset();
         auto iocount     = IOTraits::IOCount;
@@ -69,8 +69,8 @@ namespace rocwmma
 
         enum : uint32_t
         {
-            MajorIndex = std::is_same<LayoutP, rocwmma::row_major>::value ? 0 : 1,
-            MinorIndex = std::is_same<LayoutP, rocwmma::row_major>::value ? 1 : 0
+            MajorIndex = std::is_same<LayoutP, row_major>::value ? 0 : 1,
+            MinorIndex = std::is_same<LayoutP, row_major>::value ? 1 : 0
         };
 
         for(uint32_t i = 0; i < iocount; ++i)
