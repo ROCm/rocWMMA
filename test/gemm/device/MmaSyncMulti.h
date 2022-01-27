@@ -166,7 +166,6 @@ namespace rocwmma
                         globalAddrsA,
                         i,
                         MappingA::dataCoord(a, std::make_pair(std::get<0>(subMatARowRef), 0), lda));
-                    //globalAddrsA[i] = MappingA::dataCoord(a, std::make_pair(std::get<0>(subMatARowRef), 0), lda);
                 }
 
                 // Blocks in the same col share the same starting address for B
@@ -178,7 +177,6 @@ namespace rocwmma
                         globalAddrsB,
                         i,
                         MappingB::dataCoord(b, std::make_pair(0, std::get<1>(subMatBColRef)), ldb));
-                    //globalAddrsB[i] = MappingB::dataCoord(b, std::make_pair(0, std::get<1>(subMatBColRef)), ldb);
                 }
 
                 // Setup address increments.

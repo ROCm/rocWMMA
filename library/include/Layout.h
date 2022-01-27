@@ -150,7 +150,7 @@ namespace rocwmma
         {
             struct Traits
             {
-                using MappingUtil  = rocwmma::MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+                using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
                 using MatrixCoordT = typename MappingUtil::MatrixCoordT;
 
                 // ColNT enforces consistent in-register alignment of contiguous matrix column
@@ -255,7 +255,7 @@ namespace rocwmma
         {
             struct Traits
             {
-                using MappingUtil  = rocwmma::MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+                using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
                 using MatrixCoordT = typename MappingUtil::MatrixCoordT;
 
                 // RowNT enforces consistent in-register alignment of contiguous matrix row
@@ -312,7 +312,7 @@ namespace rocwmma
         {
             struct Traits
             {
-                using MappingUtil  = rocwmma::MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+                using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
                 using MatrixCoordT = typename MappingUtil::MatrixCoordT;
             };
         };
@@ -361,7 +361,7 @@ namespace rocwmma
         {
             struct Traits
             {
-                using MappingUtil  = rocwmma::MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+                using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
                 using MatrixCoordT = typename MappingUtil::MatrixCoordT;
             };
         };

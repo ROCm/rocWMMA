@@ -111,7 +111,7 @@ bool DlrmKernelBase<TileSize, DataT>::checkSizes() const
 template <uint32_t TileSize, typename DataT>
 bool DlrmKernelBase<TileSize, DataT>::checkLds() const
 {
-    return ldsUsage() <= LDS_MAX_BYTES;
+    return ldsUsage() <= AMDGCN_LDS_MAX_SIZE_BYTES;
 }
 
 template <uint32_t TileSize, typename DataT>

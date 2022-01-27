@@ -64,7 +64,7 @@ namespace rocwmma
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
     dim3 UnitKernelBase<BlockM, BlockN, DataT, Layout>::gridDim() const
     {
-        return dim3(ceilDiv(mM, BlockM * mTBlockX / rocwmma::AMDGCN_WAVE_SIZE),
+        return dim3(ceilDiv(mM, BlockM * mTBlockX / AMDGCN_WAVE_SIZE),
                     ceilDiv(mN, BlockN * mTBlockY));
     }
 
@@ -82,20 +82,19 @@ namespace rocwmma
     {
         auto deviceArch = DeviceInfo::instance()->getGcnArch();
         return (deviceArch != DeviceInfo::UNKNOWN
-                && !(deviceArch == DeviceInfo::GFX908
-                     && std::is_same<DataT, rocwmma::float64_t>::value));
+                && !(deviceArch == DeviceInfo::GFX908 && std::is_same<DataT, float64_t>::value));
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
     bool UnitKernelBase<BlockM, BlockN, DataT, Layout>::checkSizes() const
     {
-        return (mM >= (BlockM * mTBlockX / rocwmma::AMDGCN_WAVE_SIZE) && mN >= (BlockN * mTBlockY));
+        return (mM >= (BlockM * mTBlockX / AMDGCN_WAVE_SIZE) && mN >= (BlockN * mTBlockY));
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
     bool UnitKernelBase<BlockM, BlockN, DataT, Layout>::checkLds() const
     {
-        return ldsUsage() <= rocwmma::AMDGCN_LDS_MAX_SIZE_BYTES;
+        return ldsUsage() <= AMDGCN_LDS_MAX_SIZE_BYTES;
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
@@ -180,7 +179,7 @@ namespace rocwmma
                                     static_cast<uint32_t const&>(std::get<1>(problem.problemSize)));
         mParam1          = static_cast<DataT>(problem.param1);
         mParam2          = static_cast<DataT>(problem.param2);
-        mLd              = std::is_same<Layout, rocwmma::row_major>::value ? mN : mM;
+        mLd              = std::is_same<Layout, row_major>::value ? mN : mM;
 
         // Clear the kernel to run
         mRunFlag &= checkDevice();
