@@ -47,8 +47,8 @@ namespace rocwmma
 
         // Assemble the kernel generator
         // Kernel: LoadContaminationA
-        using GeneratorImpl   = rocwmma::LoadContaminationGeneratorA;
-        using KernelGenerator = rocwmma::KernelGenerator<KernelParams, GeneratorImpl>;
+        using GeneratorImpl   = LoadContaminationGeneratorA;
+        using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
         static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,

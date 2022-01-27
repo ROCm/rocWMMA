@@ -82,7 +82,7 @@ namespace rocwmma
         {
             // Initialize accumulator
             auto fragAcc = FragAcc();
-            rocwmma::fill_fragment(fragAcc, static_cast<ComputeT>(0));
+            fill_fragment(fragAcc, static_cast<ComputeT>(0));
 
             // Accumulate A * B
             if(alpha)

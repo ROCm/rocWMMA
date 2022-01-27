@@ -71,14 +71,12 @@ namespace rocwmma
         };
 
         template <>
-        struct rocblas_supported<rocwmma::bfloat16_t, rocwmma::bfloat16_t, rocwmma::bfloat16_t>
-            : std::false_type
+        struct rocblas_supported<bfloat16_t, bfloat16_t, bfloat16_t> : std::false_type
         {
         };
 
         template <>
-        struct rocblas_supported<rocwmma::int8_t, rocwmma::int8_t, rocwmma::int32_t>
-            : std::false_type
+        struct rocblas_supported<int8_t, int8_t, int32_t> : std::false_type
         {
         };
 
@@ -94,8 +92,8 @@ namespace rocwmma
             auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
             auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
 
-            auto index = std::is_same<Layout, rocwmma::row_major>::value ? rowMjr : colMjr;
-            auto ld    = std::is_same<Layout, rocwmma::row_major>::value ? n : m;
+            auto index = std::is_same<Layout, row_major>::value ? rowMjr : colMjr;
+            auto ld    = std::is_same<Layout, row_major>::value ? n : m;
 
             for(int i = 0; i < m; ++i) // row
             {
@@ -129,8 +127,8 @@ namespace rocwmma
 
             const auto limitM = m + 2 * padM;
             const auto limitN = n + 2 * padN;
-            auto       index  = std::is_same<Layout, rocwmma::row_major>::value ? rowMjr : colMjr;
-            auto       ld     = std::is_same<Layout, rocwmma::row_major>::value ? limitN : limitM;
+            auto       index  = std::is_same<Layout, row_major>::value ? rowMjr : colMjr;
+            auto       ld     = std::is_same<Layout, row_major>::value ? limitN : limitM;
 
 #pragma omp parallel for
             for(int i = 0; i < limitM; ++i) // row
@@ -172,8 +170,8 @@ namespace rocwmma
             auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
             auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
 
-            auto index = std::is_same<Layout, rocwmma::row_major>::value ? rowMjr : colMjr;
-            auto ld    = std::is_same<Layout, rocwmma::row_major>::value ? n : m;
+            auto index = std::is_same<Layout, row_major>::value ? rowMjr : colMjr;
+            auto ld    = std::is_same<Layout, row_major>::value ? n : m;
 
 #pragma omp parallel for
             for(int i = 0; i < m; ++i) // row
@@ -242,8 +240,8 @@ namespace rocwmma
         auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
         auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
 
-        auto indexA = std::is_same<LayoutA, rocwmma::row_major>::value ? rowMjr : colMjr;
-        auto indexB = std::is_same<LayoutB, rocwmma::row_major>::value ? rowMjr : colMjr;
+        auto indexA = std::is_same<LayoutA, row_major>::value ? rowMjr : colMjr;
+        auto indexB = std::is_same<LayoutB, row_major>::value ? rowMjr : colMjr;
 
         bool       isInf = false;
         bool       isNaN = false;
@@ -405,8 +403,8 @@ namespace rocwmma
     inline std::pair<bool, double> compareEqual(
         TypeA const* matrixA, TypeB const* matrixB, uint32_t m, uint32_t n, double tolerance = 10.0)
     {
-        uint32_t lda = std::is_same<LayoutA, rocwmma::row_major>::value ? n : m;
-        uint32_t ldb = std::is_same<LayoutB, rocwmma::row_major>::value ? n : m;
+        uint32_t lda = std::is_same<LayoutA, row_major>::value ? n : m;
+        uint32_t ldb = std::is_same<LayoutB, row_major>::value ? n : m;
 
         return compareEqual<TypeA, TypeB, LayoutA, LayoutB>(
             matrixA, matrixB, m, n, lda, ldb, tolerance);
@@ -473,8 +471,8 @@ namespace rocwmma
 
         const auto limitM = m + 2 * padM;
         const auto limitN = n + 2 * padN;
-        auto       index  = std::is_same<LayoutT, rocwmma::row_major>::value ? rowMjr : colMjr;
-        auto       ld     = std::is_same<LayoutT, rocwmma::row_major>::value ? limitN : limitM;
+        auto       index  = std::is_same<LayoutT, row_major>::value ? rowMjr : colMjr;
+        auto       ld     = std::is_same<LayoutT, row_major>::value ? limitN : limitM;
 
         uint64_t count = 0;
 
