@@ -180,7 +180,7 @@ namespace rocwmma
                 for(int j = 0; j < n; ++j) // col
                 {
                     // Count up in integers, in ascending order for each row.
-                    auto value = (i * n + j) % 16;
+                    auto value = (i * n + j) % 5;
                     auto idx   = index(i, j, ld);
                     mat[idx] = (value % 3) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
                 }
