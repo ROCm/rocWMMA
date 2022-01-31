@@ -44,6 +44,39 @@
     }
 #endif
 
+template <uint x>
+struct Log2
+{
+    static constexpr uint value = 1 + Log2<x / 2>::value;
+};
+
+template <>
+struct Log2<1>
+{
+    static constexpr uint value = 0;
+};
+
+// Matrix data initialization
+template <typename DataT>
+__host__ static inline void
+    fill(DataT* mat, uint32_t m, uint32_t k, uint32_t b, uint32_t normalization = 1)
+{
+    auto batchOffset = m * k;
+    for(int t = 0; t < b; ++t)
+    {
+        for(int i = 0; i < m; ++i)
+        {
+            for(int j = 0; j < k; ++j)
+            {
+                // Random values normalized such that output is between 0 and 1
+                auto value = __float2half(static_cast<float>(rand() / normalization)
+                                          / static_cast<float>(RAND_MAX));
+                mat[t * batchOffset + i * k + j] = static_cast<DataT>(value);
+            }
+        }
+    }
+}
+
 // Element-wise comparison
 template <typename T>
 __host__ void compareEqual(T const* a, T const* b, uint32_t size, double tolerance = 10.0)
