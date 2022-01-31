@@ -33,39 +33,14 @@
 #include "WMMA.h"
 #include <functional>
 
-template <uint x>
-struct Log2
+// Training pass direction
+enum class DlrmDirection_t : bool
 {
-    static constexpr uint value = 1 + Log2<x / 2>::value;
+    Forward,
+    Backward
 };
 
-template <>
-struct Log2<1>
-{
-    static constexpr uint value = 0;
-};
-
-// Matrix data initialization
-template <typename DataT>
-__host__ static inline void
-    fill(DataT* mat, uint32_t m, uint32_t k, uint32_t b, uint32_t normalization = 1)
-{
-    auto batchOffset = m * k;
-    for(int t = 0; t < b; ++t)
-    {
-        for(int i = 0; i < m; ++i)
-        {
-            for(int j = 0; j < k; ++j)
-            {
-                // Random values normalized such that output is between 0 and 1
-                auto value = __float2half(static_cast<float>(rand() / normalization)
-                                          / static_cast<float>(RAND_MAX));
-                mat[t * batchOffset + i * k + j] = static_cast<DataT>(value);
-            }
-        }
-    }
-}
-
+// Host forwards DLRM validation
 __host__ void dlrmDotFwdCPU(float16_t* input, float16_t* output, uint32_t m, uint32_t k, uint32_t b)
 {
     auto batchOffset = m * k;
@@ -98,6 +73,7 @@ __host__ void dlrmDotFwdCPU(float16_t* input, float16_t* output, uint32_t m, uin
     }
 }
 
+// Host backwards DLRM validation
 __host__ void dlrmDotBwdCPU(float16_t* input,
                             float16_t* upstreamGrad,
                             float16_t* bottomMlpGrad,
@@ -153,9 +129,35 @@ __host__ void dlrmDotBwdCPU(float16_t* input,
     }
 }
 
-const int                  T_BLOCK_X = 128;
-constexpr static const int TILE_DIM  = 16;
+// Supports WMMA fragment sizes (TILE_DIM) of
+// : 16 x 16
+// : 32 x 32
+constexpr static const int TILE_DIM = 16;
 
+// Thread block
+// : T_BLOCK_X must be multiple of AMDGCN_WAVE_SIZE (64).
+// Note: Each wave will compute one TILE_DIM x TILE_DIM output block
+// Note: Workgroup will compute
+//  T_BLOCK_X / AMDGCN_WAVE_SIZE output blocks
+constexpr static const int T_BLOCK_X = 128;
+
+// The following device kernel is a naive implementation
+// of the forward-pass interaction dot layer in the DLRM
+// architecture. Each wave will compute one TILE_DIM x TILE_DIM
+// output block of the dot product, generalized as:
+// D[b] = A[b] x transpose(A[b]) for B batches
+//
+// In this simplified example, we assume:
+// : A is in row-major format            (M x K x B)
+// : transpose(A) is in col-major format (K x M x B)
+// : D is in row-major format            (M x M x B)
+// : No LDS required
+//
+// This device kernel also handles concatenating the lower triangular
+// indexing of D to the bottom MLP output to create the interaction dot output.
+//
+// Note: This is a simplified implementation to demonstrate API usage in
+// context of wave-level BMM computation, and is not optimized.
 __global__ void dlrmDotFwd(const float16_t* __restrict input,
                            float16_t* __restrict output,
                            float* acc,
@@ -256,6 +258,10 @@ __global__ void dlrmDotFwd(const float16_t* __restrict input,
     }
 }
 
+// The following device kernel is a navie implementation of
+// matrix reconstruction from a lower triangular indexing (tril) input.
+//
+// Note: This is a simplified implementation, and is not optimized
 __global__ void trilReconstruct(const float16_t* __restrict upstreamGrad,
                                 float16_t* __restrict acc,
                                 uint m,
@@ -299,6 +305,22 @@ __global__ void trilReconstruct(const float16_t* __restrict upstreamGrad,
     }
 }
 
+// The following device kernel is a naive implementation
+// of the backwards-pass interaction dot layer in the DLRM
+// architecture. Each wave will compute one TILE_DIM x TILE_DIM
+// output block of the dot product, generalized as:
+// D[b] = reconstructedTril[b] x input[b] for B batches
+//
+// In this simplified example, we assume:
+// : reconstructedTril is in row-major format (M x K x B)
+// : input is in col-major format             (M x M x B)
+// : D is in row-major format                 (M x K x B)
+// : No LDS required
+//
+// This device kernel also handles copying the bottom MLP gradient.
+//
+// Note: This is a simplified implementation to demonstrate API usage in
+// context of wave-level BMM computation, and is not optimized.
 __global__ void dlrmDotBwd(const float16_t* __restrict input,
                            const float16_t* __restrict upstreamGrad,
                            float16_t* __restrict grad,
@@ -311,10 +333,7 @@ __global__ void dlrmDotBwd(const float16_t* __restrict input,
                            uint upstreamBatchOffset,
                            uint accBatchOffset)
 {
-    using MappingA   = MappingUtil<TILE_DIM, TILE_DIM, float16_t, row_major>;
-    using MappingB   = MappingUtil<TILE_DIM, TILE_DIM, float16_t, row_major>;
-    using MappingC   = MappingUtil<TILE_DIM, TILE_DIM, float16_t, row_major>;
-    using MappingAcc = MappingUtil<TILE_DIM, TILE_DIM, float16_t, row_major>;
+    using TileMapping = MappingUtil<TILE_DIM, TILE_DIM, float16_t, row_major>;
 
     using FragA   = wmma::fragment<matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, row_major>;
     using FragB   = wmma::fragment<matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, row_major>;
@@ -340,7 +359,7 @@ __global__ void dlrmDotBwd(const float16_t* __restrict input,
     }
 
     // Target accumulator block
-    auto matrixCoordC = MappingC::matrixCoord();
+    auto matrixCoordC = TileMapping::matrixCoord();
 
     // Target output gradient block to perform reverse bmm
     if(std::get<0>(matrixCoordC) < m && std::get<1>(matrixCoordC) < k)
@@ -352,16 +371,16 @@ __global__ void dlrmDotBwd(const float16_t* __restrict input,
         // Setup starting addresses
         auto* accWithOffset   = acc + accBatchOffset * blockIdx.z;
         auto* inputWithOffset = input + inputBatchOffset * blockIdx.z;
-        auto* addrA
-            = MappingAcc::dataCoord(accWithOffset, m, std::make_pair(std::get<0>(matrixCoordC), 0));
-        auto* addrB
-            = MappingB::dataCoord(inputWithOffset, k, std::make_pair(0, std::get<1>(matrixCoordC)));
+        auto* addrA           = TileMapping::dataCoord(
+                      accWithOffset, m, std::make_pair(std::get<0>(matrixCoordC), 0));
+        auto* addrB = TileMapping::dataCoord(
+            inputWithOffset, k, std::make_pair(0, std::get<1>(matrixCoordC)));
 
         // Setup address increments.
         // A steps BlockK through m x m
         // B steps BlockK through m x k
-        auto incrA = MappingAcc::dataOffset(m, std::make_pair(0, TILE_DIM));
-        auto incrB = MappingB::dataOffset(k, std::make_pair(TILE_DIM, 0));
+        auto incrA = TileMapping::dataOffset(m, std::make_pair(0, TILE_DIM));
+        auto incrB = TileMapping::dataOffset(k, std::make_pair(TILE_DIM, 0));
 
         auto count = m / TILE_DIM;
         for(int i = 0; i < count; i++)
@@ -380,7 +399,7 @@ __global__ void dlrmDotBwd(const float16_t* __restrict input,
 
         // Output address
         auto* gradWithOffset = grad + inputBatchOffset * blockIdx.z;
-        auto* addrGrad       = MappingA::dataCoord(gradWithOffset, k, matrixCoordC);
+        auto* addrGrad       = TileMapping::dataCoord(gradWithOffset, k, matrixCoordC);
 
         // Store accumulator fragment to output gradient
         auto fragC = FragC();
@@ -396,7 +415,7 @@ __global__ void dlrmDotBwd(const float16_t* __restrict input,
     }
 }
 
-__host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, bool isBwd)
+__host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t passDirection)
 {
     // Allocate and initialize host matrices
     std::vector<float16_t> h_input, h_output, h_upstreamGrad, h_grad, h_bottomMlpGrad;
@@ -406,7 +425,7 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, bool isBwd)
     fill<float16_t>(h_input.data(), m, k, b);
 
     const size_t trilSize = ((m * (m - 1)) / 2) + k;
-    if(!isBwd)
+    if(passDirection == DlrmDirection_t::Forward)
     {
         h_output.resize(trilSize * b);
     }
@@ -433,7 +452,7 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, bool isBwd)
 
     CHECK_HIP_ERROR(hipMalloc(&d_input, inputBytes));
 
-    if(!isBwd)
+    if(passDirection == DlrmDirection_t::Forward)
     {
         CHECK_HIP_ERROR(hipMalloc(&d_output, outputBytes));
         CHECK_HIP_ERROR(hipMalloc(&d_accFwd, accFwdBytes));
@@ -454,7 +473,7 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, bool isBwd)
 
     std::function<void()> dlrmKernel;
 
-    if(!isBwd)
+    if(passDirection == DlrmDirection_t::Forward)
     {
         dlrmKernel = [d_input, d_output, d_accFwd, m, k, b]() {
             auto gridDim = dim3(
@@ -468,11 +487,11 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, bool isBwd)
             hipExtLaunchKernelGGL((dlrmDotFwd),
                                   gridDim,
                                   blockDim,
-                                  0,
-                                  0,
-                                  nullptr,
-                                  nullptr,
-                                  0,
+                                  0, // sharedMemBytes
+                                  0, // stream
+                                  nullptr, // event start
+                                  nullptr, // event stop
+                                  0, // flags
                                   d_input,
                                   d_output,
                                   d_accFwd,
@@ -499,11 +518,11 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, bool isBwd)
             hipExtLaunchKernelGGL((trilReconstruct),
                                   gridDim,
                                   blockDim,
-                                  0,
-                                  0,
-                                  nullptr,
-                                  nullptr,
-                                  0,
+                                  0, // sharedMemBytes
+                                  0, // stream
+                                  nullptr, // event start
+                                  nullptr, // event stop
+                                  0, // flags
                                   d_upstreamGrad,
                                   d_accBwd,
                                   m,
@@ -520,11 +539,11 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, bool isBwd)
             hipExtLaunchKernelGGL((dlrmDotBwd),
                                   gridDim,
                                   blockDim,
-                                  0,
-                                  0,
-                                  nullptr,
-                                  nullptr,
-                                  0,
+                                  0, // sharedMemBytes
+                                  0, // stream
+                                  nullptr, // event start
+                                  nullptr, // event stop
+                                  0, // flags
                                   d_input,
                                   d_upstreamGrad,
                                   d_grad,
@@ -539,7 +558,9 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, bool isBwd)
         };
     }
 
-    std::cout << "Launching " << (isBwd ? "Bwd" : "Fwd") << " Dlrm kernel..." << std::endl;
+    std::cout << "Launching "
+              << (passDirection == DlrmDirection_t::Forward ? "forwards" : "backwards")
+              << " DLRM kernel..." << std::endl;
 
     hipEvent_t startEvent, stopEvent;
     CHECK_HIP_ERROR(hipEventCreate(&startEvent));
@@ -555,7 +576,21 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, bool isBwd)
     CHECK_HIP_ERROR(hipEventDestroy(startEvent));
     CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
 
-    if(!isBwd)
+    // DLRM flops converge to 2*mmkb
+    auto gFlops       = 2.0 * static_cast<double>(m * m * k * b) * 1.0e-9;
+    auto gFlopsPerSec = gFlops / static_cast<double>(timeMs) * 1.0e3;
+
+    // Echo performance
+    std::cout << "TileSize, "
+              << "MatM, MatK, Batches, "
+              << "elapsedMs, GFlops, GFlops/s" << std::endl;
+
+    std::cout << TILE_DIM << ", " << m << ", " << k << ", " << b << ", " << timeMs << ", " << gFlops
+              << ", " << gFlopsPerSec << std::endl;
+
+    std::cout << "Validating result with reference..." << std::endl;
+
+    if(passDirection == DlrmDirection_t::Forward)
     {
         CHECK_HIP_ERROR(hipMemcpy(h_output.data(), d_output, outputBytes, hipMemcpyDeviceToHost));
 
@@ -592,7 +627,7 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, bool isBwd)
 
 int main()
 {
-    dlrm_test(32, 128, 64, false);
-    dlrm_test(32, 128, 64, true);
+    dlrm_test(32, 128, 64, DlrmDirection_t::Forward);
+    dlrm_test(32, 128, 64, DlrmDirection_t::Backward);
     return 0;
 }
