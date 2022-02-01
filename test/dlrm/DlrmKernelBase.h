@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,49 +36,20 @@
 #include "DlrmResource.h"
 #include "HipDevice.h"
 
+// Training pass direction
+enum class DlrmDirection_t : bool
+{
+    Forward,
+    Backward
+};
+
 // Basic structure to hold runtime problem
 // parameters
 struct ProblemParams
 {
     std::pair<int64_t, int64_t>           threadBlockSize;
     std::tuple<int64_t, int64_t, int64_t> problemSize;
-    // Input, Output, OutputRef
-    std::tuple<int64_t, int64_t, int64_t> fwdDataSize;
-    // Input, UpstreamGrad, Grad, GradRef, BottomMlpGrad, BottomMlpGradRef
-    std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t> bwdDataSize;
-    bool                                                             isBwd;
-};
-
-// Defines for hard-coded template parameters
-enum : uint32_t
-{
-    // Shared kernel template parameters
-    kWarpSize     = AMDGCN_WAVE_SIZE,
-    kWarpSizeLog2 = Log2<AMDGCN_WAVE_SIZE>::value,
-    kTileDim      = 16,
-    kTileDimLog2  = Log2<kTileDim>::value,
-
-    // Forward kernel template parameters
-    warps_per_threadblock = 128 / kWarpSize,
-    threadblock_size      = warps_per_threadblock * kWarpSize,
-    M_BLOCKS              = 2,
-    K_BLOCKS              = 8,
-    SMEM_STRIDE           = K_BLOCKS * 16 + 8,
-    SMEM_STRIDE_ACC       = M_BLOCKS * 16 + 8,
-
-    // Backwards kernel template parameters
-    kWarpsPerBlock     = 128 / kWarpSize,
-    kWarpsPerBlockLog2 = Log2<kWarpsPerBlock>::value,
-    kNumThreads        = kWarpsPerBlock * kWarpSize,
-    kRowTilesPerStep   = 32 / kTileDim,
-    kColTilesPerStep   = 1,
-
-    // Data sizes
-    BATCH_SIZE    = 64,
-    NUM_ROWS      = 27,
-    NUM_COLS      = 128,
-    PAD           = 0,
-    MEM_SKEW_SIZE = 8
+    DlrmDirection_t                       passDirection;
 };
 
 // Typeless Kernel interface to use with testing harness.
@@ -118,50 +89,44 @@ protected: // Types
 
     // Interface to forward device kernel
     using KernelFwdFunc = void (*)(const DataT* __restrict, // input
-                                   DataT* __restrict, //  output
-                                   uint32_t, // batch_size
-                                   uint32_t, // num_rows
-                                   uint32_t, // num_cols
-                                   uint32_t, // num_rows_after_padding
-                                   uint32_t, // num_cols_after_padding
-                                   uint32_t, // smem_elems_per_warp
-                                   uint32_t, // smem_rows_per_warp
-                                   uint32_t, // output_size
-                                   uint32_t, // num_row_steps
-                                   uint32_t, // num_col_steps
-                                   uint32_t); // pad
+                                   DataT* __restrict, // output
+                                   float*, // acc
+                                   uint32_t, // m
+                                   uint32_t, // k
+                                   uint32_t, // b
+                                   uint32_t, // inputBatchOffset
+                                   uint32_t, // outputBatchOffset
+                                   uint32_t); // accBatchOffset
 
-    // Interface to backwards device kernel
+    // Interface to backwards device kernels
     using KernelBwdFunc = void (*)(const DataT* __restrict, // input
-                                   const DataT* __restrict, // upstream_grad
+                                   const DataT* __restrict, // upstreamGrad
                                    DataT* __restrict, // grad
-                                   DataT* __restrict, // bottom_mlp_grad
-                                   uint32_t, // batch_size
-                                   uint32_t, // num_rows
-                                   uint32_t, // num_cols
-                                   uint32_t, // num_rows_after_padding
-                                   uint32_t, // num_cols_after_padding
-                                   uint32_t, // sample_size
-                                   uint32_t, // interaction_ugrad_size
-                                   uint32_t, // interaction_ugrad_size_with_padding
-                                   uint32_t, // interaction_ugrad_2D_size_elems
-                                   uint32_t, // interaction_ugrad_2D_stride
-                                   uint32_t, // input_size_elems
-                                   uint32_t, // input_stride
-                                   uint32_t, // num_row_steps
-                                   uint32_t, // num_col_steps
-                                   uint32_t, // row_tiles_per_step
-                                   uint32_t); //shared_mem_per_warp_size_byte
+                                   DataT* __restrict, // bottomMlpGrad
+                                   DataT* __restrict, // acc
+                                   uint32_t, // m
+                                   uint32_t, // k
+                                   uint32_t, // b
+                                   uint32_t, // inputBatchOffset
+                                   uint32_t, // upstreamBatchOffset
+                                   uint32_t); // accBatchOffset
+
+    using KernelTrilFunc = void (*)(const DataT* __restrict, // upstreamGrad
+                                    DataT* __restrict, // acc
+                                    uint32_t, // m
+                                    uint32_t, // k
+                                    uint32_t, // b
+                                    uint32_t, // upstreamBatchOffset
+                                    uint32_t); // accBatchOffset
 
 protected:
     DlrmKernelBase();
     virtual ~DlrmKernelBase();
 
     // Kernels MUST provide the device kernel function.
-    virtual KernelFwdFunc kernelFwdImpl() const           = 0;
-    virtual KernelFwdFunc kernelFwdNonAlignedImpl() const = 0;
-    virtual KernelBwdFunc kernelBwdImpl() const           = 0;
-    virtual KernelBwdFunc kernelBwdNonAlignedImpl() const = 0;
+    virtual KernelFwdFunc  kernelFwdImpl() const  = 0;
+    virtual KernelBwdFunc  kernelBwdImpl() const  = 0;
+    virtual KernelTrilFunc kernelTrilImpl() const = 0;
 
     // Kernel launch parameters
     virtual uint32_t ldsUsage() const;
@@ -190,12 +155,16 @@ public:
 
 protected:
     // Problem params for kernel
-    uint32_t mM, mN, mK;
+    uint32_t mTBlockX, mTBlockY;
+    uint32_t mM, mK, mB;
+
+    // Padded problem params
+    uint32_t mMPadded, mKPadded;
 
     // Execution flow control
     uint32_t        mRepeats;
-    bool            mRunFlag = true;
-    bool            isBwd    = false;
+    bool            mRunFlag      = true;
+    DlrmDirection_t passDirection = DlrmDirection_t::Forward;
     validate_data_t mValidationResult;
 
     // Performance

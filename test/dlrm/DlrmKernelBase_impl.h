@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,13 +41,17 @@
 
 #include <gtest/gtest.h>
 
+#include "../Common.h"
 #include "Common.h"
-#include "Common.hpp"
 #include "Performance.h"
 
 // Library includes
 #include "Constants.h"
 #include "Utils.h"
+
+#ifdef WMMA_VALIDATION_TESTS
+#include "Reference.h" // Vanilla CPU kernel
+#endif // WMMA_VALIDATION_TESTS
 
 template <uint32_t TileSize, typename DataT>
 DlrmKernelBase<TileSize, DataT>::DlrmKernelBase()
@@ -63,76 +67,28 @@ DlrmKernelBase<TileSize, DataT>::~DlrmKernelBase()
 template <uint32_t TileSize, typename DataT>
 uint32_t DlrmKernelBase<TileSize, DataT>::ldsUsage() const
 {
-    if(!isBwd)
-    {
-        const uint smem_rows_per_warp      = M_BLOCKS << 4;
-        const uint smem_elems_per_warp_mat = smem_rows_per_warp * SMEM_STRIDE;
-        const uint smem_elems_per_warp_acc = M_BLOCKS * kTileDim * SMEM_STRIDE_ACC * 2;
-        const uint smem_elems_per_warp     = (smem_elems_per_warp_mat > smem_elems_per_warp_acc)
-                                                 ? smem_elems_per_warp_mat
-                                                 : smem_elems_per_warp_acc;
-
-        return warps_per_threadblock * smem_elems_per_warp * sizeof(DataT);
-    }
-    else
-    {
-        const uint TileSizeLog2 = Log2<TileSize>::value;
-
-        uint input_dbytes  = sizeof(DataT);
-        uint num_row_tiles = (NUM_ROWS + TileSize - 1) >> TileSizeLog2;
-        uint num_col_tiles = (NUM_COLS + TileSize - 1) >> TileSizeLog2;
-
-        uint num_rows_after_padding = num_row_tiles << TileSizeLog2;
-        uint num_cols_after_padding = num_col_tiles << TileSizeLog2;
-
-        uint interaction_ugrad_2D_stride     = num_rows_after_padding + MEM_SKEW_SIZE;
-        uint interaction_ugrad_2D_size_elems = num_rows_after_padding * interaction_ugrad_2D_stride;
-        uint interaction_ugrad_2D_size_bytes = interaction_ugrad_2D_size_elems * input_dbytes;
-
-        uint input_stride     = num_cols_after_padding + MEM_SKEW_SIZE;
-        uint input_size_elems = num_rows_after_padding * input_stride;
-        uint input_size_bytes = input_size_elems * input_dbytes;
-
-        uint output_size_elems
-            = TileSize * TileSize * kColTilesPerStep * (TileSize == 32 ? 1 : kRowTilesPerStep);
-        uint output_size_bytes = output_size_elems * sizeof(float);
-
-        uint staging_area_size_bytes = output_size_bytes > interaction_ugrad_2D_size_bytes
-                                           ? output_size_bytes
-                                           : interaction_ugrad_2D_size_bytes;
-
-        uint wmma_smem_byte = num_rows_after_padding * num_rows_after_padding * input_dbytes;
-        uint shared_mem_per_warp_size_byte
-            = input_size_bytes + staging_area_size_bytes + wmma_smem_byte;
-
-        return kWarpsPerBlock * shared_mem_per_warp_size_byte;
-    }
+    return 0;
 }
 
 template <uint32_t TileSize, typename DataT>
 dim3 DlrmKernelBase<TileSize, DataT>::gridDim() const
 {
-    if(!isBwd)
+    if(passDirection == DlrmDirection_t::Forward)
     {
-        return dim3((BATCH_SIZE + warps_per_threadblock - 1) / warps_per_threadblock);
+        return dim3(
+            ceilDiv(mMPadded, TileSize * mTBlockX / AMDGCN_WAVE_SIZE), ceilDiv(mM, TileSize), mB);
     }
     else
     {
-        return dim3((BATCH_SIZE + kWarpsPerBlock - 1) >> kWarpsPerBlockLog2);
+        return dim3(
+            ceilDiv(mMPadded, TileSize * mTBlockX / AMDGCN_WAVE_SIZE), ceilDiv(mK, TileSize), mB);
     }
 }
 
 template <uint32_t TileSize, typename DataT>
 dim3 DlrmKernelBase<TileSize, DataT>::blockDim() const
 {
-    if(!isBwd)
-    {
-        return dim3(threadblock_size);
-    }
-    else
-    {
-        return dim3(kNumThreads);
-    }
+    return dim3(mTBlockX);
 }
 
 template <uint32_t TileSize, typename DataT>
@@ -146,7 +102,8 @@ bool DlrmKernelBase<TileSize, DataT>::checkDevice() const
 template <uint32_t TileSize, typename DataT>
 bool DlrmKernelBase<TileSize, DataT>::checkSizes() const
 {
-    return true;
+    return (mM >= TileSize && mM % TileSize == 0 && mK >= TileSize && mK % TileSize == 0
+            && mTBlockX % TileSize == 0);
 }
 
 template <uint32_t TileSize, typename DataT>
@@ -158,8 +115,8 @@ bool DlrmKernelBase<TileSize, DataT>::checkLds() const
 template <uint32_t TileSize, typename DataT>
 void DlrmKernelBase<TileSize, DataT>::reset()
 {
-    mM = mN = mK = 0;
-
+    mM = mK = mB = 0;
+    mMPadded = mKPadded = 0;
     mRepeats =
 #ifdef WMMA_VALIDATION_TESTS
         1;
@@ -172,7 +129,10 @@ void DlrmKernelBase<TileSize, DataT>::reset()
     mTotalGFlops = mMeasuredGFlopsPerSec = 0.0;
     mElapsedTimeMs = mEfficiency = 0.0;
 
-    isBwd = 0;
+    passDirection = DlrmDirection_t::Forward;
+
+    mValidationResult.pass            = false;
+    mValidationResult.maxRelativeDiff = 0;
 }
 
 template <uint32_t TileSize, typename DataT>
@@ -181,9 +141,8 @@ std::ostream& DlrmKernelBase<TileSize, DataT>::printHeader(std::ostream& stream)
     return stream << "TileSize, "
                   << "DataT, "
                   << "Bwd, "
+                  << "MatM, MatK, MatB, "
 #if defined(WMMA_VALIDATION_TESTS)
-                  << "numElements, "
-                  << "maxAbsoluteDiff, "
                   << "maxRelativeDiff, "
                   << "tolerance, "
 #endif
@@ -196,12 +155,13 @@ std::ostream& DlrmKernelBase<TileSize, DataT>::printHeader(std::ostream& stream)
 template <uint32_t TileSize, typename DataT>
 std::ostream& DlrmKernelBase<TileSize, DataT>::printKernel(std::ostream& stream) const
 {
-    return stream << TileSize << ", " << dataTypeToString<DataT>() << ", " << isBwd << ", "
+    return stream << TileSize << ", " << dataTypeToString<DataT>() << ", "
+                  << (passDirection == DlrmDirection_t::Forward ? "Forwards" : "Backwards") << ", "
+                  << mM << ", " << mK << ", " << mB << ", "
 
 #if defined(WMMA_VALIDATION_TESTS)
-                  << mValidationResult.numElements << ", " << mValidationResult.maxAbsoluteDiff
-                  << ", " << mValidationResult.maxRelativeDiff << ", "
-                  << mValidationResult.tolerance << ", "
+                  << mValidationResult.maxRelativeDiff << ", " << mValidationResult.tolerance
+                  << ", "
 #endif
                   << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredGFlopsPerSec << ", "
                   << mEfficiency << ", "
@@ -220,10 +180,18 @@ void DlrmKernelBase<TileSize, DataT>::setup(ProblemParams const& problem)
     mRunFlag = true;
 
     // Format incoming problem parameters
-    std::tie(mM, mN, mK)
-        = std::tie(static_cast<uint32_t const&>(std::get<0>(problem.problemSize)),
-                   static_cast<uint32_t const&>(std::get<1>(problem.problemSize)),
-                   static_cast<uint32_t const&>(std::get<2>(problem.problemSize) * BATCH_SIZE));
+    std::tie(mTBlockX, mTBlockY)
+        = std::tie(static_cast<uint32_t const&>(std::get<0>(problem.threadBlockSize)),
+                   static_cast<uint32_t const&>(std::get<1>(problem.threadBlockSize)));
+    std::tie(mM, mK, mB) = std::tie(static_cast<uint32_t const&>(std::get<0>(problem.problemSize)),
+                                    static_cast<uint32_t const&>(std::get<1>(problem.problemSize)),
+                                    static_cast<uint32_t const&>(std::get<2>(problem.problemSize)));
+
+    mMPadded = ceilDiv(mM, TileSize) * TileSize;
+    mKPadded = ceilDiv(mK, TileSize) * TileSize;
+
+    // Determine whether to run forward or backward pass
+    passDirection = problem.passDirection;
 
     mRunFlag &= checkDevice();
     mRunFlag &= checkSizes();
@@ -233,86 +201,30 @@ void DlrmKernelBase<TileSize, DataT>::setup(ProblemParams const& problem)
     {
         auto& dataInstance = DataStorage::instance();
 
-        int         fp    = (std::is_same<DataT, float32_t>::value) ? 32 : 16;
-        std::string fpStr = std::to_string(fp);
-        size_t      result;
-
-        // Determine whether to run forward or backward pass
-        isBwd = problem.isBwd;
-
         // Initialize matrix storage
-        if(!isBwd)
+        if(passDirection == DlrmDirection_t::Forward)
         {
-            dataInstance->resizeFwdStorage(problem.fwdDataSize);
+            dataInstance->resizeFwdStorage(problem.problemSize);
         }
         else
         {
-            dataInstance->resizeBwdStorage(problem.bwdDataSize);
+            dataInstance->resizeBwdStorage(problem.problemSize);
         }
 
         // Initialize matrix data on host and transfer to device
-        // (check for null pointer for reading reference data only once)
-        if(!isBwd)
+        if(passDirection == DlrmDirection_t::Forward)
         {
-            std::string inputFile     = "dlrmData/input_fp" + fpStr;
-            std::string outputRefFile = "dlrmData/output_fp" + fpStr;
-
-            FILE* inputFp = fopen(inputFile.c_str(), "rb");
-            checkFileOpen(inputFp, inputFile);
-            FILE* outputRefFp = fopen(outputRefFile.c_str(), "rb");
-            checkFileOpen(outputRefFp, outputRefFile);
-
-            result = fread(dataInstance->hostInput().get(),
-                           sizeof(DataT),
-                           std::get<0>(problem.fwdDataSize),
-                           inputFp);
-            checkFileSize(inputFile, result, std::get<0>(problem.fwdDataSize));
-
-            result = fread(dataInstance->hostOutputRef().get(),
-                           sizeof(DataT),
-                           std::get<2>(problem.fwdDataSize),
-                           outputRefFp);
-            checkFileSize(outputRefFile, result, std::get<2>(problem.fwdDataSize));
-
+            fill<DataT>(dataInstance->hostInput().get(), mM, mK, mB, 1);
             dataInstance->copyHostToDeviceFwdAll();
         }
         else
         {
-            std::string inputFile            = "dlrmData/input_fp" + fpStr;
-            std::string upstreamGradFile     = "dlrmData/input_grad_fp" + fpStr;
-            std::string gradRefFile          = "dlrmData/output_input_grad_fp" + fpStr;
-            std::string bottomMlpGradRefFile = "dlrmData/output_mlp_input_grad_fp" + fpStr;
-
-            FILE* inputFp = fopen(inputFile.c_str(), "rb");
-            checkFileOpen(inputFp, inputFile);
-            FILE* upstreamGradFp = fopen(upstreamGradFile.c_str(), "rb");
-            checkFileOpen(upstreamGradFp, upstreamGradFile);
-            FILE* gradRefFp = fopen(gradRefFile.c_str(), "rb");
-            checkFileOpen(gradRefFp, gradRefFile);
-            FILE* bottomMlpGradRefFp = fopen(bottomMlpGradRefFile.c_str(), "rb");
-            checkFileOpen(bottomMlpGradRefFp, bottomMlpGradRefFile);
-
-            result = fread(dataInstance->hostInput().get(),
-                           sizeof(DataT),
-                           std::get<0>(problem.bwdDataSize),
-                           inputFp);
-            checkFileSize(inputFile, result, std::get<0>(problem.bwdDataSize));
-            result = fread(dataInstance->hostUpstreamGrad().get(),
-                           sizeof(DataT),
-                           std::get<1>(problem.bwdDataSize),
-                           upstreamGradFp);
-            checkFileSize(upstreamGradFile, result, std::get<1>(problem.bwdDataSize));
-            result = fread(dataInstance->hostGradRef().get(),
-                           sizeof(DataT),
-                           std::get<3>(problem.bwdDataSize),
-                           gradRefFp);
-            checkFileSize(gradRefFile, result, std::get<3>(problem.bwdDataSize));
-            result = fread(dataInstance->hostBottomMlpGradRef().get(),
-                           sizeof(DataT),
-                           std::get<5>(problem.bwdDataSize),
-                           bottomMlpGradRefFp);
-            checkFileSize(bottomMlpGradRefFile, result, std::get<5>(problem.bwdDataSize));
-
+            fill<DataT>(dataInstance->hostInput().get(), mM, mK, mB, 1);
+            fill<DataT>(dataInstance->hostUpstreamGrad().get(),
+                        std::get<1>(dataInstance->currentDataSizeBwd()),
+                        1,
+                        1,
+                        1);
             dataInstance->copyHostToDeviceBwdAll();
         }
     }
@@ -324,42 +236,15 @@ void DlrmKernelBase<TileSize, DataT>::exec()
     if(mRunFlag)
     {
         std::function<void()> dlrmKernel;
-        if(!isBwd)
+        if(passDirection == DlrmDirection_t::Forward)
         {
-            // num tiles
-            uint num_row_tiles = (NUM_ROWS + kTileDim - 1) >> kTileDimLog2;
-            uint num_col_tiles = (NUM_COLS + kTileDim - 1) >> kTileDimLog2;
-
-            // number of rows and columns after padding
-            uint num_rows_after_padding = kTileDim << 1;
-            uint num_cols_after_padding = num_col_tiles << kTileDimLog2;
-
-            uint num_row_steps = num_row_tiles / kRowTilesPerStep;
-            uint num_col_steps = num_col_tiles / kColTilesPerStep;
-
-            // multiple of 2 to guarantee 256-bit alignment for start of the row, at least 16 to safeload a tile
-            const uint smem_rows_per_warp      = M_BLOCKS << 4;
-            const uint smem_elems_per_warp_mat = smem_rows_per_warp * SMEM_STRIDE;
-
-            const uint smem_elems_per_warp_acc
-                = M_BLOCKS * kTileDim * SMEM_STRIDE_ACC * 2; // output in FP32
-            const uint smem_elems_per_warp = (smem_elems_per_warp_mat > smem_elems_per_warp_acc)
-                                                 ? smem_elems_per_warp_mat
-                                                 : smem_elems_per_warp_acc;
-            uint       output_size         = NUM_COLS + (NUM_ROWS * (NUM_ROWS - 1) >> 1) + PAD;
-
-            bool float4_predicate = !(output_size & 7); // (NUM_COLS & 7) || (output_size & 7));
-
-            if(float4_predicate)
+            if(mM == mMPadded && mK == mKPadded)
             {
-                dlrmKernel = [this,
-                              num_rows_after_padding,
-                              num_cols_after_padding,
-                              smem_elems_per_warp,
-                              smem_rows_per_warp,
-                              output_size,
-                              num_row_steps,
-                              num_col_steps]() {
+                uint inputBatchOffset  = mM * mK;
+                uint outputBatchOffset = ((mM * (mM - 1)) / 2) + mK;
+                uint accBatchOffset    = mM * mM;
+
+                dlrmKernel = [this, inputBatchOffset, outputBatchOffset, accBatchOffset]() {
                     auto& dataInstance = DataStorage::instance();
                     hipExtLaunchKernelGGL((this->kernelFwdImpl()),
                                           (this->gridDim()),
@@ -371,130 +256,51 @@ void DlrmKernelBase<TileSize, DataT>::exec()
                                           0,
                                           dataInstance->deviceInput().get(),
                                           dataInstance->deviceOutput().get(),
-                                          BATCH_SIZE,
-                                          NUM_ROWS,
-                                          NUM_COLS,
-                                          num_rows_after_padding,
-                                          num_cols_after_padding,
-                                          smem_elems_per_warp,
-                                          smem_rows_per_warp,
-                                          output_size,
-                                          num_row_steps,
-                                          num_col_steps,
-                                          PAD);
-                };
-            }
-            else
-            {
-                dlrmKernel = [this,
-                              num_rows_after_padding,
-                              num_cols_after_padding,
-                              smem_elems_per_warp,
-                              smem_rows_per_warp,
-                              output_size,
-                              num_row_steps,
-                              num_col_steps]() {
-                    auto& dataInstance = DataStorage::instance();
-                    hipExtLaunchKernelGGL((this->kernelFwdNonAlignedImpl()),
-                                          (this->gridDim()),
-                                          (this->blockDim()),
-                                          (this->ldsUsage()),
-                                          0,
-                                          nullptr,
-                                          nullptr,
-                                          0,
-                                          dataInstance->deviceInput().get(),
-                                          dataInstance->deviceOutput().get(),
-                                          BATCH_SIZE,
-                                          NUM_ROWS,
-                                          NUM_COLS,
-                                          num_rows_after_padding,
-                                          num_cols_after_padding,
-                                          smem_elems_per_warp,
-                                          smem_rows_per_warp,
-                                          output_size,
-                                          num_row_steps,
-                                          num_col_steps,
-                                          PAD);
+                                          dataInstance->deviceAccFwd().get(),
+                                          mM,
+                                          mK,
+                                          mB,
+                                          inputBatchOffset,
+                                          outputBatchOffset,
+                                          accBatchOffset);
                 };
             }
         }
         else
         {
-            const uint kWarpsPerBlockLog2 = Log2<kWarpsPerBlock>::value;
-
-            const uint TileSizeLog2 = Log2<TileSize>::value;
-
-            uint input_dbytes = sizeof(DataT);
-
-            uint row_tiles_per_step
-                = NUM_ROWS > TileSize ? (TileSize == 32 ? 1 : kRowTilesPerStep) : 1;
-
-            // num tiles
-            uint num_row_tiles = (NUM_ROWS + TileSize - 1) >> TileSizeLog2;
-            uint num_col_tiles = (NUM_COLS + TileSize - 1) >> TileSizeLog2;
-
-            // number of rows and columns after padding
-            uint num_rows_after_padding = num_row_tiles << TileSizeLog2;
-            uint num_cols_after_padding = num_col_tiles << TileSizeLog2;
-
-            // 2D ugrad size and stride
-            uint interaction_ugrad_2D_stride = num_rows_after_padding + MEM_SKEW_SIZE;
-            uint interaction_ugrad_2D_size_elems
-                = num_rows_after_padding * interaction_ugrad_2D_stride;
-            uint interaction_ugrad_2D_size_bytes = interaction_ugrad_2D_size_elems * input_dbytes;
-
-            // 1D ugrad size
-            uint interaction_ugrad_size              = NUM_ROWS * (NUM_ROWS - 1) >> 1;
-            uint interaction_ugrad_size_with_padding = interaction_ugrad_size + PAD;
-
-            // in_out place size and stride
-            uint input_stride     = num_cols_after_padding + MEM_SKEW_SIZE;
-            uint input_size_elems = num_rows_after_padding * input_stride;
-            uint input_size_bytes = input_size_elems * input_dbytes;
-
-            // sample size
-            uint sample_size = NUM_ROWS * NUM_COLS;
-
-            // output size
-            uint output_size_elems
-                = TileSize * TileSize * (TileSize == 32 ? 1 : kRowTilesPerStep) * kColTilesPerStep;
-            uint output_size_bytes = output_size_elems * sizeof(float);
-
-            // staging area size
-            uint staging_area_size_bytes = output_size_bytes > interaction_ugrad_2D_size_bytes
-                                               ? output_size_bytes
-                                               : interaction_ugrad_2D_size_bytes;
-
-            // Shared memory size
-            uint wmma_smem_byte = num_rows_after_padding * num_rows_after_padding * input_dbytes;
-            uint shared_mem_per_warp_size_byte
-                = input_size_bytes + staging_area_size_bytes + wmma_smem_byte;
-
-            uint num_blocks    = (BATCH_SIZE + kWarpsPerBlock - 1) >> kWarpsPerBlockLog2;
-            uint num_row_steps = num_row_tiles / row_tiles_per_step;
-            uint num_col_steps = num_col_tiles / kColTilesPerStep;
-
-            bool float4_predicate
-                = !((interaction_ugrad_size_with_padding & 7)); // || (NUM_COLS & 7));
-
-            if(float4_predicate)
+            if(mM == mMPadded && mK == mKPadded)
             {
-                dlrmKernel = [this,
-                              num_rows_after_padding,
-                              num_cols_after_padding,
-                              sample_size,
-                              interaction_ugrad_size,
-                              interaction_ugrad_size_with_padding,
-                              interaction_ugrad_2D_size_elems,
-                              interaction_ugrad_2D_stride,
-                              input_size_elems,
-                              input_stride,
-                              num_row_steps,
-                              num_col_steps,
-                              row_tiles_per_step,
-                              shared_mem_per_warp_size_byte]() {
+                auto& dataInstance = DataStorage::instance();
+
+                uint inputBatchOffset    = mM * mK;
+                uint upstreamBatchOffset = ((mM * (mM - 1)) / 2) + mK;
+                uint accBatchOffset      = mM * mM;
+
+                dlrmKernel = [this, inputBatchOffset, upstreamBatchOffset, accBatchOffset]() {
                     auto& dataInstance = DataStorage::instance();
+                    auto  trilGridDim
+                        = dim3(ceilDiv(mM * mM, static_cast<uint32_t>(mTBlockX)), 1, mB);
+
+                    hipEvent_t syncEvent;
+                    CHECK_HIP_ERROR(hipEventCreate(&syncEvent));
+                    hipExtLaunchKernelGGL((this->kernelTrilImpl()),
+                                          trilGridDim,
+                                          this->blockDim(),
+                                          0,
+                                          0,
+                                          nullptr,
+                                          nullptr,
+                                          0,
+                                          dataInstance->deviceUpstreamGrad().get(),
+                                          dataInstance->deviceAccBwd().get(),
+                                          mM,
+                                          mK,
+                                          mB,
+                                          upstreamBatchOffset,
+                                          accBatchOffset);
+                    CHECK_HIP_ERROR(hipEventRecord(syncEvent));
+                    CHECK_HIP_ERROR(hipEventSynchronize(syncEvent));
+
                     hipExtLaunchKernelGGL((this->kernelBwdImpl()),
                                           (this->gridDim()),
                                           (this->blockDim()),
@@ -507,69 +313,13 @@ void DlrmKernelBase<TileSize, DataT>::exec()
                                           dataInstance->deviceUpstreamGrad().get(),
                                           dataInstance->deviceGrad().get(),
                                           dataInstance->deviceBottomMlpGrad().get(),
-                                          BATCH_SIZE,
-                                          NUM_ROWS,
-                                          NUM_COLS,
-                                          num_rows_after_padding,
-                                          num_cols_after_padding,
-                                          sample_size,
-                                          interaction_ugrad_size,
-                                          interaction_ugrad_size_with_padding,
-                                          interaction_ugrad_2D_size_elems,
-                                          interaction_ugrad_2D_stride,
-                                          input_size_elems,
-                                          input_stride,
-                                          num_row_steps,
-                                          num_col_steps,
-                                          row_tiles_per_step,
-                                          shared_mem_per_warp_size_byte);
-                };
-            }
-            else
-            {
-                dlrmKernel = [this,
-                              num_rows_after_padding,
-                              num_cols_after_padding,
-                              sample_size,
-                              interaction_ugrad_size,
-                              interaction_ugrad_size_with_padding,
-                              interaction_ugrad_2D_size_elems,
-                              interaction_ugrad_2D_stride,
-                              input_size_elems,
-                              input_stride,
-                              num_row_steps,
-                              num_col_steps,
-                              row_tiles_per_step,
-                              shared_mem_per_warp_size_byte]() {
-                    auto& dataInstance = DataStorage::instance();
-                    hipExtLaunchKernelGGL((this->kernelBwdNonAlignedImpl()),
-                                          (this->gridDim()),
-                                          (this->blockDim()),
-                                          (this->ldsUsage()),
-                                          0,
-                                          nullptr,
-                                          nullptr,
-                                          0,
-                                          dataInstance->deviceInput().get(),
-                                          dataInstance->deviceUpstreamGrad().get(),
-                                          dataInstance->deviceGrad().get(),
-                                          dataInstance->deviceBottomMlpGrad().get(),
-                                          BATCH_SIZE,
-                                          NUM_ROWS,
-                                          NUM_COLS,
-                                          num_rows_after_padding,
-                                          num_cols_after_padding,
-                                          sample_size,
-                                          interaction_ugrad_size,
-                                          interaction_ugrad_size_with_padding,
-                                          interaction_ugrad_2D_size_elems,
-                                          interaction_ugrad_2D_stride,
-                                          input_size_elems,
-                                          input_stride,
-                                          num_row_steps,
-                                          num_col_steps,
-                                          row_tiles_per_step,
-                                          shared_mem_per_warp_size_byte);
+                                          dataInstance->deviceAccBwd().get(),
+                                          mM,
+                                          mK,
+                                          mB,
+                                          inputBatchOffset,
+                                          upstreamBatchOffset,
+                                          accBatchOffset);
                 };
             }
         }
@@ -593,14 +343,45 @@ void DlrmKernelBase<TileSize, DataT>::exec()
         auto& deviceInfo             = DeviceInfo::instance();
         auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
 
-        mElapsedTimeMs = float64_t(timeMs);
-        mTotalGFlops   = calculateGFlops(mM, mN, mK);
-        mMeasuredGFlopsPerSec
-            = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs) * static_cast<float64_t>(mRepeats);
+        mElapsedTimeMs        = float64_t(timeMs);
+        mTotalGFlops          = calculateGFlops(mM * mM, mB, mK);
+        mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM * mM, mB, mK, mElapsedTimeMs)
+                                * static_cast<float64_t>(mRepeats);
         mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
 
         CHECK_HIP_ERROR(hipEventDestroy(startEvent));
         CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
+
+#if defined(WMMA_VALIDATION_TESTS)
+
+        // Run reference CPU kernel
+        std::function<void()> cpuKernel;
+        if(passDirection == DlrmDirection_t::Forward)
+        {
+            cpuKernel = [this]() {
+                auto& dataInstance = DataStorage::instance();
+                dlrm_fwd_CPU<DataT>(dataInstance->hostInput().get(),
+                                    dataInstance->hostOutputRef().get(),
+                                    mM,
+                                    mK,
+                                    mB);
+            };
+        }
+        else
+        {
+            cpuKernel = [this]() {
+                auto& dataInstance = DataStorage::instance();
+                dlrm_bwd_CPU<DataT>(dataInstance->hostInput().get(),
+                                    dataInstance->hostUpstreamGrad().get(),
+                                    dataInstance->hostBottomMlpGradRef().get(),
+                                    dataInstance->hostGradRef().get(),
+                                    mM,
+                                    mK,
+                                    mB);
+            };
+        }
+        cpuKernel();
+#endif
     }
 }
 
@@ -611,38 +392,40 @@ void DlrmKernelBase<TileSize, DataT>::validateResults()
     if(mRunFlag)
     {
         auto& dataInstance = DataStorage::instance();
-        if(!isBwd)
+        if(passDirection == DlrmDirection_t::Forward)
         {
-            mValidationResult
-                = allclose<DataT>(dataInstance->deviceOutputRef().get(),
-                                  dataInstance->deviceOutput().get(),
-                                  std::get<2>(dataInstance->currentDataSizeFwd()) * sizeof(DataT),
-                                  false);
+            dataInstance->copyDeviceToHostFwdOutput();
+
+            uint batchSize    = ((mM * (mM - 1)) / 2) + mK;
+            mValidationResult = compareEqual(dataInstance->hostOutputRef().get(),
+                                             dataInstance->hostOutput().get(),
+                                             batchSize,
+                                             mB);
+
             EXPECT_TRUE(mValidationResult.pass);
         }
         else
         {
-            mValidationResult
-                = allclose<DataT>(dataInstance->deviceGradRef().get(),
-                                  dataInstance->deviceGrad().get(),
-                                  std::get<3>(dataInstance->currentDataSizeBwd()) * sizeof(DataT),
-                                  false);
+            dataInstance->copyDeviceToHostBwdOutput();
+
+            uint batchSize    = mM * mK;
+            mValidationResult = compareEqual(
+                dataInstance->hostGradRef().get(), dataInstance->hostGrad().get(), batchSize, mB);
+
             EXPECT_TRUE(mValidationResult.pass);
 
-            uint64_t numElements     = mValidationResult.numElements;
-            float    maxAbsoluteDiff = mValidationResult.maxAbsoluteDiff;
-            float    maxRelativeDiff = mValidationResult.maxRelativeDiff;
+            float maxRelativeDiff = mValidationResult.maxRelativeDiff;
 
-            mValidationResult
-                = allclose<DataT>(dataInstance->deviceBottomMlpGradRef().get(),
-                                  dataInstance->deviceBottomMlpGrad().get(),
-                                  std::get<5>(dataInstance->currentDataSizeBwd()) * sizeof(DataT),
-                                  false);
+            mValidationResult = compareEqual(dataInstance->hostBottomMlpGradRef().get(),
+                                             dataInstance->hostBottomMlpGrad().get(),
+                                             mK,
+                                             mB);
+
             EXPECT_TRUE(mValidationResult.pass);
 
-            mValidationResult.numElements += numElements;
-            mValidationResult.maxAbsoluteDiff += maxAbsoluteDiff;
-            mValidationResult.maxRelativeDiff += maxRelativeDiff;
+            mValidationResult.maxRelativeDiff = maxRelativeDiff > mValidationResult.maxRelativeDiff
+                                                    ? maxRelativeDiff
+                                                    : mValidationResult.maxRelativeDiff;
         }
     }
 #endif

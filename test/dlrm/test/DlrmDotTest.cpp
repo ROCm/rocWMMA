@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -71,6 +71,4 @@ INSTANTIATE_TEST_SUITE_P(DlrmKernelTests,
                          ::testing::Combine(::testing::ValuesIn(TestParams::kernels()),
                                             ::testing::ValuesIn(TestParams::threadBlocks()),
                                             ::testing::ValuesIn(TestParams::problemSizes()),
-                                            ::testing::ValuesIn(TestParams::fwdDataSizes()),
-                                            ::testing::ValuesIn(TestParams::bwdDataSizes()),
                                             ::testing::ValuesIn(TestParams::passDirections())));
