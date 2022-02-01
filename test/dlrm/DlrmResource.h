@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -58,35 +58,33 @@ struct DlrmResource : public HipResource, public LazySingleton<DlrmResource<Data
     template <typename T>
     using HostPtrT = Base::HostPtrT<T>;
 
-    // M, N, K
+    // M, K, BatchSize
     using ProblemSize = std::tuple<int64_t, int64_t, int64_t>;
 
     // Forward pass data sizes
-    // Input, Output, OutputRef
+    // Input, Output, Acc
     using DataSizeFwd = std::tuple<int64_t, int64_t, int64_t>;
 
     // Backward pass data sizes
-    // Input, UpstreamGrad, Grad, GradRef, BottomMlpGrad, BottomMlpGradRef
-    using DataSizeBwd = std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t>;
+    // Input, UpstreamGrad, Acc, Grad, BottomMlpGrad
+    using DataSizeBwd = std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t>;
 
     enum : uint32_t
     {
         // Forward pass data size indices
-        Input     = 0,
-        Output    = 1,
-        OutputRef = 2,
+        Input  = 0,
+        Output = 1,
+        Acc    = 2,
 
         // Backward pass data size indices
-        UpstreamGrad     = 1,
-        Grad             = 2,
-        GradRef          = 3,
-        BottomMlpGrad    = 4,
-        BottomMlpGradRef = 5,
+        UpstreamGrad  = 1,
+        Grad          = 3,
+        BottomMlpGrad = 4,
 
         // Problem size indices
         M = 0,
-        N = 1,
-        K = 2
+        K = 1,
+        B = 2
     };
 
 protected:
@@ -99,17 +97,20 @@ public:
     ~DlrmResource() = default;
     void copyHostToDeviceFwdAll();
     void copyHostToDeviceBwdAll();
-    void resizeFwdStorage(DataSizeFwd const& size);
-    void resizeBwdStorage(DataSizeBwd const& size);
+    void copyDeviceToHostFwdOutput();
+    void copyDeviceToHostBwdOutput();
+    void resizeFwdStorage(ProblemSize const& size);
+    void resizeBwdStorage(ProblemSize const& size);
 
     // Forward pass data
     HostPtrT<DataT>& hostInput();
     HostPtrT<DataT>& hostOutput();
     HostPtrT<DataT>& hostOutputRef();
+    HostPtrT<float>& hostAccFwd();
 
     DevicePtrT<DataT>& deviceInput();
     DevicePtrT<DataT>& deviceOutput();
-    DevicePtrT<DataT>& deviceOutputRef();
+    DevicePtrT<float>& deviceAccFwd();
 
     // Backward pass data
     HostPtrT<DataT>& hostUpstreamGrad();
@@ -117,12 +118,12 @@ public:
     HostPtrT<DataT>& hostGradRef();
     HostPtrT<DataT>& hostBottomMlpGrad();
     HostPtrT<DataT>& hostBottomMlpGradRef();
+    HostPtrT<DataT>& hostAccBwd();
 
     DevicePtrT<DataT>& deviceUpstreamGrad();
     DevicePtrT<DataT>& deviceGrad();
-    DevicePtrT<DataT>& deviceGradRef();
     DevicePtrT<DataT>& deviceBottomMlpGrad();
-    DevicePtrT<DataT>& deviceBottomMlpGradRef();
+    DevicePtrT<DataT>& deviceAccBwd();
 
     // Data sizes
     DataSizeFwd currentDataSizeFwd() const;
@@ -132,14 +133,15 @@ public:
 
 protected:
     // Forward pass data
-    DevicePtrT<DataT> mDeviceInput, mDeviceOutput, mDeviceOutputRef;
+    DevicePtrT<DataT> mDeviceInput, mDeviceOutput;
+    DevicePtrT<float> mDeviceAccFwd;
     HostPtrT<DataT>   mHostInput, mHostOutput, mHostOutputRef;
+    HostPtrT<float>   mHostAccFwd;
 
     // Backward pass data
-    DevicePtrT<DataT> mDeviceUpstreamGrad, mDeviceGrad, mDeviceGradRef, mDeviceBottomMlpGrad,
-        mDeviceBottomMlpGradRef;
-    HostPtrT<DataT> mHostUpstreamGrad, mHostGrad, mHostGradRef, mHostBottomMlpGrad,
-        mHostBottomMlpGradRef;
+    DevicePtrT<DataT> mDeviceUpstreamGrad, mDeviceGrad, mDeviceBottomMlpGrad, mDeviceAccBwd;
+    HostPtrT<DataT>   mHostUpstreamGrad, mHostGrad, mHostGradRef, mHostBottomMlpGrad,
+        mHostBottomMlpGradRef, mHostAccBwd;
 
     ProblemSize mCurrentProblemSize;
     DataSizeFwd mCurrentDataSizeFwd;
