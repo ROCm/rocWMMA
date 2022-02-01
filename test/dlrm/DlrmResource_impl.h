@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,25 +33,29 @@ template <typename DataT>
 DlrmResource<DataT>::DlrmResource()
     : mDeviceInput(Base::template allocDevice<DataT>(0))
     , mDeviceOutput(Base::template allocDevice<DataT>(0))
-    , mDeviceOutputRef(Base::template allocDevice<DataT>(0))
+    //, mDeviceOutputRef(Base::template allocDevice<DataT>(0))
+    , mDeviceAccFwd(Base::template allocDevice<float>(0))
     , mDeviceUpstreamGrad(Base::template allocDevice<DataT>(0))
     , mDeviceGrad(Base::template allocDevice<DataT>(0))
-    , mDeviceGradRef(Base::template allocDevice<DataT>(0))
+    //, mDeviceGradRef(Base::template allocDevice<DataT>(0))
     , mDeviceBottomMlpGrad(Base::template allocDevice<DataT>(0))
-    , mDeviceBottomMlpGradRef(Base::template allocDevice<DataT>(0))
+    //, mDeviceBottomMlpGradRef(Base::template allocDevice<DataT>(0))
+    , mDeviceAccBwd(Base::template allocDevice<DataT>(0))
     , mHostInput(Base::template allocHost<DataT>(0))
     , mHostOutput(Base::template allocHost<DataT>(0))
     , mHostOutputRef(Base::template allocHost<DataT>(0))
+    , mHostAccFwd(Base::template allocHost<float>(0))
     , mHostUpstreamGrad(Base::template allocHost<DataT>(0))
     , mHostGrad(Base::template allocHost<DataT>(0))
     , mHostGradRef(Base::template allocHost<DataT>(0))
     , mHostBottomMlpGrad(Base::template allocHost<DataT>(0))
     , mHostBottomMlpGradRef(Base::template allocHost<DataT>(0))
+    , mHostAccBwd(Base::template allocHost<DataT>(0))
     , mCurrentProblemSize({0, 0, 0})
     , mCurrentDataSizeFwd({0, 0, 0})
-    , mCurrentDataSizeBwd({0, 0, 0, 0, 0, 0})
+    , mCurrentDataSizeBwd({0, 0, 0, 0, 0})
     , mMaxFwdCapacity({0, 0, 0})
-    , mMaxBwdCapacity({0, 0, 0, 0, 0, 0})
+    , mMaxBwdCapacity({0, 0, 0, 0, 0})
 {
 }
 
@@ -59,8 +63,6 @@ template <typename DataT>
 void DlrmResource<DataT>::copyHostToDeviceFwdAll()
 {
     Base::copyData(mDeviceInput, mHostInput, std::get<Input>(mCurrentDataSizeFwd));
-    Base::copyData(mDeviceOutput, mHostOutput, std::get<Output>(mCurrentDataSizeFwd));
-    Base::copyData(mDeviceOutputRef, mHostOutputRef, std::get<OutputRef>(mCurrentDataSizeFwd));
 }
 
 template <typename DataT>
@@ -69,21 +71,34 @@ void DlrmResource<DataT>::copyHostToDeviceBwdAll()
     Base::copyData(mDeviceInput, mHostInput, std::get<Input>(mCurrentDataSizeBwd));
     Base::copyData(
         mDeviceUpstreamGrad, mHostUpstreamGrad, std::get<UpstreamGrad>(mCurrentDataSizeBwd));
-    Base::copyData(mDeviceGrad, mHostGrad, std::get<Grad>(mCurrentDataSizeBwd));
-    Base::copyData(mDeviceGradRef, mHostGradRef, std::get<GradRef>(mCurrentDataSizeBwd));
-    Base::copyData(
-        mDeviceBottomMlpGrad, mHostBottomMlpGrad, std::get<BottomMlpGrad>(mCurrentDataSizeBwd));
-    Base::copyData(mDeviceBottomMlpGradRef,
-                   mHostBottomMlpGradRef,
-                   std::get<BottomMlpGradRef>(mCurrentDataSizeBwd));
 }
 
 template <typename DataT>
-void DlrmResource<DataT>::resizeFwdStorage(DataSizeFwd const& size)
+void DlrmResource<DataT>::copyDeviceToHostFwdOutput()
 {
-    auto calcMatrixSizes = [](DataSizeFwd const& size) {
-        return std::make_tuple(
-            std::get<Input>(size), std::get<Output>(size), std::get<OutputRef>(size));
+    Base::copyData(mHostOutput, mDeviceOutput, std::get<Output>(mCurrentDataSizeFwd));
+}
+
+template <typename DataT>
+void DlrmResource<DataT>::copyDeviceToHostBwdOutput()
+{
+    Base::copyData(mHostGrad, mDeviceGrad, std::get<Grad>(mCurrentDataSizeBwd));
+    Base::copyData(
+        mHostBottomMlpGrad, mDeviceBottomMlpGrad, std::get<BottomMlpGrad>(mCurrentDataSizeBwd));
+    Base::copyData(mHostAccBwd, mDeviceAccBwd, std::get<Acc>(mCurrentDataSizeBwd));
+}
+
+template <typename DataT>
+void DlrmResource<DataT>::resizeFwdStorage(ProblemSize const& size)
+{
+    auto calcTrilSize = [](ProblemSize const& size) {
+        return ((std::get<M>(size) * (std::get<M>(size) - 1)) / 2) + std::get<K>(size);
+    };
+
+    auto calcMatrixSizes = [calcTrilSize](ProblemSize const& size) {
+        return std::make_tuple(std::get<M>(size) * std::get<K>(size) * std::get<B>(size), // Input
+                               calcTrilSize(size) * std::get<B>(size), // Output
+                               std::get<M>(size) * std::get<M>(size) * std::get<B>(size)); // Acc
     };
 
     auto allocIfNeeded = [](auto& devicePtr, auto& hostPtr, int64_t& currentMax, int64_t newSize) {
@@ -103,24 +118,26 @@ void DlrmResource<DataT>::resizeFwdStorage(DataSizeFwd const& size)
         mDeviceInput, mHostInput, std::get<Input>(mMaxFwdCapacity), std::get<Input>(newSizes));
     allocIfNeeded(
         mDeviceOutput, mHostOutput, std::get<Output>(mMaxFwdCapacity), std::get<Output>(newSizes));
-    allocIfNeeded(mDeviceOutputRef,
-                  mHostOutputRef,
-                  std::get<OutputRef>(mMaxFwdCapacity),
-                  std::get<OutputRef>(newSizes));
+    allocIfNeeded(
+        mDeviceAccFwd, mHostAccFwd, std::get<Acc>(mMaxFwdCapacity), std::get<Acc>(newSizes));
+    mHostOutputRef = std::move(Base::template allocHost<DataT>(std::get<Output>(newSizes)));
 
     mCurrentDataSizeFwd = newSizes;
 }
 
 template <typename DataT>
-void DlrmResource<DataT>::resizeBwdStorage(DataSizeBwd const& size)
+void DlrmResource<DataT>::resizeBwdStorage(ProblemSize const& size)
 {
-    auto calcMatrixSizes = [](DataSizeBwd const& size) {
-        return std::make_tuple(std::get<Input>(size),
-                               std::get<UpstreamGrad>(size),
-                               std::get<Grad>(size),
-                               std::get<GradRef>(size),
-                               std::get<BottomMlpGrad>(size),
-                               std::get<BottomMlpGradRef>(size));
+    auto calcTrilSize = [](ProblemSize const& size) {
+        return ((std::get<M>(size) * (std::get<M>(size) - 1)) / 2) + std::get<K>(size);
+    };
+
+    auto calcMatrixSizes = [calcTrilSize](ProblemSize const& size) {
+        return std::make_tuple(std::get<M>(size) * std::get<K>(size) * std::get<B>(size), // Input
+                               calcTrilSize(size) * std::get<B>(size), // UpstreamGrad
+                               std::get<M>(size) * std::get<M>(size) * std::get<B>(size), // Acc
+                               std::get<M>(size) * std::get<K>(size) * std::get<B>(size), // Grad
+                               std::get<K>(size) * std::get<B>(size)); // BottomMlpGrad
     };
 
     auto allocIfNeeded = [](auto& devicePtr, auto& hostPtr, int64_t& currentMax, int64_t newSize) {
@@ -144,18 +161,15 @@ void DlrmResource<DataT>::resizeBwdStorage(DataSizeBwd const& size)
                   std::get<UpstreamGrad>(newSizes));
     allocIfNeeded(
         mDeviceGrad, mHostGrad, std::get<Grad>(mMaxBwdCapacity), std::get<Grad>(newSizes));
-    allocIfNeeded(mDeviceGradRef,
-                  mHostGradRef,
-                  std::get<GradRef>(mMaxBwdCapacity),
-                  std::get<GradRef>(newSizes));
     allocIfNeeded(mDeviceBottomMlpGrad,
                   mHostBottomMlpGrad,
                   std::get<BottomMlpGrad>(mMaxBwdCapacity),
                   std::get<BottomMlpGrad>(newSizes));
-    allocIfNeeded(mDeviceBottomMlpGradRef,
-                  mHostBottomMlpGradRef,
-                  std::get<BottomMlpGradRef>(mMaxBwdCapacity),
-                  std::get<BottomMlpGradRef>(newSizes));
+    allocIfNeeded(
+        mDeviceAccBwd, mHostAccBwd, std::get<Acc>(mMaxBwdCapacity), std::get<Acc>(newSizes));
+    mHostGradRef = std::move(Base::template allocHost<DataT>(std::get<Grad>(newSizes)));
+    mHostBottomMlpGradRef
+        = std::move(Base::template allocHost<DataT>(std::get<BottomMlpGrad>(newSizes)));
 
     mCurrentDataSizeBwd = newSizes;
 }
@@ -176,6 +190,12 @@ template <typename DataT>
 auto DlrmResource<DataT>::hostOutputRef() -> HostPtrT<DataT>&
 {
     return mHostOutputRef;
+}
+
+template <typename DataT>
+auto DlrmResource<DataT>::hostAccFwd() -> HostPtrT<float>&
+{
+    return mHostAccFwd;
 }
 
 template <typename DataT>
@@ -209,6 +229,12 @@ auto DlrmResource<DataT>::hostBottomMlpGradRef() -> HostPtrT<DataT>&
 }
 
 template <typename DataT>
+auto DlrmResource<DataT>::hostAccBwd() -> HostPtrT<DataT>&
+{
+    return mHostAccBwd;
+}
+
+template <typename DataT>
 auto DlrmResource<DataT>::deviceInput() -> DevicePtrT<DataT>&
 {
     return mDeviceInput;
@@ -221,9 +247,9 @@ auto DlrmResource<DataT>::deviceOutput() -> DevicePtrT<DataT>&
 }
 
 template <typename DataT>
-auto DlrmResource<DataT>::deviceOutputRef() -> DevicePtrT<DataT>&
+auto DlrmResource<DataT>::deviceAccFwd() -> DevicePtrT<float>&
 {
-    return mDeviceOutputRef;
+    return mDeviceAccFwd;
 }
 
 template <typename DataT>
@@ -239,21 +265,15 @@ auto DlrmResource<DataT>::deviceGrad() -> DevicePtrT<DataT>&
 }
 
 template <typename DataT>
-auto DlrmResource<DataT>::deviceGradRef() -> DevicePtrT<DataT>&
-{
-    return mDeviceGradRef;
-}
-
-template <typename DataT>
 auto DlrmResource<DataT>::deviceBottomMlpGrad() -> DevicePtrT<DataT>&
 {
     return mDeviceBottomMlpGrad;
 }
 
 template <typename DataT>
-auto DlrmResource<DataT>::deviceBottomMlpGradRef() -> DevicePtrT<DataT>&
+auto DlrmResource<DataT>::deviceAccBwd() -> DevicePtrT<DataT>&
 {
-    return mDeviceBottomMlpGradRef;
+    return mDeviceAccBwd;
 }
 
 template <typename DataT>

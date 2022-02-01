@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,35 +35,27 @@ struct DlrmDotTest
     : public ::testing::TestWithParam<std::tuple<typename DlrmTestParams::KernelT,
                                                  typename DlrmTestParams::ThreadBlockT,
                                                  typename DlrmTestParams::ProblemSizeT,
-                                                 typename DlrmTestParams::FwdDataSizeT,
-                                                 typename DlrmTestParams::BwdDataSizeT,
                                                  typename DlrmTestParams::PassDirectionT>>
 {
     using Base = ::testing::TestWithParam<std::tuple<typename DlrmTestParams::KernelT,
                                                      typename DlrmTestParams::ThreadBlockT,
                                                      typename DlrmTestParams::ProblemSizeT,
-                                                     typename DlrmTestParams::FwdDataSizeT,
-                                                     typename DlrmTestParams::BwdDataSizeT,
                                                      typename DlrmTestParams::PassDirectionT>>;
 
     void SetUp() override
     {
         // Construct ProblemParams from
         // incoming gtest parameterization
-        auto param       = Base::GetParam();
-        auto kernel      = std::get<0>(param);
-        auto threadBlock = std::get<1>(param);
-        auto problemSize = std::get<2>(param);
-        auto fwdDataSize = std::get<3>(param);
-        auto bwdDataSize = std::get<4>(param);
-        auto isBwd       = std::get<5>(param);
+        auto param         = Base::GetParam();
+        auto kernel        = std::get<0>(param);
+        auto threadBlock   = std::get<1>(param);
+        auto problemSize   = std::get<2>(param);
+        auto passDirection = std::get<3>(param);
 
-        ProblemParams params = {threadBlock, problemSize, fwdDataSize, bwdDataSize, isBwd};
+        ProblemParams params = {threadBlock, problemSize, passDirection};
 
         // Walk through kernel workflow
         kernel->setup(params);
-
-        // run warm-up iteration based on static bool (runkernel)
     }
 
     virtual void RunKernel()

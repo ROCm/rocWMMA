@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,60 +44,17 @@ public:
 
     typename Base::KernelFwdFunc kernelFwdImpl() const final
     {
-        return typename Base::KernelFwdFunc(dotBasedInteractFwdKernel<DataT,
-                                                                      warps_per_threadblock,
-                                                                      threadblock_size,
-                                                                      M_BLOCKS,
-                                                                      K_BLOCKS,
-                                                                      SMEM_STRIDE,
-                                                                      SMEM_STRIDE_ACC,
-                                                                      kWarpSize,
-                                                                      kWarpSizeLog2,
-                                                                      kTileDim,
-                                                                      kTileDimLog2>);
-    }
-
-    typename Base::KernelFwdFunc kernelFwdNonAlignedImpl() const final
-    {
-        return
-            typename Base::KernelFwdFunc(dotBasedInteractFwdKernelNonAligned<DataT,
-                                                                             warps_per_threadblock,
-                                                                             threadblock_size,
-                                                                             M_BLOCKS,
-                                                                             K_BLOCKS,
-                                                                             SMEM_STRIDE,
-                                                                             SMEM_STRIDE_ACC,
-                                                                             kWarpSize,
-                                                                             kWarpSizeLog2,
-                                                                             kTileDim,
-                                                                             kTileDimLog2>);
+        return typename Base::KernelFwdFunc(dlrmDotFwd<DataT, TileSize>);
     }
 
     typename Base::KernelBwdFunc kernelBwdImpl() const final
     {
-        return typename Base::KernelBwdFunc(dotBasedInteractBwdKernel<DataT,
-                                                                      kWarpsPerBlock,
-                                                                      kNumThreads,
-                                                                      32 / TileSize,
-                                                                      kColTilesPerStep,
-                                                                      kWarpSize,
-                                                                      kWarpSizeLog2,
-                                                                      TileSize,
-                                                                      Log2<TileSize>::value>);
+        return typename Base::KernelBwdFunc(dlrmDotBwd<DataT, TileSize>);
     }
 
-    typename Base::KernelBwdFunc kernelBwdNonAlignedImpl() const final
+    typename Base::KernelTrilFunc kernelTrilImpl() const final
     {
-        return typename Base::KernelBwdFunc(
-            dotBasedInteractBwdKernelNonAligned<DataT,
-                                                kWarpsPerBlock,
-                                                kNumThreads,
-                                                32 / TileSize,
-                                                kColTilesPerStep,
-                                                kWarpSize,
-                                                kWarpSizeLog2,
-                                                TileSize,
-                                                Log2<TileSize>::value>);
+        return typename Base::KernelTrilFunc(trilReconstruct<DataT>);
     }
 };
 
@@ -118,10 +75,8 @@ struct DlrmDotGenerator
     {
         // Map GTest params to Kernel params
         using TestParamsT = std::tuple<Ts...>;
-        using KernelT
-            = DlrmDotKernel<std::tuple_element_t<TileSize, TestParamsT>::value, // TileSize
-                            std::tuple_element_t<DataT, TestParamsT> // DataT
-                            >;
+        using KernelT     = DlrmDotKernel<std::tuple_element_t<TileSize, TestParamsT>::value,
+                                      std::tuple_element_t<DataT, TestParamsT>>;
 
         return std::make_shared<KernelT>();
     }
