@@ -58,3 +58,4 @@ endfunction()
 
 # Create sample targets
 add_wmma_sample(SimpleGemm ${CMAKE_CURRENT_SOURCE_DIR}/SimpleGemm.cpp)
+add_wmma_sample(SGemv ${CMAKE_CURRENT_SOURCE_DIR}/SGemv.cpp)
