@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -76,4 +76,101 @@ void gemm_CPU(uint32_t       m,
     }
 }
 
+template <typename DataT>
+void dlrm_fwd_CPU(DataT const* input, DataT* output, uint32_t m, uint32_t k, uint32_t batchSize)
+{
+    auto batchOffset       = m * k;
+    uint outputBatchOffset = ((m * (m - 1)) / 2) + k;
+#pragma omp parallel for
+    for(int b = 0; b < batchSize; b++)
+    {
+        uint outputIdx = b * outputBatchOffset;
+
+        // Copy MLP to output
+        for(int i = 0; i < k; i++)
+        {
+
+            output[outputIdx] = input[b * batchOffset + i];
+            outputIdx++;
+        }
+        for(int i = 0; i < m; i++)
+        {
+            for(int j = 0; j < m; j++)
+            {
+                float accum = static_cast<float>(0);
+                for(int h = 0; h < k; h++)
+                {
+                    accum += static_cast<float>(input[b * batchOffset + i * k + h])
+                             * static_cast<float>(input[b * batchOffset + j * k + h]);
+                }
+
+                if(j < i)
+                {
+                    output[outputIdx] = static_cast<DataT>(accum);
+                    outputIdx++;
+                }
+            }
+        }
+    }
+}
+
+template <typename DataT>
+void dlrm_bwd_CPU(DataT const* input,
+                  DataT const* upstreamGrad,
+                  DataT*       bottomMlpGrad,
+                  DataT*       output,
+                  uint32_t     m,
+                  uint32_t     k,
+                  uint32_t     batchSize)
+{
+    auto batchOffset = m * k;
+    auto accOffset   = m * m;
+    auto trilSize    = ((m * (m - 1)) / 2) + k;
+    auto acc         = new DataT[batchSize * m * m];
+
+#pragma omp parallel for
+    for(int b = 0; b < batchSize; b++)
+    {
+        // Copy bottom MLP grad
+        for(int j = 0; j < k; j++)
+        {
+            bottomMlpGrad[b * k + j] = upstreamGrad[b * trilSize + j];
+        }
+
+        // Remake tril
+        uint32_t upstreamIdx = b * trilSize + k;
+        for(int i = 0; i < m; i++)
+        {
+            for(int j = 0; j <= i; j++)
+            {
+                if(i == j)
+                {
+                    acc[b * accOffset + i * m + j] = 0;
+                }
+                else
+                {
+                    acc[b * accOffset + i * m + j] = upstreamGrad[upstreamIdx];
+                    acc[b * accOffset + j * m + i] = upstreamGrad[upstreamIdx];
+                    upstreamIdx++;
+                }
+            }
+        }
+
+        // Perform reverse bmm
+        for(int i = 0; i < m; i++)
+        {
+            for(int j = 0; j < k; j++)
+            {
+                float accum = 0.0f;
+                for(int h = 0; h < m; h++)
+                {
+                    accum += static_cast<float>(acc[b * accOffset + i * m + h])
+                             * static_cast<float>(input[b * batchOffset + h * k + j]);
+                }
+                output[b * batchOffset + i * k + j] = static_cast<DataT>(accum);
+            }
+        }
+    }
+    delete[] acc;
+}
 #endif // WMMA_REFERENCE_H

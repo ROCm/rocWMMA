@@ -2,7 +2,7 @@
  #
  # MIT License
  #
- # Copyright 2021 Advanced Micro Devices, Inc.
+ # Copyright 2021-2022 Advanced Micro Devices, Inc.
  #
  # Permission is hereby granted, free of charge, to any person obtaining a copy
  # of this software and associated documentation files (the "Software"), to deal
@@ -24,54 +24,54 @@
  #
  ###############################################################################
 
-set(WMMA_TEST_DLRM_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+ set(WMMA_TEST_DLRM_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-function(add_dlrm_validation_test TEST_TARGET TEST_SOURCE)
-  list(APPEND TEST_SOURCE ${ARGN})
+ function(add_dlrm_validation_test TEST_TARGET TEST_SOURCE)
+   list(APPEND TEST_SOURCE ${ARGN})
 
-  # Create target
-  add_wmma_validation_test(${TEST_TARGET} ${TEST_SOURCE})
+   # Create target
+   add_wmma_validation_test(${TEST_TARGET} ${TEST_SOURCE})
 
-  # Add dlrm include directory
-  target_include_directories(${TEST_TARGET} PRIVATE ${WMMA_TEST_DLRM_INCLUDE_DIR})
+   # Add dlrm include directory
+   target_include_directories(${TEST_TARGET} PRIVATE ${WMMA_TEST_DLRM_INCLUDE_DIR})
 
-  # Copy DLRM data directory to build folder
-  add_custom_command(
-    TARGET ${TEST_TARGET} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/dlrmData)
+   # Copy DLRM data directory to build folder
+   add_custom_command(
+     TARGET ${TEST_TARGET} POST_BUILD
+     COMMAND ${CMAKE_COMMAND} -E copy_directory
+         ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/dlrmData)
 
-endfunction()
+ endfunction()
 
-# Include rocBLAS performance benchmark
-function(add_dlrm_benchmark_test TEST_TARGET TEST_SOURCE)
-  list(APPEND TEST_SOURCE ${ARGN})
+ # Include rocBLAS performance benchmark
+ function(add_dlrm_benchmark_test TEST_TARGET TEST_SOURCE)
+   list(APPEND TEST_SOURCE ${ARGN})
 
-  # Create target
-  add_wmma_benchmark_test(${TEST_TARGET} ${TEST_SOURCE})
+   # Create target
+   add_wmma_benchmark_test(${TEST_TARGET} ${TEST_SOURCE})
 
-  # Add dlrm include directory
-  target_include_directories(${TEST_TARGET} PRIVATE ${WMMA_TEST_DLRM_INCLUDE_DIR})
+   # Add dlrm include directory
+   target_include_directories(${TEST_TARGET} PRIVATE ${WMMA_TEST_DLRM_INCLUDE_DIR})
 
-  # Copy DLRM data directory to build folder
-  add_custom_command(
-    TARGET ${TEST_TARGET} PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/dlrmData)
-endfunction()
+   # Copy DLRM data directory to build folder
+   add_custom_command(
+     TARGET ${TEST_TARGET} PRE_BUILD
+     COMMAND ${CMAKE_COMMAND} -E copy_directory
+         ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/dlrmData)
+ endfunction()
 
-set(DlrmCommonSources ${WMMA_COMMON_TEST_SOURCES}
-                      DlrmKernelBase.cpp)
+ set(DlrmCommonSources ${WMMA_COMMON_TEST_SOURCES}
+                       DlrmKernelBase.cpp)
 
-set(DlrmDotTestSources ${DlrmCommonSources}
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/DlrmDotTest.cpp)
+ set(DlrmDotTestSources ${DlrmCommonSources}
+                        ${CMAKE_CURRENT_SOURCE_DIR}/test/DlrmDotTest.cpp)
 
-# Benchmark DLRM tests
-if (WMMA_BUILD_BENCHMARK_TESTS)
-    add_dlrm_benchmark_test(DlrmDotTest-bench ${DlrmDotTestSources})
-endif()
+ # Benchmark DLRM tests
+ if (WMMA_BUILD_BENCHMARK_TESTS)
+     add_dlrm_benchmark_test(DlrmDotTest-bench ${DlrmDotTestSources})
+ endif()
 
-# Validation DLRM tests
-if (WMMA_BUILD_VALIDATION_TESTS)
-    add_dlrm_validation_test(DlrmDotTest-validate ${DlrmDotTestSources})
-endif()
+ # Validation DLRM tests
+ if (WMMA_BUILD_VALIDATION_TESTS)
+     add_dlrm_validation_test(DlrmDotTest-validate ${DlrmDotTestSources})
+ endif()

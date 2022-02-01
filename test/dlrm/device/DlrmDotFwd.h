@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,293 +28,106 @@
 #define DLRM_DOT_FWD_H
 
 #include "./Common.h"
+#include "Utils.h"
 
-template <uint TILE_DIM, uint M_BLOCKS, uint SMEM_STRIDE, uint SMEM_STRIDE_ACC, typename T>
-__device__ inline void bmmTrilPadFwdKernel(T*   shmem,
-                                           T*   gmem_output,
-                                           uint num_rows,
-                                           uint num_cols,
-                                           uint smem_rows_per_warp,
-                                           uint output_size,
-                                           uint num_col_steps,
-                                           uint pad,
-                                           int  lane_id)
+template <typename DataT, uint TILE_DIM>
+__global__ void __launch_bounds__(128, 1) dlrmDotFwd(const DataT* __restrict input,
+                                                     DataT* __restrict output,
+                                                     float32_t* acc,
+                                                     uint       m,
+                                                     uint       k,
+                                                     uint       b,
+                                                     uint       inputBatchOffset,
+                                                     uint       outputBatchOffset,
+                                                     uint       accBatchOffset)
 {
-    wmma::fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float> acc[M_BLOCKS][M_BLOCKS];
+    using MappingA   = MappingUtil<TILE_DIM, TILE_DIM, DataT, row_major>;
+    using MappingB   = MappingUtil<TILE_DIM, TILE_DIM, DataT, col_major>;
+    using MappingC   = MappingUtil<TILE_DIM, TILE_DIM, DataT, row_major>;
+    using MappingAcc = MappingUtil<TILE_DIM, TILE_DIM, float32_t, row_major>;
 
-    for(int i = 0; i < M_BLOCKS; i++)
-    {
-        for(int j = 0; j < M_BLOCKS; j++)
-        {
-            wmma::fill_fragment(acc[i][j], 0.0f);
-        }
-    }
+    using FragA   = wmma::fragment<matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, DataT, row_major>;
+    using FragB   = wmma::fragment<matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, DataT, col_major>;
+    using FragAcc = wmma::fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float32_t>;
 
-    for(int k_step = 0; k_step < num_col_steps; k_step++)
+    // Copy bottom MLP to output
+    // Threads with a global index < k are responsible for copying MLP data
+    auto globalThreadCoord = blockIdx.x * blockDim.x + threadIdx.x;
+    auto count             = k / blockDim.x;
+    count                  = (count > 1) ? count : 1;
+    if(blockIdx.x == 0 && blockIdx.y == 0)
     {
-        wmma::fragment<matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, T, row_major> a[M_BLOCKS];
-        wmma::fragment<matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, T, col_major> b[M_BLOCKS];
-        for(int j = 0; j < M_BLOCKS; j++)
+        for(int i = 0; i < count; i++)
         {
-            int      base_row = (j < M_BLOCKS - 1) ? j * 16 : smem_rows_per_warp - 16;
-            const T* tile_ptr
-                = reinterpret_cast<T*>(shmem) + (base_row * SMEM_STRIDE + k_step * 16);
-            wmma::load_matrix_sync(a[j], tile_ptr, SMEM_STRIDE);
-            wmma::load_matrix_sync(b[j], tile_ptr, SMEM_STRIDE);
-        }
-        for(int i = 0; i < M_BLOCKS; i++)
-        {
-            for(int j = 0; j < M_BLOCKS; j++)
+            if(i * blockDim.x + globalThreadCoord < k)
             {
-                wmma::mma_sync(acc[i][j], a[i], b[j], acc[i][j]);
-            }
-        }
-    }
-    float* shmem_store = reinterpret_cast<float*>(shmem);
-    for(int i = 0; i < M_BLOCKS; i++)
-    {
-        for(int j = 0; j < M_BLOCKS; j++)
-        {
-            float* tile_ptr = shmem_store + (i * 16 * SMEM_STRIDE_ACC + j * 16);
-            wmma::store_matrix_sync(tile_ptr, acc[i][j], SMEM_STRIDE_ACC, wmma::mem_row_major);
-        }
-    }
-
-    T*  gmem_interact_output = gmem_output + num_cols;
-    int lastRowBlockOffset   = M_BLOCKS * 16 - smem_rows_per_warp;
-    int srcLine              = 0;
-    for(int i = 0; i < num_rows; ++i, ++srcLine)
-    {
-        if(i == ((M_BLOCKS - 1) * 16))
-        {
-            srcLine += lastRowBlockOffset;
-        }
-        if(lane_id < i)
-        {
-            uint offset = (i * (i - 1)) >> 1;
-            store<T>(gmem_interact_output + offset + lane_id,
-                     shmem_store + srcLine * SMEM_STRIDE_ACC + lane_id);
-        }
-    }
-
-    // Padding
-    if(lane_id < pad)
-    {
-        store<T>(gmem_output + lane_id + output_size - 1, 0.0f);
-    }
-}
-
-template <typename DataT,
-          uint WARPS_PER_BLOCK,
-          uint THREADBLOCK_SIZE,
-          uint M_BLOCKS,
-          uint K_BLOCKS,
-          uint SMEM_STRIDE,
-          uint SMEM_STRIDE_ACC,
-          uint WARP_SIZE,
-          uint WARP_SIZE_LOG_2,
-          uint TILE_DIM,
-          uint TILE_DIM_LOG_2>
-__launch_bounds__(THREADBLOCK_SIZE) __global__
-    void dotBasedInteractFwdKernelNonAligned(const DataT* __restrict input,
-                                             DataT* __restrict output,
-                                             uint batch_size,
-                                             uint num_rows,
-                                             uint num_cols,
-                                             uint num_rows_after_padding,
-                                             uint num_cols_after_padding,
-                                             uint smem_elems_per_warp,
-                                             uint smem_rows_per_warp,
-                                             uint output_size,
-                                             uint num_row_steps,
-                                             uint num_col_steps,
-                                             uint pad)
-{
-    uint warp_id   = (threadIdx.x >> WARP_SIZE_LOG_2);
-    int  sample_id = blockIdx.x * WARPS_PER_BLOCK + warp_id;
-    if(sample_id >= batch_size)
-    {
-        return;
-    }
-    int lane_id = threadIdx.x & (WARP_SIZE - 1);
-
-    HIP_DYNAMIC_SHARED(void*, shmem_dynamic)
-    DataT* shmem = reinterpret_cast<DataT*>(shmem_dynamic) + (warp_id * smem_elems_per_warp);
-
-    const DataT* sample_input = input + num_rows * num_cols * sample_id;
-    for(uint i = 0; i < num_rows; ++i, sample_input += num_cols)
-    {
-        for(uint idx = lane_id; idx < num_cols; idx += WARP_SIZE)
-        {
-            (shmem + i * SMEM_STRIDE)[idx] = sample_input[idx];
-        }
-    }
-
-    uint idx = lane_id + num_cols;
-    if(std::is_same<DataT, float16_t>::value)
-    {
-        if(idx < num_cols_after_padding)
-        {
-            for(int i = 0; i < num_rows; ++i)
-            {
-                (shmem + i * SMEM_STRIDE)[idx] = __float2half(0);
-            }
-        }
-        half4 zeros;
-        zeros.vals[0] = __float2half2_rn(0);
-        zeros.vals[1] = __float2half2_rn(0);
-
-        if(lane_id < (num_cols_after_padding >> 2))
-        {
-            for(int i = num_rows; i < num_rows_after_padding; i++)
-            {
-                ((half4*)(shmem + i * SMEM_STRIDE))[lane_id] = zeros;
-            }
-        }
-    }
-    else
-    {
-        if(idx < num_cols_after_padding)
-        {
-            for(int i = 0; i < num_rows; ++i)
-            {
-                (shmem + i * SMEM_STRIDE)[idx] = 0;
-            }
-        }
-
-        for(int i = num_rows; i < num_rows_after_padding; i++)
-        {
-            for(uint idx = lane_id; idx < num_cols; idx += WARP_SIZE)
-            {
-                (shmem + i * SMEM_STRIDE)[idx] = 0;
+                output[outputBatchOffset * blockIdx.z + i * blockDim.x + globalThreadCoord]
+                    = input[inputBatchOffset * blockIdx.z + i * blockDim.x + globalThreadCoord];
             }
         }
     }
 
-    __syncthreads();
+    // Target output block
+    auto matrixCoordC = MappingC::matrixCoord();
 
-    DataT* gmem_output = output + output_size * sample_id;
-    for(uint idx = lane_id; idx < num_cols; idx += WARP_SIZE)
+    if(std::get<0>(matrixCoordC) < m && std::get<1>(matrixCoordC) < m)
     {
-        gmem_output[idx] = shmem[idx];
-    }
+        // Initialize accumulator
+        auto fragAcc = FragAcc();
+        wmma::fill_fragment(fragAcc, static_cast<float32_t>(0));
 
-    bmmTrilPadFwdKernel<TILE_DIM, M_BLOCKS, SMEM_STRIDE, SMEM_STRIDE_ACC, DataT>(shmem,
-                                                                                 gmem_output,
-                                                                                 num_rows,
-                                                                                 num_cols,
-                                                                                 smem_rows_per_warp,
-                                                                                 output_size,
-                                                                                 num_col_steps,
-                                                                                 pad,
-                                                                                 lane_id);
-}
+        // Setup starting addresses
+        auto* inputWithOffset = input + inputBatchOffset * blockIdx.z;
+        auto* addrA
+            = MappingA::dataCoord(inputWithOffset, k, std::make_pair(std::get<0>(matrixCoordC), 0));
+        auto* addrB
+            = MappingB::dataCoord(inputWithOffset, k, std::make_pair(0, std::get<1>(matrixCoordC)));
 
-template <typename DataT,
-          uint WARPS_PER_BLOCK,
-          uint THREADBLOCK_SIZE,
-          uint M_BLOCKS,
-          uint K_BLOCKS,
-          uint SMEM_STRIDE,
-          uint SMEM_STRIDE_ACC,
-          uint WARP_SIZE,
-          uint WARP_SIZE_LOG_2,
-          uint TILE_DIM,
-          uint TILE_DIM_LOG_2>
-__launch_bounds__(THREADBLOCK_SIZE) __global__
-    void dotBasedInteractFwdKernel(const DataT* __restrict input,
-                                   DataT* __restrict output,
-                                   uint batch_size,
-                                   uint num_rows,
-                                   uint num_cols,
-                                   uint num_rows_after_padding,
-                                   uint num_cols_after_padding,
-                                   uint smem_elems_per_warp,
-                                   uint smem_rows_per_warp,
-                                   uint output_size,
-                                   uint num_row_steps,
-                                   uint num_col_steps,
-                                   uint pad)
-{
-    uint warp_id   = (threadIdx.x >> WARP_SIZE_LOG_2);
-    int  sample_id = blockIdx.x * WARPS_PER_BLOCK + warp_id;
-    if(sample_id >= batch_size)
-    {
-        return;
-    }
-    int lane_id = threadIdx.x & (WARP_SIZE - 1);
+        // Setup address increments.
+        // A steps BlockK through m x k
+        // B steps BlockK through k x m
+        auto incrA = MappingA::dataOffset(k, std::make_pair(0, TILE_DIM));
+        auto incrB = MappingB::dataOffset(k, std::make_pair(TILE_DIM, 0));
 
-    HIP_DYNAMIC_SHARED(void*, shmem_dynamic)
-    // reinterpret cast to dataT
-    DataT* shmem = reinterpret_cast<DataT*>(shmem_dynamic) + (warp_id * smem_elems_per_warp);
-
-    const DataT* sample_input = input + num_rows * num_cols * sample_id;
-    if(lane_id < (num_cols >> 1))
-    {
-        for(int i = 0; i < num_rows; ++i, sample_input += num_cols)
+        auto count = k / TILE_DIM;
+        for(int i = 0; i < count; i++)
         {
-            ((float2*)(shmem + i * SMEM_STRIDE))[lane_id] = ((float2*)sample_input)[lane_id];
+            auto fragA = FragA();
+            auto fragB = FragB();
+
+            // Load and multiply
+            wmma::load_matrix_sync(fragA, addrA, k);
+            wmma::load_matrix_sync(fragB, addrB, k);
+            wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
+
+            addrA += incrA;
+            addrB += incrB;
         }
-    }
 
-    uint idx = lane_id + num_cols;
-    if(std::is_same<DataT, float16_t>::value)
-    {
-        if(idx < num_cols_after_padding)
-        {
-            for(int i = 0; i < num_rows; ++i)
-            {
-                (shmem + i * SMEM_STRIDE)[idx] = __float2half(0);
-            }
-        }
-        half4 zeros;
-        zeros.vals[0] = __float2half2_rn(0);
-        zeros.vals[1] = __float2half2_rn(0);
+        // Store fragAcc to global acc
+        auto* accWithOffset = acc + accBatchOffset * blockIdx.z;
+        auto* addrAcc       = MappingAcc::dataCoord(accWithOffset, m, matrixCoordC);
+        wmma::store_matrix_sync(addrAcc, fragAcc, m, wmma::mem_row_major);
 
-        if(lane_id < (num_cols_after_padding >> 2))
+        // Copy lower triangular from acc to output
+        auto fragColIdx   = threadIdx.x % TILE_DIM;
+        auto globalColIdx = std::get<1>(matrixCoordC) + fragColIdx;
+        auto rowsPerStep  = AMDGCN_WAVE_SIZE / TILE_DIM;
+
+        count = (TILE_DIM * TILE_DIM) >> Log2<AMDGCN_WAVE_SIZE>::value;
+        for(int i = 0; i < count; i++)
         {
-            for(int i = num_rows; i < num_rows_after_padding; i++)
+            auto fragRowIdx = i * rowsPerStep + ((threadIdx.x & (AMDGCN_WAVE_SIZE - 1)) / TILE_DIM);
+            auto globalRowIdx = std::get<0>(matrixCoordC) + fragRowIdx;
+            if(globalRowIdx > globalColIdx)
             {
-                ((half4*)(shmem + i * SMEM_STRIDE))[lane_id] = zeros;
+                auto outputOffset = k + ((globalRowIdx * (globalRowIdx - 1)) >> 1);
+                output[outputBatchOffset * blockIdx.z + outputOffset + globalColIdx]
+                    = static_cast<DataT>(
+                        acc[accBatchOffset * blockIdx.z + globalRowIdx * m + globalColIdx]);
             }
         }
     }
-    else
-    {
-        if(idx < num_cols_after_padding)
-        {
-            for(int i = 0; i < num_rows; ++i)
-            {
-                (shmem + i * SMEM_STRIDE)[idx] = 0;
-            }
-        }
-
-        for(int i = num_rows; i < num_rows_after_padding; i++)
-        {
-            for(uint idx = lane_id; idx < num_cols; idx += WARP_SIZE)
-            {
-                (shmem + i * SMEM_STRIDE)[idx] = 0;
-            }
-        }
-    }
-
-    __syncthreads();
-
-    DataT* gmem_output = output + output_size * sample_id;
-    if(lane_id < (num_cols >> 1))
-    {
-        ((float2*)gmem_output)[lane_id] = ((float2*)shmem)[lane_id];
-    }
-
-    bmmTrilPadFwdKernel<TILE_DIM, M_BLOCKS, SMEM_STRIDE, SMEM_STRIDE_ACC, DataT>(shmem,
-                                                                                 gmem_output,
-                                                                                 num_rows,
-                                                                                 num_cols,
-                                                                                 smem_rows_per_warp,
-                                                                                 output_size,
-                                                                                 num_col_steps,
-                                                                                 pad,
-                                                                                 lane_id);
 }
 
 #endif // DLRM_DOT_FWD_H
