@@ -31,7 +31,14 @@
 #include "Common.h"
 #include "Utils.h"
 #include "WMMA.h"
+
 #include <functional>
+#include <iostream>
+#include <vector>
+
+using rocwmma::float16_t;
+using rocwmma::float32_t;
+using rocwmma::float64_t;
 
 // Training pass direction
 enum class DlrmDirection_t : bool
@@ -168,14 +175,16 @@ __global__ void dlrmDotFwd(const float16_t* __restrict input,
                            uint   outputBatchOffset,
                            uint   accBatchOffset)
 {
-    using MappingA   = MappingUtil<TILE_DIM, TILE_DIM, float16_t, row_major>;
-    using MappingB   = MappingUtil<TILE_DIM, TILE_DIM, float16_t, col_major>;
-    using MappingC   = MappingUtil<TILE_DIM, TILE_DIM, float16_t, row_major>;
-    using MappingAcc = MappingUtil<TILE_DIM, TILE_DIM, float, row_major>;
+    using MappingA   = rocwmma::MappingUtil<TILE_DIM, TILE_DIM, float16_t, rocwmma::row_major>;
+    using MappingB   = rocwmma::MappingUtil<TILE_DIM, TILE_DIM, float16_t, rocwmma::col_major>;
+    using MappingC   = rocwmma::MappingUtil<TILE_DIM, TILE_DIM, float16_t, rocwmma::row_major>;
+    using MappingAcc = rocwmma::MappingUtil<TILE_DIM, TILE_DIM, float, rocwmma::row_major>;
 
-    using FragA   = wmma::fragment<matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, row_major>;
-    using FragB   = wmma::fragment<matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, col_major>;
-    using FragAcc = wmma::fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float>;
+    using FragA = rocwmma::
+        fragment<rocwmma::matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, rocwmma::row_major>;
+    using FragB = rocwmma::
+        fragment<rocwmma::matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, rocwmma::col_major>;
+    using FragAcc = rocwmma::fragment<rocwmma::accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float>;
 
     // Copy bottom MLP to output
     // Threads with a global index < k are responsible for copying MLP data
@@ -200,53 +209,54 @@ __global__ void dlrmDotFwd(const float16_t* __restrict input,
     {
         // Initialize accumulator
         auto fragAcc = FragAcc();
-        wmma::fill_fragment(fragAcc, static_cast<float>(0));
+        rocwmma::fill_fragment(fragAcc, static_cast<float>(0));
 
         // Setup starting addresses
         auto* inputWithOffset = input + inputBatchOffset * blockIdx.z;
         auto* addrA
-            = MappingA::dataCoord(inputWithOffset, k, std::make_pair(std::get<0>(matrixCoordC), 0));
+            = MappingA::dataCoord(inputWithOffset, std::make_pair(std::get<0>(matrixCoordC), 0), k);
         auto* addrB
-            = MappingB::dataCoord(inputWithOffset, k, std::make_pair(0, std::get<1>(matrixCoordC)));
+            = MappingB::dataCoord(inputWithOffset, std::make_pair(0, std::get<1>(matrixCoordC)), k);
 
         // Setup address increments.
         // A steps BlockK through m x k
         // B steps BlockK through k x m
-        auto incrA = MappingA::dataOffset(k, std::make_pair(0, TILE_DIM));
-        auto incrB = MappingB::dataOffset(k, std::make_pair(TILE_DIM, 0));
+        auto incrA = MappingA::dataOffset(std::make_pair(0, TILE_DIM), k);
+        auto incrB = MappingB::dataOffset(std::make_pair(TILE_DIM, 0), k);
 
         auto count = k / TILE_DIM;
         for(int i = 0; i < count; i++)
         {
-            wmma::synchronize_workgroup();
+            rocwmma::synchronize_workgroup();
 
             auto fragA = FragA();
             auto fragB = FragB();
 
             // Load and multiply
-            wmma::load_matrix_sync(fragA, addrA, k);
-            wmma::load_matrix_sync(fragB, addrB, k);
-            wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
+            rocwmma::load_matrix_sync(fragA, addrA, k);
+            rocwmma::load_matrix_sync(fragB, addrB, k);
+            rocwmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
 
             addrA += incrA;
             addrB += incrB;
         }
-        wmma::synchronize_workgroup();
+        rocwmma::synchronize_workgroup();
 
         // Store fragAcc to global acc
         auto* accWithOffset = acc + accBatchOffset * blockIdx.z;
-        auto* addrAcc       = MappingAcc::dataCoord(accWithOffset, m, matrixCoordC);
-        wmma::store_matrix_sync(addrAcc, fragAcc, m, wmma::mem_row_major);
+        auto* addrAcc       = MappingAcc::dataCoord(accWithOffset, matrixCoordC, m);
+        rocwmma::store_matrix_sync(addrAcc, fragAcc, m, rocwmma::mem_row_major);
 
         // Copy lower triangular from acc to output
         auto fragColIdx   = threadIdx.x % TILE_DIM;
         auto globalColIdx = std::get<1>(matrixCoordC) + fragColIdx;
-        auto rowsPerStep  = AMDGCN_WAVE_SIZE / TILE_DIM;
+        auto rowsPerStep  = rocwmma::AMDGCN_WAVE_SIZE / TILE_DIM;
 
-        count = (TILE_DIM * TILE_DIM) >> Log2<AMDGCN_WAVE_SIZE>::value;
+        count = (TILE_DIM * TILE_DIM) >> Log2<rocwmma::AMDGCN_WAVE_SIZE>::value;
         for(int i = 0; i < count; i++)
         {
-            auto fragRowIdx = i * rowsPerStep + ((threadIdx.x & (AMDGCN_WAVE_SIZE - 1)) / TILE_DIM);
+            auto fragRowIdx
+                = i * rowsPerStep + ((threadIdx.x & (rocwmma::AMDGCN_WAVE_SIZE - 1)) / TILE_DIM);
             auto globalRowIdx = std::get<0>(matrixCoordC) + fragRowIdx;
             if(globalRowIdx > globalColIdx)
             {
@@ -333,12 +343,14 @@ __global__ void dlrmDotBwd(const float16_t* __restrict input,
                            uint upstreamBatchOffset,
                            uint accBatchOffset)
 {
-    using TileMapping = MappingUtil<TILE_DIM, TILE_DIM, float16_t, row_major>;
+    using TileMapping = rocwmma::MappingUtil<TILE_DIM, TILE_DIM, float16_t, rocwmma::row_major>;
 
-    using FragA   = wmma::fragment<matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, row_major>;
-    using FragB   = wmma::fragment<matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, row_major>;
-    using FragC   = wmma::fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float16_t>;
-    using FragAcc = wmma::fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float>;
+    using FragA = rocwmma::
+        fragment<rocwmma::matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, rocwmma::row_major>;
+    using FragB = rocwmma::
+        fragment<rocwmma::matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, rocwmma::row_major>;
+    using FragC = rocwmma::fragment<rocwmma::accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float16_t>;
+    using FragAcc = rocwmma::fragment<rocwmma::accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float>;
 
     // Copy bottom MLP grad
     // Threads with a global index < k are responsible for copying MLP data
@@ -366,21 +378,21 @@ __global__ void dlrmDotBwd(const float16_t* __restrict input,
     {
         // Initialize accumulator
         auto fragAcc = FragAcc();
-        wmma::fill_fragment(fragAcc, static_cast<float>(0));
+        rocwmma::fill_fragment(fragAcc, static_cast<float>(0));
 
         // Setup starting addresses
         auto* accWithOffset   = acc + accBatchOffset * blockIdx.z;
         auto* inputWithOffset = input + inputBatchOffset * blockIdx.z;
         auto* addrA           = TileMapping::dataCoord(
-                      accWithOffset, m, std::make_pair(std::get<0>(matrixCoordC), 0));
+                      accWithOffset, std::make_pair(std::get<0>(matrixCoordC), 0), m);
         auto* addrB = TileMapping::dataCoord(
-            inputWithOffset, k, std::make_pair(0, std::get<1>(matrixCoordC)));
+            inputWithOffset, std::make_pair(0, std::get<1>(matrixCoordC)), k);
 
         // Setup address increments.
         // A steps BlockK through m x m
         // B steps BlockK through m x k
-        auto incrA = TileMapping::dataOffset(m, std::make_pair(0, TILE_DIM));
-        auto incrB = TileMapping::dataOffset(k, std::make_pair(TILE_DIM, 0));
+        auto incrA = TileMapping::dataOffset(std::make_pair(0, TILE_DIM), m);
+        auto incrB = TileMapping::dataOffset(std::make_pair(TILE_DIM, 0), k);
 
         auto count = m / TILE_DIM;
         for(int i = 0; i < count; i++)
@@ -389,9 +401,9 @@ __global__ void dlrmDotBwd(const float16_t* __restrict input,
             auto fragB = FragB();
 
             // Load and multiply
-            wmma::load_matrix_sync(fragA, addrA, m);
-            wmma::load_matrix_sync(fragB, addrB, k);
-            wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
+            rocwmma::load_matrix_sync(fragA, addrA, m);
+            rocwmma::load_matrix_sync(fragB, addrB, k);
+            rocwmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
 
             addrA += incrA;
             addrB += incrB;
@@ -399,7 +411,7 @@ __global__ void dlrmDotBwd(const float16_t* __restrict input,
 
         // Output address
         auto* gradWithOffset = grad + inputBatchOffset * blockIdx.z;
-        auto* addrGrad       = TileMapping::dataCoord(gradWithOffset, k, matrixCoordC);
+        auto* addrGrad       = TileMapping::dataCoord(gradWithOffset, matrixCoordC, k);
 
         // Store accumulator fragment to output gradient
         auto fragC = FragC();
@@ -411,7 +423,7 @@ __global__ void dlrmDotBwd(const float16_t* __restrict input,
         }
 
         // Store the output
-        wmma::store_matrix_sync(addrGrad, fragC, k, wmma::mem_row_major);
+        rocwmma::store_matrix_sync(addrGrad, fragC, k, rocwmma::mem_row_major);
     }
 }
 
@@ -476,8 +488,10 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
     if(passDirection == DlrmDirection_t::Forward)
     {
         dlrmKernel = [d_input, d_output, d_accFwd, m, k, b]() {
-            auto gridDim = dim3(
-                ceilDiv(m, TILE_DIM * T_BLOCK_X / AMDGCN_WAVE_SIZE), ceilDiv(m, TILE_DIM), b);
+            auto gridDim
+                = dim3(rocwmma::ceilDiv(m, TILE_DIM * T_BLOCK_X / rocwmma::AMDGCN_WAVE_SIZE),
+                       rocwmma::ceilDiv(m, TILE_DIM),
+                       b);
             auto blockDim = dim3(T_BLOCK_X);
 
             uint inputBatchOffset  = m * k;
@@ -506,7 +520,7 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
     else
     {
         dlrmKernel = [d_input, d_upstreamGrad, d_grad, d_bottomMlpGrad, d_accBwd, m, k, b]() {
-            auto gridDim  = dim3(ceilDiv(m * m, T_BLOCK_X), 1, b);
+            auto gridDim  = dim3(rocwmma::ceilDiv(m * m, T_BLOCK_X), 1, b);
             auto blockDim = dim3(T_BLOCK_X);
 
             uint inputBatchOffset    = m * k;
@@ -533,8 +547,9 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
             CHECK_HIP_ERROR(hipEventRecord(syncEvent));
             CHECK_HIP_ERROR(hipEventSynchronize(syncEvent));
 
-            gridDim = dim3(
-                ceilDiv(m, TILE_DIM * T_BLOCK_X / AMDGCN_WAVE_SIZE), ceilDiv(k, TILE_DIM), b);
+            gridDim = dim3(rocwmma::ceilDiv(m, TILE_DIM * T_BLOCK_X / rocwmma::AMDGCN_WAVE_SIZE),
+                           rocwmma::ceilDiv(k, TILE_DIM),
+                           b);
 
             hipExtLaunchKernelGGL((dlrmDotBwd),
                                   gridDim,
