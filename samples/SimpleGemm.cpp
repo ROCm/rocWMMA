@@ -28,8 +28,15 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
+#include <iostream>
+#include <vector>
+
 #include "Common.h"
 #include "WMMA.h"
+
+using rocwmma::float16_t;
+using rocwmma::float32_t;
+using rocwmma::float64_t;
 
 // Host GEMM validation
 __host__ void gemm_cpu_h(uint32_t         m,
