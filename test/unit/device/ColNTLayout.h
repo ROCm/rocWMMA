@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,48 +33,59 @@
 
 #define ERROR_VALUE 12
 
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename LayoutP>
-__global__ void ColNTLayout(
-    uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld, DataT param1, DataT param2)
+namespace rocwmma
 {
-    enum : uint32_t
+
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename LayoutP>
+    __global__ void ColNTLayout(uint32_t     m,
+                                uint32_t     n,
+                                DataT const* in,
+                                DataT*       out,
+                                uint32_t     ld,
+                                DataT        param1,
+                                DataT        param2)
     {
-        MaxVectorWidth    = VecWidthTraits<BlockM, BlockN, DataT>::MaxVectorWidth,
-        ElementsPerThread = std::is_same<LayoutP, row_major>::value ? MaxVectorWidth : 1
-    };
-
-    if((std::is_same<LayoutP, col_major>::value && ElementsPerThread > 1)
-       || (BlockM > AMDGCN_WAVE_SIZE))
-    {
-        out[0] = static_cast<DataT>(ERROR_VALUE);
-        return;
-    }
-
-    using IOTraits = amdgcn_io_traits<BlockM, BlockN, DataT, ElementsPerThread>;
-    using LayoutT
-        = Layout::ColNT<BlockM, BlockN, DataT, LayoutP, ElementsPerThread, MaxVectorWidth>;
-    using Mapping = MappingUtil<BlockM, BlockN, DataT, LayoutP>;
-
-    auto baseOffset  = LayoutT::baseDataOffset(ld);
-    auto iocount     = IOTraits::IOCount;
-    auto matrixCoord = Mapping::matrixCoord();
-
-    enum : uint32_t
-    {
-        MajorIndex = std::is_same<LayoutP, row_major>::value ? 0 : 1,
-        MinorIndex = std::is_same<LayoutP, row_major>::value ? 1 : 0
-    };
-
-    for(uint32_t i = 0; i < iocount; ++i)
-    {
-        for(int j = 0; j < ElementsPerThread; j++)
+        enum : uint32_t
         {
-            auto index
-                = (std::get<MajorIndex>(matrixCoord) * ld + std::get<MinorIndex>(matrixCoord))
-                  + baseOffset + j;
-            out[index] = in[index];
+            MaxVectorWidth = detail::VecWidthTraits<BlockM, BlockN, DataT>::MaxVectorWidth,
+            VectorWidth    = std::is_same<LayoutP, row_major>::value ? MaxVectorWidth : 1
+        };
+
+        if((std::is_same<LayoutP, col_major>::value && ElementsPerThread > 1)
+           || (BlockM > AMDGCN_WAVE_SIZE))
+        {
+            out[0] = static_cast<DataT>(ERROR_VALUE);
+            return;
         }
-        baseOffset += LayoutT::dataOffsetIncrement(i, ld);
+
+        using IOTraits = IOTraits<BlockM, BlockN, DataT, VectorWidth>;
+        using LayoutT
+            = MatrixLayout::ColNT<BlockM, BlockN, DataT, LayoutP, VectorWidth, MaxVectorWidth>;
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, LayoutP>;
+
+        auto baseOffset  = LayoutT::baseOffset();
+        auto iocount     = IOTraits::IOCount;
+        auto matrixCoord = Mapping::matrixCoord();
+
+        enum : uint32_t
+        {
+            MajorIndex = std::is_same<LayoutP, row_major>::value ? 0 : 1,
+            MinorIndex = std::is_same<LayoutP, row_major>::value ? 1 : 0
+        };
+
+        for(uint32_t i = 0; i < iocount; ++i)
+        {
+            for(int j = 0; j < VectorWidth; j++)
+            {
+                auto index
+                    = (std::get<MajorIndex>(matrixCoord) * ld + std::get<MinorIndex>(matrixCoord))
+                      + Mapping::dataOffset(baseOffset, ld) + j;
+                out[index] = in[index];
+            }
+            baseOffset += LayoutT::incrementalOffset(i);
+        }
     }
-}
+
+} // namespace rocwmma
+
 #endif // WMMA_DEVICE_COLNT_LAYOUT_H

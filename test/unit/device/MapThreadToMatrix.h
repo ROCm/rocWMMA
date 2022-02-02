@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,28 +30,39 @@
 #include "MappingUtil.h"
 #include "WMMA.h"
 
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-__global__ void MapThreadToMatrix(
-    uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld, DataT param1, DataT param2)
+namespace rocwmma
 {
-    using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
 
-    enum : uint32_t
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    __global__ void MapThreadToMatrix(uint32_t     m,
+                                      uint32_t     n,
+                                      DataT const* in,
+                                      DataT*       out,
+                                      uint32_t     ld,
+                                      DataT        param1,
+                                      DataT        param2)
     {
-        MajorIndex = std::is_same<Layout, row_major>::value ? 0 : 1,
-        MinorIndex = std::is_same<Layout, row_major>::value ? 1 : 0
-    };
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
 
-    uint32_t minor = std::is_same<Layout, row_major>::value
-                         ? (threadIdx.y + blockDim.y * blockIdx.y)
-                         : ((threadIdx.x + blockDim.x * blockIdx.x) / AMDGCN_WAVE_SIZE);
-    uint32_t major = std::is_same<Layout, row_major>::value
-                         ? ((threadIdx.x + blockDim.x * blockIdx.x) / AMDGCN_WAVE_SIZE)
-                         : (threadIdx.y + blockDim.y * blockIdx.y);
+        enum : uint32_t
+        {
+            MajorIndex = std::is_same<Layout, row_major>::value ? 0 : 1,
+            MinorIndex = std::is_same<Layout, row_major>::value ? 1 : 0
+        };
 
-    for(int i = 0; i < BlockM; i++)
-        for(int j = 0; j < BlockN; j++)
-            out[(minor * BlockM + j) + (major * BlockN + i) * ld]
-                = in[(minor * BlockM + j) + (major * BlockN + i) * ld];
-}
+        uint32_t minor = std::is_same<Layout, row_major>::value
+                             ? (threadIdx.y + blockDim.y * blockIdx.y)
+                             : ((threadIdx.x + blockDim.x * blockIdx.x) / AMDGCN_WAVE_SIZE);
+        uint32_t major = std::is_same<Layout, row_major>::value
+                             ? ((threadIdx.x + blockDim.x * blockIdx.x) / AMDGCN_WAVE_SIZE)
+                             : (threadIdx.y + blockDim.y * blockIdx.y);
+
+        for(int i = 0; i < BlockM; i++)
+            for(int j = 0; j < BlockN; j++)
+                out[(minor * BlockM + j) + (major * BlockN + i) * ld]
+                    = in[(minor * BlockM + j) + (major * BlockN + i) * ld];
+    }
+
+} // namespace rocwmma
+
 #endif // WMMA_DEVICE_MAP_THREAD_TO_MATRIX_H

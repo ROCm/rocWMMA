@@ -35,114 +35,117 @@
 #include "Types.h"
 #include "UnitKernelBase.h"
 
-struct UnitTestParams
+namespace rocwmma
 {
-    ///
-    /// Compile-time params used with KernelGenerator to
-    /// instantiate kernel objects
-    ///
 
-    // Testing types as Input/Output/Compute (IOC)
-    using TestTypesIOC = std::tuple<bfloat16_t,
-                                    float16_t,
-                                    hfloat16_t,
-                                    float32_t,
-                                    int8_t
-#ifdef WMMA_EXTENDED_TESTS
-                                    ,
-                                    int32_t,
-                                    uint8_t,
-                                    uint32_t
-#endif // WMMA_EXTENDED_TESTS
-                                    >;
+    struct UnitTestParams
+    {
+        ///
+        /// Compile-time params used with KernelGenerator to
+        /// instantiate kernel objects
+        ///
 
-    // Native double
-    using TestTypeDouble = float64_t;
-
-    ///
-    /// Grouped compile time kernel parameters
-    ///
-
-    // 16 x 16 has support for double types
-    using TestTypes16x16 = typename Concat<TestTypesIOC, TestTypeDouble>::Result;
-
-    // 32 x 32 does not support double types
-    using TestTypes32x32 = TestTypesIOC;
-
-    // BlockK variances for particular BlockM, BlockN
-    using TestBlockSizes16x16 = std::tuple<std::tuple<I<16>, I<16>>,
-                                           std::tuple<I<16>, I<32>>,
-                                           std::tuple<I<16>, I<64>>
-#ifdef WMMA_EXTENDED_TESTS
-                                           ,
-                                           std::tuple<I<16>, I<128>>,
-                                           std::tuple<I<16>, I<256>>
-#endif // WMMA_EXTENDED_TESTS
-                                           >;
-
-    using TestBlockSizes32x32 = std::tuple<std::tuple<I<32>, I<8>>,
-                                           std::tuple<I<32>, I<16>>,
-                                           std::tuple<I<32>, I<32>>,
-                                           std::tuple<I<32>, I<64>>
-#ifdef WMMA_EXTENDED_TESTS
-                                           ,
-                                           std::tuple<I<32>, I<128>>,
-                                           std::tuple<I<32>, I<256>>
-#endif // WMMA_EXTENDED_TESTS
-                                           >;
-
-    using TestBlockSizes64 = std::tuple<std::tuple<I<64>, I<8>>,
-                                        std::tuple<I<64>, I<16>>,
-                                        std::tuple<I<64>, I<32>>,
-                                        std::tuple<I<64>, I<64>>
+        // Testing types as Input/Output/Compute (IOC)
+        using TestTypesIOC = std::tuple<bfloat16_t,
+                                        float16_t,
+                                        hfloat16_t,
+                                        float32_t,
+                                        int8_t
 #ifdef WMMA_EXTENDED_TESTS
                                         ,
-                                        std::tuple<I<64>, I<128>>,
-                                        std::tuple<I<64>, I<256>>
+                                        int32_t,
+                                        uint8_t,
+                                        uint32_t
 #endif // WMMA_EXTENDED_TESTS
                                         >;
 
-    using TestBlockSizes128 = std::tuple<std::tuple<I<128>, I<8>>,
-                                         std::tuple<I<128>, I<16>>,
-                                         std::tuple<I<128>, I<32>>,
-                                         std::tuple<I<128>, I<64>>
+        // Native double
+        using TestTypeDouble = float64_t;
+
+        ///
+        /// Grouped compile time kernel parameters
+        ///
+
+        // 16 x 16 has support for double types
+        using TestTypes16x16 = typename Concat<TestTypesIOC, TestTypeDouble>::Result;
+
+        // 32 x 32 does not support double types
+        using TestTypes32x32 = TestTypesIOC;
+
+        // BlockK variances for particular BlockM, BlockN
+        using TestBlockSizes16x16 = std::tuple<std::tuple<I<16>, I<16>>,
+                                               std::tuple<I<16>, I<32>>,
+                                               std::tuple<I<16>, I<64>>
 #ifdef WMMA_EXTENDED_TESTS
-                                         ,
-                                         std::tuple<I<128>, I<128>>,
-                                         std::tuple<I<128>, I<256>>
+                                               ,
+                                               std::tuple<I<16>, I<128>>,
+                                               std::tuple<I<16>, I<256>>
 #endif // WMMA_EXTENDED_TESTS
-                                         >;
+                                               >;
 
-    using TestBlockSizes256 = std::tuple<std::tuple<I<256>, I<8>>,
-                                         std::tuple<I<256>, I<16>>,
-                                         std::tuple<I<256>, I<32>>,
-                                         std::tuple<I<256>, I<64>>
+        using TestBlockSizes32x32 = std::tuple<std::tuple<I<32>, I<8>>,
+                                               std::tuple<I<32>, I<16>>,
+                                               std::tuple<I<32>, I<32>>,
+                                               std::tuple<I<32>, I<64>>
 #ifdef WMMA_EXTENDED_TESTS
-                                         ,
-                                         std::tuple<I<256>, I<128>>,
-                                         std::tuple<I<256>, I<256>>
+                                               ,
+                                               std::tuple<I<32>, I<128>>,
+                                               std::tuple<I<32>, I<256>>
 #endif // WMMA_EXTENDED_TESTS
-                                         >;
+                                               >;
 
-    // Layout groupings
-    using TestLayoutsN   = col_major;
-    using TestLayoutsT   = row_major;
-    using TestLayoutsAll = typename Concat<TestLayoutsN, TestLayoutsT>::Result;
+        using TestBlockSizes64 = std::tuple<std::tuple<I<64>, I<8>>,
+                                            std::tuple<I<64>, I<16>>,
+                                            std::tuple<I<64>, I<32>>,
+                                            std::tuple<I<64>, I<64>>
+#ifdef WMMA_EXTENDED_TESTS
+                                            ,
+                                            std::tuple<I<64>, I<128>>,
+                                            std::tuple<I<64>, I<256>>
+#endif // WMMA_EXTENDED_TESTS
+                                            >;
 
-    ///
-    /// Run-time kernel argument parameters
-    ///
+        using TestBlockSizes128 = std::tuple<std::tuple<I<128>, I<8>>,
+                                             std::tuple<I<128>, I<16>>,
+                                             std::tuple<I<128>, I<32>>,
+                                             std::tuple<I<128>, I<64>>
+#ifdef WMMA_EXTENDED_TESTS
+                                             ,
+                                             std::tuple<I<128>, I<128>>,
+                                             std::tuple<I<128>, I<256>>
+#endif // WMMA_EXTENDED_TESTS
+                                             >;
 
-    // Types of parameters
-    using KernelT      = std::shared_ptr<KernelI>; // Kernel test interface
-    using ThreadBlockT = std::pair<int64_t, int64_t>;
-    using ProblemSizeT = std::pair<int64_t, int64_t>;
-    using Param1T      = float64_t;
-    using Param2T      = float64_t;
+        using TestBlockSizes256 = std::tuple<std::tuple<I<256>, I<8>>,
+                                             std::tuple<I<256>, I<16>>,
+                                             std::tuple<I<256>, I<32>>,
+                                             std::tuple<I<256>, I<64>>
+#ifdef WMMA_EXTENDED_TESTS
+                                             ,
+                                             std::tuple<I<256>, I<128>>,
+                                             std::tuple<I<256>, I<256>>
+#endif // WMMA_EXTENDED_TESTS
+                                             >;
 
-    static inline std::vector<ThreadBlockT> threadBlocks()
-    {
-        // clang-format off
+        // Layout groupings
+        using TestLayoutsN   = col_major;
+        using TestLayoutsT   = row_major;
+        using TestLayoutsAll = typename Concat<TestLayoutsN, TestLayoutsT>::Result;
+
+        ///
+        /// Run-time kernel argument parameters
+        ///
+
+        // Types of parameters
+        using KernelT      = std::shared_ptr<KernelI>; // Kernel test interface
+        using ThreadBlockT = std::pair<int64_t, int64_t>;
+        using ProblemSizeT = std::pair<int64_t, int64_t>;
+        using Param1T      = float64_t;
+        using Param2T      = float64_t;
+
+        static inline std::vector<ThreadBlockT> threadBlocks()
+        {
+            // clang-format off
         return { {64, 1},  // 1 Wave
                  {64, 2}, {128, 1}, // 2 Waves
                  {64, 4}, {128, 2}, {256, 1}, // 4 Waves
@@ -150,12 +153,12 @@ struct UnitTestParams
                  {64, 8}, {128, 4}, {256, 2}, {512, 1} // 8 waves
 #endif // WMMA_EXTENDED_TESTS
             };
-        // clang-format on
-    }
+            // clang-format on
+        }
 
-    static inline std::vector<ProblemSizeT> problemSizes()
-    {
-        // clang-format off
+        static inline std::vector<ProblemSizeT> problemSizes()
+        {
+            // clang-format off
         // Test at least all the 1-wave and rectangular sizes
         return { {16, 16},  {16, 32},   {16, 64},   {16, 128},  {16, 256},
                  {32, 8},   {32, 16},   {32, 32},   {32, 64},   {32, 128},   {32, 256},
@@ -178,18 +181,20 @@ struct UnitTestParams
                  {8192, 8192}
 #endif // WMMA_EXTENDED_TESTS
         };
-        // clang-format on
-    }
+            // clang-format on
+        }
 
-    static inline std::vector<Param1T> param1s()
-    {
-        return {0.0};
-    }
+        static inline std::vector<Param1T> param1s()
+        {
+            return {0.0};
+        }
 
-    static inline std::vector<Param2T> param2s()
-    {
-        return {0.0};
-    }
-};
+        static inline std::vector<Param2T> param2s()
+        {
+            return {0.0};
+        }
+    };
+
+} // namespace rocwmma
 
 #endif // WMMA_UNIT_UNIT_TEST_PARAMS_H

@@ -30,59 +30,64 @@
 #include "Common.h"
 #include <cstring> // for std::memcpy
 
-template <typename DataT>
-UnitResource<DataT>::UnitResource()
-    : mDeviceIn(nullptr, [](DataT*) {})
-    , mDeviceOut(nullptr, [](DataT*) {})
-    , mHostIn(nullptr)
-    , mCurrentProblemSize({0, 0})
-    , mMaxCapacity(0)
+namespace rocwmma
 {
-}
 
-template <typename DataT>
-void UnitResource<DataT>::resizeStorage(ProblemSize const& size)
-{
-    auto newSize = std::get<M>(size) * std::get<N>(size); // M * N = C, D
-
-    if(mMaxCapacity < newSize)
+    template <typename DataT>
+    UnitResource<DataT>::UnitResource()
+        : mDeviceIn(nullptr, [](DataT*) {})
+        , mDeviceOut(nullptr, [](DataT*) {})
+        , mHostIn(nullptr)
+        , mCurrentProblemSize({0, 0})
+        , mMaxCapacity(0)
     {
-        mMaxCapacity = newSize;
-        mHostIn      = std::move(Base::template allocHost<DataT>(mMaxCapacity));
-        mDeviceIn    = std::move(Base::template allocDevice<DataT>(mMaxCapacity));
-        mDeviceOut   = std::move(Base::template allocDevice<DataT>(mMaxCapacity));
     }
-    mCurrentProblemSize = size;
-}
 
-template <typename DataT>
-auto UnitResource<DataT>::hostIn() -> HostPtrT&
-{
-    return mHostIn;
-}
+    template <typename DataT>
+    void UnitResource<DataT>::resizeStorage(ProblemSize const& size)
+    {
+        auto newSize = std::get<M>(size) * std::get<N>(size); // M * N = C, D
 
-template <typename DataT>
-auto UnitResource<DataT>::deviceIn() -> DevicePtrT&
-{
-    return mDeviceIn;
-}
+        if(mMaxCapacity < newSize)
+        {
+            mMaxCapacity = newSize;
+            mHostIn      = std::move(Base::template allocHost<DataT>(mMaxCapacity));
+            mDeviceIn    = std::move(Base::template allocDevice<DataT>(mMaxCapacity));
+            mDeviceOut   = std::move(Base::template allocDevice<DataT>(mMaxCapacity));
+        }
+        mCurrentProblemSize = size;
+    }
 
-template <typename DataT>
-auto UnitResource<DataT>::deviceOut() -> DevicePtrT&
-{
-    return mDeviceOut;
-}
+    template <typename DataT>
+    auto UnitResource<DataT>::hostIn() -> HostPtrT&
+    {
+        return mHostIn;
+    }
 
-template <typename DataT>
-auto UnitResource<DataT>::problemSize() const -> ProblemSize
-{
-    return mCurrentProblemSize;
-}
+    template <typename DataT>
+    auto UnitResource<DataT>::deviceIn() -> DevicePtrT&
+    {
+        return mDeviceIn;
+    }
 
-template <typename DataT>
-int64_t UnitResource<DataT>::maxCapacity() const
-{
-    return mMaxCapacity;
-}
+    template <typename DataT>
+    auto UnitResource<DataT>::deviceOut() -> DevicePtrT&
+    {
+        return mDeviceOut;
+    }
+
+    template <typename DataT>
+    auto UnitResource<DataT>::problemSize() const -> ProblemSize
+    {
+        return mCurrentProblemSize;
+    }
+
+    template <typename DataT>
+    int64_t UnitResource<DataT>::maxCapacity() const
+    {
+        return mMaxCapacity;
+    }
+
+} // namespace rocwmma
 
 #endif // WMMA_UNIT_RESOURCE_IMPL_H

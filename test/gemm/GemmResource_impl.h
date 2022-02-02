@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,109 +29,116 @@
 
 #include "GemmResource.h"
 
-template <typename InputT, typename OutputT>
-GemmResource<InputT, OutputT>::GemmResource()
-    : mDeviceA(Base::template allocDevice<InputT>(0))
-    , mDeviceB(Base::template allocDevice<InputT>(0))
-    , mDeviceC(Base::template allocDevice<OutputT>(0))
-    , mDeviceD(Base::template allocDevice<OutputT>(0))
-    , mHostA(Base::template allocHost<InputT>(0))
-    , mHostB(Base::template allocHost<InputT>(0))
-    , mHostC(Base::template allocHost<OutputT>(0))
-    , mHostD(Base::template allocHost<OutputT>(0))
-    , mCurrentProblemSize({0, 0, 0})
-    , mCurrentMatrixSize({0, 0, 0})
+namespace rocwmma
 {
-}
 
-template <typename InputT, typename OutputT>
-void GemmResource<InputT, OutputT>::copyHostToDeviceAll()
-{
-    Base::copyData(mDeviceA, mHostA, std::get<MatrixA>(mCurrentMatrixSize));
-    Base::copyData(mDeviceB, mHostB, std::get<MatrixB>(mCurrentMatrixSize));
-    Base::copyData(mDeviceC, mHostC, std::get<MatrixC>(mCurrentMatrixSize));
-    Base::copyData(mDeviceD, mHostD, std::get<MatrixD>(mCurrentMatrixSize));
-}
+    template <typename InputT, typename OutputT>
+    GemmResource<InputT, OutputT>::GemmResource()
+        : mDeviceA(Base::template allocDevice<InputT>(0))
+        , mDeviceB(Base::template allocDevice<InputT>(0))
+        , mDeviceC(Base::template allocDevice<OutputT>(0))
+        , mDeviceD(Base::template allocDevice<OutputT>(0))
+        , mHostA(Base::template allocHost<InputT>(0))
+        , mHostB(Base::template allocHost<InputT>(0))
+        , mHostC(Base::template allocHost<OutputT>(0))
+        , mHostD(Base::template allocHost<OutputT>(0))
+        , mCurrentProblemSize({0, 0, 0})
+        , mCurrentMatrixSize({0, 0, 0})
+    {
+    }
 
-template <typename InputT, typename OutputT>
-void GemmResource<InputT, OutputT>::resizeStorage(ProblemSize const& size)
-{
-    auto calcMatrixSizes = [](ProblemSize const& size) {
-        return std::make_tuple(std::get<M>(size) * std::get<K>(size), // M * K = A
-                               std::get<K>(size) * std::get<N>(size), // K * N = B
-                               std::get<M>(size) * std::get<N>(size)); // M * N = C, D
-    };
+    template <typename InputT, typename OutputT>
+    void GemmResource<InputT, OutputT>::copyHostToDeviceAll()
+    {
+        Base::copyData(mDeviceA, mHostA, std::get<MatrixA>(mCurrentMatrixSize));
+        Base::copyData(mDeviceB, mHostB, std::get<MatrixB>(mCurrentMatrixSize));
+        Base::copyData(mDeviceC, mHostC, std::get<MatrixC>(mCurrentMatrixSize));
+        Base::copyData(mDeviceD, mHostD, std::get<MatrixD>(mCurrentMatrixSize));
+    }
 
-    auto allocIfNeeded = [](auto& devicePtr, auto& hostPtr, int64_t currentSize, int64_t newSize) {
-        using DeviceDataT = typename std::remove_reference_t<decltype(devicePtr)>::element_type;
-        using HostDataT   = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
-        if(currentSize < newSize)
-        {
-            devicePtr = std::move(Base::template allocDevice<DeviceDataT>(newSize));
-            hostPtr   = std::move(Base::template allocHost<HostDataT>(newSize));
-        }
-    };
+    template <typename InputT, typename OutputT>
+    void GemmResource<InputT, OutputT>::resizeStorage(ProblemSize const& size)
+    {
+        auto calcMatrixSizes = [](ProblemSize const& size) {
+            return std::make_tuple(std::get<M>(size) * std::get<K>(size), // M * K = A
+                                   std::get<K>(size) * std::get<N>(size), // K * N = B
+                                   std::get<M>(size) * std::get<N>(size)); // M * N = C, D
+        };
 
-    auto newSizes = calcMatrixSizes(size);
+        auto allocIfNeeded =
+            [](auto& devicePtr, auto& hostPtr, int64_t currentSize, int64_t newSize) {
+                using DeviceDataT =
+                    typename std::remove_reference_t<decltype(devicePtr)>::element_type;
+                using HostDataT = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
+                if(currentSize < newSize)
+                {
+                    devicePtr = std::move(Base::template allocDevice<DeviceDataT>(newSize));
+                    hostPtr   = std::move(Base::template allocHost<HostDataT>(newSize));
+                }
+            };
 
-    allocIfNeeded(
-        mDeviceA, mHostA, std::get<MatrixA>(mCurrentMatrixSize), std::get<MatrixA>(newSizes));
-    allocIfNeeded(
-        mDeviceB, mHostB, std::get<MatrixB>(mCurrentMatrixSize), std::get<MatrixB>(newSizes));
-    allocIfNeeded(
-        mDeviceC, mHostC, std::get<MatrixC>(mCurrentMatrixSize), std::get<MatrixC>(newSizes));
-    allocIfNeeded(
-        mDeviceD, mHostD, std::get<MatrixD>(mCurrentMatrixSize), std::get<MatrixD>(newSizes));
+        auto newSizes = calcMatrixSizes(size);
 
-    mCurrentMatrixSize = newSizes;
-}
+        allocIfNeeded(
+            mDeviceA, mHostA, std::get<MatrixA>(mCurrentMatrixSize), std::get<MatrixA>(newSizes));
+        allocIfNeeded(
+            mDeviceB, mHostB, std::get<MatrixB>(mCurrentMatrixSize), std::get<MatrixB>(newSizes));
+        allocIfNeeded(
+            mDeviceC, mHostC, std::get<MatrixC>(mCurrentMatrixSize), std::get<MatrixC>(newSizes));
+        allocIfNeeded(
+            mDeviceD, mHostD, std::get<MatrixD>(mCurrentMatrixSize), std::get<MatrixD>(newSizes));
 
-template <typename InputT, typename OutputT>
-auto GemmResource<InputT, OutputT>::hostA() -> HostPtrT<InputT>&
-{
-    return mHostA;
-}
+        mCurrentMatrixSize = newSizes;
+    }
 
-template <typename InputT, typename OutputT>
-auto GemmResource<InputT, OutputT>::hostB() -> HostPtrT<InputT>&
-{
-    return mHostB;
-}
+    template <typename InputT, typename OutputT>
+    auto GemmResource<InputT, OutputT>::hostA() -> HostPtrT<InputT>&
+    {
+        return mHostA;
+    }
 
-template <typename InputT, typename OutputT>
-auto GemmResource<InputT, OutputT>::hostC() -> HostPtrT<OutputT>&
-{
-    return mHostC;
-}
+    template <typename InputT, typename OutputT>
+    auto GemmResource<InputT, OutputT>::hostB() -> HostPtrT<InputT>&
+    {
+        return mHostB;
+    }
 
-template <typename InputT, typename OutputT>
-auto GemmResource<InputT, OutputT>::hostD() -> HostPtrT<OutputT>&
-{
-    return mHostD;
-}
+    template <typename InputT, typename OutputT>
+    auto GemmResource<InputT, OutputT>::hostC() -> HostPtrT<OutputT>&
+    {
+        return mHostC;
+    }
 
-template <typename InputT, typename OutputT>
-auto GemmResource<InputT, OutputT>::deviceA() -> DevicePtrT<InputT>&
-{
-    return mDeviceA;
-}
+    template <typename InputT, typename OutputT>
+    auto GemmResource<InputT, OutputT>::hostD() -> HostPtrT<OutputT>&
+    {
+        return mHostD;
+    }
 
-template <typename InputT, typename OutputT>
-auto GemmResource<InputT, OutputT>::deviceB() -> DevicePtrT<InputT>&
-{
-    return mDeviceB;
-}
+    template <typename InputT, typename OutputT>
+    auto GemmResource<InputT, OutputT>::deviceA() -> DevicePtrT<InputT>&
+    {
+        return mDeviceA;
+    }
 
-template <typename InputT, typename OutputT>
-auto GemmResource<InputT, OutputT>::deviceC() -> DevicePtrT<OutputT>&
-{
-    return mDeviceC;
-}
+    template <typename InputT, typename OutputT>
+    auto GemmResource<InputT, OutputT>::deviceB() -> DevicePtrT<InputT>&
+    {
+        return mDeviceB;
+    }
 
-template <typename InputT, typename OutputT>
-auto GemmResource<InputT, OutputT>::deviceD() -> DevicePtrT<OutputT>&
-{
-    return mDeviceD;
-}
+    template <typename InputT, typename OutputT>
+    auto GemmResource<InputT, OutputT>::deviceC() -> DevicePtrT<OutputT>&
+    {
+        return mDeviceC;
+    }
+
+    template <typename InputT, typename OutputT>
+    auto GemmResource<InputT, OutputT>::deviceD() -> DevicePtrT<OutputT>&
+    {
+        return mDeviceD;
+    }
+
+} // namespace rocwmma
 
 #endif // WMMA_GEMM_RESOURCE_IMPL_H

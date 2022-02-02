@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,8 +28,15 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
+#include <iostream>
+#include <vector>
+
 #include "Common.h"
 #include "WMMA.h"
+
+using rocwmma::float16_t;
+using rocwmma::float32_t;
+using rocwmma::float64_t;
 
 // Host GEMM validation
 __host__ void gemm_cpu_h(uint32_t         m,
@@ -72,8 +79,8 @@ __host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n)
         {
             // Ascending order for each neighboring element.
             // Alternate sign for even / odd
-            auto value      = (i * n + j) % 17;
-            mat[i * ld + j] = (value % 2) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
+            auto value      = (i * n + j) % 13;
+            mat[i * ld + j] = (value % 3) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
         }
     }
 }
@@ -89,7 +96,7 @@ const int WMMA_N = 16;
 const int WMMA_K = 16;
 
 // AMDGCN default wave size
-const int WAVE_SIZE = 64;
+const int WAVE_SIZE = rocwmma::AMDGCN_WAVE_SIZE;
 
 // Thread block
 // : T_BLOCK_X must be multiple of WAVE_SIZE.
@@ -128,12 +135,14 @@ __global__ void gemm_wmma_d(uint32_t         m,
                             float32_t        beta)
 {
     // Create frags
-    auto fragA   = wmma::fragment<matrix_a, WMMA_M, WMMA_N, WMMA_K, float16_t, wmma::row_major>();
-    auto fragB   = wmma::fragment<matrix_b, WMMA_M, WMMA_N, WMMA_K, float16_t, wmma::col_major>();
-    auto fragC   = wmma::fragment<accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t>();
-    auto fragAcc = wmma::fragment<accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t>();
+    auto fragA = rocwmma::
+        fragment<rocwmma::matrix_a, WMMA_M, WMMA_N, WMMA_K, float16_t, rocwmma::row_major>();
+    auto fragB = rocwmma::
+        fragment<rocwmma::matrix_b, WMMA_M, WMMA_N, WMMA_K, float16_t, rocwmma::col_major>();
+    auto fragC   = rocwmma::fragment<rocwmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t>();
+    auto fragAcc = rocwmma::fragment<rocwmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t>();
 
-    wmma::fill_fragment(fragAcc, 0.0f);
+    rocwmma::fill_fragment(fragAcc, 0.0f);
 
     // Tile using a 2D grid
     auto warpM = (blockIdx.x * blockDim.x + threadIdx.x) / WAVE_SIZE;
@@ -156,15 +165,15 @@ __global__ void gemm_wmma_d(uint32_t         m,
             int bCol = cCol;
 
             // Load the inputs
-            wmma::load_matrix_sync(fragA, a + (aRow * lda + aCol), lda);
-            wmma::load_matrix_sync(fragB, b + (bRow + bCol * ldb), ldb);
+            rocwmma::load_matrix_sync(fragA, a + (aRow * lda + aCol), lda);
+            rocwmma::load_matrix_sync(fragB, b + (bRow + bCol * ldb), ldb);
 
             // Matrix multiply - accumulate using MFMA units
-            wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
+            rocwmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
         }
 
         // Fetch C matrix
-        wmma::load_matrix_sync(fragC, c + (cRow * ldc + cCol), ldc, wmma::mem_row_major);
+        rocwmma::load_matrix_sync(fragC, c + (cRow * ldc + cCol), ldc, rocwmma::mem_row_major);
 
         // D = alpha * A x B + beta * C
         for(int i = 0; i < fragC.num_elements; ++i)
@@ -173,7 +182,7 @@ __global__ void gemm_wmma_d(uint32_t         m,
         }
 
         // Store to D
-        wmma::store_matrix_sync(d + (cRow * ldd + cCol), fragC, ldd, wmma::mem_row_major);
+        rocwmma::store_matrix_sync(d + (cRow * ldd + cCol), fragC, ldd, rocwmma::mem_row_major);
     }
 }
 
@@ -229,7 +238,8 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
     CHECK_HIP_ERROR(hipMemcpy(d_d, matrixD.data(), bytesD, hipMemcpyHostToDevice));
 
     auto blockDim = dim3(T_BLOCK_X, T_BLOCK_Y);
-    auto gridDim = dim3(ceilDiv(m, WMMA_M * T_BLOCK_X / WAVE_SIZE), ceilDiv(n, WMMA_N * T_BLOCK_Y));
+    auto gridDim  = dim3(rocwmma::ceilDiv(m, WMMA_M * T_BLOCK_X / WAVE_SIZE),
+                         rocwmma::ceilDiv(n, WMMA_N * T_BLOCK_Y));
 
     std::cout << "Launching GEMM kernel..." << std::endl;
 

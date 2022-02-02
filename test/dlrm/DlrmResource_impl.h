@@ -29,6 +29,9 @@
 
 #include "DlrmResource.h"
 
+namespace rocwmma
+{
+
 template <typename DataT>
 DlrmResource<DataT>::DlrmResource()
     : mDeviceInput(Base::template allocDevice<DataT>(0))
@@ -299,4 +302,7 @@ auto DlrmResource<DataT>::maxBwdCapacity() const -> DataSizeBwd
 {
     return mMaxBwdCapacity;
 }
+
+} // namespace rocwmma
+
 #endif // DLRM_GEMM_RESOURCE_IMPL_H

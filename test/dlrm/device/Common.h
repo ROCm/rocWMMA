@@ -27,66 +27,76 @@
 #ifndef DLRM_TEST_DEVICE_COMMON_H
 #define DLRM_TEST_DEVICE_COMMON_H
 
-__device__ inline bool is_same(half a, half b)
+namespace rocwmma
 {
-    return __heq(a, b);
-}
 
-__device__ inline bool is_same(float a, float b)
-{
-    return a == b;
-}
-
-template <typename DataT>
-__device__ inline void store(DataT* dst, float* src)
-{
-    if(std::is_same<DataT, float16_t>::value)
-        *dst = __float2half(*src);
-    else
-        *dst = *src;
-}
-
-template <typename DataT>
-__device__ inline void store(DataT* dst, const float src)
-{
-    if(std::is_same<DataT, float16_t>::value)
-        *dst = __float2half(src);
-    else
-        *dst = src;
-}
-
-template <typename T, uint THREADBLOCK_SIZE>
-__global__ __launch_bounds__(THREADBLOCK_SIZE) void allclose_kernel(
-    T* a, T* b, size_t num_elm, float* abs_diff, float* rel_diff, float* a_float, float* b_float)
-{
-    int    tid      = threadIdx.x;
-    int    nthreads = blockDim.x;
-    size_t start    = (num_elm * tid) / nthreads;
-    size_t end      = (num_elm * (tid + 1)) / nthreads;
-    for(size_t i = start; i < end; i++)
+    __device__ inline bool is_same(half a, half b)
     {
-        if(!is_same(a[i], b[i]))
+        return __heq(a, b);
+    }
+
+    __device__ inline bool is_same(float a, float b)
+    {
+        return a == b;
+    }
+
+    template <typename DataT>
+    __device__ inline void store(DataT* dst, float* src)
+    {
+        if(std::is_same<DataT, float16_t>::value)
+            *dst = __float2half(*src);
+        else
+            *dst = *src;
+    }
+
+    template <typename DataT>
+    __device__ inline void store(DataT* dst, const float src)
+    {
+        if(std::is_same<DataT, float16_t>::value)
+            *dst = __float2half(src);
+        else
+            *dst = src;
+    }
+
+    template <typename T, uint THREADBLOCK_SIZE>
+    __global__ __launch_bounds__(THREADBLOCK_SIZE) void allclose_kernel(T*     a,
+                                                                        T*     b,
+                                                                        size_t num_elm,
+                                                                        float* abs_diff,
+                                                                        float* rel_diff,
+                                                                        float* a_float,
+                                                                        float* b_float)
+    {
+        int    tid      = threadIdx.x;
+        int    nthreads = blockDim.x;
+        size_t start    = (num_elm * tid) / nthreads;
+        size_t end      = (num_elm * (tid + 1)) / nthreads;
+        for(size_t i = start; i < end; i++)
         {
-            float a_    = (float)a[i];
-            float b_    = (float)b[i];
-            a_float[i]  = a_;
-            b_float[i]  = b_;
-            abs_diff[i] = fabs(a_ - b_);
-            if(a_ != 0.0f)
+            if(!is_same(a[i], b[i]))
             {
-                rel_diff[i] = abs_diff[i] / fabs(a_);
+                float a_    = (float)a[i];
+                float b_    = (float)b[i];
+                a_float[i]  = a_;
+                b_float[i]  = b_;
+                abs_diff[i] = fabs(a_ - b_);
+                if(a_ != 0.0f)
+                {
+                    rel_diff[i] = abs_diff[i] / fabs(a_);
+                }
+                else
+                {
+                    rel_diff[i] = 0.0f;
+                }
             }
             else
             {
+                abs_diff[i] = 0.0f;
                 rel_diff[i] = 0.0f;
             }
         }
-        else
-        {
-            abs_diff[i] = 0.0f;
-            rel_diff[i] = 0.0f;
-        }
     }
-}
+
+} // namespace rocwmma
 
 #endif // DLRM_TEST_DEVICE_COMMON_H

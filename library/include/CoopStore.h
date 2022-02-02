@@ -32,130 +32,116 @@
 #include "Types.h"
 #include "Utils.h"
 
-template <uint32_t BlockDim,
-          uint32_t BlockK,
-          typename DataT,
-          typename DataLayout,
-          template <uint32_t, uint32_t, typename, typename, uint32_t>
-          class StoreLayout,
-          uint32_t VectorWidth,
-          uint32_t SpCount = 0>
-struct amdgcn_cooperative_store_DxK
+namespace rocwmma
 {
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
-    struct Traits
+
+    template <uint32_t BlockDim,
+              uint32_t BlockK,
+              typename DataT,
+              class DataMapper,
+              class MatrixMapper,
+              uint32_t VectorWidth,
+              uint32_t SpCount = 0>
+    struct CooperativeStore
     {
-        enum : uint32_t
+        using IOTraits = IOTraits<BlockDim, BlockK, DataT, VectorWidth>;
+        struct Traits
         {
-            SplitCount   = SpCount,
-            SplitIOCount = IOTraits::IOCount / SplitCount
-        };
-
-        // Matrix-space thread offsets
-        using MatrixLayout = StoreLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
-        using MappingUtil  = typename MatrixLayout::Traits::MappingUtil;
-
-        // Store implementation
-        // Iteratively stores the entire block
-        using Storer = amdgcn_opaque_store<DataT, VectorWidth>;
-        using StoreT = typename Storer::StoreT;
-
-        // Block input vector
-        using InputT = VecT<DataT, IOTraits::UnpackedSize>;
-
-        static_assert(SplitCount > 0 && SplitCount <= IOTraits::IOCount,
-                      "Invalid SplitCount range");
-        static_assert(IOTraits::IOCount % SplitCount == 0,
-                      "IOCount must be divisible by SplitCount");
-        static_assert(InputT::size() % SplitCount == 0,
-                      "Register count not divisible by SplitCount");
-        static_assert(InputT::size() / SplitCount >= 1, "Partial registers not supported");
-    };
-
-    __device__ static inline void exec(DataT*                         storePtr,
-                                       typename Traits::InputT const& input,
-                                       uint32_t                       ldm,
-                                       uint32_t                       waveIndex,
-                                       uint32_t                       waveCount)
-    {
-        using Storer       = typename Traits::Storer;
-        using MatrixLayout = typename Traits::MatrixLayout;
-        using MappingUtil  = typename Traits::MappingUtil;
-
-        // For the cases where there are more waves than splits.
-        if(waveIndex >= Traits::SplitCount)
-            return;
-
-        // Align threads to starting positions
-        auto baseOffset = MatrixLayout::baseOffset();
-
-        // Break down block into iterable stores
-        auto splitIter = input.template begin<Traits::StoreT::size()>();
-
-#pragma unroll
-        for(uint32_t i = 0; i < Traits::SplitCount; ++i)
-        {
-            if(i % waveCount == waveIndex)
+            enum : uint32_t
             {
-                auto ioIter = splitIter;
-#pragma unroll
-                for(uint32_t j = 0; j < Traits::SplitIOCount; ++j)
-                {
-                    Storer::exec(
-                        storePtr,
-                        *ioIter,
-                        MappingUtil::dataOffset(
-                            ldm, baseOffset + MatrixLayout::cumulativeOffset(ioIter.index())));
-                    ioIter++;
-                }
-            }
-            splitIter += Traits::SplitIOCount;
-        }
-    }
-};
+                SplitCount   = SpCount,
+                SplitIOCount = IOTraits::IOCount / SplitCount
+            };
 
-// Wrapper for runtime wave count
-template <uint32_t BlockDim,
-          uint32_t BlockK,
-          typename DataT,
-          typename DataLayout,
-          template <uint32_t, uint32_t, typename, typename, uint32_t>
-          class StoreLayout,
-          uint32_t VectorWidth>
-struct amdgcn_cooperative_store_DxK<BlockDim,
-                                    BlockK,
-                                    DataT,
-                                    DataLayout,
-                                    StoreLayout,
-                                    VectorWidth,
-                                    0>
-{
-    template <uint32_t SplitCount>
-    using CooperativeStore = amdgcn_cooperative_store_DxK<BlockDim,
-                                                          BlockK,
-                                                          DataT,
-                                                          DataLayout,
-                                                          StoreLayout,
-                                                          VectorWidth,
-                                                          SplitCount>;
+            // Store implementation
+            // Iteratively stores the entire block
+            using Storer = detail::amdgcn_opaque_store<DataT, VectorWidth>;
+            using StoreT = typename Storer::StoreT;
 
-    struct Traits
-    {
-        using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
+            // Block input vector
+            using InputT = VecT<DataT, IOTraits::UnpackedSize>;
 
-        enum : uint32_t
-        {
-            MaxSplit = IOTraits::IOCount
+            static_assert(SplitCount > 0 && SplitCount <= IOTraits::IOCount,
+                          "Invalid SplitCount range");
+            static_assert(IOTraits::IOCount % SplitCount == 0,
+                          "IOCount must be divisible by SplitCount");
+            static_assert(InputT::size() % SplitCount == 0,
+                          "Register count not divisible by SplitCount");
+            static_assert(InputT::size() / SplitCount >= 1, "Partial registers not supported");
         };
 
-        // All stores will have the same input block type
-        using InputT = typename CooperativeStore<1>::Traits::InputT;
+        __device__ static inline void exec(DataT*                         storePtr,
+                                           typename Traits::InputT const& input,
+                                           uint32_t                       ldm,
+                                           uint32_t                       waveIndex,
+                                           uint32_t                       waveCount)
+        {
+            using Storer = typename Traits::Storer;
 
-        // Determine the allowable split count from the layout
-        using StoreLayoutT = StoreLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
+            // For the cases where there are more waves than splits.
+            if(waveIndex >= Traits::SplitCount)
+                return;
+
+            // Align threads to starting positions
+            auto baseOffset = MatrixMapper::baseOffset();
+
+            // Break down block into iterable stores
+            auto splitIter = input.template begin<Traits::StoreT::size()>();
+
+#pragma unroll
+            for(uint32_t i = 0; i < Traits::SplitCount; ++i)
+            {
+                if(i % waveCount == waveIndex)
+                {
+                    auto ioIter = splitIter;
+#pragma unroll
+                    for(uint32_t j = 0; j < Traits::SplitIOCount; ++j)
+                    {
+                        Storer::exec(
+                            storePtr,
+                            *ioIter,
+                            DataMapper::fromMatrixCoord(
+                                baseOffset + MatrixMapper::cumulativeOffset(ioIter.index()), ldm));
+                        ioIter++;
+                    }
+                }
+                splitIter += Traits::SplitIOCount;
+            }
+        }
     };
 
-    /*
+    // Wrapper for runtime wave count
+    template <uint32_t BlockDim,
+              uint32_t BlockK,
+              typename DataT,
+              class DataMapper,
+              class MatrixMapper,
+              uint32_t VectorWidth>
+    struct CooperativeStore<BlockDim, BlockK, DataT, DataMapper, MatrixMapper, VectorWidth, 0>
+    {
+        template <uint32_t SplitCount>
+        using CoopStore = CooperativeStore<BlockDim,
+                                           BlockK,
+                                           DataT,
+                                           DataMapper,
+                                           MatrixMapper,
+                                           VectorWidth,
+                                           SplitCount>;
+
+        struct Traits
+        {
+            using IOTraits = IOTraits<BlockDim, BlockK, DataT, VectorWidth>;
+
+            enum : uint32_t
+            {
+                MaxSplit = IOTraits::IOCount
+            };
+
+            // All stores will have the same input block type
+            using InputT = typename CoopStore<1>::Traits::InputT;
+        };
+
+        /*
     * While we try to do the runtime dispatching, we need to make sure that we only
     * instantiate splitting functions that make sense. The maximum possible split is the
     * same value as IOCount, which for now we will limit to 8.
@@ -165,278 +151,280 @@ struct amdgcn_cooperative_store_DxK<BlockDim,
     * and hide instantiations that would be otherwise not compileable.
     */
 
-    template <typename IncomingT,
-              typename std::enable_if<
-                  std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && Traits::MaxSplit >= 64,
-                  int>::type
-              = 0>
-    __device__ static inline void exec(DataT*      dataPtr,
-                                       IncomingT&& input,
-                                       uint32_t    ldm,
-                                       uint32_t    waveIndex,
-                                       uint32_t    waveCount,
-                                       uint32_t    splitCount)
-    {
-        if(splitCount >= 64)
+        template <typename IncomingT,
+                  typename std::enable_if<std::is_same<typename Traits::InputT,
+                                                       typename std::decay<IncomingT>::type>::value
+                                              && Traits::MaxSplit >= 64,
+                                          int>::type
+                  = 0>
+        __device__ static inline void exec(DataT*      dataPtr,
+                                           IncomingT&& input,
+                                           uint32_t    ldm,
+                                           uint32_t    waveIndex,
+                                           uint32_t    waveCount,
+                                           uint32_t    splitCount)
         {
-            CooperativeStore<64>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            if(splitCount >= 64)
+            {
+                CoopStore<64>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 32)
+            {
+                CoopStore<32>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 16)
+            {
+                CoopStore<16>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 8)
+            {
+                CoopStore<8>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 4)
+            {
+                CoopStore<4>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 2)
+            {
+                CoopStore<2>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 1)
+            {
+                CoopStore<1>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else
+            {
+                assert(0 && "Unsupported split count. Try reducing workgroup waves.");
+            }
         }
-        else if(splitCount == 32)
-        {
-            CooperativeStore<32>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else if(splitCount == 16)
-        {
-            CooperativeStore<16>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else if(splitCount == 8)
-        {
-            CooperativeStore<8>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else if(splitCount == 4)
-        {
-            CooperativeStore<4>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else if(splitCount == 2)
-        {
-            CooperativeStore<2>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else if(splitCount == 1)
-        {
-            CooperativeStore<1>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else
-        {
-            assert(0 && "Unsupported split count. Try reducing workgroup waves.");
-        }
-    }
 
-    template <typename IncomingT,
-              typename std::enable_if<
-                  std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && Traits::MaxSplit == 32,
-                  int>::type
-              = 0>
-    __device__ static inline void exec(DataT*      dataPtr,
-                                       IncomingT&& input,
-                                       uint32_t    ldm,
-                                       uint32_t    waveIndex,
-                                       uint32_t    waveCount,
-                                       uint32_t    splitCount)
-    {
-        if(splitCount >= 32)
+        template <typename IncomingT,
+                  typename std::enable_if<std::is_same<typename Traits::InputT,
+                                                       typename std::decay<IncomingT>::type>::value
+                                              && Traits::MaxSplit == 32,
+                                          int>::type
+                  = 0>
+        __device__ static inline void exec(DataT*      dataPtr,
+                                           IncomingT&& input,
+                                           uint32_t    ldm,
+                                           uint32_t    waveIndex,
+                                           uint32_t    waveCount,
+                                           uint32_t    splitCount)
         {
-            CooperativeStore<32>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            if(splitCount >= 32)
+            {
+                CoopStore<32>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 16)
+            {
+                CoopStore<16>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 8)
+            {
+                CoopStore<8>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 4)
+            {
+                CoopStore<4>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 2)
+            {
+                CoopStore<2>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 1)
+            {
+                CoopStore<1>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else
+            {
+                assert(0 && "Unsupported split count. Try reducing workgroup waves.");
+            }
         }
-        else if(splitCount == 16)
-        {
-            CooperativeStore<16>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else if(splitCount == 8)
-        {
-            CooperativeStore<8>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else if(splitCount == 4)
-        {
-            CooperativeStore<4>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else if(splitCount == 2)
-        {
-            CooperativeStore<2>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else if(splitCount == 1)
-        {
-            CooperativeStore<1>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else
-        {
-            assert(0 && "Unsupported split count. Try reducing workgroup waves.");
-        }
-    }
 
-    template <typename IncomingT,
-              typename std::enable_if<
-                  std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && Traits::MaxSplit == 16,
-                  int>::type
-              = 0>
-    __device__ static inline void exec(DataT*      dataPtr,
-                                       IncomingT&& input,
-                                       uint32_t    ldm,
-                                       uint32_t    waveIndex,
-                                       uint32_t    waveCount,
-                                       uint32_t    splitCount)
-    {
-        if(splitCount >= 16)
+        template <typename IncomingT,
+                  typename std::enable_if<std::is_same<typename Traits::InputT,
+                                                       typename std::decay<IncomingT>::type>::value
+                                              && Traits::MaxSplit == 16,
+                                          int>::type
+                  = 0>
+        __device__ static inline void exec(DataT*      dataPtr,
+                                           IncomingT&& input,
+                                           uint32_t    ldm,
+                                           uint32_t    waveIndex,
+                                           uint32_t    waveCount,
+                                           uint32_t    splitCount)
         {
-            CooperativeStore<16>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            if(splitCount >= 16)
+            {
+                CoopStore<16>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 8)
+            {
+                CoopStore<8>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 4)
+            {
+                CoopStore<4>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 2)
+            {
+                CoopStore<2>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 1)
+            {
+                CoopStore<1>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else
+            {
+                assert(0 && "Unsupported split count. Try reducing workgroup waves.");
+            }
         }
-        else if(splitCount == 8)
-        {
-            CooperativeStore<8>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else if(splitCount == 4)
-        {
-            CooperativeStore<4>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else if(splitCount == 2)
-        {
-            CooperativeStore<2>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else if(splitCount == 1)
-        {
-            CooperativeStore<1>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else
-        {
-            assert(0 && "Unsupported split count. Try reducing workgroup waves.");
-        }
-    }
 
-    template <typename IncomingT,
-              typename std::enable_if<
-                  std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && Traits::MaxSplit == 8,
-                  int>::type
-              = 0>
-    __device__ static inline void exec(DataT*      dataPtr,
-                                       IncomingT&& input,
-                                       uint32_t    ldm,
-                                       uint32_t    waveIndex,
-                                       uint32_t    waveCount,
-                                       uint32_t    splitCount)
-    {
-        if(splitCount >= 8)
+        template <typename IncomingT,
+                  typename std::enable_if<std::is_same<typename Traits::InputT,
+                                                       typename std::decay<IncomingT>::type>::value
+                                              && Traits::MaxSplit == 8,
+                                          int>::type
+                  = 0>
+        __device__ static inline void exec(DataT*      dataPtr,
+                                           IncomingT&& input,
+                                           uint32_t    ldm,
+                                           uint32_t    waveIndex,
+                                           uint32_t    waveCount,
+                                           uint32_t    splitCount)
         {
-            CooperativeStore<8>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            if(splitCount >= 8)
+            {
+                CoopStore<8>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 4)
+            {
+                CoopStore<4>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 2)
+            {
+                CoopStore<2>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 1)
+            {
+                CoopStore<1>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else
+            {
+                assert(0 && "Unsupported split count. Try reducing workgroup waves.");
+            }
         }
-        else if(splitCount == 4)
-        {
-            CooperativeStore<4>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else if(splitCount == 2)
-        {
-            CooperativeStore<2>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else if(splitCount == 1)
-        {
-            CooperativeStore<1>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else
-        {
-            assert(0 && "Unsupported split count. Try reducing workgroup waves.");
-        }
-    }
 
-    template <typename IncomingT,
-              typename std::enable_if<
-                  std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && Traits::MaxSplit == 4,
-                  int32_t>::type
-              = 0>
-    __device__ static inline void exec(DataT*      dataPtr,
-                                       IncomingT&& input,
-                                       uint32_t    ldm,
-                                       uint32_t    waveIndex,
-                                       uint32_t    waveCount,
-                                       uint32_t    splitCount)
-    {
-        if(splitCount >= 4)
+        template <typename IncomingT,
+                  typename std::enable_if<std::is_same<typename Traits::InputT,
+                                                       typename std::decay<IncomingT>::type>::value
+                                              && Traits::MaxSplit == 4,
+                                          int32_t>::type
+                  = 0>
+        __device__ static inline void exec(DataT*      dataPtr,
+                                           IncomingT&& input,
+                                           uint32_t    ldm,
+                                           uint32_t    waveIndex,
+                                           uint32_t    waveCount,
+                                           uint32_t    splitCount)
         {
-            CooperativeStore<4>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            if(splitCount >= 4)
+            {
+                CoopStore<4>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 2)
+            {
+                CoopStore<2>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 1)
+            {
+                CoopStore<1>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else
+            {
+                assert(0 && "Unsupported split count. Try reducing workgroup waves.");
+            }
         }
-        else if(splitCount == 2)
-        {
-            CooperativeStore<2>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else if(splitCount == 1)
-        {
-            CooperativeStore<1>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else
-        {
-            assert(0 && "Unsupported split count. Try reducing workgroup waves.");
-        }
-    }
 
-    template <typename IncomingT,
-              typename std::enable_if<
-                  std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && Traits::MaxSplit == 2,
-                  int32_t>::type
-              = 0>
-    __device__ static inline void exec(DataT*      dataPtr,
-                                       IncomingT&& input,
-                                       uint32_t    ldm,
-                                       uint32_t    waveIndex,
-                                       uint32_t    waveCount,
-                                       uint32_t    splitCount)
-    {
-        if(splitCount >= 2)
+        template <typename IncomingT,
+                  typename std::enable_if<std::is_same<typename Traits::InputT,
+                                                       typename std::decay<IncomingT>::type>::value
+                                              && Traits::MaxSplit == 2,
+                                          int32_t>::type
+                  = 0>
+        __device__ static inline void exec(DataT*      dataPtr,
+                                           IncomingT&& input,
+                                           uint32_t    ldm,
+                                           uint32_t    waveIndex,
+                                           uint32_t    waveCount,
+                                           uint32_t    splitCount)
         {
-            CooperativeStore<2>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            if(splitCount >= 2)
+            {
+                CoopStore<2>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else if(splitCount == 1)
+            {
+                CoopStore<1>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else
+            {
+                assert(0 && "Unsupported split count. Try reducing workgroup waves.");
+            }
         }
-        else if(splitCount == 1)
-        {
-            CooperativeStore<1>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
-        }
-        else
-        {
-            assert(0 && "Unsupported split count. Try reducing workgroup waves.");
-        }
-    }
 
-    template <typename IncomingT,
-              typename std::enable_if<
-                  std::is_same<typename Traits::InputT, typename std::decay<IncomingT>::type>::value
-                      && Traits::MaxSplit == 1,
-                  int32_t>::type
-              = 0>
-    __device__ static inline void exec(DataT*      dataPtr,
-                                       IncomingT&& input,
-                                       uint32_t    ldm,
-                                       uint32_t    waveIndex,
-                                       uint32_t    waveCount,
-                                       uint32_t    splitCount)
-    {
-        if(splitCount >= 1)
+        template <typename IncomingT,
+                  typename std::enable_if<std::is_same<typename Traits::InputT,
+                                                       typename std::decay<IncomingT>::type>::value
+                                              && Traits::MaxSplit == 1,
+                                          int32_t>::type
+                  = 0>
+        __device__ static inline void exec(DataT*      dataPtr,
+                                           IncomingT&& input,
+                                           uint32_t    ldm,
+                                           uint32_t    waveIndex,
+                                           uint32_t    waveCount,
+                                           uint32_t    splitCount)
         {
-            CooperativeStore<1>::exec(
-                dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            if(splitCount >= 1)
+            {
+                CoopStore<1>::exec(
+                    dataPtr, std::forward<IncomingT>(input), ldm, waveIndex, waveCount);
+            }
+            else
+            {
+                assert(0 && "Unsupported split count. Try reducing workgroup waves.");
+            }
         }
-        else
-        {
-            assert(0 && "Unsupported split count. Try reducing workgroup waves.");
-        }
-    }
-};
+    };
+
+} // namespace rocwmma
 
 #endif // WMMA_COOP_STORE_H

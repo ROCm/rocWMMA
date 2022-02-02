@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,35 +30,40 @@
 #include "KernelGenerator.h"
 #include "detail/MmaSync.h"
 
-struct TestParams : public CommonTestParams
+namespace rocwmma
 {
-    using Base = CommonTestParams;
 
-    // Types: ALL - double
-    // Block Sizes: 32 x 32 x BlockK
-    // Layouts: TT
-    using Types        = typename Base::TestTypes32x32;
-    using BlockSizes   = typename Base::TestBlockSizes32x32;
-    using Layouts      = typename Base::TestLayoutsTT;
-    using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
-
-    // Assemble the kernel generator
-    // Kernel: MmaSync
-    using GeneratorImpl   = MmaSyncGenerator;
-    using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
-
-    // Sanity check for kernel generator
-    static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
-                  "Kernels from this generator do not match testing interface");
-
-    static inline typename KernelGenerator::ResultT kernels()
+    struct TestParams : public CommonTestParams
     {
-        return KernelGenerator::generate();
-    }
-};
+        using Base = CommonTestParams;
+
+        // Types: ALL - double
+        // Block Sizes: 32 x 32 x BlockK
+        // Layouts: TT
+        using Types        = typename Base::TestTypes32x32;
+        using BlockSizes   = typename Base::TestBlockSizes32x32;
+        using Layouts      = typename Base::TestLayoutsTT;
+        using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
+
+        // Assemble the kernel generator
+        // Kernel: MmaSync
+        using GeneratorImpl   = MmaSyncGenerator;
+        using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
+
+        // Sanity check for kernel generator
+        static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
+                      "Kernels from this generator do not match testing interface");
+
+        static inline typename KernelGenerator::ResultT kernels()
+        {
+            return KernelGenerator::generate();
+        }
+    };
+
+} // namespace rocwmma
 
 // Test suite for unique parameterization
-class MmaSyncTest32x32TT : public GemmTest
+class MmaSyncTest32x32TT : public rocwmma::GemmTest
 {
 };
 
@@ -67,10 +72,11 @@ TEST_P(MmaSyncTest32x32TT, RunKernel)
     this->RunKernel();
 }
 
-INSTANTIATE_TEST_SUITE_P(GemmKernelTests,
-                         MmaSyncTest32x32TT,
-                         ::testing::Combine(::testing::ValuesIn(TestParams::kernels()),
-                                            ::testing::ValuesIn(TestParams::threadBlocks()),
-                                            ::testing::ValuesIn(TestParams::problemSizes()),
-                                            ::testing::ValuesIn(TestParams::alphas()),
-                                            ::testing::ValuesIn(TestParams::betas())));
+INSTANTIATE_TEST_SUITE_P(
+    GemmKernelTests,
+    MmaSyncTest32x32TT,
+    ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
+                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
+                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
+                       ::testing::ValuesIn(rocwmma::TestParams::alphas()),
+                       ::testing::ValuesIn(rocwmma::TestParams::betas())));

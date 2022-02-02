@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,146 +30,151 @@
 #include "GemmKernelBase.h"
 #include "device/MmaSyncMultiLds.h"
 
-// Wrapper into the actual device function
-template <uint32_t BlockM,
-          uint32_t BlockN,
-          uint32_t BlockK,
-          typename InputT,
-          typename OutputT,
-          typename ComputeT,
-          typename LayoutA,
-          typename LayoutB,
-          typename LayoutC,
-          typename LayoutD,
-          typename LayoutLds,
-          typename MappingLds,
-          uint32_t BlocksX = 1,
-          uint32_t BlocksY = 1>
-struct MmaSyncMultiLdsKernel final : public GemmKernelBase<BlockM,
-                                                           BlockN,
-                                                           BlockK,
-                                                           InputT,
-                                                           OutputT,
-                                                           ComputeT,
-                                                           LayoutA,
-                                                           LayoutB,
-                                                           LayoutC,
-                                                           LayoutD>
+namespace rocwmma
 {
-private:
-    using Base = GemmKernelBase<BlockM,
-                                BlockN,
-                                BlockK,
-                                InputT,
-                                OutputT,
-                                ComputeT,
-                                LayoutA,
-                                LayoutB,
-                                LayoutC,
-                                LayoutD>;
 
-public:
-    MmaSyncMultiLdsKernel() {}
-    ~MmaSyncMultiLdsKernel() final {}
-
-    dim3 gridDim() const final
+    // Wrapper into the actual device function
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename InputT,
+              typename OutputT,
+              typename ComputeT,
+              typename LayoutA,
+              typename LayoutB,
+              typename LayoutC,
+              typename LayoutD,
+              typename LayoutLds,
+              typename MappingLds,
+              uint32_t BlocksX = 1,
+              uint32_t BlocksY = 1>
+    struct MmaSyncMultiLdsKernel final : public GemmKernelBase<BlockM,
+                                                               BlockN,
+                                                               BlockK,
+                                                               InputT,
+                                                               OutputT,
+                                                               ComputeT,
+                                                               LayoutA,
+                                                               LayoutB,
+                                                               LayoutC,
+                                                               LayoutD>
     {
-        return dim3(ceilDiv(Base::mM, BlockM * BlocksX * Base::mTBlockX / AMDGCN_WAVE_SIZE),
-                    ceilDiv(Base::mN, BlockN * BlocksY * Base::mTBlockY));
-    }
+    private:
+        using Base = GemmKernelBase<BlockM,
+                                    BlockN,
+                                    BlockK,
+                                    InputT,
+                                    OutputT,
+                                    ComputeT,
+                                    LayoutA,
+                                    LayoutB,
+                                    LayoutC,
+                                    LayoutD>;
 
-    bool checkSizes() const final
-    {
-        return ((BlockM * BlocksX * Base::mTBlockX / AMDGCN_WAVE_SIZE) <= Base::mM)
-               && ((BlockN * BlocksY * Base::mTBlockY) <= Base::mN) && (BlockK <= Base::mK);
-    }
+    public:
+        MmaSyncMultiLdsKernel() {}
+        ~MmaSyncMultiLdsKernel() final {}
 
-    // Lds memory usage in bytes
-    uint32_t ldsUsage() const final
-    {
-        // Uses 2 lds blocks for prefetch loop
-        return 2 * sizeof(InputT)
-               * (Base::mTBlockX / AMDGCN_WAVE_SIZE * BlocksX * BlockM * BlockK
-                  + Base::mTBlockY * BlocksY * BlockK * BlockN);
-    }
+        dim3 gridDim() const final
+        {
+            return dim3(ceilDiv(Base::mM, BlockM * BlocksX * Base::mTBlockX / AMDGCN_WAVE_SIZE),
+                        ceilDiv(Base::mN, BlockN * BlocksY * Base::mTBlockY));
+        }
 
-    typename Base::KernelFunc kernelImpl() const final
-    {
-        return typename Base::KernelFunc(mmaSyncMultiLds<BlockM,
-                                                         BlockN,
-                                                         BlockK,
-                                                         InputT,
-                                                         OutputT,
-                                                         ComputeT,
-                                                         LayoutA,
-                                                         LayoutB,
-                                                         LayoutC,
-                                                         LayoutD,
-                                                         LayoutLds,
-                                                         MappingLds,
-                                                         BlocksX,
-                                                         BlocksY>);
-    }
+        bool checkSizes() const final
+        {
+            return ((BlockM * BlocksX * Base::mTBlockX / AMDGCN_WAVE_SIZE) <= Base::mM)
+                   && ((BlockN * BlocksY * Base::mTBlockY) <= Base::mN) && (BlockK <= Base::mK);
+        }
 
-    std::ostream& printHeader(std::ostream& stream = std::cout) const final
-    {
-        return Base::printHeader(stream << "MappingLds, LytLds, BlocksX, BlocksY, ");
-    }
+        // Lds memory usage in bytes
+        uint32_t ldsUsage() const final
+        {
+            // Uses 2 lds blocks for prefetch loop
+            return 2 * sizeof(InputT)
+                   * (Base::mTBlockX / AMDGCN_WAVE_SIZE * BlocksX * BlockM * BlockK
+                      + Base::mTBlockY * BlocksY * BlockK * BlockN);
+        }
 
-    std::ostream& printKernel(std::ostream& stream = std::cout) const final
-    {
-        return Base::printKernel(stream << dataTypeToString<MappingLds>() << ", "
-                                        << dataTypeToString<LayoutLds>() << ", " << BlocksX << ", "
-                                        << BlocksY << ", ");
-    }
-};
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return typename Base::KernelFunc(mmaSyncMultiLds<BlockM,
+                                                             BlockN,
+                                                             BlockK,
+                                                             InputT,
+                                                             OutputT,
+                                                             ComputeT,
+                                                             LayoutA,
+                                                             LayoutB,
+                                                             LayoutC,
+                                                             LayoutD,
+                                                             LayoutLds,
+                                                             MappingLds,
+                                                             BlocksX,
+                                                             BlocksY>);
+        }
 
-// This is the GeneratorImpl class for MmaSyncCoopLds
-struct MmaSyncMultiLdsGenerator
-{
-    // Indices to test parameters
-    enum : uint32_t
-    {
-        InputT     = 0,
-        OutputT    = 1,
-        ComputeT   = 2,
-        BlockM     = 3,
-        BlockN     = 4,
-        BlockK     = 5,
-        LayoutA    = 6,
-        LayoutB    = 7,
-        LayoutCD   = 8,
-        LayoutLds  = 9,
-        MappingLds = 10,
-        BlocksX    = 11,
-        BlocksY    = 12
+        std::ostream& printHeader(std::ostream& stream = std::cout) const final
+        {
+            return Base::printHeader(stream << "MappingLds, LytLds, BlocksX, BlocksY, ");
+        }
+
+        std::ostream& printKernel(std::ostream& stream = std::cout) const final
+        {
+            return Base::printKernel(stream << dataTypeToString<MappingLds>() << ", "
+                                            << dataTypeToString<LayoutLds>() << ", " << BlocksX
+                                            << ", " << BlocksY << ", ");
+        }
     };
 
-    using ResultT = std::shared_ptr<KernelI>;
-
-    template <typename... Ts>
-    static ResultT generate(std::tuple<Ts...> testParams)
+    // This is the GeneratorImpl class for MmaSyncCoopLds
+    struct MmaSyncMultiLdsGenerator
     {
-        using TestParamsT = std::tuple<Ts...>;
-        using KernelT
-            = MmaSyncMultiLdsKernel<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
-                                    std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
-                                    std::tuple_element_t<BlockK, TestParamsT>::value, // BlockK
-                                    std::tuple_element_t<InputT, TestParamsT>, // InputT
-                                    std::tuple_element_t<OutputT, TestParamsT>, // OutputT
-                                    std::tuple_element_t<ComputeT, TestParamsT>, // ComputeT
-                                    std::tuple_element_t<LayoutA, TestParamsT>, // LayoutA
-                                    std::tuple_element_t<LayoutB, TestParamsT>, // LayoutB
-                                    std::tuple_element_t<LayoutCD, TestParamsT>, // LayoutC
-                                    std::tuple_element_t<LayoutCD, TestParamsT>, // LayoutD
-                                    std::tuple_element_t<LayoutLds, TestParamsT>, // LayoutLds
-                                    std::tuple_element_t<MappingLds, TestParamsT>, // LayoutLds
-                                    std::tuple_element_t<BlocksX, TestParamsT>::value, // BlocksX
-                                    std::tuple_element_t<BlocksY, TestParamsT>::value // BlocksY
-                                    >;
+        // Indices to test parameters
+        enum : uint32_t
+        {
+            InputT     = 0,
+            OutputT    = 1,
+            ComputeT   = 2,
+            BlockM     = 3,
+            BlockN     = 4,
+            BlockK     = 5,
+            LayoutA    = 6,
+            LayoutB    = 7,
+            LayoutCD   = 8,
+            LayoutLds  = 9,
+            MappingLds = 10,
+            BlocksX    = 11,
+            BlocksY    = 12
+        };
 
-        return std::make_shared<KernelT>();
-    }
-};
+        using ResultT = std::shared_ptr<KernelI>;
+
+        template <typename... Ts>
+        static ResultT generate(std::tuple<Ts...> testParams)
+        {
+            using TestParamsT = std::tuple<Ts...>;
+            using KernelT     = MmaSyncMultiLdsKernel<
+                std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
+                std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
+                std::tuple_element_t<BlockK, TestParamsT>::value, // BlockK
+                std::tuple_element_t<InputT, TestParamsT>, // InputT
+                std::tuple_element_t<OutputT, TestParamsT>, // OutputT
+                std::tuple_element_t<ComputeT, TestParamsT>, // ComputeT
+                std::tuple_element_t<LayoutA, TestParamsT>, // LayoutA
+                std::tuple_element_t<LayoutB, TestParamsT>, // LayoutB
+                std::tuple_element_t<LayoutCD, TestParamsT>, // LayoutC
+                std::tuple_element_t<LayoutCD, TestParamsT>, // LayoutD
+                std::tuple_element_t<LayoutLds, TestParamsT>, // LayoutLds
+                std::tuple_element_t<MappingLds, TestParamsT>, // LayoutLds
+                std::tuple_element_t<BlocksX, TestParamsT>::value, // BlocksX
+                std::tuple_element_t<BlocksY, TestParamsT>::value // BlocksY
+                >;
+
+            return std::make_shared<KernelT>();
+        }
+    };
+
+} // namespace rocwmma
 
 #endif // WMMA_DETAIL_MMA_SYNC_MULTI_LDS_H

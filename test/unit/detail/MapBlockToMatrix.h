@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,87 +30,92 @@
 #include "UnitKernelBase.h"
 #include "device/MapBlockToMatrix.h"
 
-// Wrapper into the actual device function
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-struct MapBlockToMatrixKernel final : public UnitKernelBase<BlockM, BlockN, DataT, Layout>
+namespace rocwmma
 {
-private:
-    using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
-public:
-    MapBlockToMatrixKernel()        = default;
-    ~MapBlockToMatrixKernel() final = default;
-
-    void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
+    // Wrapper into the actual device function
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    struct MapBlockToMatrixKernel final : public UnitKernelBase<BlockM, BlockN, DataT, Layout>
     {
-        auto& dataInstance = Base::DataStorage::instance();
+    private:
+        using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
-        // Initialize matrix storage
-        const int64_t sizeD = Base::mM * Base::mN;
-        dataInstance->resizeStorage(probsize);
+    public:
+        MapBlockToMatrixKernel()        = default;
+        ~MapBlockToMatrixKernel() final = default;
 
-        // Initialize matrix data on host
-        MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
+        void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
+        {
+            auto& dataInstance = Base::DataStorage::instance();
 
-        dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), sizeD);
-    }
+            // Initialize matrix storage
+            const int64_t sizeD = Base::mM * Base::mN;
+            dataInstance->resizeStorage(probsize);
 
-    void validateResultsImpl() final
-    {
-        auto& dataInstance = Base::DataStorage::instance();
+            // Initialize matrix data on host
+            MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
 
-        // Allocated managed memory for results on host
-        const int64_t sizeD = Base::mM * Base::mN;
+            dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), sizeD);
+        }
 
-        auto kernelResult = dataInstance->template allocHost<DataT>(sizeD);
+        void validateResultsImpl() final
+        {
+            auto& dataInstance = Base::DataStorage::instance();
 
-        // Cache current kernel result from device
-        dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
+            // Allocated managed memory for results on host
+            const int64_t sizeD = Base::mM * Base::mN;
 
-        double errorTolerance = 10.0;
+            auto kernelResult = dataInstance->template allocHost<DataT>(sizeD);
 
-        std::tie(Base::mValidationResult, Base::mMaxRelativeError)
-            = compareEqual<DataT, DataT, Layout, Layout>(kernelResult.get(),
-                                                         dataInstance->hostIn().get(),
-                                                         Base::mM,
-                                                         Base::mN,
-                                                         errorTolerance);
-    }
+            // Cache current kernel result from device
+            dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
 
-    typename Base::KernelFunc kernelImpl() const final
-    {
-        return typename Base::KernelFunc(MapBlockToMatrix<BlockM, BlockN, DataT, Layout>);
-    }
-};
+            double errorTolerance = 10.0;
 
-// This is the GeneratorImpl class
-struct MapBlockToMatrixGenerator
-{
-    // Indices to test parameters
-    enum : uint32_t
-    {
-        DataT  = 0,
-        BlockM = 1,
-        BlockN = 2,
-        Layout = 3
+            std::tie(Base::mValidationResult, Base::mMaxRelativeError)
+                = compareEqual<DataT, DataT, Layout, Layout>(kernelResult.get(),
+                                                             dataInstance->hostIn().get(),
+                                                             Base::mM,
+                                                             Base::mN,
+                                                             errorTolerance);
+        }
+
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return typename Base::KernelFunc(MapBlockToMatrix<BlockM, BlockN, DataT, Layout>);
+        }
     };
 
-    using ResultT = std::shared_ptr<KernelI>;
-
-    template <typename... Ts>
-    static ResultT generate(std::tuple<Ts...> testParams)
+    // This is the GeneratorImpl class
+    struct MapBlockToMatrixGenerator
     {
-        // Map GTest params to Kernel params
-        using TestParamsT = std::tuple<Ts...>;
-        using KernelT
-            = MapBlockToMatrixKernel<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
-                                     std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
-                                     std::tuple_element_t<DataT, TestParamsT>, // DataT
-                                     std::tuple_element_t<Layout, TestParamsT> // Layout
-                                     >;
+        // Indices to test parameters
+        enum : uint32_t
+        {
+            DataT  = 0,
+            BlockM = 1,
+            BlockN = 2,
+            Layout = 3
+        };
 
-        return std::make_shared<KernelT>();
-    }
-};
+        using ResultT = std::shared_ptr<KernelI>;
+
+        template <typename... Ts>
+        static ResultT generate(std::tuple<Ts...> testParams)
+        {
+            // Map GTest params to Kernel params
+            using TestParamsT = std::tuple<Ts...>;
+            using KernelT
+                = MapBlockToMatrixKernel<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
+                                         std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
+                                         std::tuple_element_t<DataT, TestParamsT>, // DataT
+                                         std::tuple_element_t<Layout, TestParamsT> // Layout
+                                         >;
+
+            return std::make_shared<KernelT>();
+        }
+    };
+
+} // namespace rocwmma
 
 #endif // WMMA_DETAIL_MAP_BLOCK_TO_MATRIX_H

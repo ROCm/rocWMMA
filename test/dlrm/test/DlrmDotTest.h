@@ -31,6 +31,8 @@
 #include "DlrmTestParams.h"
 #include <gtest/gtest.h>
 
+namespace rocwmma
+{
 struct DlrmDotTest
     : public ::testing::TestWithParam<std::tuple<typename DlrmTestParams::KernelT,
                                                  typename DlrmTestParams::ThreadBlockT,
@@ -86,5 +88,7 @@ struct DlrmDotTest
     }
 };
 // pass enum template values through Base::<name>
+
+} // namespace rocwmma
 
 #endif // DLRM_DOT_TEST_H

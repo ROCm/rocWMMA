@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -60,7 +60,7 @@
  * In-register elements have no guaranteed order, which have been optimized for loading / storing efficiency.
  */
 
-namespace wmma
+namespace rocwmma
 {
     /**
  * \ingroup WMMA APIs
@@ -280,7 +280,7 @@ namespace wmma
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
         uint32_t                                                            ldm);
 
-} // namespace wmma
+} // namespace rocwmma
 
 #include "WMMACoop_impl.h"
 

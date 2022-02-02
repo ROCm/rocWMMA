@@ -29,103 +29,32 @@
 
 #include "./Common.h"
 
-template <typename DataT>
-__global__ void trilReconstruct(const DataT* __restrict upstreamGrad,
-                                DataT* __restrict acc,
-                                uint m,
-                                uint k,
-                                uint b,
-                                uint upstreamBatchOffset,
-                                uint accBatchOffset)
+namespace rocwmma
 {
-    auto blocksPerRow = (m + blockDim.x - 1) / blockDim.x;
-    int  globalRowIdx;
-    if(blockDim.x >= m)
-    {
-        globalRowIdx = blockIdx.x * (blockDim.x / m) + (threadIdx.x / m);
-    }
-    else
-    {
-        globalRowIdx = blockIdx.x / blocksPerRow;
-    }
 
-    auto globalColIdx = (blockIdx.x * blockDim.x + threadIdx.x) % m;
-    if(globalRowIdx < m && globalColIdx < m)
+    template <typename DataT>
+    __global__ void trilReconstruct(const DataT* __restrict upstreamGrad,
+                                    DataT* __restrict acc,
+                                    uint m,
+                                    uint k,
+                                    uint b,
+                                    uint upstreamBatchOffset,
+                                    uint accBatchOffset)
     {
-        if(globalRowIdx == globalColIdx)
+        auto blocksPerRow = (m + blockDim.x - 1) / blockDim.x;
+        int  globalRowIdx;
+        if(blockDim.x >= m)
         {
-            acc[accBatchOffset * blockIdx.z + globalRowIdx * m + globalColIdx] = 0.0;
+            globalRowIdx = blockIdx.x * (blockDim.x / m) + (threadIdx.x / m);
         }
-        else if(globalRowIdx > globalColIdx)
+        else
         {
-            auto upstreamGradOffset = k + ((globalRowIdx * (globalRowIdx - 1)) >> 1);
-
-            // original tril copy
-            acc[accBatchOffset * blockIdx.z + globalRowIdx * m + globalColIdx]
-                = upstreamGrad[upstreamBatchOffset * blockIdx.z + upstreamGradOffset
-                               + globalColIdx];
-
-            // transposed tril copy
-            acc[accBatchOffset * blockIdx.z + globalColIdx * m + globalRowIdx]
-                = upstreamGrad[upstreamBatchOffset * blockIdx.z + upstreamGradOffset
-                               + globalColIdx];
+            globalRowIdx = blockIdx.x / blocksPerRow;
         }
-    }
-}
 
-template <typename DataT, uint TILE_DIM>
-__global__ void __launch_bounds__(128, 1) dlrmDotBwd(const DataT* __restrict input,
-                                                     const DataT* __restrict upstreamGrad,
-                                                     DataT* __restrict grad,
-                                                     DataT* __restrict bottomMlpGrad,
-                                                     DataT* __restrict acc,
-                                                     uint m,
-                                                     uint k,
-                                                     uint b,
-                                                     uint inputBatchOffset,
-                                                     uint upstreamBatchOffset,
-                                                     uint accBatchOffset)
-{
-    using TileMapping = MappingUtil<TILE_DIM, TILE_DIM, DataT, row_major>;
-
-    using FragA   = wmma::fragment<matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, DataT, row_major>;
-    using FragB   = wmma::fragment<matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, DataT, row_major>;
-    using FragC   = wmma::fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, DataT>;
-    using FragAcc = wmma::fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float32_t>;
-
-    // Copy bottom MLP grad
-    // Threads with a global index < k are responsible for copying MLP data
-    auto globalThreadCoord = blockIdx.x * blockDim.x + threadIdx.x;
-    auto count             = k / blockDim.x;
-    count                  = (count > 1) ? count : 1;
-    if(blockIdx.x == 0 && blockIdx.y == 0)
-    {
-        for(int i = 0; i < count; i++)
+        auto globalColIdx = (blockIdx.x * blockDim.x + threadIdx.x) % m;
+        if(globalRowIdx < m && globalColIdx < m)
         {
-            if(i * blockDim.x + globalThreadCoord < k)
-            {
-                bottomMlpGrad[k * blockIdx.z + i * blockDim.x + globalThreadCoord]
-                    = upstreamGrad[upstreamBatchOffset * blockIdx.z + i * blockDim.x
-                                   + globalThreadCoord];
-            }
-        }
-    }
-
-    // Target accumulator block
-    auto matrixCoord = TileMapping::matrixCoord();
-
-    if(std::get<0>(matrixCoord) < m && std::get<1>(matrixCoord) < m)
-    {
-        // Remake accumulation fragment from tril
-        auto fragColIdx   = threadIdx.x % TILE_DIM;
-        auto globalColIdx = std::get<1>(matrixCoord) + fragColIdx;
-        auto rowsPerStep  = AMDGCN_WAVE_SIZE / TILE_DIM;
-
-        count = (TILE_DIM * TILE_DIM) >> Log2<AMDGCN_WAVE_SIZE>::value;
-        for(int i = 0; i < count; i++)
-        {
-            auto fragRowIdx = i * rowsPerStep + ((threadIdx.x & (AMDGCN_WAVE_SIZE - 1)) / TILE_DIM);
-            auto globalRowIdx = std::get<0>(matrixCoord) + fragRowIdx;
             if(globalRowIdx == globalColIdx)
             {
                 acc[accBatchOffset * blockIdx.z + globalRowIdx * m + globalColIdx] = 0.0;
@@ -147,60 +76,137 @@ __global__ void __launch_bounds__(128, 1) dlrmDotBwd(const DataT* __restrict inp
         }
     }
 
-    wmma::synchronize_workgroup();
-
-    // Target output gradient block to perform reverse bmm
-    if(std::get<0>(matrixCoord) < m && std::get<1>(matrixCoord) < k)
+    template <typename DataT, uint TILE_DIM>
+    __global__ void __launch_bounds__(128, 1) dlrmDotBwd(const DataT* __restrict input,
+                                                         const DataT* __restrict upstreamGrad,
+                                                         DataT* __restrict grad,
+                                                         DataT* __restrict bottomMlpGrad,
+                                                         DataT* __restrict acc,
+                                                         uint m,
+                                                         uint k,
+                                                         uint b,
+                                                         uint inputBatchOffset,
+                                                         uint upstreamBatchOffset,
+                                                         uint accBatchOffset)
     {
-        // Initialize accumulator
-        auto fragAcc = FragAcc();
-        wmma::fill_fragment(fragAcc, static_cast<float32_t>(0));
+        using TileMapping = MappingUtil<TILE_DIM, TILE_DIM, DataT, row_major>;
 
-        // Setup starting addresses
-        auto* accWithOffset   = acc + accBatchOffset * blockIdx.z;
-        auto* inputWithOffset = input + inputBatchOffset * blockIdx.z;
-        auto* addrA
-            = TileMapping::dataCoord(accWithOffset, m, std::make_pair(std::get<0>(matrixCoord), 0));
-        auto* addrB = TileMapping::dataCoord(
-            inputWithOffset, k, std::make_pair(0, std::get<1>(matrixCoord)));
+        using FragA   = fragment<matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, DataT, row_major>;
+        using FragB   = fragment<matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, DataT, row_major>;
+        using FragC   = fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, DataT>;
+        using FragAcc = fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float32_t>;
 
-        // Setup address increments.
-        // A steps BlockK through m x m
-        // B steps BlockK through m x k
-        auto incrA = TileMapping::dataOffset(m, std::make_pair(0, TILE_DIM));
-        auto incrB = TileMapping::dataOffset(k, std::make_pair(TILE_DIM, 0));
-
-        auto count = m / TILE_DIM;
-        for(int i = 0; i < count; i++)
+        // Copy bottom MLP grad
+        // Threads with a global index < k are responsible for copying MLP data
+        auto globalThreadCoord = blockIdx.x * blockDim.x + threadIdx.x;
+        auto count             = k / blockDim.x;
+        count                  = (count > 1) ? count : 1;
+        if(blockIdx.x == 0 && blockIdx.y == 0)
         {
-            auto fragA = FragA();
-            auto fragB = FragB();
-
-            // Load and multiply
-            wmma::load_matrix_sync(fragA, addrA, m);
-            wmma::load_matrix_sync(fragB, addrB, k);
-            wmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
-
-            addrA += incrA;
-            addrB += incrB;
+            for(int i = 0; i < count; i++)
+            {
+                if(i * blockDim.x + globalThreadCoord < k)
+                {
+                    bottomMlpGrad[k * blockIdx.z + i * blockDim.x + globalThreadCoord]
+                        = upstreamGrad[upstreamBatchOffset * blockIdx.z + i * blockDim.x
+                                       + globalThreadCoord];
+                }
+            }
         }
 
-        // Output address
-        auto* gradWithOffset = grad + inputBatchOffset * blockIdx.z;
-        auto* addrGrad       = TileMapping::dataCoord(gradWithOffset, k, matrixCoord);
+        // Target accumulator block
+        auto matrixCoord = TileMapping::matrixCoord();
 
-        // Store accumulator fragment to output gradient
-        auto fragC = FragC();
+        if(std::get<0>(matrixCoord) < m && std::get<1>(matrixCoord) < m)
+        {
+            // Remake accumulation fragment from tril
+            auto fragColIdx   = threadIdx.x % TILE_DIM;
+            auto globalColIdx = std::get<1>(matrixCoord) + fragColIdx;
+            auto rowsPerStep  = AMDGCN_WAVE_SIZE / TILE_DIM;
+
+            count = (TILE_DIM * TILE_DIM) >> Log2<AMDGCN_WAVE_SIZE>::value;
+            for(int i = 0; i < count; i++)
+            {
+                auto fragRowIdx
+                    = i * rowsPerStep + ((threadIdx.x & (AMDGCN_WAVE_SIZE - 1)) / TILE_DIM);
+                auto globalRowIdx = std::get<0>(matrixCoord) + fragRowIdx;
+                if(globalRowIdx == globalColIdx)
+                {
+                    acc[accBatchOffset * blockIdx.z + globalRowIdx * m + globalColIdx] = 0.0;
+                }
+                else if(globalRowIdx > globalColIdx)
+                {
+                    auto upstreamGradOffset = k + ((globalRowIdx * (globalRowIdx - 1)) >> 1);
+
+                    // original tril copy
+                    acc[accBatchOffset * blockIdx.z + globalRowIdx * m + globalColIdx]
+                        = upstreamGrad[upstreamBatchOffset * blockIdx.z + upstreamGradOffset
+                                       + globalColIdx];
+
+                    // transposed tril copy
+                    acc[accBatchOffset * blockIdx.z + globalColIdx * m + globalRowIdx]
+                        = upstreamGrad[upstreamBatchOffset * blockIdx.z + upstreamGradOffset
+                                       + globalColIdx];
+                }
+            }
+        }
+
+        synchronize_workgroup();
+
+        // Target output gradient block to perform reverse bmm
+        if(std::get<0>(matrixCoord) < m && std::get<1>(matrixCoord) < k)
+        {
+            // Initialize accumulator
+            auto fragAcc = FragAcc();
+            fill_fragment(fragAcc, static_cast<float32_t>(0));
+
+            // Setup starting addresses
+            auto* accWithOffset   = acc + accBatchOffset * blockIdx.z;
+            auto* inputWithOffset = input + inputBatchOffset * blockIdx.z;
+            auto* addrA           = TileMapping::dataCoord(
+                          accWithOffset, std::make_pair(std::get<0>(matrixCoord), 0), m);
+            auto* addrB = TileMapping::dataCoord(
+                inputWithOffset, std::make_pair(0, std::get<1>(matrixCoord)), k);
+
+            // Setup address increments.
+            // A steps BlockK through m x m
+            // B steps BlockK through m x k
+            auto incrA = TileMapping::dataOffset(std::make_pair(0, TILE_DIM), m);
+            auto incrB = TileMapping::dataOffset(std::make_pair(TILE_DIM, 0), k);
+
+            auto count = m / TILE_DIM;
+            for(int i = 0; i < count; i++)
+            {
+                auto fragA = FragA();
+                auto fragB = FragB();
+
+                // Load and multiply
+                load_matrix_sync(fragA, addrA, m);
+                load_matrix_sync(fragB, addrB, k);
+                mma_sync(fragAcc, fragA, fragB, fragAcc);
+
+                addrA += incrA;
+                addrB += incrB;
+            }
+
+            // Output address
+            auto* gradWithOffset = grad + inputBatchOffset * blockIdx.z;
+            auto* addrGrad       = TileMapping::dataCoord(gradWithOffset, matrixCoord, k);
+
+            // Store accumulator fragment to output gradient
+            auto fragC = FragC();
 
 #pragma unroll
-        for(int i = 0; i < fragC.num_elements; i++)
-        {
-            fragC.x[i] = static_cast<DataT>(fragAcc.x[i]);
-        }
+            for(int i = 0; i < fragC.num_elements; i++)
+            {
+                fragC.x[i] = static_cast<DataT>(fragAcc.x[i]);
+            }
 
-        // Store the output
-        wmma::store_matrix_sync(addrGrad, fragC, k, wmma::mem_row_major);
+            // Store the output
+            store_matrix_sync(addrGrad, fragC, k, mem_row_major);
+        }
     }
-}
+
+} // namespace rocwmma
 
 #endif // DLRM_DOT_BWD_H

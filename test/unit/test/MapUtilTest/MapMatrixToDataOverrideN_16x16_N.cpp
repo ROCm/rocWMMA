@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,35 +30,40 @@
 #include "detail/MapMatrixToDataOverrideN.h"
 #include "test/UnitTest.h"
 
-struct TestParams : public UnitTestParams
+namespace rocwmma
 {
-    using Base = UnitTestParams;
 
-    // Types: ALL + double
-    // Block Sizes: 16 x 16 x BlockK
-    // Layouts: N
-    using Types        = typename Base::TestTypes16x16;
-    using BlockSizes   = typename Base::TestBlockSizes16x16;
-    using Layouts      = typename Base::TestLayoutsN;
-    using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
-
-    // Assemble the kernel generator
-    // Kernel: MapMatrixToDataOverrideN
-    using GeneratorImpl   = MapMatrixToDataOverrideNGenerator;
-    using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
-
-    // Sanity check for kernel generator
-    static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
-                  "Kernels from this generator do not match testing interface");
-
-    static inline typename KernelGenerator::ResultT kernels()
+    struct TestParams : public UnitTestParams
     {
-        return KernelGenerator::generate();
-    }
-};
+        using Base = UnitTestParams;
+
+        // Types: ALL + double
+        // Block Sizes: 16 x 16 x BlockK
+        // Layouts: N
+        using Types        = typename Base::TestTypes16x16;
+        using BlockSizes   = typename Base::TestBlockSizes16x16;
+        using Layouts      = typename Base::TestLayoutsN;
+        using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
+
+        // Assemble the kernel generator
+        // Kernel: MapMatrixToDataOverrideN
+        using GeneratorImpl   = MapMatrixToDataOverrideNGenerator;
+        using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
+
+        // Sanity check for kernel generator
+        static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
+                      "Kernels from this generator do not match testing interface");
+
+        static inline typename KernelGenerator::ResultT kernels()
+        {
+            return KernelGenerator::generate();
+        }
+    };
+
+} // namespace rocwmma
 
 // Test suite for unique parameterization
-class MapMatrixToDataOverrideNTest16x16N : public UnitTest
+class MapMatrixToDataOverrideNTest16x16N : public rocwmma::UnitTest
 {
 };
 
@@ -67,10 +72,11 @@ TEST_P(MapMatrixToDataOverrideNTest16x16N, RunKernel)
     this->RunKernel();
 }
 
-INSTANTIATE_TEST_SUITE_P(KernelTests,
-                         MapMatrixToDataOverrideNTest16x16N,
-                         ::testing::Combine(::testing::ValuesIn(TestParams::kernels()),
-                                            ::testing::ValuesIn(TestParams::threadBlocks()),
-                                            ::testing::ValuesIn(TestParams::problemSizes()),
-                                            ::testing::ValuesIn(TestParams::param1s()),
-                                            ::testing::ValuesIn(TestParams::param2s())));
+INSTANTIATE_TEST_SUITE_P(
+    KernelTests,
+    MapMatrixToDataOverrideNTest16x16N,
+    ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
+                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
+                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
+                       ::testing::ValuesIn(rocwmma::TestParams::param1s()),
+                       ::testing::ValuesIn(rocwmma::TestParams::param2s())));

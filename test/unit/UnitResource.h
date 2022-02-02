@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,63 +35,68 @@
 #include "HipResource.h"
 #include "Singleton.h"
 
-// UnitResource class is intended to manage a shared pool of resources for
-// testing various kernels on the GPU.
-//
-// It minimizes the memory handling overhead for launching thousands of GPU
-// kernels by allowing re-use of existing memory allocations. Memory is only
-// re-allocated as necessary to satisfy minimum size requirements.
-//
-// The interface indicates memory ownership by this class and shall only be
-// used to access for read/write purposes.
-//
-// Currently uses HIP as the backend for device allocation.
-
-template <typename DataT>
-struct UnitResource : public HipResource, public LazySingleton<UnitResource<DataT>>
+namespace rocwmma
 {
-    // For static initialization
-    friend std::unique_ptr<UnitResource<DataT>> std::make_unique<UnitResource<DataT>>();
 
-    using Base = HipResource;
+    // UnitResource class is intended to manage a shared pool of resources for
+    // testing various kernels on the GPU.
+    //
+    // It minimizes the memory handling overhead for launching thousands of GPU
+    // kernels by allowing re-use of existing memory allocations. Memory is only
+    // re-allocated as necessary to satisfy minimum size requirements.
+    //
+    // The interface indicates memory ownership by this class and shall only be
+    // used to access for read/write purposes.
+    //
+    // Currently uses HIP as the backend for device allocation.
 
-    using DevicePtrT = Base::DevicePtrT<DataT>;
-
-    using HostPtrT = Base::HostPtrT<DataT>;
-
-    // M, N
-    using ProblemSize = std::tuple<int64_t, int64_t>;
-
-    enum : uint32_t
+    template <typename DataT>
+    struct UnitResource : public HipResource, public LazySingleton<UnitResource<DataT>>
     {
-        // Problem size indices
-        M = 0,
-        N = 1
+        // For static initialization
+        friend std::unique_ptr<UnitResource<DataT>> std::make_unique<UnitResource<DataT>>();
+
+        using Base = HipResource;
+
+        using DevicePtrT = Base::DevicePtrT<DataT>;
+
+        using HostPtrT = Base::HostPtrT<DataT>;
+
+        // M, N
+        using ProblemSize = std::tuple<int64_t, int64_t>;
+
+        enum : uint32_t
+        {
+            // Problem size indices
+            M = 0,
+            N = 1
+        };
+
+    protected:
+        // Singleton instantiation
+        UnitResource();
+        UnitResource(UnitResource const&) = delete;
+        UnitResource& operator=(UnitResource const&) = delete;
+
+    public:
+        ~UnitResource() = default;
+        void resizeStorage(ProblemSize const& size);
+
+        HostPtrT&   hostIn();
+        DevicePtrT& deviceIn();
+        DevicePtrT& deviceOut();
+
+        ProblemSize problemSize() const;
+        int64_t     maxCapacity() const;
+
+    protected:
+        DevicePtrT  mDeviceIn, mDeviceOut;
+        HostPtrT    mHostIn;
+        ProblemSize mCurrentProblemSize;
+        int64_t     mMaxCapacity;
     };
 
-protected:
-    // Singleton instantiation
-    UnitResource();
-    UnitResource(UnitResource const&) = delete;
-    UnitResource& operator=(UnitResource const&) = delete;
-
-public:
-    ~UnitResource() = default;
-    void resizeStorage(ProblemSize const& size);
-
-    HostPtrT&   hostIn();
-    DevicePtrT& deviceIn();
-    DevicePtrT& deviceOut();
-
-    ProblemSize problemSize() const;
-    int64_t     maxCapacity() const;
-
-protected:
-    DevicePtrT  mDeviceIn, mDeviceOut;
-    HostPtrT    mHostIn;
-    ProblemSize mCurrentProblemSize;
-    int64_t     mMaxCapacity;
-};
+} // namespace rocwmma
 
 #include "UnitResource_impl.h"
 
