@@ -205,6 +205,7 @@ namespace rocwmma
             // Store the output
             store_matrix_sync(addrGrad, fragC, k, mem_row_major);
         }
+    }
 
 } // namespace rocwmma
 
