@@ -26,19 +26,17 @@
 #ifndef WMMA_LAYOUT_H
 #define WMMA_LAYOUT_H
 
-#include "Types.h"
-#include <tuple>
-
-// FWD decl.
-template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t VectorWidth>
-struct amdgcn_io_traits;
-
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
-struct MappingUtil;
+#include <type_traits>
 
 #include "Layout_impl.h"
 
-/**
+namespace rocwmma
+{
+
+    namespace MatrixLayout
+    {
+
+        /**
  * \ingroup wmma
  * \defgroup matrixLayouts
  *
@@ -58,16 +56,11 @@ struct MappingUtil;
  *   E.g. Sum of incremental offsets for [i = 0, iteration)
  */
 
-/**
- * Layout
- */
-namespace Layout
-{
-    /**
+        /**
      * \ingroup matrixLayouts
      * @{
      */
-    /**
+        /**
      * ColNT Layout
      *
      * The ColNT layout will align contiguous threads to matrix columns,
@@ -144,36 +137,36 @@ namespace Layout
      *       ...     |   ...   |
      */
 
-    template <uint32_t BlockDim,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout,
-              uint32_t VectorWidth,
-              uint32_t MaxVectorWidth>
-    struct ColNT : public std::conditional_t<
-                       std::is_same<DataLayout, col_major>::value,
-                       detail::ColOrthoVW<BlockDim, BlockK, DataT, 1, MaxVectorWidth>,
-                       detail::ColOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>
-    {
-        struct Traits
+        template <uint32_t BlockDim,
+                  uint32_t BlockK,
+                  typename DataT,
+                  typename DataLayout,
+                  uint32_t VectorWidth,
+                  uint32_t MaxVectorWidth>
+        struct ColNT : public std::conditional_t<
+                           std::is_same<DataLayout, col_major>::value,
+                           detail::ColOrthoVW<BlockDim, BlockK, DataT, 1, MaxVectorWidth>,
+                           detail::ColOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>
         {
-            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
-            using MatrixCoordT = typename MappingUtil::CoordT;
+            struct Traits
+            {
+                using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+                using MatrixCoordT = typename MappingUtil::MatrixCoordT;
 
-            // ColNT enforces consistent in-register alignment of contiguous matrix column
-            // elements in both row_major or col_major data layouts.
-            // This layout cannot support for VW > 1 in col_major data layout otherwise the
-            // ordering is broken.
-            static_assert(!(std::is_same<DataLayout, col_major>::value && VectorWidth > 1),
-                          "ColNT in col_major does not support VectorWidth > 1");
+                // ColNT enforces consistent in-register alignment of contiguous matrix column
+                // elements in both row_major or col_major data layouts.
+                // This layout cannot support for VW > 1 in col_major data layout otherwise the
+                // ordering is broken.
+                static_assert(!(std::is_same<DataLayout, col_major>::value && VectorWidth > 1),
+                              "ColNT in col_major does not support VectorWidth > 1");
+            };
         };
-    };
 
-    /**
+        /**
      * \ingroup matrixLayouts
      * @{
      */
-    /**
+        /**
      * RowNT Layout
      *
      * The RowNT layout will align contiguous threads to matrix rows,
@@ -249,36 +242,36 @@ namespace Layout
      *      RegN*S   |  RN_S   |
      *       ...     |   ...   |
      */
-    template <uint32_t BlockDim,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout,
-              uint32_t VectorWidth,
-              uint32_t MaxVectorWidth>
-    struct RowNT : public std::conditional_t<
-                       std::is_same<DataLayout, col_major>::value,
-                       detail::RowOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
-                       detail::RowOrthoVW<BlockDim, BlockK, DataT, 1, MaxVectorWidth>>
-    {
-        struct Traits
+        template <uint32_t BlockDim,
+                  uint32_t BlockK,
+                  typename DataT,
+                  typename DataLayout,
+                  uint32_t VectorWidth,
+                  uint32_t MaxVectorWidth>
+        struct RowNT : public std::conditional_t<
+                           std::is_same<DataLayout, col_major>::value,
+                           detail::RowOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
+                           detail::RowOrthoVW<BlockDim, BlockK, DataT, 1, MaxVectorWidth>>
         {
-            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
-            using MatrixCoordT = typename MappingUtil::CoordT;
+            struct Traits
+            {
+                using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+                using MatrixCoordT = typename MappingUtil::MatrixCoordT;
 
-            // RowNT enforces consistent in-register alignment of contiguous matrix row
-            // elements in both in row_major or col_major data layouts.
-            // This layout cannot support for VW > 1 in row_major data layout otherwise the
-            // ordering is broken.
-            static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
-                          "RowNT in row_major does not support VectorWidth > 1");
+                // RowNT enforces consistent in-register alignment of contiguous matrix row
+                // elements in both in row_major or col_major data layouts.
+                // This layout cannot support for VW > 1 in row_major data layout otherwise the
+                // ordering is broken.
+                static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
+                              "RowNT in row_major does not support VectorWidth > 1");
+            };
         };
-    };
 
-    /**
+        /**
      * \ingroup dataLayouts
      * @{
      */
-    /**
+        /**
      * Col Layout
      *
      * Col signifies that this layout will align contiguous threads
@@ -306,29 +299,29 @@ namespace Layout
      * and BlockDim.
      */
 
-    template <uint32_t BlockDim,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout,
-              uint32_t VectorWidth,
-              uint32_t MaxVectorWidth>
-    struct Col : public std::conditional_t<
-                     std::is_same<DataLayout, col_major>::value,
-                     detail::ColInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
-                     detail::ColOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>
-    {
-        struct Traits
+        template <uint32_t BlockDim,
+                  uint32_t BlockK,
+                  typename DataT,
+                  typename DataLayout,
+                  uint32_t VectorWidth,
+                  uint32_t MaxVectorWidth = VectorWidth>
+        struct Col : public std::conditional_t<
+                         std::is_same<DataLayout, col_major>::value,
+                         detail::ColInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
+                         detail::ColOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>
         {
-            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
-            using MatrixCoordT = typename MappingUtil::CoordT;
+            struct Traits
+            {
+                using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+                using MatrixCoordT = typename MappingUtil::MatrixCoordT;
+            };
         };
-    };
 
-    /**
+        /**
      * \ingroup dataLayouts
      * @{
      */
-    /**
+        /**
      * Row Layout
      *
      * Row signifies that this layout will align contiguous threads
@@ -355,24 +348,31 @@ namespace Layout
      * The order that rows map to registers is affected by DataLayout, VectorWidth
      * and BlockDim.
      */
-    template <uint32_t BlockDim,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout,
-              uint32_t VectorWidth,
-              uint32_t MaxVectorWidth>
-    struct Row : public std::conditional_t<
-                     std::is_same<DataLayout, row_major>::value,
-                     detail::RowInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
-                     detail::RowOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>
-    {
-        struct Traits
+        template <uint32_t BlockDim,
+                  uint32_t BlockK,
+                  typename DataT,
+                  typename DataLayout,
+                  uint32_t VectorWidth,
+                  uint32_t MaxVectorWidth = VectorWidth>
+        struct Row : public std::conditional_t<
+                         std::is_same<DataLayout, row_major>::value,
+                         detail::RowInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
+                         detail::RowOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>
         {
-            using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
-            using MatrixCoordT = typename MappingUtil::CoordT;
+            struct Traits
+            {
+                using MappingUtil  = MappingUtil<BlockDim, BlockK, DataT, DataLayout>;
+                using MatrixCoordT = typename MappingUtil::MatrixCoordT;
+            };
         };
-    };
 
-} // namespace Layout
+    } // namespace MatrixLayout
+
+    namespace DataLayout
+    {
+
+    } // namespace DataLayout
+
+} // namespace rocwmma
 
 #endif // WMMA_LAYOUT_H

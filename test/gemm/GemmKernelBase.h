@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,128 +34,133 @@
 #include "GemmResource.h"
 #include "HipDevice.h"
 
-// Basic structure to hold runtime problem
-// parameters
-struct ProblemParams
+namespace rocwmma
 {
-    std::pair<int64_t, int64_t>           threadBlockSize;
-    std::tuple<int64_t, int64_t, int64_t> problemSize;
-    double                                alpha;
-    double                                beta;
-};
 
-// Typeless Kernel interface to use with testing harness.
-struct KernelI
-{
-    KernelI() {}
-    virtual ~KernelI(){};
+    // Basic structure to hold runtime problem
+    // parameters
+    struct ProblemParams
+    {
+        std::pair<int64_t, int64_t>           threadBlockSize;
+        std::tuple<int64_t, int64_t, int64_t> problemSize;
+        double                                alpha;
+        double                                beta;
+    };
 
-    virtual void          setup(ProblemParams const& problem)                 = 0;
-    virtual void          exec()                                              = 0;
-    virtual void          validateResults()                                   = 0;
-    virtual void          reportResults()                                     = 0;
-    virtual void          tearDown()                                          = 0;
-    virtual std::ostream& printHeader(std::ostream& stream = std::cout) const = 0;
-    virtual std::ostream& printKernel(std::ostream& stream = std::cout) const = 0;
+    // Typeless Kernel interface to use with testing harness.
+    struct KernelI
+    {
+        KernelI() {}
+        virtual ~KernelI(){};
 
-    static bool sHeaderPrinted;
-};
+        virtual void          setup(ProblemParams const& problem)                 = 0;
+        virtual void          exec()                                              = 0;
+        virtual void          validateResults()                                   = 0;
+        virtual void          reportResults()                                     = 0;
+        virtual void          tearDown()                                          = 0;
+        virtual std::ostream& printHeader(std::ostream& stream = std::cout) const = 0;
+        virtual std::ostream& printKernel(std::ostream& stream = std::cout) const = 0;
 
-inline std::ostream& operator<<(std::ostream& stream, KernelI const& kernel)
-{
-    kernel.printHeader(stream);
-    kernel.printKernel(stream);
-    return stream;
-}
+        static bool sHeaderPrinted;
+    };
 
-// Typed GEMM kernel that provides the basis for GEMM tests.
-// This class provides common implementation code.
-template <uint32_t BlockM,
-          uint32_t BlockN,
-          uint32_t BlockK,
-          typename InputT,
-          typename OutputT,
-          typename ComputeT,
-          typename LayoutA,
-          typename LayoutB,
-          typename LayoutC,
-          typename LayoutD = LayoutC>
-struct GemmKernelBase : public KernelI
-{
-protected: // Types
-    // Shared access to Gemm storage
-    using DataStorage = GemmResource<InputT, OutputT>;
+    inline std::ostream& operator<<(std::ostream& stream, KernelI const& kernel)
+    {
+        kernel.printHeader(stream);
+        kernel.printKernel(stream);
+        return stream;
+    }
 
-    // Using Hip device backend
-    using DeviceInfo = HipDevice;
+    // Typed GEMM kernel that provides the basis for GEMM tests.
+    // This class provides common implementation code.
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename InputT,
+              typename OutputT,
+              typename ComputeT,
+              typename LayoutA,
+              typename LayoutB,
+              typename LayoutC,
+              typename LayoutD = LayoutC>
+    struct GemmKernelBase : public KernelI
+    {
+    protected: // Types
+        // Shared access to Gemm storage
+        using DataStorage = GemmResource<InputT, OutputT>;
 
-    // Interface to device kernel
-    using KernelFunc = void (*)(uint32_t, // M
-                                uint32_t, // N
-                                uint32_t, // K
-                                InputT const*, // A
-                                InputT const*, // B
-                                OutputT const*, // C
-                                OutputT*, // D
-                                uint32_t, // lda
-                                uint32_t, // ldb
-                                uint32_t, // ldc
-                                uint32_t, // ldd
-                                ComputeT, // Alpha
-                                ComputeT); // Beta
+        // Using Hip device backend
+        using DeviceInfo = HipDevice;
 
-protected:
-    GemmKernelBase();
-    virtual ~GemmKernelBase();
+        // Interface to device kernel
+        using KernelFunc = void (*)(uint32_t, // M
+                                    uint32_t, // N
+                                    uint32_t, // K
+                                    InputT const*, // A
+                                    InputT const*, // B
+                                    OutputT const*, // C
+                                    OutputT*, // D
+                                    uint32_t, // lda
+                                    uint32_t, // ldb
+                                    uint32_t, // ldc
+                                    uint32_t, // ldd
+                                    ComputeT, // Alpha
+                                    ComputeT); // Beta
 
-    // Kernels MUST provide the device kernel function.
-    virtual KernelFunc kernelImpl() const = 0;
+    protected:
+        GemmKernelBase();
+        virtual ~GemmKernelBase();
 
-    // Launch parameters.
-    // Base calculations for grid and block dimensions
-    // assume one output block per wave.
-    virtual uint32_t ldsUsage() const;
-    virtual dim3     gridDim() const;
-    virtual dim3     blockDim() const;
+        // Kernels MUST provide the device kernel function.
+        virtual KernelFunc kernelImpl() const = 0;
 
-    // Kernel run checks.
-    // True = run test
-    // False = skip test
-    virtual bool checkDevice() const;
-    virtual bool checkSizes() const;
-    virtual bool checkLds() const;
-    virtual bool checkQuirks() const;
+        // Launch parameters.
+        // Base calculations for grid and block dimensions
+        // assume one output block per wave.
+        virtual uint32_t ldsUsage() const;
+        virtual dim3     gridDim() const;
+        virtual dim3     blockDim() const;
 
-    // Reset all members to default values
-    virtual void reset();
+        // Kernel run checks.
+        // True = run test
+        // False = skip test
+        virtual bool checkDevice() const;
+        virtual bool checkSizes() const;
+        virtual bool checkLds() const;
+        virtual bool checkQuirks() const;
 
-public:
-    // KernelI interface fulfillment
-    virtual void          setup(ProblemParams const& problem) override;
-    virtual void          exec() override;
-    virtual void          validateResults() override;
-    virtual void          reportResults() override;
-    virtual void          tearDown() override;
-    virtual std::ostream& printHeader(std::ostream& stream = std::cout) const override;
-    virtual std::ostream& printKernel(std::ostream& stream = std::cout) const override;
+        // Reset all members to default values
+        virtual void reset();
 
-protected:
-    // Problem params for kernel
-    uint32_t mTBlockX, mTBlockY;
-    uint32_t mM, mN, mK;
-    uint32_t mLda, mLdb, mLdc, mLdd;
-    ComputeT mAlpha, mBeta;
+    public:
+        // KernelI interface fulfillment
+        virtual void          setup(ProblemParams const& problem) override;
+        virtual void          exec() override;
+        virtual void          validateResults() override;
+        virtual void          reportResults() override;
+        virtual void          tearDown() override;
+        virtual std::ostream& printHeader(std::ostream& stream = std::cout) const override;
+        virtual std::ostream& printKernel(std::ostream& stream = std::cout) const override;
 
-    // Execution flow control
-    uint32_t mRepeats;
-    bool     mRunFlag          = true;
-    bool     mValidationResult = false;
-    double   mMaxRelativeError;
+    protected:
+        // Problem params for kernel
+        uint32_t mTBlockX, mTBlockY;
+        uint32_t mM, mN, mK;
+        uint32_t mLda, mLdb, mLdc, mLdd;
+        ComputeT mAlpha, mBeta;
 
-    // Performance
-    float64_t mElapsedTimeMs, mTotalGFlops, mMeasuredGFlopsPerSec;
-    float64_t mEfficiency, mReferenceEfficiency;
-};
+        // Execution flow control
+        uint32_t mRepeats;
+        bool     mRunFlag          = true;
+        bool     mValidationResult = false;
+        double   mMaxRelativeError;
+
+        // Performance
+        float64_t mElapsedTimeMs, mTotalGFlops, mMeasuredGFlopsPerSec;
+        float64_t mEfficiency, mReferenceEfficiency;
+    };
+
+} // namespace rocwmma
 
 #include "GemmKernelBase_impl.h"
 

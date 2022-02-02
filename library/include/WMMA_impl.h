@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +40,7 @@
 
 #include "Types.h"
 
-namespace wmma
+namespace rocwmma
 {
     // fragment implementations
     template <typename MatrixT,
@@ -290,15 +290,15 @@ namespace wmma
                              fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB> const& b,
                              fragment<accumulator, BlockM, BlockN, BlockK, ComputeT> const&     c)
     {
-        using MFMA = amdgcn_mfma_MxNxK<InputT, ComputeT, BlockM, BlockN, BlockK>;
+        using MFMA = Mfma<InputT, ComputeT, BlockM, BlockN, BlockK>;
         (*d)       = MFMA::exec(*a, *b, *c);
     }
 
     __device__ void synchronize_workgroup()
     {
-        using Barrier = struct amdgcn_barrier;
         Barrier::exec();
     }
-} // namespace wmma
+
+} // namespace rocwmma
 
 #endif // WMMA_IMPL_H_

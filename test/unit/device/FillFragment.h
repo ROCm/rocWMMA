@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,19 +30,30 @@
 #include "MappingUtil.h"
 #include "WMMA.h"
 
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-__global__ void FillFragment(
-    uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld, DataT param1, DataT param2)
+namespace rocwmma
 {
-    using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
 
-    // Create frag and fill
-    auto frag = wmma::fragment<accumulator, BlockM, BlockN, 1, DataT, Layout>();
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    __global__ void FillFragment(uint32_t     m,
+                                 uint32_t     n,
+                                 DataT const* in,
+                                 DataT*       out,
+                                 uint32_t     ld,
+                                 DataT        param1,
+                                 DataT        param2)
+    {
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
 
-    wmma::fill_fragment(frag, param1);
+        // Create frag and fill
+        auto frag = fragment<accumulator, BlockM, BlockN, 1, DataT, Layout>();
 
-    // Map and store
-    auto* offset = Mapping::dataCoord(out, ld);
-    wmma::store_matrix_sync(offset, frag, ld);
-}
+        fill_fragment(frag, param1);
+
+        // Map and store
+        auto* offset = Mapping::dataCoord(out, ld);
+        store_matrix_sync(offset, frag, ld);
+    }
+
+} // namespace rocwmma
+
 #endif // WMMA_DEVICE_FILL_FRAGMENT_H

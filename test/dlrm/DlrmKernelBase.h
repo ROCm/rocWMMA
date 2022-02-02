@@ -36,6 +36,9 @@
 #include "DlrmResource.h"
 #include "HipDevice.h"
 
+namespace rocwmma
+{
+
 // Training pass direction
 enum class DlrmDirection_t : bool
 {
@@ -171,6 +174,8 @@ protected:
     float64_t mTotalGFlops, mMeasuredGFlopsPerSec;
     float64_t mElapsedTimeMs, mEfficiency;
 };
+
+} // namespace rocwmma
 
 #include "DlrmKernelBase_impl.h"
 

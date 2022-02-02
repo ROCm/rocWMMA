@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,28 +30,39 @@
 #include "MappingUtil.h"
 #include "WMMA.h"
 
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-__global__ void MapWaveToMatrix(
-    uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld, DataT param1, DataT param2)
+namespace rocwmma
 {
-    using Mapping                         = MappingUtil<BlockM, BlockN, DataT, Layout>;
-    typename Mapping::CoordT aCoord       = Mapping::waveCoord();
-    typename Mapping::CoordT aCoord_wg    = Mapping::WaveSpace::workgroupCoord();
-    typename Mapping::CoordT aCoord_wgdim = Mapping::WaveSpace::workgroupDim();
 
-    enum : uint32_t
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    __global__ void MapWaveToMatrix(uint32_t     m,
+                                    uint32_t     n,
+                                    DataT const* in,
+                                    DataT*       out,
+                                    uint32_t     ld,
+                                    DataT        param1,
+                                    DataT        param2)
     {
-        MajorIndex = std::is_same<Layout, row_major>::value ? 0 : 1,
-        MinorIndex = std::is_same<Layout, row_major>::value ? 1 : 0
-    };
+        using Mapping     = MappingUtil<BlockM, BlockN, DataT, Layout>;
+        auto aCoord       = Mapping::waveCoord();
+        auto aCoord_wg    = Mapping::WaveSpace::workgroupCoord();
+        auto aCoord_wgdim = Mapping::WaveSpace::workgroupDim();
 
-    uint32_t col = std::get<MajorIndex>(aCoord)
-                   + (std::get<MajorIndex>(aCoord_wg) * std::get<MajorIndex>(aCoord_wgdim));
-    uint32_t row = std::get<MinorIndex>(aCoord)
-                   + (std::get<MinorIndex>(aCoord_wg) * std::get<MinorIndex>(aCoord_wgdim));
-    for(int i = 0; i < BlockM; i++)
-        for(int j = 0; j < BlockN; j++)
-            out[(col * BlockM + j) * ld + (row * BlockN + i)]
-                = in[(col * BlockM + j) * ld + (row * BlockN + i)];
-}
+        enum : uint32_t
+        {
+            MajorIndex = std::is_same<Layout, row_major>::value ? 0 : 1,
+            MinorIndex = std::is_same<Layout, row_major>::value ? 1 : 0
+        };
+
+        uint32_t col = std::get<MajorIndex>(aCoord)
+                       + (std::get<MajorIndex>(aCoord_wg) * std::get<MajorIndex>(aCoord_wgdim));
+        uint32_t row = std::get<MinorIndex>(aCoord)
+                       + (std::get<MinorIndex>(aCoord_wg) * std::get<MinorIndex>(aCoord_wgdim));
+        for(int i = 0; i < BlockM; i++)
+            for(int j = 0; j < BlockN; j++)
+                out[(col * BlockM + j) * ld + (row * BlockN + i)]
+                    = in[(col * BlockM + j) * ld + (row * BlockN + i)];
+    }
+
+} // namespace rocwmma
+
 #endif // WMMA_DEVICE_MAP_WAVE_TO_MATRIX_H

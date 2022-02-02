@@ -28,72 +28,77 @@
 
 #include "IOTraits.h"
 #include "Layout.h"
+#include "MappingUtil.h"
 #include "Types.h"
 #include "Utils.h"
 
-template <typename DataT, uint32_t VectorWidth>
-struct amdgcn_opaque_load
+namespace rocwmma
 {
-    static_assert(VectorWidth > 0, "Vector width must be greater than 0");
 
-    using LoadT = VecT<typename PackTraits<DataT>::UnpackedT, VectorWidth>;
-    __device__ static inline auto exec(DataT const* dataPtr, index_t offset = 0) -> LoadT
+    namespace detail
     {
-        return LoadT(*reinterpret_cast<typename LoadT::StorageT const*>(&(dataPtr[offset])));
-    }
-};
 
-template <uint32_t BlockDim,
-          uint32_t BlockK,
-          typename DataT,
-          typename DataLayout,
-          template <uint32_t, uint32_t, typename, typename, uint32_t>
-          class LoadLayout,
-          uint32_t VectorWidth>
-struct amdgcn_opaque_load_DxK
-{
-    using IOTraits = amdgcn_io_traits<BlockDim, BlockK, DataT, VectorWidth>;
+        template <typename DataT, uint32_t VectorWidth>
+        struct amdgcn_opaque_load
+        {
+            static_assert(VectorWidth > 0, "Vector width must be greater than 0");
 
-    struct Traits
+            using LoadT = VecT<typename PackTraits<DataT>::UnpackedT, VectorWidth>;
+            __device__ static inline auto exec(DataT const* dataPtr, index_t offset = 0) -> LoadT
+            {
+                return LoadT(
+                    *reinterpret_cast<typename LoadT::StorageT const*>(&(dataPtr[offset])));
+            }
+        };
+
+    } // namespace detail
+
+    template <uint32_t BlockDim,
+              uint32_t BlockK,
+              typename DataT,
+              class DataMapper,
+              class MatrixMapper,
+              uint32_t VectorWidth>
+    struct OpaqueLoad
     {
-        // Matrix space thread offsets
-        using MatrixLayout = LoadLayout<BlockDim, BlockK, DataT, DataLayout, VectorWidth>;
-        using MappingUtil  = typename MatrixLayout::Traits::MappingUtil;
+        using IOTraits = IOTraits<BlockDim, BlockK, DataT, VectorWidth>;
 
-        // Raw IO on unpacked register data.
-        using Loader  = amdgcn_opaque_load<DataT, VectorWidth>;
-        using LoadT   = typename Loader::LoadT;
-        using OutputT = VecT<DataT, IOTraits::UnpackedSize>;
+        struct Traits
+        {
+            // Raw IO on unpacked register data.
+            using Loader  = detail::amdgcn_opaque_load<DataT, VectorWidth>;
+            using LoadT   = typename Loader::LoadT;
+            using OutputT = VecT<DataT, IOTraits::UnpackedSize>;
+        };
+
+        __device__ static auto exec(DataT const* localPtr, uint32_t ldm) -> typename Traits::OutputT
+        {
+            // Extract traits
+            using Loader  = typename Traits::Loader;
+            using LoadT   = typename Traits::LoadT;
+            using OutputT = typename Traits::OutputT;
+
+            // Arrange wave threads to starting matrix layout offsets.
+            auto baseOffset = MatrixMapper::baseOffset();
+
+            OutputT result;
+            auto    it = result.template begin<LoadT::size()>();
+
+            static_assert(decltype(it)::range() == IOTraits::IOCount,
+                          "IOCount inconsistent with iterator range");
+
+            // Loop through entire block
+#pragma unroll
+            for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
+            {
+                *it = *Loader::exec(localPtr, DataMapper::fromMatrixCoord(baseOffset, ldm));
+                it++;
+                baseOffset += MatrixMapper::incrementalOffset(i);
+            }
+            return result;
+        }
     };
 
-    __device__ static auto exec(DataT const* localPtr, uint32_t ldm) -> typename Traits::OutputT
-    {
-        // Extract traits
-        using MatrixLayout = typename Traits::MatrixLayout;
-        using MappingUtil  = typename Traits::MappingUtil;
-        using Loader       = typename Traits::Loader;
-        using LoadT        = typename Traits::LoadT;
-        using OutputT      = typename Traits::OutputT;
-
-        // Arrange wave threads to starting data offsets due to layout.
-        auto baseOffset = MatrixLayout::baseOffset();
-
-        // Loop over loads to fill BlockDim * BlockK for each wave.
-        OutputT result;
-        auto    it = result.template begin<LoadT::size()>();
-
-        static_assert(decltype(it)::range() == IOTraits::IOCount,
-                      "IOCount inconsistent with iterator range");
-
-#pragma unroll
-        for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
-        {
-            *it = *Loader::exec(localPtr, MappingUtil::dataOffset(ldm, baseOffset));
-            it++;
-            baseOffset += MatrixLayout::incrementalOffset(i);
-        }
-        return result;
-    }
-};
+} // namespace rocwmma
 
 #endif // WMMA_OPAQUE_LOAD_H

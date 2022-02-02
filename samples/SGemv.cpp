@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,22 +28,15 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
+#include <iostream>
+#include <vector>
+
+#include "Common.h"
 #include "WMMA.h"
 
-// Helper macro for HIP errors
-#ifndef CHECK_HIP_ERROR
-#define CHECK_HIP_ERROR(status)                   \
-    if(status != hipSuccess)                      \
-    {                                             \
-        fprintf(stderr,                           \
-                "hip error: '%s'(%d) at %s:%d\n", \
-                hipGetErrorString(status),        \
-                status,                           \
-                __FILE__,                         \
-                __LINE__);                        \
-        exit(EXIT_FAILURE);                       \
-    }
-#endif
+using rocwmma::float16_t;
+using rocwmma::float32_t;
+using rocwmma::float64_t;
 
 // Host gemv validation
 __host__ void gemv_cpu_h(uint32_t         m,
@@ -174,14 +167,14 @@ const int T_BLOCK_Y = 1;
 //
 // Note: This is a simplified implementation to demonstrate API usage in
 // context of wave-level GEMV computation, and is not optimized.
-_ __global__ void gemv_wmma_d(uint32_t         m,
-                              uint32_t         n,
-                              uint32_t         k,
-                              float16_t const* a,
-                              float16_t const* b,
-                              float32_t*       c,
-                              float32_t        alpha,
-                              float32_t        beta)
+__global__ void gemv_wmma_d(uint32_t         m,
+                            uint32_t         n,
+                            uint32_t         k,
+                            float16_t const* a,
+                            float16_t const* b,
+                            float32_t*       c,
+                            float32_t        alpha,
+                            float32_t        beta)
 {
     uint32_t lda = m;
     uint32_t ldb = k;
@@ -191,12 +184,14 @@ _ __global__ void gemv_wmma_d(uint32_t         m,
     int warpM = (blockIdx.x * blockDim.x + threadIdx.x) / WAVE_SIZE;
 
     // Declare the fragments
-    wmma::fragment<matrix_a, WMMA_M, WMMA_N, WMMA_K, float16_t, wmma::row_major> a_frag;
-    wmma::fragment<matrix_b, WMMA_M, WMMA_N, WMMA_K, float16_t, wmma::col_major> b_frag;
-    wmma::fragment<accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t>               acc_frag;
-    wmma::fragment<accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t>               c_frag;
+    rocwmma::fragment<rocwmma::matrix_a, WMMA_M, WMMA_N, WMMA_K, float16_t, rocwmma::row_major>
+        a_frag;
+    rocwmma::fragment<rocwmma::matrix_b, WMMA_M, WMMA_N, WMMA_K, float16_t, rocwmma::col_major>
+                                                                               b_frag;
+    rocwmma::fragment<rocwmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t> acc_frag;
+    rocwmma::fragment<rocwmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t> c_frag;
 
-    wmma::fill_fragment(acc_frag, 0.0f);
+    rocwmma::fill_fragment(acc_frag, 0.0f);
 
     // Loop over k
     for(int i = 0; i < k; i += WMMA_K)
@@ -210,11 +205,11 @@ _ __global__ void gemv_wmma_d(uint32_t         m,
         if(aRow < m)
         {
             // Load the inputs
-            wmma::load_matrix_sync(a_frag, a + aRow + aCol * lda, lda);
-            wmma::load_matrix_sync(b_frag, b + bRow, ldb);
+            rocwmma::load_matrix_sync(a_frag, a + aRow + aCol * lda, lda);
+            rocwmma::load_matrix_sync(b_frag, b + bRow, ldb);
 
             // Perform the matrix vector multiplication
-            wmma::mma_sync(acc_frag, a_frag, b_frag, acc_frag);
+            rocwmma::mma_sync(acc_frag, a_frag, b_frag, acc_frag);
         }
     }
 
@@ -224,7 +219,7 @@ _ __global__ void gemv_wmma_d(uint32_t         m,
 
     if(cRow < m)
     {
-        wmma::load_matrix_sync(c_frag, c + cRow, ldc, wmma::mem_col_major);
+        rocwmma::load_matrix_sync(c_frag, c + cRow, ldc, rocwmma::mem_col_major);
 
         for(int i = 0; i < c_frag.num_elements; i++)
         {
@@ -232,7 +227,7 @@ _ __global__ void gemv_wmma_d(uint32_t         m,
         }
 
         // Store the output
-        wmma::store_matrix_sync(c + cRow, c_frag, ldc, wmma::mem_col_major);
+        rocwmma::store_matrix_sync(c + cRow, c_frag, ldc, rocwmma::mem_col_major);
     }
 }
 
@@ -273,7 +268,8 @@ __host__ void gemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float b
     CHECK_HIP_ERROR(hipMemcpy(d_c, matrixC.data(), bytesC, hipMemcpyHostToDevice));
 
     auto blockDim = dim3(T_BLOCK_X, T_BLOCK_Y);
-    auto gridDim = dim3(ceilDiv(m, WMMA_M * T_BLOCK_X / WAVE_SIZE), ceilDiv(n, WMMA_N * T_BLOCK_Y));
+    auto gridDim  = dim3(rocwmma::ceilDiv(m, WMMA_M * T_BLOCK_X / WAVE_SIZE),
+                         rocwmma::ceilDiv(n, WMMA_N * T_BLOCK_Y));
 
     std::cout << "Launching gemv kernel..." << std::endl;
     hipEvent_t startEvent, stopEvent;
@@ -318,7 +314,7 @@ __host__ void gemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float b
     std::vector<float32_t> matrixC_host(matrixC);
     gemv_cpu_h(m, n, k, matrixA.data(), matrixB.data(), matrixC_host.data(), alpha, beta);
 
-    compareEqual(matrixC_host.data(), matrixC_device.data(), m, 1);
+    compareEqual(matrixC_host.data(), matrixC_device.data(), m, 1u);
 
     // Release device memory
     CHECK_HIP_ERROR(hipFree(d_a));

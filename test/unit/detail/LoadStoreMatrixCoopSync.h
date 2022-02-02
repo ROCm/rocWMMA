@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,53 +30,61 @@
 #include "LoadStoreMatrixSync.h"
 #include "device/LoadStoreMatrixCoopSync.h"
 
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-struct LoadStoreMatrixCoopSyncKernelA final
-    : public LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>
+namespace rocwmma
 {
-private:
-    using Base = LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>;
 
-protected:
-    typename Base::KernelFunc kernelImpl() const final
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    struct LoadStoreMatrixCoopSyncKernelA final
+        : public LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>
     {
-        return typename Base::KernelFunc(LoadStoreMatrixCoopSyncA<BlockM, BlockN, DataT, Layout>);
-    }
-};
+    private:
+        using Base = LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>;
 
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-struct LoadStoreMatrixCoopSyncKernelB final
-    : public LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>
-{
-private:
-    using Base = LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>;
+    protected:
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return
+                typename Base::KernelFunc(LoadStoreMatrixCoopSyncA<BlockM, BlockN, DataT, Layout>);
+        }
+    };
 
-protected:
-    typename Base::KernelFunc kernelImpl() const final
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    struct LoadStoreMatrixCoopSyncKernelB final
+        : public LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>
     {
-        return typename Base::KernelFunc(LoadStoreMatrixCoopSyncB<BlockM, BlockN, DataT, Layout>);
-    }
-};
+    private:
+        using Base = LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>;
 
-template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-struct LoadStoreMatrixCoopSyncKernelAcc final
-    : public LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>
-{
-private:
-    using Base = LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>;
+    protected:
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return
+                typename Base::KernelFunc(LoadStoreMatrixCoopSyncB<BlockM, BlockN, DataT, Layout>);
+        }
+    };
 
-protected:
-    typename Base::KernelFunc kernelImpl() const final
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    struct LoadStoreMatrixCoopSyncKernelAcc final
+        : public LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>
     {
-        return typename Base::KernelFunc(LoadStoreMatrixCoopSyncAcc<BlockM, BlockN, DataT, Layout>);
-    }
-};
+    private:
+        using Base = LoadStoreMatrixSyncKernel<BlockM, BlockN, DataT, Layout>;
 
-using LoadStoreMatrixCoopSyncGeneratorA
-    = LoadStoreMatrixSyncGenerator<LoadStoreMatrixCoopSyncKernelA>;
-using LoadStoreMatrixCoopSyncGeneratorB
-    = LoadStoreMatrixSyncGenerator<LoadStoreMatrixCoopSyncKernelB>;
-using LoadStoreMatrixCoopSyncGeneratorAcc
-    = LoadStoreMatrixSyncGenerator<LoadStoreMatrixCoopSyncKernelAcc>;
+    protected:
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return typename Base::KernelFunc(
+                LoadStoreMatrixCoopSyncAcc<BlockM, BlockN, DataT, Layout>);
+        }
+    };
+
+    using LoadStoreMatrixCoopSyncGeneratorA
+        = LoadStoreMatrixSyncGenerator<LoadStoreMatrixCoopSyncKernelA>;
+    using LoadStoreMatrixCoopSyncGeneratorB
+        = LoadStoreMatrixSyncGenerator<LoadStoreMatrixCoopSyncKernelB>;
+    using LoadStoreMatrixCoopSyncGeneratorAcc
+        = LoadStoreMatrixSyncGenerator<LoadStoreMatrixCoopSyncKernelAcc>;
+
+} // namespace rocwmma
 
 #endif // WMMA_DETAIL_LOAD_STORE_MATRIX_COOP_SYNC_H

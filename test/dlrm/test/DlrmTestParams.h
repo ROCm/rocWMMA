@@ -35,6 +35,9 @@
 #include "KernelGenerator.h"
 #include "Types.h"
 
+namespace rocwmma
+{
+
 struct DlrmTestParams
 {
     // Types of parameters
@@ -61,5 +64,7 @@ struct DlrmTestParams
         return {DlrmDirection_t::Forward, DlrmDirection_t::Backward};
     }
 };
+
+} // namespace rocwmma
 
 #endif // DLRM_TEST_PARAMS_H

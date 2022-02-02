@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,45 +30,50 @@
 #include "detail/StoreContamination.h"
 #include "test/UnitTest.h"
 
-struct TestParams : public UnitTestParams
+namespace rocwmma
 {
-    using Base = UnitTestParams;
 
-    // Types: ALL + double
-    // Block Sizes: 256 x BlockN
-    // Layouts: N, T
-    using Types        = typename Base::TestTypes32x32;
-    using BlockSizes   = typename Base::TestBlockSizes256;
-    using Layouts      = typename Base::TestLayoutsAll;
-    using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
-
-    // Assemble the kernel generator
-    // Kernel: StoreContaminationAcc
-    using GeneratorImpl   = StoreContaminationGeneratorAcc;
-    using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
-
-    // Sanity check for kernel generator
-    static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
-                  "Kernels from this generator do not match testing interface");
-
-    static inline typename KernelGenerator::ResultT kernels()
+    struct TestParams : public UnitTestParams
     {
-        return KernelGenerator::generate();
-    }
+        using Base = UnitTestParams;
 
-    static inline std::vector<Param1T> param1s()
-    {
-        return {4.0, 3.0};
-    }
+        // Types: ALL + double
+        // Block Sizes: 256 x BlockN
+        // Layouts: N, T
+        using Types        = typename Base::TestTypes32x32;
+        using BlockSizes   = typename Base::TestBlockSizes256;
+        using Layouts      = typename Base::TestLayoutsAll;
+        using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
 
-    static inline std::vector<Param2T> param2s()
-    {
-        return {8.0, 1.0};
-    }
-};
+        // Assemble the kernel generator
+        // Kernel: StoreContaminationAcc
+        using GeneratorImpl   = StoreContaminationGeneratorAcc;
+        using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
+
+        // Sanity check for kernel generator
+        static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
+                      "Kernels from this generator do not match testing interface");
+
+        static inline typename KernelGenerator::ResultT kernels()
+        {
+            return KernelGenerator::generate();
+        }
+
+        static inline std::vector<Param1T> param1s()
+        {
+            return {4.0, 3.0};
+        }
+
+        static inline std::vector<Param2T> param2s()
+        {
+            return {8.0, 1.0};
+        }
+    };
+
+} // namespace rocwmma
 
 // Test suite for unique parameterization
-class StoreContaminationAccTest256 : public UnitTest
+class StoreContaminationAccTest256 : public rocwmma::UnitTest
 {
 };
 
@@ -77,10 +82,11 @@ TEST_P(StoreContaminationAccTest256, RunKernel)
     this->RunKernel();
 }
 
-INSTANTIATE_TEST_SUITE_P(KernelTests,
-                         StoreContaminationAccTest256,
-                         ::testing::Combine(::testing::ValuesIn(TestParams::kernels()),
-                                            ::testing::ValuesIn(TestParams::threadBlocks()),
-                                            ::testing::ValuesIn(TestParams::problemSizes()),
-                                            ::testing::ValuesIn(TestParams::param1s()),
-                                            ::testing::ValuesIn(TestParams::param2s())));
+INSTANTIATE_TEST_SUITE_P(
+    KernelTests,
+    StoreContaminationAccTest256,
+    ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
+                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
+                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
+                       ::testing::ValuesIn(rocwmma::TestParams::param1s()),
+                       ::testing::ValuesIn(rocwmma::TestParams::param2s())));

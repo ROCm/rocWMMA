@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -45,70 +45,75 @@
 //
 // Currently uses HIP as the backend for device allocation.
 
-template <typename InputT, typename OutputT>
-struct GemmResource : public HipResource, public LazySingleton<GemmResource<InputT, OutputT>>
+namespace rocwmma
 {
-    // For static initialization
-    friend std::unique_ptr<GemmResource<InputT, OutputT>>
-        std::make_unique<GemmResource<InputT, OutputT>>();
 
-    using Base = HipResource;
-
-    template <typename DataT>
-    using DevicePtrT = Base::DevicePtrT<DataT>;
-
-    template <typename DataT>
-    using HostPtrT = Base::HostPtrT<DataT>;
-
-    // M, N, K
-    using ProblemSize = std::tuple<int64_t, int64_t, int64_t>;
-
-    // MatrixA, MatrixB, MatrixCD (# of elements)
-    using MatrixSize = std::tuple<int64_t, int64_t, int64_t>;
-
-    enum : uint32_t
+    template <typename InputT, typename OutputT>
+    struct GemmResource : public HipResource, public LazySingleton<GemmResource<InputT, OutputT>>
     {
-        // Matrix size indices
-        MatrixA = 0,
-        MatrixB = 1,
-        MatrixC = 2,
-        MatrixD = 2,
+        // For static initialization
+        friend std::unique_ptr<GemmResource<InputT, OutputT>>
+            std::make_unique<GemmResource<InputT, OutputT>>();
 
-        // Problem size indices
-        M = 0,
-        N = 1,
-        K = 2
+        using Base = HipResource;
+
+        template <typename DataT>
+        using DevicePtrT = Base::DevicePtrT<DataT>;
+
+        template <typename DataT>
+        using HostPtrT = Base::HostPtrT<DataT>;
+
+        // M, N, K
+        using ProblemSize = std::tuple<int64_t, int64_t, int64_t>;
+
+        // MatrixA, MatrixB, MatrixCD (# of elements)
+        using MatrixSize = std::tuple<int64_t, int64_t, int64_t>;
+
+        enum : uint32_t
+        {
+            // Matrix size indices
+            MatrixA = 0,
+            MatrixB = 1,
+            MatrixC = 2,
+            MatrixD = 2,
+
+            // Problem size indices
+            M = 0,
+            N = 1,
+            K = 2
+        };
+
+    protected:
+        // Singleton instantiation
+        GemmResource();
+        GemmResource(GemmResource const&) = delete;
+        GemmResource& operator=(GemmResource const&) = delete;
+
+    public:
+        ~GemmResource() = default;
+        void copyHostToDeviceAll();
+        void resizeStorage(ProblemSize const& size);
+
+        HostPtrT<InputT>&  hostA();
+        HostPtrT<InputT>&  hostB();
+        HostPtrT<OutputT>& hostC();
+        HostPtrT<OutputT>& hostD();
+
+        DevicePtrT<InputT>&  deviceA();
+        DevicePtrT<InputT>&  deviceB();
+        DevicePtrT<OutputT>& deviceC();
+        DevicePtrT<OutputT>& deviceD();
+
+    protected:
+        DevicePtrT<InputT>  mDeviceA, mDeviceB;
+        DevicePtrT<OutputT> mDeviceC, mDeviceD;
+        HostPtrT<InputT>    mHostA, mHostB;
+        HostPtrT<OutputT>   mHostC, mHostD;
+        ProblemSize         mCurrentProblemSize;
+        MatrixSize          mCurrentMatrixSize;
     };
 
-protected:
-    // Singleton instantiation
-    GemmResource();
-    GemmResource(GemmResource const&) = delete;
-    GemmResource& operator=(GemmResource const&) = delete;
-
-public:
-    ~GemmResource() = default;
-    void copyHostToDeviceAll();
-    void resizeStorage(ProblemSize const& size);
-
-    HostPtrT<InputT>&  hostA();
-    HostPtrT<InputT>&  hostB();
-    HostPtrT<OutputT>& hostC();
-    HostPtrT<OutputT>& hostD();
-
-    DevicePtrT<InputT>&  deviceA();
-    DevicePtrT<InputT>&  deviceB();
-    DevicePtrT<OutputT>& deviceC();
-    DevicePtrT<OutputT>& deviceD();
-
-protected:
-    DevicePtrT<InputT>  mDeviceA, mDeviceB;
-    DevicePtrT<OutputT> mDeviceC, mDeviceD;
-    HostPtrT<InputT>    mHostA, mHostB;
-    HostPtrT<OutputT>   mHostC, mHostD;
-    ProblemSize         mCurrentProblemSize;
-    MatrixSize          mCurrentMatrixSize;
-};
+} // namespace rocwmma
 
 #include "GemmResource_impl.h"
 

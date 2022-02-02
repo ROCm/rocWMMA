@@ -54,6 +54,9 @@
 #include <unistd.h>
 #include <vector>
 
+namespace rocwmma
+{
+
 struct validate_data_t
 {
     bool  pass;
@@ -179,5 +182,7 @@ validate_data_t compareEqual(DataT const* matrixA,
 
     return return_data;
 }
+
+} // namespace rocwmma
 
 #endif // DLRM_TEST_COMMON_H

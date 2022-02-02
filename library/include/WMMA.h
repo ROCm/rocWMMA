@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021 Advanced Micro Devices, Inc.
+ * Copyright 2021-2022 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -165,23 +165,8 @@
  * with Fragment B rows and added to the accumulator fragment.
  */
 
-namespace wmma
+namespace rocwmma
 {
-    // MatrixT tags
-    using matrix_a    = ::matrix_a;
-    using matrix_b    = ::matrix_b;
-    using accumulator = ::accumulator;
-
-    // DataLayout tags
-    using row_major = ::row_major;
-    using col_major = ::col_major;
-
-    enum layout_t : uint32_t
-    {
-        mem_row_major,
-        mem_col_major
-    };
-
     // Configuration profile used in wmma calls
     template <typename MatrixT,
               uint32_t BlockM,
@@ -189,7 +174,7 @@ namespace wmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    using io_config = ::IOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
+    using io_config = rocwmma::IOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
 
     /**
  * \ingroup wmma
@@ -231,8 +216,8 @@ namespace wmma
         struct Traits
         {
         private:
-            using PackedT   = typename PackTraits<DataT>::PackedT;
-            using UnpackedT = typename PackTraits<DataT>::UnpackedT;
+            using PackedT   = typename detail::PackTraits<DataT>::PackedT;
+            using UnpackedT = typename detail::PackTraits<DataT>::UnpackedT;
             using IOTraits =
                 typename io_config<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>::IOTraits;
 
@@ -277,7 +262,7 @@ namespace wmma
     };
 
     /**
- * \ingroup WMMA APIs
+ * \ingroup rocwmma APIs
  * @{
  */
     /**
@@ -455,7 +440,7 @@ namespace wmma
  */
     __device__ void synchronize_workgroup();
 
-} // namespace wmma
+} // namespace rocwmma
 
 #include "WMMA_impl.h"
 
