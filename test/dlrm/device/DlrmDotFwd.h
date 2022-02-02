@@ -132,6 +132,7 @@ namespace rocwmma
                 }
             }
         }
+    }
 
 } // namespace rocwmma
 
