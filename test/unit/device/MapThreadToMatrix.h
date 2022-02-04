@@ -47,20 +47,28 @@ namespace rocwmma
         enum : uint32_t
         {
             MajorIndex = std::is_same<Layout, row_major>::value ? 0 : 1,
-            MinorIndex = std::is_same<Layout, row_major>::value ? 1 : 0
+            MinorIndex = std::is_same<Layout, row_major>::value ? 1 : 0,
+            ldmajor    = std::is_same<Layout, row_major>::value ? BlockM : BlockN,
+            ldminor    = std::is_same<Layout, row_major>::value ? BlockN : BlockM
         };
 
-        uint32_t minor = std::is_same<Layout, row_major>::value
-                             ? (threadIdx.y + blockDim.y * blockIdx.y)
-                             : ((threadIdx.x + blockDim.x * blockIdx.x) / AMDGCN_WAVE_SIZE);
-        uint32_t major = std::is_same<Layout, row_major>::value
+        auto majCoord = (std::is_same<Layout, row_major>::value
                              ? ((threadIdx.x + blockDim.x * blockIdx.x) / AMDGCN_WAVE_SIZE)
-                             : (threadIdx.y + blockDim.y * blockIdx.y);
+                             : (threadIdx.y + blockDim.y * blockIdx.y))
+                        * ldmajor;
+        auto minCoord = (std::is_same<Layout, row_major>::value
+                             ? (threadIdx.y + blockDim.y * blockIdx.y)
+                             : ((threadIdx.x + blockDim.x * blockIdx.x) / AMDGCN_WAVE_SIZE))
+                        * ldminor;
 
-        for(int i = 0; i < BlockM; i++)
-            for(int j = 0; j < BlockN; j++)
-                out[(minor * BlockM + j) + (major * BlockN + i) * ld]
-                    = in[(minor * BlockM + j) + (major * BlockN + i) * ld];
+        for(int i = 0; i < ldminor; ++i)
+        {
+            for(int j = 0; j < ldmajor; ++j)
+            {
+                out[(majCoord + j) * ld + (minCoord + i)]
+                    = in[(((majCoord + j) * ld) + (minCoord + i))];
+            }
+        }
     }
 
 } // namespace rocwmma

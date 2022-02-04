@@ -31,8 +31,6 @@
 #include "Layout.h"
 #include "MappingUtil.h"
 
-#define ERROR_VALUE 12
-
 namespace rocwmma
 {
 
@@ -50,13 +48,6 @@ namespace rocwmma
             MaxVectorWidth = detail::VecWidthTraits<BlockM, BlockN, DataT>::MaxVectorWidth,
             VectorWidth    = std::is_same<LayoutP, row_major>::value ? MaxVectorWidth : 1
         };
-
-        if((std::is_same<LayoutP, col_major>::value && ElementsPerThread > 1)
-           || (BlockM > AMDGCN_WAVE_SIZE))
-        {
-            out[0] = static_cast<DataT>(ERROR_VALUE);
-            return;
-        }
 
         using IOTraits = IOTraits<BlockM, BlockN, DataT, VectorWidth>;
         using LayoutT

@@ -31,8 +31,6 @@
 #include "Layout.h"
 #include "MappingUtil.h"
 
-#define ERROR_VALUE 12
-
 namespace rocwmma
 {
 
@@ -47,22 +45,17 @@ namespace rocwmma
     {
         enum : uint32_t
         {
-            MaxVectorWidth = detail::VecWidthTraits<BlockM, BlockN, DataT>::MaxVectorWidth,
+            BlockDim = BlockN,
+            KDim     = BlockM,
+
+            MaxVectorWidth = detail::VecWidthTraits<KDim, BlockDim, DataT>::MaxVectorWidth,
             VectorWidth    = std::is_same<LayoutP, row_major>::value ? MaxVectorWidth : 1
         };
 
-        if((std::is_same<LayoutP, row_major>::value && VectorWidth > 1)
-           || (BlockM > AMDGCN_WAVE_SIZE) || (BlockN < MaxVectorWidth)
-           || (BlockN % MaxVectorWidth != 0))
-        {
-            out[0] = static_cast<DataT>(ERROR_VALUE);
-            return;
-        }
-
-        using IOTraits = IOTraits<BlockM, BlockN, DataT, VectorWidth>;
+        using IOTraits = IOTraits<BlockDim, KDim, DataT, VectorWidth>;
         using LayoutT
-            = MatrixLayout::RowNT<BlockM, BlockN, DataT, LayoutP, VectorWidth, MaxVectorWidth>;
-        using Mapping = MappingUtil<BlockM, BlockN, DataT, LayoutP>;
+            = MatrixLayout::RowNT<BlockDim, KDim, DataT, LayoutP, VectorWidth, MaxVectorWidth>;
+        using Mapping = MappingUtil<KDim, BlockDim, DataT, LayoutP>;
 
         auto baseOffset  = LayoutT::baseOffset();
         auto iocount     = IOTraits::IOCount;
@@ -76,11 +69,12 @@ namespace rocwmma
 
         for(uint32_t i = 0; i < iocount; ++i)
         {
-            for(int j = 0; j < VectorWidth; j++)
+            for(uint32_t j = 0; j < VectorWidth; j++)
             {
                 auto index
-                    = (std::get<MajorIndex>(matrixCoord) * ld + std::get<MinorIndex>(matrixCoord))
-                      + Mapping::dataOffset(baseOffset, ld) + j;
+                    = (std::get<MajorIndex>(matrixCoord) + std::get<MajorIndex>(baseOffset) + j)
+                          * ld
+                      + (std::get<MinorIndex>(matrixCoord) + std::get<MinorIndex>(baseOffset));
                 out[index] = in[index];
             }
             baseOffset += LayoutT::incrementalOffset(i);

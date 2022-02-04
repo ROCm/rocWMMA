@@ -45,13 +45,16 @@ namespace rocwmma
     {
         enum : uint32_t
         {
-            MaxVectorWidth = detail::VecWidthTraits<BlockM, BlockN, DataT>::MaxVectorWidth,
+            BlockDim = BlockN,
+            KDim     = BlockM,
+
+            MaxVectorWidth = detail::VecWidthTraits<KDim, BlockDim, DataT>::MaxVectorWidth,
             VectorWidth    = std::is_same<LayoutP, row_major>::value ? MaxVectorWidth : 1
         };
 
-        using IOTraits = IOTraits<BlockM, BlockN, DataT, VectorWidth>;
-        using LayoutT  = MatrixLayout::Row<BlockM, BlockN, DataT, LayoutP, VectorWidth>;
-        using Mapping  = MappingUtil<BlockM, BlockN, DataT, LayoutP>;
+        using IOTraits = IOTraits<BlockDim, KDim, DataT, VectorWidth>;
+        using LayoutT  = MatrixLayout::Row<BlockDim, KDim, DataT, LayoutP, VectorWidth>;
+        using Mapping  = MappingUtil<KDim, BlockDim, DataT, LayoutP>;
 
         auto baseOffset  = LayoutT::baseOffset();
         auto iocount     = IOTraits::IOCount;
@@ -65,7 +68,7 @@ namespace rocwmma
 
         for(uint32_t i = 0; i < iocount; ++i)
         {
-            for(int j = 0; j < VectorWidth; j++)
+            for(uint32_t j = 0; j < VectorWidth; j++)
             {
                 auto index
                     = (std::get<MajorIndex>(matrixCoord) * ld + std::get<MinorIndex>(matrixCoord))

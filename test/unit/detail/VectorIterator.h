@@ -46,7 +46,10 @@ namespace rocwmma
 
         void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final {}
 
-        void validateResultsImpl() final {}
+        void validateResultsImpl() final
+        {
+            Base::mValidationResult = true;
+        }
 
         typename Base::KernelFunc kernelImpl() const final
         {
