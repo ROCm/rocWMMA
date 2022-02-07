@@ -31,6 +31,7 @@ cmake_dependent_option( WMMA_BENCHMARK_WITH_ROCBLAS "Include rocBLAS benchmark p
 
 if(WMMA_VALIDATE_WITH_ROCBLAS OR WMMA_BENCHMARK_WITH_ROCBLAS)
   find_package( rocblas REQUIRED PATHS /opt/rocm /opt/rocm/rocblas $ENV{ROCBLAS_DIR} )
+  rocm_package_add_dependencies("rocblas >= 2.32.0" COMPONENT tests)
 endif()
 
 set(WMMA_TEST_GEMM_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
