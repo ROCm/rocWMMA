@@ -77,6 +77,11 @@ function(add_wmma_test TEST_TARGET TEST_SOURCE)
     endforeach()
   endif()
 
+  rocm_install_targets(
+    TARGETS ${TEST_TARGET}
+    COMPONENT tests
+  )
+
 endfunction()
 
 # Targets that implement specifically validation configuration
