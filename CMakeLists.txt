@@ -97,12 +97,24 @@ if(WMMA_BUILD_DOCS)
 endif()
 
 if(WMMA_BUILD_SAMPLES)
+  rocm_package_setup_client_component(
+    samples
+  )
   add_subdirectory(samples)
 endif()
 
 
 if(WMMA_BUILD_TESTS)
+  rocm_package_setup_client_component(
+    tests
+    DEPENDS
+      COMMON "rocblas >= 2.32.0"
+  )
   add_subdirectory(test)
+endif()
+
+if(WMMA_BUILD_SAMPLES OR WMMA_BUILD_TESTS)
+  rocm_package_setup_component(clients)
 endif()
 
 # Package
