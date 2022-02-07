@@ -48,7 +48,13 @@ if( CMAKE_PROJECT_NAME STREQUAL "WMMA" )
 endif()
 
 # set( AMDGPU_TARGETS "gfx908:xnack-" ) # User variable
-set( CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Install path prefix, prepended onto install directories" )
+if( CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT )
+  set( CMAKE_INSTALL_PREFIX "/opt/rocm" CACHE PATH "Install path prefix, prepended onto install directories" FORCE )
+endif()
+if( NOT CPACK_PACKAGING_INSTALL_PREFIX )
+  set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}" CACHE PATH "Install path prefix for packages.")
+  set(CPACK_SET_DESTDIR OFF)
+endif()
 
 # This helps cmake properly find hip-config.cmake
 list( APPEND CMAKE_PREFIX_PATH $ENV{ROCM_PATH} ${ROCM_PATH} /opt/rocm )
