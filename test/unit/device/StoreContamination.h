@@ -27,8 +27,8 @@
 #ifndef WMMA_DEVICE_STORE_CONTAMINATION_H
 #define WMMA_DEVICE_STORE_CONTAMINATION_H
 
-#include "MappingUtil.h"
-#include "WMMA.h"
+#include <WMMA/internal/MappingUtil.h>
+#include <WMMA/WMMA.h>
 
 namespace rocwmma
 {

@@ -28,10 +28,10 @@
 
 #include <type_traits>
 
-#include "IOConfig.h"
-#include "IOTraits.h"
+#include "internal/IOConfig.h"
+#include "internal/IOTraits.h"
 
-#include "Types.h"
+#include "internal/Types.h"
 
 /**
  * \mainpage

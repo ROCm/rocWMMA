@@ -33,7 +33,7 @@
 #include "Common.h"
 #include "GemmKernelBase.h"
 #include "KernelGenerator.h"
-#include "Types.h"
+#include <WMMA/internal/Types.h>
 
 namespace rocwmma
 {

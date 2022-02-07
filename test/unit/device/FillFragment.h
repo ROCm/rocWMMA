@@ -27,8 +27,8 @@
 #ifndef WMMA_DEVICE_FILL_FRAGMENT_H
 #define WMMA_DEVICE_FILL_FRAGMENT_H
 
-#include "MappingUtil.h"
-#include "WMMA.h"
+#include <WMMA/internal/MappingUtil.h>
+#include <WMMA/WMMA.h>
 
 namespace rocwmma
 {
