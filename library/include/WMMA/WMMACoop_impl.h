@@ -28,10 +28,10 @@
 
 #include <type_traits>
 
-#include "CoopLoad.h"
-#include "CoopStore.h"
-#include "IOConfig.h"
-#include "IOPack.h"
+#include "internal/CoopLoad.h"
+#include "internal/CoopStore.h"
+#include "internal/IOConfig.h"
+#include "internal/IOPack.h"
 #include "WMMA.h"
 
 namespace rocwmma

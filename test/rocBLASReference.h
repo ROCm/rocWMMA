@@ -40,10 +40,10 @@
         exit(EXIT_FAILURE);                           \
     }
 
-#include "rocblas.h"
+#include <rocblas.h>
 
 #include "Common.h"
-#include "Types.h"
+#include <WMMA/internal/Types.h>
 
 namespace rocwmma
 {

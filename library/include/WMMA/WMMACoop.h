@@ -28,9 +28,9 @@
 
 #include <type_traits>
 
-#include "IOTraits.h"
-#include "IOUnpack.h"
-#include "Types.h"
+#include "internal/IOTraits.h"
+#include "internal/IOUnpack.h"
+#include "internal/Types.h"
 #include "WMMA.h"
 
 /**

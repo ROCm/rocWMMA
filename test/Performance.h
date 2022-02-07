@@ -26,7 +26,7 @@
 #ifndef WMMA_PERFORMANCE_H
 #define WMMA_PERFORMANCE_H
 
-#include "Types.h"
+#include <WMMA/internal/Types.h>
 
 namespace rocwmma
 {
