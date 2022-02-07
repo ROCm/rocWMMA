@@ -55,6 +55,7 @@ if( NOT CPACK_PACKAGING_INSTALL_PREFIX )
   set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}" CACHE PATH "Install path prefix for packages.")
   set(CPACK_SET_DESTDIR OFF)
 endif()
+set(BUILD_SHARED_LIBS ON)
 
 # This helps cmake properly find hip-config.cmake
 list( APPEND CMAKE_PREFIX_PATH $ENV{ROCM_PATH} ${ROCM_PATH} /opt/rocm )
@@ -103,19 +104,13 @@ if(WMMA_BUILD_DOCS)
 endif()
 
 if(WMMA_BUILD_SAMPLES)
-  rocm_package_setup_client_component(
-    samples
-  )
+  rocm_package_setup_client_component(samples)
   add_subdirectory(samples)
 endif()
 
 
 if(WMMA_BUILD_TESTS)
-  rocm_package_setup_client_component(
-    tests
-    DEPENDS
-      COMMON "rocblas >= 2.32.0"
-  )
+  rocm_package_setup_client_component(tests)
   add_subdirectory(test)
 endif()
 
@@ -124,7 +119,9 @@ if(WMMA_BUILD_SAMPLES OR WMMA_BUILD_TESTS)
 endif()
 
 # Package
-rocm_package_add_dependencies("hip-rocclr >= 3.5.0")
+rocm_package_add_dependencies("hip-rocclr >= 4.3.0")
+rocm_package_add_deb_dependencies("libomp-dev")
+rocm_package_add_rpm_dependencies("libomp-devel")
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 
 rocm_create_package(
