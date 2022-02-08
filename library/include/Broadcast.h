@@ -23,28 +23,39 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_IO_BARRIER_H
-#define WMMA_IO_BARRIER_H
+#ifndef WMMA_BROADCAST_H
+#define WMMA_BROADCAST_H
+
+#include "Types.h"
 
 namespace rocwmma
 {
 
-    namespace detail
+    // Broadcast generates vectors of desired values
+    template <typename DataT, uint32_t VectorSize>
+    struct Broadcast
     {
-
-        // Perform synchronization across fragments(wavefronts) in a workgroup
-        struct amdgcn_barrier
+        struct Traits
         {
-            __device__ static inline auto exec()
-            {
-                return __builtin_amdgcn_s_barrier();
-            }
+            using OutputT = VecT<DataT, VectorSize>;
         };
 
-    } // namespace detail
+        __device__ static inline auto exec(DataT val) -> typename Traits::OutputT
+        {
+            using OutputT = typename Traits::OutputT;
 
-    using Barrier = detail::amdgcn_barrier;
+            OutputT output;
+
+#pragma unroll
+            for(unsigned int i = 0; i < OutputT::size(); i++)
+            {
+                output[i] = val;
+            }
+
+            return output;
+        }
+    };
 
 } // namespace rocwmma
 
-#endif // WMMA_IO_BARRIER_H
+#endif // WMMA_BROADCAST_H
