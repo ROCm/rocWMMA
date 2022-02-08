@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_IO_UNPACK_H
-#define WMMA_IO_UNPACK_H
+#ifndef WMMA_UNPACK_H
+#define WMMA_UNPACK_H
 
 #include "IOTraits.h"
 #include "Types.h"
@@ -78,4 +78,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_IO_UNPACK_H
+#endif // WMMA_UNPACK_H
