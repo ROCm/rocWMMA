@@ -30,8 +30,6 @@
 
 #include "CoopLoad.h"
 #include "CoopStore.h"
-#include "IOConfig.h"
-#include "IOPack.h"
 #include "WMMA.h"
 
 namespace rocwmma
