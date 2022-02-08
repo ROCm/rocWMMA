@@ -37,13 +37,13 @@ namespace rocwmma
     {
         using Base = CommonTestParams;
 
-        // Types: ALL - double
-        // Block Sizes: 32 x 32 x BlockK
+        // Types: ALL + double
+        // Block Sizes: 16 x 16 x BlockK
         // Layouts: NN
-        using Types        = typename Base::TestTypes32x32;
-        using BlockSizes   = typename Base::TestBlockSizes32x32;
+        using Types        = typename Base::TestTypes16x16;
+        using BlockSizes   = typename Base::TestBlockSizes16x16;
         using Layouts      = typename Base::TestLayoutsNN;
-        using BlocksXY     = std::tuple<std::tuple<I<2>, I<2>>>;
+        using BlocksXY     = std::tuple<std::tuple<I<8>, I<8>>>;
         using KernelParams = typename CombineLists<Types, BlockSizes, Layouts, BlocksXY>::Result;
 
         // Assemble the kernel generator
@@ -64,18 +64,18 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class MmaSyncMultiTest32x32NN : public rocwmma::GemmTest
+class MmaSyncMultiTest16x16NN8x8 : public rocwmma::GemmTest
 {
 };
 
-TEST_P(MmaSyncMultiTest32x32NN, RunKernel)
+TEST_P(MmaSyncMultiTest16x16NN8x8, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(
     GemmKernelTests,
-    MmaSyncMultiTest32x32NN,
+    MmaSyncMultiTest16x16NN8x8,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
                        ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
