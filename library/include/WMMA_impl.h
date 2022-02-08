@@ -29,16 +29,22 @@
 #include <type_traits>
 #include <utility>
 
+#include "WMMA.h"
+
+#include "Barrier.h"
+#include "Broadcast.h"
+#include "Constants.h"
 #include "Convert.h"
-#include "IOBarrier.h"
-#include "IOBroadcast.h"
+#include "IOConfig.h"
+#include "IOTraits.h"
+#include "Layout.h"
 #include "MFMA.h"
 #include "MappingUtil.h"
 #include "OpaqueLoad.h"
 #include "OpaqueStore.h"
-#include "WMMA.h"
-
+#include "Pack.h"
 #include "Types.h"
+#include "Unpack.h"
 
 namespace rocwmma
 {
