@@ -101,7 +101,7 @@ namespace rocwmma
             Base::mValidationResult = (result == 0);
         }
 
-        typename Base::KernelFunc kernelImpl() const = 0;
+        virtual typename Base::KernelFunc kernelImpl() const = 0;
     };
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>

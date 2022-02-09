@@ -35,14 +35,14 @@ namespace rocwmma
 
     // Wrapper into the actual device function
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-    struct FillFragmentKernel final : public UnitKernelBase<BlockM, BlockN, DataT, Layout>
+    struct FillFragmentKernel : public UnitKernelBase<BlockM, BlockN, DataT, Layout>
     {
     private:
         using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
     public:
-        FillFragmentKernel()        = default;
-        ~FillFragmentKernel() final = default;
+        FillFragmentKernel()          = default;
+        virtual ~FillFragmentKernel() = default;
 
         void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
         {
@@ -84,13 +84,49 @@ namespace rocwmma
                                                              errorTolerance);
         }
 
+        virtual typename Base::KernelFunc kernelImpl() const = 0;
+    };
+
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    struct FillFragmentKernelA final : public FillFragmentKernel<BlockM, BlockN, DataT, Layout>
+    {
+    private:
+        using Base = FillFragmentKernel<BlockM, BlockN, DataT, Layout>;
+
+    protected:
         typename Base::KernelFunc kernelImpl() const final
         {
-            return typename Base::KernelFunc(FillFragment<BlockM, BlockN, DataT, Layout>);
+            return typename Base::KernelFunc(fillFragmentA<BlockM, BlockN, DataT, Layout>);
         }
     };
 
-    // This is the GeneratorImpl class
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    struct FillFragmentKernelB final : public FillFragmentKernel<BlockM, BlockN, DataT, Layout>
+    {
+    private:
+        using Base = FillFragmentKernel<BlockM, BlockN, DataT, Layout>;
+
+    protected:
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return typename Base::KernelFunc(fillFragmentB<BlockM, BlockN, DataT, Layout>);
+        }
+    };
+
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    struct FillFragmentKernelAcc final : public FillFragmentKernel<BlockM, BlockN, DataT, Layout>
+    {
+    private:
+        using Base = FillFragmentKernel<BlockM, BlockN, DataT, Layout>;
+
+    protected:
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return typename Base::KernelFunc(fillFragmentAcc<BlockM, BlockN, DataT, Layout>);
+        }
+    };
+
+    template <template <uint32_t, uint32_t, typename, typename> class KernelClass>
     struct FillFragmentGenerator
     {
         // Indices to test parameters
@@ -109,16 +145,19 @@ namespace rocwmma
         {
             // Map GTest params to Kernel params
             using TestParamsT = std::tuple<Ts...>;
-            using KernelT
-                = FillFragmentKernel<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
-                                     std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
-                                     std::tuple_element_t<DataT, TestParamsT>, // DataT
-                                     std::tuple_element_t<Layout, TestParamsT> // Layout
-                                     >;
+            using KernelT = KernelClass<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
+                                        std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
+                                        std::tuple_element_t<DataT, TestParamsT>, // DataT
+                                        std::tuple_element_t<Layout, TestParamsT> // Layout
+                                        >;
 
             return std::make_shared<KernelT>();
         }
     };
+
+    using FillFragmentGeneratorA   = FillFragmentGenerator<FillFragmentKernelA>;
+    using FillFragmentGeneratorB   = FillFragmentGenerator<FillFragmentKernelB>;
+    using FillFragmentGeneratorAcc = FillFragmentGenerator<FillFragmentKernelAcc>;
 
 } // namespace rocwmma
 

@@ -38,16 +38,16 @@ namespace rocwmma
         using Base = UnitTestParams;
 
         // Types: ALL + double
-        // Block Sizes: 32 x 32 x BlockK
-        // Layouts: N
-        using Types        = typename Base::TestTypes32x32;
-        using BlockSizes   = typename Base::TestBlockSizes32x32;
-        using Layouts      = typename Base::TestLayoutsN;
+        // Block Sizes: 16 x BlockK
+        // Layouts: N, T
+        using Types        = typename Base::TestTypes16x16;
+        using BlockSizes   = typename Base::TestBlockSizes16x16;
+        using Layouts      = typename Base::TestLayoutsAll;
         using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
 
         // Assemble the kernel generator
-        // Kernel: FillFragment
-        using GeneratorImpl   = FillFragmentGenerator;
+        // Kernel: fillFragmentA
+        using GeneratorImpl   = FillFragmentGeneratorA;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -63,18 +63,18 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class FillFragmentTest32x32N : public rocwmma::UnitTest
+class FillFragmentATest16 : public rocwmma::UnitTest
 {
 };
 
-TEST_P(FillFragmentTest32x32N, RunKernel)
+TEST_P(FillFragmentATest16, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(
     KernelTests,
-    FillFragmentTest32x32N,
+    FillFragmentATest16,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
                        ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),

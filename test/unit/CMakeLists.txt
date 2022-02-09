@@ -150,10 +150,21 @@ set(LoadStoreMatrixCoopSyncTestSources ${UnitCommonSources}
                  )
 
 set(FillFragmentTestSources ${UnitCommonSources}
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragment_16x16_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragment_16x16_T.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragment_32x32_N.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragment_32x32_T.cpp)
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragmentA_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragmentA_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragmentA_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragmentA_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragmentA_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragmentB_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragmentB_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragmentB_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragmentB_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragmentB_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragmentAcc_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragmentAcc_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragmentAcc_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragmentAcc_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/FillFragmentTest/FillFragmentAcc_256.cpp)
 
 set(VectorIteratorTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/VectorIteratorTest/VectorIterator.cpp)

@@ -79,7 +79,6 @@ namespace rocwmma
         }
     }
 
-} // namespace rocwmma
 
 template <typename DataT>
 void dlrm_fwd_CPU(DataT const* input, DataT* output, uint32_t m, uint32_t k, uint32_t batchSize)
@@ -118,6 +117,7 @@ void dlrm_fwd_CPU(DataT const* input, DataT* output, uint32_t m, uint32_t k, uin
         }
     }
 }
+
 
 template <typename DataT>
 void dlrm_bwd_CPU(DataT const* input,
@@ -178,4 +178,7 @@ void dlrm_bwd_CPU(DataT const* input,
     }
     delete[] acc;
 }
+
+} // namespace rocwmma
+
 #endif // WMMA_REFERENCE_H
