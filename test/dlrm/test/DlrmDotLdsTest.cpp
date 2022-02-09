@@ -29,29 +29,38 @@
 #include "DlrmTestParams.h"
 #include "KernelGenerator.h"
 
-struct TestParams : public DlrmTestParams
+namespace rocwmma
 {
-    // Types: 32 and 16 bit float
-    // Block Sizes: 16 x 16 x 16
-    using Base         = DlrmTestParams;
-    using Types        = typename Base::DataTypes;
-    using TileSizes    = typename Base::TileSizes;
-    using KernelParams = typename CombineLists<Types, TileSizes>::Result;
 
-    using GeneratorImpl   = DlrmDotGenerator;
-    using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
-
-    // Sanity check for kernel generator
-    static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
-                  "Kernels from this generator do not match testing interface");
-
-    static inline typename KernelGenerator::ResultT kernels()
+    struct TestParams : public DlrmTestParams
     {
-        return KernelGenerator::generate();
-    }
-};
+        // Types: 32 and 16 bit float
+        // Block Sizes: 16 x 16 x 16
+        using Base      = DlrmTestParams;
+        using Types     = typename Base::DataTypes;
+        using TileSizes = typename Base::TileSizes;
 
-class DlrmDotTestBasic : public DlrmDotTest
+        // Lds parameters
+        using MappingLds = typename Base::TestMappingLds;
+
+        using KernelParams = typename CombineLists<Types, TileSizes, MappingLds>::Result;
+
+        using GeneratorImpl   = DlrmDotGenerator;
+        using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
+
+        // Sanity check for kernel generator
+        static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
+                      "Kernels from this generator do not match testing interface");
+
+        static inline typename KernelGenerator::ResultT kernels()
+        {
+            return KernelGenerator::generate();
+        }
+    };
+
+} // namespace rocwmma
+
+class DlrmDotTestBasic : public rocwmma::DlrmDotTest
 {
 };
 
@@ -66,9 +75,10 @@ TEST_P(DlrmDotTestBasic, RunKernel)
     this->RunKernel();
 }
 
-INSTANTIATE_TEST_SUITE_P(DlrmKernelTests,
-                         DlrmDotTestBasic,
-                         ::testing::Combine(::testing::ValuesIn(TestParams::kernels()),
-                                            ::testing::ValuesIn(TestParams::threadBlocks()),
-                                            ::testing::ValuesIn(TestParams::problemSizes()),
-                                            ::testing::ValuesIn(TestParams::passDirections())));
+INSTANTIATE_TEST_SUITE_P(
+    DlrmKernelTests,
+    DlrmDotTestBasic,
+    ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
+                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
+                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
+                       ::testing::ValuesIn(rocwmma::TestParams::passDirections())));

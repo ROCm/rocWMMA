@@ -66,12 +66,17 @@
  set(DlrmDotTestSources ${DlrmCommonSources}
                         ${CMAKE_CURRENT_SOURCE_DIR}/test/dlrm_dot_test.cpp)
 
+  set(DlrmDotLdsTestSources ${DlrmCommonSources}
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/DlrmDotLdsTest.cpp)
+
  # Benchmark DLRM tests
  if (WMMA_BUILD_BENCHMARK_TESTS)
      add_dlrm_benchmark_test(dlrm_dot_test-bench ${DlrmDotTestSources})
+     add_dlrm_benchmark_test(dlrm_dot_lds_test-bench ${DlrmDotLdsTestSources})
  endif()
 
  # Validation DLRM tests
  if (WMMA_BUILD_VALIDATION_TESTS)
      add_dlrm_validation_test(dlrm_dot_test-validate ${DlrmDotTestSources})
+     add_dlrm_validation_test(dlrm_dot_lds_test-validate ${DlrmDotLdsTestSources})
  endif()
