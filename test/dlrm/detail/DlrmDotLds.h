@@ -31,55 +31,68 @@
 #include "device/DlrmDotBwdLds.h"
 #include "device/DlrmDotFwdLds.h"
 
-// Wrapper into the actual device function
-template <uint32_t TileSize, typename DataT>
-struct DlrmDotKernel final : public DlrmKernelBase<TileSize, DataT>
+namespace rocwmma
 {
-private:
-    using Base = DlrmKernelBase<TileSize, DataT>;
 
-public:
-    DlrmDotKernel() {}
-    ~DlrmDotKernel() final {}
-
-    typename Base::KernelFwdFunc kernelFwdImpl() const final
+    // Wrapper into the actual device function
+    template <uint32_t TileSize, typename DataT, typename MappingLds>
+    struct DlrmDotKernel final : public DlrmKernelBase<TileSize, DataT>
     {
-        return typename Base::KernelFwdFunc(dlrmDotFwdLds<DataT, TileSize>);
-    }
+    private:
+        using Base = DlrmKernelBase<TileSize, DataT>;
 
-    typename Base::KernelBwdFunc kernelBwdImpl() const final
-    {
-        return typename Base::KernelBwdFunc(dlrmDotBwdLds<DataT, TileSize>);
-    }
+    public:
+        DlrmDotKernel() {}
+        ~DlrmDotKernel() final {}
 
-    typename Base::KernelTrilFunc kernelTrilImpl() const final
-    {
-        return typename Base::KernelTrilFunc(trilReconstructLds<DataT>);
-    }
-};
+        uint32_t ldsUsage() const final
+        {
+            auto blockDims = this->blockDim();
+            return sizeof(DataT) * (blockDims.x / AMDGCN_WAVE_SIZE * blockDims.y) * 2
+                   * (TileSize * TileSize);
+        }
+        typename Base::KernelFwdFunc kernelFwdImpl() const final
+        {
+            return typename Base::KernelFwdFunc(dlrmDotFwdLds<DataT, TileSize, MappingLds>);
+        }
 
-// This is the GeneratorImpl class
-struct DlrmDotGenerator
-{
-    // Indices to test parameters
-    enum : uint32_t
-    {
-        DataT    = 0,
-        TileSize = 1
+        typename Base::KernelBwdFunc kernelBwdImpl() const final
+        {
+            return typename Base::KernelBwdFunc(dlrmDotBwdLds<DataT, TileSize, MappingLds>);
+        }
+
+        typename Base::KernelTrilFunc kernelTrilImpl() const final
+        {
+            return typename Base::KernelTrilFunc(trilReconstructLds<DataT>);
+        }
     };
 
-    using ResultT = std::shared_ptr<KernelI>;
-
-    template <typename... Ts>
-    static ResultT generate(std::tuple<Ts...> testParams)
+    // This is the GeneratorImpl class
+    struct DlrmDotGenerator
     {
-        // Map GTest params to Kernel params
-        using TestParamsT = std::tuple<Ts...>;
-        using KernelT     = DlrmDotKernel<std::tuple_element_t<TileSize, TestParamsT>::value,
-                                      std::tuple_element_t<DataT, TestParamsT>>;
+        // Indices to test parameters
+        enum : uint32_t
+        {
+            DataT      = 0,
+            TileSize   = 1,
+            MappingLds = 2
+        };
 
-        return std::make_shared<KernelT>();
-    }
-};
+        using ResultT = std::shared_ptr<KernelI>;
+
+        template <typename... Ts>
+        static ResultT generate(std::tuple<Ts...> testParams)
+        {
+            // Map GTest params to Kernel params
+            using TestParamsT = std::tuple<Ts...>;
+            using KernelT     = DlrmDotKernel<std::tuple_element_t<TileSize, TestParamsT>::value,
+                                          std::tuple_element_t<DataT, TestParamsT>,
+                                          std::tuple_element_t<MappingLds, TestParamsT>>;
+
+            return std::make_shared<KernelT>();
+        }
+    };
+
+} // namespace rocwmma
 
 #endif // DLRM_DOT_LDS_DETAIL_H

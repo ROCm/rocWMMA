@@ -29,6 +29,7 @@
 
 namespace rocwmma
 {
+    class LdsRF;
 
     HipDevice::HipDevice()
         : mHandle(-1)
