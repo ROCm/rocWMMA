@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef IO_CONFIG_H
-#define IO_CONFIG_H
+#ifndef WMMA_IO_CONFIG_H
+#define WMMA_IO_CONFIG_H
 
 #include "Broadcast.h"
 #include "Constants.h"
@@ -357,4 +357,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // IO_CONFIG_H
+#endif // WMMA_IO_CONFIG_H
