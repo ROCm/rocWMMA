@@ -132,6 +132,10 @@ namespace rocwmma
         using TestLayoutsT   = row_major;
         using TestLayoutsAll = typename Concat<TestLayoutsN, TestLayoutsT>::Result;
 
+        // Vector Sizes
+        using VectSizesAll = std::
+            tuple<I<16>, I<32>, I<64>, I<128>, I<256>, I<512>, I<1024>, I<2048>, I<4096>, I<8192>>;
+
         ///
         /// Run-time kernel argument parameters
         ///
@@ -153,6 +157,21 @@ namespace rocwmma
                  {64, 8}, {128, 4}, {256, 2}, {512, 1} // 8 waves
 #endif // WMMA_EXTENDED_TESTS
             };
+            // clang-format on
+        }
+
+        static inline std::vector<ThreadBlockT> vectorThreadBlocks()
+        {
+            // clang-format off
+        return { {64, 1}  // 1 Wave
+                };
+            // clang-format on
+        }
+
+        static inline std::vector<ProblemSizeT> vectorProblemSizes()
+        {
+            // clang-format off
+            return { {16, 16} };
             // clang-format on
         }
 

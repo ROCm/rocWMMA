@@ -44,16 +44,36 @@ namespace rocwmma
         VectorIteratorKernel()        = default;
         ~VectorIteratorKernel() final = default;
 
-        void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final {}
+        void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
+        {
+            auto& dataInstance = Base::DataStorage::instance();
+
+            // Initialize matrix storage
+            const int64_t sizeD = Base::mM * Base::mN;
+            dataInstance->resizeStorage(probsize);
+        }
 
         void validateResultsImpl() final
         {
-            Base::mValidationResult = true;
+            auto& dataInstance = Base::DataStorage::instance();
+
+            // Allocated managed memory for results on host
+            const int64_t sizeD        = Base::mM * Base::mN;
+            auto          kernelResult = dataInstance->template allocHost<DataT>(sizeD);
+
+            // Cache current kernel result from device
+            dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
+
+            if(static_cast<double>(static_cast<float>(kernelResult[0]))
+               != static_cast<double>(ERROR_VALUE))
+            {
+                Base::mValidationResult = true;
+            }
         }
 
         typename Base::KernelFunc kernelImpl() const final
         {
-            return typename Base::KernelFunc(VectorIterator<BlockM, BlockN, DataT, Layout>);
+            return typename Base::KernelFunc(VectorIterator<BlockM, DataT>);
         }
     };
 
@@ -63,9 +83,9 @@ namespace rocwmma
         // Indices to test parameters
         enum : uint32_t
         {
-            DataT  = 0,
-            BlockM = 1,
-            BlockN = 2,
+            BlockM = 0,
+            BlockN = 1,
+            DataT  = 2,
             Layout = 3
         };
 

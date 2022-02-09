@@ -38,12 +38,11 @@ namespace rocwmma
         using Base = UnitTestParams;
 
         // Types: ALL + double
-        // Block Sizes: 16 x 16 x BlockK
-        // Layouts: N
-        using Types        = typename Base::TestTypes16x16;
-        using BlockSizes   = typename Base::TestBlockSizes16x16;
-        using Layouts      = typename Base::TestLayoutsN;
-        using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
+
+        using Types     = typename Base::TestTypes16x16;
+        using VectSizes = typename Base::VectSizesAll;
+        using KernelParams =
+            typename CombineLists<VectSizes, std::tuple<I<1>>, Types, col_major>::Result;
 
         // Assemble the kernel generator
         // Kernel: VectorIterator
@@ -76,7 +75,7 @@ INSTANTIATE_TEST_SUITE_P(
     KernelTests,
     VectorIteratorTest,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
-                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
-                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
+                       ::testing::ValuesIn(rocwmma::TestParams::vectorThreadBlocks()),
+                       ::testing::ValuesIn(rocwmma::TestParams::vectorProblemSizes()),
                        ::testing::ValuesIn(rocwmma::TestParams::param1s()),
                        ::testing::ValuesIn(rocwmma::TestParams::param2s())));
