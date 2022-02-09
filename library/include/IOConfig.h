@@ -23,20 +23,20 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef IO_CONFIG_H
-#define IO_CONFIG_H
+#ifndef WMMA_IO_CONFIG_H
+#define WMMA_IO_CONFIG_H
 
+#include "Broadcast.h"
 #include "Constants.h"
 #include "CoopLoad.h"
 #include "CoopStore.h"
-#include "IOBroadcast.h"
-#include "IOPack.h"
 #include "IOTraits.h"
-#include "IOUnpack.h"
 #include "Layout.h"
 #include "OpaqueLoad.h"
 #include "OpaqueStore.h"
+#include "Pack.h"
 #include "Types.h"
+#include "Unpack.h"
 
 namespace rocwmma
 {
@@ -357,4 +357,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // IO_CONFIG_H
+#endif // WMMA_IO_CONFIG_H
