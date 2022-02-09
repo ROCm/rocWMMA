@@ -89,14 +89,54 @@ set(MmaSyncTestSources ${GemmCommonSources}
                        )
 
 set(MmaSyncMultiTestSources ${GemmCommonSources}
-                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NN.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NT.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TN.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TT.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_NN.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_NT.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_TN.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_TT.cpp)
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NN_1x1.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NT_1x1.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TN_1x1.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TT_1x1.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_NN_1x1.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_NT_1x1.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_TN_1x1.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_TT_1x1.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NN_2x2.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NT_2x2.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TN_2x2.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TT_2x2.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_NN_2x2.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_NT_2x2.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_TN_2x2.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_TT_2x2.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NN_4x4.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NT_4x4.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TN_4x4.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TT_4x4.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_NN_4x4.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_NT_4x4.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_TN_4x4.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_TT_4x4.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NN_8x8.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NT_8x8.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TN_8x8.cpp
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TT_8x8.cpp)
+
+if(WMMA_BUILD_EXTENDED_TESTS)
+  set(MmaSyncMultiTestSources ${MmaSyncMultiTestSources}
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NN_1x2.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NN_2x1.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NT_1x2.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NT_2x1.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TN_1x2.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TN_2x1.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TT_1x2.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TT_2x1.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_NN_1x2.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_NN_2x1.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_NT_1x2.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_NT_2x1.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_TN_1x2.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_TN_2x1.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_TT_1x2.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_32x32_TT_2x1.cpp)
+endif()
 
 set(MmaSyncMultiLdsTestSources ${GemmCommonSources}
                                ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NN_1x1.cpp
@@ -115,6 +155,18 @@ set(MmaSyncMultiLdsTestSources ${GemmCommonSources}
                                ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_NT_2x2.cpp
                                ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_TN_2x2.cpp
                                ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_TT_2x2.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NN_4x4.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NT_4x4.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_TN_4x4.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_TT_4x4.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_NN_4x4.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_NT_4x4.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_TN_4x4.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_32x32_TT_4x4.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NN_8x8.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NT_8x8.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_TN_8x8.cpp
+                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_TT_8x8.cpp
                                )
 
 if(WMMA_BUILD_EXTENDED_TESTS)

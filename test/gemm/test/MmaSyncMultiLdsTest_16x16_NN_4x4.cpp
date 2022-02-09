@@ -28,7 +28,8 @@
 
 #include "GemmTest.h"
 #include "KernelGenerator.h"
-#include "detail/MmaSyncMulti.h"
+#include "LdsMappingUtil.h"
+#include "detail/MmaSyncMultiLds.h"
 
 namespace rocwmma
 {
@@ -37,18 +38,23 @@ namespace rocwmma
     {
         using Base = CommonTestParams;
 
-        // Types: ALL - double
-        // Block Sizes: 32 x 32 x BlockK
+        // Types: ALL + double
+        // Block Sizes: 16 x 16 x BlockK
         // Layouts: NN
-        using Types        = typename Base::TestTypes32x32;
-        using BlockSizes   = typename Base::TestBlockSizes32x32;
-        using Layouts      = typename Base::TestLayoutsNN;
-        using BlocksXY     = std::tuple<std::tuple<I<2>, I<2>>>;
-        using KernelParams = typename CombineLists<Types, BlockSizes, Layouts, BlocksXY>::Result;
+        using Types = typename Base::TestTypes16x16;
+        using BlockSizes
+            = std::tuple<std::tuple<I<16>, I<16>, I<16>>, std::tuple<I<16>, I<16>, I<32>>>;
+        using Layouts     = typename Base::TestLayoutsNN;
+        using LayoutsLds  = typename Base::TestLayoutTypes;
+        using MappingsLds = typename Base::TestMappingsLds;
+        using BlocksXY    = std::tuple<std::tuple<I<4>, I<4>>>;
+        using KernelParams =
+            typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
+                Result;
 
         // Assemble the kernel generator
         // Kernel: MmaSyncMulti
-        using GeneratorImpl   = MmaSyncMultiGenerator;
+        using GeneratorImpl   = MmaSyncMultiLdsGenerator;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -64,18 +70,18 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class MmaSyncMultiTest32x32NN : public rocwmma::GemmTest
+class MmaSyncMultiLdsTest16x16NN4x4 : public rocwmma::GemmTest
 {
 };
 
-TEST_P(MmaSyncMultiTest32x32NN, RunKernel)
+TEST_P(MmaSyncMultiLdsTest16x16NN4x4, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(
     GemmKernelTests,
-    MmaSyncMultiTest32x32NN,
+    MmaSyncMultiLdsTest16x16NN4x4,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
                        ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
