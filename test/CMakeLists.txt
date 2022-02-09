@@ -77,6 +77,8 @@ function(add_wmma_test TEST_TARGET TEST_SOURCE)
     endforeach()
   endif()
 
+  add_test(NAME ${TEST_TARGET} COMMAND ${TEST_TARGET})
+
   rocm_install_targets(
     TARGETS ${TEST_TARGET}
     COMPONENT tests
