@@ -30,7 +30,6 @@
 
 #include "internal/IOConfig.h"
 #include "internal/IOTraits.h"
-
 #include "internal/Types.h"
 
 /**

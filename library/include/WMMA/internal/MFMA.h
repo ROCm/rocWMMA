@@ -27,10 +27,10 @@
 #define WMMA_MFMA_H
 
 #include "Convert.h"
-#include "IOPack.h"
 #include "IOTraits.h"
-#include "IOUnpack.h"
+#include "Pack.h"
 #include "Types.h"
+#include "Unpack.h"
 
 namespace rocwmma
 {
