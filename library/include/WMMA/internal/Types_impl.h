@@ -26,9 +26,7 @@
 #ifndef WMMA_TYPES_IMPL_H
 #define WMMA_TYPES_IMPL_H
 
-#include <array>
-#include <type_traits>
-#include <utility>
+#include "Types.h"
 
 namespace rocwmma
 {

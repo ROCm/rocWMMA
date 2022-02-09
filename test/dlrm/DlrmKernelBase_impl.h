@@ -115,7 +115,7 @@ bool DlrmKernelBase<TileSize, DataT>::checkLds() const
 }
 
 template <uint32_t TileSize, typename DataT>
-void DlrmKernelBase<TileSize, DataT>::reset()
+void DlrmKernelBase<TileSize, DataT>::reset() 
 {
     mM = mK = mB = 0;
     mMPadded = mKPadded = 0;
