@@ -32,15 +32,56 @@
 
 namespace rocwmma
 {
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    __global__ void fillFragmentA(uint32_t     m,
+                                  uint32_t     n,
+                                  DataT const* in,
+                                  DataT*       out,
+                                  uint32_t     ld,
+                                  DataT        param1,
+                                  DataT        param2)
+    {
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
+
+        // Create frag and fill
+        auto frag = fragment<matrix_a, BlockM, 1, BlockN, DataT, Layout>();
+
+        fill_fragment(frag, param1);
+
+        // Map and store
+        auto* offset = Mapping::dataCoord(out, ld);
+        store_matrix_sync(offset, frag, ld);
+    }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-    __global__ void FillFragment(uint32_t     m,
-                                 uint32_t     n,
-                                 DataT const* in,
-                                 DataT*       out,
-                                 uint32_t     ld,
-                                 DataT        param1,
-                                 DataT        param2)
+    __global__ void fillFragmentB(uint32_t     m,
+                                  uint32_t     n,
+                                  DataT const* in,
+                                  DataT*       out,
+                                  uint32_t     ld,
+                                  DataT        param1,
+                                  DataT        param2)
+    {
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
+
+        // Create frag and fill
+        auto frag = fragment<matrix_b, 1, BlockN, BlockM, DataT, Layout>();
+
+        fill_fragment(frag, param1);
+
+        // Map and store
+        auto* offset = Mapping::dataCoord(out, ld);
+        store_matrix_sync(offset, frag, ld);
+    }
+
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    __global__ void fillFragmentAcc(uint32_t     m,
+                                    uint32_t     n,
+                                    DataT const* in,
+                                    DataT*       out,
+                                    uint32_t     ld,
+                                    DataT        param1,
+                                    DataT        param2)
     {
         using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
 

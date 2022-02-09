@@ -67,7 +67,7 @@ __host__ void gemm_cpu_h(uint32_t         m,
         }
     }
 }
-
+ 
 // Matrix data initialization
 template <typename DataT>
 __host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n)
