@@ -27,6 +27,7 @@
 #ifndef DLRM_DOT_BWD_LDS_H
 #define DLRM_DOT_BWD_LDS_H
 
+#include "../../gemm/LdsMappingUtil.h"
 #include "./Common.h"
 
 namespace rocwmma
@@ -96,6 +97,30 @@ namespace rocwmma
         using FragC   = fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, DataT>;
         using FragAcc = fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float32_t>;
 
+        // Will store to LDS as though it were a register file.
+        // Rows = register count
+        // Cols = unpacked register elements = 64
+        // Row major to minimize bank conflicts
+        using MappingLds = LdsMappingUtil<TILE_DIM,
+                                          TILE_DIM,
+                                          TILE_DIM,
+                                          DataT,
+                                          row_major,
+                                          row_major,
+                                          row_major,
+                                          LdsMapping,
+                                          1,
+                                          1>;
+
+        using GlobalReadFragA = typename MappingLds::GlobalReadFragA;
+        using GlobalReadFragB = typename MappingLds::GlobalReadFragB;
+
+        using LocalWriteFragA = typename MappingLds::LocalWriteFragA;
+        using LocalWriteFragB = typename MappingLds::LocalWriteFragB;
+
+        using LocalReadFragA = typename MappingLds::LocalReadFragA;
+        using LocalReadFragB = typename MappingLds::LocalReadFragB;
+
         // Copy bottom MLP grad
         // Threads with a global index < k are responsible for copying MLP data
         auto globalThreadCoord = blockIdx.x * blockDim.x + threadIdx.x;
@@ -117,42 +142,6 @@ namespace rocwmma
         // Target accumulator block
         auto matrixCoord = TileMapping::matrixCoord();
 
-        if(std::get<0>(matrixCoord) < m && std::get<1>(matrixCoord) < m)
-        {
-            // Remake accumulation fragment from tril
-            auto fragColIdx   = threadIdx.x % TILE_DIM;
-            auto globalColIdx = std::get<1>(matrixCoord) + fragColIdx;
-            auto rowsPerStep  = AMDGCN_WAVE_SIZE / TILE_DIM;
-
-            count = (TILE_DIM * TILE_DIM) >> Log2<AMDGCN_WAVE_SIZE>::value;
-            for(int i = 0; i < count; i++)
-            {
-                auto fragRowIdx
-                    = i * rowsPerStep + ((threadIdx.x & (AMDGCN_WAVE_SIZE - 1)) / TILE_DIM);
-                auto globalRowIdx = std::get<0>(matrixCoord) + fragRowIdx;
-                if(globalRowIdx == globalColIdx)
-                {
-                    acc[accBatchOffset * blockIdx.z + globalRowIdx * m + globalColIdx] = 0.0;
-                }
-                else if(globalRowIdx > globalColIdx)
-                {
-                    auto upstreamGradOffset = k + ((globalRowIdx * (globalRowIdx - 1)) >> 1);
-
-                    // original tril copy
-                    acc[accBatchOffset * blockIdx.z + globalRowIdx * m + globalColIdx]
-                        = upstreamGrad[upstreamBatchOffset * blockIdx.z + upstreamGradOffset
-                                       + globalColIdx];
-
-                    // transposed tril copy
-                    acc[accBatchOffset * blockIdx.z + globalColIdx * m + globalRowIdx]
-                        = upstreamGrad[upstreamBatchOffset * blockIdx.z + upstreamGradOffset
-                                       + globalColIdx];
-                }
-            }
-        }
-
-        synchronize_workgroup();
-
         // Target output gradient block to perform reverse bmm
         if(std::get<0>(matrixCoord) < m && std::get<1>(matrixCoord) < k)
         {
@@ -168,26 +157,60 @@ namespace rocwmma
             auto* addrB = TileMapping::dataCoord(
                 inputWithOffset, std::make_pair(0, std::get<1>(matrixCoord)), k);
 
+            /// Setup LDS addressing and start writing pre-fetch to LDS
+            HIP_DYNAMIC_SHARED(void*, localMemPtr);
+            auto* ldsPtrLo = reinterpret_cast<DataT*>(localMemPtr);
+            auto* ldsPtrHi = ldsPtrLo + MappingLds::ldsWidth() * MappingLds::ldsHeight();
+
+            // Prefetch the first block from global memory
+            MappingLds::prefetchGlobalA(ldsPtrLo, addrA, m);
+            MappingLds::prefetchGlobalB(ldsPtrLo, addrB, k);
+
+            // Wait for A / B write LDS
+            synchronize_workgroup();
+
             // Setup address increments.
             // A steps BlockK through m x m
             // B steps BlockK through m x k
+            auto fragA = FragA();
+            auto fragB = FragB();
+
             auto incrA = TileMapping::dataOffset(std::make_pair(0, TILE_DIM), m);
             auto incrB = TileMapping::dataOffset(std::make_pair(TILE_DIM, 0), k);
 
-            auto count = m / TILE_DIM;
-            for(int i = 0; i < count; i++)
-            {
-                auto fragA = FragA();
-                auto fragB = FragB();
+            auto endA = addrA + incrA * (m / TILE_DIM);
 
-                // Load and multiply
-                load_matrix_sync(fragA, addrA, m);
-                load_matrix_sync(fragB, addrB, k);
+            addrA += incrA;
+            addrB += incrB;
+
+            while(addrA != endA)
+            {
+                // Cache lds blocks to register
+                MappingLds::prefetchLocalA(fragA, ldsPtrLo, 0);
+                MappingLds::prefetchLocalB(fragB, ldsPtrLo, 0);
+
+                // Start pulling in the next block
+                MappingLds::prefetchGlobalA(ldsPtrHi, addrA, m);
+                MappingLds::prefetchGlobalB(ldsPtrHi, addrB, k);
+
+                // Mma for current block
                 mma_sync(fragAcc, fragA, fragB, fragAcc);
+
+                // Wait for A / B read LDS
+                synchronize_workgroup();
 
                 addrA += incrA;
                 addrB += incrB;
+
+                auto* tmp = ldsPtrLo;
+                ldsPtrLo  = ldsPtrHi;
+                ldsPtrHi  = tmp;
             }
+
+            // Mma for the last block
+            MappingLds::prefetchLocalA(fragA, ldsPtrLo, 0);
+            MappingLds::prefetchLocalB(fragB, ldsPtrLo, 0);
+            mma_sync(fragAcc, fragA, fragB, fragAcc);
 
             // Output address
             auto* gradWithOffset = grad + inputBatchOffset * blockIdx.z;
