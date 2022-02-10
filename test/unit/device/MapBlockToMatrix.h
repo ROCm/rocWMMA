@@ -48,15 +48,22 @@ namespace rocwmma
         enum : uint32_t
         {
             MajorIndex = std::is_same<Layout, row_major>::value ? 0 : 1,
-            MinorIndex = std::is_same<Layout, row_major>::value ? 1 : 0
+            MinorIndex = std::is_same<Layout, row_major>::value ? 1 : 0,
+            ldmajor    = std::is_same<Layout, row_major>::value ? BlockM : BlockN,
+            ldminor    = std::is_same<Layout, row_major>::value ? BlockN : BlockM
         };
 
-        uint32_t col = std::get<MajorIndex>(aCoord);
-        uint32_t row = std::get<MinorIndex>(aCoord);
-        for(int i = 0; i < BlockM; i++)
-            for(int j = 0; j < BlockN; j++)
-                out[(col * BlockM + j) * ld + (row * BlockN + i)]
-                    = in[(col * BlockM + j) * ld + (row * BlockN + i)];
+        auto majCoord = std::get<MajorIndex>(aCoord) * ldmajor;
+        auto minCoord = std::get<MinorIndex>(aCoord) * ldminor;
+
+        for(int i = 0; i < ldminor; ++i)
+        {
+            for(int j = 0; j < ldmajor; ++j)
+            {
+                out[(majCoord + j) * ld + (minCoord + i)]
+                    = in[(((majCoord + j) * ld) + (minCoord + i))];
+            }
+        }
     }
 
 } // namespace rocwmma

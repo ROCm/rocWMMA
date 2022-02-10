@@ -29,10 +29,310 @@
 
 #include <WMMA/internal/Types.h>
 
+static constexpr uint32_t ERROR_VALUE = 7;
+static constexpr uint32_t SUCCESS     = 0;
+
 namespace rocwmma
 {
 
-    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    template <uint32_t VectSize, typename DataT>
+    __device__ static inline bool defaultConstructorTest()
+    {
+        // defaultConstructorTest
+        VecT<DataT, VectSize> vectData;
+        return (vectData.size() == VectSize);
+    }
+
+    template <uint32_t VectSize, typename DataT>
+    __device__ static inline bool copyConstructorTest()
+    {
+        // copyConstructorTest0
+        VecT<DataT, VectSize> vectData;
+        static_assert(vectData.size() == VectSize, "Allocation Error");
+        for(uint32_t i = 0; i < VectSize; i++)
+            vectData[i] = static_cast<DataT>(i);
+
+        VecT<DataT, VectSize> copyVectData(vectData);
+        bool                  ret = (copyVectData.size() == vectData.size());
+        for(uint32_t i = 0; i < copyVectData.size(); i++)
+            ret &= (copyVectData[i] == vectData[i]);
+
+        VecT<DataT, VectSize> copyStorageData(*vectData);
+        ret &= (copyStorageData.size() == vectData.size());
+        for(uint32_t i = 0; i < copyStorageData.size(); i++)
+            ret &= (copyStorageData[i] == vectData[i]);
+
+        VecT<DataT, VectSize> moveStorageData(std::move(*vectData));
+        ret &= (moveStorageData.size() == vectData.size());
+        for(uint32_t i = 0; i < moveStorageData.size(); i++)
+            ret &= (moveStorageData[i] == vectData[i]);
+
+        return ret;
+    }
+
+    template <uint32_t VectSize, typename DataT>
+    __device__ static inline bool dereferenceTest()
+    {
+        // dereferenceTest
+        VecT<DataT, VectSize> vectData;
+        static_assert(vectData.size() == VectSize, "Allocation Error");
+        for(uint32_t i = 0; i < VectSize; i++)
+            vectData[i] = static_cast<DataT>(i);
+
+        VecT<DataT, VectSize> copyVectData(vectData);
+
+        typename VecT<DataT, VectSize>::StorageT storageT = *copyVectData;
+        bool ret = (sizeof(storageT) == (sizeof(DataT) * vectData.size()));
+
+        for(uint32_t i = 0; i < copyVectData.size(); i++)
+            ret &= (storageT[i] == copyVectData[i]);
+
+        return ret;
+    }
+
+    template <uint32_t VectSize, typename DataT>
+    __device__ static inline bool iteratorTest()
+    {
+        // iteratorTest
+        VecT<DataT, VectSize> iterVectData;
+        static_assert(iterVectData.size() == VectSize, " Allocation Error");
+        for(uint32_t i = 0; i < VectSize; i++)
+            iterVectData[i] = static_cast<DataT>(i);
+
+        const uint32_t iterSize = VectSize / 2;
+        auto it  = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
+        bool ret = (iterVectData.size() == (it.range() * iterSize));
+
+        for(uint32_t i = 0; i < it.range(); i++, it++)
+        {
+            for(uint32_t j = 0; j < iterSize; j++)
+            {
+                ret &= (iterVectData[i * iterSize + j] == iterVectData[(*it)[j]]);
+            }
+        }
+
+        return ret;
+    }
+
+    template <uint32_t VectSize, typename DataT>
+    __device__ static inline bool iteratorValidityTest()
+    {
+        // iteratorValidityTest
+        VecT<DataT, VectSize> iterVectData;
+        static_assert(iterVectData.size() == VectSize, " Allocation Error");
+        for(uint32_t i = 0; i < VectSize; i++)
+            iterVectData[i] = static_cast<DataT>(i);
+
+        const uint32_t iterSize = VectSize / 2;
+        auto it  = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
+        bool ret = it.valid();
+
+        ret &= (iterVectData.size() == (it.range() * iterSize));
+
+        return ret;
+    }
+
+    template <uint32_t VectSize, typename DataT>
+    __device__ static inline bool iteratorIndexTest()
+    {
+        // iteratorIndexTest
+        VecT<DataT, VectSize> iterVectData;
+        static_assert(iterVectData.size() == VectSize, " Allocation Error");
+        for(uint32_t i = 0; i < VectSize; i++)
+            iterVectData[i] = static_cast<DataT>(i);
+
+        const uint32_t iterSize = VectSize / 2;
+        auto it  = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
+        bool ret = it.valid();
+
+        ret &= (iterVectData.size() == (it.range() * iterSize));
+        ret &= (it.index() == 0);
+
+        auto nextit = it.next();
+
+        ret &= (nextit.valid());
+        ret &= (nextit.index() == 1);
+
+        return ret;
+    }
+
+    template <uint32_t VectSize, typename DataT>
+    __device__ static inline bool iteratorRangeTest()
+    {
+        // iteratorRangeTest
+        VecT<DataT, VectSize> iterVectData;
+        static_assert(iterVectData.size() == VectSize, " Allocation Error");
+        for(uint32_t i = 0; i < VectSize; i++)
+            iterVectData[i] = static_cast<DataT>(i);
+
+        const uint32_t iterSize = VectSize / 2;
+        auto it  = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
+        bool ret = it.valid();
+
+        ret &= ((iterVectData.size() / iterSize) == it.range());
+
+        return ret;
+    }
+
+    template <uint32_t VectSize, typename DataT>
+    __device__ static inline bool iteratorBeginTest()
+    {
+        // iteratorBeginTest
+        VecT<DataT, VectSize> iterVectData;
+        static_assert(iterVectData.size() == VectSize, " Allocation Error");
+        for(uint32_t i = 0; i < VectSize; i++)
+            iterVectData[i] = static_cast<DataT>(i);
+
+        const uint32_t iterSize = VectSize / 2;
+        auto           it       = iterVectData.template begin<iterSize>();
+        assert(iterVectData.size() == (it.range() * iterSize));
+
+        bool ret = true;
+
+        ret &= (it.valid());
+        ret &= (iterVectData[0] == iterVectData[(*it)[0]]);
+
+        return ret;
+    }
+
+    template <uint32_t VectSize, typename DataT>
+    __device__ static inline bool iteratorEndTest()
+    {
+        // iteratorEndTest
+        VecT<DataT, VectSize> iterVectData;
+        static_assert(iterVectData.size() == VectSize, " Allocation Error");
+        for(uint32_t i = 0; i < VectSize; i++)
+            iterVectData[i] = static_cast<DataT>(i);
+
+        const uint32_t iterSize = VectSize / 2;
+        auto           it       = iterVectData.template end<iterSize>();
+        assert(iterVectData.size() == (it.range() * iterSize));
+
+        bool ret = true;
+
+        ret &= (iterVectData[0] == iterVectData[(*it)[0]]);
+
+        return ret;
+    }
+
+    template <uint32_t VectSize, typename DataT>
+    __device__ static inline bool iteratorObjTest()
+    {
+        // iteratorEndTest
+        VecT<DataT, VectSize> iterVectData;
+        static_assert(iterVectData.size() == VectSize, " Allocation Error");
+        for(uint32_t i = 0; i < VectSize; i++)
+            iterVectData[i] = static_cast<DataT>(i);
+
+        const uint32_t iterSize = VectSize / 2;
+        auto           it       = iterVectData.template it<iterSize>();
+        assert(iterVectData.size() == (it.range() * iterSize));
+
+        bool ret = true;
+
+        ret &= (iterVectData[0] == iterVectData[(*it)[0]]);
+
+        return ret;
+    }
+
+    template <uint32_t VectSize, typename DataT>
+    __device__ static inline bool iteratorIncTest()
+    {
+        // iteratorIncTest
+        VecT<DataT, VectSize> iterVectData;
+        static_assert(iterVectData.size() == VectSize, " Allocation Error");
+        for(uint32_t i = 0; i < VectSize; i++)
+            iterVectData[i] = static_cast<DataT>(i);
+
+        const uint32_t iterSize = VectSize / 2;
+        auto it = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
+        assert(iterVectData.size() == (it.range() * iterSize));
+
+        bool ret = true;
+        for(uint32_t i = 0; i < it.range(); i++)
+        {
+            ret &= (it.valid());
+            ret &= (iterVectData[i * iterSize] == iterVectData[(*it)[0]]);
+            ++it;
+        }
+
+        return ret;
+    }
+
+    template <uint32_t VectSize, typename DataT>
+    __device__ static inline bool iteratorDecTest()
+    {
+        // iteratorDecTest
+        VecT<DataT, VectSize> iterVectData;
+        static_assert(iterVectData.size() == VectSize, " Allocation Error");
+        for(uint32_t i = 0; i < VectSize; i++)
+            iterVectData[i] = static_cast<DataT>(i);
+
+        const uint32_t iterSize = VectSize / 2;
+        auto           it       = iterVectData.template end<iterSize>();
+        assert(iterVectData.size() == (it.range() * iterSize));
+
+        bool ret = true;
+        for(uint32_t i = 0; i < it.range(); i++)
+        {
+            ret &= (iterVectData[i * iterSize] == iterVectData[(*it)[0]]);
+            --it;
+            ret &= (it.valid());
+        }
+
+        return ret;
+    }
+
+    template <uint32_t VectSize, typename DataT>
+    __device__ static inline bool iteratorNextTest()
+    {
+        // iteratorNextTest
+        VecT<DataT, VectSize> iterVectData;
+        static_assert(iterVectData.size() == VectSize, " Allocation Error");
+        for(uint32_t i = 0; i < VectSize; i++)
+            iterVectData[i] = static_cast<DataT>(i);
+
+        const uint32_t iterSize = VectSize / 2;
+        auto it = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
+        assert(iterVectData.size() == (it.range() * iterSize));
+
+        bool ret = true;
+
+        ret &= (it.valid());
+        ret &= (iterVectData[0] == iterVectData[(*it)[0]]);
+        auto nextit = it.next();
+
+        ret &= (nextit.valid());
+        ret &= (iterVectData[iterSize] == iterVectData[(*nextit)[0]]);
+
+        return ret;
+    }
+
+    template <uint32_t VectSize, typename DataT>
+    __device__ static inline bool iteratorPrevTest()
+    {
+        // iteratorPrevTest
+        VecT<DataT, VectSize> iterVectData;
+        static_assert(iterVectData.size() == VectSize, " Allocation Error");
+        for(uint32_t i = 0; i < VectSize; i++)
+            iterVectData[i] = static_cast<DataT>(i);
+
+        const uint32_t iterSize = VectSize / 2;
+        auto           it       = iterVectData.template end<iterSize>();
+        assert(iterVectData.size() == (it.range() * iterSize));
+
+        bool ret = true;
+
+        ret &= (iterVectData[0] == iterVectData[(*it)[0]]);
+        auto previt = it.prev();
+
+        ret &= (previt.valid());
+        ret &= (iterVectData[iterSize] == iterVectData[(*previt)[0]]);
+
+        return ret;
+    }
+
+    template <uint32_t VectSize, typename DataT>
     __global__ void VectorIterator(uint32_t     m,
                                    uint32_t     n,
                                    DataT const* in,
@@ -41,79 +341,109 @@ namespace rocwmma
                                    DataT        param1,
                                    DataT        param2)
     {
-        // default ConstructorTest
-        VecT<DataT, BlockM> vectD;
-        static_assert(vectD.size() == BlockM, "Bad size");
-
-        // copy ctor test
-        VecT<DataT, BlockM> vectDCopy(vectD);
-
-        // otherConstructorTest
-        VecT<DataT, BlockM>* otherVectD(&vectD);
-        assert(otherVectD != NULL);
-        assert(otherVectD->size() == vectD.size());
-
-        // index
-        DataT ind;
-        for(uint32_t i = 0; i < BlockM; i++)
-            ind = vectD[i];
-
-        // dereference
-        VecT<DataT, BlockM> deref = *otherVectD;
-        static_assert(deref.size() == BlockM, " Allocation Error");
-
-        // vectIteratorAccess
-        VecT<DataT, BlockM> accessVectD;
-        static_assert(accessVectD.size() == BlockM, " Allocation Error");
-        auto iter = typename VecT<DataT, BlockM>::template iterator<BlockM / 2>(accessVectD);
-        assert(accessVectD.size() == sizeof(iter));
-
-        // vectIteratorInc
-        VecT<DataT, BlockM> incVectD;
-        for(uint32_t i = 0; i < BlockM; i++)
-            incVectD[i] = DataT(i);
-        auto iti = typename VecT<DataT, BlockM>::template iterator<BlockM / 2>(incVectD);
-        assert(incVectD.size() == sizeof(iti));
-        for(int i = 0; i < BlockM; i += BlockM / 2)
+        // Test is for any thread
+        if(threadIdx.x == 0 && threadIdx.y == 0)
         {
-            assert(iti.valid());
-            assert(iti.mParent[i] == incVectD[(*iti)[0]]);
-            iti++;
+            out[0] = static_cast<DataT>(SUCCESS);
+
+            bool err = defaultConstructorTest<VectSize, DataT>();
+            if(err == false)
+            {
+                out[0] = static_cast<DataT>(ERROR_VALUE);
+                return;
+            }
+
+            err &= copyConstructorTest<VectSize, DataT>();
+            if(err == false)
+            {
+                out[0] = static_cast<DataT>(ERROR_VALUE);
+                return;
+            }
+
+            err &= dereferenceTest<VectSize, DataT>();
+            if(err == false)
+            {
+                out[0] = static_cast<DataT>(ERROR_VALUE);
+                return;
+            }
+
+            err &= iteratorTest<VectSize, DataT>();
+            if(err == false)
+            {
+                out[0] = static_cast<DataT>(ERROR_VALUE);
+                return;
+            }
+
+            err &= iteratorValidityTest<VectSize, DataT>();
+            if(err == false)
+            {
+                out[0] = static_cast<DataT>(ERROR_VALUE);
+                return;
+            }
+
+            err &= iteratorIndexTest<VectSize, DataT>();
+            if(err == false)
+            {
+                out[0] = static_cast<DataT>(ERROR_VALUE);
+                return;
+            }
+
+            err &= iteratorRangeTest<VectSize, DataT>();
+            if(err == false)
+            {
+                out[0] = static_cast<DataT>(ERROR_VALUE);
+                return;
+            }
+
+            err &= iteratorBeginTest<VectSize, DataT>();
+            if(err == false)
+            {
+                out[0] = static_cast<DataT>(ERROR_VALUE);
+                return;
+            }
+
+            err &= iteratorEndTest<VectSize, DataT>();
+            if(err == false)
+            {
+                out[0] = static_cast<DataT>(ERROR_VALUE);
+                return;
+            }
+
+            err &= iteratorObjTest<VectSize, DataT>();
+            if(err == false)
+            {
+                out[0] = static_cast<DataT>(ERROR_VALUE);
+                return;
+            }
+
+            err &= iteratorIncTest<VectSize, DataT>();
+            if(err == false)
+            {
+                out[0] = static_cast<DataT>(ERROR_VALUE);
+                return;
+            }
+
+            err &= iteratorDecTest<VectSize, DataT>();
+            if(err == false)
+            {
+                out[0] = static_cast<DataT>(ERROR_VALUE);
+                return;
+            }
+
+            err &= iteratorNextTest<VectSize, DataT>();
+            if(err == false)
+            {
+                out[0] = static_cast<DataT>(ERROR_VALUE);
+                return;
+            }
+
+            err &= iteratorPrevTest<VectSize, DataT>();
+            if(err == false)
+            {
+                out[0] = static_cast<DataT>(ERROR_VALUE);
+                return;
+            }
         }
-
-        // vectIteratorDec
-        VecT<DataT, BlockM> decVectD;
-        for(uint32_t i = 0; i < BlockM; i++)
-            decVectD[i] = DataT(i);
-        auto itd = decVectD.template end<BlockM / 2>();
-        assert(decVectD.size() == sizeof(itd));
-        for(int i = 0; i < BlockM; i += (BlockM / 2))
-        {
-            --itd;
-            assert(itd.valid());
-            assert(itd.mParent[(BlockM / 2) - i] == decVectD[(*itd)[0]]);
-        }
-
-        // vectIteratorNext
-        VecT<DataT, BlockM> nextVectD;
-        for(uint32_t i = 0; i < BlockM; i++)
-            nextVectD[i] = DataT(i);
-        auto itn = typename VecT<DataT, BlockM>::template iterator<BlockM / 2>(nextVectD);
-        assert(itn.valid());
-        assert(nextVectD.size() == sizeof(itn));
-        auto nextitn = itn.next();
-        assert(nextitn.valid());
-        assert(nextitn.mParent[(BlockM / 2)] == nextVectD[(*nextitn)[0]]);
-
-        // vectIteratorPrev
-        VecT<DataT, BlockM> prevVectD;
-        for(uint32_t i = 0; i < BlockM; i++)
-            prevVectD[i] = DataT(i);
-        auto itp = prevVectD.template end<BlockM / 2>();
-        assert(prevVectD.size() == sizeof(itp));
-        auto previtp = itp.prev();
-        assert(previtp.valid());
-        assert(previtp.mParent[BlockM - (BlockM / 2)] == prevVectD[(*previtp)[0]]);
     }
 
 } // namespace rocwmma
