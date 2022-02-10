@@ -28,8 +28,8 @@
 
 #include <type_traits>
 
-#include "CoopLoad.h"
-#include "CoopStore.h"
+#include "internal/CoopLoad.h"
+#include "internal/CoopStore.h"
 #include "WMMA.h"
 
 namespace rocwmma

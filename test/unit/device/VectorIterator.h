@@ -27,7 +27,7 @@
 #ifndef WMMA_DEVICE_VECTOR_ITERATOR_H
 #define WMMA_DEVICE_VECTOR_ITERATOR_H
 
-#include "Types.h"
+#include <WMMA/internal/Types.h>
 
 namespace rocwmma
 {

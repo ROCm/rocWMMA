@@ -35,7 +35,7 @@
 // for fp64 on all other targets which succeed MI-100.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "WMMA.h"
+#include <WMMA/WMMA.h>
 #pragma GCC diagnostic pop
 
 namespace rocwmma

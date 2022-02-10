@@ -54,6 +54,10 @@ function(add_wmma_sample TEST_TARGET TEST_SOURCE)
     endforeach()
   endif()
 
+  rocm_install_targets(
+    TARGETS ${TEST_TARGET}
+    COMPONENT samples
+  )
 endfunction()
 
 # Create sample targets

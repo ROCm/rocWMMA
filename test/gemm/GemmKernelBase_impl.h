@@ -48,8 +48,8 @@
 #endif // WMMA_VALIDATE_WITH_ROCBLAS || WMMA_BENCHMARK_WITH_ROCBLAS
 
 // Library includes
-#include "Constants.h"
-#include "Utils.h"
+#include <WMMA/internal/Constants.h>
+#include <WMMA/internal/Utils.h>
 
 namespace rocwmma
 {

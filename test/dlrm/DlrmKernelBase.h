@@ -32,7 +32,7 @@
 #include <string>
 
 #include "Common.h"
-#include "Constants.h"
+#include <WMMA/internal/Constants.h>
 #include "DlrmResource.h"
 #include "HipDevice.h"
 
