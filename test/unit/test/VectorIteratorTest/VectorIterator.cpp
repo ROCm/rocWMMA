@@ -24,6 +24,7 @@
  *
  *******************************************************************************/
 
+#include <tuple>
 #include <type_traits>
 
 #include "KernelGenerator.h"
@@ -38,12 +39,12 @@ namespace rocwmma
         using Base = UnitTestParams;
 
         // Types: ALL + double
-        // Block Sizes: 16 x 16 x BlockK
-        // Layouts: N
-        using Types        = typename Base::TestTypes16x16;
-        using BlockSizes   = typename Base::TestBlockSizes16x16;
-        using Layouts      = typename Base::TestLayoutsN;
-        using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
+        using Types = typename Base::TestTypes16x16;
+
+        // Vector Sizes
+        using VecSizes = std::tuple<I<4>, I<8>, I<16>, I<32>>;
+
+        using KernelParams = typename CombineLists<VecSizes, Types>::Result;
 
         // Assemble the kernel generator
         // Kernel: VectorIterator
@@ -53,6 +54,20 @@ namespace rocwmma
         // Sanity check for kernel generator
         static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
                       "Kernels from this generator do not match testing interface");
+
+        static inline std::vector<ThreadBlockT> threadBlocks()
+        {
+            // clang-format off
+            return { {64, 1} };
+            // clang-format on
+        }
+
+        static inline std::vector<ProblemSizeT> problemSizes()
+        {
+            // clang-format off
+            return { {1, 1} };
+            // clang-format on
+        }
 
         static inline typename KernelGenerator::ResultT kernels()
         {
