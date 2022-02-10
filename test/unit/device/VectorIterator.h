@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DEVICE_VECTOR_ITERATOR_H
-#define WMMA_DEVICE_VECTOR_ITERATOR_H
+#ifndef ROCWMMA_DEVICE_VECTOR_ITERATOR_H
+#define ROCWMMA_DEVICE_VECTOR_ITERATOR_H
 
 #include <WMMA/internal/Types.h>
 
@@ -448,4 +448,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DEVICE_VECTOR_ITERATOR_H
+#endif // ROCWMMA_DEVICE_VECTOR_ITERATOR_H

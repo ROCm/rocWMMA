@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_PERFORMANCE_H
-#define WMMA_PERFORMANCE_H
+#ifndef ROCWMMA_PERFORMANCE_H
+#define ROCWMMA_PERFORMANCE_H
 
 #include <WMMA/internal/Types.h>
 
@@ -281,4 +281,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_PERFORMANCE_H
+#endif // ROCWMMA_PERFORMANCE_H

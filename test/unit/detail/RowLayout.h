@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DETAIL_ROW_LAYOUT_H
-#define WMMA_DETAIL_ROW_LAYOUT_H
+#ifndef ROCWMMA_DETAIL_ROW_LAYOUT_H
+#define ROCWMMA_DETAIL_ROW_LAYOUT_H
 
 #include "UnitKernelBase.h"
 #include "device/RowLayout.h"
@@ -117,4 +117,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DETAIL_ROW_LAYOUT_H
+#endif // ROCWMMA_DETAIL_ROW_LAYOUT_H

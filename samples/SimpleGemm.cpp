@@ -68,7 +68,7 @@ __host__ void gemm_cpu_h(uint32_t         m,
         }
     }
 }
- 
+
 // Matrix data initialization
 template <typename DataT>
 __host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n)
@@ -86,15 +86,15 @@ __host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n)
     }
 }
 
-// Supports WMMA_M/N square sizes of
+// Supports ROCWMMA_M/N square sizes of
 // : 16 x 16
 // : 32 x 32
-const int WMMA_M = 16;
-const int WMMA_N = 16;
+const int ROCWMMA_M = 16;
+const int ROCWMMA_N = 16;
 
-// Supports WMMA_K sizes as
+// Supports ROCWMMA_K sizes as
 // : multiples of 16.
-const int WMMA_K = 16;
+const int ROCWMMA_K = 16;
 
 // AMDGCN default wave size
 const int WAVE_SIZE = rocwmma::AMDGCN_WAVE_SIZE;
@@ -121,27 +121,37 @@ const int T_BLOCK_Y = 4;
 //
 // Note: This is a simplified implementation to demonstrate API usage in
 // context of wave-level GEMM computation, and is not optimized.
-__global__ void gemm_wmma_d(uint32_t         m,
-                            uint32_t         n,
-                            uint32_t         k,
-                            float16_t const* a,
-                            float16_t const* b,
-                            float32_t const* c,
-                            float32_t*       d,
-                            uint32_t         lda,
-                            uint32_t         ldb,
-                            uint32_t         ldc,
-                            uint32_t         ldd,
-                            float32_t        alpha,
-                            float32_t        beta)
+__global__ void gemm_rocwmma_d(uint32_t         m,
+                               uint32_t         n,
+                               uint32_t         k,
+                               float16_t const* a,
+                               float16_t const* b,
+                               float32_t const* c,
+                               float32_t*       d,
+                               uint32_t         lda,
+                               uint32_t         ldb,
+                               uint32_t         ldc,
+                               uint32_t         ldd,
+                               float32_t        alpha,
+                               float32_t        beta)
 {
     // Create frags
-    auto fragA = rocwmma::
-        fragment<rocwmma::matrix_a, WMMA_M, WMMA_N, WMMA_K, float16_t, rocwmma::row_major>();
-    auto fragB = rocwmma::
-        fragment<rocwmma::matrix_b, WMMA_M, WMMA_N, WMMA_K, float16_t, rocwmma::col_major>();
-    auto fragC   = rocwmma::fragment<rocwmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t>();
-    auto fragAcc = rocwmma::fragment<rocwmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t>();
+    auto fragA = rocwmma::fragment<rocwmma::matrix_a,
+                                   ROCWMMA_M,
+                                   ROCWMMA_N,
+                                   ROCWMMA_K,
+                                   float16_t,
+                                   rocwmma::row_major>();
+    auto fragB = rocwmma::fragment<rocwmma::matrix_b,
+                                   ROCWMMA_M,
+                                   ROCWMMA_N,
+                                   ROCWMMA_K,
+                                   float16_t,
+                                   rocwmma::col_major>();
+    auto fragC
+        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
+    auto fragAcc
+        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
 
     rocwmma::fill_fragment(fragAcc, 0.0f);
 
@@ -150,14 +160,14 @@ __global__ void gemm_wmma_d(uint32_t         m,
     auto warpN = (blockIdx.y * blockDim.y + threadIdx.y);
 
     // Target C block
-    auto cRow = warpM * WMMA_M;
-    auto cCol = warpN * WMMA_N;
+    auto cRow = warpM * ROCWMMA_M;
+    auto cCol = warpN * ROCWMMA_N;
 
     // Bounds check
     if(cRow < m && cCol < n)
     {
         // fragAcc = A x B
-        for(int i = 0; i < k; i += WMMA_K)
+        for(int i = 0; i < k; i += ROCWMMA_K)
         {
             int aRow = cRow;
             int aCol = i;
@@ -190,8 +200,8 @@ __global__ void gemm_wmma_d(uint32_t         m,
 __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, float32_t beta)
 {
     // Bounds check
-    if((m < (WMMA_M * T_BLOCK_X / WAVE_SIZE) || n < (WMMA_N * T_BLOCK_Y) || k < WMMA_K)
-       || (m % WMMA_M || n % WMMA_N || k % WMMA_K))
+    if((m < (ROCWMMA_M * T_BLOCK_X / WAVE_SIZE) || n < (ROCWMMA_N * T_BLOCK_Y) || k < ROCWMMA_K)
+       || (m % ROCWMMA_M || n % ROCWMMA_N || k % ROCWMMA_K))
     {
         std::cout << "Unsupported size!\n";
         return;
@@ -239,8 +249,8 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
     CHECK_HIP_ERROR(hipMemcpy(d_d, matrixD.data(), bytesD, hipMemcpyHostToDevice));
 
     auto blockDim = dim3(T_BLOCK_X, T_BLOCK_Y);
-    auto gridDim  = dim3(rocwmma::ceilDiv(m, WMMA_M * T_BLOCK_X / WAVE_SIZE),
-                         rocwmma::ceilDiv(n, WMMA_N * T_BLOCK_Y));
+    auto gridDim  = dim3(rocwmma::ceilDiv(m, ROCWMMA_M * T_BLOCK_X / WAVE_SIZE),
+                         rocwmma::ceilDiv(n, ROCWMMA_N * T_BLOCK_Y));
 
     std::cout << "Launching GEMM kernel..." << std::endl;
 
@@ -248,7 +258,7 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
     CHECK_HIP_ERROR(hipEventCreate(&startEvent));
     CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
 
-    hipExtLaunchKernelGGL(gemm_wmma_d,
+    hipExtLaunchKernelGGL(gemm_rocwmma_d,
                           gridDim,
                           blockDim,
                           0, // sharedMemBytes
@@ -287,10 +297,10 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
               << "beta, ldc, ldd, "
               << "elapsedMs, GFlops, GFlops/s" << std::endl;
 
-    std::cout << WMMA_M << ", " << WMMA_N << ", " << WMMA_K << ", " << m << ", " << n << ", " << k
-              << ", " << alpha << ", " << lda << ", " << ldb << ", " << beta << ", " << ldc << ", "
-              << ldd << ", " << elapsedTimeMs << ", " << gFlops << ", " << gFlopsPerSec
-              << std::endl;
+    std::cout << ROCWMMA_M << ", " << ROCWMMA_N << ", " << ROCWMMA_K << ", " << m << ", " << n
+              << ", " << k << ", " << alpha << ", " << lda << ", " << ldb << ", " << beta << ", "
+              << ldc << ", " << ldd << ", " << elapsedTimeMs << ", " << gFlops << ", "
+              << gFlopsPerSec << std::endl;
 
     std::cout << "Validating result with reference..." << std::endl;
 

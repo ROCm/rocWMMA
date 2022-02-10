@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_GEMM_COMMON_TEST_PARAMS_H
-#define WMMA_GEMM_COMMON_TEST_PARAMS_H
+#ifndef ROCWMMA_GEMM_COMMON_TEST_PARAMS_H
+#define ROCWMMA_GEMM_COMMON_TEST_PARAMS_H
 
 #include <tuple>
 #include <vector>
@@ -191,4 +191,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_GEMM_COMMON_TEST_PARAMS_H
+#endif // ROCWMMA_GEMM_COMMON_TEST_PARAMS_H

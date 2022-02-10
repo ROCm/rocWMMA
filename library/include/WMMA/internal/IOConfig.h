@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_IO_CONFIG_H
-#define WMMA_IO_CONFIG_H
+#ifndef ROCWMMA_IO_CONFIG_H
+#define ROCWMMA_IO_CONFIG_H
 
 #include "Broadcast.h"
 #include "Constants.h"
@@ -256,19 +256,19 @@ namespace rocwmma
     } // namespace detail
 
     /**
- * \ingroup wmma
- * \defgroup WMMA IOConfig
+ * \ingroup rocwmma
+ * \defgroup ROCWMMA IOConfig
  *
- * @brief WMMA fragment input and output configurations leveraging amdgcn architecture
+ * @brief ROCWMMA fragment input and output configurations leveraging amdgcn architecture
  */
 
     /**
- * \ingroup WMMA IOConfig
+ * \ingroup ROCWMMA IOConfig
  * @{
  */
 
     /*! \class IOConfig
- *  \brief Definition of WMMA fragment input / output configurations
+ *  \brief Definition of ROCWMMA fragment input / output configurations
  *         in specific matrix context.
  *
  * @tparam MatrixT - fragment context
@@ -357,4 +357,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_IO_CONFIG_H
+#endif // ROCWMMA_IO_CONFIG_H

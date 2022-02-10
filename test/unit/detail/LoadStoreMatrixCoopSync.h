@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DETAIL_LOAD_STORE_MATRIX_COOP_SYNC_H
-#define WMMA_DETAIL_LOAD_STORE_MATRIX_COOP_SYNC_H
+#ifndef ROCWMMA_DETAIL_LOAD_STORE_MATRIX_COOP_SYNC_H
+#define ROCWMMA_DETAIL_LOAD_STORE_MATRIX_COOP_SYNC_H
 
 #include "LoadStoreMatrixSync.h"
 #include "device/LoadStoreMatrixCoopSync.h"
@@ -87,4 +87,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DETAIL_LOAD_STORE_MATRIX_COOP_SYNC_H
+#endif // ROCWMMA_DETAIL_LOAD_STORE_MATRIX_COOP_SYNC_H

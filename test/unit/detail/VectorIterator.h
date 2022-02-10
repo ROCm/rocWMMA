@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DETAIL_VECTOR_ITERATOR_H
-#define WMMA_DETAIL_VECTOR_ITERATOR_H
+#ifndef ROCWMMA_DETAIL_VECTOR_ITERATOR_H
+#define ROCWMMA_DETAIL_VECTOR_ITERATOR_H
 
 #include "UnitKernelBase.h"
 #include "device/VectorIterator.h"
@@ -104,4 +104,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DETAIL_VECTOR_ITERATOR_H
+#endif // ROCWMMA_DETAIL_VECTOR_ITERATOR_H

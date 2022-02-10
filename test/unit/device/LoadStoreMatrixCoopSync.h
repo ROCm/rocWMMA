@@ -24,14 +24,14 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DEVICE_LOAD_STORE_MATRIX_COOP_SYNC_H
-#define WMMA_DEVICE_LOAD_STORE_MATRIX_COOP_SYNC_H
+#ifndef ROCWMMA_DEVICE_LOAD_STORE_MATRIX_COOP_SYNC_H
+#define ROCWMMA_DEVICE_LOAD_STORE_MATRIX_COOP_SYNC_H
 
 #include <algorithm>
 
-#include <WMMA/internal/MappingUtil.h>
 #include <WMMA/WMMA.h>
 #include <WMMA/WMMACoop.h>
+#include <WMMA/internal/MappingUtil.h>
 
 namespace rocwmma
 {
@@ -238,4 +238,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DEVICE_LOAD_STORE_MATRIX_COOP_SYNC_H
+#endif // ROCWMMA_DEVICE_LOAD_STORE_MATRIX_COOP_SYNC_H

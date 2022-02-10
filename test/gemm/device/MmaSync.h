@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DEVICE_MMA_SYNC_H
-#define WMMA_DEVICE_MMA_SYNC_H
+#ifndef ROCWMMA_DEVICE_MMA_SYNC_H
+#define ROCWMMA_DEVICE_MMA_SYNC_H
 
 // The testing interface instantiates fp64 typed tests for all
 // target devices. MI-100 mfma needs to be instantiated at compile time,
@@ -155,4 +155,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DEVICE_MMA_SYNC_H
+#endif // ROCWMMA_DEVICE_MMA_SYNC_H

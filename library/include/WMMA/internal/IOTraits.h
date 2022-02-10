@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_IO_TRAITS_H
-#define WMMA_IO_TRAITS_H
+#ifndef ROCWMMA_IO_TRAITS_H
+#define ROCWMMA_IO_TRAITS_H
 
 #include "Constants.h"
 #include "Types.h"
@@ -37,9 +37,9 @@ namespace rocwmma
     {
         /*
 * The following class is intended to define the packing traits
-* for particular datatypes. We consider that WMMA uses packed
+* for particular datatypes. We consider that ROCWMMA uses packed
 * registers. The pack ratio is how many registers resulting from
-* raw IO are packed together while used in WMMA.
+* raw IO are packed together while used in ROCWMMA.
 */
 
         template <typename DataT>
@@ -196,7 +196,7 @@ namespace rocwmma
     /*
 * The following class provides IO meta-data that is used
 * to provide static information used in inference and controlling
-* certain aspects of WMMA. Static asserts are also performed in this
+* certain aspects of ROCWMMA. Static asserts are also performed in this
 * class to indicate specific logical issues when implementing IO
 * functionality.
 */
@@ -242,4 +242,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_IO_TRAITS_H
+#endif // ROCWMMA_IO_TRAITS_H

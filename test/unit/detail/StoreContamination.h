@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DETAIL_STORE_CONTAMINATION_H
-#define WMMA_DETAIL_STORE_CONTAMINATION_H
+#ifndef ROCWMMA_DETAIL_STORE_CONTAMINATION_H
+#define ROCWMMA_DETAIL_STORE_CONTAMINATION_H
 
 #include "UnitKernelBase.h"
 #include "device/StoreContamination.h"
@@ -185,4 +185,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DETAIL_STORE_CONTAMINATION_H
+#endif // ROCWMMA_DETAIL_STORE_CONTAMINATION_H

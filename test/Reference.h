@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_REFERENCE_H
-#define WMMA_REFERENCE_H
+#ifndef ROCWMMA_REFERENCE_H
+#define ROCWMMA_REFERENCE_H
 
 #include <WMMA/internal/Types.h>
 #include <type_traits>
@@ -79,106 +79,104 @@ namespace rocwmma
         }
     }
 
-
-template <typename DataT>
-void dlrm_fwd_CPU(DataT const* input, DataT* output, uint32_t m, uint32_t k, uint32_t batchSize)
-{
-    auto batchOffset       = m * k;
-    uint outputBatchOffset = ((m * (m - 1)) / 2) + k;
-#pragma omp parallel for
-    for(int b = 0; b < batchSize; b++)
+    template <typename DataT>
+    void dlrm_fwd_CPU(DataT const* input, DataT* output, uint32_t m, uint32_t k, uint32_t batchSize)
     {
-        uint outputIdx = b * outputBatchOffset;
-
-        // Copy MLP to output
-        for(int i = 0; i < k; i++)
+        auto batchOffset       = m * k;
+        uint outputBatchOffset = ((m * (m - 1)) / 2) + k;
+#pragma omp parallel for
+        for(int b = 0; b < batchSize; b++)
         {
+            uint outputIdx = b * outputBatchOffset;
 
-            output[outputIdx] = input[b * batchOffset + i];
-            outputIdx++;
-        }
-        for(int i = 0; i < m; i++)
-        {
-            for(int j = 0; j < m; j++)
+            // Copy MLP to output
+            for(int i = 0; i < k; i++)
             {
-                float accum = static_cast<float>(0);
-                for(int h = 0; h < k; h++)
-                {
-                    accum += static_cast<float>(input[b * batchOffset + i * k + h])
-                             * static_cast<float>(input[b * batchOffset + j * k + h]);
-                }
 
-                if(j < i)
+                output[outputIdx] = input[b * batchOffset + i];
+                outputIdx++;
+            }
+            for(int i = 0; i < m; i++)
+            {
+                for(int j = 0; j < m; j++)
                 {
-                    output[outputIdx] = static_cast<DataT>(accum);
-                    outputIdx++;
+                    float accum = static_cast<float>(0);
+                    for(int h = 0; h < k; h++)
+                    {
+                        accum += static_cast<float>(input[b * batchOffset + i * k + h])
+                                 * static_cast<float>(input[b * batchOffset + j * k + h]);
+                    }
+
+                    if(j < i)
+                    {
+                        output[outputIdx] = static_cast<DataT>(accum);
+                        outputIdx++;
+                    }
                 }
             }
         }
     }
-}
 
-
-template <typename DataT>
-void dlrm_bwd_CPU(DataT const* input,
-                  DataT const* upstreamGrad,
-                  DataT*       bottomMlpGrad,
-                  DataT*       output,
-                  uint32_t     m,
-                  uint32_t     k,
-                  uint32_t     batchSize)
-{
-    auto batchOffset = m * k;
-    auto accOffset   = m * m;
-    auto trilSize    = ((m * (m - 1)) / 2) + k;
-    auto acc         = new DataT[batchSize * m * m];
+    template <typename DataT>
+    void dlrm_bwd_CPU(DataT const* input,
+                      DataT const* upstreamGrad,
+                      DataT*       bottomMlpGrad,
+                      DataT*       output,
+                      uint32_t     m,
+                      uint32_t     k,
+                      uint32_t     batchSize)
+    {
+        auto batchOffset = m * k;
+        auto accOffset   = m * m;
+        auto trilSize    = ((m * (m - 1)) / 2) + k;
+        auto acc         = new DataT[batchSize * m * m];
 
 #pragma omp parallel for
-    for(int b = 0; b < batchSize; b++)
-    {
-        // Copy bottom MLP grad
-        for(int j = 0; j < k; j++)
+        for(int b = 0; b < batchSize; b++)
         {
-            bottomMlpGrad[b * k + j] = upstreamGrad[b * trilSize + j];
-        }
-
-        // Remake tril
-        uint32_t upstreamIdx = b * trilSize + k;
-        for(int i = 0; i < m; i++)
-        {
-            for(int j = 0; j <= i; j++)
-            {
-                if(i == j)
-                {
-                    acc[b * accOffset + i * m + j] = 0;
-                }
-                else
-                {
-                    acc[b * accOffset + i * m + j] = upstreamGrad[upstreamIdx];
-                    acc[b * accOffset + j * m + i] = upstreamGrad[upstreamIdx];
-                    upstreamIdx++;
-                }
-            }
-        }
-
-        // Perform reverse bmm
-        for(int i = 0; i < m; i++)
-        {
+            // Copy bottom MLP grad
             for(int j = 0; j < k; j++)
             {
-                float accum = 0.0f;
-                for(int h = 0; h < m; h++)
+                bottomMlpGrad[b * k + j] = upstreamGrad[b * trilSize + j];
+            }
+
+            // Remake tril
+            uint32_t upstreamIdx = b * trilSize + k;
+            for(int i = 0; i < m; i++)
+            {
+                for(int j = 0; j <= i; j++)
                 {
-                    accum += static_cast<float>(acc[b * accOffset + i * m + h])
-                             * static_cast<float>(input[b * batchOffset + h * k + j]);
+                    if(i == j)
+                    {
+                        acc[b * accOffset + i * m + j] = 0;
+                    }
+                    else
+                    {
+                        acc[b * accOffset + i * m + j] = upstreamGrad[upstreamIdx];
+                        acc[b * accOffset + j * m + i] = upstreamGrad[upstreamIdx];
+                        upstreamIdx++;
+                    }
                 }
-                output[b * batchOffset + i * k + j] = static_cast<DataT>(accum);
+            }
+
+            // Perform reverse bmm
+            for(int i = 0; i < m; i++)
+            {
+                for(int j = 0; j < k; j++)
+                {
+                    float accum = 0.0f;
+                    for(int h = 0; h < m; h++)
+                    {
+                        accum += static_cast<float>(acc[b * accOffset + i * m + h])
+                                 * static_cast<float>(input[b * batchOffset + h * k + j]);
+                    }
+                    output[b * batchOffset + i * k + j] = static_cast<DataT>(accum);
+                }
             }
         }
+        delete[] acc;
     }
-    delete[] acc;
-}
 
 } // namespace rocwmma
 
-#endif // WMMA_REFERENCE_H
+#endif // ROCWMMA_REFERENCE_H

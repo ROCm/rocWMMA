@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_UNIT_RESOURCE_IMPL_H
-#define WMMA_UNIT_RESOURCE_IMPL_H
+#ifndef ROCWMMA_UNIT_RESOURCE_IMPL_H
+#define ROCWMMA_UNIT_RESOURCE_IMPL_H
 
 #include "Common.h"
 #include <cstring> // for std::memcpy
@@ -90,4 +90,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_UNIT_RESOURCE_IMPL_H
+#endif // ROCWMMA_UNIT_RESOURCE_IMPL_H

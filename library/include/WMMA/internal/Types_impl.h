@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_TYPES_IMPL_H
-#define WMMA_TYPES_IMPL_H
+#ifndef ROCWMMA_TYPES_IMPL_H
+#define ROCWMMA_TYPES_IMPL_H
 
 #include "Types.h"
 
@@ -263,4 +263,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_TYPES_IMPL_H
+#endif // ROCWMMA_TYPES_IMPL_H

@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_GEMM_RESOURCE_H
-#define WMMA_GEMM_RESOURCE_H
+#ifndef ROCWMMA_GEMM_RESOURCE_H
+#define ROCWMMA_GEMM_RESOURCE_H
 
 #include <memory>
 #include <tuple>
@@ -117,4 +117,4 @@ namespace rocwmma
 
 #include "GemmResource_impl.h"
 
-#endif // WMMA_GEMM_RESOURCE_H
+#endif // ROCWMMA_GEMM_RESOURCE_H

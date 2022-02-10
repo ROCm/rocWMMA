@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DETAIL_MAP_WAVE_TO_MATRIX_H
-#define WMMA_DETAIL_MAP_WAVE_TO_MATRIX_H
+#ifndef ROCWMMA_DETAIL_MAP_WAVE_TO_MATRIX_H
+#define ROCWMMA_DETAIL_MAP_WAVE_TO_MATRIX_H
 
 #include "UnitKernelBase.h"
 #include "device/MapWaveToMatrix.h"
@@ -118,4 +118,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DETAIL_MAP_WAVE_TO_MATRIX_H
+#endif // ROCWMMA_DETAIL_MAP_WAVE_TO_MATRIX_H

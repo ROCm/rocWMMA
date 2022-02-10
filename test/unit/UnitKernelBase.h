@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_UNIT_KERNEL_BASE_H
-#define WMMA_UNIT_KERNEL_BASE_H
+#ifndef ROCWMMA_UNIT_KERNEL_BASE_H
+#define ROCWMMA_UNIT_KERNEL_BASE_H
 
 #include <iostream>
 #include <sstream>
@@ -160,4 +160,4 @@ namespace rocwmma
 
 #include "UnitKernelBase_impl.h"
 
-#endif // WMMA_UNIT_KERNEL_BASE_H
+#endif // ROCWMMA_UNIT_KERNEL_BASE_H

@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DETAIL_MMA_SYNC_H
-#define WMMA_DETAIL_MMA_SYNC_H
+#ifndef ROCWMMA_DETAIL_MMA_SYNC_H
+#define ROCWMMA_DETAIL_MMA_SYNC_H
 
 #include "GemmKernelBase.h"
 #include "device/MmaSync.h"
@@ -128,4 +128,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DETAIL_MMA_SYNC_H
+#endif // ROCWMMA_DETAIL_MMA_SYNC_H

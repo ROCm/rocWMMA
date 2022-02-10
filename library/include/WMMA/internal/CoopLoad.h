@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_COOP_LOAD_H
-#define WMMA_COOP_LOAD_H
+#ifndef ROCWMMA_COOP_LOAD_H
+#define ROCWMMA_COOP_LOAD_H
 
 #include "IOTraits.h"
 #include "Layout.h"
@@ -427,4 +427,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_COOP_LOAD_H
+#endif // ROCWMMA_COOP_LOAD_H

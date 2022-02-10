@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DETAIL_LOAD_CONTAMINATION_H
-#define WMMA_DETAIL_LOAD_CONTAMINATION_H
+#ifndef ROCWMMA_DETAIL_LOAD_CONTAMINATION_H
+#define ROCWMMA_DETAIL_LOAD_CONTAMINATION_H
 
 #include "UnitKernelBase.h"
 #include "device/LoadContamination.h"
@@ -180,4 +180,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DETAIL_LOAD_CONTAMINATION_H
+#endif // ROCWMMA_DETAIL_LOAD_CONTAMINATION_H

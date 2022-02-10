@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_BARRIER_H
-#define WMMA_BARRIER_H
+#ifndef ROCWMMA_BARRIER_H
+#define ROCWMMA_BARRIER_H
 
 namespace rocwmma
 {
@@ -47,4 +47,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_BARRIER_H
+#endif // ROCWMMA_BARRIER_H

@@ -24,11 +24,11 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DEVICE_MAP_WAVE_TO_MATRIX_H
-#define WMMA_DEVICE_MAP_WAVE_TO_MATRIX_H
+#ifndef ROCWMMA_DEVICE_MAP_WAVE_TO_MATRIX_H
+#define ROCWMMA_DEVICE_MAP_WAVE_TO_MATRIX_H
 
-#include <WMMA/internal/MappingUtil.h>
 #include <WMMA/WMMA.h>
+#include <WMMA/internal/MappingUtil.h>
 
 namespace rocwmma
 {
@@ -74,4 +74,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DEVICE_MAP_WAVE_TO_MATRIX_H
+#endif // ROCWMMA_DEVICE_MAP_WAVE_TO_MATRIX_H

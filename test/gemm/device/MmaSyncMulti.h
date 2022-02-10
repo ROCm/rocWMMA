@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DEVICE_MMA_SYNC_MULTI_H
-#define WMMA_DEVICE_MMA_SYNC_MULTI_H
+#ifndef ROCWMMA_DEVICE_MMA_SYNC_MULTI_H
+#define ROCWMMA_DEVICE_MMA_SYNC_MULTI_H
 
 #include <array>
 #include <utility>
@@ -274,4 +274,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DEVICE_MMA_SYNC_MULTI_H
+#endif // ROCWMMA_DEVICE_MMA_SYNC_MULTI_H

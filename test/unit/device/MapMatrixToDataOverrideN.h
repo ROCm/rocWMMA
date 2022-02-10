@@ -24,11 +24,11 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DEVICE_MAP_MATRIX_TO_DATA_OVERRIDEN_H
-#define WMMA_DEVICE_MAP_MATRIX_TO_DATA_OVERRIDEN_H
+#ifndef ROCWMMA_DEVICE_MAP_MATRIX_TO_DATA_OVERRIDEN_H
+#define ROCWMMA_DEVICE_MAP_MATRIX_TO_DATA_OVERRIDEN_H
 
-#include <WMMA/internal/MappingUtil.h>
 #include <WMMA/WMMA.h>
+#include <WMMA/internal/MappingUtil.h>
 
 namespace rocwmma
 {
@@ -61,4 +61,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DEVICE_MAP_MATRIX_TO_DATA_OVERRIDEN_H
+#endif // ROCWMMA_DEVICE_MAP_MATRIX_TO_DATA_OVERRIDEN_H

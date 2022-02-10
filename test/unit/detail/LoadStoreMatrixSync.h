@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DETAIL_LOAD_STORE_MATRIX_SYNC_H
-#define WMMA_DETAIL_LOAD_STORE_MATRIX_SYNC_H
+#ifndef ROCWMMA_DETAIL_LOAD_STORE_MATRIX_SYNC_H
+#define ROCWMMA_DETAIL_LOAD_STORE_MATRIX_SYNC_H
 
 #include "UnitKernelBase.h"
 #include "device/LoadStoreMatrixSync.h"
@@ -162,4 +162,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DETAIL_LOAD_STORE_MATRIX_SYNC_H
+#endif // ROCWMMA_DETAIL_LOAD_STORE_MATRIX_SYNC_H

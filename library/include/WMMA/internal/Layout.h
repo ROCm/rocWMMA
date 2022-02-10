@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_LAYOUT_H
-#define WMMA_LAYOUT_H
+#ifndef ROCWMMA_LAYOUT_H
+#define ROCWMMA_LAYOUT_H
 
 #include <type_traits>
 
@@ -37,7 +37,7 @@ namespace rocwmma
     {
 
         /**
- * \ingroup wmma
+ * \ingroup rocwmma
  * \defgroup matrixLayouts
  *
  * @brief Definition and metadata on supported matrix layouts.
@@ -375,4 +375,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_LAYOUT_H
+#endif // ROCWMMA_LAYOUT_H

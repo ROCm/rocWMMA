@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_OPAQUE_LOAD_H
-#define WMMA_OPAQUE_LOAD_H
+#ifndef ROCWMMA_OPAQUE_LOAD_H
+#define ROCWMMA_OPAQUE_LOAD_H
 
 #include "IOTraits.h"
 #include "Layout.h"
@@ -101,4 +101,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_OPAQUE_LOAD_H
+#endif // ROCWMMA_OPAQUE_LOAD_H

@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_UNIT_RESOURCE_H
-#define WMMA_UNIT_RESOURCE_H
+#ifndef ROCWMMA_UNIT_RESOURCE_H
+#define ROCWMMA_UNIT_RESOURCE_H
 
 #include <memory>
 #include <tuple>
@@ -100,4 +100,4 @@ namespace rocwmma
 
 #include "UnitResource_impl.h"
 
-#endif // WMMA_UNIT_RESOURCE_H
+#endif // ROCWMMA_UNIT_RESOURCE_H

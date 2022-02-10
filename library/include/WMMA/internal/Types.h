@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_TYPES_H
-#define WMMA_TYPES_H
+#ifndef ROCWMMA_TYPES_H
+#define ROCWMMA_TYPES_H
 
 #include <hip/hip_bfloat16.h>
 #include <hip/hip_fp16.h>
@@ -37,7 +37,7 @@ namespace rocwmma
 {
 
     /**
- * \ingroup wmma
+ * \ingroup rocwmma
  * \defgroup DataTypes
  *
  * @brief Definition and metadata on supported data types of matrices.
@@ -311,4 +311,4 @@ namespace rocwmma
 
 #include "Types_ext.h"
 
-#endif // WMMA_TYPES_H
+#endif // ROCWMMA_TYPES_H

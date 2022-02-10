@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_MAPPING_UTIL_IMPL_H
-#define WMMA_MAPPING_UTIL_IMPL_H
+#ifndef ROCWMMA_MAPPING_UTIL_IMPL_H
+#define ROCWMMA_MAPPING_UTIL_IMPL_H
 
 #include <hip/hip_runtime.h>
 #include <utility>
@@ -246,4 +246,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_MAPPING_UTIL_IMPL_H
+#endif // ROCWMMA_MAPPING_UTIL_IMPL_H

@@ -24,16 +24,16 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_UNIT_UNIT_TEST_PARAMS_H
-#define WMMA_UNIT_UNIT_TEST_PARAMS_H
+#ifndef ROCWMMA_UNIT_UNIT_TEST_PARAMS_H
+#define ROCWMMA_UNIT_UNIT_TEST_PARAMS_H
 
 #include <tuple>
 #include <vector>
 
 #include "Common.h"
 #include "KernelGenerator.h"
-#include <WMMA/internal/Types.h>
 #include "UnitKernelBase.h"
+#include <WMMA/internal/Types.h>
 
 namespace rocwmma
 {
@@ -197,4 +197,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_UNIT_UNIT_TEST_PARAMS_H
+#endif // ROCWMMA_UNIT_UNIT_TEST_PARAMS_H

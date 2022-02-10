@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_UNIT_TEST_BASE_H
-#define WMMA_UNIT_TEST_BASE_H
+#ifndef ROCWMMA_UNIT_TEST_BASE_H
+#define ROCWMMA_UNIT_TEST_BASE_H
 
 #include "UnitKernelBase.h"
 #include "UnitTestParams.h"
@@ -97,4 +97,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_UNIT_TEST_BASE_H
+#endif // ROCWMMA_UNIT_TEST_BASE_H

@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_COOP_H_
-#define WMMA_COOP_H_
+#ifndef ROCWMMA_COOP_H_
+#define ROCWMMA_COOP_H_
 
 #include <type_traits>
 
@@ -33,7 +33,7 @@
 /**
  * \mainpage
  *
- * WMMACoop complements the WMMA API with support for cooperative operations.
+ * ROCWMMACoop complements the ROCWMMA API with support for cooperative operations.
  * Operations may be split into smaller unit work items that are assigned to waves
  * in a collaborative pool using a round-robin fashion.
  *
@@ -60,7 +60,7 @@
 namespace rocwmma
 {
     /**
- * \ingroup WMMA APIs
+ * \ingroup ROCWMMA APIs
  * @{
  */
     /**
@@ -170,7 +170,7 @@ namespace rocwmma
                               uint32_t                                                      ldm);
 
     /**
- * \ingroup WMMA APIs
+ * \ingroup ROCWMMA APIs
  * @{
  */
     /**
@@ -281,4 +281,4 @@ namespace rocwmma
 
 #include "WMMACoop_impl.h"
 
-#endif // WMMA_COOP_H_
+#endif // ROCWMMA_COOP_H_

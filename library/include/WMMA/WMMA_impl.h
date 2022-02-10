@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_IMPL_H_
-#define WMMA_IMPL_H_
+#ifndef ROCWMMA_IMPL_H_
+#define ROCWMMA_IMPL_H_
 
 #include <type_traits>
 #include <utility>
@@ -307,4 +307,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_IMPL_H_
+#endif // ROCWMMA_IMPL_H_
