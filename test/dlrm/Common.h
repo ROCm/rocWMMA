@@ -31,10 +31,10 @@
 #include <hip/hip_runtime_api.h>
 
 #include "device/Common.h"
-#include <rocwmma/WMMA.h>
-#include <rocwmma/internal/Constants.h>
-#include <rocwmma/internal/Types.h>
-#include <rocwmma/internal/Utils.h>
+#include <rocwmma/internal/constants.hpp>
+#include <rocwmma/internal/types.hpp>
+#include <rocwmma/internal/utils.hpp>
+#include <rocwmma/rocwmma.hpp>
 
 #include <cassert>
 #include <cstdlib>

@@ -28,7 +28,7 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
-#include <rocwmma/WMMA.h>
+#include <rocwmma/rocwmma.hpp>
 
 #include "Common.h"
 

@@ -23,15 +23,15 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_MAPPING_UTIL_IMPL_H
-#define ROCWMMA_MAPPING_UTIL_IMPL_H
+#ifndef ROCWMMA_MAPPING_UTIL_IMPL_HPP
+#define ROCWMMA_MAPPING_UTIL_IMPL_HPP
 
 #include <hip/hip_runtime.h>
 #include <utility>
 
-#include "Constants.h"
-#include "MappingUtil.h"
-#include "Types.h"
+#include "constants.hpp"
+#include "mapping_util.hpp"
+#include "types.hpp"
 
 namespace rocwmma
 {
@@ -246,4 +246,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_MAPPING_UTIL_IMPL_H
+#endif // ROCWMMA_MAPPING_UTIL_IMPL_HPP

@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_TYPES_EXT_H
-#define ROCWMMA_TYPES_EXT_H
+#ifndef ROCWMMA_TYPES_EXT_HPP
+#define ROCWMMA_TYPES_EXT_HPP
 
 #include <hip/hip_bfloat16.h>
 #include <hip/hip_fp16.h>
@@ -35,7 +35,7 @@
 #include <ostream>
 #include <type_traits>
 
-#include "Types.h"
+#include "types.hpp"
 
 /**
  * \ingroup rocwmma
@@ -411,4 +411,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_TYPES_EXT_H
+#endif // ROCWMMA_TYPES_EXT_HPP

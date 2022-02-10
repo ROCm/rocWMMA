@@ -28,7 +28,7 @@
 #define DLRM_DOT_FWD_H
 
 #include "./Common.h"
-#include <rocwmma/internal/Utils.h>
+#include <rocwmma/internal/utils.hpp>
 
 namespace rocwmma
 {

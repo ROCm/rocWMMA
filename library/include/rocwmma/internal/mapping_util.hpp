@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_MAPPING_UTIL_H
-#define ROCWMMA_MAPPING_UTIL_H
+#ifndef ROCWMMA_MAPPING_UTIL_HPP
+#define ROCWMMA_MAPPING_UTIL_HPP
 
 #include <utility>
 
@@ -185,6 +185,6 @@ workgroup.
 
 } // namespace rocwmma
 
-#include "MappingUtil_impl.h"
+#include "mapping_util_impl.hpp"
 
-#endif // ROCWMMA_MAPPING_UTIL_H
+#endif // ROCWMMA_MAPPING_UTIL_HPP

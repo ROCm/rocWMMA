@@ -23,12 +23,12 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_OPAQUE_STORE_H
-#define ROCWMMA_OPAQUE_STORE_H
+#ifndef ROCWMMA_OPAQUE_STORE_HPP
+#define ROCWMMA_OPAQUE_STORE_HPP
 
-#include "IOTraits.h"
-#include "Layout.h"
-#include "Types.h"
+#include "io_traits.hpp"
+#include "layout.hpp"
+#include "types.hpp"
 
 namespace rocwmma
 {
@@ -96,4 +96,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_OPAQUE_STORE_H
+#endif // ROCWMMA_OPAQUE_STORE_HPP

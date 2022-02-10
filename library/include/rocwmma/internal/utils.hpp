@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_UTILS_H
-#define ROCWMMA_UTILS_H
+#ifndef ROCWMMA_UTILS_HPP
+#define ROCWMMA_UTILS_HPP
 
 #include <tuple>
 #include <utility>
@@ -168,4 +168,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_UTILS_H
+#endif // ROCWMMA_UTILS_HPP

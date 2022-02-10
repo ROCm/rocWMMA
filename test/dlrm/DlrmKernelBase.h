@@ -34,7 +34,7 @@
 #include "Common.h"
 #include "DlrmResource.h"
 #include "HipDevice.h"
-#include <rocwmma/internal/Constants.h>
+#include <rocwmma/internal/constants.hpp>
 
 namespace rocwmma
 {
