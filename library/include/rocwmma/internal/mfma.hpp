@@ -23,14 +23,14 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_MFMA_H
-#define ROCWMMA_MFMA_H
+#ifndef ROCWMMA_MFMA_HPP
+#define ROCWMMA_MFMA_HPP
 
-#include "Convert.h"
-#include "IOTraits.h"
-#include "Pack.h"
-#include "Types.h"
-#include "Unpack.h"
+#include "convert.hpp"
+#include "io_traits.hpp"
+#include "pack.hpp"
+#include "types.hpp"
+#include "unpack.hpp"
 
 namespace rocwmma
 {
@@ -698,4 +698,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_MFMA_H
+#endif // ROCWMMA_MFMA_HPP

@@ -23,14 +23,14 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_COOP_LOAD_H
-#define ROCWMMA_COOP_LOAD_H
+#ifndef ROCWMMA_COOP_LOAD_HPP
+#define ROCWMMA_COOP_LOAD_HPP
 
-#include "IOTraits.h"
-#include "Layout.h"
-#include "OpaqueLoad.h"
-#include "Types.h"
-#include "Utils.h"
+#include "io_traits.hpp"
+#include "layout.hpp"
+#include "opaque_load.hpp"
+#include "types.hpp"
+#include "utils.hpp"
 
 namespace rocwmma
 {
@@ -427,4 +427,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_COOP_LOAD_H
+#endif // ROCWMMA_COOP_LOAD_HPP

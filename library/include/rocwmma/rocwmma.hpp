@@ -23,14 +23,14 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_H_
-#define ROCWMMA_H_
+#ifndef ROCWMMA_HPP
+#define ROCWMMA_HPP
 
 #include <type_traits>
 
-#include "internal/IOConfig.h"
-#include "internal/IOTraits.h"
-#include "internal/Types.h"
+#include "internal/io_config.hpp"
+#include "internal/io_traits.hpp"
+#include "internal/types.hpp"
 
 /**
  * \mainpage
@@ -441,6 +441,6 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#include "WMMA_impl.h"
+#include "rocwmma_impl.hpp"
 
-#endif // ROCWMMA_H_
+#endif // ROCWMMA_HPP

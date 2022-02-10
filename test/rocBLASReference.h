@@ -43,7 +43,7 @@
 #include <rocblas.h>
 
 #include "Common.h"
-#include <rocwmma/internal/Types.h>
+#include <rocwmma/internal/types.hpp>
 
 namespace rocwmma
 {

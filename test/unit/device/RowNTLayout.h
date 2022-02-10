@@ -27,9 +27,9 @@
 #ifndef ROCWMMA_DEVICE_ROWNT_LAYOUT_H
 #define ROCWMMA_DEVICE_ROWNT_LAYOUT_H
 
-#include <rocwmma/internal/IOTraits.h>
-#include <rocwmma/internal/Layout.h>
-#include <rocwmma/internal/MappingUtil.h>
+#include <rocwmma/internal/io_traits.hpp>
+#include <rocwmma/internal/layout.hpp>
+#include <rocwmma/internal/mapping_util.hpp>
 
 namespace rocwmma
 {

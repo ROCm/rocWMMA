@@ -23,28 +23,28 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_IMPL_H_
-#define ROCWMMA_IMPL_H_
+#ifndef ROCWMMA_IMPL_HPP
+#define ROCWMMA_IMPL_HPP
 
 #include <type_traits>
 #include <utility>
 
-#include "WMMA.h"
+#include "rocwmma.hpp"
 
-#include "internal/Barrier.h"
-#include "internal/Broadcast.h"
-#include "internal/Constants.h"
-#include "internal/Convert.h"
-#include "internal/IOConfig.h"
-#include "internal/IOTraits.h"
-#include "internal/Layout.h"
-#include "internal/MFMA.h"
-#include "internal/MappingUtil.h"
-#include "internal/OpaqueLoad.h"
-#include "internal/OpaqueStore.h"
-#include "internal/Pack.h"
-#include "internal/Types.h"
-#include "internal/Unpack.h"
+#include "internal/barrier.hpp"
+#include "internal/broadcast.hpp"
+#include "internal/constants.hpp"
+#include "internal/convert.hpp"
+#include "internal/io_config.hpp"
+#include "internal/io_traits.hpp"
+#include "internal/layout.hpp"
+#include "internal/mapping_util.hpp"
+#include "internal/mfma.hpp"
+#include "internal/opaque_load.hpp"
+#include "internal/opaque_store.hpp"
+#include "internal/pack.hpp"
+#include "internal/types.hpp"
+#include "internal/unpack.hpp"
 
 namespace rocwmma
 {
@@ -307,4 +307,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_IMPL_H_
+#endif // ROCWMMA_IMPL_HPP

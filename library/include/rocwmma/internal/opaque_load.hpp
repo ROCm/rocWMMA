@@ -23,14 +23,14 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_OPAQUE_LOAD_H
-#define ROCWMMA_OPAQUE_LOAD_H
+#ifndef ROCWMMA_OPAQUE_LOAD_HPP
+#define ROCWMMA_OPAQUE_LOAD_HPP
 
-#include "IOTraits.h"
-#include "Layout.h"
-#include "MappingUtil.h"
-#include "Types.h"
-#include "Utils.h"
+#include "io_traits.hpp"
+#include "layout.hpp"
+#include "mapping_util.hpp"
+#include "types.hpp"
+#include "utils.hpp"
 
 namespace rocwmma
 {
@@ -101,4 +101,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_OPAQUE_LOAD_H
+#endif // ROCWMMA_OPAQUE_LOAD_HPP

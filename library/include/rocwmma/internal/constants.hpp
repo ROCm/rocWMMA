@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_CONSTANTS_H
-#define ROCWMMA_CONSTANTS_H
+#ifndef ROCWMMA_CONSTANTS_HPP
+#define ROCWMMA_CONSTANTS_HPP
 
 namespace rocwmma
 {
@@ -39,4 +39,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_CONSTANTS_H
+#endif // ROCWMMA_CONSTANTS_HPP

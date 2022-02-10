@@ -23,13 +23,13 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_LAYOUT_IMPL_H
-#define ROCWMMA_LAYOUT_IMPL_H
+#ifndef ROCWMMA_LAYOUT_IMPL_HPP
+#define ROCWMMA_LAYOUT_IMPL_HPP
 
-#include "IOTraits.h"
-#include "Layout.h"
-#include "MappingUtil.h"
-#include "Utils.h"
+#include "io_traits.hpp"
+#include "layout.hpp"
+#include "mapping_util.hpp"
+#include "utils.hpp"
 
 namespace rocwmma
 {
@@ -585,4 +585,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_LAYOUT_IMPL_H
+#endif // ROCWMMA_LAYOUT_IMPL_HPP

@@ -40,8 +40,8 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "LdsMappingUtil.h"
-#include <rocwmma/WMMA.h>
-#include <rocwmma/WMMACoop.h>
+#include <rocwmma/rocwmma.hpp>
+#include <rocwmma/rocwmma_coop.hpp>
 #pragma GCC diagnostic pop
 
 namespace rocwmma

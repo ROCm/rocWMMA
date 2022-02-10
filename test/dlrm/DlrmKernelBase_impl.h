@@ -46,8 +46,8 @@
 #include "Performance.h"
 
 // Library includes
-#include <rocwmma/internal/Constants.h>
-#include <rocwmma/internal/Utils.h>
+#include <rocwmma/internal/constants.hpp>
+#include <rocwmma/internal/utils.hpp>
 
 #ifdef WMMA_VALIDATION_TESTS
 #include "Reference.h" // Vanilla CPU kernel

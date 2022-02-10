@@ -37,9 +37,9 @@
 #include "Common.h"
 
 // Library includes
-#include <rocwmma/internal/Constants.h>
-#include <rocwmma/internal/Types.h>
-#include <rocwmma/internal/Utils.h>
+#include <rocwmma/internal/constants.hpp>
+#include <rocwmma/internal/types.hpp>
+#include <rocwmma/internal/utils.hpp>
 
 namespace rocwmma
 {

@@ -26,7 +26,7 @@
 #ifndef ROCWMMA_PERFORMANCE_H
 #define ROCWMMA_PERFORMANCE_H
 
-#include <rocwmma/internal/Types.h>
+#include <rocwmma/internal/types.hpp>
 
 namespace rocwmma
 {

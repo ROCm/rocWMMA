@@ -23,12 +23,12 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_LAYOUT_H
-#define ROCWMMA_LAYOUT_H
+#ifndef ROCWMMA_LAYOUT_HPP
+#define ROCWMMA_LAYOUT_HPP
 
 #include <type_traits>
 
-#include "Layout_impl.h"
+#include "layout_impl.hpp"
 
 namespace rocwmma
 {
@@ -375,4 +375,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_LAYOUT_H
+#endif // ROCWMMA_LAYOUT_HPP

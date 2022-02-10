@@ -23,10 +23,10 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_BROADCAST_H
-#define ROCWMMA_BROADCAST_H
+#ifndef ROCWMMA_BROADCAST_HPP
+#define ROCWMMA_BROADCAST_HPP
 
-#include "Types.h"
+#include "types.hpp"
 
 namespace rocwmma
 {
@@ -58,4 +58,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_BROADCAST_H
+#endif // ROCWMMA_BROADCAST_HPP
