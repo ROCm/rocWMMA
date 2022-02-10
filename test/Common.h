@@ -33,7 +33,7 @@
 #include <type_traits>
 #include <vector>
 
-#include <WMMA/internal/Types.h>
+#include <rocwmma/internal/Types.h>
 
 #ifndef CHECK_HIP_ERROR
 #define CHECK_HIP_ERROR(status)                   \

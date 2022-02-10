@@ -28,8 +28,7 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
-#include <WMMA/WMMA.h>
-#include <WMMA/internal/Utils.h>
+#include <rocwmma/WMMA.h>
 
 #include "Common.h"
 

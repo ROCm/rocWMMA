@@ -26,7 +26,7 @@
 #ifndef ROCWMMA_REFERENCE_H
 #define ROCWMMA_REFERENCE_H
 
-#include <WMMA/internal/Types.h>
+#include <rocwmma/internal/Types.h>
 #include <type_traits>
 
 namespace rocwmma

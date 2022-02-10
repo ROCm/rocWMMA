@@ -27,8 +27,8 @@
 #ifndef ROCWMMA_DEVICE_LOAD_STORE_MATRIX_SYNC_H
 #define ROCWMMA_DEVICE_LOAD_STORE_MATRIX_SYNC_H
 
-#include <WMMA/WMMA.h>
-#include <WMMA/internal/MappingUtil.h>
+#include <rocwmma/WMMA.h>
+#include <rocwmma/internal/MappingUtil.h>
 
 namespace rocwmma
 {

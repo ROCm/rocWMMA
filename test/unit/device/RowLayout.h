@@ -27,9 +27,9 @@
 #ifndef ROCWMMA_DEVICE_ROW_LAYOUT_H
 #define ROCWMMA_DEVICE_ROW_LAYOUT_H
 
-#include <WMMA/internal/IOTraits.h>
-#include <WMMA/internal/Layout.h>
-#include <WMMA/internal/MappingUtil.h>
+#include <rocwmma/internal/IOTraits.h>
+#include <rocwmma/internal/Layout.h>
+#include <rocwmma/internal/MappingUtil.h>
 
 namespace rocwmma
 {
