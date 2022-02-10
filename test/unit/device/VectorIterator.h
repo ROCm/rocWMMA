@@ -29,7 +29,8 @@
 
 #include "Types.h"
 
-#define ERROR_VALUE 7
+static constexpr uint32_t ERROR_VALUE = 7;
+static constexpr uint32_t SUCCESS     = 0;
 
 namespace rocwmma
 {
@@ -103,7 +104,12 @@ namespace rocwmma
         bool ret = (iterVectData.size() == (it.range() * iterSize));
 
         for(uint32_t i = 0; i < it.range(); i++, it++)
-            ret &= (iterVectData[i * iterSize] == iterVectData[(*it)[0]]);
+        {
+            for(uint32_t j = 0; j < iterSize; j++)
+            {
+                ret &= (iterVectData[i * iterSize + j] == iterVectData[(*it)[j]]);
+            }
+        }
 
         return ret;
     }
@@ -335,9 +341,10 @@ namespace rocwmma
                                    DataT        param1,
                                    DataT        param2)
     {
+        // Test is for any thread
         if(threadIdx.x == 0 && threadIdx.y == 0)
         {
-            out[0] = static_cast<DataT>(0);
+            out[0] = static_cast<DataT>(SUCCESS);
 
             bool err = defaultConstructorTest<VectSize, DataT>();
             if(err == false)
