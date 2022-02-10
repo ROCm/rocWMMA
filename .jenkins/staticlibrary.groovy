@@ -7,15 +7,15 @@ import java.nio.file.Path;
 def runCI =
 {
     nodeDetails, jobName->
-    
-    def prj = new rocProject('WMMA', 'Static Library PreCheckin')
+
+    def prj = new rocProject('rocWMMA', 'Static Library PreCheckin')
 
     def nodes = new dockerNodes(nodeDetails, jobName, prj)
 
     def commonGroovy
 
     boolean formatCheck = false
-     
+
     def compileCommand =
     {
         platform, project->
@@ -24,7 +24,7 @@ def runCI =
         commonGroovy.runCompileCommand(platform, project, jobName, false)
     }
 
-    
+
     def testCommand =
     {
         platform, project->
@@ -42,10 +42,10 @@ def runCI =
     buildProject(prj, formatCheck, nodes.dockerArray, compileCommand, testCommand, packageCommand)
 }
 
-ci: { 
+ci: {
     String urlJobName = auxiliary.getTopJobName(env.BUILD_URL)
 
-    def propertyList = ["compute-rocm-dkms-no-npi":[pipelineTriggers([cron('0 1 * * 0')])], 
+    def propertyList = ["compute-rocm-dkms-no-npi":[pipelineTriggers([cron('0 1 * * 0')])],
                         "compute-rocm-dkms-no-npi-hipclang":[pipelineTriggers([cron('0 1 * * 0')])],
                         "rocm-docker":[]]
     propertyList = auxiliary.appendPropertyList(propertyList)
@@ -53,7 +53,7 @@ ci: {
     def jobNameList = ["compute-rocm-dkms-no-npi-hipclang":([ubuntu18:['gfx908'],centos7:['gfx908'],centos8:['gfx908'],sles15sp1:['gfx908'],ubuntu20:['gfx90a']])]
     // jobNameList = auxiliary.appendJobNameList(jobNameList)
 
-    propertyList.each 
+    propertyList.each
     {
         jobName, property->
         if (urlJobName == jobName)
