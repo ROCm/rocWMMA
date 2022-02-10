@@ -29,9 +29,9 @@
 
 #include <algorithm>
 
-#include <WMMA/WMMA.h>
-#include <WMMA/WMMACoop.h>
-#include <WMMA/internal/MappingUtil.h>
+#include <rocwmma/WMMA.h>
+#include <rocwmma/WMMACoop.h>
+#include <rocwmma/internal/MappingUtil.h>
 
 namespace rocwmma
 {

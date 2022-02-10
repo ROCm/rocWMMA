@@ -31,7 +31,7 @@
 #include <iostream>
 #include <vector>
 
-#include <WMMA/WMMA.h>
+#include <rocwmma/WMMA.h>
 
 #include "Common.h"
 

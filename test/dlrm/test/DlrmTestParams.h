@@ -33,37 +33,37 @@
 #include "../Common.h"
 #include "DlrmKernelBase.h"
 #include "KernelGenerator.h"
-#include <WMMA/internal/Types.h>
+#include <rocwmma/internal/Types.h>
 
 namespace rocwmma
 {
 
-struct DlrmTestParams
-{
-    // Types of parameters
-    using KernelT        = std::shared_ptr<KernelI>;
-    using ThreadBlockT   = std::pair<int64_t, int64_t>;
-    using ProblemSizeT   = std::tuple<int64_t, int64_t, int64_t>;
-    using PassDirectionT = DlrmDirection_t;
-
-    using DataTypes = std::tuple<std::tuple<float32_t>, std::tuple<float16_t>>;
-    using TileSizes = std::tuple<std::tuple<I<16>>, std::tuple<I<32>>>;
-
-    // M, K, BatchSize
-    static inline std::vector<ProblemSizeT> problemSizes()
+    struct DlrmTestParams
     {
-        return {{32, 32, 64}, {32, 128, 64}, {128, 128, 64}, {1024, 1024, 64}};
-    }
-    static inline std::vector<ThreadBlockT> threadBlocks()
-    {
-        return {{128, 1}};
-    }
+        // Types of parameters
+        using KernelT        = std::shared_ptr<KernelI>;
+        using ThreadBlockT   = std::pair<int64_t, int64_t>;
+        using ProblemSizeT   = std::tuple<int64_t, int64_t, int64_t>;
+        using PassDirectionT = DlrmDirection_t;
 
-    static inline std::vector<PassDirectionT> passDirections()
-    {
-        return {DlrmDirection_t::Forward, DlrmDirection_t::Backward};
-    }
-};
+        using DataTypes = std::tuple<std::tuple<float32_t>, std::tuple<float16_t>>;
+        using TileSizes = std::tuple<std::tuple<I<16>>, std::tuple<I<32>>>;
+
+        // M, K, BatchSize
+        static inline std::vector<ProblemSizeT> problemSizes()
+        {
+            return {{32, 32, 64}, {32, 128, 64}, {128, 128, 64}, {1024, 1024, 64}};
+        }
+        static inline std::vector<ThreadBlockT> threadBlocks()
+        {
+            return {{128, 1}};
+        }
+
+        static inline std::vector<PassDirectionT> passDirections()
+        {
+            return {DlrmDirection_t::Forward, DlrmDirection_t::Backward};
+        }
+    };
 
 } // namespace rocwmma
 

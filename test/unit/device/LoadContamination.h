@@ -27,8 +27,8 @@
 #ifndef ROCWMMA_DEVICE_LOAD_CONTAMINATION_H
 #define ROCWMMA_DEVICE_LOAD_CONTAMINATION_H
 
-#include <WMMA/WMMA.h>
-#include <WMMA/internal/MappingUtil.h>
+#include <rocwmma/WMMA.h>
+#include <rocwmma/internal/MappingUtil.h>
 
 namespace rocwmma
 {

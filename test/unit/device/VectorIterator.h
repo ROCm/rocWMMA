@@ -27,7 +27,7 @@
 #ifndef ROCWMMA_DEVICE_VECTOR_ITERATOR_H
 #define ROCWMMA_DEVICE_VECTOR_ITERATOR_H
 
-#include <WMMA/internal/Types.h>
+#include <rocwmma/internal/Types.h>
 
 static constexpr uint32_t ERROR_VALUE = 7;
 static constexpr uint32_t SUCCESS     = 0;

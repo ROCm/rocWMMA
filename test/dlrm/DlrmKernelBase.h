@@ -32,148 +32,148 @@
 #include <string>
 
 #include "Common.h"
-#include <WMMA/internal/Constants.h>
 #include "DlrmResource.h"
 #include "HipDevice.h"
+#include <rocwmma/internal/Constants.h>
 
 namespace rocwmma
 {
 
-// Training pass direction
-enum class DlrmDirection_t : bool
-{
-    Forward,
-    Backward
-};
+    // Training pass direction
+    enum class DlrmDirection_t : bool
+    {
+        Forward,
+        Backward
+    };
 
-// Basic structure to hold runtime problem
-// parameters
-struct ProblemParams
-{
-    std::pair<int64_t, int64_t>           threadBlockSize;
-    std::tuple<int64_t, int64_t, int64_t> problemSize;
-    DlrmDirection_t                       passDirection;
-};
+    // Basic structure to hold runtime problem
+    // parameters
+    struct ProblemParams
+    {
+        std::pair<int64_t, int64_t>           threadBlockSize;
+        std::tuple<int64_t, int64_t, int64_t> problemSize;
+        DlrmDirection_t                       passDirection;
+    };
 
-// Typeless Kernel interface to use with testing harness.
-struct KernelI
-{
-    KernelI() {}
-    virtual ~KernelI(){};
+    // Typeless Kernel interface to use with testing harness.
+    struct KernelI
+    {
+        KernelI() {}
+        virtual ~KernelI(){};
 
-    virtual void          setup(ProblemParams const& problem)                 = 0;
-    virtual void          exec()                                              = 0;
-    virtual void          validateResults()                                   = 0;
-    virtual void          reportResults()                                     = 0;
-    virtual void          tearDown()                                          = 0;
-    virtual std::ostream& printHeader(std::ostream& stream = std::cout) const = 0;
-    virtual std::ostream& printKernel(std::ostream& stream = std::cout) const = 0;
+        virtual void          setup(ProblemParams const& problem)                 = 0;
+        virtual void          exec()                                              = 0;
+        virtual void          validateResults()                                   = 0;
+        virtual void          reportResults()                                     = 0;
+        virtual void          tearDown()                                          = 0;
+        virtual std::ostream& printHeader(std::ostream& stream = std::cout) const = 0;
+        virtual std::ostream& printKernel(std::ostream& stream = std::cout) const = 0;
 
-    static bool sHeaderPrinted;
-};
+        static bool sHeaderPrinted;
+    };
 
-inline std::ostream& operator<<(std::ostream& stream, KernelI const& kernel)
-{
-    kernel.printHeader(stream);
-    kernel.printKernel(stream);
-    return stream;
-}
+    inline std::ostream& operator<<(std::ostream& stream, KernelI const& kernel)
+    {
+        kernel.printHeader(stream);
+        kernel.printKernel(stream);
+        return stream;
+    }
 
-// Typed DLRM kernel that provides the basis for DLRM tests.
-// This class provides common implementation code.
-template <uint32_t TileSize, typename DataT>
-struct DlrmKernelBase : public KernelI
-{
-protected: // Types
-    // Shared access to DLRM storage
-    using DataStorage = DlrmResource<DataT>;
-    // Using Hip device backend
-    using DeviceInfo = HipDevice;
+    // Typed DLRM kernel that provides the basis for DLRM tests.
+    // This class provides common implementation code.
+    template <uint32_t TileSize, typename DataT>
+    struct DlrmKernelBase : public KernelI
+    {
+    protected: // Types
+        // Shared access to DLRM storage
+        using DataStorage = DlrmResource<DataT>;
+        // Using Hip device backend
+        using DeviceInfo = HipDevice;
 
-    // Interface to forward device kernel
-    using KernelFwdFunc = void (*)(const DataT* __restrict, // input
-                                   DataT* __restrict, // output
-                                   float*, // acc
-                                   uint32_t, // m
-                                   uint32_t, // k
-                                   uint32_t, // b
-                                   uint32_t, // inputBatchOffset
-                                   uint32_t, // outputBatchOffset
-                                   uint32_t); // accBatchOffset
+        // Interface to forward device kernel
+        using KernelFwdFunc = void (*)(const DataT* __restrict, // input
+                                       DataT* __restrict, // output
+                                       float*, // acc
+                                       uint32_t, // m
+                                       uint32_t, // k
+                                       uint32_t, // b
+                                       uint32_t, // inputBatchOffset
+                                       uint32_t, // outputBatchOffset
+                                       uint32_t); // accBatchOffset
 
-    // Interface to backwards device kernels
-    using KernelBwdFunc = void (*)(const DataT* __restrict, // input
-                                   const DataT* __restrict, // upstreamGrad
-                                   DataT* __restrict, // grad
-                                   DataT* __restrict, // bottomMlpGrad
-                                   DataT* __restrict, // acc
-                                   uint32_t, // m
-                                   uint32_t, // k
-                                   uint32_t, // b
-                                   uint32_t, // inputBatchOffset
-                                   uint32_t, // upstreamBatchOffset
-                                   uint32_t); // accBatchOffset
+        // Interface to backwards device kernels
+        using KernelBwdFunc = void (*)(const DataT* __restrict, // input
+                                       const DataT* __restrict, // upstreamGrad
+                                       DataT* __restrict, // grad
+                                       DataT* __restrict, // bottomMlpGrad
+                                       DataT* __restrict, // acc
+                                       uint32_t, // m
+                                       uint32_t, // k
+                                       uint32_t, // b
+                                       uint32_t, // inputBatchOffset
+                                       uint32_t, // upstreamBatchOffset
+                                       uint32_t); // accBatchOffset
 
-    using KernelTrilFunc = void (*)(const DataT* __restrict, // upstreamGrad
-                                    DataT* __restrict, // acc
-                                    uint32_t, // m
-                                    uint32_t, // k
-                                    uint32_t, // b
-                                    uint32_t, // upstreamBatchOffset
-                                    uint32_t); // accBatchOffset
+        using KernelTrilFunc = void (*)(const DataT* __restrict, // upstreamGrad
+                                        DataT* __restrict, // acc
+                                        uint32_t, // m
+                                        uint32_t, // k
+                                        uint32_t, // b
+                                        uint32_t, // upstreamBatchOffset
+                                        uint32_t); // accBatchOffset
 
-protected:
-    DlrmKernelBase();
-    virtual ~DlrmKernelBase();
+    protected:
+        DlrmKernelBase();
+        virtual ~DlrmKernelBase();
 
-    // Kernels MUST provide the device kernel function.
-    virtual KernelFwdFunc  kernelFwdImpl() const  = 0;
-    virtual KernelBwdFunc  kernelBwdImpl() const  = 0;
-    virtual KernelTrilFunc kernelTrilImpl() const = 0;
+        // Kernels MUST provide the device kernel function.
+        virtual KernelFwdFunc  kernelFwdImpl() const  = 0;
+        virtual KernelBwdFunc  kernelBwdImpl() const  = 0;
+        virtual KernelTrilFunc kernelTrilImpl() const = 0;
 
-    // Kernel launch parameters
-    virtual uint32_t ldsUsage() const;
-    virtual dim3     gridDim() const;
-    virtual dim3     blockDim() const;
+        // Kernel launch parameters
+        virtual uint32_t ldsUsage() const;
+        virtual dim3     gridDim() const;
+        virtual dim3     blockDim() const;
 
-    // Kernel run checks.
-    // True = run test
-    // False = skip test
-    virtual bool checkDevice() const;
-    virtual bool checkSizes() const;
-    virtual bool checkLds() const;
+        // Kernel run checks.
+        // True = run test
+        // False = skip test
+        virtual bool checkDevice() const;
+        virtual bool checkSizes() const;
+        virtual bool checkLds() const;
 
-    // Reset all members to default values
-    virtual void reset();
+        // Reset all members to default values
+        virtual void reset();
 
-public:
-    // KernelI interface fulfillment
-    virtual void          setup(ProblemParams const& problem) override;
-    virtual void          exec() override;
-    virtual void          validateResults() override;
-    virtual void          reportResults() override;
-    virtual void          tearDown() override;
-    virtual std::ostream& printHeader(std::ostream& stream = std::cout) const override;
-    virtual std::ostream& printKernel(std::ostream& stream = std::cout) const override;
+    public:
+        // KernelI interface fulfillment
+        virtual void          setup(ProblemParams const& problem) override;
+        virtual void          exec() override;
+        virtual void          validateResults() override;
+        virtual void          reportResults() override;
+        virtual void          tearDown() override;
+        virtual std::ostream& printHeader(std::ostream& stream = std::cout) const override;
+        virtual std::ostream& printKernel(std::ostream& stream = std::cout) const override;
 
-protected:
-    // Problem params for kernel
-    uint32_t mTBlockX, mTBlockY;
-    uint32_t mM, mK, mB;
+    protected:
+        // Problem params for kernel
+        uint32_t mTBlockX, mTBlockY;
+        uint32_t mM, mK, mB;
 
-    // Padded problem params
-    uint32_t mMPadded, mKPadded;
+        // Padded problem params
+        uint32_t mMPadded, mKPadded;
 
-    // Execution flow control
-    uint32_t        mRepeats;
-    bool            mRunFlag      = true;
-    DlrmDirection_t passDirection = DlrmDirection_t::Forward;
-    validate_data_t mValidationResult;
+        // Execution flow control
+        uint32_t        mRepeats;
+        bool            mRunFlag      = true;
+        DlrmDirection_t passDirection = DlrmDirection_t::Forward;
+        validate_data_t mValidationResult;
 
-    // Performance
-    float64_t mTotalGFlops, mMeasuredGFlopsPerSec;
-    float64_t mElapsedTimeMs, mEfficiency;
-};
+        // Performance
+        float64_t mTotalGFlops, mMeasuredGFlopsPerSec;
+        float64_t mElapsedTimeMs, mEfficiency;
+    };
 
 } // namespace rocwmma
 

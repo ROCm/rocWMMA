@@ -3,13 +3,13 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include <WMMA/WMMA.h>
-#include <WMMA/WMMACoop.h>
+#include <rocwmma/WMMA.h>
+#include <rocwmma/WMMACoop.h>
 #pragma GCC diagnostic pop
 
-#include <WMMA/internal/IOConfig.h>
-#include <WMMA/internal/MappingUtil.h>
-#include <WMMA/internal/Utils.h>
+#include <rocwmma/internal/IOConfig.h>
+#include <rocwmma/internal/MappingUtil.h>
+#include <rocwmma/internal/Utils.h>
 
 namespace rocwmma
 {
