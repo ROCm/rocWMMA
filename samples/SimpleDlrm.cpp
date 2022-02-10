@@ -28,9 +28,10 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
+#include <WMMA/internal/Utils.h>
+#include <WMMA/WMMA.h>
+
 #include "Common.h"
-#include "Utils.h"
-#include "WMMA.h"
 
 #include <functional>
 #include <iostream>

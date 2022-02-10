@@ -46,8 +46,8 @@
 #include "Performance.h"
 
 // Library includes
-#include "Constants.h"
-#include "Utils.h"
+#include <WMMA/internal/Constants.h>
+#include <WMMA/internal/Utils.h>
 
 #ifdef WMMA_VALIDATION_TESTS
 #include "Reference.h" // Vanilla CPU kernel

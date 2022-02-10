@@ -27,9 +27,9 @@
 #ifndef WMMA_DEVICE_COL_LAYOUT_H
 #define WMMA_DEVICE_COL_LAYOUT_H
 
-#include "IOTraits.h"
-#include "Layout.h"
-#include "MappingUtil.h"
+#include <WMMA/internal/IOTraits.h>
+#include <WMMA/internal/Layout.h>
+#include <WMMA/internal/MappingUtil.h>
 
 namespace rocwmma
 {

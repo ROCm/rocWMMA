@@ -30,10 +30,10 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime_api.h>
 
-#include "Constants.h"
-#include "Types.h"
-#include "Utils.h"
-#include "WMMA.h"
+#include <WMMA/internal/Constants.h>
+#include <WMMA/internal/Types.h>
+#include <WMMA/internal/Utils.h>
+#include <WMMA/WMMA.h>
 #include "device/Common.h"
 
 #include <cassert>

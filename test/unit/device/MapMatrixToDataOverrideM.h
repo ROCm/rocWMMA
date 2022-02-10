@@ -27,8 +27,8 @@
 #ifndef WMMA_DEVICE_MAP_MATRIX_TO_DATA_OVERRIDEM_H
 #define WMMA_DEVICE_MAP_MATRIX_TO_DATA_OVERRIDEM_H
 
-#include "MappingUtil.h"
-#include "WMMA.h"
+#include <WMMA/internal/MappingUtil.h>
+#include <WMMA/WMMA.h>
 
 namespace rocwmma
 {

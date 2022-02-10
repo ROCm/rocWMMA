@@ -31,8 +31,9 @@
 #include <iostream>
 #include <vector>
 
+#include <WMMA/WMMA.h>
+
 #include "Common.h"
-#include "WMMA.h"
 
 using rocwmma::float16_t;
 using rocwmma::float32_t;
