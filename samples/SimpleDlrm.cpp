@@ -28,8 +28,8 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
-#include <WMMA/internal/Utils.h>
 #include <WMMA/WMMA.h>
+#include <WMMA/internal/Utils.h>
 
 #include "Common.h"
 
@@ -137,7 +137,7 @@ __host__ void dlrmDotBwdCPU(float16_t* input,
     }
 }
 
-// Supports WMMA fragment sizes (TILE_DIM) of
+// Supports ROCWMMA fragment sizes (TILE_DIM) of
 // : 16 x 16
 // : 32 x 32
 constexpr static const int TILE_DIM = 16;

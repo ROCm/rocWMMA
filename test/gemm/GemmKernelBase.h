@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_KERNEL_BASE_H
-#define WMMA_KERNEL_BASE_H
+#ifndef ROCWMMA_KERNEL_BASE_H
+#define ROCWMMA_KERNEL_BASE_H
 
 #include <iostream>
 #include <sstream>
@@ -164,4 +164,4 @@ namespace rocwmma
 
 #include "GemmKernelBase_impl.h"
 
-#endif // WMMA_KERNEL_BASE_H
+#endif // ROCWMMA_KERNEL_BASE_H

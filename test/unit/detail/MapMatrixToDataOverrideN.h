@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DETAIL_MAP_MATRIX_TO_DATA_OVERRIDEN_H
-#define WMMA_DETAIL_MAP_MATRIX_TO_DATA_OVERRIDEN_H
+#ifndef ROCWMMA_DETAIL_MAP_MATRIX_TO_DATA_OVERRIDEN_H
+#define ROCWMMA_DETAIL_MAP_MATRIX_TO_DATA_OVERRIDEN_H
 
 #include "UnitKernelBase.h"
 #include "device/MapMatrixToDataOverrideN.h"
@@ -125,4 +125,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DETAIL_MAP_MATRIX_TO_DATA_OVERRIDEN_H
+#endif // ROCWMMA_DETAIL_MAP_MATRIX_TO_DATA_OVERRIDEN_H

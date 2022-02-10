@@ -23,14 +23,14 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_COOP_IMPL_H_
-#define WMMA_COOP_IMPL_H_
+#ifndef ROCWMMA_COOP_IMPL_H_
+#define ROCWMMA_COOP_IMPL_H_
 
 #include <type_traits>
 
+#include "WMMA.h"
 #include "internal/CoopLoad.h"
 #include "internal/CoopStore.h"
-#include "WMMA.h"
 
 namespace rocwmma
 {
@@ -192,4 +192,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_COOP_IMPL_H_
+#endif // ROCWMMA_COOP_IMPL_H_

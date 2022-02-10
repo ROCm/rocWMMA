@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DETAIL_MAP_MATRIX_TO_DATA_H
-#define WMMA_DETAIL_MAP_MATRIX_TO_DATA_H
+#ifndef ROCWMMA_DETAIL_MAP_MATRIX_TO_DATA_H
+#define ROCWMMA_DETAIL_MAP_MATRIX_TO_DATA_H
 
 #include "UnitKernelBase.h"
 #include "device/MapMatrixToData.h"
@@ -118,4 +118,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DETAIL_MAP_MATRIX_TO_DATA_H
+#endif // ROCWMMA_DETAIL_MAP_MATRIX_TO_DATA_H

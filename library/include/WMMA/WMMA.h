@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_H_
-#define WMMA_H_
+#ifndef ROCWMMA_H_
+#define ROCWMMA_H_
 
 #include <type_traits>
 
@@ -35,15 +35,15 @@
 /**
  * \mainpage
  *
- * WMMA is a C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications
+ * ROCWMMA is a C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications
  * leveraging AMD's GPU hardware matrix cores through HIP.
  * Specifically, the library enhances the portability of CUDA WMMA code to
  * AMD's heterogeneous platform and provides an interface to use underlying
  * hardware matrix multiplication (MFMA) units.
- * The WMMA API exposes memory and MMA (Matrix Multiply Accumulate) functions
+ * The ROCWMMA API exposes memory and MMA (Matrix Multiply Accumulate) functions
  * that operate on blocks, or 'fragments' of data appropriately sized for
  * warp (thread block) execution.
- * WMMA code is templated for componentization and for providing ability to
+ * ROCWMMA code is templated for componentization and for providing ability to
  * make compile-time optimizations based on available meta-data.
  * This library is an ongoing Work-In-Progress (WIP).
  *
@@ -131,7 +131,7 @@
  *
  * \n
  *
- * **LDS Support/Requirements(Only applicable to WMMA v0.3 and below)**
+ * **LDS Support/Requirements(Only applicable to ROCWMMA v0.3 and below)**
  *
  * Required LDS space is calculated by
  *  - LDSBytes = max(BlockM * blockDim.y, BlockN * blockDim.x / 64) * BlockK * sizeof(InputT)
@@ -166,7 +166,7 @@
 
 namespace rocwmma
 {
-    // Configuration profile used in wmma calls
+    // Configuration profile used in rocwmma calls
     template <typename MatrixT,
               uint32_t BlockM,
               uint32_t BlockN,
@@ -176,14 +176,14 @@ namespace rocwmma
     using io_config = rocwmma::IOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
 
     /**
- * \ingroup wmma
- * \defgroup WMMA APIs
+ * \ingroup rocwmma
+ * \defgroup ROCWMMA APIs
  *
- * @brief WMMA Fragment and its API function definitions.
+ * @brief ROCWMMA Fragment and its API function definitions.
  */
 
     /**
- * \ingroup WMMA APIs
+ * \ingroup ROCWMMA APIs
  * @{
  */
 
@@ -286,7 +286,7 @@ namespace rocwmma
         fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                       DataT                                                         value);
     /**
- * \ingroup WMMA APIs
+ * \ingroup ROCWMMA APIs
  * @{
  */
     /**
@@ -315,7 +315,7 @@ namespace rocwmma
                          uint32_t                                                      ldm);
 
     /**
- * \ingroup WMMA APIs
+ * \ingroup ROCWMMA APIs
  * @{
  */
     /**
@@ -398,7 +398,7 @@ namespace rocwmma
                                       layout_t layout);
 
     /**
- * \ingroup WMMA APIs
+ * \ingroup ROCWMMA APIs
  * @{
  */
     /**
@@ -429,7 +429,7 @@ namespace rocwmma
                              fragment<accumulator, BlockM, BlockN, BlockK, ComputeT> const&     c);
 
     /**
- * \ingroup WMMA APIs
+ * \ingroup ROCWMMA APIs
  * @{
  */
     /**
@@ -443,4 +443,4 @@ namespace rocwmma
 
 #include "WMMA_impl.h"
 
-#endif // WMMA_H_
+#endif // ROCWMMA_H_

@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_TEST_HIP_DEVICE_H
-#define WMMA_TEST_HIP_DEVICE_H
+#ifndef ROCWMMA_TEST_HIP_DEVICE_H
+#define ROCWMMA_TEST_HIP_DEVICE_H
 
 #include "Performance.h"
 #include "Singleton.h"
@@ -85,4 +85,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_TEST_HIP_DEVICE_H
+#endif // ROCWMMA_TEST_HIP_DEVICE_H

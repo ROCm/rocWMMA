@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_LAYOUT_IMPL_H
-#define WMMA_LAYOUT_IMPL_H
+#ifndef ROCWMMA_LAYOUT_IMPL_H
+#define ROCWMMA_LAYOUT_IMPL_H
 
 #include "IOTraits.h"
 #include "Layout.h"
@@ -585,4 +585,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_LAYOUT_IMPL_H
+#endif // ROCWMMA_LAYOUT_IMPL_H

@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef WMMA_CONVERT_H
-#define WMMA_CONVERT_H
+#ifndef ROCWMMA_CONVERT_H
+#define ROCWMMA_CONVERT_H
 
 #include "Types.h"
 
@@ -105,4 +105,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_CONVERT_H
+#endif // ROCWMMA_CONVERT_H

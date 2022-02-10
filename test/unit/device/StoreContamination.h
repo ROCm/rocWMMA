@@ -24,11 +24,11 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DEVICE_STORE_CONTAMINATION_H
-#define WMMA_DEVICE_STORE_CONTAMINATION_H
+#ifndef ROCWMMA_DEVICE_STORE_CONTAMINATION_H
+#define ROCWMMA_DEVICE_STORE_CONTAMINATION_H
 
-#include <WMMA/internal/MappingUtil.h>
 #include <WMMA/WMMA.h>
+#include <WMMA/internal/MappingUtil.h>
 
 namespace rocwmma
 {
@@ -137,4 +137,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DEVICE_STORE_CONTAMINATION_H
+#endif // ROCWMMA_DEVICE_STORE_CONTAMINATION_H

@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_KERNEL_BASE_IMPL_H
-#define WMMA_KERNEL_BASE_IMPL_H
+#ifndef ROCWMMA_KERNEL_BASE_IMPL_H
+#define ROCWMMA_KERNEL_BASE_IMPL_H
 
 #include "GemmKernelBase.h"
 
@@ -513,10 +513,10 @@ namespace rocwmma
         if(mRunFlag)
         {
             ///
-            /// Run WMMA kernel
+            /// Run ROCWMMA kernel
             ///
 
-            auto wmmaKernel = [this]() {
+            auto rocwmmaKernel = [this]() {
                 auto& dataInstance = DataStorage::instance();
                 hipExtLaunchKernelGGL((this->kernelImpl()), // Kernel to launch
                                       (this->gridDim()), // Wg grid size
@@ -549,7 +549,7 @@ namespace rocwmma
                 CHECK_HIP_ERROR(hipEventRecord(startEvent));
                 for(uint32_t i = 0; i < mRepeats; ++i)
                 {
-                    wmmaKernel();
+                    rocwmmaKernel();
                 }
                 CHECK_HIP_ERROR(hipEventRecord(stopEvent));
                 CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
@@ -621,7 +621,7 @@ namespace rocwmma
             {
                 auto& dataInstance = DataStorage::instance();
 
-                // A, B & C are already cached on GPU from WMMA run.
+                // A, B & C are already cached on GPU from ROCWMMA run.
                 // Rocblas matrix C, D always in col_major, so we must
                 // change C if needed
                 if(!std::is_same<LayoutC, col_major>::value)
@@ -634,15 +634,15 @@ namespace rocwmma
                 referenceKernel = rocBlasKernel;
 
 #if defined(WMMA_VALIDATE_WITH_ROCBLAS)
-                // Cache the WMMA result from device
-                auto wmmaResult = dataInstance->template allocHost<OutputT>(mM * mN);
-                dataInstance->copyData(wmmaResult, dataInstance->deviceD(), mM * mN);
+                // Cache the ROCWMMA result from device
+                auto rocwmmaResult = dataInstance->template allocHost<OutputT>(mM * mN);
+                dataInstance->copyData(rocwmmaResult, dataInstance->deviceD(), mM * mN);
 
                 // Reset device D with NaN, from host
                 dataInstance->copyData(dataInstance->deviceD(), dataInstance->hostD(), mM * mN);
 
-                // Move the WMMA result to host for analysis
-                dataInstance->copyData(dataInstance->hostD(), wmmaResult, mM * mN);
+                // Move the ROCWMMA result to host for analysis
+                dataInstance->copyData(dataInstance->hostD(), rocwmmaResult, mM * mN);
 #endif // WMMA_VALIDATE_WITH_ROCBLAS
             }
 #endif // WMMA_VALIDATE_WITH_ROCBLAS || WMMA_BENCHMARK_WITH_ROCBLAS
@@ -833,4 +833,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_KERNEL_BASE_IMPL_H
+#endif // ROCWMMA_KERNEL_BASE_IMPL_H

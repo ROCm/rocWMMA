@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_GEMM_TEST_BASE_H
-#define WMMA_GEMM_TEST_BASE_H
+#ifndef ROCWMMA_GEMM_TEST_BASE_H
+#define ROCWMMA_GEMM_TEST_BASE_H
 
 #include "CommonTestParams.h"
 #include "GemmKernelBase.h"
@@ -88,4 +88,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_GEMM_TEST_BASE_H
+#endif // ROCWMMA_GEMM_TEST_BASE_H

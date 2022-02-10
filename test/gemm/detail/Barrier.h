@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DETAIL_BARRIER_H
-#define WMMA_DETAIL_BARRIER_H
+#ifndef ROCWMMA_DETAIL_BARRIER_H
+#define ROCWMMA_DETAIL_BARRIER_H
 
 #include "GemmKernelBase.h"
 #include "device/Barrier.h"
@@ -129,4 +129,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DETAIL_BARRIER_H
+#endif // ROCWMMA_DETAIL_BARRIER_H

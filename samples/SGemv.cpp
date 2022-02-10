@@ -133,15 +133,15 @@ __host__ void
     std::cout << "Max relative error: " << max_relative_error << std::endl;
 }
 
-// Supports WMMA_M/N square sizes of
+// Supports ROCWMMA_M/N square sizes of
 // : 16 x 16
 // : 32 x 32
-const int WMMA_M = 16;
-const int WMMA_N = 16;
+const int ROCWMMA_M = 16;
+const int ROCWMMA_N = 16;
 
-// Supports WMMA_K sizes as
+// Supports ROCWMMA_K sizes as
 // : multiples of 16.
-const int WMMA_K = 16;
+const int ROCWMMA_K = 16;
 
 // AMDGCN default wave size
 const int WAVE_SIZE = 64;
@@ -168,14 +168,14 @@ const int T_BLOCK_Y = 1;
 //
 // Note: This is a simplified implementation to demonstrate API usage in
 // context of wave-level GEMV computation, and is not optimized.
-__global__ void gemv_wmma_d(uint32_t         m,
-                            uint32_t         n,
-                            uint32_t         k,
-                            float16_t const* a,
-                            float16_t const* b,
-                            float32_t*       c,
-                            float32_t        alpha,
-                            float32_t        beta)
+__global__ void gemv_rocwmma_d(uint32_t         m,
+                               uint32_t         n,
+                               uint32_t         k,
+                               float16_t const* a,
+                               float16_t const* b,
+                               float32_t*       c,
+                               float32_t        alpha,
+                               float32_t        beta)
 {
     uint32_t lda = m;
     uint32_t ldb = k;
@@ -185,19 +185,21 @@ __global__ void gemv_wmma_d(uint32_t         m,
     int warpM = (blockIdx.x * blockDim.x + threadIdx.x) / WAVE_SIZE;
 
     // Declare the fragments
-    rocwmma::fragment<rocwmma::matrix_a, WMMA_M, WMMA_N, WMMA_K, float16_t, rocwmma::row_major>
-        a_frag;
-    rocwmma::fragment<rocwmma::matrix_b, WMMA_M, WMMA_N, WMMA_K, float16_t, rocwmma::col_major>
-                                                                               b_frag;
-    rocwmma::fragment<rocwmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t> acc_frag;
-    rocwmma::fragment<rocwmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t> c_frag;
+    rocwmma::
+        fragment<rocwmma::matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t, rocwmma::row_major>
+            a_frag;
+    rocwmma::
+        fragment<rocwmma::matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t, rocwmma::col_major>
+                                                                                        b_frag;
+    rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t> acc_frag;
+    rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t> c_frag;
 
     rocwmma::fill_fragment(acc_frag, 0.0f);
 
     // Loop over k
-    for(int i = 0; i < k; i += WMMA_K)
+    for(int i = 0; i < k; i += ROCWMMA_K)
     {
-        int aRow = warpM * WMMA_M;
+        int aRow = warpM * ROCWMMA_M;
         int aCol = i;
 
         int bRow = i;
@@ -216,7 +218,7 @@ __global__ void gemv_wmma_d(uint32_t         m,
 
     // Load in the current value of c, scale it by beta, and add this our result
     // scaled by alpha
-    int cRow = warpM * WMMA_M;
+    int cRow = warpM * ROCWMMA_M;
 
     if(cRow < m)
     {
@@ -235,7 +237,7 @@ __global__ void gemv_wmma_d(uint32_t         m,
 __host__ void gemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float beta)
 {
     // Bounds check
-    if(m % WMMA_M || n % WMMA_N || k % WMMA_K)
+    if(m % ROCWMMA_M || n % ROCWMMA_N || k % ROCWMMA_K)
     {
         std::cout << "Unsupported size!\n";
         return;
@@ -269,15 +271,15 @@ __host__ void gemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float b
     CHECK_HIP_ERROR(hipMemcpy(d_c, matrixC.data(), bytesC, hipMemcpyHostToDevice));
 
     auto blockDim = dim3(T_BLOCK_X, T_BLOCK_Y);
-    auto gridDim  = dim3(rocwmma::ceilDiv(m, WMMA_M * T_BLOCK_X / WAVE_SIZE),
-                         rocwmma::ceilDiv(n, WMMA_N * T_BLOCK_Y));
+    auto gridDim  = dim3(rocwmma::ceilDiv(m, ROCWMMA_M * T_BLOCK_X / WAVE_SIZE),
+                         rocwmma::ceilDiv(n, ROCWMMA_N * T_BLOCK_Y));
 
     std::cout << "Launching gemv kernel..." << std::endl;
     hipEvent_t startEvent, stopEvent;
     CHECK_HIP_ERROR(hipEventCreate(&startEvent));
     CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
 
-    hipExtLaunchKernelGGL(gemv_wmma_d,
+    hipExtLaunchKernelGGL(gemv_rocwmma_d,
                           gridDim,
                           blockDim,
                           0, // sharedMemBytes
@@ -303,8 +305,8 @@ __host__ void gemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float b
     std::cout << "BlkM, BlkN, BlkK, "
               << "MatM, MatN, MatK, " << std::endl;
 
-    std::cout << WMMA_M << ", " << WMMA_N << ", " << WMMA_K << ", " << m << ", " << n << ", " << k
-              << std::endl;
+    std::cout << ROCWMMA_M << ", " << ROCWMMA_N << ", " << ROCWMMA_K << ", " << m << ", " << n
+              << ", " << k << std::endl;
 
     std::cout << "Validating result with reference..." << std::endl;
     // Bring kernel result back to host
@@ -329,7 +331,7 @@ int main()
 {
     const uint32_t m = 256;
     const uint32_t k = 256;
-    const uint32_t n = T_BLOCK_Y * WMMA_N;
+    const uint32_t n = T_BLOCK_Y * ROCWMMA_N;
 
     gemv_test(m, n, k, 2.1f, 2.1f);
     return 0;

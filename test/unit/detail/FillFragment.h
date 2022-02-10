@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DETAIL_FILL_FRAGMENT_H
-#define WMMA_DETAIL_FILL_FRAGMENT_H
+#ifndef ROCWMMA_DETAIL_FILL_FRAGMENT_H
+#define ROCWMMA_DETAIL_FILL_FRAGMENT_H
 
 #include "UnitKernelBase.h"
 #include "device/FillFragment.h"
@@ -161,4 +161,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DETAIL_FILL_FRAGMENT_H
+#endif // ROCWMMA_DETAIL_FILL_FRAGMENT_H

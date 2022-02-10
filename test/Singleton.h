@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_TEST_SINGLETON_H
-#define WMMA_TEST_SINGLETON_H
+#ifndef ROCWMMA_TEST_SINGLETON_H
+#define ROCWMMA_TEST_SINGLETON_H
 
 #include <memory>
 
@@ -45,4 +45,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_TEST_SINGLETON_H
+#endif // ROCWMMA_TEST_SINGLETON_H

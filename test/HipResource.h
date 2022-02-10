@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_HIP_RESOURCE_H
-#define WMMA_HIP_RESOURCE_H
+#ifndef ROCWMMA_HIP_RESOURCE_H
+#define ROCWMMA_HIP_RESOURCE_H
 
 #include <memory>
 
@@ -75,4 +75,4 @@ namespace rocwmma
 
 #include "HipResource_impl.h"
 
-#endif // WMMA_HIP_RESOURCE_H
+#endif // ROCWMMA_HIP_RESOURCE_H

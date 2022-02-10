@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_UNIT_KERNEL_BASE_IMPL_H
-#define WMMA_UNIT_KERNEL_BASE_IMPL_H
+#ifndef ROCWMMA_UNIT_KERNEL_BASE_IMPL_H
+#define ROCWMMA_UNIT_KERNEL_BASE_IMPL_H
 
 #include "UnitKernelBase.h"
 
@@ -101,9 +101,9 @@ namespace rocwmma
     bool UnitKernelBase<BlockM, BlockN, DataT, Layout>::checkQuirks() const
     {
         // Historically, there have been some bugs that are elicited under certain conditions
-        // and produce 'quirky' failures that are beyond WMMA's control.
+        // and produce 'quirky' failures that are beyond ROCWMMA's control.
         // E.g. Previous compiler issue with h16 unsanitized register packing.
-        // We can choose to ignore the quirks and focus on WMMA specific failures here.
+        // We can choose to ignore the quirks and focus on ROCWMMA specific failures here.
         return true;
     }
 
@@ -258,4 +258,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_UNIT_KERNEL_BASE_IMPL_H
+#endif // ROCWMMA_UNIT_KERNEL_BASE_IMPL_H

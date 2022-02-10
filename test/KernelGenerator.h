@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_KERNEL_GENERATOR_H
-#define WMMA_KERNEL_GENERATOR_H
+#ifndef ROCWMMA_KERNEL_GENERATOR_H
+#define ROCWMMA_KERNEL_GENERATOR_H
 
 #include <tuple>
 #include <vector>
@@ -219,4 +219,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_KERNEL_GENERATOR_H
+#endif // ROCWMMA_KERNEL_GENERATOR_H

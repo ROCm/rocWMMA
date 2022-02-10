@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef WMMA_DEVICE_ROWNT_LAYOUT_H
-#define WMMA_DEVICE_ROWNT_LAYOUT_H
+#ifndef ROCWMMA_DEVICE_ROWNT_LAYOUT_H
+#define ROCWMMA_DEVICE_ROWNT_LAYOUT_H
 
 #include <WMMA/internal/IOTraits.h>
 #include <WMMA/internal/Layout.h>
@@ -86,4 +86,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // WMMA_DEVICE_ROWNT_LAYOUT_H
+#endif // ROCWMMA_DEVICE_ROWNT_LAYOUT_H
