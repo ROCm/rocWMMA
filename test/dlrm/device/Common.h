@@ -27,6 +27,8 @@
 #ifndef DLRM_TEST_DEVICE_COMMON_H
 #define DLRM_TEST_DEVICE_COMMON_H
 
+#include <rocwmma/internal/Types.h>
+
 namespace rocwmma
 {
 
