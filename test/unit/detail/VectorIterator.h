@@ -34,11 +34,15 @@ namespace rocwmma
 {
 
     // Wrapper into the actual device function
-    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-    struct VectorIteratorKernel final : public UnitKernelBase<BlockM, BlockN, DataT, Layout>
+    template <uint32_t VecSize, typename DataT>
+    struct VectorIteratorKernel final
+        : public UnitKernelBase<1,
+                                1,
+                                DataT,
+                                col_major> // BlockM, BlockN, DataLayout are redundant for this test
     {
     private:
-        using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
+        using Base = UnitKernelBase<1, 1, DataT, col_major>;
 
     public:
         VectorIteratorKernel()        = default;
@@ -46,10 +50,8 @@ namespace rocwmma
 
         void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
         {
+            // Need at least 1 element for the result
             auto& dataInstance = Base::DataStorage::instance();
-
-            // Initialize matrix storage
-            const int64_t sizeD = Base::mM * Base::mN;
             dataInstance->resizeStorage(probsize);
         }
 
@@ -64,16 +66,13 @@ namespace rocwmma
             // Cache current kernel result from device
             dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
 
-            if(static_cast<double>(static_cast<float>(kernelResult[0]))
-               != static_cast<double>(ERROR_VALUE))
-            {
-                Base::mValidationResult = true;
-            }
+            // Check the single output result
+            Base::mValidationResult = (kernelResult[0] == DataT(0));
         }
 
         typename Base::KernelFunc kernelImpl() const final
         {
-            return typename Base::KernelFunc(VectorIterator<BlockM, DataT>);
+            return typename Base::KernelFunc(VectorIterator<VecSize, DataT>);
         }
     };
 
@@ -83,10 +82,8 @@ namespace rocwmma
         // Indices to test parameters
         enum : uint32_t
         {
-            BlockM = 0,
-            BlockN = 1,
-            DataT  = 2,
-            Layout = 3
+            VecSize = 0,
+            DataT   = 1,
         };
 
         using ResultT = std::shared_ptr<KernelI>;
@@ -97,10 +94,8 @@ namespace rocwmma
             // Map GTest params to Kernel params
             using TestParamsT = std::tuple<Ts...>;
             using KernelT
-                = VectorIteratorKernel<std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
-                                       std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
-                                       std::tuple_element_t<DataT, TestParamsT>, // DataT
-                                       std::tuple_element_t<Layout, TestParamsT> // Layout
+                = VectorIteratorKernel<std::tuple_element_t<VecSize, TestParamsT>::value, // VecSize
+                                       std::tuple_element_t<DataT, TestParamsT> // DataT
                                        >;
 
             return std::make_shared<KernelT>();

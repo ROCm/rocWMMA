@@ -24,6 +24,7 @@
  *
  *******************************************************************************/
 
+#include <tuple>
 #include <type_traits>
 
 #include "KernelGenerator.h"
@@ -38,11 +39,12 @@ namespace rocwmma
         using Base = UnitTestParams;
 
         // Types: ALL + double
+        using Types = typename Base::TestTypes16x16;
 
-        using Types     = typename Base::TestTypes16x16;
-        using VectSizes = typename Base::VectSizesAll;
-        using KernelParams =
-            typename CombineLists<VectSizes, std::tuple<I<1>>, Types, col_major>::Result;
+        // Vector Sizes
+        using VecSizes = std::tuple<I<4>, I<8>, I<16>, I<32>>;
+
+        using KernelParams = typename CombineLists<VecSizes, Types>::Result;
 
         // Assemble the kernel generator
         // Kernel: VectorIterator
@@ -52,6 +54,20 @@ namespace rocwmma
         // Sanity check for kernel generator
         static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
                       "Kernels from this generator do not match testing interface");
+
+        static inline std::vector<ThreadBlockT> threadBlocks()
+        {
+            // clang-format off
+            return { {64, 1} };
+            // clang-format on
+        }
+
+        static inline std::vector<ProblemSizeT> problemSizes()
+        {
+            // clang-format off
+            return { {1, 1} };
+            // clang-format on
+        }
 
         static inline typename KernelGenerator::ResultT kernels()
         {
@@ -75,7 +91,7 @@ INSTANTIATE_TEST_SUITE_P(
     KernelTests,
     VectorIteratorTest,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
-                       ::testing::ValuesIn(rocwmma::TestParams::vectorThreadBlocks()),
-                       ::testing::ValuesIn(rocwmma::TestParams::vectorProblemSizes()),
+                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
+                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
                        ::testing::ValuesIn(rocwmma::TestParams::param1s()),
                        ::testing::ValuesIn(rocwmma::TestParams::param2s())));
