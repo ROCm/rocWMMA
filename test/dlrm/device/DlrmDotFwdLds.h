@@ -168,8 +168,13 @@ namespace rocwmma
             fill_fragment(fragA, static_cast<float32_t>(1));
             mma_sync(fragAcc, fragA, fragB, fragAcc);
 
-            // Wait for final mma before writing to LDS
-            synchronize_workgroup();
+            //Store fragAcc to global acc
+            auto* accWithOffset = acc + accBatchOffset * blockIdx.z;
+            auto* addrAcc       = MappingAcc::dataCoord(accWithOffset, matrixCoordC, m);
+            store_matrix_sync(addrAcc, fragAcc, m, mem_row_major);
+
+            // // Wait for final mma before writing to LDS
+            //synchronize_workgroup();
 
             // // Store acc frag to lds for recasting
             // auto* ldsPtrAcc = reinterpret_cast<float32_t*>(localMemPtr);
@@ -193,11 +198,6 @@ namespace rocwmma
             //             = static_cast<DataT>(ldsPtrAcc[globalRowIdx * m + globalColIdx]);
             //     }
             // }
-
-            //Store fragAcc to global acc
-            auto* accWithOffset = acc + accBatchOffset * blockIdx.z;
-            auto* addrAcc       = MappingAcc::dataCoord(accWithOffset, matrixCoordC, m);
-            store_matrix_sync(addrAcc, fragAcc, m, mem_row_major);
 
             // Copy lower triangular from acc to output
             auto fragColIdx   = threadIdx.x % TILE_DIM;
