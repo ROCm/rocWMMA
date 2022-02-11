@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_PERFORMANCE_H
-#define ROCWMMA_PERFORMANCE_H
+#ifndef ROCWMMA_PERFORMANCE_HPP
+#define ROCWMMA_PERFORMANCE_HPP
 
 #include <rocwmma/internal/types.hpp>
 
