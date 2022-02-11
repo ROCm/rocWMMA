@@ -80,6 +80,7 @@ namespace rocwmma
     void DlrmResource<DataT>::copyDeviceToHostFwdOutput()
     {
         Base::copyData(mHostOutput, mDeviceOutput, std::get<Output>(mCurrentDataSizeFwd));
+        Base::copyData(mHostAccFwd, mDeviceAccFwd, std::get<Acc>(mCurrentDataSizeFwd));
     }
 
     template <typename DataT>
