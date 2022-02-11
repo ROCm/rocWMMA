@@ -24,11 +24,12 @@
  *
  *******************************************************************************/
 
-#ifndef DLRM_DOT_FWD_H
-#define DLRM_DOT_FWD_H
+#ifndef DLRM_DOT_FWD_HPP
+#define DLRM_DOT_FWD_HPP
 
-#include "./Common.h"
 #include <rocwmma/internal/utils.hpp>
+
+#include "./common.hpp"
 
 namespace rocwmma
 {
@@ -136,4 +137,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // DLRM_DOT_FWD_H
+#endif // DLRM_DOT_FWD_HPP

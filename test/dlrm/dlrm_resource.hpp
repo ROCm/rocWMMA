@@ -24,13 +24,14 @@
  *
  *******************************************************************************/
 
-#ifndef DLRM_RESOURCE_H
-#define DLRM_RESOURCE_H
+#ifndef DLRM_RESOURCE_HPP
+#define DLRM_RESOURCE_HPP
+
+#include <memory>
+#include <tuple>
 
 #include "HipResource.h"
 #include "Singleton.h"
-#include <memory>
-#include <tuple>
 
 namespace rocwmma
 {
@@ -155,6 +156,6 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#include "DlrmResource_impl.h"
+#include "dlrm_resource_impl.hpp"
 
-#endif // DLRM_RESOURCE_H
+#endif // DLRM_RESOURCE_HPP

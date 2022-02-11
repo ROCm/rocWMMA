@@ -24,10 +24,9 @@
  *
  *******************************************************************************/
 
-#ifndef DLRM_KERNEL_BASE_IMPL_H
-#define DLRM_KERNEL_BASE_IMPL_H
+#ifndef DLRM_KERNEL_BASE_IMPL_HPP
+#define DLRM_KERNEL_BASE_IMPL_HPP
 
-#include "DlrmKernelBase.h"
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -41,13 +40,15 @@
 
 #include <gtest/gtest.h>
 
-#include "../Common.h"
-#include "./Common.h"
-#include "Performance.h"
-
-// Library includes
 #include <rocwmma/internal/constants.hpp>
 #include <rocwmma/internal/utils.hpp>
+
+#include "../Common.h"
+#include "./common.hpp"
+#include "Performance.h"
+#include "dlrm_kernel_base.hpp"
+
+// Library includes
 
 #ifdef WMMA_VALIDATION_TESTS
 #include "Reference.h" // Vanilla CPU kernel
@@ -457,4 +458,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // DLRM_KERNEL_BASE_IMPL_H
+#endif // DLRM_KERNEL_BASE_IMPL_HPP

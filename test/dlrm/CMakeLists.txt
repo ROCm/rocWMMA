@@ -61,10 +61,10 @@
  endfunction()
 
  set(DlrmCommonSources ${WMMA_COMMON_TEST_SOURCES}
-                       DlrmKernelBase.cpp)
+                       dlrm_kernel_base.cpp)
 
  set(DlrmDotTestSources ${DlrmCommonSources}
-                        ${CMAKE_CURRENT_SOURCE_DIR}/test/DlrmDotTest.cpp)
+                        ${CMAKE_CURRENT_SOURCE_DIR}/test/dlrm_dot_test.cpp)
 
  # Benchmark DLRM tests
  if (WMMA_BUILD_BENCHMARK_TESTS)
