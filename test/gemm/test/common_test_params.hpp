@@ -54,33 +54,33 @@ namespace rocwmma
         using TestTypesIOC = std::tuple<
         // Non-native bfloat16_t
 
-#if defined(WMMA_EXTENDED_TESTS)
+#if defined(ROCWMMA_EXTENDED_TESTS)
             std::tuple<bfloat16_t, bfloat16_t, bfloat16_t>,
             std::tuple<bfloat16_t, bfloat16_t, float32_t>,
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
             std::tuple<bfloat16_t, float32_t, float32_t>,
 
         // Native fp16
-#if defined(WMMA_EXTENDED_TESTS)
+#if defined(ROCWMMA_EXTENDED_TESTS)
             std::tuple<float16_t, float16_t, float16_t>,
             std::tuple<float16_t, float16_t, float32_t>,
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
             std::tuple<float16_t, float32_t, float32_t>,
 
             // Native fp32
             std::tuple<float32_t, float32_t, float32_t>,
 
         // Non-native hfloat16_t (i.e. __half)
-#if defined(WMMA_EXTENDED_TESTS)
+#if defined(ROCWMMA_EXTENDED_TESTS)
             std::tuple<hfloat16_t, hfloat16_t, hfloat16_t>,
             std::tuple<hfloat16_t, hfloat16_t, float32_t>,
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
             std::tuple<hfloat16_t, float32_t, float32_t>,
 
         // Native int8
-#if defined(WMMA_EXTENDED_TESTS)
+#if defined(ROCWMMA_EXTENDED_TESTS)
             std::tuple<int8_t, int8_t, int32_t>,
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
             std::tuple<int8_t, int32_t, int32_t>>;
 
         // Native double
@@ -91,9 +91,9 @@ namespace rocwmma
 
         // Supported LDS mappings
         using TestMappingsLds = std::tuple<
-#if defined(WMMA_EXTENDED_TESTS)
+#if defined(ROCWMMA_EXTENDED_TESTS)
             std::tuple<LdsRF>,
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
             std::tuple<LdsKH>,
             std::tuple<LdsKW>>;
 
@@ -111,22 +111,22 @@ namespace rocwmma
         using TestBlockSizes16x16 = std::tuple<std::tuple<I<16>, I<16>, I<16>>,
                                                std::tuple<I<16>, I<16>, I<32>>,
                                                std::tuple<I<16>, I<16>, I<64>>
-#if defined(WMMA_EXTENDED_TESTS)
+#if defined(ROCWMMA_EXTENDED_TESTS)
                                                ,
                                                std::tuple<I<16>, I<16>, I<128>>,
                                                std::tuple<I<16>, I<16>, I<256>>
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
                                                >;
 
         using TestBlockSizes32x32 = std::tuple<std::tuple<I<32>, I<32>, I<8>>,
                                                std::tuple<I<32>, I<32>, I<16>>,
                                                std::tuple<I<32>, I<32>, I<32>>
-#if defined(WMMA_EXTENDED_TESTS)
+#if defined(ROCWMMA_EXTENDED_TESTS)
                                                ,
                                                std::tuple<I<32>, I<32>, I<64>>,
                                                ,
                                                std::tuple<I<32>, I<32>, I<128>>
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
                                                >;
 
         // Layout groupings
@@ -164,7 +164,7 @@ namespace rocwmma
                     {2048, 64, 1024},
                     {64, 2048, 1024},
                     {1024, 1024, 1024}
-#ifndef WMMA_VALIDATION_TESTS
+#ifndef ROCWMMA_VALIDATION_TESTS
                     ,
                     {2048, 2048, 2048},
                     {2560, 2560, 2560},
@@ -175,7 +175,7 @@ namespace rocwmma
                     {6144, 6144, 6144},
                     {7168, 7168, 7168},
                     {8192, 8192, 8192}
-#endif // WMMA_VALIDATION_TESTS
+#endif // ROCWMMA_VALIDATION_TESTS
             };
         }
 

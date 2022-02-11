@@ -72,7 +72,7 @@ function(add_gemm_benchmark_test TEST_TARGET TEST_SOURCE)
 endfunction()
 
 # GEMM common test sources
-set(GemmCommonSources ${WMMA_COMMON_TEST_SOURCES}
+set(GemmCommonSources ${ROCWMMA_COMMON_TEST_SOURCES}
                       ${CMAKE_CURRENT_SOURCE_DIR}/gemm_kernel_base.cpp)
 
 set(BarrierTestSources ${GemmCommonSources}

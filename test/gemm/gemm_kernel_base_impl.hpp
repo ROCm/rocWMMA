@@ -42,9 +42,9 @@
 #include "gemm_kernel_base.hpp"
 #include "performance.hpp"
 
-#ifdef WMMA_VALIDATION_TESTS
+#ifdef ROCWMMA_VALIDATION_TESTS
 #include "reference.hpp" // Vanilla CPU kernel
-#endif // WMMA_VALIDATION_TESTS
+#endif // ROCWMMA_VALIDATION_TESTS
 
 #if defined(WMMA_VALIDATE_WITH_ROCBLAS) || defined(WMMA_BENCHMARK_WITH_ROCBLAS)
 #include "rocblas_reference.hpp" // rocBLAS GPU kernel
@@ -306,7 +306,7 @@ namespace rocwmma
         mAlpha = mBeta = ComputeT(0.0f);
 
         mRepeats =
-#ifdef WMMA_VALIDATION_TESTS
+#ifdef ROCWMMA_VALIDATION_TESTS
             1;
 #else
             5;
@@ -411,11 +411,11 @@ namespace rocwmma
                    << mReferenceEfficiency << ", "
 #endif // WMMA_BENCHMARK_WITH_ROCBLAS
 
-#if defined(WMMA_VALIDATION_TESTS)
+#if defined(ROCWMMA_VALIDATION_TESTS)
                    << (mValidationResult ? "PASSED" : "FAILED")
 #else
                    << "BENCH"
-#endif // WMMA_VALIDATION_TESTS
+#endif // ROCWMMA_VALIDATION_TESTS
                    << std::endl;
         }
 
@@ -646,7 +646,7 @@ namespace rocwmma
             }
 #endif // WMMA_VALIDATE_WITH_ROCBLAS || WMMA_BENCHMARK_WITH_ROCBLAS
 
-#if defined(WMMA_VALIDATION_TESTS)
+#if defined(ROCWMMA_VALIDATION_TESTS)
 
             // Fallback CPU kernel for validation
             auto cpuKernel = [this]() {
@@ -668,7 +668,7 @@ namespace rocwmma
                 benchRef        = false; // No bench for cpu
                 referenceKernel = cpuKernel;
             }
-#endif // WMMA_VALIDATION_TESTS
+#endif // ROCWMMA_VALIDATION_TESTS
 
             // Run reference kernel
             if(referenceKernel)
@@ -728,7 +728,7 @@ namespace rocwmma
                         LayoutD>::validateResults()
     {
 
-#if defined(WMMA_VALIDATION_TESTS)
+#if defined(ROCWMMA_VALIDATION_TESTS)
         if(mRunFlag)
         {
             using DeviceLayoutD =
@@ -773,7 +773,7 @@ namespace rocwmma
 
             EXPECT_TRUE(mValidationResult) << "Max relative error: " << mMaxRelativeError;
         }
-#endif // WMMA_VALIDATION_TESTS
+#endif // ROCWMMA_VALIDATION_TESTS
     }
 
     template <uint32_t BlockM,
