@@ -18,7 +18,7 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
                 cd ${project.paths.project_build_prefix}
                 mkdir -p build/${buildTypeDir} && cd build/${buildTypeDir}
                 ${auxiliary.gfxTargetParser()}
-                ${cmake} ${cmakeArgs} -DWMMA_BUILD_TESTS=ON -DWMMA_BENCHMARK_WITH_ROCBLAS=ON ../..
+                ${cmake} ${cmakeArgs} -DROCWMMA_BUILD_TESTS=ON -DROCWMMA_BENCHMARK_WITH_ROCBLAS=ON ../..
                 make -j\$(nproc)
                 """
 
