@@ -36,14 +36,14 @@ namespace rocwmma
 
     // Wrapper into the actual device function
     template <uint32_t TileSize, typename DataT, typename MappingLds>
-    struct DlrmDotKernel final : public DlrmKernelBase<TileSize, DataT>
+    struct DlrmDotLdsKernel final : public DlrmKernelBase<TileSize, DataT>
     {
     private:
         using Base = DlrmKernelBase<TileSize, DataT>;
 
     public:
-        DlrmDotKernel() {}
-        ~DlrmDotKernel() final {}
+        DlrmDotLdsKernel() {}
+        ~DlrmDotLdsKernel() final {}
 
         uint32_t ldsUsage() const final
         {
@@ -68,7 +68,7 @@ namespace rocwmma
     };
 
     // This is the GeneratorImpl class
-    struct DlrmDotGenerator
+    struct DlrmDotLdsGenerator
     {
         // Indices to test parameters
         enum : uint32_t
@@ -85,9 +85,9 @@ namespace rocwmma
         {
             // Map GTest params to Kernel params
             using TestParamsT = std::tuple<Ts...>;
-            using KernelT     = DlrmDotKernel<std::tuple_element_t<TileSize, TestParamsT>::value,
-                                          std::tuple_element_t<DataT, TestParamsT>,
-                                          std::tuple_element_t<MappingLds, TestParamsT>>;
+            using KernelT     = DlrmDotLdsKernel<std::tuple_element_t<TileSize, TestParamsT>::value,
+                                             std::tuple_element_t<DataT, TestParamsT>,
+                                             std::tuple_element_t<MappingLds, TestParamsT>>;
 
             return std::make_shared<KernelT>();
         }

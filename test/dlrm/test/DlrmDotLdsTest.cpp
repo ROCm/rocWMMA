@@ -45,7 +45,7 @@ namespace rocwmma
 
         using KernelParams = typename CombineLists<Types, TileSizes, MappingLds>::Result;
 
-        using GeneratorImpl   = DlrmDotGenerator;
+        using GeneratorImpl   = DlrmDotLdsGenerator;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -60,11 +60,11 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-class DlrmDotTestBasic : public rocwmma::DlrmDotTest
+class DlrmDotLdsTestBasic : public rocwmma::DlrmDotTest
 {
 };
 
-TEST_P(DlrmDotTestBasic, RunKernel)
+TEST_P(DlrmDotLdsTestBasic, RunKernel)
 {
     static bool ranWarmup = false;
     if(!ranWarmup)
@@ -77,7 +77,7 @@ TEST_P(DlrmDotTestBasic, RunKernel)
 
 INSTANTIATE_TEST_SUITE_P(
     DlrmKernelTests,
-    DlrmDotTestBasic,
+    DlrmDotLdsTestBasic,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
                        ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),

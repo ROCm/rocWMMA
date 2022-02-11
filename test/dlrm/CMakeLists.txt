@@ -33,14 +33,7 @@
    add_rocwmma_validation_test(${TEST_TARGET} ${TEST_SOURCE})
 
    # Add dlrm include directory
-   target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_DLRM_INCLUDE_DIR})
-
-   # Copy DLRM data directory to build folder
-   add_custom_command(
-     TARGET ${TEST_TARGET} POST_BUILD
-     COMMAND ${CMAKE_COMMAND} -E copy_directory
-         ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/dlrmData)
-
+   target_include_directories(${TEST_TARGET} PRIVATE ${WMMA_TEST_DLRM_INCLUDE_DIR})
  endfunction()
 
  # Include rocBLAS performance benchmark
@@ -51,13 +44,7 @@
    add_rocwmma_benchmark_test(${TEST_TARGET} ${TEST_SOURCE})
 
    # Add dlrm include directory
-   target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_DLRM_INCLUDE_DIR})
-
-   # Copy DLRM data directory to build folder
-   add_custom_command(
-     TARGET ${TEST_TARGET} PRE_BUILD
-     COMMAND ${CMAKE_COMMAND} -E copy_directory
-         ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/dlrmData)
+   target_include_directories(${TEST_TARGET} PRIVATE ${WMMA_TEST_DLRM_INCLUDE_DIR})
  endfunction()
 
  set(DlrmCommonSources ${WMMA_COMMON_TEST_SOURCES}
