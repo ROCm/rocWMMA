@@ -71,13 +71,13 @@ namespace rocwmma
                 1.0,
                 2.0,
                 3.0 // 1 - 4 waves
-#ifdef WMMA_EXTENDED_TESTS
+#ifdef ROCWMMA_EXTENDED_TESTS
                 ,
                 4.0,
                 5.0,
                 6.0,
                 7.0 // 8 waves
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
             };
         }
     };

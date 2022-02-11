@@ -29,7 +29,7 @@ include( CMakeDependentOption )
 set(ROCWMMA_TEST_UNIT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Unit common test sources
-set(UnitCommonSources ${WMMA_COMMON_TEST_SOURCES}
+set(UnitCommonSources ${ROCWMMA_COMMON_TEST_SOURCES}
                        unit_kernel_base.cpp)
 
 set(ContaminationTestSources ${UnitCommonSources}

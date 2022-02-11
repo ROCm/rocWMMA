@@ -52,12 +52,12 @@ namespace rocwmma
                                         hfloat16_t,
                                         float32_t,
                                         int8_t
-#ifdef WMMA_EXTENDED_TESTS
+#ifdef ROCWMMA_EXTENDED_TESTS
                                         ,
                                         int32_t,
                                         uint8_t,
                                         uint32_t
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
                                         >;
 
         // Native double
@@ -77,55 +77,55 @@ namespace rocwmma
         using TestBlockSizes16x16 = std::tuple<std::tuple<I<16>, I<16>>,
                                                std::tuple<I<16>, I<32>>,
                                                std::tuple<I<16>, I<64>>
-#ifdef WMMA_EXTENDED_TESTS
+#ifdef ROCWMMA_EXTENDED_TESTS
                                                ,
                                                std::tuple<I<16>, I<128>>,
                                                std::tuple<I<16>, I<256>>
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
                                                >;
 
         using TestBlockSizes32x32 = std::tuple<std::tuple<I<32>, I<8>>,
                                                std::tuple<I<32>, I<16>>,
                                                std::tuple<I<32>, I<32>>,
                                                std::tuple<I<32>, I<64>>
-#ifdef WMMA_EXTENDED_TESTS
+#ifdef ROCWMMA_EXTENDED_TESTS
                                                ,
                                                std::tuple<I<32>, I<128>>,
                                                std::tuple<I<32>, I<256>>
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
                                                >;
 
         using TestBlockSizes64 = std::tuple<std::tuple<I<64>, I<8>>,
                                             std::tuple<I<64>, I<16>>,
                                             std::tuple<I<64>, I<32>>,
                                             std::tuple<I<64>, I<64>>
-#ifdef WMMA_EXTENDED_TESTS
+#ifdef ROCWMMA_EXTENDED_TESTS
                                             ,
                                             std::tuple<I<64>, I<128>>,
                                             std::tuple<I<64>, I<256>>
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
                                             >;
 
         using TestBlockSizes128 = std::tuple<std::tuple<I<128>, I<8>>,
                                              std::tuple<I<128>, I<16>>,
                                              std::tuple<I<128>, I<32>>,
                                              std::tuple<I<128>, I<64>>
-#ifdef WMMA_EXTENDED_TESTS
+#ifdef ROCWMMA_EXTENDED_TESTS
                                              ,
                                              std::tuple<I<128>, I<128>>,
                                              std::tuple<I<128>, I<256>>
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
                                              >;
 
         using TestBlockSizes256 = std::tuple<std::tuple<I<256>, I<8>>,
                                              std::tuple<I<256>, I<16>>,
                                              std::tuple<I<256>, I<32>>,
                                              std::tuple<I<256>, I<64>>
-#ifdef WMMA_EXTENDED_TESTS
+#ifdef ROCWMMA_EXTENDED_TESTS
                                              ,
                                              std::tuple<I<256>, I<128>>,
                                              std::tuple<I<256>, I<256>>
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
                                              >;
 
         // Layout groupings
@@ -150,9 +150,9 @@ namespace rocwmma
         return { {64, 1},  // 1 Wave
                  {64, 2}, {128, 1}, // 2 Waves
                  {64, 4}, {128, 2}, {256, 1}, // 4 Waves
-#ifdef WMMA_EXTENDED_TESTS
+#ifdef ROCWMMA_EXTENDED_TESTS
                  {64, 8}, {128, 4}, {256, 2}, {512, 1} // 8 waves
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
             };
             // clang-format on
         }
@@ -169,7 +169,7 @@ namespace rocwmma
                  {512, 8},  {512, 16},  {512, 32},  {512, 64},  {512, 128},  {512, 256},  {512, 512},
                  {1024, 8}, {1024, 16}, {1024, 32}, {1024, 64}, {1024, 128}, {1024, 256}, {1024, 512},
 
-#ifdef WMMA_EXTENDED_TESTS
+#ifdef ROCWMMA_EXTENDED_TESTS
                  {1024, 1024},
                  {2048, 2048},
                  {2560, 2560},
@@ -180,7 +180,7 @@ namespace rocwmma
                  {6144, 6144},
                  {7168, 7168},
                  {8192, 8192}
-#endif // WMMA_EXTENDED_TESTS
+#endif // ROCWMMA_EXTENDED_TESTS
         };
             // clang-format on
         }

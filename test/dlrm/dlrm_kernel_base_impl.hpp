@@ -50,9 +50,9 @@
 
 // Library includes
 
-#ifdef WMMA_VALIDATION_TESTS
+#ifdef ROCWMMA_VALIDATION_TESTS
 #include "reference.hpp" // Vanilla CPU kernel
-#endif // WMMA_VALIDATION_TESTS
+#endif // ROCWMMA_VALIDATION_TESTS
 
 namespace rocwmma
 {
@@ -123,7 +123,7 @@ namespace rocwmma
         mM = mK = mB = 0;
         mMPadded = mKPadded = 0;
         mRepeats =
-#ifdef WMMA_VALIDATION_TESTS
+#ifdef ROCWMMA_VALIDATION_TESTS
             1;
 #else
             5;
@@ -147,7 +147,7 @@ namespace rocwmma
                       << "DataT, "
                       << "Bwd, "
                       << "MatM, MatK, MatB, "
-#if defined(WMMA_VALIDATION_TESTS)
+#if defined(ROCWMMA_VALIDATION_TESTS)
                       << "maxRelativeDiff, "
                       << "tolerance, "
 #endif
@@ -164,17 +164,17 @@ namespace rocwmma
                       << (passDirection == DlrmDirection_t::Forward ? "Forwards" : "Backwards")
                       << ", " << mM << ", " << mK << ", " << mB << ", "
 
-#if defined(WMMA_VALIDATION_TESTS)
+#if defined(ROCWMMA_VALIDATION_TESTS)
                       << mValidationResult.maxRelativeDiff << ", " << mValidationResult.tolerance
                       << ", "
 #endif
                       << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredGFlopsPerSec
                       << ", " << mEfficiency << ", "
-#if defined(WMMA_VALIDATION_TESTS)
+#if defined(ROCWMMA_VALIDATION_TESTS)
                       << (mValidationResult.pass ? "PASSED" : "FAILED")
 #else
                       << "BENCH"
-#endif // WMMA_VALIDATION_TESTS
+#endif // ROCWMMA_VALIDATION_TESTS
                       << std::endl;
     }
 
@@ -358,7 +358,7 @@ namespace rocwmma
             CHECK_HIP_ERROR(hipEventDestroy(startEvent));
             CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
 
-#if defined(WMMA_VALIDATION_TESTS)
+#if defined(ROCWMMA_VALIDATION_TESTS)
 
             // Run reference CPU kernel
             std::function<void()> cpuKernel;
@@ -394,7 +394,7 @@ namespace rocwmma
     template <uint32_t TileSize, typename DataT>
     void DlrmKernelBase<TileSize, DataT>::validateResults()
     {
-#ifdef WMMA_VALIDATION_TESTS
+#ifdef ROCWMMA_VALIDATION_TESTS
         if(mRunFlag)
         {
             auto& dataInstance = DataStorage::instance();
