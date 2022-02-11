@@ -24,17 +24,17 @@
  *
  *******************************************************************************/
 
+#include <functional>
+#include <iostream>
+#include <vector>
+
 #include <hip/hip_ext.h>
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 
 #include <rocwmma/rocwmma.hpp>
 
-#include "Common.h"
-
-#include <functional>
-#include <iostream>
-#include <vector>
+#include "common.hpp"
 
 using rocwmma::float16_t;
 using rocwmma::float32_t;

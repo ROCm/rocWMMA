@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef COMMON_H_SAMPLES
-#define COMMON_H_SAMPLES
+#ifndef ROCWMMA_SAMPLES_COMMON_H
+#define ROCWMMA_SAMPLES_COMMON_H
 
 #include <iostream>
 
@@ -108,4 +108,4 @@ __host__ void compareEqual(T const* a, T const* b, uint32_t size, double toleran
     std::cout << "Max relative error: " << max_relative_error << std::endl;
 }
 
-#endif
+#endif // ROCWMMA_SAMPLES_COMMON_H
