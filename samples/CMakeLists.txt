@@ -2,7 +2,7 @@
  #
  # MIT License
  #
- # Copyright 2021 Advanced Micro Devices, Inc.
+ # Copyright 2021-2022 Advanced Micro Devices, Inc.
  #
  # Permission is hereby granted, free of charge, to any person obtaining a copy
  # of this software and associated documentation files (the "Software"), to deal
@@ -24,21 +24,21 @@
  #
  ###############################################################################
 
-set(WMMA_SAMPLES_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(ROCWMMA_SAMPLES_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Regular gtests that don't require any special
 # designation for validation or benchmarking
-function(add_wmma_sample TEST_TARGET TEST_SOURCE)
+function(add_rocwmma_sample TEST_TARGET TEST_SOURCE)
 
   list(APPEND TEST_SOURCE ${ARGN})
   add_executable(${TEST_TARGET} ${TEST_SOURCE})
-  target_link_libraries(${TEST_TARGET} wmma )
+  target_link_libraries(${TEST_TARGET} rocwmma )
   target_include_directories(${TEST_TARGET} PRIVATE
                              ${CMAKE_CURRENT_SOURCE_DIR}
-                             ${WMMA_SAMPLES_INCLUDE_DIR})
+                             ${ROCWMMA_SAMPLES_INCLUDE_DIR})
 
   # Add support to build the target's assembly files
-  if(WMMA_BUILD_ASSEMBLY)
+  if(ROCWMMA_BUILD_ASSEMBLY)
     foreach(file_name ${TEST_SOURCE})
 
       # Replicate the current source tree in the build output/assembly folder
@@ -61,6 +61,6 @@ function(add_wmma_sample TEST_TARGET TEST_SOURCE)
 endfunction()
 
 # Create sample targets
-add_wmma_sample(SimpleGemm ${CMAKE_CURRENT_SOURCE_DIR}/SimpleGemm.cpp)
-add_wmma_sample(SGemv ${CMAKE_CURRENT_SOURCE_DIR}/SGemv.cpp)
-add_wmma_sample(SimpleDlrm ${CMAKE_CURRENT_SOURCE_DIR}/SimpleDlrm.cpp)
+add_wmma_sample(simple_gemm ${CMAKE_CURRENT_SOURCE_DIR}/simple_gemm.cpp)
+add_wmma_sample(sgemmv ${CMAKE_CURRENT_SOURCE_DIR}/sgemmv.cpp)
+add_wmma_sample(simple_dlrm ${CMAKE_CURRENT_SOURCE_DIR}/simple_dlrm.cpp)
