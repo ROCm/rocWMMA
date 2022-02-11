@@ -41,8 +41,8 @@ FetchContent_MakeAvailable(googletest)
 
 include(GoogleTest)
 
-set(WMMA_TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(WMMA_COMMON_TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/hip_device.cpp)
+set(ROCWMMA_TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(ROCWMMA_COMMON_TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/hip_device.cpp)
 
 # Regular gtests that don't require any special
 # designation for validation or benchmarking
