@@ -26,7 +26,7 @@
 
 include( CMakeDependentOption )
 
-set(WMMA_TEST_UNIT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(ROCWMMA_TEST_UNIT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Unit common test sources
 set(UnitCommonSources ${WMMA_COMMON_TEST_SOURCES}
@@ -170,11 +170,11 @@ set(VectorIteratorTestSources ${UnitCommonSources}
                        )
 
 # Benchmark Unit
-add_wmma_test(ContaminationTest ${ContaminationTestSources})
-add_wmma_test(LayoutTest ${LayoutTestSources})
-add_wmma_test(MapUtilTest ${MapUtilTestSources})
-add_wmma_test(LoadStoreMatrixSyncTest ${LoadStoreMatrixSyncTestSources})
-add_wmma_test(LoadStoreMatrixCoopSyncTest ${LoadStoreMatrixCoopSyncTestSources})
-add_wmma_test(FillFragmentTest ${FillFragmentTestSources})
-add_wmma_test(VectorIteratorTest ${VectorIteratorTestSources})
+add_rocwmma_test(ContaminationTest ${ContaminationTestSources})
+add_rocwmma_test(LayoutTest ${LayoutTestSources})
+add_rocwmma_test(MapUtilTest ${MapUtilTestSources})
+add_rocwmma_test(LoadStoreMatrixSyncTest ${LoadStoreMatrixSyncTestSources})
+add_rocwmma_test(LoadStoreMatrixCoopSyncTest ${LoadStoreMatrixCoopSyncTestSources})
+add_rocwmma_test(FillFragmentTest ${FillFragmentTestSources})
+add_rocwmma_test(VectorIteratorTest ${VectorIteratorTestSources})
 

@@ -26,9 +26,9 @@
 
 include( CMakeDependentOption )
 
-cmake_dependent_option( WMMA_BUILD_VALIDATION_TESTS "Build validation tests" ON "WMMA_BUILD_TESTS" OFF )
-cmake_dependent_option( WMMA_BUILD_BENCHMARK_TESTS "Build benchmarking tests" ON "WMMA_BUILD_TESTS" OFF )
-cmake_dependent_option( WMMA_BUILD_EXTENDED_TESTS "Build extended test parameter coverage" OFF "WMMA_BUILD_TESTS" OFF )
+cmake_dependent_option( ROCWMMA_BUILD_VALIDATION_TESTS "Build validation tests" ON "ROCWMMA_BUILD_TESTS" OFF )
+cmake_dependent_option( ROCWMMA_BUILD_BENCHMARK_TESTS "Build benchmarking tests" ON "ROCWMMA_BUILD_TESTS" OFF )
+cmake_dependent_option( ROCWMMA_BUILD_EXTENDED_TESTS "Build extended test parameter coverage" OFF "ROCWMMA_BUILD_TESTS" OFF )
 
 # Test/benchmark requires additional dependencies
 include( FetchContent )
@@ -46,22 +46,22 @@ set(WMMA_COMMON_TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/hip_device.cpp)
 
 # Regular gtests that don't require any special
 # designation for validation or benchmarking
-function(add_wmma_test TEST_TARGET TEST_SOURCE)
+function(add_rocwmma_test TEST_TARGET TEST_SOURCE)
 
   list(APPEND TEST_SOURCE ${ARGN})
   add_executable(${TEST_TARGET} ${TEST_SOURCE})
-  target_link_libraries(${TEST_TARGET} wmma gtest_main)
+  target_link_libraries(${TEST_TARGET} rocwmma gtest_main)
   target_include_directories(${TEST_TARGET} PRIVATE
                              ${CMAKE_CURRENT_SOURCE_DIR}
-                             ${WMMA_TEST_INCLUDE_DIR})
+                             ${ROCWMMA_TEST_INCLUDE_DIR})
 
   # Add support to include extended test coverage
-  if(WMMA_BUILD_EXTENDED_TESTS)
-    target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_EXTENDED_TESTS)
+  if(ROCWMMA_BUILD_EXTENDED_TESTS)
+    target_compile_definitions(${TEST_TARGET} PRIVATE ROCWMMA_EXTENDED_TESTS)
   endif()
 
   # Add support to build the target's assembly files
-  if(WMMA_BUILD_ASSEMBLY)
+  if(ROCWMMA_BUILD_ASSEMBLY)
     foreach(file_name ${TEST_SOURCE})
 
       # Replicate the current source tree in the build output/assembly folder
@@ -87,17 +87,17 @@ function(add_wmma_test TEST_TARGET TEST_SOURCE)
 endfunction()
 
 # Targets that implement specifically validation configuration
-function(add_wmma_validation_test TEST_TARGET TEST_SOURCE)
+function(add_rocwmma_validation_test TEST_TARGET TEST_SOURCE)
   list(APPEND TEST_SOURCE ${ARGN})
-  add_wmma_test(${TEST_TARGET} ${TEST_SOURCE})
-  target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_VALIDATION_TESTS)
+  add_rocwmma_test(${TEST_TARGET} ${TEST_SOURCE})
+  target_compile_definitions(${TEST_TARGET} PRIVATE ROCWMMA_VALIDATION_TESTS)
 endfunction()
 
 # Targets that implement specifically benchmarking configuration
-function(add_wmma_benchmark_test TEST_TARGET TEST_SOURCE)
+function(add_rocwmma_benchmark_test TEST_TARGET TEST_SOURCE)
   list(APPEND TEST_SOURCE ${ARGN})
-  add_wmma_test(${TEST_TARGET} ${TEST_SOURCE})
-  target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_BENCHMARK_TESTS)
+  add_rocwmma_test(${TEST_TARGET} ${TEST_SOURCE})
+  target_compile_definitions(${TEST_TARGET} PRIVATE ROCWMMA_BENCHMARK_TESTS)
 endfunction()
 
 add_subdirectory(gemm)

@@ -24,21 +24,21 @@
  #
  ###############################################################################
 
-set(WMMA_SAMPLES_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(ROCWMMA_SAMPLES_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Regular gtests that don't require any special
 # designation for validation or benchmarking
-function(add_wmma_sample TEST_TARGET TEST_SOURCE)
+function(add_rocwmma_sample TEST_TARGET TEST_SOURCE)
 
   list(APPEND TEST_SOURCE ${ARGN})
   add_executable(${TEST_TARGET} ${TEST_SOURCE})
-  target_link_libraries(${TEST_TARGET} wmma )
+  target_link_libraries(${TEST_TARGET} rocwmma )
   target_include_directories(${TEST_TARGET} PRIVATE
                              ${CMAKE_CURRENT_SOURCE_DIR}
-                             ${WMMA_SAMPLES_INCLUDE_DIR})
+                             ${ROCWMMA_SAMPLES_INCLUDE_DIR})
 
   # Add support to build the target's assembly files
-  if(WMMA_BUILD_ASSEMBLY)
+  if(ROCWMMA_BUILD_ASSEMBLY)
     foreach(file_name ${TEST_SOURCE})
 
       # Replicate the current source tree in the build output/assembly folder
