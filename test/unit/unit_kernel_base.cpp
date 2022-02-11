@@ -24,7 +24,7 @@
  *
  *******************************************************************************/
 
-#include "UnitKernelBase.h"
+#include "unit_kernel_base.hpp"
 
 namespace rocwmma
 {

@@ -27,8 +27,8 @@
 #ifndef ROCWMMA_DETAIL_LOAD_STORE_MATRIX_SYNC_H
 #define ROCWMMA_DETAIL_LOAD_STORE_MATRIX_SYNC_H
 
-#include "UnitKernelBase.h"
 #include "device/LoadStoreMatrixSync.h"
+#include "unit_kernel_base.hpp"
 
 namespace rocwmma
 {

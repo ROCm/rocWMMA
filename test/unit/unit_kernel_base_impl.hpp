@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_UNIT_KERNEL_BASE_IMPL_H
-#define ROCWMMA_UNIT_KERNEL_BASE_IMPL_H
+#ifndef ROCWMMA_UNIT_KERNEL_BASE_IMPL_HPP
+#define ROCWMMA_UNIT_KERNEL_BASE_IMPL_HPP
 
 #include <tuple>
 
@@ -37,8 +37,8 @@
 #include <rocwmma/internal/types.hpp>
 #include <rocwmma/internal/utils.hpp>
 
-#include "UnitKernelBase.h"
 #include "common.hpp"
+#include "unit_kernel_base.hpp"
 
 namespace rocwmma
 {
@@ -257,4 +257,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_UNIT_KERNEL_BASE_IMPL_H
+#endif // ROCWMMA_UNIT_KERNEL_BASE_IMPL_HPP

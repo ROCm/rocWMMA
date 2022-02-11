@@ -27,8 +27,8 @@
 #ifndef ROCWMMA_DETAIL_LOAD_CONTAMINATION_H
 #define ROCWMMA_DETAIL_LOAD_CONTAMINATION_H
 
-#include "UnitKernelBase.h"
 #include "device/LoadContamination.h"
+#include "unit_kernel_base.hpp"
 
 namespace rocwmma
 {

@@ -24,15 +24,15 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_UNIT_KERNEL_BASE_H
-#define ROCWMMA_UNIT_KERNEL_BASE_H
+#ifndef ROCWMMA_UNIT_KERNEL_BASE_HPP
+#define ROCWMMA_UNIT_KERNEL_BASE_HPP
 
 #include <iostream>
 #include <sstream>
 #include <string>
 
-#include "UnitResource.h"
 #include "hip_device.hpp"
+#include "unit_resource.hpp"
 
 namespace rocwmma
 {
@@ -158,6 +158,6 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#include "UnitKernelBase_impl.h"
+#include "unit_kernel_base_impl.hpp"
 
-#endif // ROCWMMA_UNIT_KERNEL_BASE_H
+#endif // ROCWMMA_UNIT_KERNEL_BASE_HPP

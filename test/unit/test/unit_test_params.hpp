@@ -24,17 +24,17 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_UNIT_UNIT_TEST_PARAMS_H
-#define ROCWMMA_UNIT_UNIT_TEST_PARAMS_H
+#ifndef ROCWMMA_UNIT_TEST_PARAMS_HPP
+#define ROCWMMA_UNIT_TEST_PARAMS_HPP
 
 #include <tuple>
 #include <vector>
 
 #include <rocwmma/internal/types.hpp>
 
-#include "UnitKernelBase.h"
 #include "common.hpp"
 #include "kernel_generator.hpp"
+#include "unit_kernel_base.hpp"
 
 namespace rocwmma
 {
@@ -198,4 +198,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_UNIT_UNIT_TEST_PARAMS_H
+#endif // ROCWMMA_UNIT_TEST_PARAMS_HPP
