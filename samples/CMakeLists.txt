@@ -2,7 +2,7 @@
  #
  # MIT License
  #
- # Copyright 2021 Advanced Micro Devices, Inc.
+ # Copyright 2021-2022 Advanced Micro Devices, Inc.
  #
  # Permission is hereby granted, free of charge, to any person obtaining a copy
  # of this software and associated documentation files (the "Software"), to deal
@@ -61,6 +61,6 @@ function(add_wmma_sample TEST_TARGET TEST_SOURCE)
 endfunction()
 
 # Create sample targets
-add_wmma_sample(SimpleGemm ${CMAKE_CURRENT_SOURCE_DIR}/SimpleGemm.cpp)
-add_wmma_sample(SGemv ${CMAKE_CURRENT_SOURCE_DIR}/SGemv.cpp)
-add_wmma_sample(SimpleDlrm ${CMAKE_CURRENT_SOURCE_DIR}/SimpleDlrm.cpp)
+add_wmma_sample(simple_gemm ${CMAKE_CURRENT_SOURCE_DIR}/simple_gemm.cpp)
+add_wmma_sample(sgemmv ${CMAKE_CURRENT_SOURCE_DIR}/sgemmv.cpp)
+add_wmma_sample(simple_dlrm ${CMAKE_CURRENT_SOURCE_DIR}/simple_dlrm.cpp)
