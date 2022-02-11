@@ -24,16 +24,16 @@
  #
  ###############################################################################
 
- set(WMMA_TEST_DLRM_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+ set(ROCWMMA_TEST_DLRM_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
  function(add_dlrm_validation_test TEST_TARGET TEST_SOURCE)
    list(APPEND TEST_SOURCE ${ARGN})
 
    # Create target
-   add_wmma_validation_test(${TEST_TARGET} ${TEST_SOURCE})
+   add_rocwmma_validation_test(${TEST_TARGET} ${TEST_SOURCE})
 
    # Add dlrm include directory
-   target_include_directories(${TEST_TARGET} PRIVATE ${WMMA_TEST_DLRM_INCLUDE_DIR})
+   target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_DLRM_INCLUDE_DIR})
 
    # Copy DLRM data directory to build folder
    add_custom_command(
@@ -48,10 +48,10 @@
    list(APPEND TEST_SOURCE ${ARGN})
 
    # Create target
-   add_wmma_benchmark_test(${TEST_TARGET} ${TEST_SOURCE})
+   add_rocwmma_benchmark_test(${TEST_TARGET} ${TEST_SOURCE})
 
    # Add dlrm include directory
-   target_include_directories(${TEST_TARGET} PRIVATE ${WMMA_TEST_DLRM_INCLUDE_DIR})
+   target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_DLRM_INCLUDE_DIR})
 
    # Copy DLRM data directory to build folder
    add_custom_command(
