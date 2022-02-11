@@ -36,13 +36,15 @@ message( VERBOSE "CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "" FORCE )
 
 ### Project ROCWMMA
-project( ROCWMMA LANGUAGES CXX )
-set (CMAKE_CXX_STANDARD 14)
+project( rocwmma LANGUAGES CXX )
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Top level configs
-if( CMAKE_PROJECT_NAME STREQUAL "ROCWMMA" )
-  option( ROCWMMA_BUILD_TESTS "Build ROCWMMA tests" ON )
-  option( ROCWMMA_BUILD_SAMPLES "Build ROCWMMA samples" ON )
+if( CMAKE_PROJECT_NAME STREQUAL "rocwmma" )
+  option( ROCWMMA_BUILD_TESTS "Build rocWMMA tests" ON )
+  option( ROCWMMA_BUILD_SAMPLES "Build rocWMMA samples" ON )
   option( ROCWMMA_BUILD_DOCS "Build doxygen documentation" OFF )
   option( ROCWMMA_BUILD_ASSEMBLY "Output assembly files" OFF )
 endif()
@@ -92,7 +94,6 @@ find_package( OpenMP REQUIRED )
 
 add_library(rocwmma INTERFACE)
 target_link_libraries(rocwmma INTERFACE hip::device hip::host OpenMP::OpenMP_CXX)
-target_compile_options(rocwmma INTERFACE -std=c++14)
 
 rocm_install_targets(
   TARGETS rocwmma
@@ -125,8 +126,8 @@ rocm_package_add_rpm_dependencies("libomp-devel")
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 
 rocm_create_package(
-  NAME ROCWMMA
-  DESCRIPTION "AMD's C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications on GPU using MFMA hardware cores."
-  MAINTAINER "ROCWMMA Maintainer <rocwmma-maintainer@amd.com>"
+  NAME rocwmma
+  DESCRIPTION "AMD's C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications on GPU leveraging MFMA instructions executing on matrix cores."
+  MAINTAINER "rocWMMA Maintainer <rocwmma-maintainer@amd.com>"
   HEADER_ONLY
 )
