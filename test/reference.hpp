@@ -23,11 +23,12 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_REFERENCE_H
-#define ROCWMMA_REFERENCE_H
+#ifndef ROCWMMA_REFERENCE_HPP
+#define ROCWMMA_REFERENCE_HPP
+
+#include <type_traits>
 
 #include <rocwmma/internal/types.hpp>
-#include <type_traits>
 
 namespace rocwmma
 {
@@ -179,4 +180,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_REFERENCE_H
+#endif // ROCWMMA_REFERENCE_HPP

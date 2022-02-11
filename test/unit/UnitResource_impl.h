@@ -27,8 +27,9 @@
 #ifndef ROCWMMA_UNIT_RESOURCE_IMPL_H
 #define ROCWMMA_UNIT_RESOURCE_IMPL_H
 
-#include "Common.h"
 #include <cstring> // for std::memcpy
+
+#include "common.hpp"
 
 namespace rocwmma
 {

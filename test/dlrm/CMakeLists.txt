@@ -68,10 +68,10 @@
 
  # Benchmark DLRM tests
  if (WMMA_BUILD_BENCHMARK_TESTS)
-     add_dlrm_benchmark_test(DlrmDotTest-bench ${DlrmDotTestSources})
+     add_dlrm_benchmark_test(dlrm_dot_test-bench ${DlrmDotTestSources})
  endif()
 
  # Validation DLRM tests
  if (WMMA_BUILD_VALIDATION_TESTS)
-     add_dlrm_validation_test(DlrmDotTest-validate ${DlrmDotTestSources})
+     add_dlrm_validation_test(dlrm_dot_test-validate ${DlrmDotTestSources})
  endif()

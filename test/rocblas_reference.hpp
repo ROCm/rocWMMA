@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_ROCBLAS_REFERENCE_H
-#define ROCWMMA_ROCBLAS_REFERENCE_H
+#ifndef ROCWMMA_ROCBLAS_REFERENCE_HPP
+#define ROCWMMA_ROCBLAS_REFERENCE_HPP
 
 #define ROCM_USE_FLOAT16
 
@@ -42,7 +42,7 @@
 
 #include <rocblas.h>
 
-#include "Common.h"
+#include "common.hpp"
 #include <rocwmma/internal/types.hpp>
 
 namespace rocwmma
@@ -305,4 +305,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_ROCBLAS_REFERENCE_H
+#endif // ROCWMMA_ROCBLAS_REFERENCE_HPP

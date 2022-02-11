@@ -27,9 +27,10 @@
 #ifndef ROCWMMA_UNIT_TEST_BASE_H
 #define ROCWMMA_UNIT_TEST_BASE_H
 
+#include <gtest/gtest.h>
+
 #include "UnitKernelBase.h"
 #include "UnitTestParams.h"
-#include <gtest/gtest.h>
 
 namespace rocwmma
 {

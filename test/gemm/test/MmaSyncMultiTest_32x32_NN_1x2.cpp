@@ -27,8 +27,8 @@
 #include <type_traits>
 
 #include "GemmTest.h"
-#include "KernelGenerator.h"
 #include "detail/MmaSyncMulti.h"
+#include "kernel_generator.hpp"
 
 namespace rocwmma
 {

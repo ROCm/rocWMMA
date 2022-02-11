@@ -24,12 +24,13 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_HIP_RESOURCE_IMPL_H
-#define ROCWMMA_HIP_RESOURCE_IMPL_H
+#ifndef ROCWMMA_HIP_RESOURCE_IMPL_HPP
+#define ROCWMMA_HIP_RESOURCE_IMPL_HPP
 
-#include "Common.h"
-#include "HipResource.h"
 #include <hip/hip_runtime_api.h>
+
+#include "common.hpp"
+#include "hip_resource.hpp"
 
 namespace rocwmma
 {
@@ -99,4 +100,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif //ROCWMMA_HIP_RESOURCE_IMPL_H
+#endif //ROCWMMA_HIP_RESOURCE_IMPL_HPP

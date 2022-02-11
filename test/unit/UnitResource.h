@@ -32,8 +32,8 @@
 
 #include <hip/hip_runtime_api.h>
 
-#include "HipResource.h"
-#include "Singleton.h"
+#include "hip_resource.hpp"
+#include "singleton.hpp"
 
 namespace rocwmma
 {

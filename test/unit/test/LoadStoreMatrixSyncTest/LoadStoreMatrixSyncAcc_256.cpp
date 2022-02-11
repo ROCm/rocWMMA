@@ -26,8 +26,8 @@
 
 #include <type_traits>
 
-#include "KernelGenerator.h"
 #include "detail/LoadStoreMatrixSync.h"
+#include "kernel_generator.hpp"
 #include "test/UnitTest.h"
 #include "test/UnitTestParams.h"
 

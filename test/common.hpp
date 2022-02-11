@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_TEST_COMMON_H
-#define ROCWMMA_TEST_COMMON_H
+#ifndef ROCWMMA_TEST_COMMON_HPP
+#define ROCWMMA_TEST_COMMON_HPP
 
 #include <iostream>
 #include <mutex>
@@ -500,4 +500,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_TEST_COMMON_H
+#endif // ROCWMMA_TEST_COMMON_HPP

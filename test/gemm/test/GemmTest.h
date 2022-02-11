@@ -27,9 +27,10 @@
 #ifndef ROCWMMA_GEMM_TEST_BASE_H
 #define ROCWMMA_GEMM_TEST_BASE_H
 
+#include <gtest/gtest.h>
+
 #include "CommonTestParams.h"
 #include "GemmKernelBase.h"
-#include <gtest/gtest.h>
 
 namespace rocwmma
 {

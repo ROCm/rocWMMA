@@ -33,8 +33,8 @@
 #include <rocwmma/internal/types.hpp>
 
 #include "../common.hpp"
-#include "KernelGenerator.h"
 #include "dlrm_kernel_base.hpp"
+#include "kernel_generator.hpp"
 
 namespace rocwmma
 {

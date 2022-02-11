@@ -281,4 +281,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_PERFORMANCE_H
+#endif // ROCWMMA_PERFORMANCE_HPP

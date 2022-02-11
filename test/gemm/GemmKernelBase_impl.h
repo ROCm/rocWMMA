@@ -27,8 +27,6 @@
 #ifndef ROCWMMA_KERNEL_BASE_IMPL_H
 #define ROCWMMA_KERNEL_BASE_IMPL_H
 
-#include "GemmKernelBase.h"
-
 #include <tuple>
 
 #include <hip/hip_ext.h>
@@ -36,20 +34,21 @@
 
 #include <gtest/gtest.h>
 
-#include "Common.h"
-#include "Performance.h"
-
-#ifdef WMMA_VALIDATION_TESTS
-#include "Reference.h" // Vanilla CPU kernel
-#endif // WMMA_VALIDATION_TESTS
-
-#if defined(WMMA_VALIDATE_WITH_ROCBLAS) || defined(WMMA_BENCHMARK_WITH_ROCBLAS)
-#include "rocBLASReference.h" // rocBLAS GPU kernel
-#endif // WMMA_VALIDATE_WITH_ROCBLAS || WMMA_BENCHMARK_WITH_ROCBLAS
-
 // Library includes
 #include <rocwmma/internal/constants.hpp>
 #include <rocwmma/internal/utils.hpp>
+
+#include "GemmKernelBase.h"
+#include "common.hpp"
+#include "performance.hpp"
+
+#ifdef WMMA_VALIDATION_TESTS
+#include "reference.hpp" // Vanilla CPU kernel
+#endif // WMMA_VALIDATION_TESTS
+
+#if defined(WMMA_VALIDATE_WITH_ROCBLAS) || defined(WMMA_BENCHMARK_WITH_ROCBLAS)
+#include "rocblas_reference.hpp" // rocBLAS GPU kernel
+#endif // WMMA_VALIDATE_WITH_ROCBLAS || WMMA_BENCHMARK_WITH_ROCBLAS
 
 namespace rocwmma
 {
