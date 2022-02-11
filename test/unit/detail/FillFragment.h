@@ -27,8 +27,8 @@
 #ifndef ROCWMMA_DETAIL_FILL_FRAGMENT_H
 #define ROCWMMA_DETAIL_FILL_FRAGMENT_H
 
-#include "UnitKernelBase.h"
 #include "device/FillFragment.h"
+#include "unit_kernel_base.hpp"
 
 namespace rocwmma
 {

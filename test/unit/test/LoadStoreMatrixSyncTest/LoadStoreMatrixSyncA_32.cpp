@@ -28,7 +28,7 @@
 
 #include "detail/LoadStoreMatrixSync.h"
 #include "kernel_generator.hpp"
-#include "test/UnitTest.h"
+#include "test/unit_test.hpp"
 
 namespace rocwmma
 {

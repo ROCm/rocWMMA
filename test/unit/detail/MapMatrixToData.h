@@ -27,8 +27,8 @@
 #ifndef ROCWMMA_DETAIL_MAP_MATRIX_TO_DATA_H
 #define ROCWMMA_DETAIL_MAP_MATRIX_TO_DATA_H
 
-#include "UnitKernelBase.h"
 #include "device/MapMatrixToData.h"
+#include "unit_kernel_base.hpp"
 
 namespace rocwmma
 {

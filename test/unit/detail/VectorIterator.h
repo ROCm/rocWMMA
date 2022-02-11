@@ -27,8 +27,8 @@
 #ifndef ROCWMMA_DETAIL_VECTOR_ITERATOR_H
 #define ROCWMMA_DETAIL_VECTOR_ITERATOR_H
 
-#include "UnitKernelBase.h"
 #include "device/VectorIterator.h"
+#include "unit_kernel_base.hpp"
 
 namespace rocwmma
 {

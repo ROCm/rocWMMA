@@ -27,8 +27,8 @@
 #ifndef ROCWMMA_DETAIL_MAP_BLOCK_TO_MATRIX_H
 #define ROCWMMA_DETAIL_MAP_BLOCK_TO_MATRIX_H
 
-#include "UnitKernelBase.h"
 #include "device/MapBlockToMatrix.h"
+#include "unit_kernel_base.hpp"
 
 namespace rocwmma
 {

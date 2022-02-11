@@ -30,7 +30,7 @@ set(WMMA_TEST_UNIT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Unit common test sources
 set(UnitCommonSources ${WMMA_COMMON_TEST_SOURCES}
-                       UnitKernelBase.cpp)
+                       unit_kernel_base.cpp)
 
 set(ContaminationTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/ContaminationTest/LoadContaminationA_16.cpp

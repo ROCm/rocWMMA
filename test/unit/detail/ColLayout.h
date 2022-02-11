@@ -27,8 +27,8 @@
 #ifndef ROCWMMA_DETAIL_COL_LAYOUT_H
 #define ROCWMMA_DETAIL_COL_LAYOUT_H
 
-#include "UnitKernelBase.h"
 #include "device/ColLayout.h"
+#include "unit_kernel_base.hpp"
 
 namespace rocwmma
 {

@@ -24,13 +24,13 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_UNIT_TEST_BASE_H
-#define ROCWMMA_UNIT_TEST_BASE_H
+#ifndef ROCWMMA_UNIT_TEST_BASE_HPP
+#define ROCWMMA_UNIT_TEST_BASE_HPP
 
 #include <gtest/gtest.h>
 
-#include "UnitKernelBase.h"
-#include "UnitTestParams.h"
+#include "unit_kernel_base.hpp"
+#include "unit_test_params.hpp"
 
 namespace rocwmma
 {
@@ -98,4 +98,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_UNIT_TEST_BASE_H
+#endif // ROCWMMA_UNIT_TEST_BASE_HPP
