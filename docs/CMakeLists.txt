@@ -28,12 +28,12 @@
  # Documentation requires doxygen installation
 find_package( Doxygen REQUIRED )
 
-set(ROCWMMA_DOCS_ARCHIVE "${CMAKE_CURRENT_SOURCE_DIR}/../ROCWMMA-Guide.tar.gz")
+set(ROCWMMA_DOCS_ARCHIVE "${CMAKE_CURRENT_SOURCE_DIR}/../rocWMMA-Guide.tar.gz")
 set(ROCWMMA_DOXYGEN_INPUT "${CMAKE_CURRENT_SOURCE_DIR}/../library" "${CMAKE_CURRENT_SOURCE_DIR}/../test")
 set(ROCWMMA_DOXYGEN_OUTPUT "${CMAKE_BINARY_DIR}/docs")
 
 add_custom_target(
-  BuildDocs ALL
+  build_docs ALL
   DEPENDS ${ROCWMMA_DOCS_ARCHIVE}
 )
 
@@ -42,7 +42,7 @@ string (REPLACE ";" " " ROCWMMA_DOXYGEN_INPUT "${ROCWMMA_DOXYGEN_INPUT}")
 
 # Adjust the doxygen inputs and output directories dynamically
 add_custom_command(
-  OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/ROCWMMA-Guide.tar.gz
+  OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/rocWMMA-Guide.tar.gz
   COMMAND bash -c "(cat ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile; echo \"INPUT=${ROCWMMA_DOXYGEN_INPUT}\"; echo \"OUTPUT_DIRECTORY=${ROCWMMA_DOXYGEN_OUTPUT}\") | doxygen -"
   COMMAND tar -czvf ${ROCWMMA_DOCS_ARCHIVE} ${ROCWMMA_DOXYGEN_OUTPUT}
   VERBATIM)
