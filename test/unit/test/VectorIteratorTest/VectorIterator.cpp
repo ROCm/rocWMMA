@@ -27,8 +27,8 @@
 #include <tuple>
 #include <type_traits>
 
-#include "KernelGenerator.h"
 #include "detail/VectorIterator.h"
+#include "kernel_generator.hpp"
 #include "test/UnitTest.h"
 
 namespace rocwmma

@@ -25,9 +25,9 @@
  *******************************************************************************/
 
 #include "dlrm_dot_test.hpp"
-#include "KernelGenerator.h"
 #include "detail/dlrm_dot.hpp"
 #include "dlrm_test_params.hpp"
+#include "kernel_generator.hpp"
 
 namespace rocwmma
 {

@@ -43,15 +43,15 @@
 #include <rocwmma/internal/constants.hpp>
 #include <rocwmma/internal/utils.hpp>
 
-#include "../Common.h"
+#include "../common.hpp"
 #include "./common.hpp"
-#include "Performance.h"
 #include "dlrm_kernel_base.hpp"
+#include "performance.hpp"
 
 // Library includes
 
 #ifdef WMMA_VALIDATION_TESTS
-#include "Reference.h" // Vanilla CPU kernel
+#include "reference.hpp" // Vanilla CPU kernel
 #endif // WMMA_VALIDATION_TESTS
 
 namespace rocwmma

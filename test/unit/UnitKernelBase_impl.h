@@ -27,19 +27,18 @@
 #ifndef ROCWMMA_UNIT_KERNEL_BASE_IMPL_H
 #define ROCWMMA_UNIT_KERNEL_BASE_IMPL_H
 
-#include "UnitKernelBase.h"
-
 #include <tuple>
 
 #include <hip/hip_ext.h>
 #include <hip/hip_runtime_api.h>
 
-#include "Common.h"
-
 // Library includes
 #include <rocwmma/internal/constants.hpp>
 #include <rocwmma/internal/types.hpp>
 #include <rocwmma/internal/utils.hpp>
+
+#include "UnitKernelBase.h"
+#include "common.hpp"
 
 namespace rocwmma
 {

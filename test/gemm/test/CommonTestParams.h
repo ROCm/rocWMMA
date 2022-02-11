@@ -30,10 +30,11 @@
 #include <tuple>
 #include <vector>
 
-#include "Common.h"
-#include "GemmKernelBase.h"
-#include "KernelGenerator.h"
 #include <rocwmma/internal/types.hpp>
+
+#include "GemmKernelBase.h"
+#include "common.hpp"
+#include "kernel_generator.hpp"
 
 namespace rocwmma
 {

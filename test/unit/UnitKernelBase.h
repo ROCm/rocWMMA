@@ -31,8 +31,8 @@
 #include <sstream>
 #include <string>
 
-#include "HipDevice.h"
 #include "UnitResource.h"
+#include "hip_device.hpp"
 
 namespace rocwmma
 {

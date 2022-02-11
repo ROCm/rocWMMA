@@ -26,8 +26,8 @@
 #include <type_traits>
 
 #include "GemmTest.h"
-#include "KernelGenerator.h"
 #include "detail/Barrier.h"
+#include "kernel_generator.hpp"
 
 namespace rocwmma
 {

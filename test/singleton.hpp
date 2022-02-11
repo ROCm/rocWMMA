@@ -24,51 +24,25 @@
  *
  *******************************************************************************/
 
-#include "HipDevice.h"
-#include "Common.h"
+#ifndef ROCWMMA_TEST_SINGLETON_HPP
+#define ROCWMMA_TEST_SINGLETON_HPP
+
+#include <memory>
 
 namespace rocwmma
 {
 
-    HipDevice::HipDevice()
-        : mHandle(-1)
-        , mGcnArch(hipGcnArch_t::UNKNOWN)
+    template <typename T>
+    class LazySingleton
     {
-        CHECK_HIP_ERROR(hipGetDevice(&mHandle));
-        CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
-
-        mArch = mProps.arch;
-
-        std::string deviceName(mProps.gcnArchName);
-
-        if(deviceName.find("gfx908") != std::string::npos)
+    public:
+        static std::unique_ptr<T> const& instance()
         {
-            mGcnArch = hipGcnArch_t::GFX908;
+            static auto sInstance = std::make_unique<T>();
+            return sInstance;
         }
-        else if(deviceName.find("gfx90a") != std::string::npos)
-        {
-            mGcnArch = hipGcnArch_t::GFX90A;
-        }
-    }
-
-    hipDevice_t HipDevice::getDeviceHandle() const
-    {
-        return mHandle;
-    }
-
-    hipDeviceProp_t HipDevice::getDeviceProps() const
-    {
-        return mProps;
-    }
-
-    hipDeviceArch_t HipDevice::getDeviceArch() const
-    {
-        return mArch;
-    }
-
-    HipDevice::hipGcnArch_t HipDevice::getGcnArch() const
-    {
-        return mGcnArch;
-    }
+    };
 
 } // namespace rocwmma
+
+#endif // ROCWMMA_TEST_SINGLETON_HPP

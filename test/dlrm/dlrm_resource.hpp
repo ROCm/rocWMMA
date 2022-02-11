@@ -30,8 +30,8 @@
 #include <memory>
 #include <tuple>
 
-#include "HipResource.h"
-#include "Singleton.h"
+#include "hip_resource.hpp"
+#include "singleton.hpp"
 
 namespace rocwmma
 {

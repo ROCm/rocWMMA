@@ -24,12 +24,13 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_TEST_HIP_DEVICE_H
-#define ROCWMMA_TEST_HIP_DEVICE_H
+#ifndef ROCWMMA_TEST_HIP_DEVICE_HPP
+#define ROCWMMA_TEST_HIP_DEVICE_HPP
 
-#include "Performance.h"
-#include "Singleton.h"
 #include <hip/hip_runtime_api.h>
+
+#include "performance.hpp"
+#include "singleton.hpp"
 
 namespace rocwmma
 {
@@ -85,4 +86,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_TEST_HIP_DEVICE_H
+#endif // ROCWMMA_TEST_HIP_DEVICE_HPP

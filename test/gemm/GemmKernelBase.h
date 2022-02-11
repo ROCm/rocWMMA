@@ -32,7 +32,7 @@
 #include <string>
 
 #include "GemmResource.h"
-#include "HipDevice.h"
+#include "hip_device.hpp"
 
 namespace rocwmma
 {

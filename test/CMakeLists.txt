@@ -2,7 +2,7 @@
  #
  # MIT License
  #
- # Copyright 2021 Advanced Micro Devices, Inc.
+ # Copyright 2021-2022 Advanced Micro Devices, Inc.
  #
  # Permission is hereby granted, free of charge, to any person obtaining a copy
  # of this software and associated documentation files (the "Software"), to deal
@@ -42,7 +42,7 @@ FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 
 set(WMMA_TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(WMMA_COMMON_TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/HipDevice.cpp)
+set(WMMA_COMMON_TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/hip_device.cpp)
 
 # Regular gtests that don't require any special
 # designation for validation or benchmarking
