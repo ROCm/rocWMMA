@@ -24,12 +24,12 @@
  *
  *******************************************************************************/
 
-#ifndef DLRM_DOT_DETAIL_H
-#define DLRM_DOT_DETAIL_H
+#ifndef DLRM_DOT_DETAIL_HPP
+#define DLRM_DOT_DETAIL_HPP
 
-#include "DlrmKernelBase.h"
-#include "device/DlrmDotBwd.h"
-#include "device/DlrmDotFwd.h"
+#include "device/dlrm_dot_bwd.hpp"
+#include "device/dlrm_dot_fwd.hpp"
+#include "dlrm_kernel_base.hpp"
 
 namespace rocwmma
 {
@@ -40,6 +40,7 @@ namespace rocwmma
     {
     private:
         using Base = DlrmKernelBase<TileSize, DataT>;
+
     public:
         DlrmDotKernel() {}
         ~DlrmDotKernel() final {}
@@ -63,7 +64,7 @@ namespace rocwmma
     // This is the GeneratorImpl class
     struct DlrmDotGenerator
     {
-         // Indices to test parameters
+        // Indices to test parameters
         enum : uint32_t
         {
             DataT    = 0,
@@ -78,7 +79,7 @@ namespace rocwmma
             // Map GTest params to Kernel params
             using TestParamsT = std::tuple<Ts...>;
             using KernelT     = DlrmDotKernel<std::tuple_element_t<TileSize, TestParamsT>::value,
-                                      std::tuple_element_t<DataT, TestParamsT>>;
+                                          std::tuple_element_t<DataT, TestParamsT>>;
 
             return std::make_shared<KernelT>();
         }
@@ -86,4 +87,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // DLRM_DOT_DETAIL_H
+#endif // DLRM_DOT_DETAIL_HPP

@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef DLRM_TEST_DEVICE_COMMON_H
-#define DLRM_TEST_DEVICE_COMMON_H
+#ifndef DLRM_TEST_DEVICE_COMMON_HPP
+#define DLRM_TEST_DEVICE_COMMON_HPP
 
 #include <rocwmma/internal/types.hpp>
 
@@ -101,4 +101,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // DLRM_TEST_DEVICE_COMMON_H
+#endif // DLRM_TEST_DEVICE_COMMON_HPP

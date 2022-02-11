@@ -24,10 +24,10 @@
  *
  *******************************************************************************/
 
-#include "DlrmDotTest.h"
-#include "DlrmTestParams.h"
+#include "dlrm_dot_test.hpp"
 #include "KernelGenerator.h"
-#include "detail/DlrmDot.h"
+#include "detail/dlrm_dot.hpp"
+#include "dlrm_test_params.hpp"
 
 namespace rocwmma
 {
@@ -71,9 +71,10 @@ TEST_P(DlrmDotTestBasic, RunKernel)
     this->RunKernel();
 }
 
-INSTANTIATE_TEST_SUITE_P(DlrmKernelTests,
-                         DlrmDotTestBasic,
-                         ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
-                                            ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
-                                            ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
-                                            ::testing::ValuesIn(rocwmma::TestParams::passDirections())));
+INSTANTIATE_TEST_SUITE_P(
+    DlrmKernelTests,
+    DlrmDotTestBasic,
+    ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
+                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
+                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
+                       ::testing::ValuesIn(rocwmma::TestParams::passDirections())));

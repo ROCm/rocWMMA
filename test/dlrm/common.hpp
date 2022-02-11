@@ -24,17 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef DLRM_TEST_COMMON_H
-#define DLRM_TEST_COMMON_H
-
-#include <hip/hip_fp16.h>
-#include <hip/hip_runtime_api.h>
-
-#include "device/Common.h"
-#include <rocwmma/internal/constants.hpp>
-#include <rocwmma/internal/types.hpp>
-#include <rocwmma/internal/utils.hpp>
-#include <rocwmma/rocwmma.hpp>
+#ifndef DLRM_TEST_COMMON_HPP
+#define DLRM_TEST_COMMON_HPP
 
 #include <cassert>
 #include <cstdlib>
@@ -53,6 +44,16 @@
 #include <type_traits>
 #include <unistd.h>
 #include <vector>
+
+#include <hip/hip_fp16.h>
+#include <hip/hip_runtime_api.h>
+
+#include <rocwmma/internal/constants.hpp>
+#include <rocwmma/internal/types.hpp>
+#include <rocwmma/internal/utils.hpp>
+#include <rocwmma/rocwmma.hpp>
+
+#include "device/common.hpp"
 
 namespace rocwmma
 {
@@ -187,4 +188,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // DLRM_TEST_COMMON_H
+#endif // DLRM_TEST_COMMON_HPP

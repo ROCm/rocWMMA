@@ -24,7 +24,7 @@
  *
  *******************************************************************************/
 
-#include "DlrmKernelBase.h"
+#include "dlrm_kernel_base.hpp"
 
 namespace rocwmma
 {

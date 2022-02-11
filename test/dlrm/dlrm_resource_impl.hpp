@@ -24,10 +24,10 @@
  *
  *******************************************************************************/
 
-#ifndef DLRM_GEMM_RESOURCE_IMPL_H
-#define DLRM_GEMM_RESOURCE_IMPL_H
+#ifndef DLRM_GEMM_RESOURCE_IMPL_HPP
+#define DLRM_GEMM_RESOURCE_IMPL_HPP
 
-#include "DlrmResource.h"
+#include "dlrm_resource.hpp"
 
 namespace rocwmma
 {
@@ -313,4 +313,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // DLRM_GEMM_RESOURCE_IMPL_H
+#endif // DLRM_GEMM_RESOURCE_IMPL_HPP

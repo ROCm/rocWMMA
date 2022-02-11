@@ -24,17 +24,18 @@
  *
  *******************************************************************************/
 
-#ifndef DLRM_KERNEL_BASE_H
-#define DLRM_KERNEL_BASE_H
+#ifndef DLRM_KERNEL_BASE_HPP
+#define DLRM_KERNEL_BASE_HPP
 
 #include <iostream>
 #include <sstream>
 #include <string>
 
-#include "Common.h"
-#include "DlrmResource.h"
-#include "HipDevice.h"
 #include <rocwmma/internal/constants.hpp>
+
+#include "HipDevice.h"
+#include "common.hpp"
+#include "dlrm_resource.hpp"
 
 namespace rocwmma
 {
@@ -177,6 +178,6 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#include "DlrmKernelBase_impl.h"
+#include "dlrm_kernel_base_impl.hpp"
 
-#endif // DLRM_KERNEL_BASE_H
+#endif // DLRM_KERNEL_BASE_HPP

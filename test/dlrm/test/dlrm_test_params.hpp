@@ -24,16 +24,17 @@
  *
  *******************************************************************************/
 
-#ifndef DLRM_TEST_PARAMS_H
-#define DLRM_TEST_PARAMS_H
+#ifndef DLRM_TEST_PARAMS_HPP
+#define DLRM_TEST_PARAMS_HPP
 
 #include <tuple>
 #include <vector>
 
-#include "../Common.h"
-#include "DlrmKernelBase.h"
-#include "KernelGenerator.h"
 #include <rocwmma/internal/types.hpp>
+
+#include "../common.hpp"
+#include "KernelGenerator.h"
+#include "dlrm_kernel_base.hpp"
 
 namespace rocwmma
 {
@@ -67,4 +68,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // DLRM_TEST_PARAMS_H
+#endif // DLRM_TEST_PARAMS_HPP
