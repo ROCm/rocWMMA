@@ -35,16 +35,18 @@ message( VERBOSE "CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "" FORCE )
 
-### Project WMMA
-project( WMMA LANGUAGES CXX )
-set (CMAKE_CXX_STANDARD 14)
+### Project ROCWMMA
+project( rocwmma LANGUAGES CXX )
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Top level configs
-if( CMAKE_PROJECT_NAME STREQUAL "WMMA" )
-  option( WMMA_BUILD_TESTS "Build WMMA tests" ON )
-  option( WMMA_BUILD_SAMPLES "Build WMMA samples" ON )
-  option( WMMA_BUILD_DOCS "Build doxygen documentation" OFF )
-  option( WMMA_BUILD_ASSEMBLY "Output assembly files" OFF )
+if( CMAKE_PROJECT_NAME STREQUAL "rocwmma" )
+  option( ROCWMMA_BUILD_TESTS "Build rocWMMA tests" ON )
+  option( ROCWMMA_BUILD_SAMPLES "Build rocWMMA samples" ON )
+  option( ROCWMMA_BUILD_DOCS "Build doxygen documentation" OFF )
+  option( ROCWMMA_BUILD_ASSEMBLY "Output assembly files" OFF )
 endif()
 
 # set( AMDGPU_TARGETS "gfx908:xnack-" ) # User variable
@@ -90,31 +92,30 @@ message( VERBOSE "AMDGPU_TARGETS=${AMDGPU_TARGETS}")
 find_package( hip REQUIRED )
 find_package( OpenMP REQUIRED )
 
-add_library(wmma INTERFACE)
-target_link_libraries(wmma INTERFACE hip::device hip::host OpenMP::OpenMP_CXX)
-target_compile_options(wmma INTERFACE -std=c++14)
+add_library(rocwmma INTERFACE)
+target_link_libraries(rocwmma INTERFACE hip::device hip::host OpenMP::OpenMP_CXX)
 
 rocm_install_targets(
-  TARGETS wmma
+  TARGETS rocwmma
   INCLUDE library/include
 )
 
-if(WMMA_BUILD_DOCS)
+if(ROCWMMA_BUILD_DOCS)
   add_subdirectory(docs)
 endif()
 
-if(WMMA_BUILD_SAMPLES)
+if(ROCWMMA_BUILD_SAMPLES)
   rocm_package_setup_client_component(samples)
   add_subdirectory(samples)
 endif()
 
 
-if(WMMA_BUILD_TESTS)
+if(ROCWMMA_BUILD_TESTS)
   rocm_package_setup_client_component(tests)
   add_subdirectory(test)
 endif()
 
-if(WMMA_BUILD_SAMPLES OR WMMA_BUILD_TESTS)
+if(ROCWMMA_BUILD_SAMPLES OR ROCWMMA_BUILD_TESTS)
   rocm_package_setup_component(clients)
 endif()
 
@@ -125,8 +126,8 @@ rocm_package_add_rpm_dependencies("libomp-devel")
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 
 rocm_create_package(
-  NAME WMMA
-  DESCRIPTION "AMD's C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications on GPU using MFMA hardware cores."
-  MAINTAINER "WMMA Maintainer <wmma-maintainer@amd.com>"
+  NAME rocwmma
+  DESCRIPTION "AMD's C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications on GPU leveraging MFMA instructions executing on matrix cores."
+  MAINTAINER "rocWMMA Maintainer <rocwmma-maintainer@amd.com>"
   HEADER_ONLY
 )
