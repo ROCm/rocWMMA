@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_DETAIL_MMA_SYNC_MULTI_LDS_H
-#define ROCWMMA_DETAIL_MMA_SYNC_MULTI_LDS_H
+#ifndef ROCWMMA_DETAIL_MMA_SYNC_MULTI_LDS_HPP
+#define ROCWMMA_DETAIL_MMA_SYNC_MULTI_LDS_HPP
 
 #include "device/mma_sync_multi_lds.hpp"
 #include "gemm_kernel_base.hpp"

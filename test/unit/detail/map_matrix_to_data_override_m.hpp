@@ -50,9 +50,7 @@ namespace rocwmma
             auto& dataInstance = Base::DataStorage::instance();
 
             srand((unsigned)time(0));
-            DataT overrideM = Base::mM; //(rand() % 600);
-
-            Base::mParam1 = overrideM;
+            Base::mParam1 = static_cast<DataT>(static_cast<float32_t>(rand() % 64));
 
             // Initialize matrix storage
             const int64_t sizeD = Base::mM * Base::mN;
