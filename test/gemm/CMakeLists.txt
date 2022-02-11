@@ -26,15 +26,15 @@
 
 include( CMakeDependentOption )
 
-cmake_dependent_option( WMMA_VALIDATE_WITH_ROCBLAS "Use rocBLAS for validation" ON "WMMA_BUILD_VALIDATION_TESTS" OFF )
-cmake_dependent_option( WMMA_BENCHMARK_WITH_ROCBLAS "Include rocBLAS benchmark performance comparisons" OFF "WMMA_BUILD_BENCHMARK_TESTS" OFF )
+cmake_dependent_option( ROCWMMA_VALIDATE_WITH_ROCBLAS "Use rocBLAS for validation" ON "ROCWMMA_BUILD_VALIDATION_TESTS" OFF )
+cmake_dependent_option( ROCWMMA_BENCHMARK_WITH_ROCBLAS "Include rocBLAS benchmark performance comparisons" OFF "ROCWMMA_BUILD_BENCHMARK_TESTS" OFF )
 
-if(WMMA_VALIDATE_WITH_ROCBLAS OR WMMA_BENCHMARK_WITH_ROCBLAS)
+if(ROCWMMA_VALIDATE_WITH_ROCBLAS OR ROCWMMA_BENCHMARK_WITH_ROCBLAS)
   find_package( rocblas REQUIRED PATHS /opt/rocm /opt/rocm/rocblas $ENV{ROCBLAS_DIR} )
   rocm_package_add_dependencies("rocblas >= 2.32.0" COMPONENT tests)
 endif()
 
-set(WMMA_TEST_GEMM_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(ROCWMMA_TEST_GEMM_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 ### GEMM tests that have rocBLAS support
 # Use rocBLAS for validation
@@ -42,15 +42,15 @@ function(add_gemm_validation_test TEST_TARGET TEST_SOURCE)
   list(APPEND TEST_SOURCE ${ARGN})
 
   # Create target
-  add_wmma_validation_test(${TEST_TARGET} ${TEST_SOURCE})
+  add_rocwmma_validation_test(${TEST_TARGET} ${TEST_SOURCE})
 
   # Add gemm include directory
-  target_include_directories(${TEST_TARGET} PRIVATE ${WMMA_TEST_GEMM_INCLUDE_DIR})
+  target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_GEMM_INCLUDE_DIR})
 
   # Link to rocBLAS
-  if(WMMA_VALIDATE_WITH_ROCBLAS)
+  if(ROCWMMA_VALIDATE_WITH_ROCBLAS)
     target_link_libraries(${TEST_TARGET} roc::rocblas)
-    target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_VALIDATE_WITH_ROCBLAS)
+    target_compile_definitions(${TEST_TARGET} PRIVATE ROCWMMA_VALIDATE_WITH_ROCBLAS)
   endif()
 endfunction()
 
@@ -59,20 +59,20 @@ function(add_gemm_benchmark_test TEST_TARGET TEST_SOURCE)
   list(APPEND TEST_SOURCE ${ARGN})
 
   # Create target
-  add_wmma_benchmark_test(${TEST_TARGET} ${TEST_SOURCE})
+  add_rocwmma_benchmark_test(${TEST_TARGET} ${TEST_SOURCE})
 
   # Add gemm include directory
-  target_include_directories(${TEST_TARGET} PRIVATE ${WMMA_TEST_GEMM_INCLUDE_DIR})
+  target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_GEMM_INCLUDE_DIR})
 
   # Link to rocBLAS
-  if(WMMA_BENCHMARK_WITH_ROCBLAS)
+  if(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
     target_link_libraries(${TEST_TARGET} roc::rocblas)
-    target_compile_definitions(${TEST_TARGET} PRIVATE WMMA_BENCHMARK_WITH_ROCBLAS)
+    target_compile_definitions(${TEST_TARGET} PRIVATE ROCWMMA_BENCHMARK_WITH_ROCBLAS)
   endif()
 endfunction()
 
 # GEMM common test sources
-set(GemmCommonSources ${WMMA_COMMON_TEST_SOURCES}
+set(GemmCommonSources ${ROCWMMA_COMMON_TEST_SOURCES}
                       ${CMAKE_CURRENT_SOURCE_DIR}/GemmKernelBase.cpp)
 
 set(BarrierTestSources ${GemmCommonSources}
@@ -119,7 +119,7 @@ set(MmaSyncMultiTestSources ${GemmCommonSources}
                             ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TN_8x8.cpp
                             ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_TT_8x8.cpp)
 
-if(WMMA_BUILD_EXTENDED_TESTS)
+if(ROCWMMA_BUILD_EXTENDED_TESTS)
   set(MmaSyncMultiTestSources ${MmaSyncMultiTestSources}
                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NN_1x2.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiTest_16x16_NN_2x1.cpp
@@ -170,7 +170,7 @@ set(MmaSyncMultiLdsTestSources ${GemmCommonSources}
                                ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_TT_8x8.cpp
                                )
 
-if(WMMA_BUILD_EXTENDED_TESTS)
+if(ROCWMMA_BUILD_EXTENDED_TESTS)
   set(MmaSyncMultiLdsTestSources ${MmaSyncMultiLdsTestSources}
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NN_1x2.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/MmaSyncMultiLdsTest_16x16_NN_2x1.cpp
@@ -196,7 +196,7 @@ set(MmaSyncAdHocTestSources ${GemmCommonSources}
 ### GEMM tests are built as either benchmark or validation
 
 # Benchmark GEMM tests
-if(WMMA_BUILD_BENCHMARK_TESTS)
+if(ROCWMMA_BUILD_BENCHMARK_TESTS)
   add_gemm_benchmark_test(BarrierTest-bench ${BarrierTestSources})
   add_gemm_benchmark_test(MmaSyncTest-bench ${MmaSyncTestSources})
   add_gemm_benchmark_test(MmaSyncMultiTest-bench ${MmaSyncMultiTestSources})
@@ -204,7 +204,7 @@ if(WMMA_BUILD_BENCHMARK_TESTS)
 endif()
 
 # Validation GEMM tests
-if(WMMA_BUILD_VALIDATION_TESTS)
+if(ROCWMMA_BUILD_VALIDATION_TESTS)
   add_gemm_validation_test(BarrierTest-validate ${BarrierTestSources})
   add_gemm_validation_test(MmaSyncTest-validate ${MmaSyncTestSources})
   add_gemm_validation_test(MmaSyncMultiTest-validate ${MmaSyncMultiTestSources})
