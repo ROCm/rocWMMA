@@ -170,11 +170,11 @@ set(VectorIteratorTestSources ${UnitCommonSources}
                        )
 
 # Benchmark Unit
-add_rocwmma_test(ContaminationTest ${ContaminationTestSources})
-add_rocwmma_test(LayoutTest ${LayoutTestSources})
-add_rocwmma_test(MapUtilTest ${MapUtilTestSources})
-add_rocwmma_test(LoadStoreMatrixSyncTest ${LoadStoreMatrixSyncTestSources})
-add_rocwmma_test(LoadStoreMatrixCoopSyncTest ${LoadStoreMatrixCoopSyncTestSources})
-add_rocwmma_test(FillFragmentTest ${FillFragmentTestSources})
-add_rocwmma_test(VectorIteratorTest ${VectorIteratorTestSources})
+add_rocwmma_test(contamination_test ${ContaminationTestSources})
+add_rocwmma_test(layout_test ${LayoutTestSources})
+add_rocwmma_test(map_util_test ${MapUtilTestSources})
+add_rocwmma_test(load_store_matrix_sync_test ${LoadStoreMatrixSyncTestSources})
+add_rocwmma_test(load_store_matrix_coop_sync_test ${LoadStoreMatrixCoopSyncTestSources})
+add_rocwmma_test(fill_fragment_test ${FillFragmentTestSources})
+add_rocwmma_test(vector_iterator_test ${VectorIteratorTestSources})
 

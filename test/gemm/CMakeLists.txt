@@ -197,17 +197,17 @@ set(MmaSyncAdHocTestSources ${GemmCommonSources}
 
 # Benchmark GEMM tests
 if(ROCWMMA_BUILD_BENCHMARK_TESTS)
-  add_gemm_benchmark_test(BarrierTest-bench ${BarrierTestSources})
-  add_gemm_benchmark_test(MmaSyncTest-bench ${MmaSyncTestSources})
-  add_gemm_benchmark_test(MmaSyncMultiTest-bench ${MmaSyncMultiTestSources})
-  add_gemm_benchmark_test(MmaSyncMultiLdsTest-bench ${MmaSyncMultiLdsTestSources})
+  add_gemm_benchmark_test(barrier_test-bench ${BarrierTestSources})
+  add_gemm_benchmark_test(mma_sync_test-bench ${MmaSyncTestSources})
+  add_gemm_benchmark_test(mma_sync_multi_test-bench ${MmaSyncMultiTestSources})
+  add_gemm_benchmark_test(mma_sync_multi_lds_test-bench ${MmaSyncMultiLdsTestSources})
 endif()
 
 # Validation GEMM tests
 if(ROCWMMA_BUILD_VALIDATION_TESTS)
-  add_gemm_validation_test(BarrierTest-validate ${BarrierTestSources})
-  add_gemm_validation_test(MmaSyncTest-validate ${MmaSyncTestSources})
-  add_gemm_validation_test(MmaSyncMultiTest-validate ${MmaSyncMultiTestSources})
-  add_gemm_validation_test(MmaSyncMultiLdsTest-validate ${MmaSyncMultiLdsTestSources})
-  add_gemm_validation_test(MmaSyncAdHocTest ${MmaSyncAdHocTestSources})
+  add_gemm_validation_test(barrier_test-validate ${BarrierTestSources})
+  add_gemm_validation_test(mma_sync_test-validate ${MmaSyncTestSources})
+  add_gemm_validation_test(mma_sync_multi_test-validate ${MmaSyncMultiTestSources})
+  add_gemm_validation_test(mma_sync_multi_lds_test-validate ${MmaSyncMultiLdsTestSources})
+  add_gemm_validation_test(mma_sync_ad_hoc_test ${MmaSyncAdHocTestSources})
 endif()
