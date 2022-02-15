@@ -399,10 +399,12 @@ namespace rocwmma
             if(passDirection == DlrmDirection_t::Forward)
             {
                 dataInstance->copyDeviceToHostFwdOutput();
-                // for (int i = mK; i < ((mM * (mM - 1)) / 2) + mK; i++)
-                //     std::cout << "[" << i-mK << "] h: " << dataInstance->hostOutputRef().get()[i]
-                //         << ", d: " << dataInstance->hostOutput().get()[i] << ", diff: "
-                //         << dataInstance->hostOutputRef().get()[i] - dataInstance->hostOutput().get()[i] << '\n';
+                for(int i = mK; i < ((mM * (mM - 1)) / 2) + mK; i++)
+                    std::cout << "[" << i - mK << "] h: " << dataInstance->hostOutputRef().get()[i]
+                              << ", d: " << dataInstance->hostOutput().get()[i] << ", diff: "
+                              << dataInstance->hostOutputRef().get()[i]
+                                     - dataInstance->hostOutput().get()[i]
+                              << '\n';
                 for(int i = 0; i < mM * mM; i++)
                 {
                     std::cout << "[" << i << "] d: " << dataInstance->hostAccFwd().get()[i] << '\t';

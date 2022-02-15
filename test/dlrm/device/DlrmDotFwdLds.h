@@ -69,15 +69,6 @@ namespace rocwmma
                                           1,
                                           1>;
 
-        // using GlobalReadFragA = typename MappingLds::GlobalReadFragA;
-        // using GlobalReadFragB = typename MappingLds::GlobalReadFragB;
-
-        // using LocalWriteFragA = typename MappingLds::LocalWriteFragA;
-        // using LocalWriteFragB = typename MappingLds::LocalWriteFragB;
-
-        // using LocalReadFragA = typename MappingLds::LocalReadFragA;
-        // using LocalReadFragB = typename MappingLds::LocalReadFragB;
-
         // Copy bottom MLP to output
         // Threads with a global index < k are responsible for copying MLP data
         auto globalThreadCoord = blockIdx.x * blockDim.x + threadIdx.x;
@@ -136,19 +127,18 @@ namespace rocwmma
 
             addrA += incrA;
             addrB += incrB;
-
             while(addrA != endA)
             {
                 // Cache lds blocks to register
                 MappingLds::prefetchLocalA(fragA, ldsPtrLo, 0);
-                MappingLds::prefetchLocalB(fragB, ldsPtrLo, 0);
+                fill_fragment(fragB, static_cast<DataT>(1));
+                //MappingLds::prefetchLocalB(fragB, ldsPtrLo, 0);
 
                 // Start pulling in the next block
                 MappingLds::prefetchGlobalA(ldsPtrHi, addrA, k);
                 MappingLds::prefetchGlobalB(ldsPtrHi, addrB, k);
 
                 // Mma for current block
-                fill_fragment(fragA, static_cast<float32_t>(1));
                 mma_sync(fragAcc, fragA, fragB, fragAcc);
 
                 // Wait for A / B read LDS
@@ -164,8 +154,8 @@ namespace rocwmma
 
             // Mma for the last block
             MappingLds::prefetchLocalA(fragA, ldsPtrLo, 0);
-            MappingLds::prefetchLocalB(fragB, ldsPtrLo, 0);
-            fill_fragment(fragA, static_cast<float32_t>(1));
+            fill_fragment(fragB, static_cast<DataT>(1));
+            // MappingLds::prefetchLocalB(fragB, ldsPtrLo, 0);
             mma_sync(fragAcc, fragA, fragB, fragAcc);
 
             //Store fragAcc to global acc
@@ -173,33 +163,18 @@ namespace rocwmma
             auto* addrAcc       = MappingAcc::dataCoord(accWithOffset, matrixCoordC, m);
             store_matrix_sync(addrAcc, fragAcc, m, mem_row_major);
 
-            // // Wait for final mma before writing to LDS
-            //synchronize_workgroup();
+            // Wait for final mma before writing to LDS
+            synchronize_workgroup();
 
-            // // Store acc frag to lds for recasting
-            // auto* ldsPtrAcc = reinterpret_cast<float32_t*>(localMemPtr);
-            // store_matrix_sync(ldsPtrAcc, fragAcc, m, mem_row_major);
+            // Store acc frag to lds for recasting
+            auto* ldsPtrAcc     = reinterpret_cast<float32_t*>(localMemPtr);
+            auto* ldsWavePtrAcc = ldsPtrAcc + MappingLds::waveOffsetA();
+            store_matrix_sync(ldsWavePtrAcc, fragAcc, MappingLds::ld(), mem_row_major);
 
-            // // Copy lower triangular from lds to output
-            // auto fragColIdx   = threadIdx.x % TILE_DIM;
-            // auto globalColIdx = std::get<1>(matrixCoordC) + fragColIdx;
-            // auto rowsPerStep  = AMDGCN_WAVE_SIZE / TILE_DIM;
+            // Wait for LDS write before accessing
+            synchronize_workgroup();
 
-            // count = (TILE_DIM * TILE_DIM) >> Log2<AMDGCN_WAVE_SIZE>::value;
-            // for(int i = 0; i < count; i++)
-            // {
-            //     auto fragRowIdx
-            //         = i * rowsPerStep + ((threadIdx.x & (AMDGCN_WAVE_SIZE - 1)) / TILE_DIM);
-            //     auto globalRowIdx = std::get<0>(matrixCoordC) + fragRowIdx;
-            //     if(globalRowIdx > globalColIdx)
-            //     {
-            //         auto outputOffset = k + ((globalRowIdx * (globalRowIdx - 1)) >> 1);
-            //         output[outputBatchOffset * blockIdx.z + outputOffset + globalColIdx]
-            //             = static_cast<DataT>(ldsPtrAcc[globalRowIdx * m + globalColIdx]);
-            //     }
-            // }
-
-            // Copy lower triangular from acc to output
+            // Copy lower triangular from lds to output
             auto fragColIdx   = threadIdx.x % TILE_DIM;
             auto globalColIdx = std::get<1>(matrixCoordC) + fragColIdx;
             auto rowsPerStep  = AMDGCN_WAVE_SIZE / TILE_DIM;
@@ -214,10 +189,29 @@ namespace rocwmma
                 {
                     auto outputOffset = k + ((globalRowIdx * (globalRowIdx - 1)) >> 1);
                     output[outputBatchOffset * blockIdx.z + outputOffset + globalColIdx]
-                        = static_cast<DataT>(
-                            acc[accBatchOffset * blockIdx.z + globalRowIdx * m + globalColIdx]);
+                        = static_cast<DataT>(ldsWavePtrAcc[fragRowIdx * TILE_DIM + fragColIdx]);
                 }
             }
+
+            // // Copy lower triangular from acc to output
+            // auto fragColIdx   = threadIdx.x % TILE_DIM;
+            // auto globalColIdx = std::get<1>(matrixCoordC) + fragColIdx;
+            // auto rowsPerStep  = AMDGCN_WAVE_SIZE / TILE_DIM;
+
+            // count = (TILE_DIM * TILE_DIM) >> Log2<AMDGCN_WAVE_SIZE>::value;
+            // for(int i = 0; i < count; i++)
+            // {
+            //     auto fragRowIdx
+            //         = i * rowsPerStep + ((threadIdx.x & (AMDGCN_WAVE_SIZE - 1)) / TILE_DIM);
+            //     auto globalRowIdx = std::get<0>(matrixCoordC) + fragRowIdx;
+            //     if(globalRowIdx > globalColIdx)
+            //     {
+            //         auto outputOffset = k + ((globalRowIdx * (globalRowIdx - 1)) >> 1);
+            //         output[outputBatchOffset * blockIdx.z + outputOffset + globalColIdx]
+            //             = static_cast<DataT>(
+            //                 acc[accBatchOffset * blockIdx.z + globalRowIdx * m + globalColIdx]);
+            //     }
+            // }
         }
     }
 } // namespace rocwmma
