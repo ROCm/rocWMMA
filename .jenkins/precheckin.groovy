@@ -10,6 +10,7 @@ def runCI =
 
     def prj = new rocProject('rocWMMA', 'precheckin')
     prj.paths.build_command = './install -c'
+    prj.libraryDependencies = ['rocBLAS']
 
     def nodes = new dockerNodes(nodeDetails, jobName, prj)
 

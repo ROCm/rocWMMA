@@ -5,6 +5,15 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
 {
     project.paths.construct_build_prefix()
 
+
+    def getDependenciesCommand = ""
+    if (project.installLibraryDependenciesFromCI) {
+        project.libraryDependencies.each
+        { libraryName ->
+            getDependenciesCommand += stageContext.auxiliary.getLibrary(libraryName, platform.jenkinsLabel, 'develop')
+        }
+    }
+
     String buildTypeArg = debug ? '-DCMAKE_BUILD_TYPE=Debug' : '-DCMAKE_BUILD_TYPE=Release'
     String buildTypeDir = debug ? 'debug' : 'release'
     String cmake = platform.jenkinsLabel.contains('centos') ? 'cmake3' : 'cmake'
@@ -16,6 +25,7 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
     def command = """#!/usr/bin/env bash
                 set -x
                 cd ${project.paths.project_build_prefix}
+                ${getDependenciesCommand}
                 mkdir -p build/${buildTypeDir} && cd build/${buildTypeDir}
                 ${auxiliary.gfxTargetParser()}
                 ${cmake} ${cmakeArgs} -DROCWMMA_BUILD_TESTS=ON -DROCWMMA_BENCHMARK_WITH_ROCBLAS=ON ../..
