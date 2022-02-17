@@ -270,6 +270,7 @@ git push origin <new_branch>
 |---|---|---|
 |AMDGPU_TARGETS|Build code for specific GPU target(s)|gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+|
 |ROCWMMA_BUILD_TESTS|Build Tests|ON|
+|ROCWMMA_BUILD_SAMPLES|Build Samples|ON|
 |ROCWMMA_BUILD_DOCS|Build doxygen documentation from code|OFF|
 |ROCWMMA_BUILD_ASSEMBLY|Generate assembly files|OFF|
 |ROCWMMA_BUILD_VALIDATION_TESTS|Build validation tests |ON (requires ROCWMMA_BUILD_TESTS=ON)|
