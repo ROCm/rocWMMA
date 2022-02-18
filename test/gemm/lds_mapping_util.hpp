@@ -275,7 +275,7 @@ namespace rocwmma
                 GlobalReadFragA fetchA;
                 load_matrix_coop_sync(
                     fetchA,
-                    baseA + GlobalAOffsets::dataOffset(lda, std::make_pair(BlockM * i, 0)),
+                    baseA + GlobalAOffsets::dataOffset(std::make_pair(BlockM * i, 0), lda),
                     lda,
                     waveIndex,
                     waveCount,
@@ -317,7 +317,7 @@ namespace rocwmma
                 GlobalReadFragB fetchB;
                 load_matrix_coop_sync(
                     fetchB,
-                    baseB + GlobalBOffsets::dataOffset(ldb, std::make_pair(0, BlockN * i)),
+                    baseB + GlobalBOffsets::dataOffset(std::make_pair(0, BlockN * i), ldb),
                     ldb,
                     waveIndex,
                     waveCount,
