@@ -24,12 +24,12 @@
  *
  *******************************************************************************/
 
-#ifndef DLRM_DOT_LDS_DETAIL_H
-#define DLRM_DOT_LDS_DETAIL_H
+#ifndef DLRM_DOT_LDS_DETAIL_HPP
+#define DLRM_DOT_LDS_DETAIL_HPP
 
-#include "DlrmKernelBase.h"
-#include "device/DlrmDotBwdLds.h"
-#include "device/DlrmDotFwdLds.h"
+#include "device/dlrm_dot_bwd_lds.hpp"
+#include "device/dlrm_dot_fwd_lds.hpp"
+#include "dlrm_kernel_base.hpp"
 
 namespace rocwmma
 {
@@ -95,4 +95,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // DLRM_DOT_LDS_DETAIL_H
+#endif // DLRM_DOT_LDS_DETAIL_HPP

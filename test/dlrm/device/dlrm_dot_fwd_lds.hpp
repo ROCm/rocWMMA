@@ -24,12 +24,11 @@
  *
  *******************************************************************************/
 
-#ifndef DLRM_DOT_FWD_LDS_H
-#define DLRM_DOT_FWD_LDS_H
+#ifndef DLRM_DOT_FWD_LDS_HPP
+#define DLRM_DOT_FWD_LDS_HPP
 
-#include "./Common.h"
-#include "./LdsMappingUtil.h"
-#include "Utils.h"
+#include "./common.hpp"
+#include "./lds_mapping_util.hpp"
 
 namespace rocwmma
 {
@@ -189,4 +188,4 @@ namespace rocwmma
     }
 } // namespace rocwmma
 
-#endif // DLRM_DOT_FWD_LDS_H
+#endif // DLRM_DOT_FWD_LDS_HPP

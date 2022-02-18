@@ -348,10 +348,11 @@ namespace rocwmma
             // Calculate efficiency
             auto& deviceInfo             = DeviceInfo::instance();
             auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
+            auto  outputSize = (passDirection == DlrmDirection_t::Forward) ? mM * mM : mM * mK;
 
             mElapsedTimeMs        = float64_t(timeMs);
-            mTotalGFlops          = calculateGFlops(mM * mM, mB, mK);
-            mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM * mM, mB, mK, mElapsedTimeMs)
+            mTotalGFlops          = calculateGFlops(outputSize, mB, mK);
+            mMeasuredGFlopsPerSec = calculateGFlopsPerSec(outputSize, mB, mK, mElapsedTimeMs)
                                     * static_cast<float64_t>(mRepeats);
             mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
 

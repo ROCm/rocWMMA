@@ -24,10 +24,10 @@
  *
  *******************************************************************************/
 
-#include "detail/DlrmDotLds.h"
-#include "DlrmDotTest.h"
-#include "DlrmTestParams.h"
-#include "KernelGenerator.h"
+#include "detail/dlrm_dot_lds.hpp"
+#include "dlrm_dot_test.hpp"
+#include "dlrm_test_params.hpp"
+#include "kernel_generator.hpp"
 
 namespace rocwmma
 {
