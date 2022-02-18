@@ -1,15 +1,15 @@
-#ifndef DLRM_LDS_MAPPING_UTIL_H
-#define DLRM_LDS_MAPPING_UTIL_H
+#ifndef DLRM_LDS_MAPPING_UTIL_HPP
+#define DLRM_LDS_MAPPING_UTIL_HPP
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "WMMA.h"
-#include "WMMACoop.h"
+#include <rocwmma/rocwmma.hpp>
+#include <rocwmma/rocwmma_coop.hpp>
 #pragma GCC diagnostic pop
 
-#include "IOConfig.h"
-#include "MappingUtil.h"
-#include "Utils.h"
+#include <rocwmma/internal/io_config.hpp>
+#include <rocwmma/internal/mapping_util.hpp>
+#include <rocwmma/internal/utils.hpp>
 
 namespace rocwmma
 {
@@ -383,4 +383,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // DLRM_LDS_MAPPING_UTIL_H
+#endif // DLRM_LDS_MAPPING_UTIL_HPP
