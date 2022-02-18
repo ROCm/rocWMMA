@@ -78,7 +78,7 @@ namespace rocwmma
                     // Random values normalized such that output is between 0 and 1
                     auto value = __float2half(static_cast<float>(rand() / normalization)
                                               / static_cast<float>(RAND_MAX));
-                    mat[k * batchOffset + i * numCols + j] = static_cast<DataT>(i);
+                    mat[k * batchOffset + i * numCols + j] = static_cast<DataT>(value);
                 }
             }
         }
