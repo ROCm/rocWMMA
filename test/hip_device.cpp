@@ -29,8 +29,6 @@
 
 namespace rocwmma
 {
-    class LdsRF;
-
     HipDevice::HipDevice()
         : mHandle(-1)
         , mGcnArch(hipGcnArch_t::UNKNOWN)
