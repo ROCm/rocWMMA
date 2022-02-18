@@ -60,18 +60,18 @@
          ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/dlrmData)
  endfunction()
 
- set(DlrmCommonSources ${WMMA_COMMON_TEST_SOURCES}
-                       dlrm_kernel_base.cpp)
+ set(DlrmCommonSources ${ROCWMMA_COMMON_TEST_SOURCES}
+                       ${CMAKE_CURRENT_SOURCE_DIR}/dlrm_kernel_base.cpp)
 
  set(DlrmDotTestSources ${DlrmCommonSources}
                         ${CMAKE_CURRENT_SOURCE_DIR}/test/dlrm_dot_test.cpp)
 
  # Benchmark DLRM tests
- if (WMMA_BUILD_BENCHMARK_TESTS)
+ if (ROCWMMA_BUILD_BENCHMARK_TESTS)
      add_dlrm_benchmark_test(dlrm_dot_test-bench ${DlrmDotTestSources})
  endif()
 
  # Validation DLRM tests
- if (WMMA_BUILD_VALIDATION_TESTS)
+ if (ROCWMMA_BUILD_VALIDATION_TESTS)
      add_dlrm_validation_test(dlrm_dot_test-validate ${DlrmDotTestSources})
  endif()
