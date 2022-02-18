@@ -33,7 +33,7 @@
    add_rocwmma_validation_test(${TEST_TARGET} ${TEST_SOURCE})
 
    # Add dlrm include directory
-   target_include_directories(${TEST_TARGET} PRIVATE ${WMMA_TEST_DLRM_INCLUDE_DIR})
+   target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_DLRM_INCLUDE_DIR})
  endfunction()
 
  # Include rocBLAS performance benchmark
@@ -44,26 +44,26 @@
    add_rocwmma_benchmark_test(${TEST_TARGET} ${TEST_SOURCE})
 
    # Add dlrm include directory
-   target_include_directories(${TEST_TARGET} PRIVATE ${WMMA_TEST_DLRM_INCLUDE_DIR})
+   target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_DLRM_INCLUDE_DIR})
  endfunction()
 
- set(DlrmCommonSources ${WMMA_COMMON_TEST_SOURCES}
+ set(DlrmCommonSources ${ROCWMMA_COMMON_TEST_SOURCES}
                        dlrm_kernel_base.cpp)
 
  set(DlrmDotTestSources ${DlrmCommonSources}
                         ${CMAKE_CURRENT_SOURCE_DIR}/test/dlrm_dot_test.cpp)
 
   set(DlrmDotLdsTestSources ${DlrmCommonSources}
-                            ${CMAKE_CURRENT_SOURCE_DIR}/test/DlrmDotLdsTest.cpp)
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/dlrm_dot_lds_test.cpp)
 
  # Benchmark DLRM tests
- if (WMMA_BUILD_BENCHMARK_TESTS)
+ if (ROCWMMA_BUILD_BENCHMARK_TESTS)
      add_dlrm_benchmark_test(dlrm_dot_test-bench ${DlrmDotTestSources})
      add_dlrm_benchmark_test(dlrm_dot_lds_test-bench ${DlrmDotLdsTestSources})
  endif()
 
  # Validation DLRM tests
- if (WMMA_BUILD_VALIDATION_TESTS)
+ if (ROCWMMA_BUILD_VALIDATION_TESTS)
      add_dlrm_validation_test(dlrm_dot_test-validate ${DlrmDotTestSources})
      add_dlrm_validation_test(dlrm_dot_lds_test-validate ${DlrmDotLdsTestSources})
  endif()
