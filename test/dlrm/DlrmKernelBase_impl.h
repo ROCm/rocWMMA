@@ -347,10 +347,11 @@ namespace rocwmma
             // Calculate efficiency
             auto& deviceInfo             = DeviceInfo::instance();
             auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
+            auto  outputSize = (passDirection == DlrmDirection_t::Forward) ? mM * mM : mM * mK;
 
             mElapsedTimeMs        = float64_t(timeMs);
-            mTotalGFlops          = calculateGFlops(mM * mM, mB, mK);
-            mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM * mM, mB, mK, mElapsedTimeMs)
+            mTotalGFlops          = calculateGFlops(outputSize, mB, mK);
+            mMeasuredGFlopsPerSec = calculateGFlopsPerSec(outputSize, mB, mK, mElapsedTimeMs)
                                     * static_cast<float64_t>(mRepeats);
             mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
 
@@ -399,18 +400,6 @@ namespace rocwmma
             if(passDirection == DlrmDirection_t::Forward)
             {
                 dataInstance->copyDeviceToHostFwdOutput();
-                for(int i = mK; i < ((mM * (mM - 1)) / 2) + mK; i++)
-                    std::cout << "[" << i - mK << "] h: " << dataInstance->hostOutputRef().get()[i]
-                              << ", d: " << dataInstance->hostOutput().get()[i] << ", diff: "
-                              << dataInstance->hostOutputRef().get()[i]
-                                     - dataInstance->hostOutput().get()[i]
-                              << '\n';
-                for(int i = 0; i < mM * mM; i++)
-                {
-                    std::cout << "[" << i << "] d: " << dataInstance->hostAccFwd().get()[i] << '\t';
-                    if(i % mM == mM - 1)
-                        std::cout << '\n';
-                }
 
                 uint batchSize    = ((mM * (mM - 1)) / 2) + mK;
                 mValidationResult = compareEqual(dataInstance->hostOutputRef().get(),

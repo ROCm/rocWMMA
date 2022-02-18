@@ -27,8 +27,8 @@
 #ifndef DLRM_DOT_BWD_LDS_H
 #define DLRM_DOT_BWD_LDS_H
 
-#include "../../gemm/LdsMappingUtil.h"
 #include "./Common.h"
+#include "./LdsMappingUtil.h"
 
 namespace rocwmma
 {
@@ -112,15 +112,6 @@ namespace rocwmma
                                           1,
                                           1>;
 
-        using GlobalReadFragA = typename MappingLds::GlobalReadFragA;
-        using GlobalReadFragB = typename MappingLds::GlobalReadFragB;
-
-        using LocalWriteFragA = typename MappingLds::LocalWriteFragA;
-        using LocalWriteFragB = typename MappingLds::LocalWriteFragB;
-
-        using LocalReadFragA = typename MappingLds::LocalReadFragA;
-        using LocalReadFragB = typename MappingLds::LocalReadFragB;
-
         // Copy bottom MLP grad
         // Threads with a global index < k are responsible for copying MLP data
         auto globalThreadCoord = blockIdx.x * blockDim.x + threadIdx.x;
@@ -163,8 +154,16 @@ namespace rocwmma
             auto* ldsPtrHi = ldsPtrLo + MappingLds::ldsWidth() * MappingLds::ldsHeight();
 
             // Prefetch the first block from global memory
-            MappingLds::prefetchGlobalA(ldsPtrLo, addrA, m);
-            MappingLds::prefetchGlobalB(ldsPtrLo, addrB, k);
+            if(m / TILE_DIM > 1)
+            {
+                MappingLds::prefetchCoopGlobalA(ldsPtrLo, addrA, m);
+                MappingLds::prefetchCoopGlobalB(ldsPtrLo, addrB, k);
+            }
+            else
+            {
+                MappingLds::prefetchGlobalA(ldsPtrLo, addrA, m);
+                MappingLds::prefetchGlobalB(ldsPtrLo, addrB, k);
+            }
 
             // Wait for A / B write LDS
             synchronize_workgroup();
@@ -190,8 +189,16 @@ namespace rocwmma
                 MappingLds::prefetchLocalB(fragB, ldsPtrLo, 0);
 
                 // Start pulling in the next block
-                MappingLds::prefetchGlobalA(ldsPtrHi, addrA, m);
-                MappingLds::prefetchGlobalB(ldsPtrHi, addrB, k);
+                if(m / TILE_DIM > 1)
+                {
+                    MappingLds::prefetchCoopGlobalA(ldsPtrHi, addrA, m);
+                    MappingLds::prefetchCoopGlobalB(ldsPtrHi, addrB, k);
+                }
+                else
+                {
+                    MappingLds::prefetchGlobalA(ldsPtrHi, addrA, m);
+                    MappingLds::prefetchGlobalB(ldsPtrHi, addrB, k);
+                }
 
                 // Mma for current block
                 mma_sync(fragAcc, fragA, fragB, fragAcc);
@@ -211,6 +218,9 @@ namespace rocwmma
             MappingLds::prefetchLocalA(fragA, ldsPtrLo, 0);
             MappingLds::prefetchLocalB(fragB, ldsPtrLo, 0);
             mma_sync(fragAcc, fragA, fragB, fragAcc);
+
+            // Wait for final mma before writing to LDS
+            synchronize_workgroup();
 
             // Output address
             auto* gradWithOffset = grad + inputBatchOffset * blockIdx.z;
