@@ -46,9 +46,9 @@
 #include "reference.hpp" // Vanilla CPU kernel
 #endif // ROCWMMA_VALIDATION_TESTS
 
-#if defined(WMMA_VALIDATE_WITH_ROCBLAS) || defined(WMMA_BENCHMARK_WITH_ROCBLAS)
+#if defined(ROCWMMA_VALIDATE_WITH_ROCBLAS) || defined(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
 #include "rocblas_reference.hpp" // rocBLAS GPU kernel
-#endif // WMMA_VALIDATE_WITH_ROCBLAS || WMMA_BENCHMARK_WITH_ROCBLAS
+#endif // ROCWMMA_VALIDATE_WITH_ROCBLAS || ROCWMMA_BENCHMARK_WITH_ROCBLAS
 
 namespace rocwmma
 {
@@ -351,9 +351,9 @@ namespace rocwmma
                       << "GFlops, "
                       << "GFlops/s, "
                       << "Efficiency(%), "
-#if defined(WMMA_BENCHMARK_WITH_ROCBLAS)
+#if defined(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
                       << "rocBLAS Efficiency(%), "
-#endif // WMMA_BENCHMARK_WITH_ROCBLAS
+#endif // ROCWMMA_BENCHMARK_WITH_ROCBLAS
                       << "Result" << std::endl;
     }
 
@@ -396,10 +396,10 @@ namespace rocwmma
                    << ", "
                    << "n/a"
                    << ", "
-#if defined(WMMA_BENCHMARK_WITH_ROCBLAS)
+#if defined(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
                    << "n/a"
                    << ", "
-#endif // WMMA_BENCHMARK_WITH_ROCBLAS
+#endif // ROCWMMA_BENCHMARK_WITH_ROCBLAS
                    << "SKIPPED" << std::endl;
         }
         else
@@ -407,9 +407,9 @@ namespace rocwmma
 
             stream << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredGFlopsPerSec
                    << ", " << mEfficiency << ", "
-#if defined(WMMA_BENCHMARK_WITH_ROCBLAS)
+#if defined(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
                    << mReferenceEfficiency << ", "
-#endif // WMMA_BENCHMARK_WITH_ROCBLAS
+#endif // ROCWMMA_BENCHMARK_WITH_ROCBLAS
 
 #if defined(ROCWMMA_VALIDATION_TESTS)
                    << (mValidationResult ? "PASSED" : "FAILED")
@@ -577,7 +577,7 @@ namespace rocwmma
             bool                  benchRef = false;
             std::function<void()> referenceKernel;
 
-#if defined(WMMA_VALIDATE_WITH_ROCBLAS) || defined(WMMA_BENCHMARK_WITH_ROCBLAS)
+#if defined(ROCWMMA_VALIDATE_WITH_ROCBLAS) || defined(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
 
             // Create a rocBLAS handle to be used with rocBLAS API
             rocblas_handle handle;
@@ -632,7 +632,7 @@ namespace rocwmma
                 benchRef        = true;
                 referenceKernel = rocBlasKernel;
 
-#if defined(WMMA_VALIDATE_WITH_ROCBLAS)
+#if defined(ROCWMMA_VALIDATE_WITH_ROCBLAS)
                 // Cache the ROCWMMA result from device
                 auto rocwmmaResult = dataInstance->template allocHost<OutputT>(mM * mN);
                 dataInstance->copyData(rocwmmaResult, dataInstance->deviceD(), mM * mN);
@@ -642,9 +642,9 @@ namespace rocwmma
 
                 // Move the ROCWMMA result to host for analysis
                 dataInstance->copyData(dataInstance->hostD(), rocwmmaResult, mM * mN);
-#endif // WMMA_VALIDATE_WITH_ROCBLAS
+#endif // ROCWMMA_VALIDATE_WITH_ROCBLAS
             }
-#endif // WMMA_VALIDATE_WITH_ROCBLAS || WMMA_BENCHMARK_WITH_ROCBLAS
+#endif // ROCWMMA_VALIDATE_WITH_ROCBLAS || ROCWMMA_BENCHMARK_WITH_ROCBLAS
 
 #if defined(ROCWMMA_VALIDATION_TESTS)
 
@@ -732,7 +732,7 @@ namespace rocwmma
         if(mRunFlag)
         {
             using DeviceLayoutD =
-#if defined(WMMA_VALIDATE_WITH_ROCBLAS)
+#if defined(ROCWMMA_VALIDATE_WITH_ROCBLAS)
                 // rocBLAS output is col_major.
                 typename std::conditional_t<
                     quirks::rocblas_supported<InputT, OutputT, ComputeT>::value,
@@ -740,7 +740,7 @@ namespace rocwmma
                     LayoutD>;
 #else
                 LayoutD;
-#endif
+#endif // ROCWMMA_VALIDATE_WITH_ROCBLAS
 
             auto& dataInstance = DataStorage::instance();
 
