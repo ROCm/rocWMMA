@@ -30,7 +30,7 @@ set(ROCWMMA_TEST_UNIT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Unit common test sources
 set(UnitCommonSources ${ROCWMMA_COMMON_TEST_SOURCES}
-                       unit_kernel_base.cpp)
+                      ${CMAKE_CURRENT_SOURCE_DIR}/unit_kernel_base.cpp)
 
 set(ContaminationTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/contamination_test/load_contamination_a_16.cpp

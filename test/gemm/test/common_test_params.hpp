@@ -124,7 +124,6 @@ namespace rocwmma
 #if defined(ROCWMMA_EXTENDED_TESTS)
                                                ,
                                                std::tuple<I<32>, I<32>, I<64>>,
-                                               ,
                                                std::tuple<I<32>, I<32>, I<128>>
 #endif // ROCWMMA_EXTENDED_TESTS
                                                >;
