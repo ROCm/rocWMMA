@@ -24,22 +24,23 @@
  *
  *******************************************************************************/
 
-#ifndef DLRM_DOT_BWD_HPP
-#define DLRM_DOT_BWD_HPP
+#ifndef DLRM_DOT_BWD_LDS_HPP
+#define DLRM_DOT_BWD_LDS_HPP
 
 #include "./common.hpp"
+#include "./lds_mapping_util.hpp"
 
 namespace rocwmma
 {
 
     template <typename DataT>
-    __global__ void trilReconstruct(const DataT* __restrict upstreamGrad,
-                                    DataT* __restrict acc,
-                                    uint m,
-                                    uint k,
-                                    uint b,
-                                    uint upstreamBatchOffset,
-                                    uint accBatchOffset)
+    __global__ void trilReconstructLds(const DataT* __restrict upstreamGrad,
+                                       DataT* __restrict acc,
+                                       uint m,
+                                       uint k,
+                                       uint b,
+                                       uint upstreamBatchOffset,
+                                       uint accBatchOffset)
     {
         auto blocksPerRow = (m + blockDim.x - 1) / blockDim.x;
         int  globalRowIdx;
@@ -76,18 +77,18 @@ namespace rocwmma
         }
     }
 
-    template <typename DataT, uint TILE_DIM>
-    __global__ void __launch_bounds__(128, 1) dlrmDotBwd(const DataT* __restrict input,
-                                                         const DataT* __restrict upstreamGrad,
-                                                         DataT* __restrict grad,
-                                                         DataT* __restrict bottomMlpGrad,
-                                                         DataT* __restrict acc,
-                                                         uint m,
-                                                         uint k,
-                                                         uint b,
-                                                         uint inputBatchOffset,
-                                                         uint upstreamBatchOffset,
-                                                         uint accBatchOffset)
+    template <typename DataT, uint TILE_DIM, typename LdsMapping>
+    __global__ void __launch_bounds__(128, 1) dlrmDotBwdLds(const DataT* __restrict input,
+                                                            const DataT* __restrict upstreamGrad,
+                                                            DataT* __restrict grad,
+                                                            DataT* __restrict bottomMlpGrad,
+                                                            DataT* __restrict acc,
+                                                            uint m,
+                                                            uint k,
+                                                            uint b,
+                                                            uint inputBatchOffset,
+                                                            uint upstreamBatchOffset,
+                                                            uint accBatchOffset)
     {
         using TileMapping = MappingUtil<TILE_DIM, TILE_DIM, DataT, row_major>;
 
@@ -95,6 +96,21 @@ namespace rocwmma
         using FragB   = fragment<matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, DataT, row_major>;
         using FragC   = fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, DataT>;
         using FragAcc = fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float32_t>;
+
+        // Will store to LDS as though it were a register file.
+        // Rows = register count
+        // Cols = unpacked register elements = 64
+        // Row major to minimize bank conflicts
+        using MappingLds = LdsMappingUtil<TILE_DIM,
+                                          TILE_DIM,
+                                          TILE_DIM,
+                                          DataT,
+                                          row_major,
+                                          row_major,
+                                          row_major,
+                                          LdsMapping,
+                                          1,
+                                          1>;
 
         // Copy bottom MLP grad
         // Threads with a global index < k are responsible for copying MLP data
@@ -132,26 +148,79 @@ namespace rocwmma
             auto* addrB = TileMapping::dataCoord(
                 inputWithOffset, std::make_pair(0, std::get<1>(matrixCoord)), k);
 
+            /// Setup LDS addressing and start writing pre-fetch to LDS
+            HIP_DYNAMIC_SHARED(void*, localMemPtr);
+            auto* ldsPtrLo = reinterpret_cast<DataT*>(localMemPtr);
+            auto* ldsPtrHi = ldsPtrLo + MappingLds::ldsWidth() * MappingLds::ldsHeight();
+
+            // Prefetch the first block from global memory
+            if(m / TILE_DIM > 1)
+            {
+                MappingLds::prefetchCoopGlobalA(ldsPtrLo, addrA, m);
+                MappingLds::prefetchCoopGlobalB(ldsPtrLo, addrB, k);
+            }
+            else
+            {
+                MappingLds::prefetchGlobalA(ldsPtrLo, addrA, m);
+                MappingLds::prefetchGlobalB(ldsPtrLo, addrB, k);
+            }
+
+            // Wait for A / B write LDS
+            synchronize_workgroup();
+
             // Setup address increments.
             // A steps BlockK through m x m
             // B steps BlockK through m x k
+            auto fragA = FragA();
+            auto fragB = FragB();
+
             auto incrA = TileMapping::dataOffset(std::make_pair(0, TILE_DIM), m);
             auto incrB = TileMapping::dataOffset(std::make_pair(TILE_DIM, 0), k);
 
-            auto count = m / TILE_DIM;
-            for(int i = 0; i < count; i++)
-            {
-                auto fragA = FragA();
-                auto fragB = FragB();
+            auto endA = addrA + incrA * (m / TILE_DIM);
 
-                // Load and multiply
-                load_matrix_sync(fragA, addrA, m);
-                load_matrix_sync(fragB, addrB, k);
+            addrA += incrA;
+            addrB += incrB;
+
+            while(addrA != endA)
+            {
+                // Cache lds blocks to register
+                MappingLds::prefetchLocalA(fragA, ldsPtrLo, 0);
+                MappingLds::prefetchLocalB(fragB, ldsPtrLo, 0);
+
+                // Start pulling in the next block
+                if(m / TILE_DIM > 1)
+                {
+                    MappingLds::prefetchCoopGlobalA(ldsPtrHi, addrA, m);
+                    MappingLds::prefetchCoopGlobalB(ldsPtrHi, addrB, k);
+                }
+                else
+                {
+                    MappingLds::prefetchGlobalA(ldsPtrHi, addrA, m);
+                    MappingLds::prefetchGlobalB(ldsPtrHi, addrB, k);
+                }
+
+                // Mma for current block
                 mma_sync(fragAcc, fragA, fragB, fragAcc);
+
+                // Wait for A / B read LDS
+                synchronize_workgroup();
 
                 addrA += incrA;
                 addrB += incrB;
+
+                auto* tmp = ldsPtrLo;
+                ldsPtrLo  = ldsPtrHi;
+                ldsPtrHi  = tmp;
             }
+
+            // Mma for the last block
+            MappingLds::prefetchLocalA(fragA, ldsPtrLo, 0);
+            MappingLds::prefetchLocalB(fragB, ldsPtrLo, 0);
+            mma_sync(fragAcc, fragA, fragB, fragAcc);
+
+            // Wait for final mma before writing to LDS
+            synchronize_workgroup();
 
             // Output address
             auto* gradWithOffset = grad + inputBatchOffset * blockIdx.z;
@@ -173,4 +242,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // DLRM_DOT_BWD_HPP
+#endif // DLRM_DOT_BWD_LDS_HPP

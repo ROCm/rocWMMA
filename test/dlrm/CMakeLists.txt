@@ -34,13 +34,6 @@
 
    # Add dlrm include directory
    target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_DLRM_INCLUDE_DIR})
-
-   # Copy DLRM data directory to build folder
-   add_custom_command(
-     TARGET ${TEST_TARGET} POST_BUILD
-     COMMAND ${CMAKE_COMMAND} -E copy_directory
-         ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/dlrmData)
-
  endfunction()
 
  # Include rocBLAS performance benchmark
@@ -52,12 +45,6 @@
 
    # Add dlrm include directory
    target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_DLRM_INCLUDE_DIR})
-
-   # Copy DLRM data directory to build folder
-   add_custom_command(
-     TARGET ${TEST_TARGET} PRE_BUILD
-     COMMAND ${CMAKE_COMMAND} -E copy_directory
-         ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/dlrmData)
  endfunction()
 
  set(DlrmCommonSources ${ROCWMMA_COMMON_TEST_SOURCES}
@@ -66,12 +53,17 @@
  set(DlrmDotTestSources ${DlrmCommonSources}
                         ${CMAKE_CURRENT_SOURCE_DIR}/test/dlrm_dot_test.cpp)
 
+  set(DlrmDotLdsTestSources ${DlrmCommonSources}
+                            ${CMAKE_CURRENT_SOURCE_DIR}/test/dlrm_dot_lds_test.cpp)
+
  # Benchmark DLRM tests
  if (ROCWMMA_BUILD_BENCHMARK_TESTS)
      add_dlrm_benchmark_test(dlrm_dot_test-bench ${DlrmDotTestSources})
+     add_dlrm_benchmark_test(dlrm_dot_lds_test-bench ${DlrmDotLdsTestSources})
  endif()
 
  # Validation DLRM tests
  if (ROCWMMA_BUILD_VALIDATION_TESTS)
      add_dlrm_validation_test(dlrm_dot_test-validate ${DlrmDotTestSources})
+     add_dlrm_validation_test(dlrm_dot_lds_test-validate ${DlrmDotLdsTestSources})
  endif()
