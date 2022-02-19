@@ -61,7 +61,7 @@
  endfunction()
 
  set(DlrmCommonSources ${ROCWMMA_COMMON_TEST_SOURCES}
-                       dlrm_kernel_base.cpp)
+                       ${CMAKE_CURRENT_SOURCE_DIR}/dlrm_kernel_base.cpp)
 
  set(DlrmDotTestSources ${DlrmCommonSources}
                         ${CMAKE_CURRENT_SOURCE_DIR}/test/dlrm_dot_test.cpp)
