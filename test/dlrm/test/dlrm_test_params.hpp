@@ -38,7 +38,7 @@
 
 namespace rocwmma
 {
-
+    class LdsRF;
     struct DlrmTestParams
     {
         // Types of parameters
@@ -46,6 +46,7 @@ namespace rocwmma
         using ThreadBlockT   = std::pair<int64_t, int64_t>;
         using ProblemSizeT   = std::tuple<int64_t, int64_t, int64_t>;
         using PassDirectionT = DlrmDirection_t;
+        using TestMappingLds = std::tuple<std::tuple<LdsRF>>;
 
         using DataTypes = std::tuple<std::tuple<float32_t>, std::tuple<float16_t>>;
         using TileSizes = std::tuple<std::tuple<I<16>>, std::tuple<I<32>>>;
