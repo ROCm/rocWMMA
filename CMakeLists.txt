@@ -110,13 +110,13 @@ if(ROCWMMA_BUILD_SAMPLES OR ROCWMMA_BUILD_TESTS)
 endif()
 
 if(ROCWMMA_BUILD_SAMPLES)
-  rocm_package_setup_client_component(samples)
+  rocm_package_setup_component(samples PARENT clients)
   add_subdirectory(samples)
 endif()
 
 
 if(ROCWMMA_BUILD_TESTS)
-  rocm_package_setup_client_component(tests)
+  rocm_package_setup_component(tests PARENT clients)
   add_subdirectory(test)
 endif()
 
