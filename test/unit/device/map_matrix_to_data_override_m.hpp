@@ -43,6 +43,7 @@ namespace rocwmma
                                              DataT        param2)
     {
         using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
+        auto aCoord = Mapping::matrixCoordM(static_cast<uint32_t>(static_cast<float32_t>(param1)));
 
         enum : uint32_t
         {
@@ -50,18 +51,11 @@ namespace rocwmma
             MinorIndex = std::is_same<Layout, row_major>::value ? 1 : 0
         };
 
-        auto aCoord = Mapping::matrixCoordM(param1);
+        auto MCoord = std::is_same<Layout, row_major>::value ? std::get<MajorIndex>(aCoord)
+                                                             : std::get<MinorIndex>(aCoord);
 
-        uint32_t col = std::is_same<Layout, row_major>::value ? std::get<MajorIndex>(aCoord)
-                                                              : std::get<MinorIndex>(aCoord);
-        uint32_t row = std::is_same<Layout, row_major>::value ? std::get<MinorIndex>(aCoord)
-                                                              : std::get<MajorIndex>(aCoord);
-
-        for(int i = 0; i < BlockM; i++)
-            for(int j = 0; j < BlockN; j++)
-                out[(col + j) * ld + (row + i)] = in[(col + j) * ld + (row + i)];
+        out[MCoord] = in[MCoord];
     }
-
 } // namespace rocwmma
 
 #endif // ROCWMMA_DEVICE_MAP_MATRIX_TO_DATA_OVERRIDE_M_HPP

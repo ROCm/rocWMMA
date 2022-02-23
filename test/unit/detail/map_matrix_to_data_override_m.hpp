@@ -50,15 +50,18 @@ namespace rocwmma
             auto& dataInstance = Base::DataStorage::instance();
 
             srand((unsigned)time(0));
-            Base::mParam1 = static_cast<DataT>(static_cast<float32_t>(rand() % 64));
+            Base::mParam1 = static_cast<DataT>(static_cast<float32_t>(rand() % Base::mM));
 
             // Initialize matrix storage
             const int64_t sizeD = Base::mM * Base::mN;
             dataInstance->resizeStorage(probsize);
 
             // Initialize matrix data on host
-            MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
+            MatrixUtil<Layout>::template fill<DataT>(
+                dataInstance->hostIn().get(), Base::mM, Base::mN, (DataT)0);
+            dataInstance->copyData(dataInstance->deviceOut(), dataInstance->hostIn(), sizeD);
 
+            MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
             dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), sizeD);
         }
 
@@ -74,14 +77,17 @@ namespace rocwmma
             // Cache current kernel result from device
             dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
 
-            double errorTolerance = 10.0;
+            double errorTolerance = 1.0;
 
             std::tie(Base::mValidationResult, Base::mMaxRelativeError)
-                = compareEqual<DataT, DataT, Layout, Layout>(kernelResult.get(),
-                                                             dataInstance->hostIn().get(),
-                                                             Base::mM,
-                                                             Base::mN,
-                                                             errorTolerance);
+                = compareEqual<DataT, DataT, Layout, Layout>(
+                    kernelResult.get()
+                        + static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1)),
+                    dataInstance->hostIn().get()
+                        + static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1)),
+                    1,
+                    1,
+                    errorTolerance);
         }
 
         typename Base::KernelFunc kernelImpl() const final
