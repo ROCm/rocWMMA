@@ -1,6 +1,14 @@
 # rocWMMA
 
-AMD's C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications on GPU leveraging MFMA instructions executing on matrix cores. The API provides support for blockwise operations in single-wave perspective as well as extended cooperative operations in multi-wave perspective.
+AMD's C++ library for accelerating mixed precision matrix multiplication and accumulation (MFMA) operations leveraging specialized GPU matrix cores. rocWMMA provides a C++ API to facilitate breaking down matrix multiply-accumulate problems into fragments and using them in block-wise operations that are distributed in parallel across GPU wavefronts. The API is a header library of GPU device code meaning that matrix core acceleration may be compiled directly into your kernel device code. This can benefit from compiler optimization in the generation of kernel assembly, and does not incur additional overhead costs of linking to external runtime libraries or having to launch separate kernels.
+
+Conceptually, the rocWMMA API is designed from a 'wave' perspective, such that block-wise API calls are processed by GPU threads coordinated together as a group, or a 'wave'. Importantly, individual threads may access only a portion of a fragment, and there is no guaranteed order or locality of this data. Thread access to fragment data is analogous to vector register access of individual threads. Fragments and block-wise operations therefore can be thought of in a 'wave' perspective.
+
+Thread blocks that contain multiple waves have the added benefit of sharing resources and cooperating. For rocWMMA, this is especially useful for moving data. The header library contains a separate rocWMMA Coop API which facilitates the cooperation of multiple waves in loading and storing fragment data. Keeping this in mind, the order and locality of fragment data in a wave is not guaranteed, and can be thought of in a 'distributed wave' perspective.
+
+Memory addresses are treated as 1D arrays and the rocWMMA API can opaquely handle both global and shared memory address locations. The library code also includes utilities for mapping 2D grid / matrix coordinates to 1D array coordinates, and supports either row major or column major data layouts. Block-wise dimensions (BlockM,N,K) familiar to block-wise GEMM matrix product algorithms are supported directly by availability of matrix core instructions for the target architecture. Likewise, mixed precision datatypes for input, output and accumulation fragments can be varied as listed below in currently supported configurations.
+
+rocWMMA is released as a header library, but also includes test and sample projects to validate and illustrate example usages of the C++ API. GEMM matrix multiplication is used as primary validation given the heavy precedent for the library, however the usage portfolio is growing significantly and demonstrates different ways rocWMMA may be consumed.
 
 ## Minimum Requirements
 * ROCm stack minimum version 4.3
@@ -394,3 +402,40 @@ Run ad-hoc test:
 ```
 - Manually adjust the test cases coverage.
 - Use ad-hoc tests to focus in on specific parameters.
+- Select ROCWMMA_BUILD_EXTENDED_TESTS=OFF
+
+### Samples
+These are stand-alone real-world use-cases of the rocWMMA API. They have minimal dependencies and represent a targeted application with a fixed set of parameters.
+
+**SGEMM-V**
+
+Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose. Calculates Y = alpha * (A) * X + beta * Y with mixed precision fp16 inputs and fp32 output. Includes simple CPU validation and benchmark.
+
+ A = Matrix of size m * k (row-major)
+ 
+ X = Vector of size k * 1 (col-major)
+ 
+ Y = accumulator of size m * 1 (row-major)
+   
+Run sgemmv sample:
+```
+<build_dir>/samples/sgemmv
+```
+
+**Simple DLRM**
+
+Simple Deep Learning Recommendation Model (DLRM) for machine learning. Implements both forward and backward passes on fp16 inputs and outputs. Includes simple CPU validation and benchmark.
+
+Run simple_dlrm sample:
+```
+<build_dir>/samples/simple_dlrm
+```
+
+**Simple GEMM**
+
+Simple GEMM algorithm demonstration without LDS memory usage and no transpose. Calculates D = Alpha * A x B + Beta * C with mixed precision fp16 inputs and fp32 output. Includes simple CPU validation and benchmark.
+
+Run simple_gemm sample:
+```
+<build_dir>/samples/simple_gemm
+```
