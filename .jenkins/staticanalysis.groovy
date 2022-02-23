@@ -42,7 +42,7 @@ def runCI =
 {
     nodeDetails, jobName->
 
-    def prj  = new rocProject('rocSOLVER', 'StaticAnalysis')
+    def prj  = new rocProject('rocWMMA', 'StaticAnalysis')
 
     // Define test architectures, optional rocm version argument is available
     def nodes = new dockerNodes(nodeDetails, jobName, prj)
