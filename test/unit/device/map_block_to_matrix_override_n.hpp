@@ -43,20 +43,20 @@ namespace rocwmma
                                               DataT        param2)
     {
         using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
-        auto aCoord   = Mapping::blockCoordN(static_cast<uint32_t>(static_cast<float32_t>(param1)));
+        auto aCoord   = Mapping::matrixCoord(
+              Mapping::blockCoordN(static_cast<uint32_t>(static_cast<float32_t>(param1))));
 
-        enum : uint32_t
+        uint32_t incrementalOffset = std::is_same<Layout, row_major>::value ? n : 1;
+
+        if(threadIdx.x % AMDGCN_WAVE_SIZE == 0)
         {
-            MajorIndex = std::is_same<Layout, row_major>::value ? 0 : 1,
-            MinorIndex = std::is_same<Layout, row_major>::value ? 1 : 0
-        };
-
-        auto NCoord = std::is_same<Layout, row_major>::value ? std::get<MinorIndex>(aCoord)
-                                                             : std::get<MajorIndex>(aCoord);
-
-        out[NCoord] = in[NCoord];
+            for(int i = 0; i < BlockM; i++)
+            {
+                out[Mapping::dataOffset(aCoord, ld) + (i * incrementalOffset)]
+                    = in[Mapping::dataOffset(aCoord, ld) + (i * incrementalOffset)];
+            }
+        }
     }
-
 } // namespace rocwmma
 
 #endif // ROCWMMA_DEVICE_MAP_BLOCK_TO_MATRIX_OVERRIDE_N_HPP

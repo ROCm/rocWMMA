@@ -50,7 +50,8 @@ namespace rocwmma
             auto& dataInstance = Base::DataStorage::instance();
 
             srand((unsigned)time(0));
-            Base::mParam1 = static_cast<DataT>(static_cast<float32_t>(rand() % Base::mM));
+            uint32_t mBlocks = this->gridDim().x;
+            Base::mParam1    = static_cast<DataT>(static_cast<float32_t>(rand() % mBlocks));
 
             // Initialize matrix storage
             const int64_t sizeD = Base::mM * Base::mN;
@@ -73,21 +74,44 @@ namespace rocwmma
             const int64_t sizeD = Base::mM * Base::mN;
 
             auto kernelResult = dataInstance->template allocHost<DataT>(sizeD);
+            auto hostResult   = dataInstance->hostIn().get();
+
+            //Allocate additional resource to validate only the overriden row of size Base::mN
+            auto kernelResultToValidate = dataInstance->template allocHost<DataT>(Base::mN);
+            auto hostResultToValidate   = dataInstance->template allocHost<DataT>(Base::mN);
 
             // Cache current kernel result from device
             dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
 
             double errorTolerance = 1.0;
+            // Validation offset starts at row Base::mParam1 * BlockM
+            // To get to row Base::mParam1 * BlockM,
+            // in case of row-major layout, skip Base::mParam1 * BlockM * Base::mN elements
+            // in case of col-major layout, skip only Base::mParam1 * BlockM elements
+            uint32_t baseOffset
+                = std::is_same<Layout, row_major>::value
+                      ? static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1)) * BlockM
+                            * Base::mN
+                      : static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1)) * BlockM;
+
+            // To get to the elements across row,
+            // in case of row-major, next element access is current_element + 1
+            // in case of col-major, next element access is by current_element + Base::mN
+            uint32_t ld = std::is_same<Layout, row_major>::value ? 1 : Base::mM;
+
+            // Copy the entire row Base::mParam1 * BlockM
+            for(int i = 0; i < Base::mN; i++)
+            {
+                kernelResultToValidate[i] = kernelResult[baseOffset + (i * ld)];
+                hostResultToValidate[i]   = hostResult[baseOffset + (i * ld)];
+            }
 
             std::tie(Base::mValidationResult, Base::mMaxRelativeError)
-                = compareEqual<DataT, DataT, Layout, Layout>(
-                    kernelResult.get()
-                        + static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1)),
-                    dataInstance->hostIn().get()
-                        + static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1)),
-                    1,
-                    1,
-                    errorTolerance);
+                = compareEqual<DataT, DataT, Layout, Layout>(kernelResultToValidate.get(),
+                                                             hostResultToValidate.get(),
+                                                             1,
+                                                             Base::mN,
+                                                             errorTolerance);
         }
 
         typename Base::KernelFunc kernelImpl() const final
