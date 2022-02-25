@@ -15,9 +15,7 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
 
     def command = """#!/usr/bin/env bash
             set -x
-            cd ${project.paths.project_build_prefix}
-            cmake -S docs -B build
-            cmake --build build
+            ${project-paths.project_build_prefix}/docs/run_doc.sh
             """
 
     try
@@ -32,7 +30,7 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
     publishHTML([allowMissing: false,
                 alwaysLinkToLastBuild: false,
                 keepAll: false,
-                reportDir: "${project.paths.project_build_prefix}/build/docs/html",
+                reportDir: "${project.paths.project_build_prefix}/docs/source/_build/html",
                 reportFiles: "index.html",
                 reportName: "Documentation",
                 reportTitles: "Documentation"])
