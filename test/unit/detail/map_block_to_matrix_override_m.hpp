@@ -24,10 +24,10 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_DETAIL_MAP_MATRIX_TO_DATA_OVERRIDE_N_HPP
-#define ROCWMMA_DETAIL_MAP_MATRIX_TO_DATA_OVERRIDE_N_HPP
+#ifndef ROCWMMA_DETAIL_MAP_BLOCK_TO_MATRIX_OVERRIDE_M_HPP
+#define ROCWMMA_DETAIL_MAP_BLOCK_TO_MATRIX_OVERRIDE_M_HPP
 
-#include "device/map_matrix_to_data_override_n.hpp"
+#include "device/map_block_to_matrix_override_m.hpp"
 #include "unit_kernel_base.hpp"
 
 namespace rocwmma
@@ -35,22 +35,23 @@ namespace rocwmma
 
     // Wrapper into the actual device function
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-    struct MapMatrixToDataOverrideNKernel final
+    struct MapBlockToMatrixOverrideMKernel final
         : public UnitKernelBase<BlockM, BlockN, DataT, Layout>
     {
     private:
         using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
 
     public:
-        MapMatrixToDataOverrideNKernel()        = default;
-        ~MapMatrixToDataOverrideNKernel() final = default;
+        MapBlockToMatrixOverrideMKernel()        = default;
+        ~MapBlockToMatrixOverrideMKernel() final = default;
 
         void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
         {
             auto& dataInstance = Base::DataStorage::instance();
 
             srand((unsigned)time(0));
-            Base::mParam1 = static_cast<DataT>(static_cast<float32_t>(rand() % Base::mN));
+            uint32_t mBlocks = this->gridDim().x;
+            Base::mParam1    = static_cast<DataT>(static_cast<float32_t>(rand() % mBlocks));
 
             // Initialize matrix storage
             const int64_t sizeD = Base::mM * Base::mN;
@@ -75,31 +76,31 @@ namespace rocwmma
             auto kernelResult = dataInstance->template allocHost<DataT>(sizeD);
             auto hostResult   = dataInstance->hostIn().get();
 
-            //Allocate additional resource to validate only the overriden col of size Base::mM
-            auto kernelResultToValidate = dataInstance->template allocHost<DataT>(Base::mM);
-            auto hostResultToValidate   = dataInstance->template allocHost<DataT>(Base::mM);
+            //Allocate additional resource to validate only the overriden row of size Base::mN
+            auto kernelResultToValidate = dataInstance->template allocHost<DataT>(Base::mN);
+            auto hostResultToValidate   = dataInstance->template allocHost<DataT>(Base::mN);
 
             // Cache current kernel result from device
             dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
 
             double errorTolerance = 1.0;
-
-            // Validation offset starts at col Base::mParam1
-            // To get to col Base::mParam1,
-            // in case of row-major layout, skip only Base::mParam1 elements
-            // in case of col-major layout, skip Base::mParam1 * Base::mM elements
+            // Validation offset starts at row Base::mParam1 * BlockM
+            // To get to row Base::mParam1 * BlockM,
+            // in case of row-major layout, skip Base::mParam1 * BlockM * Base::mN elements
+            // in case of col-major layout, skip only Base::mParam1 * BlockM elements
             uint32_t baseOffset
                 = std::is_same<Layout, row_major>::value
-                      ? static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1))
-                      : static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1)) * Base::mM;
+                      ? static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1)) * BlockM
+                            * Base::mN
+                      : static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1)) * BlockM;
 
-            // To get to the elements across col,
-            // in case of row-major, next element access is by current_element + Base::mN
-            // in case of col-major, next element access is current_element + 1
-            uint32_t ld = std::is_same<Layout, row_major>::value ? Base::mN : 1;
+            // To get to the elements across row,
+            // in case of row-major, next element access is current_element + 1
+            // in case of col-major, next element access is by current_element + Base::mN
+            uint32_t ld = std::is_same<Layout, row_major>::value ? 1 : Base::mM;
 
-            // Copy the entire col Base::mParam1
-            for(int i = 0; i < Base::mM; i++)
+            // Copy the entire row Base::mParam1 * BlockM
+            for(int i = 0; i < Base::mN; i++)
             {
                 kernelResultToValidate[i] = kernelResult[baseOffset + (i * ld)];
                 hostResultToValidate[i]   = hostResult[baseOffset + (i * ld)];
@@ -108,20 +109,20 @@ namespace rocwmma
             std::tie(Base::mValidationResult, Base::mMaxRelativeError)
                 = compareEqual<DataT, DataT, Layout, Layout>(kernelResultToValidate.get(),
                                                              hostResultToValidate.get(),
-                                                             Base::mM,
                                                              1,
+                                                             Base::mN,
                                                              errorTolerance);
         }
 
         typename Base::KernelFunc kernelImpl() const final
         {
             return
-                typename Base::KernelFunc(MapMatrixToDataOverrideN<BlockM, BlockN, DataT, Layout>);
+                typename Base::KernelFunc(MapBlockToMatrixOverrideM<BlockM, BlockN, DataT, Layout>);
         }
     };
 
     // This is the GeneratorImpl class
-    struct MapMatrixToDataOverrideNGenerator
+    struct MapBlockToMatrixOverrideMGenerator
     {
         // Indices to test parameters
         enum : uint32_t
@@ -139,7 +140,7 @@ namespace rocwmma
         {
             // Map GTest params to Kernel params
             using TestParamsT = std::tuple<Ts...>;
-            using KernelT     = MapMatrixToDataOverrideNKernel<
+            using KernelT     = MapBlockToMatrixOverrideMKernel<
                 std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
                 std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
                 std::tuple_element_t<DataT, TestParamsT>, // DataT
@@ -152,4 +153,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_DETAIL_MAP_MATRIX_TO_DATA_OVERRIDE_N_HPP
+#endif // ROCWMMA_DETAIL_MAP_BLOCK_TO_MATRIX_OVERRIDE_M_HPP

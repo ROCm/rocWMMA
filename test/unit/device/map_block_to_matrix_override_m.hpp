@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_DEVICE_MAP_MATRIX_TO_DATA_OVERRIDE_N_HPP
-#define ROCWMMA_DEVICE_MAP_MATRIX_TO_DATA_OVERRIDE_N_HPP
+#ifndef ROCWMMA_DEVICE_MAP_BLOCK_TO_MATRIX_OVERRIDE_M_HPP
+#define ROCWMMA_DEVICE_MAP_BLOCK_TO_MATRIX_OVERRIDE_M_HPP
 
 #include <rocwmma/internal/mapping_util.hpp>
 #include <rocwmma/rocwmma.hpp>
@@ -34,22 +34,23 @@ namespace rocwmma
 {
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
-    __global__ void MapMatrixToDataOverrideN(uint32_t     m,
-                                             uint32_t     n,
-                                             DataT const* in,
-                                             DataT*       out,
-                                             uint32_t     ld,
-                                             DataT        param1,
-                                             DataT        param2)
+    __global__ void MapBlockToMatrixOverrideM(uint32_t     m,
+                                              uint32_t     n,
+                                              DataT const* in,
+                                              DataT*       out,
+                                              uint32_t     ld,
+                                              DataT        param1,
+                                              DataT        param2)
     {
         using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
-        auto aCoord = Mapping::matrixCoordN(static_cast<uint32_t>(static_cast<float32_t>(param1)));
+        auto aCoord   = Mapping::matrixCoord(
+              Mapping::blockCoordM(static_cast<uint32_t>(static_cast<float32_t>(param1))));
 
-        uint32_t incrementalOffset = std::is_same<Layout, row_major>::value ? n : 1;
+        uint32_t incrementalOffset = std::is_same<Layout, row_major>::value ? 1 : m;
 
         if(threadIdx.x % AMDGCN_WAVE_SIZE == 0)
         {
-            for(int i = 0; i < BlockM; i++)
+            for(int i = 0; i < BlockN; i++)
             {
                 out[Mapping::dataOffset(aCoord, ld) + (i * incrementalOffset)]
                     = in[Mapping::dataOffset(aCoord, ld) + (i * incrementalOffset)];
@@ -59,4 +60,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_DEVICE_MAP_MATRIX_TO_DATA_OVERRIDE_N_HPP
+#endif // ROCWMMA_DEVICE_MAP_BLOCK_TO_MATRIX_OVERRIDE_M_HPP
