@@ -89,6 +89,14 @@ set(MapUtilTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_16x16_t.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_32x32_n.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_32x32_t.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_override_m_16x16_n.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_override_m_16x16_t.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_override_m_32x32_n.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_override_m_32x32_t.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_override_n_16x16_n.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_override_n_16x16_t.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_override_n_32x32_n.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_override_n_32x32_t.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_matrix_to_data_16x16_n.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_matrix_to_data_16x16_t.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_matrix_to_data_32x32_n.cpp
