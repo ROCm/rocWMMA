@@ -74,6 +74,14 @@ namespace rocwmma
             const int64_t sizeD = Base::mM * Base::mN;
 
             auto kernelResult = dataInstance->template allocHost<DataT>(sizeD);
+            auto hostResult   = dataInstance->hostIn().get();
+
+            //Allocate additional resource to validate only the overriden col of size Base::mM
+            auto kernelResultToValidate = dataInstance->template allocHost<DataT>(Base::mM);
+            auto hostResultToValidate   = dataInstance->template allocHost<DataT>(Base::mM);
+
+            // Cache current kernel result from device
+            dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
 
             // Cache current kernel result from device
             dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
@@ -86,15 +94,34 @@ namespace rocwmma
                             * BlockN;
             uint32_t ld = std::is_same<Layout, row_major>::value ? Base::mN : 1;
 
+            // Validation offset starts at col Base::mParam1 * BlockN
+            // To get to col Base::mParam1 * BlockN,
+            // in case of row-major layout, skip only Base::mParam1 * BlockN elements
+            // in case of col-major layout, skip Base::mParam1 * Base::mM * BlockN elements
+            uint32_t baseOffset
+                = std::is_same<Layout, row_major>::value
+                      ? static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1)) * BlockN
+                      : static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1)) * Base::mM
+                            * BlockN;
+
+            // To get to the elements across col,
+            // in case of row-major, next element access is by current_element + Base::mN
+            // in case of col-major, next element access is current_element + 1
+            uint32_t ld = std::is_same<Layout, row_major>::value ? Base::mN : 1;
+
+            // Copy the entire col Base::mParam1 * BlockN
+            for(int i = 0; i < Base::mM; i++)
+            {
+                kernelResultToValidate[i] = kernelResult[baseOffset + (i * ld)];
+                hostResultToValidate[i]   = hostResult[baseOffset + (i * ld)];
+            }
+
             std::tie(Base::mValidationResult, Base::mMaxRelativeError)
-                = compareEqual<DataT, DataT, Layout, Layout, true>(kernelResult.get() + baseOffset,
-                                                                   dataInstance->hostIn().get()
-                                                                       + baseOffset,
-                                                                   Base::mM,
-                                                                   1,
-                                                                   ld,
-                                                                   ld,
-                                                                   errorTolerance);
+                = compareEqual<DataT, DataT, Layout, Layout>(kernelResultToValidate.get(),
+                                                             hostResultToValidate.get(),
+                                                             Base::mM,
+                                                             1,
+                                                             errorTolerance);
         }
 
         typename Base::KernelFunc kernelImpl() const final
