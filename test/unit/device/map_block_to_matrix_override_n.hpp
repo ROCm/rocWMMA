@@ -48,10 +48,13 @@ namespace rocwmma
 
         uint32_t incrementalOffset = std::is_same<Layout, row_major>::value ? n : 1;
 
-        for(int i = 0; i < BlockM; i++)
+        if(threadIdx.x % AMDGCN_WAVE_SIZE == 0)
         {
-            out[Mapping::dataOffset(aCoord, ld) + (i * incrementalOffset)]
-                = in[Mapping::dataOffset(aCoord, ld) + (i * incrementalOffset)];
+            for(int i = 0; i < BlockM; i++)
+            {
+                out[Mapping::dataOffset(aCoord, ld) + (i * incrementalOffset)]
+                    = in[Mapping::dataOffset(aCoord, ld) + (i * incrementalOffset)];
+            }
         }
     }
 } // namespace rocwmma
