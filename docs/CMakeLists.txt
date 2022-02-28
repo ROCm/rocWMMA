@@ -42,7 +42,7 @@ string (REPLACE ";" " " ROCWMMA_DOXYGEN_INPUT "${ROCWMMA_DOXYGEN_INPUT}")
 
 # Adjust the doxygen inputs and output directories dynamically
 add_custom_command(
-  OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/rocWMMA-Guide.tar.gz
+  OUTPUT ${ROCWMMA_DOCS_ARCHIVE}
   COMMAND bash -c "(cat ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile; echo \"INPUT=${ROCWMMA_DOXYGEN_INPUT}\"; echo \"OUTPUT_DIRECTORY=${ROCWMMA_DOXYGEN_OUTPUT}\") | doxygen -"
   COMMAND tar -czvf ${ROCWMMA_DOCS_ARCHIVE} ${ROCWMMA_DOXYGEN_OUTPUT}
   VERBATIM)
