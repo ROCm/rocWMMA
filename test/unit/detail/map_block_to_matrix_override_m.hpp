@@ -84,6 +84,7 @@ namespace rocwmma
             dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
 
             double errorTolerance = 1.0;
+            
             // Validation offset starts at row Base::mParam1 * BlockM
             // To get to row Base::mParam1 * BlockM,
             // in case of row-major layout, skip Base::mParam1 * BlockM * Base::mN elements

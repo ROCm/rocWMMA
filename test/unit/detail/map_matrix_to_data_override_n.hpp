@@ -82,7 +82,12 @@ namespace rocwmma
             // Cache current kernel result from device
             dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
 
-            double errorTolerance = 1.0;
+            double   errorTolerance = 1.0;
+            uint32_t baseOffset
+                = std::is_same<Layout, row_major>::value
+                      ? static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1))
+                      : static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1)) * Base::mM;
+            uint32_t ld = std::is_same<Layout, row_major>::value ? Base::mN : 1;
 
             // Validation offset starts at col Base::mParam1
             // To get to col Base::mParam1,
