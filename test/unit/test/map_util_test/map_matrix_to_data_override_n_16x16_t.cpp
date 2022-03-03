@@ -26,7 +26,7 @@
 
 #include <type_traits>
 
-#include "detail/map_matrix_to_data_override_n.hpp"
+#include "detail/map_matrix_to_data_override.hpp"
 #include "kernel_generator.hpp"
 #include "test/unit_test.hpp"
 
