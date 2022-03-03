@@ -38,8 +38,8 @@ namespace rocwmma
     {
         using Base = UnitTestParams;
 
-        // Types: ALL + double
-        using Types = typename Base::TestTypes16x16;
+        // Types: Base IOC + double
+        using Types = typename Base::TestTypes16;
 
         // Vector Sizes
         using VecSizes = std::tuple<I<4>, I<8>, I<16>, I<32>>;
