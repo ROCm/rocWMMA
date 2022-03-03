@@ -29,6 +29,7 @@
 
 namespace rocwmma
 {
+
     HipDevice::HipDevice()
         : mHandle(-1)
         , mGcnArch(hipGcnArch_t::UNKNOWN)
