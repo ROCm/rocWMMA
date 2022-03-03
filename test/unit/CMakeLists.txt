@@ -85,10 +85,11 @@ set(LayoutTestSources ${UnitCommonSources}
                        )
 
 set(MapUtilTestSources ${UnitCommonSources}
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_16x16_n.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_16x16_t.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_32x32_n.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_32x32_t.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_256.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_override_m_16.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_override_m_32.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_block_to_matrix_override_m_64.cpp
