@@ -1,5 +1,5 @@
 ==================
-rocBLAS User Guide
+rocWMMA User Guide
 ==================
 
 .. toctree::

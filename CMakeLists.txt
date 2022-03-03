@@ -45,7 +45,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 if( CMAKE_PROJECT_NAME STREQUAL "rocwmma" )
   option( ROCWMMA_BUILD_TESTS "Build rocWMMA tests" ON )
   option( ROCWMMA_BUILD_SAMPLES "Build rocWMMA samples" ON )
-  option( ROCWMMA_BUILD_DOCS "Build doxygen documentation" OFF )
   option( ROCWMMA_BUILD_ASSEMBLY "Output assembly files" OFF )
 endif()
 
@@ -99,10 +98,6 @@ rocm_install_targets(
   TARGETS rocwmma
   INCLUDE library/include
 )
-
-if(ROCWMMA_BUILD_DOCS)
-  add_subdirectory(docs)
-endif()
 
 if(ROCWMMA_BUILD_SAMPLES OR ROCWMMA_BUILD_TESTS)
   enable_testing()
