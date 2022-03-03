@@ -114,10 +114,11 @@ set(MmaSyncMultiTestSources ${GemmCommonSources}
                             ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_nt_4x4.cpp
                             ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_tn_4x4.cpp
                             ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_tt_4x4.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_nn_8x8.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_nt_8x8.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_tn_8x8.cpp
-                            ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_tt_8x8.cpp)
+			    #${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_nn_8x8.cpp
+			    #${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_nt_8x8.cpp
+			    #${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_tn_8x8.cpp
+			    #${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_tt_8x8.cpp
+			    )
 
 if(ROCWMMA_BUILD_EXTENDED_TESTS)
   set(MmaSyncMultiTestSources ${MmaSyncMultiTestSources}
