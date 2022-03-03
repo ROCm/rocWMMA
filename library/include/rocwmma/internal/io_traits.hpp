@@ -232,9 +232,9 @@ namespace rocwmma
             UnpackedVRegCount = PackedVRegCount * detail::PackTraits<DataT>::PackRatio
         };
 
-        static_assert((BlockDim <= ElementsPerIO)
-                          ? ((ElementsPerIO % BlockDim) == 0 || (ElementsPerIO % BlockK) == 0)
-                          : ((BlockDim % ElementsPerIO) == 0 || (BlockK % ElementsPerIO) == 0),
+        static_assert((BlockDim <= ElementsPerIO) ?
+                      ((ElementsPerIO % BlockDim) == 0 || (ElementsPerIO % BlockK) == 0) :
+                      ((BlockDim % ElementsPerIO) == 0 || (BlockK % ElementsPerIO) == 0), 
                       "I/O operation elements not a multiple of BlockDim");
         static_assert((ElementCount % ElementsPerIO) == 0,
                       "I/O element count not divisible into equal operations");

@@ -214,14 +214,11 @@ namespace rocwmma
     };
 
     // compareEqual on two different layouts: must calculate index offsets
-    template <
-        typename TypeA,
-        typename TypeB,
-        typename LayoutA,
-        typename LayoutB,
-        bool skipRowsCols              = false,
-        typename std::enable_if_t<!std::is_same<LayoutA, LayoutB>::value || skipRowsCols == true,
-                                  int> = 0>
+    template <typename TypeA,
+              typename TypeB,
+              typename LayoutA,
+              typename LayoutB,
+              typename std::enable_if_t<!std::is_same<LayoutA, LayoutB>::value, int> = 0>
     std::pair<bool, double> compareEqual(TypeA const* matrixA,
                                          TypeB const* matrixB,
                                          uint32_t     m,
@@ -315,14 +312,11 @@ namespace rocwmma
 
     // compareEqual on two equal layouts: index offsets are identical
     // can use slightly faster 1D compare
-    template <
-        typename TypeA,
-        typename TypeB,
-        typename LayoutA,
-        typename LayoutB,
-        bool skipRowsCols              = false,
-        typename std::enable_if_t<std::is_same<LayoutA, LayoutB>::value && skipRowsCols == false,
-                                  int> = 0>
+    template <typename TypeA,
+              typename TypeB,
+              typename LayoutA,
+              typename LayoutB,
+              typename std::enable_if_t<std::is_same<LayoutA, LayoutB>::value, int> = 0>
     std::pair<bool, double> compareEqual(TypeA const* matrixA,
                                          TypeB const* matrixB,
                                          uint32_t     m,
@@ -331,7 +325,6 @@ namespace rocwmma
                                          uint32_t     ldb,
                                          double       tolerance = 10.0)
     {
-
         assert(lda == ldb && "Leading dims must match");
 
         bool   retval             = true;
@@ -426,7 +419,6 @@ namespace rocwmma
     {
         assert(a.size() == b.size() && "A and B are not the same size");
         assert(a.size() == m * n && "A and B do not match size M x N");
-
         return compareEqual<TypeA, TypeB, LayoutA, LayoutB>(a.data(), b.data(), m, n, tolerance);
     }
 
