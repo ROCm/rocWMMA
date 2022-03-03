@@ -27,7 +27,7 @@
 include( CMakeDependentOption )
 
 cmake_dependent_option( ROCWMMA_BUILD_VALIDATION_TESTS "Build validation tests" ON "ROCWMMA_BUILD_TESTS" OFF )
-cmake_dependent_option( ROCWMMA_BUILD_BENCHMARK_TESTS "Build benchmarking tests" ON "ROCWMMA_BUILD_TESTS" OFF )
+cmake_dependent_option( ROCWMMA_BUILD_BENCHMARK_TESTS "Build benchmarking tests" OFF "ROCWMMA_BUILD_TESTS" OFF )
 cmake_dependent_option( ROCWMMA_BUILD_EXTENDED_TESTS "Build extended test parameter coverage" OFF "ROCWMMA_BUILD_TESTS" OFF )
 
 # Test/benchmark requires additional dependencies
