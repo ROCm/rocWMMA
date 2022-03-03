@@ -37,17 +37,17 @@ namespace rocwmma
     {
         using Base = UnitTestParams;
 
-        // Types: ALL + double
-        // Block Sizes: 32 x 32 x BlockK
-        // Layouts: T
+        // Types: ALL
+        // Block Sizes: 128 x BlockN
+        // Layouts: NT
         using Types        = typename Base::TestTypes32x32;
-        using BlockSizes   = typename Base::TestBlockSizes32x32;
-        using Layouts      = typename Base::TestLayoutsT;
+        using BlockSizes   = typename Base::TestBlockSizes128;
+        using Layouts      = typename Base::TestLayoutsAll;
         using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
 
         // Assemble the kernel generator
-        // Kernel: MapMatrixToDataOverrideN
-        using GeneratorImpl   = MapMatrixToDataOverrideNGenerator;
+        // Kernel: MapMatrixToDataOverrideM
+        using GeneratorImpl   = MapMatrixToDataOverrideMGenerator;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -63,18 +63,18 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class MapMatrixToDataOverrideNTest32x32T : public rocwmma::UnitTest
+class MapMatrixToDataOverrideMTest128 : public rocwmma::UnitTest
 {
 };
 
-TEST_P(MapMatrixToDataOverrideNTest32x32T, RunKernel)
+TEST_P(MapMatrixToDataOverrideMTest128, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(
     KernelTests,
-    MapMatrixToDataOverrideNTest32x32T,
+    MapMatrixToDataOverrideMTest128,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
                        ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
