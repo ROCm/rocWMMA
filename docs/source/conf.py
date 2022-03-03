@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-# rocFFT documentation build configuration file, created by
-# sphinx-quickstart on Mon Jan  8 16:34:42 2018.
-#
 # This file is execfile()d with the current directory set to its
 # containing dir.
 #
