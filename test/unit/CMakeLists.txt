@@ -115,10 +115,11 @@ set(MapUtilTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_matrix_to_data_override_n_64.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_matrix_to_data_override_n_128.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_matrix_to_data_override_n_256.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_thread_to_matrix_16x16_n.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_thread_to_matrix_16x16_t.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_thread_to_matrix_32x32_n.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_thread_to_matrix_32x32_t.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_thread_to_matrix_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_thread_to_matrix_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_thread_to_matrix_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_thread_to_matrix_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_thread_to_matrix_256.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_wave_to_matrix_16x16_n.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_wave_to_matrix_16x16_t.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_util_test/map_wave_to_matrix_32x32_n.cpp
