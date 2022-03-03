@@ -26,7 +26,7 @@
 
 #include <type_traits>
 
-#include "detail/map_block_to_matrix_override_m.hpp"
+#include "detail/map_block_to_matrix_override.hpp"
 #include "kernel_generator.hpp"
 #include "test/unit_test.hpp"
 
