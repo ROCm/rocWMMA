@@ -37,12 +37,12 @@ namespace rocwmma
     {
         using Base = UnitTestParams;
 
-        // Types: ALL + double
-        // Block Sizes: 16 x 16 x BlockK
-        // Layouts: T
-        using Types        = typename Base::TestTypes16x16;
-        using BlockSizes   = typename Base::TestBlockSizes16x16;
-        using Layouts      = typename Base::TestLayoutsT;
+        // Types: ALL
+        // Block Sizes: 256 x BlockN
+        // Layouts: NT
+        using Types        = typename Base::TestTypes32x32;
+        using BlockSizes   = typename Base::TestBlockSizes256;
+        using Layouts      = typename Base::TestLayoutsAll;
         using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
 
         // Assemble the kernel generator
@@ -63,18 +63,18 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class MapMatrixToDataTest16x16T : public rocwmma::UnitTest
+class MapMatrixToDataTest256 : public rocwmma::UnitTest
 {
 };
 
-TEST_P(MapMatrixToDataTest16x16T, RunKernel)
+TEST_P(MapMatrixToDataTest256, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(
     KernelTests,
-    MapMatrixToDataTest16x16T,
+    MapMatrixToDataTest256,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
                        ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
