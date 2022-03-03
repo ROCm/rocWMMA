@@ -37,10 +37,10 @@ namespace rocwmma
     {
         using Base = UnitTestParams;
 
-        // Types: ALL + double
+        // Types: Base IOC
         // Block Sizes: 64 x BlockN
         // Layouts: N, T
-        using Types      = typename Base::TestTypes32x32;
+        using Types      = typename Base::TestTypesIOC;
         using BlockSizes = std::
             tuple<std::tuple<I<64>, I<8>>, std::tuple<I<64>, I<16>>, std::tuple<I<64>, I<32>>>;
         using Layouts      = typename Base::TestLayoutsAll;
