@@ -28,9 +28,9 @@
 
 #include <type_traits>
 
+#include "internal/types.hpp"
 #include "internal/io_config.hpp"
 #include "internal/io_traits.hpp"
-#include "internal/types.hpp"
 
 /**
  * \mainpage

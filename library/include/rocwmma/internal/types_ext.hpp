@@ -28,7 +28,6 @@
 
 #include <hip/hip_bfloat16.h>
 #include <hip/hip_fp16.h>
-#include <hip/hip_runtime.h>
 
 #include <cmath>
 #include <limits>
@@ -407,6 +406,37 @@ namespace rocwmma
     constexpr const char* dataTypeToString<col_major>()
     {
         return "N";
+    }
+
+    template<typename T,
+    typename std::enable_if_t<std::is_integral<T>::value, int> = 0>
+    constexpr auto maxExactInteger() -> decltype(std::numeric_limits<T>::max()) 
+    {
+        return std::numeric_limits<T>::max();
+    }
+
+    template<typename T,
+    typename std::enable_if_t<std::is_floating_point<T>::value && std::numeric_limits<T>::digits, int> = 0>
+    constexpr auto maxExactInteger() -> typename std::conditional_t<std::is_same<T, float64_t>::value, int64_t, int32_t>
+    {
+        using RetT = typename std::conditional_t<std::is_same<T, float64_t>::value, int64_t, int32_t>;
+        return ((RetT)1 << std::numeric_limits<T>::digits);
+    }
+
+    template<typename T,
+    typename std::enable_if_t<std::is_same<T, hfloat16_t>::value || std::is_same<T, float16_t>::value, int> = 0>
+    constexpr auto maxExactInteger() -> int32_t
+    {
+        // f16 mantissa is 10 bits
+        return ((int32_t)1 << 11);
+    }
+
+    template<typename T,
+    typename std::enable_if_t<std::is_same<T, bfloat16_t>::value, int> = 0>
+    constexpr auto maxExactInteger() -> int32_t
+    {
+        // b16 mantissa is 7 bits
+        return ((int32_t)1 << 8);
     }
 
 } // namespace rocwmma
