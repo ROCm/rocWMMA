@@ -9,8 +9,9 @@ def runCI =
     nodeDetails, jobName->
 
     def prj = new rocProject('rocWMMA', 'precheckin')
-    prj.libraryDependencies = ['rocBLAS']
     prj.paths.build_command = './install -c'
+    prj.libraryDependencies = ['rocBLAS']
+    prj.defaults.ccache = true
 
     def nodes = new dockerNodes(nodeDetails, jobName, prj)
 
@@ -52,7 +53,7 @@ ci: {
     propertyList = auxiliary.appendPropertyList(propertyList)
 
     def jobNameList = ["compute-rocm-dkms-no-npi-hipclang":([ubuntu18:['gfx908'],centos7:['gfx908'],centos8:['gfx908'],sles15sp1:['gfx908'],ubuntu20:['gfx90a']])]
-    // jobNameList = auxiliary.appendJobNameList(jobNameList, 'rocWMMA')
+    jobNameList = auxiliary.appendJobNameList(jobNameList, 'rocWMMA')
 
     propertyList.each
     {
