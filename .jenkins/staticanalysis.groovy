@@ -15,7 +15,7 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
 
     def command = """#!/usr/bin/env bash
             set -x
-            ${project-paths.project_build_prefix}/docs/run_doc.sh
+            ${project.paths.project_build_prefix}/docs/run_doc.sh
             """
 
     try
