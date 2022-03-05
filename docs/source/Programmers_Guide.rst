@@ -20,7 +20,7 @@ The `library` directory
 library/include/rocwmma/
 ''''''''''''''''''''''''
 
-Contains C98 include files for the external API. These files also contain Doxygen
+Contains C++ include files for the rocWMMA API. These files also contain Doxygen
 comments that document the API.
 
 library/include/internal
@@ -29,13 +29,16 @@ library/include/internal
 Internal include files for:
 
 - Type support
-- Input Output Configuration and Traits
+- Input / output configuration and traits
 - Layout
 - Mapping Utility
-- Packing and Unpacking
-- Conversion and Broadcasting
-- Load and Store
-- utility code
+- Packing and unpacking
+- Conversion and broadcasting
+- Load and store
+- Matrix multiply-accumulate
+- Cooperative load and store
+- Threadblock synchronization
+- Utility code
 
 
 The `samples` directory
@@ -61,7 +64,7 @@ Sample code for calling Simple Deep Learning Recommendation Model (DLRM) for mac
 samples/common.hpp
 ''''''''''''''''''
 
-Common code used by all the above rocwmma samples files.
+Common code used by all the above rocWMMA samples files.
 
 
 The `test` directory
@@ -75,7 +78,7 @@ Script to generate benchmark plots from the gtest output dumps of benchmark test
 test/dlrm
 '''''''''
 
-Test Code for various strategies of DLRM application. This test is used to validate dlrm functions using rocWMMA API.
+Test code for various strategies of DLRM application. This test is used to validate dlrm functions using rocWMMA API.
 
 test/gemm
 '''''''''

@@ -43,9 +43,8 @@ concerns when reviewing pull-requests.
 Interface
 ---------
 
--  All public APIs are C99 compatible; all other library code should use
-   C++14
--  Our minimum supported compiler is clang 3.6
+-  Library code should use C++14
+-  Our minimum supported compiler is hipcc 4.4
 -  Avoid CamelCase
 -  This rule applies specifically to publicly visible APIs, but is also
    encouraged (not mandated) for internal code
@@ -63,21 +62,16 @@ Implementation
 --------------
 
 -  `SF.1 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rs-file-suffix>`__:
-   Use a ``.cpp`` suffix for code files and an ``.h`` suffix for
+   Use a ``.cpp`` suffix for code files and an ``.hpp`` suffix for
    interface files if your project doesn't already follow another
    convention
--  We modify this rule:
-
-   -  ``.h``: C header files
-   -  ``.hpp``: C++ header files
-
 -  `SF.5 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rs-consistency>`__:
-   A ``.cpp`` file must include the ``.h`` file(s) that defines its
+   A ``.cpp`` file must include the ``.hpp`` file(s) that defines its
    interface
 -  `SF.7 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rs-using-directive>`__:
-   Don't put a ``using``-directive in a header file
+   Don't put a global ``using``-directive in a header file
 -  `SF.8 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rs-guards>`__:
-   Use ``#include`` guards for all ``.h`` files
+   Use ``#include`` guards for all ``.hpp`` files
 -  `SF.21 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rs-unnamed>`__:
    Don't use an unnamed (anonymous) ``namespace`` in a header
 -  `SL.10 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rsl-arrays>`__:
@@ -105,7 +99,7 @@ Implementation
 Format
 ------
 
-C and C++ code is formatted using ``clang-format``. To run clang-format
+C++ code is formatted using ``clang-format``. To run clang-format
 use the version in the ``/opt/rocm/llvm/bin`` directory. Please do not use your
 system's built-in ``clang-format``, as this may be an older version that
 will result in different results.

@@ -50,11 +50,11 @@ rocWMMA can be installed on SLES using
     sudo dnf upgrade
     sudo dnf install rocWMMA
 
-Once installed, rocWMMA can be used just like any other library with a C API.
-The rocWMMA.h header file will need to be included in the user code in order to make calls
+Once installed, rocWMMA can be used just like any other library with a C++ API.
+The rocwmma.hpp header file will need to be included in the user code in order to make calls
 into rocWMMA.
 
-Once installed, rocWMMA.h can be found in the /opt/rocm/include directory.
+Once installed, rocwmma.hpp can be found in the /opt/rocm/include directory.
 Only this installed file should be used when needed in user code.
 Other rocWMMA files can be found in /opt/rocm/include/internal, however these files
 should not be directly included.
@@ -118,7 +118,7 @@ Below are the project options available to build rocWMMA library with/without cl
 +------------------------------+-------------------------------------+-----------------------------------------------+
 |ROCWMMA_BUILD_TESTS           |Build Tests                          |ON                                             |
 +------------------------------+-------------------------------------+-----------------------------------------------+
-|ROCWMMA_BUILD_SAMPLES         |Build Samples                        |OFF                                            |
+|ROCWMMA_BUILD_SAMPLES         |Build Samples                        |ON                                            |
 +------------------------------+-------------------------------------+-----------------------------------------------+
 |ROCWMMA_BUILD_DOCS            |Build doxygen documentation from code|OFF                                            |
 +------------------------------+-------------------------------------+-----------------------------------------------+
@@ -143,11 +143,11 @@ CMake has a minimum version requirement 3.5.
 
 Minimum ROCm version support is 4.3.
 
-By default, the project is configured as Release mode, and is linked against rocBLAS for validating results.
+By default, the project is configured as Release mode.
 
 To build only library, run the following comomand :
 
-    CC=hipcc CXX=hipcc cmake -B<build_dir> . -DROCWMMA_BUILD_TESTS=OFF
+    CC=hipcc CXX=hipcc cmake -B<build_dir> . -DROCWMMA_BUILD_TESTS=OFF -DROCWMMA_BUILD_SAMPLES=OFF
 
 Here are some other example project configurations:
 
@@ -195,14 +195,23 @@ simple-dlrm      a simple DLRM operation using rocWMMA API
 
 Build library + tests
 ^^^^^^^^^^^^^^^^^^^^^
+rocWMMA has several test suites that can be built:
 
-rocWMMA library performs both Validation and Benchmark tests.
+- DLRM tests
+- GEMM tests
+- Unit tests
 
-The library uses CPU GEMM or rocBLAS method for benchmark comparisons based on the provided project option.
+DLRM tests cover a Deep Learning Recommendation Model implemented with rocWMMA.
+GEMM tests cover block-wise Generalized Matrix Multiplication (GEMM) implemented with rocWMMA.
+Unit tests cover various aspects of rocWMMA API and internal functionality.
+
+rocWMMA can build both validation and benchmark tests.
+
+The library uses CPU or rocBLAS methods for validation (where available) and benchmark comparisons based on the provided project option.
 
 By default, the project is linked against rocBLAS for validating results. Minimum ROCBLAS library version requirement is 4.0.
 
-To build library and tests, run the following comomand :
+To build library and tests, run the following command :
 
     CC=hipcc CXX=hipcc cmake -B<build_dir> .
 
@@ -210,15 +219,31 @@ After configuration, build with
 
     cmake --build <build_dir> -- -j
 
-The samples folder in <build_dir> contains executables in the table below.
+The tests in <build_dir> contains executables in the table below.
 
-================ ===========================================================================
+====================================== ===========================================================================================================
 executable name                         description
-================ ===========================================================================
-simple-gemm      a simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API
-sgemv            a simple GEMV operation [y = alpha * (A) * x + beta * y] using rocWMMA API
-simple-dlrm      a simple DLRM operation using rocWMMA API
-================ ===========================================================================
+====================================== ===========================================================================================================
+dlrm/dlrm_dot_test-*                   a DLRM implementation using rocWMMA API
+dlrm/dlrm_dot_lds_test-*               a DLRM implementation using rocWMMA API with LDS shared memory
+====================================== ===========================================================================================================
+gemm/mma_sync_test-*                   a simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API 
+gemm/mma_sync_multi_test-*             a modified GEMM operation, each wave targets a sub-grid of output blocks using rocWMMA API
+gemm/mma_sync_multi_lds_test-*         a modified GEMM operation, each wave targets a sub-grid of output blocks using LDS memory and rocWMMA API
+gemm/mma_sync_barrier_test-*           a simple GEMM operation with wave synchronization
+====================================== ===========================================================================================================
+unit/fill_fragment_test                tests fill_fragment API function
+unit/load_store_matrix_sync_test       tests load_matrix_sync and store_matrix_sync API functions
+unit/load_store_matrix_coop_sync_test  tests load_matrix_coop_sync and store_matrix_coop_sync API functions
+unit/contamination_test                tests against contamination of pristine data for loads and stores
+unit/layout_test                       tests accuracy of internal matrix layout patterns
+unit/mapping_util_test                 tests mapping utilities used in rocWMMA implementations
+unit/vector_iterator_test              tests internal vector storage implementation
+====================================== ===========================================================================================================
+
+*= validate: executables that compare outputs for correctness against reference sources such as CPU or rocBLAS calculations.
+*= bench: executables that measure kernel execution speeds and may compare against those of rocBLAS references.
+
 
 Build library + Tests + Assembly
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -231,4 +256,4 @@ After configuration, build with
 
     cmake --build <build_dir> -- -j
 
-The assembly folder in <build_dir> contains assembly generation of test executable in the format [test_executable_name.s]
+The assembly folder in <build_dir> contains assembly generation of test executables in the format [test_executable_name.s]
