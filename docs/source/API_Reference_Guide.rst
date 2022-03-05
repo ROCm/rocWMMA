@@ -2,46 +2,44 @@
 Introduction
 ************
 
-rocWMMA is a `BLAS's Level 3 GEMM <http://www.netlib.org/blas/#_level_3>`__ implementation on top of AMD's Radeon Open Compute `ROCm <https://rocm.github.io/install.html>`__ runtime and toolchains.
-rocWMMA is leveraging AMD's GPU hardware matrix cores through HIP and optimized for AMD's latest discrete GPUs.
+rocWMMA is AMD's C++ library for accelerating mixed precision matrix multiply-accumulate operations
+
+leveraging specialized GPU matrix cores on AMD's latest discrete GPUs. A C++ API is provided to facilitate
+
+decomposition of matrix multiply-accumulate problems into discretized block fragments and to parallelize
+
+block-wise operations across multiple GPU wavefronts. The API is implemented in GPU device code: it empowers
+
+user device kernel code with direct use of GPU matrix cores. Moreover, this code can benefit from inline compiler
+
+optimization passes and does not incur additional overhead of external runtime calls or extra kernel launches.
 
 ======== =========
 Acronym  Expansion
 ======== =========
 **GEMM**    **GE**\ neral **M**\ atrix **M**\ ultiply
-**WMMA**    **W**\ arp **M**\ atrix **M**\ ultiply **A**\ ccumulate
-**ROCm**    **R**\ adeon **O**\ pen E\ **C**\ osyste\ **m**
+**WMMA**    **W**\ avefront **M**\ ixed precision **M**\ ultiply **A**\ ccumulate
+**ROCm**    **R**\ adeon **O**\ pen **C**\ ompute platfor\ **m**
 **HIP**     **H**\ eterogeneous-Compute **I**\ nterface for **P**\ ortability
 ======== =========
 
+rocWMMA is written in C++14 and may be applied directly in device kernel code. Library code is templated
 
-The aim of rocWMMA is to provide:
+for modularity and uses available meta-data to provide opportunities for compile-time inferences and optimizations.
 
-- functionality similar to Legacy BLAS's Level 3 GEMM, adapted to run on GPUs
-- high performance robust implementation
+The rocWMMA API exposes block-wise data load / store and matrix multiply-accumulate functions appropriately sized
 
-rocWMMA is written in C++14 and HIP. It uses AMD's ROCm runtime to run on GPU devices.
+for thread-block execution on data fragments. Matrix multiply-accumulate functionality supports mixed precision inputs
 
-Specifically, the rocWMMA library enhances the portability of CUDA WMMA code to AMD's heterogeneous platform
-and provides an interface to use underlying hardware matrix multiplication (MFMA) units.
+and outputs with native fixed-precision accumulation. The rocWMMA Coop API provides wave/warp collaborations
 
-The ROCWMMA API exposes memory and MMA (Matrix Multiply Accumulate) functions that operate on blocks, or 'fragments' of data
-appropriately sized for warp (thread block) execution.
+within the thread-blocks for block-wise data load and stores. Supporting code is required for GPU device
 
-ROCWMMA code is templated for componentization and for providing ability to make compile-time optimizations
-based on available meta-data.
+management and for kernel invocation. Kernel code samples and tests provided are built and launched via the HIP
 
-rocWMMA library is an ongoing Work-In-Progress (WIP).
+ecosystem within ROCm.
 
-The official rocWMMA API is the C99 API defined in rocwmma.h and therefore the use of any other public symbols is discouraged. All other C/C++ interfaces may not follow a deprecation model and so can change without warning from one release to the next.
-
-rocWMMA uses the provided device memory functions to allocate device memory for the input and output matrices and filling/copying it with appropriate input data.
-
-rocWMMA functions run on the host and they call HIP to launch rocWMMA kernels that run on the device in a HIP stream.
-
-Before calling a rocWMMA function arrays must be copied to the device. Integer scalars like m, n, k are stored on the host. Floating point scalars like alpha and beta can be on host or device.
-
-Below is a simple example code for calling rocwmma functions load_matrix_sync, store_matrix_sync, fill_fragment, mma_sync.
+Below is a simple example code for calling rocWMMA functions load_matrix_sync, store_matrix_sync, fill_fragment, mma_sync.
 
 .. code-block:: c++
 
@@ -52,11 +50,10 @@ Below is a simple example code for calling rocwmma functions load_matrix_sync, s
    #include <iostream>
    #include <vector>
 
-   #include "WMMA.h"
+   #include <rocwmma/rocwmma.hpp>
 
    using rocwmma::float16_t;
    using rocwmma::float32_t;
-   using rocwmma::float64_t;
 
    // Matrix data initialization
    template <typename DataT>
@@ -67,8 +64,8 @@ Below is a simple example code for calling rocwmma functions load_matrix_sync, s
        {
            for(int j = 0; j < n; ++j)
            {
-               // Ascending order for each neighboring element.
-                // Alternate sign for even / odd
+                // Generated data
+                // Alternate sign every 3 elements
                 auto value      = (i * n + j) % 13;
                 mat[i * ld + j] = (value % 3) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
            }
@@ -76,7 +73,7 @@ Below is a simple example code for calling rocwmma functions load_matrix_sync, s
    }
 
 
-   // Supports ROCWMMA_M/N square sizes of
+   // Supports BlockM/N square sizes of
    // : 16 x 16
    // : 32 x 32
    const int ROCWMMA_M = 16;
@@ -94,6 +91,7 @@ Below is a simple example code for calling rocwmma functions load_matrix_sync, s
    // Note: Each wave will compute one BLOCK_M x BLOCK_N output block
    // Note: Workgroup will compute
    //  T_BLOCK_X / WAVE_SIZE x T_BLOCK_Y output blocks
+   // This thread block will compute (4 x 4 output blocks)
    const int T_BLOCK_X = 4 * WAVE_SIZE;
    const int T_BLOCK_Y = 4;
 
@@ -103,36 +101,44 @@ Below is a simple example code for calling rocwmma functions load_matrix_sync, s
    // D = alpha * (A x B) + beta * C
    //
    // In this simplified example, we assume:
-   // : A is in row-major format     (M x K)
-   // : B is in col-major format     (K x N)
-   // : C, D are in row-major format (M x N)
+   // : A is in row-major format     (m x k)
+   // : B is in col-major format     (k x n)
+   // : C, D are in row-major format (m x n)
    // : Multiplication is NOT in-place, output is written to D matrix
    // : No LDS required
    //
-   // Note: This is a simplified implementation to demonstrate API usage in
+   // Disclaimer: This is a simplified implementation to demonstrate API usage in
    // context of wave-level GEMM computation, and is not optimized.
-   __global__ void gemm_wmma_d(uint32_t         m,
-                               uint32_t         n,
-                               uint32_t         k,
-                               float16_t const* a,
-                               float16_t const* b,
-                               float32_t const* c,
-                               float32_t*       d,
-                               uint32_t         lda,
-                               uint32_t         ldb,
-                               uint32_t         ldc,
-                               uint32_t         ldd,
-                               float32_t        alpha,
-                               float32_t        beta)
+   //
+   // Launchable device kernel function:
+   //
+   __global__ void gemm_wmma_d(uint32_t         m,     // matrix free dim m 
+                               uint32_t         n,     // matrix free dim n
+                               uint32_t         k,     // matrix fixed dim k
+                               float16_t const* a,     // device data ptr for matrix A
+                               float16_t const* b,     // device data ptr for matrix B
+                               float32_t const* c,     // device data ptr for matrix C
+                               float32_t*       d,     // device data ptr for matrix D
+                               uint32_t         lda,   // leading dimension for matrix A
+                               uint32_t         ldb,   // leading dimension for matrix B
+                               uint32_t         ldc,   // leading dimension for matrix C
+                               uint32_t         ldd,   // leading dimension for matrix D
+                               float32_t        alpha, // uniform scalar
+                               float32_t        beta)  // uniform scalar
    {
-       // Create frags
-       auto fragA = rocwmma::
-           fragment<rocwmma::matrix_a, WMMA_M, WMMA_N, WMMA_K, float16_t, rocwmma::row_major>();
-       auto fragB = rocwmma::
-           fragment<rocwmma::matrix_b, WMMA_M, WMMA_N, WMMA_K, float16_t, rocwmma::col_major>();
+       // Create frags with meta-data context for block-wise GEMM decomposition
+       // @tp0: fragment context = matrix_a, matrix_b or accumulator
+       // @tp1: block size M
+       // @tp2: block size N
+       // @tp3: block size K
+       // @tp4: fragment data type
+       // @tp5: data layout = row_major, col_major or void (default)
+       auto fragA = rocwmma::fragment<rocwmma::matrix_a, WMMA_M, WMMA_N, WMMA_K, float16_t, rocwmma::row_major>();
+       auto fragB = rocwmma::fragment<rocwmma::matrix_b, WMMA_M, WMMA_N, WMMA_K, float16_t, rocwmma::col_major>();
        auto fragC   = rocwmma::fragment<rocwmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t>();
        auto fragAcc = rocwmma::fragment<rocwmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t>();
 
+       // Initialize accumulator fragment
        rocwmma::fill_fragment(fragAcc, 0.0f);
 
        // Tile using a 2D grid
@@ -146,7 +152,7 @@ Below is a simple example code for calling rocwmma functions load_matrix_sync, s
        // Bounds check
        if(cRow < m && cCol < n)
        {
-           // fragAcc = A x B
+           // Accumulate AxB in steps of block K into fragAcc
            for(int i = 0; i < k; i += WMMA_K)
            {
                int aRow = cRow;
@@ -159,7 +165,7 @@ Below is a simple example code for calling rocwmma functions load_matrix_sync, s
                rocwmma::load_matrix_sync(fragA, a + (aRow * lda + aCol), lda);
                rocwmma::load_matrix_sync(fragB, b + (bRow + bCol * ldb), ldb);
 
-               // Matrix multiply - accumulate using MFMA units
+               // Matrix multiply-accumulate using matrix cores
                rocwmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
             }
 
@@ -177,9 +183,10 @@ Below is a simple example code for calling rocwmma functions load_matrix_sync, s
         }
    }
 
+   // Host side supporting device mgmt and launch code
    __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, float32_t beta)
    {
-       // Bounds check
+       // Problem size check
        if((m < (WMMA_M * T_BLOCK_X / WAVE_SIZE) || n < (WMMA_N * T_BLOCK_Y) || k < WMMA_K)
            || (m % WMMA_M || n % WMMA_N || k % WMMA_K))
         {
@@ -284,14 +291,55 @@ Below is a simple example code for calling rocwmma functions load_matrix_sync, s
 Synchronous API
 ^^^^^^^^^^^^^^^
 
-rocWMMA API functions ( load_matrix_sync, store_matrix_sync, mma_sync ) will be synchronous.
+In general, rocWMMA API functions ( load_matrix_sync, store_matrix_sync, mma_sync ) are assumed to be synchronous when
+used in context of global memory.
+
+When using these functions in the context of shared memory (e.g. LDS memory), additional explicit workgroup synchronization
+may be required due to the nature this memory usage.
 
 
 Supported Data Types
 ^^^^^^^^^^^^^^^^^^^^
 
-All WMMA API function supports the native datatypes : float = f32, double = f64, _Float16 = f16, int8, uint8, int16, int32, uint32 and
-non-native datatypes : h16 = __half, bf16 = bfloat16
+rocWMMA mixed precision multiply-accumulate operations support the following data type combinations: 
+
+Data Types <Ti / To / Tc> = <Input type / Output Type / Compute Type>
+
+Input Type = Matrix A/B
+
+Output Type = Matrix C/D
+
+Compute Type = math / accumulation type
+
+Ti / To / Tc	BlockM	BlockN	BlockK
+i8 / i32 / i32	16	16	Min: 16, pow2
+32	32	Min: 8, pow2
+i8 / i8 / i32	16	16	Min: 16, pow2
+32	32	Min: 8, pow2
+f16 / f32 / f32	16	16	Min: 16, pow2
+32	32	Min: 8, pow2
+f16 / f16 / f32	16	16	Min: 16, pow2
+32	32	Min: 8, pow2
+f16 / f16 / f16*	16	16	Min: 16, pow2
+32	32	Min: 8, pow2
+__half / f32 / f32	16	16	Min: 16, pow2
+32	32	Min: 8, pow2
+__half / __half / f32	16	16	Min: 16, pow2
+32	32	Min: 8, pow2
+__half / __half / __half*	16	16	Min: 16, pow2
+32	32	Min: 8, pow2
+bf16 / f32 / f32	16	16	Min: 8, pow2
+32	32	Min: 4, pow2
+bf16 / bf16 / f32	16	16	Min: 8, pow2
+32	32	Min: 4, pow2
+bf16 / bf16 / bf16*	16	16	Min: 8, pow2
+32	32	Min: 4, pow2
+f32 / f32 / f32	16	16	Min: 4, pow2
+32	32	Min: 2, pow2
+f64** / f64** / f64**	16	16	Min: 4, pow2
+
+*= matrix unit accumulation is natively 32 bit precision, and is converted to desired type.
+**= f64 datatype is only supported on MI-200 class AMDGPU and successors.
 
 
 Supported Matrix Layouts
@@ -365,7 +413,7 @@ VectorStorage
 rocWMMA Enumeration
 ^^^^^^^^^^^^^^^^^^^
 
-   Enumeration constants have numbering that is consistent with standard C libraries.
+   Enumeration constants have numbering that is consistent with standard C++ libraries.
 
 
 layout_t
@@ -373,36 +421,6 @@ layout_t
 
 .. doxygenenum:: layout_t
 
-
-rocWMMA Helper functions
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Auxiliary Functions
-'''''''''''''''''''
-
-.. doxygenfunction:: dataTypeToString
-.. doxygenfunction:: epsilon
-.. doxygenfunction:: infinity
-.. doxygenfunction:: max
-.. doxygenfunction:: min
-.. doxygenfunction:: quiet_NaN
-.. doxygenfunction:: signaling_NaN
-.. doxygenfunction:: lowest
-
-Device Memory Allocation Functions
-''''''''''''''''''''''''''''''''''
-
-.. doxygenfunction:: hipMalloc
-.. doxygenfunction:: hipMemcpy
-.. doxygenfunction:: hipFree
-
-Event Synchronization Functions
-'''''''''''''''''''''''''''''''
-
-.. doxygenfunction:: hipEventCreate
-.. doxygenfunction:: hipEventSynchronize
-.. doxygenfunction:: hipEventElapsedTime
-.. doxygenfunction:: hipEventDestroy
 
 rocWMMA API functions
 ^^^^^^^^^^^^^^^^^^^^^^
