@@ -62,12 +62,12 @@ namespace rocwmma
             // can store an accurate integer representation for override.
             // must be between [0, min(maxInt, M) - BlockM) for block rw.
             auto maxInt = maxExactInteger<DataT>();
+            using MaxIntT = decltype(maxInt);
             auto blockSize = mOverride == OVERRIDE_M ? BlockM : BlockN;
             auto matrixDim = mOverride == OVERRIDE_M ? Base::mM : Base::mN;
-            using MaxIntT = decltype(maxInt);
             auto upperBound = std::max(
                 static_cast<MaxIntT>(0), 
-                std::min(maxInt, static_cast<MaxIntT>(matrixDim - blockSize - 1)));
+                std::min(maxInt, static_cast<MaxIntT>(matrixDim - blockSize)));
 
             // Modulate if non zero
             upperBound = upperBound ? rand() % upperBound : upperBound;
