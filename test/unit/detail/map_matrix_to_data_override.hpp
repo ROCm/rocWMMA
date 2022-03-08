@@ -80,12 +80,12 @@ namespace rocwmma
             dataInstance->resizeStorage(probsize);
 
             // Initialize matrix data on host
-            MatrixUtil<Layout>::template fill<DataT>(
-                dataInstance->hostIn().get(), Base::mM, Base::mN, (DataT)0);
-            dataInstance->copyData(dataInstance->deviceOut(), dataInstance->hostIn(), sizeD);
-
             MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
+            MatrixUtil<Layout>::fill(
+                dataInstance->hostOut().get(), Base::mM, Base::mN, std::numeric_limits<DataT>::signaling_NaN());
+
             dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), sizeD);
+            dataInstance->copyData(dataInstance->deviceOut(), dataInstance->hostOut(), sizeD);
         }
 
         void validateResultsImpl() final
@@ -95,8 +95,7 @@ namespace rocwmma
             const int64_t sizeD = Base::mM * Base::mN;
 
             // Allocate and cache host memory for device result
-            auto kernelResult = dataInstance->template allocHost<DataT>(sizeD);
-            dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
+            dataInstance->copyData(dataInstance->hostOut(), dataInstance->deviceOut(), sizeD);
 
             // Allocate host memory for reference calcs
             auto& hostInput   = dataInstance->hostIn();
@@ -153,7 +152,7 @@ namespace rocwmma
             
             double errorTolerance = 1.0;
             std::tie(Base::mValidationResult, Base::mMaxRelativeError)
-                = compareEqual<DataT, DataT, Layout, Layout>(kernelResult.get(),
+                = compareEqual<DataT, DataT, Layout, Layout>(dataInstance->hostOut().get(),
                                                              hostResult.get(),
                                                              Base::mM,
                                                              Base::mN,

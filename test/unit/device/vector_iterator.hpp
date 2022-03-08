@@ -341,8 +341,9 @@ namespace rocwmma
                                    DataT        param1,
                                    DataT        param2)
     {
-        // Test is for any thread
-        if(threadIdx.x == 0 && threadIdx.y == 0)
+        // Just need one thread
+        if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0 &&
+           blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0)
         {
             out[0] = static_cast<DataT>(SUCCESS);
 
