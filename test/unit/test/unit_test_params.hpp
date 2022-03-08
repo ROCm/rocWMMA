@@ -67,14 +67,11 @@ namespace rocwmma
         /// Grouped compile time kernel parameters
         ///
 
-        // 16 x 16 has support for double types
-        using TestTypes16x16 = typename Concat<TestTypesIOC, TestTypeDouble>::Result;
+        // 16 has support for double types
+        using TestTypes16 = typename Concat<TestTypesIOC, TestTypeDouble>::Result;
 
-        // 32 x 32 does not support double types
-        using TestTypes32x32 = TestTypesIOC;
-
-        // BlockK variances for particular BlockM, BlockN
-        using TestBlockSizes16x16 = std::tuple<std::tuple<I<16>, I<16>>,
+        // Variances for particular BlockM, BlockN
+        using TestBlockSizes16 = std::tuple<std::tuple<I<16>, I<16>>,
                                                std::tuple<I<16>, I<32>>,
                                                std::tuple<I<16>, I<64>>
 #ifdef ROCWMMA_EXTENDED_TESTS
@@ -84,7 +81,7 @@ namespace rocwmma
 #endif // ROCWMMA_EXTENDED_TESTS
                                                >;
 
-        using TestBlockSizes32x32 = std::tuple<std::tuple<I<32>, I<8>>,
+        using TestBlockSizes32 = std::tuple<std::tuple<I<32>, I<8>>,
                                                std::tuple<I<32>, I<16>>,
                                                std::tuple<I<32>, I<32>>,
                                                std::tuple<I<32>, I<64>>
