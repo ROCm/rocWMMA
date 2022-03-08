@@ -37,11 +37,11 @@ namespace rocwmma
     {
         using Base = UnitTestParams;
 
-        // Types: ALL + double
-        // Block Sizes: 16 x 16 x BlockK
+        // Types: Base IOC + double
+        // Block Sizes:  16 x BlockN
         // Layouts: N
-        using Types        = typename Base::TestTypes16x16;
-        using BlockSizes   = typename Base::TestBlockSizes16x16;
+        using Types        = typename Base::TestTypes16;
+        using BlockSizes   = typename Base::TestBlockSizes16;
         using Layouts      = typename Base::TestLayoutsN;
         using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
 
