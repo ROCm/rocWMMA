@@ -118,7 +118,7 @@ Below are the project options available to build rocWMMA library with/without cl
 +------------------------------+-------------------------------------+-----------------------------------------------+
 |ROCWMMA_BUILD_TESTS           |Build Tests                          |ON                                             |
 +------------------------------+-------------------------------------+-----------------------------------------------+
-|ROCWMMA_BUILD_SAMPLES         |Build Samples                        |ON                                            |
+|ROCWMMA_BUILD_SAMPLES         |Build Samples                        |ON                                             |
 +------------------------------+-------------------------------------+-----------------------------------------------+
 |ROCWMMA_BUILD_DOCS            |Build doxygen documentation from code|OFF                                            |
 +------------------------------+-------------------------------------+-----------------------------------------------+
@@ -222,7 +222,7 @@ After configuration, build with
 The tests in <build_dir> contains executables in the table below.
 
 ====================================== ===========================================================================================================
-executable name                         description
+executable name                        description
 ====================================== ===========================================================================================================
 dlrm/dlrm_dot_test-*                   a DLRM implementation using rocWMMA API
 dlrm/dlrm_dot_lds_test-*               a DLRM implementation using rocWMMA API with LDS shared memory

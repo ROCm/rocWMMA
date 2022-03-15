@@ -267,7 +267,7 @@ namespace rocwmma
  * @{
  */
 
-    /*! \class IOConfig
+    /*! \struct IOConfig
  *  \brief Definition of ROCWMMA fragment input / output configurations
  *         in specific matrix context.
  *

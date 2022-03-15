@@ -128,7 +128,10 @@ namespace rocwmma
 
     } // namespace detail
 
-    // Functional vector class
+    /*! \class VecT
+    *  \brief  Functional vector class
+    *
+    */
     template <typename T, uint32_t VecSize>
     class __align__(4) VecT
     {
