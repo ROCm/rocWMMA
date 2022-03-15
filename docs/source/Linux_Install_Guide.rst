@@ -126,7 +126,7 @@ Below are the project options available to build rocWMMA library with/without cl
 +------------------------------+-------------------------------------+-----------------------------------------------+
 |ROCWMMA_BUILD_VALIDATION_TESTS|Build validation tests               |ON (requires ROCWMMA_BUILD_TESTS=ON)           |
 +------------------------------+-------------------------------------+-----------------------------------------------+
-|ROCWMMA_BUILD_BENCHMARK_TESTS |Build benchmark tests                |ON (requires ROCWMMA_BUILD_TESTS=ON)           |
+|ROCWMMA_BUILD_BENCHMARK_TESTS |Build benchmark tests                |OFF (requires ROCWMMA_BUILD_TESTS=ON)          |
 +------------------------------+-------------------------------------+-----------------------------------------------+
 |ROCWMMA_BUILD_EXTENDED_TESTS  |Build extended testing coverage      |OFF (requires ROCWMMA_BUILD_TESTS=ON)          |
 +------------------------------+-------------------------------------+-----------------------------------------------+
@@ -185,7 +185,7 @@ After configuration, build with
 The samples folder in <build_dir> contains executables in the table below.
 
 ================ ===========================================================================
-executable name                         description
+executable name  description
 ================ ===========================================================================
 simple-gemm      a simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API
 sgemv            a simple GEMV operation [y = alpha * (A) * x + beta * y] using rocWMMA API
@@ -202,14 +202,14 @@ rocWMMA has several test suites that can be built:
 - Unit tests
 
 DLRM tests cover a Deep Learning Recommendation Model implemented with rocWMMA.
+
 GEMM tests cover block-wise Generalized Matrix Multiplication (GEMM) implemented with rocWMMA.
+
 Unit tests cover various aspects of rocWMMA API and internal functionality.
 
-rocWMMA can build both validation and benchmark tests.
-
-The library uses CPU or rocBLAS methods for validation (where available) and benchmark comparisons based on the provided project option.
-
-By default, the project is linked against rocBLAS for validating results. Minimum ROCBLAS library version requirement is 4.0.
+rocWMMA can build both validation and benchmark tests. The library uses CPU or rocBLAS methods for validation (where available) and benchmark comparisons based on the provided project option.
+By default, the project is linked against rocBLAS for validating results. 
+Minimum ROCBLAS library version requirement is 4.0.
 
 To build library and tests, run the following command :
 
@@ -226,12 +226,10 @@ executable name                        description
 ====================================== ===========================================================================================================
 dlrm/dlrm_dot_test-*                   a DLRM implementation using rocWMMA API
 dlrm/dlrm_dot_lds_test-*               a DLRM implementation using rocWMMA API with LDS shared memory
-====================================== ===========================================================================================================
 gemm/mma_sync_test-*                   a simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API 
 gemm/mma_sync_multi_test-*             a modified GEMM operation, each wave targets a sub-grid of output blocks using rocWMMA API
 gemm/mma_sync_multi_lds_test-*         a modified GEMM operation, each wave targets a sub-grid of output blocks using LDS memory and rocWMMA API
 gemm/mma_sync_barrier_test-*           a simple GEMM operation with wave synchronization
-====================================== ===========================================================================================================
 unit/fill_fragment_test                tests fill_fragment API function
 unit/load_store_matrix_sync_test       tests load_matrix_sync and store_matrix_sync API functions
 unit/load_store_matrix_coop_sync_test  tests load_matrix_coop_sync and store_matrix_coop_sync API functions
@@ -242,6 +240,7 @@ unit/vector_iterator_test              tests internal vector storage implementat
 ====================================== ===========================================================================================================
 
 *= validate: executables that compare outputs for correctness against reference sources such as CPU or rocBLAS calculations.
+
 *= bench: executables that measure kernel execution speeds and may compare against those of rocBLAS references.
 
 
