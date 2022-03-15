@@ -46,7 +46,7 @@ namespace rocwmma
                                       std::tuple<I<32>, I<32>, I<16>>,
                                       std::tuple<I<32>, I<32>, I<32>>>;
         using Layouts     = typename Base::TestLayoutsTT;
-        using LayoutsLds  = typename Base::TestLayoutTypes;
+        using LayoutsLds  = typename Base::TestLdsLayoutTypes;
         using MappingsLds = typename Base::TestMappingsLds;
         using BlocksXY    = std::tuple<std::tuple<I<1>, I<2>>>;
         using KernelParams =
