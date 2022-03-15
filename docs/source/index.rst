@@ -7,8 +7,8 @@ rocWMMA User Guide
    :caption: Contents:
    :numbered:
 
-   Linux_Install_Guide
    API_Reference_Guide
+   Linux_Install_Guide
    Programmers_Guide
    Contributors_Guide
    Disclaimer

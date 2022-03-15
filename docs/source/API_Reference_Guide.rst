@@ -3,16 +3,14 @@ Introduction
 ************
 
 rocWMMA is AMD's C++ library for accelerating mixed precision matrix multiply-accumulate operations
+leveraging specialized GPU matrix cores on AMD's latest discrete GPUs. 
 
-leveraging specialized GPU matrix cores on AMD's latest discrete GPUs. A C++ API is provided to facilitate
+A C++ API is provided to facilitate decomposition of matrix multiply-accumulate problems into 
+discretized block fragments and to parallelize block-wise operations across multiple GPU wavefronts. 
 
-decomposition of matrix multiply-accumulate problems into discretized block fragments and to parallelize
-
-block-wise operations across multiple GPU wavefronts. The API is implemented in GPU device code: it empowers
-
-user device kernel code with direct use of GPU matrix cores. Moreover, this code can benefit from inline compiler
-
-optimization passes and does not incur additional overhead of external runtime calls or extra kernel launches.
+The API is implemented in GPU device code: it empowers user device kernel code with direct use of GPU matrix cores. 
+Moreover, this code can benefit from inline compiler optimization passes and does not incur additional 
+overhead of external runtime calls or extra kernel launches.
 
 ======== =========
 Acronym  Expansion
@@ -24,19 +22,13 @@ Acronym  Expansion
 ======== =========
 
 rocWMMA is written in C++14 and may be applied directly in device kernel code. Library code is templated
-
 for modularity and uses available meta-data to provide opportunities for compile-time inferences and optimizations.
 
 The rocWMMA API exposes block-wise data load / store and matrix multiply-accumulate functions appropriately sized
-
 for thread-block execution on data fragments. Matrix multiply-accumulate functionality supports mixed precision inputs
-
 and outputs with native fixed-precision accumulation. The rocWMMA Coop API provides wave/warp collaborations
-
 within the thread-blocks for block-wise data load and stores. Supporting code is required for GPU device
-
 management and for kernel invocation. Kernel code samples and tests provided are built and launched via the HIP
-
 ecosystem within ROCm.
 
 Below is a simple example code for calling rocWMMA functions load_matrix_sync, store_matrix_sync, fill_fragment, mma_sync.
@@ -71,7 +63,6 @@ Below is a simple example code for calling rocWMMA functions load_matrix_sync, s
            }
        }
    }
-
 
    // Supports BlockM/N square sizes of
    // : 16 x 16
@@ -303,7 +294,9 @@ Supported Data Types
 
 rocWMMA mixed precision multiply-accumulate operations support the following data type combinations: 
 
-Data Types <Ti / To / Tc> = <Input type / Output Type / Compute Type>
+Data Types **<Ti / To / Tc>** = <Input type / Output Type / Compute Type>
+
+where
 
 Input Type = Matrix A/B
 
@@ -375,18 +368,30 @@ Compute Type = math / accumulation type
 Supported Matrix Layouts
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
- (N = col major, T = row major)
+(N = col major, T = row major)
 
-<LayoutA, LayoutB, Layout C, LayoutD>
-<N, N, N, N>
-<N, N, T, T>
-<N, T, N, N>
-<N, T, T, T>
-<T, N, N, N>
-<T, N, T, T>
-<T, T, N, N>
-<T, T, T, T>
+.. tabularcolumns::
+   |C|C|C|C|
 
++---------+--------+---------+--------+
+|LayoutA  |LayoutB |Layout C |LayoutD |
++=========+========+=========+========+
+|N        |N       |N        |N       |
++---------+--------+---------+--------+
+|N        |N       |T        |T       |
++---------+--------+---------+--------+
+|N        |T       |N        |N       |
++---------+--------+---------+--------+
+|N        |T       |T        |T       |
++---------+--------+---------+--------+
+|T        |N       |N        |N       |
++---------+--------+---------+--------+
+|T        |N       |T        |T       |
++---------+--------+---------+--------+
+|T        |T       |N        |N       |
++---------+--------+---------+--------+
+|T        |T       |T        |T       |
++---------+--------+---------+--------+
 
 -----------------
 Using rocWMMA API
