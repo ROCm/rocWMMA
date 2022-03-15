@@ -314,7 +314,7 @@ Compute Type = math / accumulation type
 .. tabularcolumns::
    |C|C|C|
 
-+-------------------------- ---+------------+-----------+---------------+
++------------------------------+------------+-----------+---------------+
 |Ti / To / Tc                  |BlockM      |BlockN     |BlockK         |
 +==============================+============+===========+===============+
 |i8 / i32 / i32                |16          |16         |Min: 16, pow2  |
@@ -367,6 +367,7 @@ Compute Type = math / accumulation type
 +------------------------------+------------+-----------+---------------+
 |f64** / f64** / f64**         |16          |16         |Min: 4, pow2   |
 +------------------------------+------------+-----------+---------------+
+
 *= matrix unit accumulation is natively 32 bit precision, and is converted to desired type.
 **= f64 datatype is only supported on MI-200 class AMDGPU and successors.
 
@@ -400,31 +401,31 @@ rocWMMA Datatypes
 matrix_a
 ''''''''
 
-.. doxygenstruct:: matrix_a
+.. doxygenstruct:: rocwmma::matrix_a
 
 
 matrix_b
 ''''''''
 
-.. doxygenstruct:: matrix_b
+.. doxygenstruct:: rocwmma::matrix_b
 
 
 accumulator
 '''''''''''
 
-.. doxygenstruct:: accumulator
+.. doxygenstruct:: rocwmma::accumulator
 
 
 row_major
 '''''''''
 
-.. doxygenstruct:: row_major
+.. doxygenstruct:: rocwmma::row_major
 
 
 col_major
 '''''''''
 
-.. doxygenstruct:: col_major
+.. doxygenstruct:: rocwmma::col_major
 
 
 VecT
@@ -433,10 +434,23 @@ VecT
 .. doxygenclass:: VecT
 
 
+
 VectorStorage
 '''''''''''''
 
-.. doxygenclass:: VectorStorage
+.. doxygenstruct:: rocwmma::detail::VectorStorage
+
+
+IOConfig
+''''''''''''
+
+.. doxygenstruct:: rocwmma::IOConfig
+
+
+IOShape
+''''''''''''
+
+.. doxygenstruct:: rocwmma::detail::IOShape
 
 
 rocWMMA Enumeration
@@ -448,7 +462,7 @@ rocWMMA Enumeration
 layout_t
 ''''''''''''
 
-.. doxygenenum:: layout_t
+.. doxygenenum:: rocwmma::layout_t
 
 
 rocWMMA API functions
@@ -456,15 +470,39 @@ rocWMMA API functions
 
 .. doxygenfunction:: fill_fragment
    :outline:
-.. doxygenfunction:: load_matrix_sync
+
+.. doxygenfunction:: load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag, const DataT* data, uint32_t ldm)
    :outline:
-.. doxygenfunction:: store_matrix_sync
+
+.. doxygenfunction:: load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT>& frag, const DataT* data, uint32_t ldm, layout_t layout)
    :outline:
+
+.. doxygenfunction:: store_matrix_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag, uint32_t ldm)
+   :outline:
+
+.. doxygenfunction:: store_matrix_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag, uint32_t ldm,layout_t layout)
+   :outline:
+
 .. doxygenfunction:: mma_sync
    :outline:
+
 .. doxygenfunction:: synchronize_workgroup
    :outline:
-.. doxygenfunction:: load_matrix_coop_sync
+
+.. doxygenfunction:: load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag, const DataT* data, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount, uint32_t splitCount)
    :outline:
-.. doxygenfunction:: store_matrix_coop_sync
+
+.. doxygenfunction:: load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag, const DataT* data, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount)
+   :outline:
+
+.. doxygenfunction:: load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag, const DataT* data, uint32_t ldm)
+   :outline:
+
+.. doxygenfunction:: store_matrix_coop_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount, uint32_t splitCount)
+   :outline:
+
+.. doxygenfunction:: store_matrix_coop_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount)
+   :outline:
+
+.. doxygenfunction:: store_matrix_coop_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag, uint32_t ldm)
    :outline:
