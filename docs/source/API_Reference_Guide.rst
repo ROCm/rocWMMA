@@ -292,7 +292,7 @@ may be required due to the nature this memory usage.
 Supported Data Types
 ^^^^^^^^^^^^^^^^^^^^
 
-rocWMMA mixed precision multiply-accumulate operations support the following data type combinations: 
+rocWMMA mixed precision multiply-accumulate operations support the following data type combinations.
 
 Data Types **<Ti / To / Tc>** = <Input type / Output Type / Compute Type>
 
@@ -362,6 +362,7 @@ Compute Type = math / accumulation type
 +------------------------------+------------+-----------+---------------+
 
 *= matrix unit accumulation is natively 32 bit precision, and is converted to desired type.
+
 **= f64 datatype is only supported on MI-200 class AMDGPU and successors.
 
 
