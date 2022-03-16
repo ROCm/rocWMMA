@@ -102,9 +102,8 @@ namespace rocwmma
 
     // clang-format on
 
-    // Runtime data layout flags
     /*! \struct layout_t
- *  \brief Definition of data storage layout
+ *  \brief Definition of Runtime data layout flags
  *  @var mem_row_major
  *  @var mem_col_major 
  */

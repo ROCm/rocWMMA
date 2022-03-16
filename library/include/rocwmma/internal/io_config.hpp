@@ -284,20 +284,20 @@ namespace rocwmma
  * @tparam BlockM/N/K block dimensions
  * @tparam DataT data type
  * @tparam DataLayout in-memory layout as col_major or row_major
- * @var BlockDim leading block dimension (row / col size)
- * @var KDim minor block dimension (row / col count)
- * @var MaxVectorWidth maximum allowable vector width
- * @var VectorWidth currently used vector width
- * @var CoopIndex shared wave index (0 = row, 1 = col)
- * @var IOTraits Input/output traits specific to AMDGCN architecture
- * @var Packer Packs raw fragment data into register
- * @var Unpacker Unpacks registers to raw fragment data
- * @var Broadcaster Sets all fragment data to a desired value
- * @var MatrixLayout Maps GPU threads to matrix shape or geometry
- * @var Loader Issues load instructions for raw fragment data
- * @var Storer Issues store instructions for raw fragment data
- * @var CoopLoader Issues cooperative load instructions for raw fragment data
- * @var CoopStorer Issues cooperative store instructions for raw fragment data
+ * @param BlockDim leading block dimension (row / col size)
+ * @param KDim minor block dimension (row / col count)
+ * @param MaxVectorWidth maximum allowable vector width
+ * @param VectorWidth currently used vector width
+ * @param CoopIndex shared wave index (0 = row, 1 = col)
+ * @param IOTraits Input/output traits specific to AMDGCN architecture
+ * @param Packer Packs raw fragment data into register
+ * @param Unpacker Unpacks registers to raw fragment data
+ * @param Broadcaster Sets all fragment data to a desired value
+ * @param MatrixLayout Maps GPU threads to matrix shape or geometry
+ * @param Loader Issues load instructions for raw fragment data
+ * @param Storer Issues store instructions for raw fragment data
+ * @param CoopLoader Issues cooperative load instructions for raw fragment data
+ * @param CoopStorer Issues cooperative store instructions for raw fragment data
  */
 
     template <typename MatrixT,
