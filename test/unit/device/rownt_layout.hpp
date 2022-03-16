@@ -51,8 +51,10 @@ namespace rocwmma
             BlockDim = BlockN,
             KDim     = BlockM,
 
-            MaxVectorWidth = detail::VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth,
-            VectorWidth    = std::is_same<LayoutP, row_major>::value ? MaxVectorWidth : 1
+            MaxVectorWidth = std::is_same<DataT, float64_t>::value
+                                    ? 1
+                                    : 4, // Actual output of the mfma hardware
+            VectorWidth    = std::is_same<DataLayout, col_major>::value ? MaxVectorWidth : 1,
         };
 
         using IOTraits = IOTraits<BlockDim, KDim, DataT, VectorWidth>;
