@@ -51,8 +51,10 @@ namespace rocwmma
             BlockDim = BlockN,
             KDim     = BlockM,
 
-            MaxVectorWidth = detail::VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth,
-            VectorWidth    = std::is_same<LayoutP, row_major>::value ? MaxVectorWidth : 1
+            MaxVectorWidth = std::is_same<DataT, float64_t>::value
+                                    ? 1
+                                    : detail::VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth,
+            VectorWidth    = std::is_same<LayoutP, col_major>::value ? MaxVectorWidth : 1,
         };
 
         using IOTraits = IOTraits<BlockDim, KDim, DataT, VectorWidth>;
@@ -75,9 +77,8 @@ namespace rocwmma
             for(uint32_t j = 0; j < VectorWidth; j++)
             {
                 auto index
-                    = (std::get<MajorIndex>(matrixCoord) + std::get<MajorIndex>(baseOffset) + j)
-                          * ld
-                      + (std::get<MinorIndex>(matrixCoord) + std::get<MinorIndex>(baseOffset));
+                    = (std::get<MajorIndex>(matrixCoord) * ld + std::get<MinorIndex>(matrixCoord))
+                      + Mapping::dataOffset(baseOffset, ld) + j;
                 out[index] = in[index];
             }
             baseOffset += LayoutT::incrementalOffset(i);
