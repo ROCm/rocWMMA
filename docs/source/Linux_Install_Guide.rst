@@ -120,8 +120,6 @@ Below are the project options available to build rocWMMA library with/without cl
 +------------------------------+-------------------------------------+-----------------------------------------------+
 |ROCWMMA_BUILD_SAMPLES         |Build Samples                        |ON                                             |
 +------------------------------+-------------------------------------+-----------------------------------------------+
-|ROCWMMA_BUILD_DOCS            |Build doxygen documentation from code|OFF                                            |
-+------------------------------+-------------------------------------+-----------------------------------------------+
 |ROCWMMA_BUILD_ASSEMBLY        |Generate assembly files              |OFF                                            |
 +------------------------------+-------------------------------------+-----------------------------------------------+
 |ROCWMMA_BUILD_VALIDATION_TESTS|Build validation tests               |ON (requires ROCWMMA_BUILD_TESTS=ON)           |
