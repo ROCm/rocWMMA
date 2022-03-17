@@ -75,16 +75,21 @@ namespace rocwmma
             dataInstance->copyData(dataInstance->deviceIn(),
                                    dataInstance->hostIn(),
                                    std::get<0>(paddedProbSize) * std::get<1>(paddedProbSize));
+
+            // Initialize device output data with NaN
+            MatrixUtil<Layout>::fill(
+                dataInstance->hostOut().get(), Base::mM, Base::mN, std::numeric_limits<DataT>::signaling_NaN());
+
+            dataInstance->copyData(dataInstance->deviceOut(), dataInstance->hostOut(), Base::mM * Base::mN);
         }
 
         void validateResultsImpl() final
         {
             auto& dataInstance = Base::DataStorage::instance();
 
-            // Re-use host in memory for result
             // Use M x N as output is not padded
             const int64_t sizeD        = Base::mM * Base::mN;
-            auto&         kernelResult = dataInstance->hostIn();
+            auto&         kernelResult = dataInstance->hostOut();
 
             // Cache current kernel result from device
             dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);

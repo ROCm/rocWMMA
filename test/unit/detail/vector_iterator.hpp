@@ -53,21 +53,20 @@ namespace rocwmma
             // Need at least 1 element for the result
             auto& dataInstance = Base::DataStorage::instance();
             dataInstance->resizeStorage(probsize);
+
+            dataInstance->hostOut().get()[0] = static_cast<DataT>(ERROR_VALUE);
+            dataInstance->copyData(dataInstance->deviceOut(), dataInstance->hostOut(), 1);
         }
 
         void validateResultsImpl() final
         {
             auto& dataInstance = Base::DataStorage::instance();
 
-            // Allocated managed memory for results on host
-            const int64_t sizeD        = Base::mM * Base::mN;
-            auto          kernelResult = dataInstance->template allocHost<DataT>(sizeD);
-
             // Cache current kernel result from device
-            dataInstance->copyData(kernelResult, dataInstance->deviceOut(), sizeD);
+            dataInstance->copyData(dataInstance->hostOut(), dataInstance->deviceOut(), 1);
 
             // Check the single output result
-            Base::mValidationResult = (kernelResult[0] == DataT(SUCCESS));
+            Base::mValidationResult = (dataInstance->hostOut().get()[0] == DataT(SUCCESS));
         }
 
         typename Base::KernelFunc kernelImpl() const final

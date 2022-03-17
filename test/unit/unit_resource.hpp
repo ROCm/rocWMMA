@@ -83,6 +83,7 @@ namespace rocwmma
         void resizeStorage(ProblemSize const& size);
 
         HostPtrT&   hostIn();
+        HostPtrT&   hostOut();
         DevicePtrT& deviceIn();
         DevicePtrT& deviceOut();
 
@@ -91,7 +92,7 @@ namespace rocwmma
 
     protected:
         DevicePtrT  mDeviceIn, mDeviceOut;
-        HostPtrT    mHostIn;
+        HostPtrT    mHostIn, mHostOut;
         ProblemSize mCurrentProblemSize;
         int64_t     mMaxCapacity;
     };
