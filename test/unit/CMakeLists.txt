@@ -66,22 +66,26 @@ set(ContaminationTestSources ${UnitCommonSources}
                      )
 
 set(LayoutTestSources ${UnitCommonSources}
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/col_layout_16x16_n.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/col_layout_16x16_t.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/col_layout_32x32_n.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/col_layout_32x32_t.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/colnt_layout_16x16_n.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/colnt_layout_16x16_t.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/colnt_layout_32x32_n.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/colnt_layout_32x32_t.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/row_layout_16x16_n.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/row_layout_16x16_t.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/row_layout_32x32_n.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/row_layout_32x32_t.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/rownt_layout_16x16_n.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/rownt_layout_16x16_t.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/rownt_layout_32x32_n.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/rownt_layout_32x32_t.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/col_layout_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/col_layout_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/col_layout_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/col_layout_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/col_layout_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/colnt_layout_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/colnt_layout_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/colnt_layout_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/colnt_layout_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/colnt_layout_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/row_layout_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/row_layout_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/row_layout_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/row_layout_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/row_layout_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/rownt_layout_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/rownt_layout_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/rownt_layout_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/rownt_layout_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/layout_test/rownt_layout_256.cpp
                        )
 
 set(MapUtilTestSources ${UnitCommonSources}
