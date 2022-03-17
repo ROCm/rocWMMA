@@ -49,32 +49,32 @@ namespace rocwmma
             auto& dataInstance = Base::DataStorage::instance();
 
             // Initialize matrix storage
-            const int64_t matrixElements = Base::mM * Base::mN;
+            const int64_t sizeD = Base::mM * Base::mN;
             dataInstance->resizeStorage(probsize);
 
-            // Initialize matrix data on host
+            // Initialize data on host
             MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
+            MatrixUtil<Layout>::fill(
+                dataInstance->hostOut().get(), Base::mM, Base::mN, std::numeric_limits<DataT>::signaling_NaN());
 
-            dataInstance->copyData(
-                dataInstance->deviceIn(), dataInstance->hostIn(), matrixElements);
+            // Copy init data to device
+            dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), sizeD);
+            dataInstance->copyData(dataInstance->deviceOut(), dataInstance->hostOut(), sizeD);
         }
 
         void validateResultsImpl() final
         {
             auto& dataInstance = Base::DataStorage::instance();
 
-            // Allocated managed memory for results on host
-            const int64_t matrixElements = Base::mM * Base::mN;
-
-            auto kernelResult = dataInstance->template allocHost<DataT>(matrixElements);
+            const int64_t sizeD = Base::mM * Base::mN;
 
             // Cache current kernel result from device
-            dataInstance->copyData(kernelResult, dataInstance->deviceOut(), matrixElements);
+            dataInstance->copyData(dataInstance->hostOut(), dataInstance->deviceOut(), sizeD);
 
             double errorTolerance = 10.0;
 
             std::tie(Base::mValidationResult, Base::mMaxRelativeError)
-                = compareEqual<DataT, DataT, Layout, Layout>(kernelResult.get(),
+                = compareEqual<DataT, DataT, Layout, Layout>(dataInstance->hostOut().get(),
                                                              dataInstance->hostIn().get(),
                                                              Base::mM,
                                                              Base::mN,

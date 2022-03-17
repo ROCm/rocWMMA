@@ -40,6 +40,7 @@ namespace rocwmma
         : mDeviceIn(nullptr, [](DataT*) {})
         , mDeviceOut(nullptr, [](DataT*) {})
         , mHostIn(nullptr)
+        , mHostOut(nullptr)
         , mCurrentProblemSize({0, 0})
         , mMaxCapacity(0)
     {
@@ -54,6 +55,7 @@ namespace rocwmma
         {
             mMaxCapacity = newSize;
             mHostIn      = std::move(Base::template allocHost<DataT>(mMaxCapacity));
+            mHostOut      = std::move(Base::template allocHost<DataT>(mMaxCapacity));
             mDeviceIn    = std::move(Base::template allocDevice<DataT>(mMaxCapacity));
             mDeviceOut   = std::move(Base::template allocDevice<DataT>(mMaxCapacity));
         }
@@ -64,6 +66,12 @@ namespace rocwmma
     auto UnitResource<DataT>::hostIn() -> HostPtrT&
     {
         return mHostIn;
+    }
+
+    template <typename DataT>
+    auto UnitResource<DataT>::hostOut() -> HostPtrT&
+    {
+        return mHostOut;
     }
 
     template <typename DataT>

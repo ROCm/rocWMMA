@@ -69,20 +69,18 @@ namespace rocwmma
                 dataInstance->deviceIn(), dataInstance->hostIn(), paddedElements);
 
             // Initialize output data on host (padded size, all with marker elements)
-            auto outputInit = dataInstance->template allocHost<DataT>(paddedElements);
-            MatrixUtil<Layout>::fill(outputInit.get(),
+            MatrixUtil<Layout>::fill(dataInstance->hostOut().get(),
                                      std::get<0>(paddedProbSize),
                                      std::get<1>(paddedProbSize),
                                      std::numeric_limits<DataT>::max());
-            dataInstance->copyData(dataInstance->deviceOut(), outputInit, paddedElements);
+            dataInstance->copyData(dataInstance->deviceOut(), dataInstance->hostOut(), paddedElements);
         }
 
         void validateResultsImpl() final
         {
             auto& dataInstance = Base::DataStorage::instance();
-            auto& kernelResult = dataInstance->hostIn();
+            auto& kernelResult = dataInstance->hostOut();
 
-            // Re-use host in memory for result
             // Use padded MxN as output is padded
             auto          paddedSize     = dataInstance->problemSize();
             const int64_t paddedElements = std::get<0>(paddedSize) * std::get<1>(paddedSize);
