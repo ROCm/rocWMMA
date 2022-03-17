@@ -199,7 +199,7 @@ rocWMMA has several test suites that can be built:
 - GEMM tests
 - Unit tests
 
-DLRM tests cover a Deep Learning Recommendation Model implemented with rocWMMA.
+DLRM tests cover the dot product interactions between embeddings used in DLRM.
 
 GEMM tests cover block-wise Generalized Matrix Multiplication (GEMM) implemented with rocWMMA.
 
