@@ -67,6 +67,11 @@ Building and Installing rocWMMA
 For most users building from source is not necessary, as rocWMMA can be used after installing the pre-built
 packages as described above. If desired, the following instructions can be used to build rocWMMA from source.
 
+Requirements
+^^^^^^^^^^^^
+As a general rule, 5GB of system memory is required for a full rocWMMA build. This value can be lower if rocWMMA is built without tests. This value may also increase in the future as more functions are added to rocWMMA.
+
+
 Download rocWMMA
 ^^^^^^^^^^^^^^^^
 
