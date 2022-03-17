@@ -10,14 +10,19 @@ Memory addresses are treated as 1D arrays and the rocWMMA API can opaquely handl
 
 rocWMMA is released as a header library, but also includes test and sample projects to validate and illustrate example usages of the C++ API. GEMM matrix multiplication is used as primary validation given the heavy precedent for the library, however the usage portfolio is growing significantly and demonstrates different ways rocWMMA may be consumed.
 
-## Minimum Requirements
+## Minimum GPU Requirements
+* AMD Instinct&trade; class GPU with matrix core support: Minimum MI-100
+* Note: Double precision FP64 datatype support minimum MI-200 +
+
+## Minimum Software Requirements
 * ROCm stack minimum version 4.3
+* [ROCm-cmake version 5.0](https://github.com/RadeonOpenCompute/rocm-cmake/tree/rocm-5.0.0)
 * C++ 14
-* CMake >=3.5
+* CMake >=3.6
 * OpenMP
 
 Optional:
-* rocblas >= 4.0 (if rocBLAS) https://github.com/ROCmSoftwarePlatform/rocBLAS/releases/tag/rocm-4.0.0
+* [rocBLAS 2.39.0 for ROCm 4.3.0](https://github.com/ROCmSoftwarePlatform/rocBLAS/releases/tag/rocm-4.3.0) (for rocBLAS validation / benchmarks)
 * doxygen (for building documentation)
 
 ## Currently supported configurations (ongoing)
@@ -213,11 +218,11 @@ Optional:
             <td>Min: 2, pow2</td>
         </tr>
         <tr>
-            <td>f64 / f64 / f64</td>
+            <td>f64 / f64 / f64*</td>
             <td>16</td>
             <td>16</td>
             <td>Min: 4, pow2</td>
-            <td></td>
+            <td rowspan=2>*= Supported on MI-200 +</td>
         </tr>
     </tbody>
   </table>
