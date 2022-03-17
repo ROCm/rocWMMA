@@ -26,7 +26,7 @@
 
 #include <type_traits>
 
-#include "detail/colnt_layout.hpp"
+#include "detail/col_layout.hpp"
 #include "kernel_generator.hpp"
 #include "test/unit_test.hpp"
 
@@ -38,16 +38,16 @@ namespace rocwmma
         using Base = UnitTestParams;
 
         // Types: Base IOC
-        // Block Sizes: 32 x BlockN
-        // Layouts: N
+        // Block Sizes: 128 x BlockN
+        // Layouts: N, T
         using Types        = typename Base::TestTypesIOC;
-        using BlockSizes   = typename Base::TestBlockSizes32;
-        using Layouts      = typename Base::TestLayoutsN;
+        using BlockSizes   = typename Base::TestBlockSizes128;
+        using Layouts      = typename Base::TestLayoutsAll;
         using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
 
         // Assemble the kernel generator
-        // Kernel: ColNTLayout
-        using GeneratorImpl   = ColNTLayoutGenerator;
+        // Kernel: ColLayout
+        using GeneratorImpl   = ColLayoutGenerator;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -63,18 +63,18 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class ColNTLayoutTest32x32N : public rocwmma::UnitTest
+class ColLayoutTest128 : public rocwmma::UnitTest
 {
 };
 
-TEST_P(ColNTLayoutTest32x32N, RunKernel)
+TEST_P(ColLayoutTest128, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(
     KernelTests,
-    ColNTLayoutTest32x32N,
+    ColLayoutTest128,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
                        ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
