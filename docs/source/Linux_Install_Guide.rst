@@ -67,9 +67,15 @@ Building and Installing rocWMMA
 For most users building from source is not necessary, as rocWMMA can be used after installing the pre-built
 packages as described above. If desired, the following instructions can be used to build rocWMMA from source.
 
-Requirements
-^^^^^^^^^^^^
+System Requirements
+^^^^^^^^^^^^^^^^^^^
 As a general rule, 5GB of system memory is required for a full rocWMMA build. This value can be lower if rocWMMA is built without tests. This value may also increase in the future as more functions are added to rocWMMA.
+
+
+Minimum GPU Requirements
+^^^^^^^^^^^^^^^^^^^^^^^^
+* AMD Instinct™ class GPU with matrix core support: Minimum MI-100
+* Note: Double precision FP64 datatype support minimum MI-200 +
 
 
 Download rocWMMA
@@ -212,7 +218,7 @@ Unit tests cover various aspects of rocWMMA API and internal functionality.
 
 rocWMMA can build both validation and benchmark tests. The library uses CPU or rocBLAS methods for validation (where available) and benchmark comparisons based on the provided project option.
 By default, the project is linked against rocBLAS for validating results. 
-Minimum ROCBLAS library version requirement is 4.0.
+Minimum ROCBLAS library version requirement is 2.39.0 for ROCm 4.3.0
 
 To build library and tests, run the following command :
 
