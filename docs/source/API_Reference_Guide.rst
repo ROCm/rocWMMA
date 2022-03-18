@@ -305,7 +305,7 @@ Output Type = Matrix C/D
 Compute Type = math / accumulation type
 
 .. tabularcolumns::
-   |C|C|C|
+   |C|C|C|C|
 
 +------------------------------+------------+-----------+---------------+
 |Ti / To / Tc                  |BlockM      |BlockN     |BlockK         |
