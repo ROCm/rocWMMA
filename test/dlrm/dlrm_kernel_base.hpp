@@ -166,10 +166,12 @@ namespace rocwmma
         uint32_t mMPadded, mKPadded;
 
         // Execution flow control
-        uint32_t        mRepeats;
-        bool            mRunFlag      = true;
+        uint32_t mRepeats;
+        bool     mRunFlag          = true;
+        bool     mValidationResult = false;
+        double   mMaxRelativeError;
+
         DlrmDirection_t passDirection = DlrmDirection_t::Forward;
-        validate_data_t mValidationResult;
 
         // Performance
         float64_t mTotalGFlops, mMeasuredGFlopsPerSec;
