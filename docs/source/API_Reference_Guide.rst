@@ -3,16 +3,14 @@ Introduction
 ************
 
 rocWMMA is AMD's C++ library for accelerating mixed precision matrix multiply-accumulate operations
+leveraging specialized GPU matrix cores on AMD's latest discrete GPUs. 
 
-leveraging specialized GPU matrix cores on AMD's latest discrete GPUs. A C++ API is provided to facilitate
+A C++ API is provided to facilitate decomposition of matrix multiply-accumulate problems into 
+discretized block fragments and to parallelize block-wise operations across multiple GPU wavefronts. 
 
-decomposition of matrix multiply-accumulate problems into discretized block fragments and to parallelize
-
-block-wise operations across multiple GPU wavefronts. The API is implemented in GPU device code: it empowers
-
-user device kernel code with direct use of GPU matrix cores. Moreover, this code can benefit from inline compiler
-
-optimization passes and does not incur additional overhead of external runtime calls or extra kernel launches.
+The API is implemented in GPU device code: it empowers user device kernel code with direct use of GPU matrix cores. 
+Moreover, this code can benefit from inline compiler optimization passes and does not incur additional 
+overhead of external runtime calls or extra kernel launches.
 
 ======== =========
 Acronym  Expansion
@@ -24,19 +22,13 @@ Acronym  Expansion
 ======== =========
 
 rocWMMA is written in C++14 and may be applied directly in device kernel code. Library code is templated
-
 for modularity and uses available meta-data to provide opportunities for compile-time inferences and optimizations.
 
 The rocWMMA API exposes block-wise data load / store and matrix multiply-accumulate functions appropriately sized
-
 for thread-block execution on data fragments. Matrix multiply-accumulate functionality supports mixed precision inputs
-
 and outputs with native fixed-precision accumulation. The rocWMMA Coop API provides wave/warp collaborations
-
 within the thread-blocks for block-wise data load and stores. Supporting code is required for GPU device
-
 management and for kernel invocation. Kernel code samples and tests provided are built and launched via the HIP
-
 ecosystem within ROCm.
 
 Below is a simple example code for calling rocWMMA functions load_matrix_sync, store_matrix_sync, fill_fragment, mma_sync.
@@ -71,7 +63,6 @@ Below is a simple example code for calling rocWMMA functions load_matrix_sync, s
            }
        }
    }
-
 
    // Supports BlockM/N square sizes of
    // : 16 x 16
@@ -301,9 +292,11 @@ may be required due to the nature this memory usage.
 Supported Data Types
 ^^^^^^^^^^^^^^^^^^^^
 
-rocWMMA mixed precision multiply-accumulate operations support the following data type combinations: 
+rocWMMA mixed precision multiply-accumulate operations support the following data type combinations.
 
-Data Types <Ti / To / Tc> = <Input type / Output Type / Compute Type>
+Data Types **<Ti / To / Tc>** = <Input type / Output Type / Compute Type>
+
+where
 
 Input Type = Matrix A/B
 
@@ -312,9 +305,9 @@ Output Type = Matrix C/D
 Compute Type = math / accumulation type
 
 .. tabularcolumns::
-   |C|C|C|
+   |C|C|C|C|
 
-+-------------------------- ---+------------+-----------+---------------+
++------------------------------+------------+-----------+---------------+
 |Ti / To / Tc                  |BlockM      |BlockN     |BlockK         |
 +==============================+============+===========+===============+
 |i8 / i32 / i32                |16          |16         |Min: 16, pow2  |
@@ -367,25 +360,39 @@ Compute Type = math / accumulation type
 +------------------------------+------------+-----------+---------------+
 |f64** / f64** / f64**         |16          |16         |Min: 4, pow2   |
 +------------------------------+------------+-----------+---------------+
+
 *= matrix unit accumulation is natively 32 bit precision, and is converted to desired type.
+
 **= f64 datatype is only supported on MI-200 class AMDGPU and successors.
 
 
 Supported Matrix Layouts
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
- (N = col major, T = row major)
+(N = col major, T = row major)
 
-<LayoutA, LayoutB, Layout C, LayoutD>
-<N, N, N, N>
-<N, N, T, T>
-<N, T, N, N>
-<N, T, T, T>
-<T, N, N, N>
-<T, N, T, T>
-<T, T, N, N>
-<T, T, T, T>
+.. tabularcolumns::
+   |C|C|C|C|
 
++---------+--------+---------+--------+
+|LayoutA  |LayoutB |Layout C |LayoutD |
++=========+========+=========+========+
+|N        |N       |N        |N       |
++---------+--------+---------+--------+
+|N        |N       |T        |T       |
++---------+--------+---------+--------+
+|N        |T       |N        |N       |
++---------+--------+---------+--------+
+|N        |T       |T        |T       |
++---------+--------+---------+--------+
+|T        |N       |N        |N       |
++---------+--------+---------+--------+
+|T        |N       |T        |T       |
++---------+--------+---------+--------+
+|T        |T       |N        |N       |
++---------+--------+---------+--------+
+|T        |T       |T        |T       |
++---------+--------+---------+--------+
 
 -----------------
 Using rocWMMA API
@@ -400,31 +407,31 @@ rocWMMA Datatypes
 matrix_a
 ''''''''
 
-.. doxygenstruct:: matrix_a
+.. doxygenstruct:: rocwmma::matrix_a
 
 
 matrix_b
 ''''''''
 
-.. doxygenstruct:: matrix_b
+.. doxygenstruct:: rocwmma::matrix_b
 
 
 accumulator
 '''''''''''
 
-.. doxygenstruct:: accumulator
+.. doxygenstruct:: rocwmma::accumulator
 
 
 row_major
 '''''''''
 
-.. doxygenstruct:: row_major
+.. doxygenstruct:: rocwmma::row_major
 
 
 col_major
 '''''''''
 
-.. doxygenstruct:: col_major
+.. doxygenstruct:: rocwmma::col_major
 
 
 VecT
@@ -433,10 +440,23 @@ VecT
 .. doxygenclass:: VecT
 
 
+
 VectorStorage
 '''''''''''''
 
-.. doxygenclass:: VectorStorage
+.. doxygenstruct:: rocwmma::detail::VectorStorage
+
+
+IOConfig
+''''''''''''
+
+.. doxygenstruct:: rocwmma::IOConfig
+
+
+IOShape
+''''''''''''
+
+.. doxygenstruct:: rocwmma::detail::IOShape
 
 
 rocWMMA Enumeration
@@ -448,23 +468,34 @@ rocWMMA Enumeration
 layout_t
 ''''''''''''
 
-.. doxygenenum:: layout_t
+.. doxygenenum:: rocwmma::layout_t
 
 
 rocWMMA API functions
 ^^^^^^^^^^^^^^^^^^^^^^
 
 .. doxygenfunction:: fill_fragment
-   :outline:
-.. doxygenfunction:: load_matrix_sync
-   :outline:
-.. doxygenfunction:: store_matrix_sync
-   :outline:
+
+.. doxygenfunction:: load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag, const DataT* data, uint32_t ldm)
+
+.. doxygenfunction:: load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT>& frag, const DataT* data, uint32_t ldm, layout_t layout)
+
+.. doxygenfunction:: store_matrix_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag, uint32_t ldm)
+
+.. doxygenfunction:: store_matrix_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag, uint32_t ldm,layout_t layout)
+
 .. doxygenfunction:: mma_sync
-   :outline:
+
 .. doxygenfunction:: synchronize_workgroup
-   :outline:
-.. doxygenfunction:: load_matrix_coop_sync
-   :outline:
-.. doxygenfunction:: store_matrix_coop_sync
-   :outline:
+
+.. doxygenfunction:: load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag, const DataT* data, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount, uint32_t splitCount)
+
+.. doxygenfunction:: load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag, const DataT* data, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount)
+
+.. doxygenfunction:: load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag, const DataT* data, uint32_t ldm)
+
+.. doxygenfunction:: store_matrix_coop_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount, uint32_t splitCount)
+
+.. doxygenfunction:: store_matrix_coop_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount)
+
+.. doxygenfunction:: store_matrix_coop_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag, uint32_t ldm)

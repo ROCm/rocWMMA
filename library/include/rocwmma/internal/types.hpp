@@ -77,17 +77,36 @@ namespace rocwmma
     // clang-format off
 
     // Data layout meta-tags
+    /*! \struct row_major
+ *  \brief Data/In-memory Layout as Row Major
+ */
     struct row_major{};
+    /*! \struct col_major
+ *  \brief Data/In-memory Layout as Column Major
+ */
     struct col_major{};
 
     // Fragment usage meta-tags
+    /*! \struct matrix_a
+ *  \brief Input Matrix A
+ */
     struct matrix_a{};
+    /*! \struct matrix_b
+ *  \brief Input Matrix B
+ */
     struct matrix_b{};
+    /*! \struct accumulator
+ *  \brief Input/Output Matrix Accumulator
+ */
     struct accumulator{};
 
     // clang-format on
 
-    // Runtime data layout flags
+    /*! \struct layout_t
+ *  \brief Definition of Runtime data layout flags
+ *  @var mem_row_major
+ *  @var mem_col_major 
+ */
     enum layout_t : uint32_t
     {
         mem_row_major,
@@ -96,8 +115,12 @@ namespace rocwmma
 
     namespace detail
     {
-
-        // Vectorized internal storage.
+        /*! \struct VectorStorage
+        *  \brief Vectorized internal storage
+        *  @tparam T Storage type 
+        *  @tparam Elements No of Elements in the vector
+        *  @tparam IsNativType Native or rocWMMA defined
+        */
         template <typename T,
                   int Elements,
                   typename IsNativeType = typename std::is_fundamental<T>::type>
@@ -128,7 +151,11 @@ namespace rocwmma
 
     } // namespace detail
 
-    // Functional vector class
+    /*! \class VecT
+    *  \brief  Functional vector class
+    *  @tparam T Vector data type 
+    *  @tparam VecSize Vector storage size
+    */
     template <typename T, uint32_t VecSize>
     class __align__(4) VecT
     {
