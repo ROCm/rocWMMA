@@ -42,6 +42,15 @@ namespace rocwmma
 {
     namespace detail
     {
+    /*! \struct IOShape
+ *  \brief Definition of ROCWMMA data and matrix mapping utilities
+ *         in specific matrix context.
+ *
+ * @tparam MatrixT fragment context
+ * @tparam BlockM/N/K block dimensions
+ * @tparam DataT data type
+ * @tparam DataLayout in-memory layout as col_major or row_major
+ */
         template <typename MatrixT,
                   uint32_t BlockM,
                   uint32_t BlockN,
@@ -267,29 +276,28 @@ namespace rocwmma
  * @{
  */
 
-    /*! \class IOConfig
+    /*! \struct IOConfig
  *  \brief Definition of ROCWMMA fragment input / output configurations
  *         in specific matrix context.
  *
- * @tparam MatrixT - fragment context
- * @tparam BlockM/N/K - block dimensions
- * @tparam DataT - data type
- * @tparam DataLayout - in-memory layout as col_major or row_major
- *
- * BlockDim - leading block dimension (row / col size)
- * KDim - minor block dimension (row / col count)
- * MaxVectorWidth - maximum allowable vector width
- * VectorWidth - currently used vector width
- * CoopIndex - shared wave index (0 = row, 1 = col)
- * IOTraits - Input/output traits specific to AMDGCN architecture
- * Packer - Packs raw fragment data into register
- * Unpacker - Unpacks registers to raw fragment data
- * Broadcaster - Sets all fragment data to a desired value
- * MatrixLayout - Maps GPU threads to matrix shape or geometry
- * Loader - Issues load instructions for raw fragment data
- * Storer - Issues store instructions for raw fragment data
- * CoopLoader - Issues cooperative load instructions for raw fragment data
- * CoopStorer - Issues cooperative store instructions for raw fragment data
+ * @tparam Matrix fragment context
+ * @tparam BlockM/N/K block dimensions
+ * @tparam DataT data type
+ * @tparam DataLayout in-memory layout as col_major or row_major
+ * @param BlockDim leading block dimension (row / col size)
+ * @param KDim minor block dimension (row / col count)
+ * @param MaxVectorWidth maximum allowable vector width
+ * @param VectorWidth currently used vector width
+ * @param CoopIndex shared wave index (0 = row, 1 = col)
+ * @param IOTraits Input/output traits specific to AMDGCN architecture
+ * @param Packer Packs raw fragment data into register
+ * @param Unpacker Unpacks registers to raw fragment data
+ * @param Broadcaster Sets all fragment data to a desired value
+ * @param MatrixLayout Maps GPU threads to matrix shape or geometry
+ * @param Loader Issues load instructions for raw fragment data
+ * @param Storer Issues store instructions for raw fragment data
+ * @param CoopLoader Issues cooperative load instructions for raw fragment data
+ * @param CoopStorer Issues cooperative store instructions for raw fragment data
  */
 
     template <typename MatrixT,
