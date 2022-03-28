@@ -50,11 +50,12 @@ namespace rocwmma
 
     __device__ inline float64_t maxDouble(float64_t a, float64_t b)
     {
-        if (a == std::numeric_limits<float64_t>::infinity() || b == std::numeric_limits<float64_t>::infinity())
+        if (std::isinf(a) || std::isinf(b))
         {
             return std::numeric_limits<float64_t>::infinity();
         }
-        else if (a == std::numeric_limits<float64_t>::signaling_NaN() || b == std::numeric_limits<float64_t>::signaling_NaN())
+        // Check for NaN
+        else if (std::isnan(a) || std::isnan(b))
         {
             return std::numeric_limits<float64_t>::signaling_NaN();
         }
@@ -104,10 +105,10 @@ namespace rocwmma
             // Determine relative error for each element of matrix A/B
             auto numerator = fabs(toDouble(valA) - toDouble(valB));
             auto divisor   = fabs(toDouble(valA)) + fabs(toDouble(valB)) + 1.0;
-            if (numerator == std::numeric_limits<float64_t>::infinity() || divisor == std::numeric_limits<float64_t>::infinity())
+            if(std::isinf(numerator) || std::isinf(divisor))
             {
                 relativeError[errorIdx] = std::numeric_limits<float64_t>::infinity();
-            } else 
+            } else
             {
                 relativeError[errorIdx] = numerator / divisor;
             }
@@ -138,7 +139,7 @@ namespace rocwmma
             // Determine relative error for each element of matrix A/B
             auto numerator = fabs(toDouble(valA) - toDouble(valB));
             auto divisor   = fabs(toDouble(valA)) + fabs(toDouble(valB)) + 1.0;
-            if (numerator == std::numeric_limits<float64_t>::infinity() || divisor == std::numeric_limits<float64_t>::infinity())
+            if (std::isinf(numerator) || std::isinf(divisor))
             {
                 relativeError[batchOffset + errorIdx] = std::numeric_limits<float64_t>::infinity();
             } else 

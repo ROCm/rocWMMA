@@ -487,6 +487,13 @@ namespace rocwmma
 #if !defined(ROCWMMA_VALIDATE_WITH_ROCBLAS) && defined(ROCWMMA_VALIDATION_TESTS)
             dataInstance->copyDeviceToHostAll();
 #endif // !defined(ROCWMMA_VALIDATE_WITH_ROCBLAS) && defined(ROCWMMA_VALIDATION_TESTS)
+
+#if defined(ROCWMMA_VALIDATE_WITH_ROCBLAS)
+            if(!quirks::rocblas_supported<InputT, OutputT, ComputeT>::value)
+            {
+                dataInstance->copyDeviceToHostAll();
+            }
+#endif // ROCWMMA_VALIDATE_WITH_ROCBLAS
         }
     };
 
