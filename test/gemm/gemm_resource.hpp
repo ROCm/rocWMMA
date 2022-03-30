@@ -92,6 +92,7 @@ namespace rocwmma
     public:
         ~GemmResource() = default;
         void copyHostToDeviceAll();
+        void copyDeviceToHostAll();
         void resizeStorage(ProblemSize const& size);
 
         HostPtrT<InputT>&  hostA();

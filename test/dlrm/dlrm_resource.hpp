@@ -100,7 +100,9 @@ namespace rocwmma
         ~DlrmResource() = default;
         void copyHostToDeviceFwdAll();
         void copyHostToDeviceBwdAll();
+        void copyDeviceToHostFwdInput();
         void copyDeviceToHostFwdOutput();
+        void copyDeviceToHostBwdInput();
         void copyDeviceToHostBwdOutput();
         void resizeFwdStorage(ProblemSize const& size);
         void resizeBwdStorage(ProblemSize const& size);
