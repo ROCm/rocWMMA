@@ -35,6 +35,8 @@
 
 #include <rocwmma/internal/types.hpp>
 
+#include "device/common.hpp"
+
 #ifndef CHECK_HIP_ERROR
 #define CHECK_HIP_ERROR(status)                   \
     if(status != hipSuccess)                      \
@@ -210,6 +212,56 @@ namespace rocwmma
         {
             assert(mat.size() == n * m);
             fill(mat.data(), m, n, value);
+        }
+
+        // fill kernel wrapper for M x N matrix
+        template <typename DataT>
+        __host__ static inline void fillLaunchKernel(DataT* d_mat, uint32_t m, uint32_t n)
+        {
+            auto blockDim = dim3(1024, 1, 1);
+            auto gridDim  = dim3(ceilDiv(m * n, blockDim.x), 1, 1);
+            hipLaunchKernelGGL((fillKernel<DataT, Layout>),
+                                gridDim,
+                                blockDim,
+                                0,
+                                0,
+                                d_mat,
+                                m,
+                                n);
+        }
+
+        // fill kernel wrapper for batched M x K matrices
+        template <typename DataT>
+        __host__ static inline void fillLaunchKernel(DataT* d_mat, uint32_t m, uint32_t k, uint32_t b)
+        {
+            auto blockDim = dim3(1024, 1, 1);
+            auto gridDim  = dim3(ceilDiv(m * k, blockDim.x), 1, b);
+            hipLaunchKernelGGL((fillKernel<DataT, Layout>),
+                                gridDim,
+                                blockDim,
+                                0,
+                                0,
+                                d_mat,
+                                m,
+                                k,
+                                b);
+        }
+
+        // fill kernel wrapper for M x N matrix for a specific value
+        template <typename DataT>
+        __host__ static inline void fillLaunchKernel(DataT* d_mat, uint32_t m, uint32_t n, DataT value)
+        {
+            auto blockDim = dim3(1024, 1, 1);
+            auto gridDim  = dim3(ceilDiv(m * n, blockDim.x), 1, 1);
+            hipLaunchKernelGGL((fillKernel<DataT, Layout>),
+                                gridDim,
+                                blockDim,
+                                0,
+                                0,
+                                d_mat,
+                                m,
+                                n,
+                                value);
         }
     };
 
@@ -435,6 +487,177 @@ namespace rocwmma
         assert(a.size() == m * n && "A and B do not match size m x n");
         return compareEqual<TypeA, TypeB, LayoutA, LayoutB>(
             a.data(), b.data(), m, n, lda, ldb, tolerance);
+    }
+
+    // compareEqual kernel wrapper for gemm tests
+    template <typename TypeA, typename TypeB, typename LayoutA, typename LayoutB>
+    std::pair<bool, double> compareEqualLaunchKernel(TypeA* matrixA,
+                                                     TypeB* matrixB,
+                                                     uint32_t     m,
+                                                     uint32_t     n,
+                                                     double       tolerance = 10.0)
+    {
+        uint32_t lda = std::is_same<LayoutA, row_major>::value ? n : m;
+        uint32_t ldb = std::is_same<LayoutB, row_major>::value ? n : m;
+
+        auto blockDim = dim3(1024, 1, 1);
+        auto gridDim  = dim3(ceilDiv(m * n, blockDim.x), 1, 1);
+
+        double *d_relativeError;
+        double maxRelativeError;
+        CHECK_HIP_ERROR(hipMalloc(&d_relativeError, m * n * sizeof(double)));
+
+        hipEvent_t syncEvent;
+        CHECK_HIP_ERROR(hipEventCreate(&syncEvent));
+
+        // Calculate the relative error for each element of matrix A/B
+        hipLaunchKernelGGL((compareEqualKernel<TypeA, TypeB, LayoutA, LayoutB>),
+                            gridDim,
+                            blockDim,
+                            0,
+                            0,
+                            matrixA,
+                            matrixB,
+                            d_relativeError,
+                            m,
+                            n,
+                            lda,
+                            ldb);
+        CHECK_HIP_ERROR(hipEventRecord(syncEvent));
+        CHECK_HIP_ERROR(hipEventSynchronize(syncEvent));
+
+        // Determine the maximum relative error
+        blockDim = dim3(512, 1, 1);
+        uint32_t maxElements = 1024;
+        uint32_t offset = 1;
+
+        for (uint32_t i = m * n; i > 1; i = ceilDiv(i, maxElements))
+        {
+            gridDim = dim3(ceilDiv(i, maxElements), 1, 1);
+            auto elements = i > maxElements ? maxElements : i;
+
+            hipLaunchKernelGGL((maxReduceKernel),
+                                gridDim,
+                                blockDim,
+                                0,
+                                0,
+                                d_relativeError,
+                                elements,
+                                offset,
+                                m * n);
+
+            CHECK_HIP_ERROR(hipEventRecord(syncEvent));
+            CHECK_HIP_ERROR(hipEventSynchronize(syncEvent));
+            offset = offset * maxElements;
+        }
+        
+        CHECK_HIP_ERROR(hipMemcpy(&maxRelativeError, d_relativeError, sizeof(double), hipMemcpyDeviceToHost));
+
+        // Free allocated device memory
+        CHECK_HIP_ERROR(hipFree(d_relativeError));
+
+        bool   retval = true;
+        bool   isNaN = std::isnan(maxRelativeError);
+        
+        auto toDoubleA
+            = [](TypeA const& val) { return static_cast<double>(static_cast<float>(val)); };
+
+        auto eps = toDoubleA(std::numeric_limits<TypeA>::epsilon());
+        if(isNaN)
+        {
+            retval             = false;
+            maxRelativeError = std::numeric_limits<TypeA>::signaling_NaN();
+        }
+        else if(maxRelativeError > (eps * tolerance))
+        {
+            retval = false;
+        }
+
+        return std::make_pair(retval, maxRelativeError);
+    }
+
+    // compareEqual kernel wrapper for batched matrices
+    template <typename TypeA, typename TypeB>
+    std::pair<bool, double> compareEqualLaunchKernel(TypeA* matrixA,
+                                                     TypeB* matrixB,
+                                                     uint32_t     m,
+                                                     uint32_t     k,
+                                                     uint32_t     b,
+                                                     double       tolerance = 10.0)
+    {
+        auto blockDim = dim3(1024, 1, 1);
+        auto gridDim  = dim3(ceilDiv(m * k, blockDim.x), 1, b);
+
+        double *d_relativeError;
+        double maxRelativeError;
+        CHECK_HIP_ERROR(hipMalloc(&d_relativeError, m * k * b * sizeof(double)));
+
+        hipEvent_t syncEvent;
+        CHECK_HIP_ERROR(hipEventCreate(&syncEvent));
+
+        // Calculate the relative error for each element of matrix A/B
+        hipLaunchKernelGGL((compareEqualKernel<TypeA, TypeB>),
+                            gridDim,
+                            blockDim,
+                            0,
+                            0,
+                            matrixA,
+                            matrixB,
+                            d_relativeError,
+                            m,
+                            k,
+                            b);
+        CHECK_HIP_ERROR(hipEventRecord(syncEvent));
+        CHECK_HIP_ERROR(hipEventSynchronize(syncEvent));
+
+        // Determine the maximum relative error
+        blockDim = dim3(512, 1, 1);
+        uint32_t maxElements = 1024;
+        uint32_t offset = 1;
+
+        for (uint32_t i = m * k * b; i > 1; i = ceilDiv(i, maxElements))
+        {
+            gridDim = dim3(ceilDiv(i, maxElements), 1, 1);
+            auto elements = i > maxElements ? maxElements : i;
+            
+            hipLaunchKernelGGL((maxReduceKernel),
+                                gridDim,
+                                blockDim,
+                                0,
+                                0,
+                                d_relativeError,
+                                elements,
+                                offset,
+                                m * k * b);
+
+            CHECK_HIP_ERROR(hipEventRecord(syncEvent));
+            CHECK_HIP_ERROR(hipEventSynchronize(syncEvent));
+            offset = offset * maxElements;
+        }
+        
+        CHECK_HIP_ERROR(hipMemcpy(&maxRelativeError, d_relativeError, sizeof(double), hipMemcpyDeviceToHost));
+
+        // Free allocated device memory
+        CHECK_HIP_ERROR(hipFree(d_relativeError));
+
+        bool   retval = true;
+        bool   isNaN = std::isnan(maxRelativeError);
+        
+        auto toDoubleA
+            = [](TypeA const& val) { return static_cast<double>(static_cast<float>(val)); };
+
+        auto eps = toDoubleA(std::numeric_limits<TypeA>::epsilon());
+        if(isNaN)
+        {
+            retval             = false;
+            maxRelativeError = std::numeric_limits<TypeA>::signaling_NaN();
+        }
+        else if(maxRelativeError > (eps * tolerance))
+        {
+            retval = false;
+        }
+
+        return std::make_pair(retval, maxRelativeError);
     }
 
     // Count occurrences of val in the input array

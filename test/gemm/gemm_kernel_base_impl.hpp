@@ -476,15 +476,24 @@ namespace rocwmma
             // Initialize matrix storage
             dataInstance->resizeStorage(problem.problemSize);
 
-            // Initialize matrix data on host
-            MatrixUtil<LayoutA>::fill(dataInstance->hostA().get(), mM, mK);
-            MatrixUtil<LayoutB>::fill(dataInstance->hostB().get(), mK, mN);
-            MatrixUtil<LayoutC>::fill(dataInstance->hostC().get(), mM, mN);
-            MatrixUtil<LayoutD>::fill(
-                dataInstance->hostD().get(), mM, mN, std::numeric_limits<OutputT>::signaling_NaN());
+            // Initialize matrix data on device
+            MatrixUtil<LayoutA>::fillLaunchKernel(dataInstance->deviceA().get(), mM, mK);
+            MatrixUtil<LayoutB>::fillLaunchKernel(dataInstance->deviceB().get(), mK, mN);
+            MatrixUtil<LayoutC>::fillLaunchKernel(dataInstance->deviceC().get(), mM, mN);
+            MatrixUtil<LayoutD>::fillLaunchKernel(
+                dataInstance->deviceD().get(), mM, mN, std::numeric_limits<OutputT>::signaling_NaN());
 
-            // Send to device
-            dataInstance->copyHostToDeviceAll();
+            // Copy to host if performing cpu validation
+#if !defined(ROCWMMA_VALIDATE_WITH_ROCBLAS) && defined(ROCWMMA_VALIDATION_TESTS)
+            dataInstance->copyDeviceToHostAll();
+#endif // !defined(ROCWMMA_VALIDATE_WITH_ROCBLAS) && defined(ROCWMMA_VALIDATION_TESTS)
+
+#if defined(ROCWMMA_VALIDATE_WITH_ROCBLAS)
+            if(!quirks::rocblas_supported<InputT, OutputT, ComputeT>::value)
+            {
+                dataInstance->copyDeviceToHostAll();
+            }
+#endif // ROCWMMA_VALIDATE_WITH_ROCBLAS
         }
     };
 
@@ -625,8 +634,7 @@ namespace rocwmma
                 // change C if needed
                 if(!std::is_same<LayoutC, col_major>::value)
                 {
-                    MatrixUtil<col_major>::fill(dataInstance->hostC().get(), mM, mN);
-                    dataInstance->copyData(dataInstance->deviceC(), dataInstance->hostC(), mM * mN);
+                    MatrixUtil<col_major>::fillLaunchKernel(dataInstance->deviceC().get(), mM, mN);
                 }
 
                 benchRef        = true;
@@ -637,8 +645,9 @@ namespace rocwmma
                 auto rocwmmaResult = dataInstance->template allocHost<OutputT>(mM * mN);
                 dataInstance->copyData(rocwmmaResult, dataInstance->deviceD(), mM * mN);
 
-                // Reset device D with NaN, from host
-                dataInstance->copyData(dataInstance->deviceD(), dataInstance->hostD(), mM * mN);
+                // Reset device D with NaN
+                MatrixUtil<LayoutD>::fillLaunchKernel(
+                    dataInstance->deviceD().get(), mM, mN, std::numeric_limits<OutputT>::signaling_NaN());
 
                 // Move the ROCWMMA result to host for analysis
                 dataInstance->copyData(dataInstance->hostD(), rocwmmaResult, mM * mN);
@@ -747,12 +756,9 @@ namespace rocwmma
             // Allocated managed memory for results on host
             const int64_t sizeD = mM * mN;
 
-            // One result on device
-            auto result0 = dataInstance->template allocHost<OutputT>(sizeD);
-            dataInstance->copyData(result0, dataInstance->deviceD(), sizeD);
-
-            // Other already on host
-            auto& result1 = dataInstance->hostD();
+            // One result on host needs to be transfered to device
+            auto reference = dataInstance->template allocDevice<OutputT>(sizeD);
+            dataInstance->copyData(reference, dataInstance->hostD(), sizeD);
 
             // Give more error tolerance to ComputeT = fp16,
             // due to MFMA output is always fp32. We downcast the MFMA result to fp16, which
@@ -765,8 +771,8 @@ namespace rocwmma
             double errorTolerance = sizeof(ComputeT) < sizeof(float32_t) ? 100.0 : 10.0;
 
             std::tie(mValidationResult, mMaxRelativeError)
-                = compareEqual<OutputT, OutputT, DeviceLayoutD, LayoutD>(
-                    result0.get(), result1.get(), mM, mN, errorTolerance);
+                = compareEqualLaunchKernel<OutputT, OutputT, DeviceLayoutD, LayoutD>(
+                    dataInstance->deviceD().get(), reference.get(), mM, mN, errorTolerance);
 
             // MatrixUtil<DeviceLayoutD>::print(result0.get(), mM, mN);
             // MatrixUtil<LayoutD>::print(result1.get(), mM, mN);

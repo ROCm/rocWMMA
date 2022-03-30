@@ -74,9 +74,22 @@ namespace rocwmma
     }
 
     template <typename DataT>
+    void DlrmResource<DataT>::copyDeviceToHostFwdInput()
+    {
+        Base::copyData(mHostInput, mDeviceInput, std::get<Input>(mCurrentDataSizeFwd));
+    }
+
+    template <typename DataT>
     void DlrmResource<DataT>::copyDeviceToHostFwdOutput()
     {
         Base::copyData(mHostOutput, mDeviceOutput, std::get<Output>(mCurrentDataSizeFwd));
+    }
+
+    template <typename DataT>
+    void DlrmResource<DataT>::copyDeviceToHostBwdInput()
+    {
+        Base::copyData(mHostInput, mDeviceInput, std::get<Input>(mCurrentDataSizeBwd));
+        Base::copyData(mHostUpstreamGrad, mDeviceUpstreamGrad, std::get<UpstreamGrad>(mCurrentDataSizeBwd));
     }
 
     template <typename DataT>

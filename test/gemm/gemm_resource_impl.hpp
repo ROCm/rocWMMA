@@ -57,6 +57,15 @@ namespace rocwmma
     }
 
     template <typename InputT, typename OutputT>
+    void GemmResource<InputT, OutputT>::copyDeviceToHostAll()
+    {
+        Base::copyData(mHostA, mDeviceA, std::get<MatrixA>(mCurrentMatrixSize));
+        Base::copyData(mHostB, mDeviceB, std::get<MatrixB>(mCurrentMatrixSize));
+        Base::copyData(mHostC, mDeviceC, std::get<MatrixC>(mCurrentMatrixSize));
+        Base::copyData(mHostD, mDeviceD, std::get<MatrixD>(mCurrentMatrixSize));
+    }
+
+    template <typename InputT, typename OutputT>
     void GemmResource<InputT, OutputT>::resizeStorage(ProblemSize const& size)
     {
         auto calcMatrixSizes = [](ProblemSize const& size) {

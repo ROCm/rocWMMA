@@ -136,8 +136,8 @@ namespace rocwmma
 
         passDirection = DlrmDirection_t::Forward;
 
-        mValidationResult.pass            = false;
-        mValidationResult.maxRelativeDiff = 0;
+        mValidationResult = false;
+        mMaxRelativeError = 0.0;
     }
 
     template <uint32_t TileSize, typename DataT>
@@ -145,7 +145,7 @@ namespace rocwmma
     {
         return stream << "TileSize, "
                       << "DataT, "
-                      << "Bwd, "
+                      << "Direction, "
                       << "MatM, MatK, MatB, "
 #if defined(ROCWMMA_VALIDATION_TESTS)
                       << "maxRelativeDiff, "
@@ -165,13 +165,12 @@ namespace rocwmma
                       << ", " << mM << ", " << mK << ", " << mB << ", "
 
 #if defined(ROCWMMA_VALIDATION_TESTS)
-                      << mValidationResult.maxRelativeDiff << ", " << mValidationResult.tolerance
-                      << ", "
+                      << mMaxRelativeError << ", "
 #endif
                       << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredGFlopsPerSec
                       << ", " << mEfficiency << ", "
 #if defined(ROCWMMA_VALIDATION_TESTS)
-                      << (mValidationResult.pass ? "PASSED" : "FAILED")
+                      << (mValidationResult ? "PASSED" : "FAILED")
 #else
                       << "BENCH"
 #endif // ROCWMMA_VALIDATION_TESTS
@@ -217,21 +216,22 @@ namespace rocwmma
                 dataInstance->resizeBwdStorage(problem.problemSize);
             }
 
-            // Initialize matrix data on host and transfer to device
+            // Initialize matrix data on device and transfer to host for validation
             if(passDirection == DlrmDirection_t::Forward)
             {
-                fill<DataT>(dataInstance->hostInput().get(), mM, mK, mB, 1);
-                dataInstance->copyHostToDeviceFwdAll();
+                MatrixUtil<row_major>::fillLaunchKernel(dataInstance->deviceInput().get(), mM, mK, mB);
+#if defined(ROCWMMA_VALIDATION_TESTS)
+                dataInstance->copyDeviceToHostFwdInput();
+#endif // ROCWMMA_VALIDATION_TESTS
             }
             else
             {
-                fill<DataT>(dataInstance->hostInput().get(), mM, mK, mB, 1);
-                fill<DataT>(dataInstance->hostUpstreamGrad().get(),
-                            std::get<1>(dataInstance->currentDataSizeBwd()),
-                            1,
-                            1,
-                            1);
-                dataInstance->copyHostToDeviceBwdAll();
+                uint gradSize = ((mM * (mM - 1)) / 2) + mK;
+                MatrixUtil<row_major>::fillLaunchKernel(dataInstance->deviceInput().get(), mM, mK, mB);
+                MatrixUtil<row_major>::fillLaunchKernel(dataInstance->deviceUpstreamGrad().get(), 1, gradSize, mB);
+#if defined(ROCWMMA_VALIDATION_TESTS)
+                dataInstance->copyDeviceToHostBwdInput();
+#endif // ROCWMMA_VALIDATION_TESTS
             }
         }
     }
@@ -401,41 +401,41 @@ namespace rocwmma
             auto& dataInstance = DataStorage::instance();
             if(passDirection == DlrmDirection_t::Forward)
             {
-                dataInstance->copyDeviceToHostFwdOutput();
-
                 uint batchSize    = ((mM * (mM - 1)) / 2) + mK;
-                mValidationResult = compareEqual(dataInstance->hostOutputRef().get(),
-                                                 dataInstance->hostOutput().get(),
-                                                 batchSize,
-                                                 mB);
+                auto reference = dataInstance->template allocDevice<DataT>(batchSize * mB);
+                dataInstance->copyData(reference, dataInstance->hostOutputRef(), batchSize * mB);
+                
+                std::tie(mValidationResult, mMaxRelativeError)
+                    = compareEqualLaunchKernel<DataT, DataT>(
+                        dataInstance->deviceOutput().get(), reference.get(), 1, batchSize, mB, 10.0);
 
-                EXPECT_TRUE(mValidationResult.pass);
+                EXPECT_TRUE(mValidationResult) << "Max relative error: " << mMaxRelativeError;
             }
             else
             {
-                dataInstance->copyDeviceToHostBwdOutput();
+                // Copy reference output gradient to device
+                auto reference0 = dataInstance->template allocDevice<DataT>(mM * mK * mB);
+                dataInstance->copyData(reference0, dataInstance->hostGradRef(), mM * mK * mB);
 
-                uint batchSize    = mM * mK;
-                mValidationResult = compareEqual(dataInstance->hostGradRef().get(),
-                                                 dataInstance->hostGrad().get(),
-                                                 batchSize,
-                                                 mB);
+                std::tie(mValidationResult, mMaxRelativeError)
+                    = compareEqualLaunchKernel<DataT, DataT>(
+                        dataInstance->deviceGrad().get(), reference0.get(), mM, mK, mB);
 
-                EXPECT_TRUE(mValidationResult.pass);
+                EXPECT_TRUE(mValidationResult) << "Max relative error: " << mMaxRelativeError;
 
-                float maxRelativeDiff = mValidationResult.maxRelativeDiff;
+                double maxRelativeError = mMaxRelativeError;
+                
+                // Copy reference bottom mlp gradient to device
+                auto reference1 = dataInstance->template allocDevice<DataT>(mK * mB);
+                dataInstance->copyData(reference1, dataInstance->hostBottomMlpGradRef(), mK * mB);
 
-                mValidationResult = compareEqual(dataInstance->hostBottomMlpGradRef().get(),
-                                                 dataInstance->hostBottomMlpGrad().get(),
-                                                 mK,
-                                                 mB);
+                std::tie(mValidationResult, mMaxRelativeError)
+                    = compareEqualLaunchKernel<DataT, DataT>(
+                        dataInstance->deviceBottomMlpGrad().get(), reference1.get(), 1, mK, mB);
 
-                EXPECT_TRUE(mValidationResult.pass);
+                EXPECT_TRUE(mValidationResult) << "Max relative error: " << mMaxRelativeError;
 
-                mValidationResult.maxRelativeDiff
-                    = maxRelativeDiff > mValidationResult.maxRelativeDiff
-                          ? maxRelativeDiff
-                          : mValidationResult.maxRelativeDiff;
+                mMaxRelativeError = (maxRelativeError > mMaxRelativeError) ? maxRelativeError : mMaxRelativeError;
             }
         }
 #endif
