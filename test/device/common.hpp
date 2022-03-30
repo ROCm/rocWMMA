@@ -108,6 +108,9 @@ namespace rocwmma
             if(std::isinf(numerator) || std::isinf(divisor))
             {
                 relativeError[errorIdx] = std::numeric_limits<float64_t>::infinity();
+            } else if (std::isnan(numerator) || std::isnan(divisor))
+            {
+                relativeError[errorIdx] = std::numeric_limits<float64_t>::signaling_NaN();
             } else
             {
                 relativeError[errorIdx] = numerator / divisor;
