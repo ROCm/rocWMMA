@@ -31,7 +31,7 @@
 
 namespace rocwmma
 {
-
+    KernelI* DlrmDotTest::sLastKernelRun = nullptr;
     struct TestParams : public DlrmTestParams
     {
         // Types: 32 and 16 bit float

@@ -141,6 +141,37 @@ namespace rocwmma
     }
 
     template <uint32_t TileSize, typename DataT>
+    HipResource* DlrmKernelBase<TileSize, DataT>::getResource()
+    {
+        sInitialResource = DataStorage::instance().get();
+        return sInitialResource;
+    }
+
+    template <uint32_t TileSize, typename DataT>
+    void DlrmKernelBase<TileSize, DataT>::resetMemory()
+    {
+        auto& dataInstance = DataStorage::instance();
+
+        // Reset host memory
+        dataInstance->hostInput().reset(nullptr);
+        dataInstance->hostOutput().reset(nullptr);
+        dataInstance->hostAccFwd().reset(nullptr);
+        dataInstance->hostUpstreamGrad().reset(nullptr);
+        dataInstance->hostGrad().reset(nullptr);
+        dataInstance->hostBottomMlpGrad().reset(nullptr);
+        dataInstance->hostAccBwd().reset(nullptr);
+
+        // Reset device memory
+        dataInstance->deviceInput().reset(nullptr);
+        dataInstance->deviceOutput().reset(nullptr);
+        dataInstance->deviceAccFwd().reset(nullptr);
+        dataInstance->deviceUpstreamGrad().reset(nullptr);
+        dataInstance->deviceGrad().reset(nullptr);
+        dataInstance->deviceBottomMlpGrad().reset(nullptr);
+        dataInstance->deviceAccBwd().reset(nullptr);
+    }
+
+    template <uint32_t TileSize, typename DataT>
     std::ostream& DlrmKernelBase<TileSize, DataT>::printHeader(std::ostream& stream) const
     {
         return stream << "TileSize, "

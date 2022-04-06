@@ -45,6 +45,8 @@ namespace rocwmma
                                                          typename DlrmTestParams::ProblemSizeT,
                                                          typename DlrmTestParams::PassDirectionT>>;
 
+        static KernelI* sLastKernelRun;
+
         void SetUp() override
         {
             // Construct ProblemParams from
@@ -54,6 +56,13 @@ namespace rocwmma
             auto threadBlock   = std::get<1>(param);
             auto problemSize   = std::get<2>(param);
             auto passDirection = std::get<3>(param);
+
+            // Cleanup previously used resources if data types change
+            if (sLastKernelRun && sLastKernelRun->getResource() != kernel->getResource())
+            {
+                sLastKernelRun->resetMemory();
+            }
+            sLastKernelRun = kernel.get();
 
             ProblemParams params = {threadBlock, problemSize, passDirection};
 
