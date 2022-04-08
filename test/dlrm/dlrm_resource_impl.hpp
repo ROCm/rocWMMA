@@ -196,6 +196,15 @@ namespace rocwmma
     }
 
     template <typename DataT>
+    void DlrmResource<DataT>::resetSizes()
+    {
+        mCurrentDataSizeFwd = {0, 0, 0};
+        mCurrentDataSizeBwd = {0, 0, 0, 0, 0};
+        mMaxFwdCapacity = {0, 0, 0};
+        mMaxBwdCapacity = {0, 0, 0, 0, 0};
+    }
+
+    template <typename DataT>
     auto DlrmResource<DataT>::hostInput() -> HostPtrT<DataT>&
     {
         return mHostInput;

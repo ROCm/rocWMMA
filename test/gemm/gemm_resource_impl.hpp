@@ -101,6 +101,12 @@ namespace rocwmma
     }
 
     template <typename InputT, typename OutputT>
+    void GemmResource<InputT, OutputT>::resetSizes()
+    {
+        mCurrentMatrixSize = {0, 0, 0};
+    }
+
+    template <typename InputT, typename OutputT>
     auto GemmResource<InputT, OutputT>::hostA() -> HostPtrT<InputT>&
     {
         return mHostA;

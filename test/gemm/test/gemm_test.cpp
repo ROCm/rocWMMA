@@ -24,11 +24,9 @@
  *
  *******************************************************************************/
 
-#include "gemm_kernel_base.hpp"
+#include "gemm_test.hpp"
 
 namespace rocwmma
 {
-    HipResource* KernelI::sInitialResource = nullptr;
-    bool KernelI::sHeaderPrinted = false;
-
+    KernelI* GemmTest::sLastKernelRun = nullptr;
 } // namespace rocwmma

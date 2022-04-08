@@ -152,23 +152,26 @@ namespace rocwmma
     {
         auto& dataInstance = DataStorage::instance();
 
+        // Reset problem sizes
+        dataInstance->resetSizes();
+
         // Reset host memory
-        dataInstance->hostInput().reset(nullptr);
-        dataInstance->hostOutput().reset(nullptr);
-        dataInstance->hostAccFwd().reset(nullptr);
-        dataInstance->hostUpstreamGrad().reset(nullptr);
-        dataInstance->hostGrad().reset(nullptr);
-        dataInstance->hostBottomMlpGrad().reset(nullptr);
-        dataInstance->hostAccBwd().reset(nullptr);
+        dataInstance->hostInput() = dataInstance->template allocHost<DataT>(0);
+        dataInstance->hostOutput() = dataInstance->template allocHost<DataT>(0);
+        dataInstance->hostAccFwd() = dataInstance->template allocHost<float32_t>(0);
+        dataInstance->hostUpstreamGrad() = dataInstance->template allocHost<DataT>(0);
+        dataInstance->hostGrad() = dataInstance->template allocHost<DataT>(0);
+        dataInstance->hostBottomMlpGrad() = dataInstance->template allocHost<DataT>(0);
+        dataInstance->hostAccBwd() = dataInstance->template allocHost<DataT>(0);
 
         // Reset device memory
-        dataInstance->deviceInput().reset(nullptr);
-        dataInstance->deviceOutput().reset(nullptr);
-        dataInstance->deviceAccFwd().reset(nullptr);
-        dataInstance->deviceUpstreamGrad().reset(nullptr);
-        dataInstance->deviceGrad().reset(nullptr);
-        dataInstance->deviceBottomMlpGrad().reset(nullptr);
-        dataInstance->deviceAccBwd().reset(nullptr);
+        dataInstance->deviceInput() = dataInstance->template allocDevice<DataT>(0);
+        dataInstance->deviceOutput() = dataInstance->template allocDevice<DataT>(0);
+        dataInstance->deviceAccFwd() = dataInstance->template allocDevice<float32_t>(0);
+        dataInstance->deviceUpstreamGrad() = dataInstance->template allocDevice<DataT>(0);
+        dataInstance->deviceGrad() = dataInstance->template allocDevice<DataT>(0);
+        dataInstance->deviceBottomMlpGrad() = dataInstance->template allocDevice<DataT>(0);
+        dataInstance->deviceAccBwd() = dataInstance->template allocDevice<DataT>(0);
     }
 
     template <uint32_t TileSize, typename DataT>

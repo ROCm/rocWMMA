@@ -48,6 +48,8 @@ namespace rocwmma
                                                          typename CommonTestParams::AlphaT,
                                                          typename CommonTestParams::BetaT>>;
 
+        static KernelI* sLastKernelRun;
+
         void SetUp() override
         {
             // Construct ProblemParams from
@@ -58,6 +60,13 @@ namespace rocwmma
             auto problemSize = std::get<2>(param);
             auto alpha       = std::get<3>(param);
             auto beta        = std::get<4>(param);
+
+            // Cleanup previously used resources if data types change
+            if (sLastKernelRun && sLastKernelRun->getResource() != kernel->getResource())
+            {
+                sLastKernelRun->resetMemory();
+            }
+            sLastKernelRun = kernel.get();
 
             ProblemParams params = {threadBlock, problemSize, alpha, beta};
 

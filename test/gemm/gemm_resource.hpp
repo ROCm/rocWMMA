@@ -105,6 +105,8 @@ namespace rocwmma
         DevicePtrT<OutputT>& deviceC();
         DevicePtrT<OutputT>& deviceD();
 
+        void resetSizes();
+
     protected:
         DevicePtrT<InputT>  mDeviceA, mDeviceB;
         DevicePtrT<OutputT> mDeviceC, mDeviceD;
