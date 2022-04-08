@@ -34,7 +34,6 @@
 
 namespace rocwmma
 {
-
     struct GemmTest
         : public ::testing::TestWithParam<std::tuple<typename CommonTestParams::KernelT,
                                                      typename CommonTestParams::ThreadBlockT,
@@ -48,8 +47,6 @@ namespace rocwmma
                                                          typename CommonTestParams::AlphaT,
                                                          typename CommonTestParams::BetaT>>;
 
-        static KernelI* sLastKernelRun;
-
         void SetUp() override
         {
             // Construct ProblemParams from
@@ -62,9 +59,10 @@ namespace rocwmma
             auto beta        = std::get<4>(param);
 
             // Cleanup previously used resources if data types change
+            static KernelI* sLastKernelRun = nullptr;
             if (sLastKernelRun && sLastKernelRun->getResource() != kernel->getResource())
             {
-                sLastKernelRun->resetMemory();
+                sLastKernelRun->getResource()->reset();
             }
             sLastKernelRun = kernel.get();
 

@@ -319,7 +319,7 @@ namespace rocwmma
         mEfficiency = mReferenceEfficiency = -1.0;
     }
 
-        template <uint32_t BlockM,
+    template <uint32_t BlockM,
               uint32_t BlockN,
               uint32_t BlockK,
               typename InputT,
@@ -340,47 +340,7 @@ namespace rocwmma
                                 LayoutC,
                                 LayoutD>::getResource()
     {
-        sInitialResource = DataStorage::instance().get();
-        return sInitialResource;
-    }
-
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename InputT,
-              typename OutputT,
-              typename ComputeT,
-              typename LayoutA,
-              typename LayoutB,
-              typename LayoutC,
-              typename LayoutD>
-    void GemmKernelBase<BlockM,
-                        BlockN,
-                        BlockK,
-                        InputT,
-                        OutputT,
-                        ComputeT,
-                        LayoutA,
-                        LayoutB,
-                        LayoutC,
-                        LayoutD>::resetMemory()
-    {
-        auto& dataInstance = DataStorage::instance();
-        
-        // Reset problem sizes
-        dataInstance->resetSizes();
-
-        // Reset host memory
-        dataInstance->hostA() = dataInstance->template allocHost<InputT>(0);
-        dataInstance->hostB() = dataInstance->template allocHost<InputT>(0);
-        dataInstance->hostC() = dataInstance->template allocHost<ComputeT>(0);
-        dataInstance->hostD() = dataInstance->template allocHost<OutputT>(0);
-
-        // Reset device memory
-        dataInstance->deviceA() = dataInstance->template allocDevice<InputT>(0);
-        dataInstance->deviceB() = dataInstance->template allocDevice<InputT>(0);
-        dataInstance->deviceC() = dataInstance->template allocDevice<ComputeT>(0);
-        dataInstance->deviceD() = dataInstance->template allocDevice<OutputT>(0);
+        return DataStorage::instance().get();
     }
 
     template <uint32_t BlockM,

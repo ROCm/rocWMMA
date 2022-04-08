@@ -196,12 +196,29 @@ namespace rocwmma
     }
 
     template <typename DataT>
-    void DlrmResource<DataT>::resetSizes()
+    void DlrmResource<DataT>::reset()
     {
         mCurrentDataSizeFwd = {0, 0, 0};
         mCurrentDataSizeBwd = {0, 0, 0, 0, 0};
         mMaxFwdCapacity = {0, 0, 0};
         mMaxBwdCapacity = {0, 0, 0, 0, 0};
+
+        auto allocNew = [] (auto& devicePtr, auto& hostPtr)
+        {
+            using DeviceDataT = typename std::remove_reference_t<decltype(devicePtr)>::element_type;
+            using HostDataT = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
+
+            devicePtr = std::move(Base::template allocDevice<DeviceDataT>(0));
+            hostPtr   = std::move(Base::template allocHost<HostDataT>(0));
+        };
+
+        allocNew(mDeviceInput, mHostInput);
+        allocNew(mDeviceOutput, mHostOutput);
+        allocNew(mDeviceAccFwd, mHostAccFwd);
+        allocNew(mDeviceUpstreamGrad, mHostUpstreamGrad);
+        allocNew(mDeviceGrad, mHostGrad);
+        allocNew(mDeviceBottomMlpGrad, mHostBottomMlpGrad);
+        allocNew(mDeviceAccBwd, mHostAccBwd);
     }
 
     template <typename DataT>

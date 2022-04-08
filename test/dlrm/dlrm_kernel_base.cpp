@@ -28,7 +28,5 @@
 
 namespace rocwmma
 {
-    HipResource* KernelI::sInitialResource = nullptr;
     bool KernelI::sHeaderPrinted = false;
-
 } // namespace rocwmma

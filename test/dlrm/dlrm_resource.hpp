@@ -137,8 +137,7 @@ namespace rocwmma
         DataSizeBwd maxBwdCapacity() const;
 
         // Reset sizes
-        void resetSizes();
-
+        void reset() final;
 
     protected:
         // Forward pass data

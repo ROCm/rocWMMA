@@ -143,35 +143,7 @@ namespace rocwmma
     template <uint32_t TileSize, typename DataT>
     HipResource* DlrmKernelBase<TileSize, DataT>::getResource()
     {
-        sInitialResource = DataStorage::instance().get();
-        return sInitialResource;
-    }
-
-    template <uint32_t TileSize, typename DataT>
-    void DlrmKernelBase<TileSize, DataT>::resetMemory()
-    {
-        auto& dataInstance = DataStorage::instance();
-
-        // Reset problem sizes
-        dataInstance->resetSizes();
-
-        // Reset host memory
-        dataInstance->hostInput() = dataInstance->template allocHost<DataT>(0);
-        dataInstance->hostOutput() = dataInstance->template allocHost<DataT>(0);
-        dataInstance->hostAccFwd() = dataInstance->template allocHost<float32_t>(0);
-        dataInstance->hostUpstreamGrad() = dataInstance->template allocHost<DataT>(0);
-        dataInstance->hostGrad() = dataInstance->template allocHost<DataT>(0);
-        dataInstance->hostBottomMlpGrad() = dataInstance->template allocHost<DataT>(0);
-        dataInstance->hostAccBwd() = dataInstance->template allocHost<DataT>(0);
-
-        // Reset device memory
-        dataInstance->deviceInput() = dataInstance->template allocDevice<DataT>(0);
-        dataInstance->deviceOutput() = dataInstance->template allocDevice<DataT>(0);
-        dataInstance->deviceAccFwd() = dataInstance->template allocDevice<float32_t>(0);
-        dataInstance->deviceUpstreamGrad() = dataInstance->template allocDevice<DataT>(0);
-        dataInstance->deviceGrad() = dataInstance->template allocDevice<DataT>(0);
-        dataInstance->deviceBottomMlpGrad() = dataInstance->template allocDevice<DataT>(0);
-        dataInstance->deviceAccBwd() = dataInstance->template allocDevice<DataT>(0);
+        return DataStorage::instance().get();
     }
 
     template <uint32_t TileSize, typename DataT>
