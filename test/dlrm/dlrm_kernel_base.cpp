@@ -28,7 +28,5 @@
 
 namespace rocwmma
 {
-
     bool KernelI::sHeaderPrinted = false;
-
 } // namespace rocwmma

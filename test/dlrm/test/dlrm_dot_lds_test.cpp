@@ -31,7 +31,6 @@
 
 namespace rocwmma
 {
-
     struct TestParams : public DlrmTestParams
     {
         // Types: 32 and 16 bit float

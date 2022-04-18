@@ -329,6 +329,30 @@ namespace rocwmma
               typename LayoutB,
               typename LayoutC,
               typename LayoutD>
+    HipResource* GemmKernelBase<BlockM,
+                                BlockN,
+                                BlockK,
+                                InputT,
+                                OutputT,
+                                ComputeT,
+                                LayoutA,
+                                LayoutB,
+                                LayoutC,
+                                LayoutD>::getResource()
+    {
+        return DataStorage::instance().get();
+    }
+
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename InputT,
+              typename OutputT,
+              typename ComputeT,
+              typename LayoutA,
+              typename LayoutB,
+              typename LayoutC,
+              typename LayoutD>
     std::ostream& GemmKernelBase<BlockM,
                                  BlockN,
                                  BlockK,

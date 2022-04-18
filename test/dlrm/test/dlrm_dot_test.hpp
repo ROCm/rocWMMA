@@ -55,6 +55,14 @@ namespace rocwmma
             auto problemSize   = std::get<2>(param);
             auto passDirection = std::get<3>(param);
 
+            // Cleanup previously used resources if data types change
+            static KernelI* sLastKernelRun = nullptr;
+            if (sLastKernelRun && sLastKernelRun->getResource() != kernel->getResource())
+            {
+                sLastKernelRun->getResource()->reset();
+            }
+            sLastKernelRun = kernel.get();
+
             ProblemParams params = {threadBlock, problemSize, passDirection};
 
             // Walk through kernel workflow
