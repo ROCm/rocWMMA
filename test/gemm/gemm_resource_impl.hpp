@@ -101,6 +101,26 @@ namespace rocwmma
     }
 
     template <typename InputT, typename OutputT>
+    void GemmResource<InputT, OutputT>::reset()
+    {
+        mCurrentMatrixSize = {0, 0, 0};
+
+        auto allocNew = [] (auto& devicePtr, auto& hostPtr)
+        {
+            using DeviceDataT = typename std::remove_reference_t<decltype(devicePtr)>::element_type;
+            using HostDataT = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
+
+            devicePtr = std::move(Base::template allocDevice<DeviceDataT>(0));
+            hostPtr   = std::move(Base::template allocHost<HostDataT>(0));
+        };
+
+        allocNew(mDeviceA, mHostA);
+        allocNew(mDeviceB, mHostB);
+        allocNew(mDeviceC, mHostC);
+        allocNew(mDeviceD, mHostD);
+    }
+
+    template <typename InputT, typename OutputT>
     auto GemmResource<InputT, OutputT>::hostA() -> HostPtrT<InputT>&
     {
         return mHostA;

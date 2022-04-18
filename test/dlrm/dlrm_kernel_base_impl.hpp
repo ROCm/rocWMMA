@@ -141,6 +141,12 @@ namespace rocwmma
     }
 
     template <uint32_t TileSize, typename DataT>
+    HipResource* DlrmKernelBase<TileSize, DataT>::getResource()
+    {
+        return DataStorage::instance().get();
+    }
+
+    template <uint32_t TileSize, typename DataT>
     std::ostream& DlrmKernelBase<TileSize, DataT>::printHeader(std::ostream& stream) const
     {
         return stream << "TileSize, "

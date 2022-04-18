@@ -98,6 +98,11 @@ namespace rocwmma
         return mMaxCapacity;
     }
 
+    template <typename DataT>
+    void UnitResource<DataT>::reset()
+    {
+    }
+
 } // namespace rocwmma
 
 #endif // ROCWMMA_UNIT_RESOURCE_IMPL_HPP

@@ -69,6 +69,8 @@ namespace rocwmma
         template <typename DataT>
         static void
             copyData(DevicePtrT<DataT>& dst, DevicePtrT<DataT> const& src, int64_t numElements);
+
+        virtual void reset() = 0;
     };
 
 } // namespace rocwmma

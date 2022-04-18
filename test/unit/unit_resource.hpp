@@ -90,6 +90,9 @@ namespace rocwmma
         ProblemSize problemSize() const;
         int64_t     maxCapacity() const;
 
+        // Reset sizes
+        void reset() final;
+
     protected:
         DevicePtrT  mDeviceIn, mDeviceOut;
         HostPtrT    mHostIn, mHostOut;
