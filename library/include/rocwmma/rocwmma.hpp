@@ -28,9 +28,9 @@
 
 #include <type_traits>
 
-#include "internal/types.hpp"
 #include "internal/io_config.hpp"
 #include "internal/io_traits.hpp"
+#include "internal/types.hpp"
 
 /**
  * \mainpage
@@ -210,14 +210,14 @@ namespace rocwmma
         struct Traits
         {
         private:
-            using PackedT   = typename detail::PackTraits<DataT>::PackedT;
-            using UnpackedT = typename detail::PackTraits<DataT>::UnpackedT;
+            using PackedElementT   = typename detail::PackTraits<DataT>::PackedT;
+            using UnpackedElementT = typename detail::PackTraits<DataT>::UnpackedT;
             using IOTraits =
                 typename io_config<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>::IOTraits;
 
         public:
-            using AccessT  = VecT<UnpackedT, IOTraits::UnpackedSize>;
-            using StorageT = VecT<PackedT, IOTraits::PackedSize>;
+            using AccessT  = VecT<UnpackedElementT, IOTraits::UnpackedSize>;
+            using StorageT = VecT<PackedElementT, IOTraits::PackedSize>;
 
             static_assert(IOTraits::PackedVRegCount >= 1,
                           "Fragments must occupy at least one packed register");
@@ -245,9 +245,9 @@ namespace rocwmma
         // Compatibility with nvcuda::wmma
         union
         {
-            typename Traits::StorageT mStorage;
-            typename Traits::AccessT  mStorageUnpacked;
-            typename Traits::AccessT  x;
+            typename Traits::StorageT mStorage; // Packed
+            typename Traits::AccessT  mAccess; // Unpacked
+            typename Traits::AccessT  x; // Nuanced access
             static_assert(sizeof(typename Traits::AccessT) == sizeof(typename Traits::StorageT),
                           "Storage type and access type should be views into the same raw data");
         };
@@ -255,7 +255,7 @@ namespace rocwmma
         using element_type                     = DataT;
     };
 
-   //! Fills the entire fragment with the desired value.
+    //! Fills the entire fragment with the desired value.
     /*!
       \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param value Value of type DataT.
@@ -273,8 +273,8 @@ namespace rocwmma
     __device__ void
         fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                       DataT                                                         value);
-    
-   //! Loads the entire fragment from the data pointer according to its matrix and data layouts. Data pointer may point to either local or global memory.
+
+    //! Loads the entire fragment from the data pointer according to its matrix and data layouts. Data pointer may point to either local or global memory.
     /*!
       \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
@@ -295,8 +295,7 @@ namespace rocwmma
                          const DataT*                                                  data,
                          uint32_t                                                      ldm);
 
-
-   //! Loads the entire fragment from the data pointer according to its matrix layout.Data pointer may point to either local or global memory. This overload provides a run-time ability to choose the data layout of the target fragment.
+    //! Loads the entire fragment from the data pointer according to its matrix layout.Data pointer may point to either local or global memory. This overload provides a run-time ability to choose the data layout of the target fragment.
     /*!
       \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
@@ -313,7 +312,7 @@ namespace rocwmma
                                      uint32_t                                          ldm,
                                      layout_t                                          layout);
 
-   //! Stores the entire fragment to the data pointer according to its matrix and data layouts. Data pointer may point to either local or global memory.
+    //! Stores the entire fragment to the data pointer according to its matrix and data layouts. Data pointer may point to either local or global memory.
     /*!
       \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
@@ -334,7 +333,7 @@ namespace rocwmma
                           fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
                           uint32_t                                                            ldm);
 
-   //!  Stores the entire fragment to the data pointer according to its matrix layout. Data pointer may point to either local or global memory. This overload provides a run-time ability to choose the data layout of the target fragment.
+    //!  Stores the entire fragment to the data pointer according to its matrix layout. Data pointer may point to either local or global memory. This overload provides a run-time ability to choose the data layout of the target fragment.
     /*!
       \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
@@ -351,7 +350,7 @@ namespace rocwmma
                                       uint32_t                                                ldm,
                                       layout_t layout);
 
-   //! Performs the Multiply-Accumulate operation on the fragments A, B, C and D(D = A * B + C)
+    //! Performs the Multiply-Accumulate operation on the fragments A, B, C and D(D = A * B + C)
     /*!
       \param d Accumulator output D
       \param a Input fragment A
@@ -376,8 +375,7 @@ namespace rocwmma
                              fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB> const& b,
                              fragment<accumulator, BlockM, BlockN, BlockK, ComputeT> const&     c);
 
-
-   //! Synchronization point for all wavefronts in a workgroup.
+    //! Synchronization point for all wavefronts in a workgroup.
     __device__ void synchronize_workgroup();
 
 } // namespace rocwmma
