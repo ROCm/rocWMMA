@@ -58,7 +58,7 @@ namespace rocwmma
         __device__ constexpr inline Coord2d threadCount(Coord2d const& waveCount)
         {
             // threadCount.x = waveCount.x * AMDGCN_WAVE_SIZE
-            // threadCount.y = waveCount.y 
+            // threadCount.y = waveCount.y
             return std::make_pair(std::get<0>(waveCount) << Log2<AMDGCN_WAVE_SIZE>::value,
                                   std::get<1>(waveCount));
         }
@@ -104,14 +104,16 @@ namespace rocwmma
 
         /// DataSpace
         template <typename DataOrientation>
-        __device__ constexpr inline auto DataSpace<DataOrientation>::leadingDim(MatrixSizeT const& matrixSize)
+        __device__ constexpr inline auto
+            DataSpace<DataOrientation>::leadingDim(MatrixSizeT const& matrixSize)
         {
             return std::get<MinorIndex>(matrixSize);
         }
 
         template <typename DataOrientation>
-        __device__ constexpr inline auto DataSpace<DataOrientation>::fromMatrixCoord(MatrixCoordT const& matrixCoord,
-                                                                           uint32_t            leadingDim)
+        __device__ constexpr inline auto
+            DataSpace<DataOrientation>::fromMatrixCoord(MatrixCoordT const& matrixCoord,
+                                                        uint32_t            leadingDim)
         {
             // 1D data element offset transform
             return std::get<MajorIndex>(matrixCoord) * leadingDim

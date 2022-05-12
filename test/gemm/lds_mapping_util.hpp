@@ -33,10 +33,10 @@
 #include <rocwmma/rocwmma_transforms.hpp>
 #pragma GCC diagnostic pop
 
-#include "gemm_global_mapping.hpp"
-#include "gemm_local_mapping.hpp"
 #include "gemm_coop_schedule.hpp"
 #include "gemm_driver.hpp"
+#include "gemm_global_mapping.hpp"
+#include "gemm_local_mapping.hpp"
 
 namespace rocwmma
 {
@@ -45,29 +45,29 @@ namespace rocwmma
         struct LdsKW
         {
             template <uint32_t BlockM,
-                uint32_t BlockN,
-                uint32_t BlockK,
-                typename InputT,
-                typename OutputT,
-                typename ComputeT,
-                typename LayoutA,
-                typename LayoutB,
-                typename LayoutC,
-                typename LayoutD,
-                uint32_t BlocksX,
-                uint32_t BlocksY>
+                      uint32_t BlockN,
+                      uint32_t BlockK,
+                      typename InputT,
+                      typename OutputT,
+                      typename ComputeT,
+                      typename LayoutA,
+                      typename LayoutB,
+                      typename LayoutC,
+                      typename LayoutD,
+                      uint32_t BlocksX,
+                      uint32_t BlocksY>
             using GlobalMapping = GlobalMapping<BlockM,
-                                                        BlockN,
-                                                        BlockK,
-                                                        InputT,
-                                                        OutputT,
-                                                        ComputeT,
-                                                        LayoutA,
-                                                        LayoutB,
-                                                        LayoutC,
-                                                        LayoutD,
-                                                        BlocksX,
-                                                        BlocksY>;
+                                                BlockN,
+                                                BlockK,
+                                                InputT,
+                                                OutputT,
+                                                ComputeT,
+                                                LayoutA,
+                                                LayoutB,
+                                                LayoutC,
+                                                LayoutD,
+                                                BlocksX,
+                                                BlocksY>;
 
             template <typename GlobalMapping, typename LayoutLds>
             using LdsMapping = LdsMappingNT<GlobalMapping, LayoutLds>;
@@ -75,46 +75,53 @@ namespace rocwmma
             using CoopSchedulerA = typename Schedule::SameRowFwd;
             using CoopSchedulerB = typename Schedule::SameColFwd;
 
-            template<typename GlobalMapping, typename LdsMapping, typename CoopSchedulerA, typename CoopSchedulerB>
-            using GemmDriver = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
+            template <typename GlobalMapping,
+                      typename LdsMapping,
+                      typename CoopSchedulerA,
+                      typename CoopSchedulerB>
+            using GemmDriver
+                = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
         };
 
         struct LdsKH
         {
             template <uint32_t BlockM,
-                uint32_t BlockN,
-                uint32_t BlockK,
-                typename InputT,
-                typename OutputT,
-                typename ComputeT,
-                typename LayoutA,
-                typename LayoutB,
-                typename LayoutC,
-                typename LayoutD,
-                uint32_t BlocksX,
-                uint32_t BlocksY>
+                      uint32_t BlockN,
+                      uint32_t BlockK,
+                      typename InputT,
+                      typename OutputT,
+                      typename ComputeT,
+                      typename LayoutA,
+                      typename LayoutB,
+                      typename LayoutC,
+                      typename LayoutD,
+                      uint32_t BlocksX,
+                      uint32_t BlocksY>
             using GlobalMapping = GlobalMapping<BlockM,
-                                                        BlockN,
-                                                        BlockK,
-                                                        InputT,
-                                                        OutputT,
-                                                        ComputeT,
-                                                        LayoutA,
-                                                        LayoutB,
-                                                        LayoutC,
-                                                        LayoutD,
-                                                        BlocksX,
-                                                        BlocksY>;
+                                                BlockN,
+                                                BlockK,
+                                                InputT,
+                                                OutputT,
+                                                ComputeT,
+                                                LayoutA,
+                                                LayoutB,
+                                                LayoutC,
+                                                LayoutD,
+                                                BlocksX,
+                                                BlocksY>;
 
-            
             template <typename GlobalMapping, typename LayoutLds>
             using LdsMapping = LdsMappingTN<GlobalMapping, LayoutLds>;
 
             using CoopSchedulerA = typename Schedule::SameRowFwd;
             using CoopSchedulerB = typename Schedule::SameColFwd;
 
-            template<typename GlobalMapping, typename LdsMapping, typename CoopSchedulerA, typename CoopSchedulerB>
-            using GemmDriver = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
+            template <typename GlobalMapping,
+                      typename LdsMapping,
+                      typename CoopSchedulerA,
+                      typename CoopSchedulerB>
+            using GemmDriver
+                = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
         };
 
     } // namespace CooperativeGemm

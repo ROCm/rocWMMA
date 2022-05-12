@@ -79,7 +79,7 @@ namespace rocwmma
         struct DataSpace
         {
             using MatrixCoordT = Coord2d;
-            using MatrixSizeT = Coord2d;
+            using MatrixSizeT  = Coord2d;
 
             enum : uint32_t
             {
@@ -91,7 +91,8 @@ namespace rocwmma
             __device__ constexpr static inline auto leadingDim(MatrixSizeT const& matrixSize);
 
             // Global data coordinate space (1d element) transform for a matrix coordinate.
-            __device__ constexpr static inline auto fromMatrixCoord(MatrixCoordT const& matrixCoord, uint32_t leadingDim);
+            __device__ constexpr static inline auto fromMatrixCoord(MatrixCoordT const& matrixCoord,
+                                                                    uint32_t            leadingDim);
         };
 
         template <>
