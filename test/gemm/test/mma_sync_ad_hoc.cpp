@@ -44,10 +44,10 @@ namespace rocwmma
         using Types      = std::tuple<std::tuple<float16_t, float32_t, float32_t>>;
         using BlockSizes = std::tuple<std::tuple<I<16>, I<16>, I<16>>>;
         using Layouts    = std::tuple<
-            std::tuple<row_major, row_major, row_major>>; //typename Base::TestLayoutsNT;
-        using LayoutsLds  = std::tuple<row_major>; //typename Base::TestLayoutTypes;
-        using MappingsLds = typename Base::TestMappingsLds;
-        using BlocksXY    = std::tuple<std::tuple<I<2>, I<2>>>;
+            std::tuple<col_major, row_major, row_major>>; //typename Base::TestLayoutsNT;
+        using LayoutsLds  = std::tuple<col_major>; //typename Base::TestLayoutTypes;
+        using MappingsLds = std::tuple<CooperativeGemm::LdsKW>;
+        using BlocksXY    = std::tuple<std::tuple<I<4>, I<2>>>;
         using KernelParams =
             typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
                 Result;
@@ -83,9 +83,9 @@ namespace rocwmma
                 // {64, 32, 1024},
                 // {256, 256, 1024},
                 //{1024, 1024, 1024},
-                {64, 64, 64},
+                //{64, 64, 64},
                 //{2048, 2048, 2048},
-                //{8192, 8192, 8192}
+                {8192, 8192, 8192}
 
             };
         }

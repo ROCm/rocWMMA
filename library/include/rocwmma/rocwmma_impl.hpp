@@ -48,6 +48,14 @@
 
 namespace rocwmma
 {
+    namespace detail
+    {
+        // Ensure that MFMA fragments for A and B have orthogonal layouts
+        template<typename FragA, typename FragB>
+        struct MfmaCheck : public MatrixLayout::detail::OrthogonalCheck<typename FragA::IOConfig::IOShape::MatrixMapper,
+                                                                        typename FragB::IOConfig::IOShape::MatrixMapper>{};
+    }
+
     // fragment implementations
     template <typename MatrixT,
               uint32_t BlockM,
@@ -297,7 +305,13 @@ namespace rocwmma
                              fragment<accumulator, BlockM, BlockN, BlockK, ComputeT> const&     c)
     {
         using MFMA = Mfma<InputT, ComputeT, BlockM, BlockN, BlockK>;
-        (*d)       = MFMA::exec(*a, *b, *c);
+        using FragA  = typename std::decay<decltype(a)>::type;
+        using FragB  = typename std::decay<decltype(b)>::type;
+
+        // Sanity check
+        static_assert(detail::MfmaCheck<FragA, FragB>::value, "A and B fragment layouts must be orthogonal");
+
+        (*d) = MFMA::exec(*a, *b, *c);
     }
 
     __device__ void synchronize_workgroup()
