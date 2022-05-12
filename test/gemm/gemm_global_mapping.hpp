@@ -37,18 +37,18 @@ namespace rocwmma
 {
     namespace CooperativeGemm
     {
-        template<uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename InputT,
-              typename OutputT,
-              typename ComputeT,
-              typename LayoutA,
-              typename LayoutB,
-              typename LayoutC,
-              typename LayoutD,
-              uint32_t BlocksX,
-              uint32_t BlocksY>
+        template <uint32_t BlockM,
+                  uint32_t BlockN,
+                  uint32_t BlockK,
+                  typename InputT,
+                  typename OutputT,
+                  typename ComputeT,
+                  typename LayoutA,
+                  typename LayoutB,
+                  typename LayoutC,
+                  typename LayoutD,
+                  uint32_t BlocksX,
+                  uint32_t BlocksY>
         struct GlobalMapping
         {
             ///
@@ -60,7 +60,7 @@ namespace rocwmma
             // computing tiles on the same col (matrix B) have opportunities
             // for data sharing. As a result, waves collaboration is limited
             // to tiles in same locality.
-            // 
+            //
             // Wave tile size:     (BlocksX * BlockM) x (BlocksY * BlockN)
             // WG MacroTile size: (WgDim.x * BlocksX * BlockM) x (WgDim.y * BlocksY * BlockN)
             //
@@ -70,45 +70,45 @@ namespace rocwmma
             // Global C layout & workgroup assignment:
             //
             //                                 MacroTile Y
-            //                      |<----------------------------------| 
-            //          
+            //                      |<----------------------------------|
+            //
             //                       BlocksY x BlockN   BlocksY x BlockN
             //                      |<--------------->|<--------------->|
             //      __            __  ________ ________ ________ ________
             //        ^            ^ |        |        |        |        |
             //        |   BlocksX  | |        W        |        W        |
-            //        |      x     | |__   (0, 0)    __|__   (0, 1)    __| 
+            //        |      x     | |__   (0, 0)    __|__   (0, 1)    __|
             //        |   BlockM   | |                 |                 |
             //  Macro |            | |                 |                 |
             //   Tile |           _v |________|________|________|________|
             //    X   |            ^ |        |        |        |        |
             //        |   BlocksX  | |        W        |        W        |
-            //        |      x     | |__   (1, 0)    __|__   (1, 1)    __| 
+            //        |      x     | |__   (1, 0)    __|__   (1, 1)    __|
             //        |   BlockM   | |                 |                 |
             //        |            | |                 |                 |
             //       _v           _v |________|________|________|________|
-            
+
             // Global wave tile fragments that are loaded collaboratively
             using GRFragA = fragment<matrix_a, BlockM * BlocksX, BlockN, BlockK, InputT, LayoutA>;
             using GRFragB = fragment<matrix_b, BlockM, BlockN * BlocksY, BlockK, InputT, LayoutB>;
 
             // Block fragments that are used as inputs to MFMA operations.
-            using MfmaFragA = fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA>;
-            using MfmaFragB = fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB>;
-            using MfmaFragC = fragment<accumulator, BlockM, BlockN, BlockK, OutputT, LayoutC>;
-            using MfmaFragD = fragment<accumulator, BlockM, BlockN, BlockK, OutputT, LayoutD>;
+            using MfmaFragA   = fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA>;
+            using MfmaFragB   = fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB>;
+            using MfmaFragC   = fragment<accumulator, BlockM, BlockN, BlockK, OutputT, LayoutC>;
+            using MfmaFragD   = fragment<accumulator, BlockM, BlockN, BlockK, OutputT, LayoutD>;
             using MfmaFragAcc = fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>;
 
-            // Helper to access fragment dimensions                       
-            template<typename FragT>
+            // Helper to access fragment dimensions
+            template <typename FragT>
             using IOShape = typename FragT::IOConfig::IOShape;
 
             // Projection of C coordinate in direction of A
-            template<typename CoordC>
+            template <typename CoordC>
             __device__ constexpr static inline auto projCoordA(CoordC const& coordC);
 
             // Projection of C coordinate in direction of B
-            template<typename CoordC>
+            template <typename CoordC>
             __device__ constexpr static inline auto projCoordB(CoordC const& coordC);
 
             // Full macro tile size

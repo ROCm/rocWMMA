@@ -33,110 +33,119 @@ namespace rocwmma
         ///
         /// Consistency and orthogonality checks as they apply to fragment types
         ///
-        template<typename LhsFrag, typename RhsFrag>
-        struct ConsistencyCheck 
-        : public MatrixLayout::detail::ConsistencyCheck<typename LhsFrag::IOConfig::IOShape::MatrixMapper,
-                                                        typename RhsFrag::IOConfig::IOShape::MatrixMapper>{};
+        template <typename LhsFrag, typename RhsFrag>
+        struct ConsistencyCheck : public MatrixLayout::detail::ConsistencyCheck<
+                                      typename LhsFrag::IOConfig::IOShape::MatrixMapper,
+                                      typename RhsFrag::IOConfig::IOShape::MatrixMapper>
+        {
+        };
 
-        template<typename LhsFrag, typename RhsFrag>
-        struct OrthogonalCheck 
-        : public MatrixLayout::detail::OrthogonalCheck<typename LhsFrag::IOConfig::IOShape::MatrixMapper,
-                                                      typename RhsFrag::IOConfig::IOShape::MatrixMapper>{};
+        template <typename LhsFrag, typename RhsFrag>
+        struct OrthogonalCheck : public MatrixLayout::detail::OrthogonalCheck<
+                                     typename LhsFrag::IOConfig::IOShape::MatrixMapper,
+                                     typename RhsFrag::IOConfig::IOShape::MatrixMapper>
+        {
+        };
 
         ///
         /// Apply implicit transpose of fragment
         ///
-        template<typename FragT>
+        template <typename FragT>
         struct ApplyTranspose;
 
-        template<uint32_t BlockM,
-                uint32_t BlockN,
-                uint32_t BlockK,
-                typename DataT,
-                typename DataLayoutT>
+        template <uint32_t BlockM,
+                  uint32_t BlockN,
+                  uint32_t BlockK,
+                  typename DataT,
+                  typename DataLayoutT>
         struct ApplyTranspose<fragment<matrix_a, BlockM, BlockN, BlockK, DataT, DataLayoutT>>
         {
-            private:
+        private:
             // Original frag type
             using Frag = fragment<matrix_a, BlockM, BlockN, BlockK, DataT, DataLayoutT>;
-            
+
             // Transposed frag type
             using FragT = fragment<matrix_b,
-                                BlockN,
-                                BlockM,
-                                BlockK,
-                                DataT,
-                                typename DataLayout::template OrthogonalLayout_t<DataLayoutT>>; 
+                                   BlockN,
+                                   BlockM,
+                                   BlockK,
+                                   DataT,
+                                   typename DataLayout::template OrthogonalLayout_t<DataLayoutT>>;
 
             // Sanity check
-            static_assert(OrthogonalCheck<Frag, FragT>::value, "Implicit fragment transpose is not orthogonal");
+            static_assert(OrthogonalCheck<Frag, FragT>::value,
+                          "Implicit fragment transpose is not orthogonal");
 
-            public:
+        public:
             using Type = FragT;
         };
 
-        template<uint32_t BlockM,
-                uint32_t BlockN,
-                uint32_t BlockK,
-                typename DataT,
-                typename DataLayoutT>
+        template <uint32_t BlockM,
+                  uint32_t BlockN,
+                  uint32_t BlockK,
+                  typename DataT,
+                  typename DataLayoutT>
         struct ApplyTranspose<fragment<matrix_b, BlockM, BlockN, BlockK, DataT, DataLayoutT>>
         {
-            private:
+        private:
             // Original frag type
             using Frag = fragment<matrix_b, BlockM, BlockN, BlockK, DataT, DataLayoutT>;
 
             // Transposed frag type
             using FragT = fragment<matrix_a,
-                                BlockN,
-                                BlockM,
-                                BlockK,
-                                DataT,
-                                typename DataLayout::template OrthogonalLayout_t<DataLayoutT>>;
+                                   BlockN,
+                                   BlockM,
+                                   BlockK,
+                                   DataT,
+                                   typename DataLayout::template OrthogonalLayout_t<DataLayoutT>>;
 
             // Sanity check
-            static_assert(OrthogonalCheck<Frag, FragT>::value, "Implicit fragment transpose failed");
+            static_assert(OrthogonalCheck<Frag, FragT>::value,
+                          "Implicit fragment transpose failed");
 
-            public:
+        public:
             using Type = FragT;
         };
 
         ///
         /// Apply implicit data layout change of fragment
         ///
-        template<typename FragT, typename NewDataLayoutT>
+        template <typename FragT, typename NewDataLayoutT>
         struct ApplyDataLayout;
 
         // Same layout case
-        template<typename MatrixT,
-                uint32_t BlockM,
-                uint32_t BlockN,
-                uint32_t BlockK,
-                typename DataT,
-                typename DataLayout>
-        struct ApplyDataLayout<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>, DataLayout>
+        template <typename MatrixT,
+                  uint32_t BlockM,
+                  uint32_t BlockN,
+                  uint32_t BlockK,
+                  typename DataT,
+                  typename DataLayout>
+        struct ApplyDataLayout<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>,
+                               DataLayout>
         {
             using Type = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
         };
 
-        template<typename MatrixT,
-                uint32_t BlockM,
-                uint32_t BlockN,
-                uint32_t BlockK,
-                typename DataT,
-                typename DataLayout,
-                typename NewDataLayout>
-        struct ApplyDataLayout<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>, NewDataLayout>
+        template <typename MatrixT,
+                  uint32_t BlockM,
+                  uint32_t BlockN,
+                  uint32_t BlockK,
+                  typename DataT,
+                  typename DataLayout,
+                  typename NewDataLayout>
+        struct ApplyDataLayout<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>,
+                               NewDataLayout>
         {
-            private:
-            using Frag = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
+        private:
+            using Frag  = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
             using FragT = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, NewDataLayout>;
 
             // Some fragment layouts like ColNT and RowNT enforce consistency across DataLayouts.
             // If so, we can implicitly change the DataLayout.
-            static_assert(ConsistencyCheck<Frag, FragT>::value, "Implicit fragment DataLayout change is inconsistent");
+            static_assert(ConsistencyCheck<Frag, FragT>::value,
+                          "Implicit fragment DataLayout change is inconsistent");
 
-            public: 
+        public:
             using Type = FragT;
         };
 

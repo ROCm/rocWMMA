@@ -56,7 +56,6 @@ namespace std
 ///////////////////////////////////////////////////////////
 namespace std
 {
-
     // Single operand for swap
     template <typename T>
     __host__ __device__ constexpr static inline pair<T, T> swap(pair<T, T> const& p)
@@ -73,13 +72,15 @@ namespace std
 
     // Add, sub operators
     template <typename T>
-    __host__ __device__ constexpr static inline pair<T, T> operator+(pair<T, T> const& lhs, pair<T, T> const& rhs)
+    __host__ __device__ constexpr static inline pair<T, T> operator+(pair<T, T> const& lhs,
+                                                                     pair<T, T> const& rhs)
     {
         return make_pair(get<0>(lhs) + get<0>(rhs), get<1>(lhs) + get<1>(rhs));
     }
 
     template <typename T>
-    __host__ __device__ constexpr static inline pair<T, T>& operator+=(pair<T, T>& lhs, pair<T, T> const& rhs)
+    __host__ __device__ constexpr static inline pair<T, T>& operator+=(pair<T, T>&       lhs,
+                                                                       pair<T, T> const& rhs)
     {
         get<0>(lhs) += get<0>(rhs);
         get<1>(lhs) += get<1>(rhs);
@@ -87,14 +88,15 @@ namespace std
     }
 
     template <typename T>
-    __host__ __device__ constexpr static inline pair<T, T> operator*(pair<T, T> const& lhs, pair<T, T> const& rhs)
+    __host__ __device__ constexpr static inline pair<T, T> operator*(pair<T, T> const& lhs,
+                                                                     pair<T, T> const& rhs)
     {
-        return make_pair(get<0>(lhs) * get<0>(rhs),
-                         get<1>(lhs) * get<1>(rhs));
+        return make_pair(get<0>(lhs) * get<0>(rhs), get<1>(lhs) * get<1>(rhs));
     }
 
     template <typename T>
-    __host__ __device__ constexpr static inline pair<T, T>& operator*=(pair<T, T>& lhs, pair<T, T> const& rhs)
+    __host__ __device__ constexpr static inline pair<T, T>& operator*=(pair<T, T>&       lhs,
+                                                                       pair<T, T> const& rhs)
     {
         get<0>(lhs) *= get<0>(rhs);
         get<1>(lhs) *= get<1>(rhs);
@@ -102,13 +104,15 @@ namespace std
     }
 
     template <typename T>
-    __host__ __device__ constexpr static inline pair<T, T> operator-(pair<T, T> const& lhs, pair<T, T> const& rhs)
+    __host__ __device__ constexpr static inline pair<T, T> operator-(pair<T, T> const& lhs,
+                                                                     pair<T, T> const& rhs)
     {
         return make_pair(get<0>(lhs) - get<0>(rhs), get<1>(lhs) - get<1>(rhs));
     }
 
     template <typename T>
-    __host__ __device__ constexpr static inline pair<T, T>& operator-=(pair<T, T>& lhs, pair<T, T> const& rhs)
+    __host__ __device__ constexpr static inline pair<T, T>& operator-=(pair<T, T>&       lhs,
+                                                                       pair<T, T> const& rhs)
     {
         get<0>(lhs) -= get<0>(rhs);
         get<1>(lhs) -= get<1>(rhs);

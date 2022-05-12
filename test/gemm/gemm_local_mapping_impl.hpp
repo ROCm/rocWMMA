@@ -26,22 +26,18 @@
 #ifndef GEMM_LOCAL_MAPPING_IMPL_HPP
 #define GEMM_LOCAL_MAPPING_IMPL_HPP
 
-#include "gemm_local_mapping.hpp"
 #include "gemm_global_mapping.hpp"
+#include "gemm_local_mapping.hpp"
 
 namespace rocwmma
 {
     namespace CooperativeGemm
     {
-        
-#define LdsMappingT  \
-    typename GlobalMapping, \
-    typename LayoutLds
 
-#define LdsMappingT_impl \
-    GlobalMapping, \
-    LayoutLds
-        
+#define LdsMappingT typename GlobalMapping, typename LayoutLds
+
+#define LdsMappingT_impl GlobalMapping, LayoutLds
+
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::waveOffsetA()
         {
@@ -76,9 +72,9 @@ namespace rocwmma
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::matrixCoordB()
         {
-            return std::swap(GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC())) +
-                    waveOffsetB();
-        }            
+            return std::swap(GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()))
+                   + waveOffsetB();
+        }
 
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::sizeLds()
@@ -93,17 +89,12 @@ namespace rocwmma
             return DataSpace::leadingDim(sizeLds());
         }
 
-    #undef LdsMappingT
-    #undef LdsMappingT_impl
+#undef LdsMappingT
+#undef LdsMappingT_impl
 
+#define LdsMappingT typename GlobalMapping, typename LayoutLds
 
-#define LdsMappingT  \
-    typename GlobalMapping, \
-    typename LayoutLds
-
-#define LdsMappingT_impl \
-    GlobalMapping, \
-    LayoutLds
+#define LdsMappingT_impl GlobalMapping, LayoutLds
 
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::waveOffsetA()
@@ -122,7 +113,7 @@ namespace rocwmma
         {
             return GlobalMapping::blockOffsetA();
         }
-        
+
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::blockOffsetB()
         {
@@ -139,8 +130,7 @@ namespace rocwmma
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::matrixCoordB()
         {
-            return GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()) +
-                    waveOffsetB();
+            return GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()) + waveOffsetB();
         }
 
         template <LdsMappingT>

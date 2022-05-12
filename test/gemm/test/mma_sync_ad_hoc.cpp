@@ -46,7 +46,7 @@ namespace rocwmma
         using Layouts    = std::tuple<
             std::tuple<col_major, row_major, row_major>>; //typename Base::TestLayoutsNT;
         using LayoutsLds  = std::tuple<col_major>; //typename Base::TestLayoutTypes;
-        using MappingsLds = std::tuple<CooperativeGemm::LdsKW>;
+        using MappingsLds = std::tuple<typename CooperativeGemm::LdsKW>;
         using BlocksXY    = std::tuple<std::tuple<I<4>, I<2>>>;
         using KernelParams =
             typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
@@ -77,15 +77,14 @@ namespace rocwmma
 
         static inline std::vector<ProblemSizeT> problemSizes()
         {
-            return {
-                //{64, 64, 1024},
-                //         {32, 64, 1024},
-                // {64, 32, 1024},
-                // {256, 256, 1024},
-                //{1024, 1024, 1024},
-                //{64, 64, 64},
-                //{2048, 2048, 2048},
-                {8192, 8192, 8192}
+            return {//{64, 64, 1024},
+                    //         {32, 64, 1024},
+                    // {64, 32, 1024},
+                    // {256, 256, 1024},
+                    //{1024, 1024, 1024},
+                    //{64, 64, 64},
+                    //{2048, 2048, 2048},
+                    {8192, 8192, 8192}
 
             };
         }

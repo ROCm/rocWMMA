@@ -688,7 +688,7 @@ namespace rocwmma
             };
         };
 
-        template<typename LayoutT>
+        template <typename LayoutT>
         using OrthogonalLayout_t = typename detail::OrthogonalLayout<LayoutT>::Type;
 
     } // namespace MatrixLayout

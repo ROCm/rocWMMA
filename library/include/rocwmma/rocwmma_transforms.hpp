@@ -32,12 +32,13 @@
 namespace rocwmma
 {
     // Implicit transpose of fragment
-    template<typename FragT>
+    template <typename FragT>
     using ApplyTranspose_t = typename detail::template ApplyTranspose<FragT>::Type;
 
     // Implicit layout change of fragment
-    template<typename FragT, typename NewDataLayoutT>
-    using ApplyDataLayout_t = typename detail::template ApplyDataLayout<FragT, NewDataLayoutT>::Type;
+    template <typename FragT, typename NewDataLayoutT>
+    using ApplyDataLayout_t =
+        typename detail::template ApplyDataLayout<FragT, NewDataLayoutT>::Type;
 
 } // namespace rocwmma
 
