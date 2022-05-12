@@ -32,10 +32,13 @@
 
 namespace rocwmma
 {
+    namespace DataLayout
+    {
+
+    } // namespace DataLayout
 
     namespace MatrixLayout
     {
-
         /**
          * \ingroup rocwmma
          * \defgroup Matrix Layouts
@@ -685,12 +688,10 @@ namespace rocwmma
             };
         };
 
+        template<typename LayoutT>
+        using OrthogonalLayout_t = typename detail::OrthogonalLayout<LayoutT>::Type;
+
     } // namespace MatrixLayout
-
-    namespace DataLayout
-    {
-
-    } // namespace DataLayout
 
 } // namespace rocwmma
 

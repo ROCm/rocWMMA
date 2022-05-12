@@ -47,16 +47,16 @@ namespace rocwmma
             __device__ static inline uint32_t localLaneId();
 
             // Local wave coordinate relative to current workgroup.
-            __device__ static inline WaveCoordT localWaveCoord();
+            __device__ constexpr static inline WaveCoordT localWaveCoord();
 
             // Global wave grid coordinate relative to all workgroups.
             __device__ static inline WaveCoordT globalWaveCoord();
 
             // Global workgroup Id
-            __device__ static inline WorkgroupCoordT workgroupCoord();
+            __device__ constexpr static inline WorkgroupCoordT workgroupCoord();
 
             // Size of workgroup, normalized to wave count.
-            __device__ static inline WorkgroupDimT workgroupDim();
+            __device__ constexpr static inline WorkgroupDimT workgroupDim();
         };
 
         /*
@@ -79,10 +79,19 @@ namespace rocwmma
         struct DataSpace
         {
             using MatrixCoordT = Coord2d;
+            using MatrixSizeT = Coord2d;
+
+            enum : uint32_t
+            {
+                MajorIndex = std::is_same<DataOrientation, row_major>::value ? 0 : 1,
+                MinorIndex = std::is_same<DataOrientation, row_major>::value ? 1 : 0
+            };
+
+            // Determine the leading dimension of a matrix.
+            __device__ constexpr static inline auto leadingDim(MatrixSizeT const& matrixSize);
 
             // Global data coordinate space (1d element) transform for a matrix coordinate.
-            __device__ static inline uint32_t fromMatrixCoord(MatrixCoordT const& matrixCoord,
-                                                              uint32_t            leadingDim);
+            __device__ constexpr static inline auto fromMatrixCoord(MatrixCoordT const& matrixCoord, uint32_t leadingDim);
         };
 
         template <>
