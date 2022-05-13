@@ -39,9 +39,12 @@
 namespace rocwmma
 {
 
-    class LdsRF;
-    class LdsKH;
-    class LdsKW;
+    namespace CooperativeGemm
+    {
+        class LdsKH;
+        class LdsKW;
+
+    } // namespace CooperativeGemm
 
     struct CommonTestParams
     {

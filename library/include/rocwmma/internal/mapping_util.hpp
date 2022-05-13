@@ -35,6 +35,9 @@ namespace rocwmma
     using Coord2d = std::pair<uint32_t, uint32_t>;
 
     // Fwd declaration
+    struct row_major;
+    struct col_major;
+
     namespace detail
     {
         struct WaveSpace

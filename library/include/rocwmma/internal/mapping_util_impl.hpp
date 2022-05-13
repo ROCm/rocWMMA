@@ -32,6 +32,7 @@
 #include "constants.hpp"
 #include "mapping_util.hpp"
 #include "types.hpp"
+#include "utils.hpp"
 
 namespace rocwmma
 {
