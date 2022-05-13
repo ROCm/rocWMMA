@@ -67,7 +67,7 @@ namespace rocwmma
         using ProblemSize = std::tuple<int64_t, int64_t, int64_t>;
 
         // MatrixA, MatrixB, MatrixCD (# of elements)
-        using MatrixSize = std::tuple<int64_t, int64_t, int64_t>;
+        using MatrixSize = std::tuple<int64_t, int64_t, int64_t, int64_t>;
 
         enum : uint32_t
         {
@@ -75,7 +75,7 @@ namespace rocwmma
             MatrixA = 0,
             MatrixB = 1,
             MatrixC = 2,
-            MatrixD = 2,
+            MatrixD = 3,
 
             // Problem size indices
             M = 0,
@@ -114,6 +114,7 @@ namespace rocwmma
         HostPtrT<OutputT>   mHostC, mHostD;
         ProblemSize         mCurrentProblemSize;
         MatrixSize          mCurrentMatrixSize;
+        MatrixSize          mCurrentAllocSize;
     };
 
 } // namespace rocwmma
