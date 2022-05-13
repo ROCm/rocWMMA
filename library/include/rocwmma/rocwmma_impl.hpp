@@ -312,8 +312,8 @@ namespace rocwmma
         using FragB = typename std::decay<decltype(b)>::type;
 
         // Sanity check
-        static_assert(detail::MfmaCheck<FragA, FragB>::value,
-                      "A and B fragment layouts must be orthogonal");
+        // static_assert(detail::MfmaCheck<FragA, FragB>::value,
+        //              "A and B fragment layouts must be orthogonal");
 
         (*d) = MFMA::exec(*a, *b, *c);
     }
