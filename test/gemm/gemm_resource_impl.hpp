@@ -43,7 +43,8 @@ namespace rocwmma
         , mHostC(Base::template allocHost<OutputT>(0))
         , mHostD(Base::template allocHost<OutputT>(0))
         , mCurrentProblemSize({0, 0, 0})
-        , mCurrentMatrixSize({0, 0, 0})
+        , mCurrentMatrixSize({0, 0, 0, 0})
+        , mCurrentAllocSize({0, 0, 0, 0})
     {
     }
 
@@ -69,33 +70,36 @@ namespace rocwmma
     void GemmResource<InputT, OutputT>::resizeStorage(ProblemSize const& size)
     {
         auto calcMatrixSizes = [](ProblemSize const& size) {
-            return std::make_tuple(std::get<M>(size) * std::get<K>(size), // M * K = A
-                                   std::get<K>(size) * std::get<N>(size), // K * N = B
-                                   std::get<M>(size) * std::get<N>(size)); // M * N = C, D
+            return std::make_tuple(std::get<M>(size) * std::get<K>(size), // sizeA = M * K
+                                   std::get<K>(size) * std::get<N>(size), // sizeB = K * N
+                                   std::get<M>(size) * std::get<N>(size), // sizeC = M * N
+                                   std::get<M>(size) * std::get<N>(size)); // sizeD = M * N
         };
 
         auto allocIfNeeded =
-            [](auto& devicePtr, auto& hostPtr, int64_t currentSize, int64_t newSize) {
+            [](auto& devicePtr, auto& hostPtr, int64_t& currentAllocSize, int64_t newSize) {
                 using DeviceDataT =
                     typename std::remove_reference_t<decltype(devicePtr)>::element_type;
                 using HostDataT = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
-                if(currentSize < newSize)
+                if(currentAllocSize < newSize)
                 {
                     devicePtr = std::move(Base::template allocDevice<DeviceDataT>(newSize));
                     hostPtr   = std::move(Base::template allocHost<HostDataT>(newSize));
+
+                    currentAllocSize = newSize;
                 }
             };
 
         auto newSizes = calcMatrixSizes(size);
 
         allocIfNeeded(
-            mDeviceA, mHostA, std::get<MatrixA>(mCurrentMatrixSize), std::get<MatrixA>(newSizes));
+            mDeviceA, mHostA, std::get<MatrixA>(mCurrentAllocSize), std::get<MatrixA>(newSizes));
         allocIfNeeded(
-            mDeviceB, mHostB, std::get<MatrixB>(mCurrentMatrixSize), std::get<MatrixB>(newSizes));
+            mDeviceB, mHostB, std::get<MatrixB>(mCurrentAllocSize), std::get<MatrixB>(newSizes));
         allocIfNeeded(
-            mDeviceC, mHostC, std::get<MatrixC>(mCurrentMatrixSize), std::get<MatrixC>(newSizes));
+            mDeviceC, mHostC, std::get<MatrixC>(mCurrentAllocSize), std::get<MatrixC>(newSizes));
         allocIfNeeded(
-            mDeviceD, mHostD, std::get<MatrixD>(mCurrentMatrixSize), std::get<MatrixD>(newSizes));
+            mDeviceD, mHostD, std::get<MatrixD>(mCurrentAllocSize), std::get<MatrixD>(newSizes));
 
         mCurrentMatrixSize = newSizes;
     }
@@ -103,12 +107,12 @@ namespace rocwmma
     template <typename InputT, typename OutputT>
     void GemmResource<InputT, OutputT>::reset()
     {
-        mCurrentMatrixSize = {0, 0, 0};
+        mCurrentAllocSize  = {0, 0, 0, 0};
+        mCurrentMatrixSize = {0, 0, 0, 0};
 
-        auto allocNew = [] (auto& devicePtr, auto& hostPtr)
-        {
+        auto allocNew = [](auto& devicePtr, auto& hostPtr) {
             using DeviceDataT = typename std::remove_reference_t<decltype(devicePtr)>::element_type;
-            using HostDataT = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
+            using HostDataT   = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
 
             devicePtr = std::move(Base::template allocDevice<DeviceDataT>(0));
             hostPtr   = std::move(Base::template allocHost<HostDataT>(0));
