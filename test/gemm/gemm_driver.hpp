@@ -64,12 +64,21 @@ namespace rocwmma
 
             // Ensure that splitCounts are the same on both sides of
             // global fetch and local writes to match fragment data locality.
-            constexpr static auto splitCount = std::min((uint32_t)IOTraits<GRFragB>::IOCount,
-                                                        (uint32_t)IOTraits<LWFragB>::IOCount);
+            constexpr static auto splitCountA = std::min((uint32_t)IOTraits<GRFragA>::IOCount,
+                                                         (uint32_t)IOTraits<LWFragA>::IOCount);
 
-            static_assert(((uint32_t)IOTraits<GRFragB>::IOCount % splitCount == 0u)
-                              && ((uint32_t)IOTraits<LWFragB>::IOCount % splitCount == 0u),
-                          "splitCount is not common divisor of GlobalRead and LocalWrite IOCounts");
+            constexpr static auto splitCountB = std::min((uint32_t)IOTraits<GRFragB>::IOCount,
+                                                         (uint32_t)IOTraits<LWFragB>::IOCount);
+
+            static_assert(
+                ((uint32_t)IOTraits<GRFragA>::IOCount % splitCountA == 0u)
+                    && ((uint32_t)IOTraits<LWFragA>::IOCount % splitCountA == 0u),
+                "splitCount A is not common divisor of GlobalRead and LocalWrite IOCounts");
+
+            static_assert(
+                ((uint32_t)IOTraits<GRFragB>::IOCount % splitCountB == 0u)
+                    && ((uint32_t)IOTraits<LWFragB>::IOCount % splitCountB == 0u),
+                "splitCount B is not common divisor of GlobalRead and LocalWrite IOCounts");
 
             ///
             /// Broadcast (fill) value

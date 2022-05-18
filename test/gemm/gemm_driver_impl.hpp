@@ -53,7 +53,7 @@ namespace rocwmma
                                            lda,
                                            CoopSchedulerA::waveIndex(),
                                            CoopSchedulerA::waveCount(),
-                                           splitCount);
+                                           splitCountA);
         }
 
         template <GemmDriverT>
@@ -65,7 +65,7 @@ namespace rocwmma
                                            ldb,
                                            CoopSchedulerB::waveIndex(),
                                            CoopSchedulerB::waveCount(),
-                                           splitCount);
+                                           splitCountB);
         }
 
         template <GemmDriverT>
@@ -77,7 +77,7 @@ namespace rocwmma
                                             ldlds,
                                             CoopSchedulerA::waveIndex(),
                                             CoopSchedulerA::waveCount(),
-                                            splitCount);
+                                            splitCountA);
         }
 
         template <GemmDriverT>
@@ -89,7 +89,7 @@ namespace rocwmma
                                             ldlds,
                                             CoopSchedulerB::waveIndex(),
                                             CoopSchedulerB::waveCount(),
-                                            splitCount);
+                                            splitCountB);
         }
 
         template <GemmDriverT>
