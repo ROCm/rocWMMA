@@ -38,10 +38,16 @@ namespace rocwmma
 
     struct HipResource
     {
-        HipResource()                   = default;
-        ~HipResource()                  = default;
+    protected:
+        HipResource() = default;
+
+    private: // No Copy
+        HipResource(HipResource&&)      = delete;
         HipResource(const HipResource&) = delete;
         HipResource& operator=(const HipResource&) = delete;
+
+    public:
+        virtual ~HipResource() = default;
 
         // Types
         template <typename DataT>
@@ -52,10 +58,16 @@ namespace rocwmma
 
         // Alloc
         template <typename DataT>
-        static DevicePtrT<DataT> allocDevice(int64_t numElements);
+        static inline DevicePtrT<DataT> allocDevice(int64_t numElements);
 
         template <typename DataT>
-        static HostPtrT<DataT> allocHost(int64_t numElements);
+        static inline void reallocDevice(DevicePtrT<DataT>& devicePtr, int64_t numElements);
+
+        template <typename DataT>
+        static inline HostPtrT<DataT> allocHost(int64_t numElements);
+
+        template <typename DataT>
+        static inline void reallocHost(HostPtrT<DataT>& hostPtr, int64_t numElements);
 
         // Transfer wrappers
         template <typename DataT>
