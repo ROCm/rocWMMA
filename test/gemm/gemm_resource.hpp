@@ -57,17 +57,18 @@ namespace rocwmma
 
         using Base = HipResource;
 
+    public:
         template <typename DataT>
-        using DevicePtrT = Base::DevicePtrT<DataT>;
+        using DevicePtrT = Base::template DevicePtrT<DataT>;
 
         template <typename DataT>
-        using HostPtrT = Base::HostPtrT<DataT>;
+        using HostPtrT = Base::template HostPtrT<DataT>;
 
         // M, N, K
-        using ProblemSize = std::tuple<int64_t, int64_t, int64_t>;
+        using ProblemDims = std::tuple<int64_t, int64_t, int64_t>;
 
-        // MatrixA, MatrixB, MatrixCD (# of elements)
-        using MatrixSize = std::tuple<int64_t, int64_t, int64_t, int64_t>;
+        // MatrixA, MatrixB, MatrixC, MatrixD (# of elements)
+        using MatrixElements = std::tuple<int64_t, int64_t, int64_t, int64_t>;
 
         enum : uint32_t
         {
@@ -83,17 +84,25 @@ namespace rocwmma
             K = 2
         };
 
-    protected:
-        // Singleton instantiation
+    private: // No public instantiation except make_unique.
+             // No copy
         GemmResource();
-        GemmResource(GemmResource const&) = delete;
-        GemmResource& operator=(GemmResource const&) = delete;
+        GemmResource(const GemmResource&) = delete;
+        GemmResource& operator=(const GemmResource&) = delete;
 
     public:
+        GemmResource(GemmResource&&);
         ~GemmResource() = default;
+
+        template <typename DataT>
+        static inline void reallocDeviceHostPair(DevicePtrT<DataT>& devicePtr,
+                                                 HostPtrT<DataT>&   hostPtr,
+                                                 int64_t            numElements);
+
         void copyHostToDeviceAll();
         void copyDeviceToHostAll();
-        void resizeStorage(ProblemSize const& size);
+        void resizeStorage(ProblemDims const& size);
+        void resizeStorage(MatrixElements const& size);
 
         HostPtrT<InputT>&  hostA();
         HostPtrT<InputT>&  hostB();
@@ -112,9 +121,8 @@ namespace rocwmma
         DevicePtrT<OutputT> mDeviceC, mDeviceD;
         HostPtrT<InputT>    mHostA, mHostB;
         HostPtrT<OutputT>   mHostC, mHostD;
-        ProblemSize         mCurrentProblemSize;
-        MatrixSize          mCurrentMatrixSize;
-        MatrixSize          mCurrentAllocSize;
+        MatrixElements      mCurrentMatrixElements;
+        MatrixElements      mCurrentAllocElements;
     };
 
 } // namespace rocwmma

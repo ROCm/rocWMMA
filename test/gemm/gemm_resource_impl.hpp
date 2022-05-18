@@ -34,7 +34,8 @@ namespace rocwmma
 
     template <typename InputT, typename OutputT>
     GemmResource<InputT, OutputT>::GemmResource()
-        : mDeviceA(Base::template allocDevice<InputT>(0))
+        : HipResource()
+        , mDeviceA(Base::template allocDevice<InputT>(0))
         , mDeviceB(Base::template allocDevice<InputT>(0))
         , mDeviceC(Base::template allocDevice<OutputT>(0))
         , mDeviceD(Base::template allocDevice<OutputT>(0))
@@ -42,86 +43,110 @@ namespace rocwmma
         , mHostB(Base::template allocHost<InputT>(0))
         , mHostC(Base::template allocHost<OutputT>(0))
         , mHostD(Base::template allocHost<OutputT>(0))
-        , mCurrentProblemSize({0, 0, 0})
-        , mCurrentMatrixSize({0, 0, 0, 0})
-        , mCurrentAllocSize({0, 0, 0, 0})
+        , mCurrentMatrixElements({0, 0, 0, 0})
+        , mCurrentAllocElements({0, 0, 0, 0})
     {
+    }
+
+    template <typename InputT, typename OutputT>
+    GemmResource<InputT, OutputT>::GemmResource(GemmResource&& rhs)
+        : HipResource()
+        , mDeviceA(std::move(rhs.mDeviceA))
+        , mDeviceB(std::move(rhs.mDeviceB))
+        , mDeviceC(std::move(rhs.mDeviceC))
+        , mDeviceD(std::move(rhs.mDeviceD))
+        , mHostA(std::move(rhs.mHostA))
+        , mHostB(std::move(rhs.mHostB))
+        , mHostC(std::move(rhs.mHostC))
+        , mHostD(std::move(rhs.mHostD))
+        , mCurrentMatrixElements(rhs.mCurrentMatrixElements)
+        , mCurrentAllocElements(rhs.mCurrentAllocElements)
+    {
+    }
+
+    template <typename InputT, typename OutputT>
+    template <typename DataT>
+    inline void GemmResource<InputT, OutputT>::reallocDeviceHostPair(DevicePtrT<DataT>& devicePtr,
+                                                                     HostPtrT<DataT>&   hostPtr,
+                                                                     int64_t            numElements)
+    {
+        Base::reallocDevice(devicePtr, numElements);
+        Base::reallocHost(hostPtr, numElements);
     }
 
     template <typename InputT, typename OutputT>
     void GemmResource<InputT, OutputT>::copyHostToDeviceAll()
     {
-        Base::copyData(mDeviceA, mHostA, std::get<MatrixA>(mCurrentMatrixSize));
-        Base::copyData(mDeviceB, mHostB, std::get<MatrixB>(mCurrentMatrixSize));
-        Base::copyData(mDeviceC, mHostC, std::get<MatrixC>(mCurrentMatrixSize));
-        Base::copyData(mDeviceD, mHostD, std::get<MatrixD>(mCurrentMatrixSize));
+        Base::copyData(mDeviceA, mHostA, std::get<MatrixA>(mCurrentMatrixElements));
+        Base::copyData(mDeviceB, mHostB, std::get<MatrixB>(mCurrentMatrixElements));
+        Base::copyData(mDeviceC, mHostC, std::get<MatrixC>(mCurrentMatrixElements));
+        Base::copyData(mDeviceD, mHostD, std::get<MatrixD>(mCurrentMatrixElements));
     }
 
     template <typename InputT, typename OutputT>
     void GemmResource<InputT, OutputT>::copyDeviceToHostAll()
     {
-        Base::copyData(mHostA, mDeviceA, std::get<MatrixA>(mCurrentMatrixSize));
-        Base::copyData(mHostB, mDeviceB, std::get<MatrixB>(mCurrentMatrixSize));
-        Base::copyData(mHostC, mDeviceC, std::get<MatrixC>(mCurrentMatrixSize));
-        Base::copyData(mHostD, mDeviceD, std::get<MatrixD>(mCurrentMatrixSize));
+        Base::copyData(mHostA, mDeviceA, std::get<MatrixA>(mCurrentMatrixElements));
+        Base::copyData(mHostB, mDeviceB, std::get<MatrixB>(mCurrentMatrixElements));
+        Base::copyData(mHostC, mDeviceC, std::get<MatrixC>(mCurrentMatrixElements));
+        Base::copyData(mHostD, mDeviceD, std::get<MatrixD>(mCurrentMatrixElements));
     }
 
     template <typename InputT, typename OutputT>
-    void GemmResource<InputT, OutputT>::resizeStorage(ProblemSize const& size)
+    void GemmResource<InputT, OutputT>::resizeStorage(ProblemDims const& size)
     {
-        auto calcMatrixSizes = [](ProblemSize const& size) {
-            return std::make_tuple(std::get<M>(size) * std::get<K>(size), // sizeA = M * K
-                                   std::get<K>(size) * std::get<N>(size), // sizeB = K * N
-                                   std::get<M>(size) * std::get<N>(size), // sizeC = M * N
-                                   std::get<M>(size) * std::get<N>(size)); // sizeD = M * N
+        resizeStorage(
+            std::make_tuple(std::get<M>(size) * std::get<K>(size), // elements MatrixA = M * K
+                            std::get<K>(size) * std::get<N>(size), // elements MatrixB = K * N
+                            std::get<M>(size) * std::get<N>(size), // elements MatrixC = M * N
+                            std::get<M>(size) * std::get<N>(size))); // elements MatrixD = M * N)
+    }
+
+    template <typename InputT, typename OutputT>
+    void GemmResource<InputT, OutputT>::resizeStorage(MatrixElements const& newMatrixElements)
+    {
+        auto conditionalReallocDeviceHostPair = [](auto&    devicePtr,
+                                                   auto&    hostPtr,
+                                                   int64_t& currentAllocElements,
+                                                   int64_t  newAllocElements) {
+            // Only realloc if required (e.g. current allocation won't fit new sizes)
+            if(currentAllocElements < newAllocElements)
+            {
+                reallocDeviceHostPair(devicePtr, hostPtr, newAllocElements);
+                currentAllocElements = newAllocElements;
+            }
         };
 
-        auto allocIfNeeded =
-            [](auto& devicePtr, auto& hostPtr, int64_t& currentAllocSize, int64_t newSize) {
-                using DeviceDataT =
-                    typename std::remove_reference_t<decltype(devicePtr)>::element_type;
-                using HostDataT = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
-                if(currentAllocSize < newSize)
-                {
-                    devicePtr = std::move(Base::template allocDevice<DeviceDataT>(newSize));
-                    hostPtr   = std::move(Base::template allocHost<HostDataT>(newSize));
+        conditionalReallocDeviceHostPair(mDeviceA,
+                                         mHostA,
+                                         std::get<MatrixA>(mCurrentAllocElements),
+                                         std::get<MatrixA>(newMatrixElements));
+        conditionalReallocDeviceHostPair(mDeviceB,
+                                         mHostB,
+                                         std::get<MatrixB>(mCurrentAllocElements),
+                                         std::get<MatrixB>(newMatrixElements));
+        conditionalReallocDeviceHostPair(mDeviceC,
+                                         mHostC,
+                                         std::get<MatrixC>(mCurrentAllocElements),
+                                         std::get<MatrixC>(newMatrixElements));
+        conditionalReallocDeviceHostPair(mDeviceD,
+                                         mHostD,
+                                         std::get<MatrixD>(mCurrentAllocElements),
+                                         std::get<MatrixD>(newMatrixElements));
 
-                    currentAllocSize = newSize;
-                }
-            };
-
-        auto newSizes = calcMatrixSizes(size);
-
-        allocIfNeeded(
-            mDeviceA, mHostA, std::get<MatrixA>(mCurrentAllocSize), std::get<MatrixA>(newSizes));
-        allocIfNeeded(
-            mDeviceB, mHostB, std::get<MatrixB>(mCurrentAllocSize), std::get<MatrixB>(newSizes));
-        allocIfNeeded(
-            mDeviceC, mHostC, std::get<MatrixC>(mCurrentAllocSize), std::get<MatrixC>(newSizes));
-        allocIfNeeded(
-            mDeviceD, mHostD, std::get<MatrixD>(mCurrentAllocSize), std::get<MatrixD>(newSizes));
-
-        mCurrentMatrixSize = newSizes;
+        // Always update the current matrix element count
+        mCurrentMatrixElements = newMatrixElements;
     }
 
     template <typename InputT, typename OutputT>
     void GemmResource<InputT, OutputT>::reset()
     {
-        mCurrentAllocSize  = {0, 0, 0, 0};
-        mCurrentMatrixSize = {0, 0, 0, 0};
-
-        auto allocNew = [](auto& devicePtr, auto& hostPtr) {
-            using DeviceDataT = typename std::remove_reference_t<decltype(devicePtr)>::element_type;
-            using HostDataT   = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
-
-            devicePtr = std::move(Base::template allocDevice<DeviceDataT>(0));
-            hostPtr   = std::move(Base::template allocHost<HostDataT>(0));
-        };
-
-        allocNew(mDeviceA, mHostA);
-        allocNew(mDeviceB, mHostB);
-        allocNew(mDeviceC, mHostC);
-        allocNew(mDeviceD, mHostD);
+        reallocDeviceHostPair(mDeviceA, mHostA, 0);
+        reallocDeviceHostPair(mDeviceB, mHostB, 0);
+        reallocDeviceHostPair(mDeviceC, mHostC, 0);
+        reallocDeviceHostPair(mDeviceD, mHostD, 0);
+        mCurrentAllocElements  = {0, 0, 0, 0};
+        mCurrentMatrixElements = {0, 0, 0, 0};
     }
 
     template <typename InputT, typename OutputT>
