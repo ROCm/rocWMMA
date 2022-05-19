@@ -56,21 +56,23 @@ namespace rocwmma
         using Base = HipResource;
 
         template <typename T>
-        using DevicePtrT = Base::DevicePtrT<T>;
+        using DevicePtrT = Base::template DevicePtrT<T>;
 
         template <typename T>
-        using HostPtrT = Base::HostPtrT<T>;
+        using HostPtrT = Base::template HostPtrT<T>;
 
         // M, K, BatchSize
         using ProblemSize = std::tuple<int64_t, int64_t, int64_t>;
 
         // Forward pass data sizes
         // Input, Output, Acc
-        using DataSizeFwd = std::tuple<int64_t, int64_t, int64_t>;
+        // Differentiate from ProblemSize
+        using DummyT          = DataT;
+        using ElementCountFwd = std::tuple<int64_t, int64_t, int64_t, DummyT>;
 
         // Backward pass data sizes
         // Input, UpstreamGrad, Acc, Grad, BottomMlpGrad
-        using DataSizeBwd = std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t>;
+        using ElementCountBwd = std::tuple<int64_t, int64_t, int64_t, int64_t, int64_t>;
 
         enum : uint32_t
         {
@@ -90,14 +92,24 @@ namespace rocwmma
             B = 2
         };
 
-    protected:
-        // Singleton instantiation
+    protected: // No public instantiation except make_unique.
+               // No copy
         DlrmResource();
         DlrmResource(DlrmResource const&) = delete;
         DlrmResource& operator=(DlrmResource const&) = delete;
 
+        // Helpers
+        template <typename T>
+        static inline void    conditionalReallocDeviceHostPair(DevicePtrT<T>& devicePtr,
+                                                               HostPtrT<T>&   hostPtr,
+                                                               int64_t&       currentMax,
+                                                               int64_t        newSize);
+        static inline int64_t calcTrilSize(ProblemSize const& size);
+
     public:
+        DlrmResource(DlrmResource&&);
         ~DlrmResource() = default;
+
         void copyHostToDeviceFwdAll();
         void copyHostToDeviceBwdAll();
         void copyDeviceToHostFwdInput();
@@ -105,16 +117,19 @@ namespace rocwmma
         void copyDeviceToHostBwdInput();
         void copyDeviceToHostBwdOutput();
         void resizeFwdStorage(ProblemSize const& size);
+        void resizeFwdStorage(ElementCountFwd const& size);
+
         void resizeBwdStorage(ProblemSize const& size);
+        void resizeBwdStorage(ElementCountBwd const& size);
 
         // Forward pass data
-        HostPtrT<DataT>& hostInput();
-        HostPtrT<DataT>& hostOutput();
-        HostPtrT<DataT>& hostOutputRef();
+        HostPtrT<DataT>&     hostInput();
+        HostPtrT<DataT>&     hostOutput();
+        HostPtrT<DataT>&     hostOutputRef();
         HostPtrT<float32_t>& hostAccFwd();
 
-        DevicePtrT<DataT>& deviceInput();
-        DevicePtrT<DataT>& deviceOutput();
+        DevicePtrT<DataT>&     deviceInput();
+        DevicePtrT<DataT>&     deviceOutput();
         DevicePtrT<float32_t>& deviceAccFwd();
 
         // Backward pass data
@@ -131,10 +146,10 @@ namespace rocwmma
         DevicePtrT<DataT>& deviceAccBwd();
 
         // Data sizes
-        DataSizeFwd currentDataSizeFwd() const;
-        DataSizeBwd currentDataSizeBwd() const;
-        DataSizeFwd maxFwdCapacity() const;
-        DataSizeBwd maxBwdCapacity() const;
+        ElementCountFwd currentElementCountFwd() const;
+        ElementCountBwd currentElementCountBwd() const;
+        ElementCountFwd maxFwdCapacity() const;
+        ElementCountBwd maxBwdCapacity() const;
 
         // Reset sizes
         void reset() final;
@@ -151,12 +166,11 @@ namespace rocwmma
         HostPtrT<DataT>   mHostUpstreamGrad, mHostGrad, mHostGradRef, mHostBottomMlpGrad,
             mHostBottomMlpGradRef, mHostAccBwd;
 
-        ProblemSize mCurrentProblemSize;
-        DataSizeFwd mCurrentDataSizeFwd;
-        DataSizeBwd mCurrentDataSizeBwd;
+        ElementCountFwd mCurrentElementCountFwd;
+        ElementCountBwd mCurrentElementCountBwd;
 
-        DataSizeFwd mMaxFwdCapacity;
-        DataSizeBwd mMaxBwdCapacity;
+        ElementCountFwd mMaxFwdCapacity;
+        ElementCountBwd mMaxBwdCapacity;
     };
 
 } // namespace rocwmma

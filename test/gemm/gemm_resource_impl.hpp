@@ -49,7 +49,7 @@ namespace rocwmma
     }
 
     template <typename InputT, typename OutputT>
-    GemmResource<InputT, OutputT>::GemmResource(GemmResource&& rhs)
+    GemmResource<InputT, OutputT>::GemmResource(GemmResource<InputT, OutputT>&& rhs)
         : HipResource()
         , mDeviceA(std::move(rhs.mDeviceA))
         , mDeviceB(std::move(rhs.mDeviceB))
@@ -62,16 +62,6 @@ namespace rocwmma
         , mCurrentMatrixElements(rhs.mCurrentMatrixElements)
         , mCurrentAllocElements(rhs.mCurrentAllocElements)
     {
-    }
-
-    template <typename InputT, typename OutputT>
-    template <typename DataT>
-    inline void GemmResource<InputT, OutputT>::reallocDeviceHostPair(DevicePtrT<DataT>& devicePtr,
-                                                                     HostPtrT<DataT>&   hostPtr,
-                                                                     int64_t            numElements)
-    {
-        Base::reallocDevice(devicePtr, numElements);
-        Base::reallocHost(hostPtr, numElements);
     }
 
     template <typename InputT, typename OutputT>
@@ -112,7 +102,7 @@ namespace rocwmma
             // Only realloc if required (e.g. current allocation won't fit new sizes)
             if(currentAllocElements < newAllocElements)
             {
-                reallocDeviceHostPair(devicePtr, hostPtr, newAllocElements);
+                Base::reallocDeviceHostPair(devicePtr, hostPtr, newAllocElements);
                 currentAllocElements = newAllocElements;
             }
         };
@@ -141,10 +131,10 @@ namespace rocwmma
     template <typename InputT, typename OutputT>
     void GemmResource<InputT, OutputT>::reset()
     {
-        reallocDeviceHostPair(mDeviceA, mHostA, 0);
-        reallocDeviceHostPair(mDeviceB, mHostB, 0);
-        reallocDeviceHostPair(mDeviceC, mHostC, 0);
-        reallocDeviceHostPair(mDeviceD, mHostD, 0);
+        Base::reallocDeviceHostPair(mDeviceA, mHostA, 0);
+        Base::reallocDeviceHostPair(mDeviceB, mHostB, 0);
+        Base::reallocDeviceHostPair(mDeviceC, mHostC, 0);
+        Base::reallocDeviceHostPair(mDeviceD, mHostD, 0);
         mCurrentAllocElements  = {0, 0, 0, 0};
         mCurrentMatrixElements = {0, 0, 0, 0};
     }

@@ -94,11 +94,6 @@ namespace rocwmma
         GemmResource(GemmResource&&);
         ~GemmResource() = default;
 
-        template <typename DataT>
-        static inline void reallocDeviceHostPair(DevicePtrT<DataT>& devicePtr,
-                                                 HostPtrT<DataT>&   hostPtr,
-                                                 int64_t            numElements);
-
         void copyHostToDeviceAll();
         void copyDeviceToHostAll();
         void resizeStorage(ProblemDims const& size);
