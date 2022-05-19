@@ -69,6 +69,11 @@ namespace rocwmma
         template <typename DataT>
         static inline void reallocHost(HostPtrT<DataT>& hostPtr, int64_t numElements);
 
+        template <typename DataT>
+        static inline void reallocDeviceHostPair(DevicePtrT<DataT>& devicePtr,
+                                                 HostPtrT<DataT>&   hostPtr,
+                                                 int64_t            numElements);
+
         // Transfer wrappers
         template <typename DataT>
         static void

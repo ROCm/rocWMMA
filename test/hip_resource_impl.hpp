@@ -66,6 +66,15 @@ namespace rocwmma
     }
 
     template <typename DataT>
+    inline void HipResource::reallocDeviceHostPair(DevicePtrT<DataT>& devicePtr,
+                                                   HostPtrT<DataT>&   hostPtr,
+                                                   int64_t            numElements)
+    {
+        reallocDevice(devicePtr, numElements);
+        reallocHost(hostPtr, numElements);
+    }
+
+    template <typename DataT>
     void HipResource::copyData(HostPtrT<DataT>&         dst,
                                DevicePtrT<DataT> const& src,
                                int64_t                  numElements)
