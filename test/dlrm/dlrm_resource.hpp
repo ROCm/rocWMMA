@@ -100,7 +100,9 @@ namespace rocwmma
         ~DlrmResource() = default;
         void copyHostToDeviceFwdAll();
         void copyHostToDeviceBwdAll();
+        void copyDeviceToHostFwdInput();
         void copyDeviceToHostFwdOutput();
+        void copyDeviceToHostBwdInput();
         void copyDeviceToHostBwdOutput();
         void resizeFwdStorage(ProblemSize const& size);
         void resizeBwdStorage(ProblemSize const& size);
@@ -109,11 +111,11 @@ namespace rocwmma
         HostPtrT<DataT>& hostInput();
         HostPtrT<DataT>& hostOutput();
         HostPtrT<DataT>& hostOutputRef();
-        HostPtrT<float>& hostAccFwd();
+        HostPtrT<float32_t>& hostAccFwd();
 
         DevicePtrT<DataT>& deviceInput();
         DevicePtrT<DataT>& deviceOutput();
-        DevicePtrT<float>& deviceAccFwd();
+        DevicePtrT<float32_t>& deviceAccFwd();
 
         // Backward pass data
         HostPtrT<DataT>& hostUpstreamGrad();
@@ -134,12 +136,15 @@ namespace rocwmma
         DataSizeFwd maxFwdCapacity() const;
         DataSizeBwd maxBwdCapacity() const;
 
+        // Reset sizes
+        void reset() final;
+
     protected:
         // Forward pass data
-        DevicePtrT<DataT> mDeviceInput, mDeviceOutput;
-        DevicePtrT<float> mDeviceAccFwd;
-        HostPtrT<DataT>   mHostInput, mHostOutput, mHostOutputRef;
-        HostPtrT<float>   mHostAccFwd;
+        DevicePtrT<DataT>     mDeviceInput, mDeviceOutput;
+        DevicePtrT<float32_t> mDeviceAccFwd;
+        HostPtrT<DataT>       mHostInput, mHostOutput, mHostOutputRef;
+        HostPtrT<float32_t>   mHostAccFwd;
 
         // Backward pass data
         DevicePtrT<DataT> mDeviceUpstreamGrad, mDeviceGrad, mDeviceBottomMlpGrad, mDeviceAccBwd;

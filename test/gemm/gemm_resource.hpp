@@ -92,6 +92,7 @@ namespace rocwmma
     public:
         ~GemmResource() = default;
         void copyHostToDeviceAll();
+        void copyDeviceToHostAll();
         void resizeStorage(ProblemSize const& size);
 
         HostPtrT<InputT>&  hostA();
@@ -103,6 +104,8 @@ namespace rocwmma
         DevicePtrT<InputT>&  deviceB();
         DevicePtrT<OutputT>& deviceC();
         DevicePtrT<OutputT>& deviceD();
+
+        void reset() final;
 
     protected:
         DevicePtrT<InputT>  mDeviceA, mDeviceB;

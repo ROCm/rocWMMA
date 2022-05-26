@@ -67,6 +67,7 @@ namespace rocwmma
         virtual void          validateResults()                                   = 0;
         virtual void          reportResults()                                     = 0;
         virtual void          tearDown()                                          = 0;
+        virtual HipResource*  getResource()                                       = 0;
         virtual std::ostream& printHeader(std::ostream& stream = std::cout) const = 0;
         virtual std::ostream& printKernel(std::ostream& stream = std::cout) const = 0;
 
@@ -154,6 +155,7 @@ namespace rocwmma
         virtual void          validateResults() override;
         virtual void          reportResults() override;
         virtual void          tearDown() override;
+        virtual HipResource*  getResource() override;
         virtual std::ostream& printHeader(std::ostream& stream = std::cout) const override;
         virtual std::ostream& printKernel(std::ostream& stream = std::cout) const override;
 
@@ -166,10 +168,12 @@ namespace rocwmma
         uint32_t mMPadded, mKPadded;
 
         // Execution flow control
-        uint32_t        mRepeats;
-        bool            mRunFlag      = true;
+        uint32_t mRepeats;
+        bool     mRunFlag          = true;
+        bool     mValidationResult = false;
+        double   mMaxRelativeError;
+
         DlrmDirection_t passDirection = DlrmDirection_t::Forward;
-        validate_data_t mValidationResult;
 
         // Performance
         float64_t mTotalGFlops, mMeasuredGFlopsPerSec;
