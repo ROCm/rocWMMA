@@ -1,6 +1,6 @@
 # Change Log for rocWMMA
 Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://rocwmma.readthedocs.io/en/latest/).
-## rocWMMA 0.7
+## rocWMMA 0.7 for ROCm 5.2.0
 ### Added
 - Added unit tests for DLRM kernels
 - Added GEMM sample
