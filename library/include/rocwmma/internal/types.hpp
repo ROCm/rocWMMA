@@ -192,10 +192,8 @@ namespace rocwmma
             struct Traits
             {
                 // Iterates over sub-vector type (may be > 1)
-                using ItVecT = typename std::conditional_t<
-                    IsConst,
-                    detail::VectorStorage_internal<DataT, SubVecSize> const,
-                    detail::VectorStorage_internal<DataT, SubVecSize>>;
+                using ItVecT = typename std::
+                    conditional_t<IsConst, VecT<DataT, SubVecSize> const, VecT<DataT, SubVecSize>>;
 
                 enum : int32_t
                 {
