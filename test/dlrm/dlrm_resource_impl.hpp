@@ -51,174 +51,192 @@ namespace rocwmma
         , mHostBottomMlpGrad(Base::template allocHost<DataT>(0))
         , mHostBottomMlpGradRef(Base::template allocHost<DataT>(0))
         , mHostAccBwd(Base::template allocHost<DataT>(0))
-        , mCurrentProblemSize({0, 0, 0})
-        , mCurrentDataSizeFwd({0, 0, 0})
-        , mCurrentDataSizeBwd({0, 0, 0, 0, 0})
-        , mMaxFwdCapacity({0, 0, 0})
+        , mCurrentElementCountFwd({0, 0, 0, DummyT()})
+        , mCurrentElementCountBwd({0, 0, 0, 0, 0})
+        , mMaxFwdCapacity({0, 0, 0, DummyT()})
         , mMaxBwdCapacity({0, 0, 0, 0, 0})
     {
     }
 
     template <typename DataT>
+    DlrmResource<DataT>::DlrmResource(DlrmResource<DataT>&& rhs)
+        : HipResource()
+        , mDeviceInput(std::move(rhs.mDeviceInput))
+        , mDeviceOutput(std::move(rhs.mDeviceOutput))
+        , mDeviceAccFwd(std::move(rhs.mDeviceAccFwd))
+        , mDeviceUpstreamGrad(std::move(rhs.mDeviceUpstreamGrad))
+        , mDeviceGrad(std::move(rhs.mDeviceGrad))
+        , mDeviceBottomMlpGrad(std::move(rhs.mDeviceBottomMlpGrad))
+        , mDeviceAccBwd(std::move(rhs.mDeviceAccBwd))
+        , mHostInput(std::move(rhs.mHostInput))
+        , mHostOutput(std::move(rhs.mHostOutput))
+        , mHostOutputRef(std::move(rhs.mHostOutputRef))
+        , mHostAccFwd(std::move(rhs.mHostAccFwd))
+        , mHostUpstreamGrad(std::move(rhs.mHostUpstreamGrad))
+        , mHostGrad(std::move(rhs.mHostGrad))
+        , mHostGradRef(std::move(rhs.mHostGradRef))
+        , mHostBottomMlpGrad(std::move(rhs.mHostBottomMlpGrad))
+        , mHostBottomMlpGradRef(std::move(rhs.mHostBottomMlpGradRef))
+        , mHostAccBwd(std::move(rhs.mHostAccBwd))
+        , mCurrentElementCountFwd(rhs.mCurrentElementCountFwd)
+        , mCurrentElementCountBwd(rhs.mCurrentElementCountBwd)
+        , mMaxFwdCapacity(rhs.mMaxFwdCapacity)
+        , mMaxBwdCapacity(rhs.mMaxBwdCapacity)
+    {
+    }
+
+    template <typename DataT>
+    template <typename T>
+    inline void DlrmResource<DataT>::conditionalReallocDeviceHostPair(DevicePtrT<T>& devicePtr,
+                                                                      HostPtrT<T>&   hostPtr,
+                                                                      int64_t&       currentMax,
+                                                                      int64_t        newSize)
+    {
+        if(currentMax < newSize)
+        {
+            Base::reallocDeviceHostPair(devicePtr, hostPtr, newSize);
+            currentMax = newSize;
+        }
+    }
+
+    template <typename DataT>
+    inline int64_t DlrmResource<DataT>::calcTrilSize(ProblemSize const& size)
+    {
+        return ((std::get<M>(size) * (std::get<M>(size) - 1)) / 2) + std::get<K>(size);
+    };
+
+    template <typename DataT>
     void DlrmResource<DataT>::copyHostToDeviceFwdAll()
     {
-        Base::copyData(mDeviceInput, mHostInput, std::get<Input>(mCurrentDataSizeFwd));
+        Base::copyData(mDeviceInput, mHostInput, std::get<Input>(mCurrentElementCountFwd));
     }
 
     template <typename DataT>
     void DlrmResource<DataT>::copyHostToDeviceBwdAll()
     {
-        Base::copyData(mDeviceInput, mHostInput, std::get<Input>(mCurrentDataSizeBwd));
-        Base::copyData(
-            mDeviceUpstreamGrad, mHostUpstreamGrad, std::get<UpstreamGrad>(mCurrentDataSizeBwd));
+        Base::copyData(mDeviceInput, mHostInput, std::get<Input>(mCurrentElementCountBwd));
+        Base::copyData(mDeviceUpstreamGrad,
+                       mHostUpstreamGrad,
+                       std::get<UpstreamGrad>(mCurrentElementCountBwd));
     }
 
     template <typename DataT>
     void DlrmResource<DataT>::copyDeviceToHostFwdInput()
     {
-        Base::copyData(mHostInput, mDeviceInput, std::get<Input>(mCurrentDataSizeFwd));
+        Base::copyData(mHostInput, mDeviceInput, std::get<Input>(mCurrentElementCountFwd));
     }
 
     template <typename DataT>
     void DlrmResource<DataT>::copyDeviceToHostFwdOutput()
     {
-        Base::copyData(mHostOutput, mDeviceOutput, std::get<Output>(mCurrentDataSizeFwd));
+        Base::copyData(mHostOutput, mDeviceOutput, std::get<Output>(mCurrentElementCountFwd));
     }
 
     template <typename DataT>
     void DlrmResource<DataT>::copyDeviceToHostBwdInput()
     {
-        Base::copyData(mHostInput, mDeviceInput, std::get<Input>(mCurrentDataSizeBwd));
-        Base::copyData(mHostUpstreamGrad, mDeviceUpstreamGrad, std::get<UpstreamGrad>(mCurrentDataSizeBwd));
+        Base::copyData(mHostInput, mDeviceInput, std::get<Input>(mCurrentElementCountBwd));
+        Base::copyData(mHostUpstreamGrad,
+                       mDeviceUpstreamGrad,
+                       std::get<UpstreamGrad>(mCurrentElementCountBwd));
     }
 
     template <typename DataT>
     void DlrmResource<DataT>::copyDeviceToHostBwdOutput()
     {
-        Base::copyData(mHostGrad, mDeviceGrad, std::get<Grad>(mCurrentDataSizeBwd));
-        Base::copyData(
-            mHostBottomMlpGrad, mDeviceBottomMlpGrad, std::get<BottomMlpGrad>(mCurrentDataSizeBwd));
-        Base::copyData(mHostAccBwd, mDeviceAccBwd, std::get<Acc>(mCurrentDataSizeBwd));
+        Base::copyData(mHostGrad, mDeviceGrad, std::get<Grad>(mCurrentElementCountBwd));
+        Base::copyData(mHostBottomMlpGrad,
+                       mDeviceBottomMlpGrad,
+                       std::get<BottomMlpGrad>(mCurrentElementCountBwd));
+        Base::copyData(mHostAccBwd, mDeviceAccBwd, std::get<Acc>(mCurrentElementCountBwd));
     }
 
     template <typename DataT>
     void DlrmResource<DataT>::resizeFwdStorage(ProblemSize const& size)
     {
-        auto calcTrilSize = [](ProblemSize const& size) {
-            return ((std::get<M>(size) * (std::get<M>(size) - 1)) / 2) + std::get<K>(size);
-        };
+        resizeFwdStorage(
+            std::make_tuple(std::get<M>(size) * std::get<K>(size) * std::get<B>(size), // Input
+                            calcTrilSize(size) * std::get<B>(size), // Output
+                            std::get<M>(size) * std::get<M>(size) * std::get<B>(size),
+                            DummyT()));
+    }
 
-        auto calcMatrixSizes = [calcTrilSize](ProblemSize const& size) {
-            return std::make_tuple(
-                std::get<M>(size) * std::get<K>(size) * std::get<B>(size), // Input
-                calcTrilSize(size) * std::get<B>(size), // Output
-                std::get<M>(size) * std::get<M>(size) * std::get<B>(size)); // Acc
-        };
+    template <typename DataT>
+    void DlrmResource<DataT>::resizeFwdStorage(ElementCountFwd const& newElementCounts)
+    {
+        conditionalReallocDeviceHostPair(mDeviceInput,
+                                         mHostInput,
+                                         std::get<Input>(mMaxFwdCapacity),
+                                         std::get<Input>(newElementCounts));
+        conditionalReallocDeviceHostPair(mDeviceOutput,
+                                         mHostOutput,
+                                         std::get<Output>(mMaxFwdCapacity),
+                                         std::get<Output>(newElementCounts));
+        conditionalReallocDeviceHostPair(mDeviceAccFwd,
+                                         mHostAccFwd,
+                                         std::get<Acc>(mMaxFwdCapacity),
+                                         std::get<Acc>(newElementCounts));
 
-        auto allocIfNeeded =
-            [](auto& devicePtr, auto& hostPtr, int64_t& currentMax, int64_t newSize) {
-                using DeviceDataT =
-                    typename std::remove_reference_t<decltype(devicePtr)>::element_type;
-                using HostDataT = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
-                if(currentMax < newSize)
-                {
-                    currentMax = newSize;
-                    devicePtr  = std::move(Base::template allocDevice<DeviceDataT>(newSize));
-                    hostPtr    = std::move(Base::template allocHost<HostDataT>(newSize));
-                }
-            };
+        Base::reallocHost(mHostOutputRef, std::get<Output>(newElementCounts));
 
-        auto newSizes = calcMatrixSizes(size);
-
-        allocIfNeeded(
-            mDeviceInput, mHostInput, std::get<Input>(mMaxFwdCapacity), std::get<Input>(newSizes));
-        allocIfNeeded(mDeviceOutput,
-                      mHostOutput,
-                      std::get<Output>(mMaxFwdCapacity),
-                      std::get<Output>(newSizes));
-        allocIfNeeded(
-            mDeviceAccFwd, mHostAccFwd, std::get<Acc>(mMaxFwdCapacity), std::get<Acc>(newSizes));
-        mHostOutputRef = std::move(Base::template allocHost<DataT>(std::get<Output>(newSizes)));
-
-        mCurrentDataSizeFwd = newSizes;
+        mCurrentElementCountFwd = newElementCounts;
     }
 
     template <typename DataT>
     void DlrmResource<DataT>::resizeBwdStorage(ProblemSize const& size)
     {
-        auto calcTrilSize = [](ProblemSize const& size) {
-            return ((std::get<M>(size) * (std::get<M>(size) - 1)) / 2) + std::get<K>(size);
-        };
+        resizeBwdStorage(
+            std::make_tuple(std::get<M>(size) * std::get<K>(size) * std::get<B>(size), // Input
+                            calcTrilSize(size) * std::get<B>(size), // UpstreamGrad
+                            std::get<M>(size) * std::get<M>(size) * std::get<B>(size), // Acc
+                            std::get<M>(size) * std::get<K>(size) * std::get<B>(size), // Grad
+                            std::get<K>(size) * std::get<B>(size)));
+    }
 
-        auto calcMatrixSizes = [calcTrilSize](ProblemSize const& size) {
-            return std::make_tuple(
-                std::get<M>(size) * std::get<K>(size) * std::get<B>(size), // Input
-                calcTrilSize(size) * std::get<B>(size), // UpstreamGrad
-                std::get<M>(size) * std::get<M>(size) * std::get<B>(size), // Acc
-                std::get<M>(size) * std::get<K>(size) * std::get<B>(size), // Grad
-                std::get<K>(size) * std::get<B>(size)); // BottomMlpGrad
-        };
+    template <typename DataT>
+    void DlrmResource<DataT>::resizeBwdStorage(ElementCountBwd const& newElementCounts)
+    {
+        conditionalReallocDeviceHostPair(mDeviceInput,
+                                         mHostInput,
+                                         std::get<Input>(mMaxBwdCapacity),
+                                         std::get<Input>(newElementCounts));
+        conditionalReallocDeviceHostPair(mDeviceUpstreamGrad,
+                                         mHostUpstreamGrad,
+                                         std::get<UpstreamGrad>(mMaxBwdCapacity),
+                                         std::get<UpstreamGrad>(newElementCounts));
+        conditionalReallocDeviceHostPair(mDeviceGrad,
+                                         mHostGrad,
+                                         std::get<Grad>(mMaxBwdCapacity),
+                                         std::get<Grad>(newElementCounts));
+        conditionalReallocDeviceHostPair(mDeviceBottomMlpGrad,
+                                         mHostBottomMlpGrad,
+                                         std::get<BottomMlpGrad>(mMaxBwdCapacity),
+                                         std::get<BottomMlpGrad>(newElementCounts));
+        conditionalReallocDeviceHostPair(mDeviceAccBwd,
+                                         mHostAccBwd,
+                                         std::get<Acc>(mMaxBwdCapacity),
+                                         std::get<Acc>(newElementCounts));
 
-        auto allocIfNeeded =
-            [](auto& devicePtr, auto& hostPtr, int64_t& currentMax, int64_t newSize) {
-                using DeviceDataT =
-                    typename std::remove_reference_t<decltype(devicePtr)>::element_type;
-                using HostDataT = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
-                if(currentMax < newSize)
-                {
-                    currentMax = newSize;
-                    devicePtr  = std::move(Base::template allocDevice<DeviceDataT>(newSize));
-                    hostPtr    = std::move(Base::template allocHost<HostDataT>(newSize));
-                }
-            };
+        Base::reallocHost(mHostGradRef, std::get<Grad>(newElementCounts));
+        Base::reallocHost(mHostBottomMlpGradRef, std::get<BottomMlpGrad>(newElementCounts));
 
-        auto newSizes = calcMatrixSizes(size);
-
-        allocIfNeeded(
-            mDeviceInput, mHostInput, std::get<Input>(mMaxBwdCapacity), std::get<Input>(newSizes));
-        allocIfNeeded(mDeviceUpstreamGrad,
-                      mHostUpstreamGrad,
-                      std::get<UpstreamGrad>(mCurrentDataSizeBwd),
-                      std::get<UpstreamGrad>(newSizes));
-        allocIfNeeded(
-            mDeviceGrad, mHostGrad, std::get<Grad>(mMaxBwdCapacity), std::get<Grad>(newSizes));
-        allocIfNeeded(mDeviceBottomMlpGrad,
-                      mHostBottomMlpGrad,
-                      std::get<BottomMlpGrad>(mMaxBwdCapacity),
-                      std::get<BottomMlpGrad>(newSizes));
-        allocIfNeeded(
-            mDeviceAccBwd, mHostAccBwd, std::get<Acc>(mMaxBwdCapacity), std::get<Acc>(newSizes));
-        mHostGradRef = std::move(Base::template allocHost<DataT>(std::get<Grad>(newSizes)));
-        mHostBottomMlpGradRef
-            = std::move(Base::template allocHost<DataT>(std::get<BottomMlpGrad>(newSizes)));
-
-        mCurrentDataSizeBwd = newSizes;
+        mCurrentElementCountBwd = newElementCounts;
     }
 
     template <typename DataT>
     void DlrmResource<DataT>::reset()
     {
-        mCurrentDataSizeFwd = {0, 0, 0};
-        mCurrentDataSizeBwd = {0, 0, 0, 0, 0};
-        mMaxFwdCapacity = {0, 0, 0};
-        mMaxBwdCapacity = {0, 0, 0, 0, 0};
-
-        auto allocNew = [] (auto& devicePtr, auto& hostPtr)
-        {
-            using DeviceDataT = typename std::remove_reference_t<decltype(devicePtr)>::element_type;
-            using HostDataT = typename std::remove_reference_t<decltype(hostPtr)>::element_type;
-
-            devicePtr = std::move(Base::template allocDevice<DeviceDataT>(0));
-            hostPtr   = std::move(Base::template allocHost<HostDataT>(0));
-        };
-
-        allocNew(mDeviceInput, mHostInput);
-        allocNew(mDeviceOutput, mHostOutput);
-        allocNew(mDeviceAccFwd, mHostAccFwd);
-        allocNew(mDeviceUpstreamGrad, mHostUpstreamGrad);
-        allocNew(mDeviceGrad, mHostGrad);
-        allocNew(mDeviceBottomMlpGrad, mHostBottomMlpGrad);
-        allocNew(mDeviceAccBwd, mHostAccBwd);
+        Base::reallocDeviceHostPair(mDeviceInput, mHostInput, 0);
+        Base::reallocDeviceHostPair(mDeviceOutput, mHostOutput, 0);
+        Base::reallocDeviceHostPair(mDeviceAccFwd, mHostAccFwd, 0);
+        Base::reallocDeviceHostPair(mDeviceUpstreamGrad, mHostUpstreamGrad, 0);
+        Base::reallocDeviceHostPair(mDeviceGrad, mHostGrad, 0);
+        Base::reallocDeviceHostPair(mDeviceBottomMlpGrad, mHostBottomMlpGrad, 0);
+        Base::reallocDeviceHostPair(mDeviceAccBwd, mHostAccBwd, 0);
+        mCurrentElementCountFwd = {0, 0, 0, DummyT()};
+        mCurrentElementCountBwd = {0, 0, 0, 0, 0};
+        mMaxFwdCapacity         = {0, 0, 0, DummyT()};
+        mMaxBwdCapacity         = {0, 0, 0, 0, 0};
     }
 
     template <typename DataT>
@@ -324,25 +342,25 @@ namespace rocwmma
     }
 
     template <typename DataT>
-    auto DlrmResource<DataT>::currentDataSizeFwd() const -> DataSizeFwd
+    auto DlrmResource<DataT>::currentElementCountFwd() const -> ElementCountFwd
     {
-        return mCurrentDataSizeFwd;
+        return mCurrentElementCountFwd;
     }
 
     template <typename DataT>
-    auto DlrmResource<DataT>::currentDataSizeBwd() const -> DataSizeBwd
+    auto DlrmResource<DataT>::currentElementCountBwd() const -> ElementCountBwd
     {
-        return mCurrentDataSizeBwd;
+        return mCurrentElementCountBwd;
     }
 
     template <typename DataT>
-    auto DlrmResource<DataT>::maxFwdCapacity() const -> DataSizeFwd
+    auto DlrmResource<DataT>::maxFwdCapacity() const -> ElementCountFwd
     {
         return mMaxFwdCapacity;
     }
 
     template <typename DataT>
-    auto DlrmResource<DataT>::maxBwdCapacity() const -> DataSizeBwd
+    auto DlrmResource<DataT>::maxBwdCapacity() const -> ElementCountBwd
     {
         return mMaxBwdCapacity;
     }
