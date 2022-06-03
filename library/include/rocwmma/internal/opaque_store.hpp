@@ -41,11 +41,11 @@ namespace rocwmma
         {
             static_assert(VectorWidth > 0, "Vector width must be greater than 0");
 
-            using StoreT = VecT<typename PackTraits<DataT>::UnpackedT, VectorWidth>;
+            using StoreT = VecT<DataT, VectorWidth>;
             __device__ static inline void
                 exec(DataT* dataPtr, StoreT const& data, index_t offset = 0)
             {
-                *reinterpret_cast<typename StoreT::StorageT*>(&(dataPtr[offset])) = *data;
+                *reinterpret_cast<StoreT*>(&(dataPtr[offset])) = data;
             }
         };
 
@@ -60,7 +60,6 @@ namespace rocwmma
     struct OpaqueStore
     {
         using IOTraits = IOTraits<BlockDim, BlockK, DataT, VectorWidth>;
-
         struct Traits
         {
             // Raw IO on unpacked register data.
@@ -70,26 +69,22 @@ namespace rocwmma
         };
 
         __device__ static void
-            exec(DataT* localPtr, typename Traits::InputT const& incoming, uint32_t ldm)
+            exec(DataT* dataPtr, typename Traits::InputT const& data, uint32_t ldm)
         {
-            // Extract traits
-            using Storer = typename Traits::Storer;
-            using StoreT = typename Traits::StoreT;
-
             // Arrange wave threads to starting matrix layout offsets.
             auto baseOffset = MatrixMapper::baseOffset();
 
-            auto it = incoming.template begin<StoreT::size()>();
+            auto it = data.template cbegin<Traits::StoreT::size()>();
             static_assert(decltype(it)::range() == IOTraits::IOCount,
                           "IOCount inconsistent with iterator range");
 
             // Loop through entire block
 #pragma unroll
-            for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
+            for(auto i = 0; i < IOTraits::IOCount; ++i)
             {
-                Storer::exec(localPtr, *it, DataMapper::fromMatrixCoord(baseOffset, ldm));
+                Traits::Storer::exec(dataPtr, *it, DataMapper::fromMatrixCoord(baseOffset, ldm));
+                baseOffset += MatrixMapper::incrementalOffset(it.index());
                 it++;
-                baseOffset += MatrixMapper::incrementalOffset(i);
             }
         }
     };
