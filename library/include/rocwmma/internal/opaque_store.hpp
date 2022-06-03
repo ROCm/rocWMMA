@@ -54,8 +54,8 @@ namespace rocwmma
     template <uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
-              class DataMapper,
-              class MatrixMapper,
+              class DataLayout,
+              class MatrixLayout,
               uint32_t VectorWidth>
     struct OpaqueStore
     {
@@ -77,7 +77,7 @@ namespace rocwmma
             using StoreT = typename Traits::StoreT;
 
             // Arrange wave threads to starting matrix layout offsets.
-            auto baseOffset = MatrixMapper::baseOffset();
+            auto baseOffset = MatrixLayout::baseOffset();
 
             auto it = incoming.template begin<StoreT::size()>();
             static_assert(decltype(it)::range() == IOTraits::IOCount,
@@ -87,9 +87,9 @@ namespace rocwmma
 #pragma unroll
             for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
             {
-                Storer::exec(localPtr, *it, DataMapper::fromMatrixCoord(baseOffset, ldm));
+                Storer::exec(localPtr, *it, DataLayout::fromMatrixCoord(baseOffset, ldm));
                 it++;
-                baseOffset += MatrixMapper::incrementalOffset(i);
+                baseOffset += MatrixLayout::incrementalOffset(i);
             }
         }
     };

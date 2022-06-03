@@ -31,11 +31,13 @@
 
 #include "rocwmma.hpp"
 
+#include "internal/accessors.hpp"
 #include "internal/barrier.hpp"
 #include "internal/broadcast.hpp"
 #include "internal/constants.hpp"
 #include "internal/convert.hpp"
 #include "internal/io_config.hpp"
+#include "internal/io_shape.hpp"
 #include "internal/io_traits.hpp"
 #include "internal/layout.hpp"
 #include "internal/mapping_util.hpp"
@@ -53,8 +55,8 @@ namespace rocwmma
         // Ensure that MFMA fragments for A and B have orthogonal layouts
         template <typename FragA, typename FragB>
         struct MfmaCheck : public MatrixLayout::detail::OrthogonalCheck<
-                               typename FragA::IOConfig::IOShape::MatrixMapper,
-                               typename FragB::IOConfig::IOShape::MatrixMapper>
+                               typename GetIOShape_t<FragA>::MatrixLayout,
+                               typename GetIOShape_t<FragB>::MatrixLayout>
         {
         };
     }
@@ -182,7 +184,7 @@ namespace rocwmma
                       DataT                                                         value)
     {
         using FragT       = typename std::decay<decltype(frag)>::type;
-        using Config      = typename FragT::IOConfig;
+        using Config      = GetIOConfig_t<FragT>;
         using Broadcaster = typename Config::Broadcaster;
         using Packer      = typename Config::Packer;
 
@@ -211,7 +213,7 @@ namespace rocwmma
                          uint32_t                                                      ldm)
     {
         using FragT  = typename std::decay<decltype(frag)>::type;
-        using Config = typename FragT::IOConfig;
+        using Config = GetIOConfig_t<FragT>;
         using Loader = typename Config::Loader;
         using Packer = typename Config::Packer;
 
@@ -259,7 +261,7 @@ namespace rocwmma
                           uint32_t                                                            ldm)
     {
         using FragT    = typename std::decay<decltype(frag)>::type;
-        using Config   = typename FragT::IOConfig;
+        using Config   = GetIOConfig_t<FragT>;
         using Storer   = typename Config::Storer;
         using Unpacker = typename Config::Unpacker;
 

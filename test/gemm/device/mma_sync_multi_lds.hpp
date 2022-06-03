@@ -61,68 +61,68 @@ namespace rocwmma
               uint32_t BlocksX = 1,
               uint32_t BlocksY = 1>
     __global__ void __launch_bounds__(256) mmaSyncMultiLds(uint32_t       m,
-                                                              uint32_t       n,
-                                                              uint32_t       k,
-                                                              InputT const*  a,
-                                                              InputT const*  b,
-                                                              OutputT const* c,
-                                                              OutputT*       d,
-                                                              uint32_t       lda,
-                                                              uint32_t       ldb,
-                                                              uint32_t       ldc,
-                                                              uint32_t       ldd,
-                                                              ComputeT       alpha,
-                                                              ComputeT       beta)
+                                                           uint32_t       n,
+                                                           uint32_t       k,
+                                                           InputT const*  a,
+                                                           InputT const*  b,
+                                                           OutputT const* c,
+                                                           OutputT*       d,
+                                                           uint32_t       lda,
+                                                           uint32_t       ldb,
+                                                           uint32_t       ldc,
+                                                           uint32_t       ldd,
+                                                           ComputeT       alpha,
+                                                           ComputeT       beta)
     {
         ///
         /// Assemble the gemm driver from the incoming gemm configuration
         ///
         using GlobalMapping = typename GemmConfig::template GlobalMapping<BlockM,
-                                                        BlockN,
-                                                        BlockK,
-                                                        InputT,
-                                                        OutputT,
-                                                        ComputeT,
-                                                        LayoutA,
-                                                        LayoutB,
-                                                        LayoutC,
-                                                        LayoutD,
-                                                        BlocksX,
-                                                        BlocksY>;
+                                                                          BlockN,
+                                                                          BlockK,
+                                                                          InputT,
+                                                                          OutputT,
+                                                                          ComputeT,
+                                                                          LayoutA,
+                                                                          LayoutB,
+                                                                          LayoutC,
+                                                                          LayoutD,
+                                                                          BlocksX,
+                                                                          BlocksY>;
 
         using LdsMapping = typename GemmConfig::template LdsMapping<GlobalMapping, LayoutLds>;
-        using GemmDriver = typename GemmConfig::template GemmDriver<GlobalMapping,
-                                      LdsMapping,
-                                      typename GemmConfig::CoopSchedulerA,
-                                      typename GemmConfig::CoopSchedulerB>;
+        using GemmDriver =
+            typename GemmConfig::template GemmDriver<GlobalMapping,
+                                                     LdsMapping,
+                                                     typename GemmConfig::CoopSchedulerA,
+                                                     typename GemmConfig::CoopSchedulerB>;
 
         // Global fragments used in pre-fetching
         using GRFragA = typename GlobalMapping::GRFragA;
         using GRFragB = typename GlobalMapping::GRFragB;
 
         // Fragments for mfma
-        using MfmaFragA = typename GlobalMapping::MfmaFragA;
-        using MfmaFragB = typename GlobalMapping::MfmaFragB;
-        using MfmaFragC = typename GlobalMapping::MfmaFragC;
-        using MfmaFragD = typename GlobalMapping::MfmaFragD;
+        using MfmaFragA   = typename GlobalMapping::MfmaFragA;
+        using MfmaFragB   = typename GlobalMapping::MfmaFragB;
+        using MfmaFragC   = typename GlobalMapping::MfmaFragC;
+        using MfmaFragD   = typename GlobalMapping::MfmaFragD;
         using MfmaFragAcc = typename GlobalMapping::MfmaFragAcc;
 
         // Mapping utils for each fragment type
-        using DataMappingA = typename MfmaFragA::IOConfig::MappingUtil::DataSpace;
-        using DataMappingB = typename MfmaFragB::IOConfig::MappingUtil::DataSpace;
-        using DataMappingC = typename MfmaFragC::IOConfig::MappingUtil::DataSpace;
-        using DataMappingD = typename MfmaFragD::IOConfig::MappingUtil::DataSpace;
-        using DataMappingLds = typename LdsMapping::DataSpace;
-        
+        using DataMappingA   = typename GetIOShape_t<MfmaFragA>::DataLayout;
+        using DataMappingB   = typename GetIOShape_t<MfmaFragB>::DataLayout;
+        using DataMappingC   = typename GetIOShape_t<MfmaFragC>::DataLayout;
+        using DataMappingD   = typename GetIOShape_t<MfmaFragD>::DataLayout;
+        using DataMappingLds = typename LdsMapping::DataLayout;
+
         ///
         /// Target starting C / D macro tile matrix coordinate on 2D grid
         ///
         auto matrixCoordC = GlobalMapping::matrixCoordC();
 
         // Bounds check
-        if( (std::get<0>(matrixCoordC) + BlocksX * BlockM) > m ||
-            (std::get<1>(matrixCoordC) + BlocksY * BlockN) > n ||
-            (BlockK > k) )
+        if((std::get<0>(matrixCoordC) + BlocksX * BlockM) > m
+           || (std::get<1>(matrixCoordC) + BlocksY * BlockN) > n || (BlockK > k))
         {
             return;
         }
@@ -141,8 +141,8 @@ namespace rocwmma
         ///
         /// Start global prefetch
         ///
-        GRFragA grBuffA;
-        GRFragB grBuffB;
+        typename GlobalMapping::GRBuffA grBuffA;
+        typename GlobalMapping::GRBuffB grBuffB;
         GemmDriver::globalReadCoopA(grBuffA, a + globalOffsetA, lda);
         GemmDriver::globalReadCoopB(grBuffB, b + globalOffsetB, ldb);
         globalOffsetA += kStepOffsetA;
@@ -154,31 +154,31 @@ namespace rocwmma
         /// for pipelining in the accumulation loop
         ///
         HIP_DYNAMIC_SHARED(void*, localMemPtr);
-        auto sizeLds = LdsMapping::sizeLds();
+        auto  sizeLds  = LdsMapping::sizeLds();
         auto* ldsPtrLo = reinterpret_cast<InputT*>(localMemPtr);
         auto* ldsPtrHi = ldsPtrLo + std::get<0>(sizeLds) * std::get<1>(sizeLds);
 
-        auto ldlds = LdsMapping::ldLds();
+        auto ldlds      = LdsMapping::ldLds();
         auto ldsOffsetA = DataMappingLds::fromMatrixCoord(LdsMapping::matrixCoordA(), ldlds);
         auto ldsOffsetB = DataMappingLds::fromMatrixCoord(LdsMapping::matrixCoordB(), ldlds);
 
         ///
         /// Write prefetch to local
-        ///           
+        ///
         GemmDriver::localWriteCoopA(ldsPtrLo + ldsOffsetA, grBuffA, ldlds);
         GemmDriver::localWriteCoopB(ldsPtrLo + ldsOffsetB, grBuffB, ldlds);
 
         ///
         /// Initialize accumulation frags
         ///
-        MfmaFragAcc fragsAcc[BlocksX][BlocksY];
+        typename GlobalMapping::MfmaBuffAcc fragsAcc;
         GemmDriver::fill(fragsAcc, static_cast<ComputeT>(0));
 
         ///
         /// Synchronize waves and memory
         ///
         GemmDriver::syncWorkgroup();
-        
+
         ///
         /// Accumulate A * B
         ///
@@ -186,8 +186,8 @@ namespace rocwmma
         {
             for(int currentK = BlockK; currentK < k; currentK += BlockK)
             {
-                MfmaFragA fragsA[BlocksX];
-                MfmaFragB fragsB[BlocksY];
+                typename GlobalMapping::MfmaBuffA fragsA;
+                typename GlobalMapping::MfmaBuffB fragsB;
 
                 // Local read mfma frags
                 GemmDriver::localReadA(fragsA, ldsPtrLo + ldsOffsetA, ldlds);
@@ -221,7 +221,7 @@ namespace rocwmma
         /// Start loading C
         ///
 
-        MfmaFragC fragsC[BlocksX][BlocksY];
+        typename GlobalMapping::MfmaBuffC fragsC;
         if(beta)
         {
             GemmDriver::globalReadC(fragsC, c + globalOffsetC, ldc);
@@ -235,9 +235,9 @@ namespace rocwmma
         /// Clean up tail A * B
         ///
 
-        MfmaFragA fragsA[BlocksX];
-        MfmaFragB fragsB[BlocksY];
-        
+        typename GlobalMapping::MfmaBuffA fragsA;
+        typename GlobalMapping::MfmaBuffB fragsB;
+
         GemmDriver::localReadA(fragsA, ldsPtrLo + ldsOffsetA, ldlds);
         GemmDriver::localReadB(fragsB, ldsPtrLo + ldsOffsetB, ldlds);
         GemmDriver::mfma(fragsAcc, fragsA, fragsB, fragsAcc);
@@ -245,7 +245,7 @@ namespace rocwmma
         ///
         /// D = alpha * accum + beta * C
         ///
-        MfmaFragD fragsD[BlocksX][BlocksY];
+        typename GlobalMapping::MfmaBuffD fragsD;
         GemmDriver::uniformFma(fragsD, alpha, fragsAcc, beta, fragsC);
         GemmDriver::globalWriteD(d + globalOffsetD, fragsD, ldd);
     }

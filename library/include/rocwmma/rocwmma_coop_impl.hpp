@@ -49,7 +49,7 @@ namespace rocwmma
                               uint32_t splitCount)
     {
         using FragT      = typename std::decay<decltype(frag)>::type;
-        using Config     = typename FragT::IOConfig;
+        using Config     = GetIOConfig_t<FragT>;
         using Packer     = typename Config::Packer;
         using CoopLoader = typename Config::CoopLoader;
 
@@ -98,7 +98,7 @@ namespace rocwmma
                               uint32_t                                                      ldm)
     {
         using FragT       = typename std::decay<decltype(frag)>::type;
-        using Config      = typename FragT::IOConfig;
+        using Config      = GetIOConfig_t<FragT>;
         using MappingUtil = typename Config::MappingUtil;
 
         // Matrix A:
@@ -129,7 +129,7 @@ namespace rocwmma
     {
 
         using FragT      = typename std::decay<decltype(frag)>::type;
-        using Config     = typename FragT::IOConfig;
+        using Config     = GetIOConfig_t<FragT>;
         using CoopStorer = typename Config::CoopStorer;
         using Unpacker   = typename Config::Unpacker;
 
@@ -175,7 +175,7 @@ namespace rocwmma
         uint32_t                                                            ldm)
     {
         using FragT       = typename std::decay<decltype(frag)>::type;
-        using Config      = typename FragT::IOConfig;
+        using Config      = GetIOConfig_t<FragT>;
         using MappingUtil = typename Config::MappingUtil;
 
         // Matrix A:
