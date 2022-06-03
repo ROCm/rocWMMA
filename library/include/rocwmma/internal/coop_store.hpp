@@ -70,8 +70,8 @@ namespace rocwmma
             static_assert(InputT::size() / SplitCount >= 1, "Partial registers not supported");
         };
 
-        __device__ static inline void exec(DataT*                         storePtr,
-                                           typename Traits::InputT const& input,
+        __device__ static inline void exec(DataT*                         dataPtr,
+                                           typename Traits::InputT const& data,
                                            uint32_t                       ldm,
                                            uint32_t                       waveIndex,
                                            uint32_t                       waveCount)
@@ -86,7 +86,7 @@ namespace rocwmma
             auto baseOffset = MatrixLayout::baseOffset();
 
             // Break down block into iterable stores
-            auto splitIter = input.template begin<Traits::StoreT::size()>();
+            auto splitIter = data.template begin<Traits::StoreT::size()>();
 
 #pragma unroll
             for(uint32_t i = 0; i < Traits::SplitCount; ++i)
@@ -98,7 +98,7 @@ namespace rocwmma
                     for(uint32_t j = 0; j < Traits::SplitIOCount; ++j)
                     {
                         Storer::exec(
-                            storePtr,
+                            dataPtr,
                             *ioIter,
                             DataLayout::fromMatrixCoord(
                                 baseOffset + MatrixLayout::cumulativeOffset(ioIter.index()), ldm));

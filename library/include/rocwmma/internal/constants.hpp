@@ -36,6 +36,7 @@ namespace rocwmma
 
     static constexpr uint32_t AMDGCN_LDS_MAX_SIZE_BYTES    = 65536;
     static constexpr uint32_t AMDGCN_CACHE_LINE_SIZE_BYTES = 64;
+    static constexpr uint32_t AMDGCN_DWORD_SIZE_BYTES = 4;
 
 } // namespace rocwmma
 

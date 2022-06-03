@@ -210,14 +210,14 @@ namespace rocwmma
         struct Traits
         {
         private:
-            using PackedT   = typename detail::PackTraits<DataT>::PackedT;
-            using UnpackedT = typename detail::PackTraits<DataT>::UnpackedT;
+            using PackedElementT   = typename detail::PackTraits<DataT>::PackedT;
+            using UnpackedElementT = typename detail::PackTraits<DataT>::UnpackedT;
             using IOTraits =
                 typename io_config<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>::IOTraits;
 
         public:
-            using AccessT  = VecT<UnpackedT, IOTraits::UnpackedSize>;
-            using StorageT = VecT<PackedT, IOTraits::PackedSize>;
+            using AccessT  = VecT<UnpackedElementT, IOTraits::UnpackedSize>;
+            using StorageT = VecT<PackedElementT, IOTraits::PackedSize>;
 
             static_assert(IOTraits::PackedVRegCount >= 1,
                           "Fragments must occupy at least one packed register");
@@ -245,9 +245,9 @@ namespace rocwmma
         // Compatibility with nvcuda::wmma
         union
         {
-            typename Traits::StorageT mStorage;
-            typename Traits::AccessT  mStorageUnpacked;
-            typename Traits::AccessT  x;
+            typename Traits::StorageT mStorage; // Packed
+            typename Traits::AccessT  mAccess; // Unpacked
+            typename Traits::AccessT  x; // Nuanced access
             static_assert(sizeof(typename Traits::AccessT) == sizeof(typename Traits::StorageT),
                           "Storage type and access type should be views into the same raw data");
         };

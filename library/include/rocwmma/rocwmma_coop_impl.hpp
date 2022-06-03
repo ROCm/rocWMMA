@@ -49,25 +49,21 @@ namespace rocwmma
                               uint32_t splitCount)
     {
         using FragT      = typename std::decay<decltype(frag)>::type;
-        using Config     = GetIOConfig_t<FragT>;
-        using Packer     = typename Config::Packer;
-        using CoopLoader = typename Config::CoopLoader;
+        using CoopLoader = typename GetIOConfig_t<FragT>::CoopLoader;
 
         // Sanity checks
         static_assert(!std::is_same<DataLayout, void>::value,
                       "Must provide layout information. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
-        static_assert(
-            std::is_same<typename FragT::Traits::StorageT, typename Packer::Traits::OutputT>::value,
-            "Fragment storage type and packed types do not match");
+        static_assert(std::is_same<typename FragT::Traits::AccessT,
+                                   typename CoopLoader::Traits::OutputT>::value,
+                      "Fragment access and coop load output types do not match");
 
-        typename CoopLoader::Traits::OutputT unpacked;
-
-        // Each cooperative wave only loads the portion they are responsible for
-        // Note: the read frag will only be partially filled with useful data
-        CoopLoader::exec(unpacked, data, ldm, waveIndex, waveCount, splitCount);
-        (*frag) = Packer::exec(unpacked);
+        // Load and implicit pack
+        // Note: the frag will only be partially filled with useful data.
+        // Layout and thread locality is not guaranteed.
+        CoopLoader::exec(frag.mAccess, data, ldm, waveIndex, waveCount, splitCount);
     }
 
     template <typename MatrixT,
@@ -129,22 +125,21 @@ namespace rocwmma
     {
 
         using FragT      = typename std::decay<decltype(frag)>::type;
-        using Config     = GetIOConfig_t<FragT>;
-        using CoopStorer = typename Config::CoopStorer;
-        using Unpacker   = typename Config::Unpacker;
+        using CoopStorer = typename GetIOConfig_t<FragT>::CoopStorer;
 
         // Sanity checks
         static_assert(!std::is_same<DataLayout, void>::value,
                       "Must provide data layout. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
-        static_assert(std::is_same<typename FragT::Traits::StorageT,
-                                   typename Unpacker::Traits::InputT>::value,
-                      "Fragment storage type and packed types do not match");
+        static_assert(std::is_same<typename FragT::Traits::AccessT,
+                                   typename CoopStorer::Traits::InputT>::value,
+                      "Fragment access and coop stor input types do not match");
 
-        // Each cooperative wave only stores the portion they are responsible for
-        // Note: the write frag is only partially filled with useful data
-        CoopStorer::exec(data, Unpacker::exec(*frag), ldm, waveIndex, waveCount, splitCount);
+        // Implicit unpack and store
+        // Note: the frag is only be partially filled with useful data.
+        // Layout and thread locality is not guaranteed.
+        CoopStorer::exec(data, frag.mAccess, ldm, waveIndex, waveCount, splitCount);
     }
 
     template <typename MatrixT,

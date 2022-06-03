@@ -97,7 +97,7 @@ namespace rocwmma
     __device__ inline DataT&
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator[](uint32_t index)
     {
-        return mStorageUnpacked[index];
+        return mAccess[index];
     }
 
     template <typename MatrixT,
@@ -121,7 +121,7 @@ namespace rocwmma
     __device__ inline DataT const&
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator[](uint32_t index) const
     {
-        return mStorageUnpacked[index];
+        return mAccess[index];
     }
 
     template <typename MatrixT,
@@ -184,21 +184,15 @@ namespace rocwmma
                       DataT                                                         value)
     {
         using FragT       = typename std::decay<decltype(frag)>::type;
-        using Config      = GetIOConfig_t<FragT>;
-        using Broadcaster = typename Config::Broadcaster;
-        using Packer      = typename Config::Packer;
+        using Broadcaster = typename GetIOConfig_t<FragT>::Broadcaster;
 
-        // Sanity checks
-        static_assert(std::is_same<typename Broadcaster::Traits::OutputT,
-                                   typename Packer::Traits::InputT>::value,
-                      "Broadcast output and pack input types do not match");
+        // Sanity check
+        static_assert(std::is_same<typename Broadcaster::Traits::BroadcastT,
+                                   typename FragT::Traits::AccessT>::value,
+                      "Broadcast input and fragment access types do not match");
 
-        static_assert(
-            std::is_same<typename FragT::Traits::StorageT, typename Packer::Traits::OutputT>::value,
-            "Fragment storage type and packed types do not match");
-
-        // Broadcast then pack
-        (*frag) = Packer::exec(Broadcaster::exec(value));
+        // Broadcast then implicit pack
+        Broadcaster::exec(frag.mAccess, value);
     }
 
     template <typename MatrixT,
@@ -213,9 +207,7 @@ namespace rocwmma
                          uint32_t                                                      ldm)
     {
         using FragT  = typename std::decay<decltype(frag)>::type;
-        using Config = GetIOConfig_t<FragT>;
-        using Loader = typename Config::Loader;
-        using Packer = typename Config::Packer;
+        using Loader = typename GetIOConfig_t<FragT>::Loader;
 
         // Sanity checks
         static_assert(!std::is_same<DataLayout, void>::value,
@@ -223,11 +215,11 @@ namespace rocwmma
                       "fragment declaration or use the run-time function overload.");
 
         static_assert(
-            std::is_same<typename FragT::Traits::StorageT, typename Packer::Traits::OutputT>::value,
-            "Fragment storage type and packed types do not match");
+            std::is_same<typename FragT::Traits::AccessT, typename Loader::Traits::OutputT>::value,
+            "Fragment access and load output types do not match");
 
-        // Load then pack
-        (*frag) = Packer::exec(Loader::exec(data, ldm));
+        // Load then implicit pack
+        Loader::exec(frag.mAccess, data, ldm);
     }
 
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
@@ -239,6 +231,7 @@ namespace rocwmma
         using FragRowMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, row_major>;
         using FragColMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, col_major>;
 
+        // Dispatch on layout type
         if(layout == layout_t::mem_row_major)
         {
             load_matrix_sync(reinterpret_cast<FragRowMajor&>(frag), data, ldm);
@@ -260,22 +253,20 @@ namespace rocwmma
                           fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
                           uint32_t                                                            ldm)
     {
-        using FragT    = typename std::decay<decltype(frag)>::type;
-        using Config   = GetIOConfig_t<FragT>;
-        using Storer   = typename Config::Storer;
-        using Unpacker = typename Config::Unpacker;
+        using FragT  = typename std::decay<decltype(frag)>::type;
+        using Storer = typename GetIOConfig_t<FragT>::Storer;
 
         // Sanity check
         static_assert(!std::is_same<DataLayout, void>::value,
                       "Must provide data layout. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
-        static_assert(std::is_same<typename FragT::Traits::StorageT,
-                                   typename Unpacker::Traits::InputT>::value,
-                      "Fragment storage type and packed types do not match");
+        static_assert(
+            std::is_same<typename FragT::Traits::AccessT, typename Storer::Traits::InputT>::value,
+            "Fragment access and store input types do not match");
 
-        // Unpack and scatter
-        Storer::exec(data, Unpacker::exec(*frag), ldm);
+        // Implicit unpack and then store
+        Storer::exec(data, frag.mAccess, ldm);
     }
 
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
@@ -287,6 +278,7 @@ namespace rocwmma
         using FragRowMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, row_major>;
         using FragColMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, col_major>;
 
+        // Dispatch on layout type
         if(layout == layout_t::mem_row_major)
         {
             store_matrix_sync(data, reinterpret_cast<FragRowMajor const&>(frag), ldm);

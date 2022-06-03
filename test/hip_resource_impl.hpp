@@ -36,31 +36,42 @@ namespace rocwmma
 {
 
     template <typename DataT>
-    auto HipResource::allocDevice(int64_t numElements) -> DevicePtrT<DataT>
+    auto inline HipResource::allocDevice(int64_t numElements) -> DevicePtrT<DataT>
     {
-        if(numElements <= 0)
-        {
-            return {nullptr, [](DataT*) {}};
-        }
-        else
-        {
-            DataT* data;
-            CHECK_HIP_ERROR(hipMalloc(&data, numElements * sizeof(DataT)));
-            return DevicePtrT<DataT>(data, [](DataT* d) { CHECK_HIP_ERROR(hipFree(d)); });
-        }
+        DataT* data;
+        CHECK_HIP_ERROR(hipMalloc(&data, numElements * sizeof(DataT)));
+        return DevicePtrT<DataT>(data, [](DataT* d) { CHECK_HIP_ERROR(hipFree(d)); });
+    }
+
+    template <typename DataT>
+    inline void HipResource::reallocDevice(DevicePtrT<DataT>& devicePtr, int64_t numElements)
+    {
+        // Free existing ptr first before alloc in case of big sizes.
+        devicePtr.reset(nullptr);
+        devicePtr = std::move(allocDevice<DataT>(numElements));
     }
 
     template <typename DataT>
     auto HipResource::allocHost(int64_t numElements) -> HostPtrT<DataT>
     {
-        if(numElements <= 0)
-        {
-            return {nullptr};
-        }
-        else
-        {
-            return HostPtrT<DataT>(new DataT[numElements]);
-        }
+        return HostPtrT<DataT>(new DataT[numElements]);
+    }
+
+    template <typename DataT>
+    inline void HipResource::reallocHost(HostPtrT<DataT>& hostPtr, int64_t numElements)
+    {
+        // Free existing ptr first before alloc in case of big sizes.
+        hostPtr.reset(nullptr);
+        hostPtr = std::move(allocHost<DataT>(numElements));
+    }
+
+    template <typename DataT>
+    inline void HipResource::reallocDeviceHostPair(DevicePtrT<DataT>& devicePtr,
+                                                   HostPtrT<DataT>&   hostPtr,
+                                                   int64_t            numElements)
+    {
+        reallocDevice(devicePtr, numElements);
+        reallocHost(hostPtr, numElements);
     }
 
     template <typename DataT>
