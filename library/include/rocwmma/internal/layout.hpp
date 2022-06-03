@@ -34,6 +34,11 @@ namespace rocwmma
 {
     namespace DataLayout
     {
+        template <typename DataOrientation>
+        using Array1d = typename ::rocwmma::detail::template DataSpace<DataOrientation>;
+
+        using RowMajor = Array1d<row_major>;
+        using ColMajor = Array1d<col_major>;
 
     } // namespace DataLayout
 

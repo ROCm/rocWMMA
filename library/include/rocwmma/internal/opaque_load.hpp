@@ -56,8 +56,8 @@ namespace rocwmma
     template <uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
-              class DataMapper,
-              class MatrixMapper,
+              class DataLayout,
+              class MatrixLayout,
               uint32_t VectorWidth>
     struct OpaqueLoad
     {
@@ -79,7 +79,7 @@ namespace rocwmma
             using OutputT = typename Traits::OutputT;
 
             // Arrange wave threads to starting matrix layout offsets.
-            auto baseOffset = MatrixMapper::baseOffset();
+            auto baseOffset = MatrixLayout::baseOffset();
 
             OutputT result;
             auto    it = result.template begin<LoadT::size()>();
@@ -91,9 +91,9 @@ namespace rocwmma
 #pragma unroll
             for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
             {
-                *it = *Loader::exec(localPtr, DataMapper::fromMatrixCoord(baseOffset, ldm));
+                *it = *Loader::exec(localPtr, DataLayout::fromMatrixCoord(baseOffset, ldm));
                 it++;
-                baseOffset += MatrixMapper::incrementalOffset(i);
+                baseOffset += MatrixLayout::incrementalOffset(i);
             }
             return result;
         }
