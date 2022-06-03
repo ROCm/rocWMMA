@@ -45,8 +45,21 @@ namespace rocwmma
 #define GemmDriverT_impl GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB
 
         template <GemmDriverT>
+        template <uint32_t BlocksX>
         __device__ inline void GemmDriver<GemmDriverT_impl>::globalReadCoopA(
-            GRFragA& grFragA, DataT<GRFragA> const* gAddrA, uint32_t lda)
+            GRFragA (&grFragsA)[BlocksX], GetDataType_t<GRFragA> const* gAddrA, uint32_t lda)
+        {
+            auto blockOffset = MappingUtil<GRFragA>::dataOffset(GlobalMapping::blockOffsetA(), lda);
+#pragma unroll
+            for(int i = 0; i < BlocksX; i++)
+            {
+                globalReadCoopA(grFragsA[i], gAddrA + i * blockOffset, lda);
+            }
+        }
+
+        template <GemmDriverT>
+        __device__ inline void GemmDriver<GemmDriverT_impl>::globalReadCoopA(
+            GRFragA& grFragA, GetDataType_t<GRFragA> const* gAddrA, uint32_t lda)
         {
             rocwmma::load_matrix_coop_sync(grFragA,
                                            gAddrA,
@@ -57,8 +70,21 @@ namespace rocwmma
         }
 
         template <GemmDriverT>
+        template <uint32_t BlocksY>
         __device__ inline void GemmDriver<GemmDriverT_impl>::globalReadCoopB(
-            GRFragB& grFragB, DataT<GRFragB> const* gAddrB, uint32_t ldb)
+            GRFragB (&grFragsB)[BlocksY], GetDataType_t<GRFragB> const* gAddrB, uint32_t ldb)
+        {
+            auto blockOffset = MappingUtil<GRFragB>::dataOffset(GlobalMapping::blockOffsetB(), ldb);
+#pragma unroll
+            for(int i = 0; i < BlocksY; i++)
+            {
+                globalReadCoopB(grFragsB[i], gAddrB + i * blockOffset, ldb);
+            }
+        }
+
+        template <GemmDriverT>
+        __device__ inline void GemmDriver<GemmDriverT_impl>::globalReadCoopB(
+            GRFragB& grFragB, GetDataType_t<GRFragB> const* gAddrB, uint32_t ldb)
         {
             rocwmma::load_matrix_coop_sync(grFragB,
                                            gAddrB,
@@ -69,8 +95,21 @@ namespace rocwmma
         }
 
         template <GemmDriverT>
+        template <uint32_t BlocksX>
         __device__ inline void GemmDriver<GemmDriverT_impl>::localWriteCoopA(
-            DataT<GRFragA>* ldsAddr, GRFragA const& grFragA, uint32_t ldlds)
+            GetDataType_t<GRFragA>* ldsAddr, GRFragA const (&grFragsA)[BlocksX], uint32_t ldlds)
+        {
+            auto blockOffset = MappingUtil<LWFragA>::dataOffset(LdsMapping::blockOffsetA(), ldlds);
+#pragma unroll
+            for(int i = 0; i < BlocksX; i++)
+            {
+                localWriteCoopA(ldsAddr + i * blockOffset, grFragsA[i], ldlds);
+            }
+        }
+
+        template <GemmDriverT>
+        __device__ inline void GemmDriver<GemmDriverT_impl>::localWriteCoopA(
+            GetDataType_t<GRFragA>* ldsAddr, GRFragA const& grFragA, uint32_t ldlds)
         {
             rocwmma::store_matrix_coop_sync(ldsAddr,
                                             reinterpret_cast<LWFragA const&>(grFragA),
@@ -81,8 +120,21 @@ namespace rocwmma
         }
 
         template <GemmDriverT>
+        template <uint32_t BlocksY>
         __device__ inline void GemmDriver<GemmDriverT_impl>::localWriteCoopB(
-            DataT<GRFragB>* ldsAddr, GRFragB const& grFragB, uint32_t ldlds)
+            GetDataType_t<GRFragB>* ldsAddr, GRFragB const (&grFragsB)[BlocksY], uint32_t ldlds)
+        {
+            auto blockOffset = MappingUtil<LWFragB>::dataOffset(LdsMapping::blockOffsetB(), ldlds);
+#pragma unroll
+            for(int i = 0; i < BlocksY; i++)
+            {
+                localWriteCoopB(ldsAddr + i * blockOffset, grFragsB[i], ldlds);
+            }
+        }
+
+        template <GemmDriverT>
+        __device__ inline void GemmDriver<GemmDriverT_impl>::localWriteCoopB(
+            GetDataType_t<GRFragB>* ldsAddr, GRFragB const& grFragB, uint32_t ldlds)
         {
             rocwmma::store_matrix_coop_sync(ldsAddr,
                                             reinterpret_cast<LWFragB const&>(grFragB),
@@ -94,7 +146,7 @@ namespace rocwmma
 
         template <GemmDriverT>
         __device__ inline void GemmDriver<GemmDriverT_impl>::localReadA(
-            MfmaFragA& fragsA, DataT<MfmaFragA> const* ldsAddrA, uint32_t ldlds)
+            MfmaFragA& fragsA, GetDataType_t<MfmaFragA> const* ldsAddrA, uint32_t ldlds)
         {
             rocwmma::load_matrix_sync(reinterpret_cast<LRFragA&>(fragsA), ldsAddrA, ldlds);
         }
@@ -102,7 +154,7 @@ namespace rocwmma
         template <GemmDriverT>
         template <uint32_t BlocksX>
         __device__ inline void GemmDriver<GemmDriverT_impl>::localReadA(
-            MfmaFragA (&fragsA)[BlocksX], DataT<MfmaFragA> const* ldsAddrA, uint32_t ldlds)
+            MfmaFragA (&fragsA)[BlocksX], GetDataType_t<MfmaFragA> const* ldsAddrA, uint32_t ldlds)
         {
             auto blockStep = MappingUtil<LRFragA>::dataOffset(LdsMapping::blockOffsetA(), ldlds);
 #pragma unroll
@@ -115,7 +167,7 @@ namespace rocwmma
 
         template <GemmDriverT>
         __device__ inline void GemmDriver<GemmDriverT_impl>::localReadB(
-            MfmaFragB& fragsB, DataT<MfmaFragB> const* ldsAddrB, uint32_t ldlds)
+            MfmaFragB& fragsB, GetDataType_t<MfmaFragB> const* ldsAddrB, uint32_t ldlds)
         {
             rocwmma::load_matrix_sync(reinterpret_cast<LRFragB&>(fragsB), ldsAddrB, ldlds);
         }
@@ -123,7 +175,7 @@ namespace rocwmma
         template <GemmDriverT>
         template <uint32_t BlocksY>
         __device__ inline void GemmDriver<GemmDriverT_impl>::localReadB(
-            MfmaFragB (&fragsB)[BlocksY], DataT<MfmaFragB> const* ldsAddrB, uint32_t ldlds)
+            MfmaFragB (&fragsB)[BlocksY], GetDataType_t<MfmaFragB> const* ldsAddrB, uint32_t ldlds)
         {
             auto blockStep = MappingUtil<LRFragB>::dataOffset(LdsMapping::blockOffsetB(), ldlds);
 #pragma unroll
@@ -136,7 +188,8 @@ namespace rocwmma
 
         template <GemmDriverT>
         template <typename FragT>
-        __device__ inline void GemmDriver<GemmDriverT_impl>::fill(FragT& frag, DataT<FragT> value)
+        __device__ inline void GemmDriver<GemmDriverT_impl>::fill(FragT&               frag,
+                                                                  GetDataType_t<FragT> value)
         {
             rocwmma::fill_fragment(frag, value);
         }
@@ -144,7 +197,7 @@ namespace rocwmma
         template <GemmDriverT>
         template <typename FragT, uint32_t BlocksX, uint32_t BlocksY>
         __device__ inline void GemmDriver<GemmDriverT_impl>::fill(FragT (&frags)[BlocksX][BlocksY],
-                                                                  DataT<FragT> value)
+                                                                  GetDataType_t<FragT> value)
         {
 #pragma unroll
             for(int i = 0; i < BlocksX; i++)
@@ -187,15 +240,17 @@ namespace rocwmma
 
         template <GemmDriverT>
         __device__ inline void GemmDriver<GemmDriverT_impl>::globalReadC(
-            MfmaFragC& fragC, DataT<MfmaFragC> const* gAddrC, uint32_t ldc)
+            MfmaFragC& fragC, GetDataType_t<MfmaFragC> const* gAddrC, uint32_t ldc)
         {
             rocwmma::load_matrix_sync(fragC, gAddrC, ldc);
         }
 
         template <GemmDriverT>
         template <uint32_t BlocksX, uint32_t BlocksY>
-        __device__ inline void GemmDriver<GemmDriverT_impl>::globalReadC(
-            MfmaFragC (&fragC)[BlocksX][BlocksY], DataT<MfmaFragC> const* gAddrC, uint32_t ldc)
+        __device__ inline void
+            GemmDriver<GemmDriverT_impl>::globalReadC(MfmaFragC (&fragC)[BlocksX][BlocksY],
+                                                      GetDataType_t<MfmaFragC> const* gAddrC,
+                                                      uint32_t                        ldc)
         {
             auto blockStepX
                 = MappingUtil<MfmaFragC>::dataOffset(GlobalMapping::blockOffsetA(), ldc);
@@ -217,17 +272,18 @@ namespace rocwmma
         }
 
         template <GemmDriverT>
-        __device__ inline void GemmDriver<GemmDriverT_impl>::globalWriteD(DataT<MfmaFragD>* gAddrD,
-                                                                          MfmaFragD const&  fragD,
-                                                                          uint32_t          ldd)
+        __device__ inline void GemmDriver<GemmDriverT_impl>::globalWriteD(
+            GetDataType_t<MfmaFragD>* gAddrD, MfmaFragD const& fragD, uint32_t ldd)
         {
             rocwmma::store_matrix_sync(gAddrD, fragD, ldd);
         }
 
         template <GemmDriverT>
         template <uint32_t BlocksX, uint32_t BlocksY>
-        __device__ inline void GemmDriver<GemmDriverT_impl>::globalWriteD(
-            DataT<MfmaFragD>* gAddrD, MfmaFragD const (&fragsD)[BlocksX][BlocksY], uint32_t ldd)
+        __device__ inline void
+            GemmDriver<GemmDriverT_impl>::globalWriteD(GetDataType_t<MfmaFragD>* gAddrD,
+                                                       MfmaFragD const (&fragsD)[BlocksX][BlocksY],
+                                                       uint32_t ldd)
         {
             auto blockStepX
                 = MappingUtil<MfmaFragD>::dataOffset(GlobalMapping::blockOffsetA(), ldd);
@@ -249,17 +305,19 @@ namespace rocwmma
         }
 
         template <GemmDriverT>
-        __device__ inline void GemmDriver<GemmDriverT_impl>::uniformFma(MfmaFragD&         fragD,
-                                                                        DataT<MfmaFragAcc> alpha,
-                                                                        MfmaFragAcc const& fragAcc,
-                                                                        DataT<MfmaFragAcc> beta,
-                                                                        MfmaFragC const&   fragC)
+        __device__ inline void
+            GemmDriver<GemmDriverT_impl>::uniformFma(MfmaFragD&                 fragD,
+                                                     GetDataType_t<MfmaFragAcc> alpha,
+                                                     MfmaFragAcc const&         fragAcc,
+                                                     GetDataType_t<MfmaFragAcc> beta,
+                                                     MfmaFragC const&           fragC)
         {
             for(int i = 0; i < fragD.num_elements; i++)
             {
                 // Perform computation in ComputeT and cast back to OutputT
-                fragD.x[i] = static_cast<DataT<MfmaFragD>>(
-                    alpha * fragAcc.x[i] + beta * static_cast<DataT<MfmaFragAcc>>(fragC.x[i]));
+                fragD.x[i] = static_cast<GetDataType_t<MfmaFragD>>(
+                    alpha * fragAcc.x[i]
+                    + beta * static_cast<GetDataType_t<MfmaFragAcc>>(fragC.x[i]));
             }
         }
 
@@ -267,9 +325,9 @@ namespace rocwmma
         template <uint32_t BlocksX, uint32_t BlocksY>
         __device__ inline void GemmDriver<GemmDriverT_impl>::uniformFma(
             MfmaFragD (&fragsD)[BlocksX][BlocksY],
-            DataT<MfmaFragAcc> alpha,
+            GetDataType_t<MfmaFragAcc> alpha,
             MfmaFragAcc const (&fragsAcc)[BlocksX][BlocksY],
-            DataT<MfmaFragAcc> beta,
+            GetDataType_t<MfmaFragAcc> beta,
             MfmaFragC const (&fragsC)[BlocksX][BlocksY])
         {
 #pragma unroll
