@@ -30,127 +30,137 @@
 
 namespace rocwmma
 {
-    namespace CooperativeGemm
+    namespace GlobalMapping
     {
 
-#define GlobalMappingT                                                                             \
+        namespace detail
+        {
+
+#define MappingBaseT                                                                               \
     uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename InputT, typename OutputT,          \
         typename ComputeT, typename LayoutA, typename LayoutB, typename LayoutC, typename LayoutD, \
         uint32_t BlocksX, uint32_t BlocksY
 
-#define GlobalMappingT_impl                                                                \
+#define MappingBaseT_impl                                                                  \
     BlockM, BlockN, BlockK, InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD, \
         BlocksX, BlocksY
 
-        template <GlobalMappingT>
-        template <typename CoordC>
-        __device__ constexpr inline auto
-            GlobalMapping<GlobalMappingT_impl>::projCoordA(CoordC const& coordC)
-        {
-            return std::make_pair(std::get<0>(coordC), 0u);
+            template <MappingBaseT>
+            template <typename CoordC>
+            __device__ constexpr inline auto
+                MappingBase<MappingBaseT_impl>::projCoordA(CoordC const& coordC)
+            {
+                return std::make_pair(std::get<0>(coordC), 0u);
+            }
+
+            template <MappingBaseT>
+            template <typename CoordC>
+            __device__ constexpr inline auto
+                MappingBase<MappingBaseT_impl>::projCoordB(CoordC const& coordC)
+            {
+                return std::make_pair(0u, std::get<1>(coordC));
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::macroTileSizeC()
+            {
+                return WaveSpace::workgroupDim() * waveTileSizeC();
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::waveTileSizeC()
+            {
+                return blockSizeC() * std::make_pair(BlocksX, BlocksY);
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::blockSizeC()
+            {
+                return std::make_pair((uint32_t)GetIOShape_t<MfmaFragC>::BlockHeight,
+                                      (uint32_t)GetIOShape_t<MfmaFragC>::BlockWidth);
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::kDim()
+            {
+                return BlockK;
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::macroTileCoordC()
+            {
+                return WaveSpace::workgroupCoord() * macroTileSizeC();
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::waveOffsetA()
+            {
+                return projCoordA(waveOffsetC());
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::waveOffsetB()
+            {
+                return projCoordB(waveOffsetC());
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::waveOffsetC()
+            {
+                return WaveSpace::localWaveCoord() * waveTileSizeC();
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::blockOffsetA()
+            {
+                return projCoordA(blockOffsetC());
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::blockOffsetB()
+            {
+                return projCoordB(blockOffsetC());
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::blockOffsetC()
+            {
+                return blockSizeC();
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::matrixCoordA()
+            {
+                return projCoordA(matrixCoordC());
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::matrixCoordB()
+            {
+                return projCoordB(matrixCoordC());
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::matrixCoordC()
+            {
+                return macroTileCoordC() + waveOffsetC();
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::kStepA()
+            {
+                return std::make_pair(0u, BlockK);
+            }
+
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::kStepB()
+            {
+                return std::make_pair(BlockK, 0u);
+            }
         }
 
-        template <GlobalMappingT>
-        template <typename CoordC>
-        __device__ constexpr inline auto
-            GlobalMapping<GlobalMappingT_impl>::projCoordB(CoordC const& coordC)
-        {
-            return std::make_pair(0u, std::get<1>(coordC));
-        }
-
-        template <GlobalMappingT>
-        __device__ constexpr inline auto GlobalMapping<GlobalMappingT_impl>::macroTileSizeC()
-        {
-            return detail::WaveSpace::workgroupDim()
-                   * std::make_pair((uint32_t)IOShape<GRFragA>::BlockHeight,
-                                    (uint32_t)IOShape<GRFragB>::BlockWidth);
-        }
-
-        template <GlobalMappingT>
-        __device__ constexpr inline auto GlobalMapping<GlobalMappingT_impl>::macroTileCoordC()
-        {
-            return detail::WaveSpace::workgroupCoord() * macroTileSizeC();
-        }
-
-        template <GlobalMappingT>
-        __device__ constexpr inline auto GlobalMapping<GlobalMappingT_impl>::waveOffsetA()
-        {
-            return projCoordA(waveOffsetC());
-        }
-
-        template <GlobalMappingT>
-        __device__ constexpr inline auto GlobalMapping<GlobalMappingT_impl>::waveOffsetB()
-        {
-            return projCoordB(waveOffsetC());
-        }
-
-        template <GlobalMappingT>
-        __device__ constexpr inline auto GlobalMapping<GlobalMappingT_impl>::waveOffsetC()
-        {
-            return detail::WaveSpace::localWaveCoord()
-                   * std::make_pair((uint32_t)IOShape<GRFragA>::BlockHeight,
-                                    (uint32_t)IOShape<GRFragB>::BlockWidth);
-        }
-
-        template <GlobalMappingT>
-        __device__ constexpr inline auto GlobalMapping<GlobalMappingT_impl>::blockOffsetA()
-        {
-            return projCoordA(blockOffsetC());
-        }
-
-        template <GlobalMappingT>
-        __device__ constexpr inline auto GlobalMapping<GlobalMappingT_impl>::blockOffsetB()
-        {
-            return projCoordB(blockOffsetC());
-        }
-
-        template <GlobalMappingT>
-        __device__ constexpr inline auto GlobalMapping<GlobalMappingT_impl>::blockOffsetC()
-        {
-            return std::make_pair((uint32_t)IOShape<MfmaFragA>::BlockHeight,
-                                  (uint32_t)IOShape<MfmaFragB>::BlockWidth);
-        }
-
-        template <GlobalMappingT>
-        __device__ constexpr inline auto GlobalMapping<GlobalMappingT_impl>::matrixCoordA()
-        {
-            return projCoordA(matrixCoordC());
-        }
-
-        template <GlobalMappingT>
-        __device__ constexpr inline auto GlobalMapping<GlobalMappingT_impl>::matrixCoordB()
-        {
-            return projCoordB(matrixCoordC());
-        }
-
-        template <GlobalMappingT>
-        __device__ constexpr inline auto GlobalMapping<GlobalMappingT_impl>::matrixCoordC()
-        {
-            return macroTileCoordC() + waveOffsetC();
-        }
-
-        template <GlobalMappingT>
-        __device__ constexpr inline auto GlobalMapping<GlobalMappingT_impl>::kStepA()
-        {
-            // Sanity check
-            static_assert((uint32_t)IOShape<GRFragA>::BlockWidth == BlockK,
-                          "Global read A block width does not match BlockK step dimension");
-
-            return std::make_pair(0u, BlockK);
-        }
-
-        template <GlobalMappingT>
-        __device__ constexpr inline auto GlobalMapping<GlobalMappingT_impl>::kStepB()
-        {
-            // Sanity check
-            static_assert((uint32_t)IOShape<GRFragB>::BlockHeight == BlockK,
-                          "Global read B block height does not match BlockK step dimension");
-
-            return std::make_pair(BlockK, 0u);
-        }
-
-#undef GlobalMappingT
-#undef GlobalMappingT_impl
+#undef MappingBaseT
+#undef MappingBaseT_impl
 
     } // namespace CooperativeGemm
 
