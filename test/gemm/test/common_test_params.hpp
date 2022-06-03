@@ -43,6 +43,7 @@ namespace rocwmma
     {
         class LdsKH;
         class LdsKW;
+        class LdsRF;
 
     } // namespace CooperativeGemm
 
@@ -101,8 +102,9 @@ namespace rocwmma
 
         // Supported LDS mappings
         using TestMappingsLds = std::tuple<
-#if defined(ROCWMMA_EXTENDED_TESTS)
+#if defined(ROCWMMA_VALIDATION_TESTS) || defined(ROCWMMA_EXTENDED_TESTS)
             std::tuple<typename CooperativeGemm::LdsKW>,
+            std::tuple<typename CooperativeGemm::LdsRF>,
 #endif // ROCWMMA_EXTENDED_TESTS
             std::tuple<typename CooperativeGemm::LdsKH>>;
 

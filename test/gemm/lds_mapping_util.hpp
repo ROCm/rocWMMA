@@ -56,21 +56,21 @@ namespace rocwmma
                       typename LayoutD,
                       uint32_t BlocksX,
                       uint32_t BlocksY>
-            using GlobalMapping = GlobalMapping<BlockM,
-                                                BlockN,
-                                                BlockK,
-                                                InputT,
-                                                OutputT,
-                                                ComputeT,
-                                                LayoutA,
-                                                LayoutB,
-                                                LayoutC,
-                                                LayoutD,
-                                                BlocksX,
-                                                BlocksY>;
+            using GlobalMapping = GlobalMapping::WaveLevelMapping<BlockM,
+                                                                  BlockN,
+                                                                  BlockK,
+                                                                  InputT,
+                                                                  OutputT,
+                                                                  ComputeT,
+                                                                  LayoutA,
+                                                                  LayoutB,
+                                                                  LayoutC,
+                                                                  LayoutD,
+                                                                  BlocksX,
+                                                                  BlocksY>;
 
             template <typename GlobalMapping, typename LayoutLds>
-            using LdsMapping = LdsMappingNT<GlobalMapping, LayoutLds>;
+            using LdsMapping = LocalMapping::LdsMappingNT<GlobalMapping, LayoutLds>;
 
             using CoopSchedulerA = typename Schedule::SameRowFwd;
             using CoopSchedulerB = typename Schedule::SameColFwd;
@@ -97,21 +97,62 @@ namespace rocwmma
                       typename LayoutD,
                       uint32_t BlocksX,
                       uint32_t BlocksY>
-            using GlobalMapping = GlobalMapping<BlockM,
-                                                BlockN,
-                                                BlockK,
-                                                InputT,
-                                                OutputT,
-                                                ComputeT,
-                                                LayoutA,
-                                                LayoutB,
-                                                LayoutC,
-                                                LayoutD,
-                                                BlocksX,
-                                                BlocksY>;
+            using GlobalMapping = GlobalMapping::WaveLevelMapping<BlockM,
+                                                                  BlockN,
+                                                                  BlockK,
+                                                                  InputT,
+                                                                  OutputT,
+                                                                  ComputeT,
+                                                                  LayoutA,
+                                                                  LayoutB,
+                                                                  LayoutC,
+                                                                  LayoutD,
+                                                                  BlocksX,
+                                                                  BlocksY>;
 
             template <typename GlobalMapping, typename LayoutLds>
-            using LdsMapping = LdsMappingTN<GlobalMapping, LayoutLds>;
+            using LdsMapping = LocalMapping::LdsMappingTN<GlobalMapping, LayoutLds>;
+
+            using CoopSchedulerA = typename Schedule::SameRowFwd;
+            using CoopSchedulerB = typename Schedule::SameColFwd;
+
+            template <typename GlobalMapping,
+                      typename LdsMapping,
+                      typename CoopSchedulerA,
+                      typename CoopSchedulerB>
+            using GemmDriver
+                = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
+        };
+
+        struct LdsRF
+        {
+            template <uint32_t BlockM,
+                      uint32_t BlockN,
+                      uint32_t BlockK,
+                      typename InputT,
+                      typename OutputT,
+                      typename ComputeT,
+                      typename LayoutA,
+                      typename LayoutB,
+                      typename LayoutC,
+                      typename LayoutD,
+                      uint32_t BlocksX,
+                      uint32_t BlocksY>
+            using GlobalMapping = GlobalMapping::BlockLevelMapping<BlockM,
+                                                                   BlockN,
+                                                                   BlockK,
+                                                                   InputT,
+                                                                   OutputT,
+                                                                   ComputeT,
+                                                                   LayoutA,
+                                                                   LayoutB,
+                                                                   LayoutC,
+                                                                   LayoutD,
+                                                                   BlocksX,
+                                                                   BlocksY>;
+
+            template <typename GlobalMapping, typename LayoutLds>
+            using LdsMapping = LocalMapping::LdsMappingRF<GlobalMapping, LayoutLds>;
 
             using CoopSchedulerA = typename Schedule::SameRowFwd;
             using CoopSchedulerB = typename Schedule::SameColFwd;
@@ -136,6 +177,12 @@ namespace rocwmma
     constexpr const char* dataTypeToString<typename CooperativeGemm::LdsKH>()
     {
         return "LdsKH";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<typename CooperativeGemm::LdsRF>()
+    {
+        return "LdsRF";
     }
 
 } // namespace rocwmma

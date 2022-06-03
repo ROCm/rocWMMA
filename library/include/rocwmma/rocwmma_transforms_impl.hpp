@@ -35,15 +35,15 @@ namespace rocwmma
         ///
         template <typename LhsFrag, typename RhsFrag>
         struct ConsistencyCheck : public MatrixLayout::detail::ConsistencyCheck<
-                                      typename LhsFrag::IOConfig::IOShape::MatrixMapper,
-                                      typename RhsFrag::IOConfig::IOShape::MatrixMapper>
+                                      typename GetIOShape_t<LhsFrag>::MatrixLayout,
+                                      typename GetIOShape_t<RhsFrag>::MatrixLayout>
         {
         };
 
         template <typename LhsFrag, typename RhsFrag>
         struct OrthogonalCheck : public MatrixLayout::detail::OrthogonalCheck<
-                                     typename LhsFrag::IOConfig::IOShape::MatrixMapper,
-                                     typename RhsFrag::IOConfig::IOShape::MatrixMapper>
+                                     typename GetIOShape_t<LhsFrag>::MatrixLayout,
+                                     typename GetIOShape_t<RhsFrag>::MatrixLayout>
         {
         };
 
@@ -147,6 +147,24 @@ namespace rocwmma
 
         public:
             using Type = FragT;
+        };
+
+        template <typename FragT>
+        struct ApplyRegisterFile;
+        template <typename MatrixT,
+                  uint32_t BlockM,
+                  uint32_t BlockN,
+                  uint32_t BlockK,
+                  typename DataT,
+                  typename DataLayout>
+        struct ApplyRegisterFile<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>>
+        {
+        private:
+            using FragT = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
+            constexpr static const uint32_t registerFileWidth = AMDGCN_WAVE_SIZE;
+
+        public:
+            using Type = fragment<matrix_b, 1, registerFileWidth, FragT::size(), DataT, DataLayout>;
         };
 
     } // namespace detail

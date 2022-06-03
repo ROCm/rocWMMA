@@ -31,7 +31,7 @@
 
 namespace rocwmma
 {
-    namespace CooperativeGemm
+    namespace LocalMapping
     {
 
 #define LdsMappingT typename GlobalMapping, typename LayoutLds
@@ -86,7 +86,7 @@ namespace rocwmma
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::ldLds()
         {
-            return DataSpace::leadingDim(sizeLds());
+            return DataLayout::leadingDim(sizeLds());
         }
 
 #undef LdsMappingT
@@ -143,13 +143,91 @@ namespace rocwmma
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::ldLds()
         {
-            return DataSpace::leadingDim(sizeLds());
+            return DataLayout::leadingDim(sizeLds());
         }
 
 #undef LdsMappingT
 #undef LdsMappingT_impl
 
-    } // namespace CooperativeGemm
+#undef LdsMappingT
+#undef LdsMappingT_impl
+
+#define LdsMappingT typename GlobalMapping, typename LayoutLds
+
+#define LdsMappingT_impl GlobalMapping, LayoutLds
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto
+            LdsMappingRF<LdsMappingT_impl>::projCoordA(Coord2d const& coordA)
+        {
+            // Scale the A coordinate to register file height
+            return std::make_pair(std::get<0>(coordA) * GlobalMapping::kDim() / LdsWidth, 0u);
+        }
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto
+            LdsMappingRF<LdsMappingT_impl>::projCoordB(Coord2d const& coordB)
+        {
+            // Scale the B coordinate to register file height
+            return std::make_pair(std::get<1>(coordB) * GlobalMapping::kDim() / LdsWidth, 0u);
+        }
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::waveOffsetA()
+        {
+            return projCoordA(GlobalMapping::waveOffsetA());
+        }
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::waveOffsetB()
+        {
+            return projCoordB(GlobalMapping::waveOffsetB());
+        }
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::blockOffsetA()
+        {
+            return projCoordA(GlobalMapping::blockOffsetA());
+        }
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::blockOffsetB()
+        {
+            return projCoordB(GlobalMapping::blockOffsetB());
+        }
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::matrixCoordA()
+        {
+            // Assuming base coord of (0, 0) for LDS
+            return waveOffsetA();
+        }
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::matrixCoordB()
+        {
+            return projCoordA(GlobalMapping::macroTileSizeC()) + waveOffsetB();
+        }
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::sizeLds()
+        {
+            auto macroTileC = GlobalMapping::macroTileSizeC();
+            return std::make_pair((std::get<0>(macroTileC) + std::get<1>(macroTileC))
+                                      * GlobalMapping::kDim() / LdsWidth,
+                                  LdsWidth);
+        }
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::ldLds()
+        {
+            return DataLayout::leadingDim(sizeLds());
+        }
+
+#undef LdsMappingT
+#undef LdsMappingT_impl
+
+    } // namespace LocalMapping
 
 } // namespace rocwmma
 

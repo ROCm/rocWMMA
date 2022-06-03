@@ -40,6 +40,9 @@ namespace rocwmma
     using ApplyDataLayout_t =
         typename detail::template ApplyDataLayout<FragT, NewDataLayoutT>::Type;
 
+    template <typename FragT>
+    using ApplyRegisterFile_t = typename detail::template ApplyRegisterFile<FragT>::Type;
+
 } // namespace rocwmma
 
 #endif // ROCWMMA_TRANSFORMS_HPP
