@@ -105,7 +105,7 @@ namespace rocwmma
     /*! \struct layout_t
  *  \brief Definition of Runtime data layout flags
  *  @var mem_row_major
- *  @var mem_col_major 
+ *  @var mem_col_major
  */
     enum layout_t : uint32_t
     {
@@ -117,7 +117,7 @@ namespace rocwmma
     {
         /*! \struct VectorStorage
         *  \brief Vectorized internal storage
-        *  @tparam T Storage type 
+        *  @tparam T Storage type
         *  @tparam Elements No of Elements in the vector
         *  @tparam IsNativType Native or rocWMMA defined
         */
@@ -153,7 +153,7 @@ namespace rocwmma
 
     /*! \class VecT
     *  \brief  Functional vector class
-    *  @tparam T Vector data type 
+    *  @tparam T Vector data type
     *  @tparam VecSize Vector storage size
     */
     template <typename T, uint32_t VecSize>
@@ -190,10 +190,8 @@ namespace rocwmma
             struct Traits
             {
                 // Iterates over sub-vector type (may be > 1)
-                using ItVecT = typename std::conditional_t<
-                    IsConst,
-                    detail::VectorStorage_internal<DataT, SubVecSize> const,
-                    detail::VectorStorage_internal<DataT, SubVecSize>>;
+                using ItVecT = typename std::
+                    conditional_t<IsConst, VecT<DataT, SubVecSize> const, VecT<DataT, SubVecSize>>;
 
                 enum : int32_t
                 {

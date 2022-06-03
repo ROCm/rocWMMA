@@ -37,22 +37,16 @@ namespace rocwmma
     {
         struct Traits
         {
-            using OutputT = VecT<DataT, VectorSize>;
+            using BroadcastT = VecT<DataT, VectorSize>;
         };
 
-        __device__ static inline auto exec(DataT val) -> typename Traits::OutputT
+        __device__ static inline void exec(typename Traits::BroadcastT& data, DataT val)
         {
-            using OutputT = typename Traits::OutputT;
-
-            OutputT output;
-
 #pragma unroll
-            for(unsigned int i = 0; i < OutputT::size(); i++)
+            for(unsigned int i = 0; i < Traits::BroadcastT::size(); i++)
             {
-                output[i] = val;
+                data[i] = val;
             }
-
-            return output;
         }
     };
 
