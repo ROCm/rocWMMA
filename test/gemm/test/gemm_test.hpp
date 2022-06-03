@@ -58,13 +58,15 @@ namespace rocwmma
             auto alpha       = std::get<3>(param);
             auto beta        = std::get<4>(param);
 
-            // Cleanup previously used resources if data types change
-            static KernelI* sLastKernelRun = nullptr;
-            if (sLastKernelRun && sLastKernelRun->getResource() != kernel->getResource())
+            // Cleanup previously used resources if the resource context changes.
+            // This happens in GEMM when the Input/Output types change for test batches.
+            // Eg. tests change from f16 to f32
+            static HipResource* sLastResourceRun = nullptr;
+            if(sLastResourceRun && sLastResourceRun != kernel->getResource())
             {
-                sLastKernelRun->getResource()->reset();
+                sLastResourceRun->reset();
             }
-            sLastKernelRun = kernel.get();
+            sLastResourceRun = kernel->getResource();
 
             ProblemParams params = {threadBlock, problemSize, alpha, beta};
 
