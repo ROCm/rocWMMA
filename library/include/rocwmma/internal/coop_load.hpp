@@ -101,7 +101,7 @@ namespace rocwmma
                             *ioIter,
                             dataPtr,
                             DataLayout::fromMatrixCoord(
-                                baseOffset + MatrixMapper::cumulativeOffset(ioIter.index()), ldm));
+                                baseOffset + MatrixLayout::cumulativeOffset(ioIter.index()), ldm));
                         ioIter++;
                     }
                 }
