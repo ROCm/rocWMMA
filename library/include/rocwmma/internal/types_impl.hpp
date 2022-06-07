@@ -33,9 +33,8 @@ namespace rocwmma
 
     template <typename T, uint32_t VecSize>
     template <uint32_t SubVecSize, bool IsConst>
-    __device__
-        VecT<T, VecSize>::Iterator<SubVecSize, IsConst>::Iterator(ParentT& parent,
-                                                                  uint32_t startIndex /*= 0*/)
+    __device__ constexpr VecT<T, VecSize>::Iterator<SubVecSize, IsConst>::Iterator(
+        ParentT& parent, uint32_t startIndex /*= 0*/)
         : mIndex(startIndex)
         , mParent(parent)
     {
