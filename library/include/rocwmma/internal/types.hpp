@@ -203,7 +203,7 @@ namespace rocwmma
 
             static_assert(VecSize % SubVecSize == 0, "VecSize not iterable by ItVecSize");
 
-            __device__ Iterator(ParentT& parent, uint32_t startIndex = 0);
+            __device__ constexpr Iterator(ParentT& parent, uint32_t startIndex = 0);
             __device__ ~Iterator() = default;
 
             __device__ inline typename Traits::ItVecT&       operator*() const;
