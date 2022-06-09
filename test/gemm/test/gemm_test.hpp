@@ -81,6 +81,13 @@ namespace rocwmma
             auto param  = Base::GetParam();
             auto kernel = std::get<0>(param);
 
+            static bool ranWarmup = false;
+            if(!ranWarmup)
+            {
+                kernel->exec();
+                ranWarmup = true;
+            }
+
             kernel->exec();
             kernel->validateResults();
             kernel->reportResults();
