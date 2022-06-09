@@ -198,7 +198,7 @@ namespace rocwmma
                         LayoutD>::checkDevice() const
     {
         auto deviceArch = DeviceInfo::instance()->getGcnArch();
-        return (deviceArch != DeviceInfo::UNKNOWN
+        return (deviceArch != DeviceInfo::UNSUPPORTED
                 && !(deviceArch == DeviceInfo::GFX908 && std::is_same<InputT, float64_t>::value));
     }
 
