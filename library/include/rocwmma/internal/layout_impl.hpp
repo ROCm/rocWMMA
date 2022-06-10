@@ -33,6 +33,402 @@
 
 namespace rocwmma
 {
+    namespace DataLayout
+    {
+        namespace detail
+        {
+            ///
+            /// Helper to obtain orthogonal data layout
+            ///
+            template <typename LayoutT>
+            struct OrthogonalLayout;
+
+            template <>
+            struct OrthogonalLayout<row_major>
+            {
+                using Type = col_major;
+            };
+
+            template <>
+            struct OrthogonalLayout<col_major>
+            {
+                using Type = row_major;
+            };
+
+            ///
+            /// Helper to ensure layout types are consistent (same)
+            ///
+            template <typename LhsDataLayout, typename RhsDataLayout>
+            struct ConsistencyCheck : public std::false_type
+            {
+            };
+
+            template <typename DataLayout>
+            struct ConsistencyCheck<DataLayout, DataLayout> : public std::true_type
+            {
+            };
+
+            ///
+            /// Helper to check if layout types are orthogonal
+            ///
+            template <typename LhsDataLayout, typename RhsDataLayout>
+            struct OrthogonalCheck : public std::true_type
+            {
+            };
+
+            template <typename DataLayout>
+            struct OrthogonalCheck<DataLayout, DataLayout> : public std::false_type
+            {
+            };
+
+        } // namespace detail
+
+        template <typename DataLayoutT>
+        using OrthogonalLayout_t = typename detail::OrthogonalLayout<DataLayoutT>::Type;
+
+        // TODO: C++17 OrthogonalCheck_v
+        // TODO: C++17 ConsistencyCheck_v
+
+    } // namespace DataLayout
+
+    namespace MatrixLayout
+    {
+        ///
+        /// Fwd declaration of matrix layouts used in API
+        ///
+        template <uint32_t BlockDim,
+                  uint32_t BlockK,
+                  typename DataT,
+                  typename DataLayout,
+                  uint32_t VectorWidth,
+                  uint32_t MaxVectorWidth>
+        struct ColNT;
+
+        template <uint32_t BlockDim,
+                  uint32_t BlockK,
+                  typename DataT,
+                  typename DataLayout,
+                  uint32_t VectorWidth,
+                  uint32_t MaxVectorWidth>
+        struct RowNT;
+
+        template <uint32_t BlockDim,
+                  uint32_t BlockK,
+                  typename DataT,
+                  typename DataLayout,
+                  uint32_t VectorWidth,
+                  uint32_t MaxVectorWidth>
+        struct Col;
+
+        template <uint32_t BlockDim,
+                  uint32_t BlockK,
+                  typename DataT,
+                  typename DataLayout,
+                  uint32_t VectorWidth,
+                  uint32_t MaxVectorWidth>
+        struct Row;
+
+        namespace detail
+        {
+            ///
+            /// Helper to obtain orthogonal data layout
+            ///
+            template <typename LayoutT>
+            struct OrthogonalLayout;
+
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      typename DataLayout,
+                      uint32_t VectorWidth,
+                      uint32_t MaxVectorWidth>
+            struct OrthogonalLayout<
+                ColNT<BlockDim, BlockK, DataT, DataLayout, VectorWidth, MaxVectorWidth>>
+            {
+                using Type = RowNT<BlockDim,
+                                   BlockK,
+                                   DataT,
+                                   typename DataLayout::template OrthogonalLayout_t<DataLayout>,
+                                   VectorWidth,
+                                   MaxVectorWidth>;
+            };
+
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      typename DataLayout,
+                      uint32_t VectorWidth,
+                      uint32_t MaxVectorWidth>
+            struct OrthogonalLayout<
+                RowNT<BlockDim, BlockK, DataT, DataLayout, VectorWidth, MaxVectorWidth>>
+            {
+                using Type = ColNT<BlockDim,
+                                   BlockK,
+                                   DataT,
+                                   typename DataLayout::template OrthogonalLayout_t<DataLayout>,
+                                   VectorWidth,
+                                   MaxVectorWidth>;
+            };
+
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      typename DataLayout,
+                      uint32_t VectorWidth,
+                      uint32_t MaxVectorWidth>
+            struct OrthogonalLayout<
+                Col<BlockDim, BlockK, DataT, DataLayout, VectorWidth, MaxVectorWidth>>
+            {
+                using Type = Row<BlockDim,
+                                 BlockK,
+                                 DataT,
+                                 typename DataLayout::template OrthogonalLayout_t<DataLayout>,
+                                 VectorWidth,
+                                 MaxVectorWidth>;
+            };
+
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      typename DataLayout,
+                      uint32_t VectorWidth,
+                      uint32_t MaxVectorWidth>
+            struct OrthogonalLayout<
+                Row<BlockDim, BlockK, DataT, DataLayout, VectorWidth, MaxVectorWidth>>
+            {
+                using Type = Col<BlockDim,
+                                 BlockK,
+                                 DataT,
+                                 typename DataLayout::template OrthogonalLayout_t<DataLayout>,
+                                 VectorWidth,
+                                 MaxVectorWidth>;
+            };
+
+            ///
+            /// Check for consistency in element ordering between two layouts
+            ///
+            template <typename LhsMatrixLayout, typename RhsMatrixLayout>
+            struct ConsistencyCheck : public std::false_type
+            {
+            };
+
+            // Same type is compatible
+            template <typename MatrixLayout>
+            struct ConsistencyCheck<MatrixLayout, MatrixLayout> : public std::true_type
+            {
+            };
+
+            // ColNT and RowNT layouts guarantee a level of consistency between col / row major
+            // data layouts, given some restrictions vector width and same MaxVW
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      uint32_t MaxVectorWidth,
+                      uint32_t RhsVectorWidth>
+            struct ConsistencyCheck<
+                MatrixLayout::ColNT<BlockDim, BlockK, DataT, col_major, 1, MaxVectorWidth>,
+                MatrixLayout::
+                    ColNT<BlockDim, BlockK, DataT, row_major, RhsVectorWidth, MaxVectorWidth>>
+                : public std::true_type
+            {
+            };
+
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      uint32_t MaxVectorWidth,
+                      uint32_t LhsVectorWidth>
+            struct ConsistencyCheck<
+                MatrixLayout::
+                    ColNT<BlockDim, BlockK, DataT, row_major, LhsVectorWidth, MaxVectorWidth>,
+                MatrixLayout::ColNT<BlockDim, BlockK, DataT, col_major, 1, MaxVectorWidth>>
+                : public std::true_type
+            {
+            };
+
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      uint32_t MaxVectorWidth,
+                      uint32_t LhsVectorWidth>
+            struct ConsistencyCheck<
+                MatrixLayout::
+                    RowNT<BlockDim, BlockK, DataT, col_major, LhsVectorWidth, MaxVectorWidth>,
+                MatrixLayout::RowNT<BlockDim, BlockK, DataT, row_major, 1, MaxVectorWidth>>
+                : public std::true_type
+            {
+            };
+
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      uint32_t MaxVectorWidth,
+                      uint32_t RhsVectorWidth>
+            struct ConsistencyCheck<
+                MatrixLayout::RowNT<BlockDim, BlockK, DataT, row_major, 1, MaxVectorWidth>,
+                MatrixLayout::
+                    RowNT<BlockDim, BlockK, DataT, col_major, RhsVectorWidth, MaxVectorWidth>>
+                : public std::true_type
+            {
+            };
+
+            // Col and Row layouts guarantee a level of consistency between variable vector widths in
+            // matching data layouts, given the same MaxVW.
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      typename DataLayout,
+                      uint32_t LhsVectorWidth,
+                      uint32_t RhsVectorWidth,
+                      uint32_t MaxVectorWidth>
+            struct ConsistencyCheck<
+                MatrixLayout::
+                    Col<BlockDim, BlockK, DataT, DataLayout, LhsVectorWidth, MaxVectorWidth>,
+                MatrixLayout::
+                    Col<BlockDim, BlockK, DataT, DataLayout, RhsVectorWidth, MaxVectorWidth>>
+                : public std::true_type
+            {
+            };
+
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      typename DataLayout,
+                      uint32_t LhsVectorWidth,
+                      uint32_t RhsVectorWidth,
+                      uint32_t MaxVectorWidth>
+            struct ConsistencyCheck<
+                MatrixLayout::
+                    Row<BlockDim, BlockK, DataT, DataLayout, LhsVectorWidth, MaxVectorWidth>,
+                MatrixLayout::
+                    Row<BlockDim, BlockK, DataT, DataLayout, RhsVectorWidth, MaxVectorWidth>>
+                : public std::true_type
+            {
+            };
+
+            ///
+            /// Check for layout orthogonality
+            ///
+
+            template <typename LhsMatrixLayout, typename RhsMatrixLayout>
+            struct OrthogonalCheck : public std::false_type
+            {
+            };
+
+            // Same type is not orthogonal
+            template <typename MatrixLayout>
+            struct OrthogonalCheck<MatrixLayout, MatrixLayout> : public std::false_type
+            {
+            };
+
+            template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t MaxVectorWidth>
+            struct OrthogonalCheck<
+                MatrixLayout::ColNT<BlockDim, BlockK, DataT, col_major, 1, MaxVectorWidth>,
+                MatrixLayout::RowNT<BlockDim, BlockK, DataT, row_major, 1, MaxVectorWidth>>
+                : public std::true_type
+            {
+            };
+
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      uint32_t LhsVectorWidth,
+                      uint32_t RhsVectorWidth,
+                      uint32_t MaxVectorWidth>
+            struct OrthogonalCheck<
+                MatrixLayout::
+                    ColNT<BlockDim, BlockK, DataT, row_major, LhsVectorWidth, MaxVectorWidth>,
+                MatrixLayout::
+                    RowNT<BlockDim, BlockK, DataT, col_major, RhsVectorWidth, MaxVectorWidth>>
+                : public std::true_type
+            {
+            };
+
+            template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t MaxVectorWidth>
+            struct OrthogonalCheck<
+                MatrixLayout::RowNT<BlockDim, BlockK, DataT, row_major, 1, MaxVectorWidth>,
+                MatrixLayout::ColNT<BlockDim, BlockK, DataT, col_major, 1, MaxVectorWidth>>
+                : public std::true_type
+            {
+            };
+
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      uint32_t LhsVectorWidth,
+                      uint32_t RhsVectorWidth,
+                      uint32_t MaxVectorWidth>
+            struct OrthogonalCheck<
+                MatrixLayout::
+                    RowNT<BlockDim, BlockK, DataT, col_major, LhsVectorWidth, MaxVectorWidth>,
+                MatrixLayout::
+                    ColNT<BlockDim, BlockK, DataT, row_major, RhsVectorWidth, MaxVectorWidth>>
+                : public std::true_type
+            {
+            };
+
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      typename LhsDataLayout,
+                      uint32_t LhsVectorWidth,
+                      uint32_t RhsVectorWidth,
+                      uint32_t MaxVectorWidth>
+            struct OrthogonalCheck<
+                MatrixLayout::
+                    Col<BlockDim, BlockK, DataT, LhsDataLayout, LhsVectorWidth, MaxVectorWidth>,
+                MatrixLayout::Row<BlockDim,
+                                  BlockK,
+                                  DataT,
+                                  typename DataLayout::template OrthogonalLayout_t<LhsDataLayout>,
+                                  RhsVectorWidth,
+                                  MaxVectorWidth>> : public std::true_type
+            {
+            };
+
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      typename LhsDataLayout,
+                      uint32_t LhsVectorWidth,
+                      uint32_t RhsVectorWidth,
+                      uint32_t MaxVectorWidth>
+            struct OrthogonalCheck<
+                MatrixLayout::
+                    Row<BlockDim, BlockK, DataT, LhsDataLayout, LhsVectorWidth, MaxVectorWidth>,
+                MatrixLayout::Col<BlockDim,
+                                  BlockK,
+                                  DataT,
+                                  typename DataLayout::template OrthogonalLayout_t<LhsDataLayout>,
+                                  RhsVectorWidth,
+                                  MaxVectorWidth>> : public std::true_type
+            {
+            };
+
+            template <uint32_t BlockDim,
+                      uint32_t BlockK,
+                      typename DataT,
+                      uint32_t LhsVectorWidth,
+                      uint32_t RhsVectorWidth,
+                      uint32_t MaxVectorWidth>
+            struct OrthogonalCheck<
+                MatrixLayout::
+                    Col<BlockDim, BlockK, DataT, col_major, LhsVectorWidth, MaxVectorWidth>,
+                MatrixLayout::
+                    Row<BlockDim, BlockK, DataT, row_major, RhsVectorWidth, MaxVectorWidth>>
+                : public std::true_type
+            {
+            };
+
+        } // namespace detail
+
+        template <typename DataLayoutT>
+        using OrthogonalLayout_t = typename detail::OrthogonalLayout<DataLayoutT>::Type;
+
+        // TODO: C++17 OrthogonalCheck_v
+        // TODO: C++17 ConsistencyCheck_v
+
+    } // namespace MatrixLayout
 
     namespace MatrixLayout
     {

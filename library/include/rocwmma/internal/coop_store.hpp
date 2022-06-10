@@ -38,8 +38,8 @@ namespace rocwmma
     template <uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
-              class DataMapper,
-              class MatrixMapper,
+              class DataLayout,
+              class MatrixLayout,
               uint32_t VectorWidth,
               uint32_t SpCount = 0>
     struct CooperativeStore
@@ -83,7 +83,7 @@ namespace rocwmma
                 return;
 
             // Align threads to starting positions
-            auto baseOffset = MatrixMapper::baseOffset();
+            auto baseOffset = MatrixLayout::baseOffset();
 
             // Break down block into iterable stores
             auto splitIter = data.template begin<Traits::StoreT::size()>();
@@ -100,8 +100,8 @@ namespace rocwmma
                         Storer::exec(
                             dataPtr,
                             *ioIter,
-                            DataMapper::fromMatrixCoord(
-                                baseOffset + MatrixMapper::cumulativeOffset(ioIter.index()), ldm));
+                            DataLayout::fromMatrixCoord(
+                                baseOffset + MatrixLayout::cumulativeOffset(ioIter.index()), ldm));
                         ioIter++;
                     }
                 }
@@ -114,17 +114,17 @@ namespace rocwmma
     template <uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
-              class DataMapper,
-              class MatrixMapper,
+              class DataLayout,
+              class MatrixLayout,
               uint32_t VectorWidth>
-    struct CooperativeStore<BlockDim, BlockK, DataT, DataMapper, MatrixMapper, VectorWidth, 0>
+    struct CooperativeStore<BlockDim, BlockK, DataT, DataLayout, MatrixLayout, VectorWidth, 0>
     {
         template <uint32_t SplitCount>
         using CoopStore = CooperativeStore<BlockDim,
                                            BlockK,
                                            DataT,
-                                           DataMapper,
-                                           MatrixMapper,
+                                           DataLayout,
+                                           MatrixLayout,
                                            VectorWidth,
                                            SplitCount>;
 

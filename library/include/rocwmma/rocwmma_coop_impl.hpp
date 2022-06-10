@@ -49,7 +49,7 @@ namespace rocwmma
                               uint32_t splitCount)
     {
         using FragT      = typename std::decay<decltype(frag)>::type;
-        using CoopLoader = typename FragT::IOConfig::CoopLoader;
+        using CoopLoader = typename GetIOConfig_t<FragT>::CoopLoader;
 
         // Sanity checks
         static_assert(!std::is_same<DataLayout, void>::value,
@@ -94,7 +94,7 @@ namespace rocwmma
                               uint32_t                                                      ldm)
     {
         using FragT       = typename std::decay<decltype(frag)>::type;
-        using Config      = typename FragT::IOConfig;
+        using Config      = GetIOConfig_t<FragT>;
         using MappingUtil = typename Config::MappingUtil;
 
         // Matrix A:
@@ -125,7 +125,7 @@ namespace rocwmma
     {
 
         using FragT      = typename std::decay<decltype(frag)>::type;
-        using CoopStorer = typename FragT::IOConfig::CoopStorer;
+        using CoopStorer = typename GetIOConfig_t<FragT>::CoopStorer;
 
         // Sanity checks
         static_assert(!std::is_same<DataLayout, void>::value,
@@ -170,7 +170,7 @@ namespace rocwmma
         uint32_t                                                            ldm)
     {
         using FragT       = typename std::decay<decltype(frag)>::type;
-        using Config      = typename FragT::IOConfig;
+        using Config      = GetIOConfig_t<FragT>;
         using MappingUtil = typename Config::MappingUtil;
 
         // Matrix A:

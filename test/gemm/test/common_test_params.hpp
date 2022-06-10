@@ -39,9 +39,13 @@
 namespace rocwmma
 {
 
-    class LdsRF;
-    class LdsKH;
-    class LdsKW;
+    namespace CooperativeGemm
+    {
+        class LdsKH;
+        class LdsKW;
+        class LdsRF;
+
+    } // namespace CooperativeGemm
 
     struct CommonTestParams
     {
@@ -89,21 +93,20 @@ namespace rocwmma
         // Supported layout types
         using TestLayoutTypes = std::tuple<row_major, col_major>;
 
-        using TestLdsLayoutTypes = std::tuple<
-            row_major
-#if defined(ROCWMMA_VALIDATION_TESTS) || defined (ROCWMMA_EXTENDED_TESTS)
-            , col_major
+        using TestLdsLayoutTypes = std::tuple<row_major
+#if defined(ROCWMMA_VALIDATION_TESTS) || defined(ROCWMMA_EXTENDED_TESTS)
+                                              ,
+                                              col_major
 #endif // ROCWMMA_EXTENDED_TESTS
-            >;
+                                              >;
 
         // Supported LDS mappings
         using TestMappingsLds = std::tuple<
-#if defined(ROCWMMA_EXTENDED_TESTS)
-            std::tuple<LdsRF>,
-            std::tuple<LdsKW>,
+#if defined(ROCWMMA_VALIDATION_TESTS) || defined(ROCWMMA_EXTENDED_TESTS)
+            std::tuple<typename CooperativeGemm::LdsKW>,
+            std::tuple<typename CooperativeGemm::LdsRF>,
 #endif // ROCWMMA_EXTENDED_TESTS
-            std::tuple<LdsKH>
-            >;
+            std::tuple<typename CooperativeGemm::LdsKH>>;
 
         ///
         /// Grouped compile time kernel parameters
@@ -159,38 +162,43 @@ namespace rocwmma
 
         static inline std::vector<ThreadBlockT> threadBlocks()
         {
-            return {
-#if defined(ROCWMMA_VALIDATION_TESTS) || defined (ROCWMMA_EXTENDED_TESTS)
+            return
+            {
+#if defined(ROCWMMA_VALIDATION_TESTS) || defined(ROCWMMA_EXTENDED_TESTS)
                 // Don't benchmark wg less than 4 waves
-                {64, 1},           // 1 wave
-                {64, 2}, {128, 1}, // 2 wave
+                {64, 1}, // 1 wave
+                    {64, 2}, {128, 1}, // 2 wave
 #endif // ROCWMMA_VALIDATION_TESTS
-                {64, 4}, {128, 2}, {256, 1}
-                }; // 4 wave
+                    {64, 4}, {128, 2},
+                {
+                    256, 1
+                }
+            }; // 4 wave
         }
 
         static inline std::vector<ProblemSizeT> problemSizes()
         {
-            return {{64, 64, 1024},
-                    {32, 64, 1024},
-                    {64, 32, 1024},
-                    {256, 256, 1024},
-                    {2048, 64, 1024},
-                    {64, 2048, 1024},
-                    {1024, 1024, 1024},
+            return {
+                {64, 64, 1024},
+                {32, 64, 1024},
+                {64, 32, 1024},
+                {256, 256, 1024},
+                {2048, 64, 1024},
+                {64, 2048, 1024},
+                {1024, 1024, 1024},
 #ifndef ROCWMMA_VALIDATION_TESTS
-                    {2048, 2048, 2048},
-                    {2560, 2560, 2560},
-                    {3072, 3072, 3072},
-                    {3584, 3584, 3584},
-                    {4096, 4096, 4096},
-                    {5120, 5120, 5120},
+                {2048, 2048, 2048},
+                {2560, 2560, 2560},
+                {3072, 3072, 3072},
+                {3584, 3584, 3584},
+                {4096, 4096, 4096},
+                {5120, 5120, 5120},
 #endif // ROCWMMA_VALIDATION_TESTS
 #ifdef ROCWMMA_EXTENDED_TESTS
-                    {6144, 6144, 6144},
-                    {7168, 7168, 7168},
-                    {8192, 8192, 8192},
-#endif 
+                {6144, 6144, 6144},
+                {7168, 7168, 7168},
+                {8192, 8192, 8192},
+#endif
             };
         }
 
