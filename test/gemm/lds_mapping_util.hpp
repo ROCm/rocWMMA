@@ -165,6 +165,51 @@ namespace rocwmma
                 = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
         };
 
+        // struct WGTest
+        // {
+        //     template <uint32_t BlockM,
+        //               uint32_t BlockN,
+        //               uint32_t BlockK,
+        //               typename InputT,
+        //               typename OutputT,
+        //               typename ComputeT,
+        //               typename LayoutA,
+        //               typename LayoutB,
+        //               typename LayoutC,
+        //               typename LayoutD,
+        //               uint32_t BlocksX,
+        //               uint32_t BlocksY,
+        //               uint32_t WgX,
+        //               uint32_t WgY>
+        //     using GlobalMapping = GlobalMapping::BlockLevelMapping<BlockM,
+        //                                                            BlockN,
+        //                                                            BlockK,
+        //                                                            InputT,
+        //                                                            OutputT,
+        //                                                            ComputeT,
+        //                                                            LayoutA,
+        //                                                            LayoutB,
+        //                                                            LayoutC,
+        //                                                            LayoutD,
+        //                                                            BlocksX,
+        //                                                            BlocksY,
+        //                                                            WgX,
+        //                                                            WgY>;
+
+        //     template <typename GlobalMapping, typename LayoutLds>
+        //     using LdsMapping = LocalMapping::LdsMappingRF<GlobalMapping, LayoutLds>;
+
+        //     using CoopSchedulerA = typename Schedule::SameRowFwd;
+        //     using CoopSchedulerB = typename Schedule::SameColFwd;
+
+        //     template <typename GlobalMapping,
+        //               typename LdsMapping,
+        //               typename CoopSchedulerA,
+        //               typename CoopSchedulerB>
+        //     using GemmDriver
+        //         = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
+        // };
+
     } // namespace CooperativeGemm
 
     template <>
