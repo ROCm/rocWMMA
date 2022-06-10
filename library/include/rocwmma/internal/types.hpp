@@ -115,6 +115,8 @@ namespace rocwmma
 
     namespace detail
     {
+        using Coord2d = std::pair<uint32_t, uint32_t>;
+
         /*! \struct VectorStorage
         *  \brief Vectorized internal storage
         *  @tparam T Storage type
