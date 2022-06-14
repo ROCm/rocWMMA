@@ -63,17 +63,39 @@ namespace rocwmma
         }
 
         template <LdsMappingT>
-        __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::matrixCoordA()
+        __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::writeCoordA()
         {
-            // Base lds coord = (0, 0);
-            return waveOffsetA();
+            // Base lds coordA = (0, 0).
+            // For local write, must add wave offset if global read tile is a wave tile
+            auto baseCoordA = std::make_pair(0u, 0u);
+            return GlobalMapping::readABWaveTile() ? baseCoordA + waveOffsetA() : baseCoordA;
         }
 
         template <LdsMappingT>
-        __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::matrixCoordB()
+        __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::writeCoordB()
         {
-            return std::swap(GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()))
-                   + waveOffsetB();
+            // B data will start right after A data
+            // For local write, must add wave offset if global read tile is a wave tile
+            auto baseCoordB = std::swap(GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()));
+            return GlobalMapping::readABWaveTile() ? baseCoordB + waveOffsetB() : baseCoordB;
+        }
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::readCoordA()
+        {
+            // Base lds coordA = (0, 0).
+            // For local read, will be in MFMA format, so we need the wave offset
+            auto baseCoordA = std::make_pair(0u, 0u);
+            return baseCoordA + waveOffsetA();
+        }
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::readCoordB()
+        {
+            // B data will start right after A data
+            // For local read, will be in MFMA format, so we need the wave offset
+            auto baseCoordB = std::swap(GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()));
+            return baseCoordB + waveOffsetB();
         }
 
         template <LdsMappingT>
@@ -121,16 +143,39 @@ namespace rocwmma
         }
 
         template <LdsMappingT>
-        __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::matrixCoordA()
+        __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::writeCoordA()
         {
-            // Assuming base coord of (0, 0) for LDS
-            return waveOffsetA();
+            // Base lds coordA = (0, 0).
+            // For local write, must add wave offset if global read tile is a wave tile
+            auto baseCoordA = std::make_pair(0u, 0u);
+            return GlobalMapping::readABWaveTile() ? baseCoordA + waveOffsetA() : baseCoordA;
         }
 
         template <LdsMappingT>
-        __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::matrixCoordB()
+        __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::writeCoordB()
         {
-            return GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()) + waveOffsetB();
+            // B data will start right after A data
+            // For local write, must add wave offset if global read tile is a wave tile
+            auto baseCoordB = GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC());
+            return GlobalMapping::readABWaveTile() ? baseCoordB + waveOffsetB() : baseCoordB;
+        }
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::readCoordA()
+        {
+            // Base lds coordA = (0, 0).
+            // For local write, must add wave offset if global read tile is a wave tile
+            auto baseCoordA = std::make_pair(0u, 0u);
+            return baseCoordA + waveOffsetA();
+        }
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::readCoordB()
+        {
+            // B data will start right after A data
+            // For local write, must add wave offset if global read tile is a wave tile
+            auto baseCoordB = GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC());
+            return baseCoordB + waveOffsetB();
         }
 
         template <LdsMappingT>
@@ -197,14 +242,27 @@ namespace rocwmma
         }
 
         template <LdsMappingT>
-        __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::matrixCoordA()
+        __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::writeCoordA()
         {
             // Assuming base coord of (0, 0) for LDS
             return waveOffsetA();
         }
 
         template <LdsMappingT>
-        __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::matrixCoordB()
+        __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::writeCoordB()
+        {
+            return projCoordA(GlobalMapping::macroTileSizeC()) + waveOffsetB();
+        }
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::readCoordA()
+        {
+            // Assuming base coord of (0, 0) for LDS
+            return waveOffsetA();
+        }
+
+        template <LdsMappingT>
+        __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::readCoordB()
         {
             return projCoordA(GlobalMapping::macroTileSizeC()) + waveOffsetB();
         }
