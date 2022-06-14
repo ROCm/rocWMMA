@@ -61,6 +61,10 @@ namespace rocwmma
                 return std::make_pair(0u, std::get<1>(coordC));
             }
 
+            ///
+            /// Dimensions
+            ///
+
             template <MappingBaseT>
             __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::macroTileSizeC()
             {
@@ -86,11 +90,9 @@ namespace rocwmma
                 return BlockK;
             }
 
-            template <MappingBaseT>
-            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::macroTileCoordC()
-            {
-                return WaveSpace::workgroupCoord() * macroTileSizeC();
-            }
+            ///
+            /// Offsets
+            ///
 
             template <MappingBaseT>
             __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::waveOffsetA()
@@ -129,157 +131,32 @@ namespace rocwmma
             }
 
             template <MappingBaseT>
-            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::matrixCoordA()
-            {
-                return projCoordA(matrixCoordC());
-            }
-
-            template <MappingBaseT>
-            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::matrixCoordB()
-            {
-                return projCoordB(matrixCoordC());
-            }
-
-            template <MappingBaseT>
-            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::matrixCoordC()
-            {
-                return macroTileCoordC() + waveOffsetC();
-            }
-
-            template <MappingBaseT>
-            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::kStepA()
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::kStepOffsetA()
             {
                 return std::make_pair(0u, BlockK);
             }
 
             template <MappingBaseT>
-            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::kStepB()
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::kStepOffsetB()
             {
                 return std::make_pair(BlockK, 0u);
             }
 
-#define MappingBaseWGT                                                                             \
-    uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename InputT, typename OutputT,          \
-        typename ComputeT, typename LayoutA, typename LayoutB, typename LayoutC, typename LayoutD, \
-        uint32_t BlocksX, uint32_t BlocksY, uint32_t WgX, uint32_t WgY
+            ///
+            /// Global matrix coords
+            ///
 
-#define MappingBaseWGT_impl                                                                \
-    BlockM, BlockN, BlockK, InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD, \
-        BlocksX, BlocksY, WgX, WgY
-
-            template <MappingBaseWGT>
-            template <typename CoordC>
-            __device__ constexpr inline auto
-                MappingBaseWG<MappingBaseWGT_impl>::projCoordA(CoordC const& coordC)
-            {
-                return std::make_pair(std::get<0>(coordC), 0u);
-            }
-
-            template <MappingBaseWGT>
-            template <typename CoordC>
-            __device__ constexpr inline auto
-                MappingBaseWG<MappingBaseWGT_impl>::projCoordB(CoordC const& coordC)
-            {
-                return std::make_pair(0u, std::get<1>(coordC));
-            }
-
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::macroTileSizeC()
-            {
-                return WaveSpace::workgroupDim() * waveTileSizeC();
-            }
-
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::waveTileSizeC()
-            {
-                return blockSizeC() * std::make_pair(BlocksX, BlocksY);
-            }
-
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::blockSizeC()
-            {
-                return std::make_pair((uint32_t)GetIOShape_t<MfmaFragC>::BlockHeight,
-                                      (uint32_t)GetIOShape_t<MfmaFragC>::BlockWidth);
-            }
-
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::kDim()
-            {
-                return BlockK;
-            }
-
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::macroTileCoordC()
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::macroTileCoordC()
             {
                 return WaveSpace::workgroupCoord() * macroTileSizeC();
             }
 
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::waveOffsetA()
-            {
-                return projCoordA(waveOffsetC());
-            }
-
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::waveOffsetB()
-            {
-                return projCoordB(waveOffsetC());
-            }
-
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::waveOffsetC()
-            {
-                return WaveSpace::localWaveCoord() * waveTileSizeC();
-            }
-
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::blockOffsetA()
-            {
-                return projCoordA(blockOffsetC());
-            }
-
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::blockOffsetB()
-            {
-                return projCoordB(blockOffsetC());
-            }
-
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::blockOffsetC()
-            {
-                return blockSizeC();
-            }
-
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::matrixCoordA()
-            {
-                return projCoordA(matrixCoordC());
-            }
-
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::matrixCoordB()
-            {
-                return projCoordB(matrixCoordC());
-            }
-
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::matrixCoordC()
+            template <MappingBaseT>
+            __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::waveTileCoordC()
             {
                 return macroTileCoordC() + waveOffsetC();
             }
-
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::kStepA()
-            {
-                return std::make_pair(0u, BlockK);
-            }
-
-            template <MappingBaseWGT>
-            __device__ constexpr inline auto MappingBaseWG<MappingBaseWGT_impl>::kStepB()
-            {
-                return std::make_pair(BlockK, 0u);
-            }
-
         }
 
 #undef MappingBaseT
