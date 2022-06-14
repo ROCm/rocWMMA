@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef LDS_MAPPING_UTIL_HPP
-#define LDS_MAPPING_UTIL_HPP
+#ifndef GEMM_CONFIG_HPP
+#define GEMM_CONFIG_HPP
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -208,4 +208,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // LDS_MAPPING_UTIL_HPP
+#endif // GEMM_CONFIG_HPP

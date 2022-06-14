@@ -39,7 +39,7 @@
 // for fp64 on all other targets which succeed MI-100.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "lds_mapping_util.hpp"
+#include "gemm_config.hpp"
 #include <rocwmma/rocwmma.hpp>
 #include <rocwmma/rocwmma_coop.hpp>
 #pragma GCC diagnostic pop
