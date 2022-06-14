@@ -39,15 +39,16 @@ namespace rocwmma
     {
     public:
         // For static initialization
-        friend class LazySingleton<HipDevice>;
+        friend std::unique_ptr<HipDevice> std::make_unique<HipDevice>();
+
         enum hipGcnArch_t : uint32_t
         {
             GFX908 = 0x908,
             GFX90A = 0x90A,
-            UNKNOWN,
+            UNSUPPORTED,
         };
 
-    public:
+    protected:
         HipDevice();
 
     public:

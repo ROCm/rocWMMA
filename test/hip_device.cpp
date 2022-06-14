@@ -29,10 +29,9 @@
 
 namespace rocwmma
 {
-
     HipDevice::HipDevice()
         : mHandle(-1)
-        , mGcnArch(hipGcnArch_t::UNKNOWN)
+        , mGcnArch(hipGcnArch_t::UNSUPPORTED)
     {
         CHECK_HIP_ERROR(hipGetDevice(&mHandle));
         CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
@@ -70,5 +69,22 @@ namespace rocwmma
     {
         return mGcnArch;
     }
+
+    // Need to check the host device target support statically before hip modules attempt
+    // to load any kernels. Not safe to proceed if the host device is unsupported.
+    struct HipStaticDeviceGuard
+    {
+        static bool testSupportedDevice() 
+        { 
+            if(HipDevice::instance()->getGcnArch() == HipDevice::UNSUPPORTED)
+            {
+                std::cerr << "Cannot proceed: unsupported host device detected. Exiting." << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            return true;
+        }
+        static bool sResult;
+    };
+    bool HipStaticDeviceGuard::sResult = HipStaticDeviceGuard::testSupportedDevice();
 
 } // namespace rocwmma
