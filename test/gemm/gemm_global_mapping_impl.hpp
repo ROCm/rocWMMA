@@ -39,11 +39,11 @@ namespace rocwmma
 #define MappingBaseT                                                                               \
     uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename InputT, typename OutputT,          \
         typename ComputeT, typename LayoutA, typename LayoutB, typename LayoutC, typename LayoutD, \
-        uint32_t BlocksX, uint32_t BlocksY
+        uint32_t BlocksX, uint32_t BlocksY, uint32_t TBlockX, uint32_t TBlockY
 
 #define MappingBaseT_impl                                                                  \
     BlockM, BlockN, BlockK, InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD, \
-        BlocksX, BlocksY
+        BlocksX, BlocksY, TBlockX, TBlockY
 
             template <MappingBaseT>
             template <typename CoordC>

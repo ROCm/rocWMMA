@@ -91,11 +91,11 @@ namespace rocwmma
                                                                           BlocksY>;
 
         using LdsMapping = typename GemmConfig::template LdsMapping<GlobalMapping, LayoutLds>;
-        using GemmDriver =
-            typename GemmConfig::template GemmDriver<GlobalMapping,
-                                                     LdsMapping,
-                                                     typename GemmConfig::CoopSchedulerA,
-                                                     typename GemmConfig::CoopSchedulerB>;
+        using GemmDriver = typename GemmConfig::template GemmDriver<
+            GlobalMapping,
+            LdsMapping,
+            typename GemmConfig::template CoopSchedulerA<>,
+            typename GemmConfig::template CoopSchedulerB<>>;
 
         // Global fragments used in pre-fetching
         using GRFragA = typename GlobalMapping::GRFragA;

@@ -28,6 +28,8 @@
 
 #include <utility>
 
+#include "types.hpp"
+
 namespace rocwmma
 {
 
@@ -40,6 +42,9 @@ namespace rocwmma
 
     namespace detail
     {
+        // TBlockX, TBlockY default to runtime variable query of blockDim.x, blockDim.y
+        // if not known at compile time.
+        template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
         struct WaveSpace
         {
             using WaveCoordT      = Coord2d;
@@ -63,7 +68,7 @@ namespace rocwmma
         };
 
         /*
-    Matrix coordinate space is analogous to global block space scaled by BlockM and BlockN.
+    Matrix coordinate space is analogous to global mfma block space scaled by BlockM and BlockN.
     */
         template <uint32_t BlockHeight, uint32_t BlockWidth>
         struct MatrixSpace
@@ -136,7 +141,7 @@ workgroup.
     template <uint32_t BlockHeight, uint32_t BlockWidth, typename DataT, typename DataLayout>
     struct MappingUtil
     {
-        using WaveSpace   = detail::WaveSpace;
+        using WaveSpace   = detail::WaveSpace<>;
         using MatrixSpace = detail::MatrixSpace<BlockHeight, BlockWidth>;
         using DataSpace   = detail::DataSpace<DataLayout>;
 
