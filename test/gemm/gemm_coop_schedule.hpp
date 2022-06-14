@@ -43,15 +43,18 @@ namespace rocwmma
             // E.g. Wg = (128, 2) = 2x2 waves
             // (0, 0)   (0, 1)  => Share Schedule: i0 = (0, 0), i1 = (0, 1), count = 2
             // (1, 0)   (1, 1)  => Share Schedule: i0 = (1, 0), i2 = (1, 1), count = 2
+            template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
             struct SameRowFwd
             {
+                using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
+
                 constexpr static inline auto waveIndex()
                 {
-                    return std::get<1>(detail::WaveSpace::localWaveCoord());
+                    return std::get<1>(WaveSpace::localWaveCoord());
                 }
                 constexpr static inline auto waveCount()
                 {
-                    return std::get<1>(detail::WaveSpace::workgroupDim());
+                    return std::get<1>(WaveSpace::workgroupDim());
                 }
             };
 
@@ -63,15 +66,18 @@ namespace rocwmma
             //   ||       \/
             //   \/    Share Schedule: i0 = (0, 1), i1 = (1, 1), count = 2
             // Share Schedule: i0 = (0, 1), i1 = (1, 0), count = 2
+            template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
             struct SameColFwd
             {
+                using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
+
                 constexpr static inline auto waveIndex()
                 {
-                    return std::get<0>(detail::WaveSpace::localWaveCoord());
+                    return std::get<0>(WaveSpace::localWaveCoord());
                 }
                 constexpr static inline auto waveCount()
                 {
-                    return std::get<0>(detail::WaveSpace::workgroupDim());
+                    return std::get<0>(WaveSpace::workgroupDim());
                 }
             };
 
@@ -80,18 +86,19 @@ namespace rocwmma
             // E.g. Wg = (128, 2) = 2x2 waves
             // (0, 0)   (0, 1)   Share Schedule: i0 = (0, 0), i1 = (0, 1),
             // (1, 0)   (1, 1)                   i2 = (1, 0), i3 = (1, 1), count = 4
+            template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
             struct AllRowMajor
             {
+                using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
                 constexpr static inline auto waveIndex()
                 {
-                    auto localWaveCoord = detail::WaveSpace::localWaveCoord();
-                    return std::get<0>(localWaveCoord)
-                               * std::get<1>(detail::WaveSpace::workgroupDim())
+                    auto localWaveCoord = WaveSpace::localWaveCoord();
+                    return std::get<0>(localWaveCoord) * std::get<1>(WaveSpace::workgroupDim())
                            + std::get<1>(localWaveCoord);
                 }
                 constexpr static inline auto waveCount()
                 {
-                    auto wgDim = detail::WaveSpace::workgroupDim();
+                    auto wgDim = WaveSpace::workgroupDim();
                     return std::get<0>(wgDim) * std::get<1>(wgDim);
                 }
             };
@@ -101,18 +108,20 @@ namespace rocwmma
             // E.g. Wg = (128, 2) = 2x2 waves
             // (0, 0)   (0, 1)   Share Schedule: i0 = (0, 0), i2 = (0, 1),
             // (1, 0)   (1, 1)                   i1 = (1, 0), i3 = (1, 1), count = 4
+            template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
             struct AllColMajor
             {
+                using WaveSpace = detail::WaveSpace<TBlockY, TBlockY>;
+
                 constexpr static inline auto waveIndex()
                 {
-                    auto localWaveCoord = detail::WaveSpace::localWaveCoord();
-                    return std::get<1>(localWaveCoord)
-                               * std::get<0>(detail::WaveSpace::workgroupDim())
+                    auto localWaveCoord = WaveSpace::localWaveCoord();
+                    return std::get<1>(localWaveCoord) * std::get<0>(WaveSpace::workgroupDim())
                            + std::get<0>(localWaveCoord);
                 }
                 constexpr static inline auto waveCount()
                 {
-                    auto wgDim = detail::WaveSpace::workgroupDim();
+                    auto wgDim = WaveSpace::workgroupDim();
                     return std::get<0>(wgDim) * std::get<1>(wgDim);
                 }
             };
