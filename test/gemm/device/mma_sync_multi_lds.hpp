@@ -59,7 +59,9 @@ namespace rocwmma
               typename LayoutLds,
               typename GemmConfig,
               uint32_t BlocksX = 1,
-              uint32_t BlocksY = 1>
+              uint32_t BlocksY = 1,
+              uint32_t TBlockX = 0,
+              uint32_t TBlockY = 0>
     __global__ void __launch_bounds__(256) mmaSyncMultiLds(uint32_t       m,
                                                            uint32_t       n,
                                                            uint32_t       k,
@@ -88,14 +90,15 @@ namespace rocwmma
                                                                           LayoutC,
                                                                           LayoutD,
                                                                           BlocksX,
-                                                                          BlocksY>;
+                                                                          BlocksY,
+                                                                          TBlockX,
+                                                                          TBlockY>;
 
-        using LdsMapping = typename GemmConfig::template LdsMapping<GlobalMapping, LayoutLds>;
-        using GemmDriver = typename GemmConfig::template GemmDriver<
-            GlobalMapping,
-            LdsMapping,
-            typename GemmConfig::template CoopSchedulerA<>,
-            typename GemmConfig::template CoopSchedulerB<>>;
+        using LdsMapping     = typename GemmConfig::template LdsMapping<GlobalMapping, LayoutLds>;
+        using CoopSchedulerA = typename GemmConfig::template CoopSchedulerA<TBlockX, TBlockY>;
+        using CoopSchedulerB = typename GemmConfig::template CoopSchedulerB<TBlockX, TBlockY>;
+        using GemmDriver     = typename GemmConfig::
+            template GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
 
         // Global fragments used in pre-fetching
         using GRFragA = typename GlobalMapping::GRFragA;

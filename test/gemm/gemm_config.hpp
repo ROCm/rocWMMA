@@ -289,6 +289,106 @@ namespace rocwmma
 
         } // namespace WaveLevel
 
+        namespace WorkgroupLevel
+        {
+            struct LdsNT
+            {
+                template <uint32_t BlockM,
+                          uint32_t BlockN,
+                          uint32_t BlockK,
+                          typename InputT,
+                          typename OutputT,
+                          typename ComputeT,
+                          typename LayoutA,
+                          typename LayoutB,
+                          typename LayoutC,
+                          typename LayoutD,
+                          uint32_t BlocksX,
+                          uint32_t BlocksY,
+                          uint32_t TBlockX,
+                          uint32_t TBlockY>
+                using GlobalMapping = GlobalMapping::WorkgroupLevelMapping<BlockM,
+                                                                           BlockN,
+                                                                           BlockK,
+                                                                           InputT,
+                                                                           OutputT,
+                                                                           ComputeT,
+                                                                           LayoutA,
+                                                                           LayoutB,
+                                                                           LayoutC,
+                                                                           LayoutD,
+                                                                           BlocksX,
+                                                                           BlocksY,
+                                                                           TBlockX,
+                                                                           TBlockY>;
+
+                template <typename GlobalMapping, typename LayoutLds>
+                using LdsMapping = LocalMapping::LdsMappingNT<GlobalMapping, LayoutLds>;
+
+                template <uint32_t TBlockX, uint32_t TBlockY>
+                using CoopSchedulerA = typename Schedule::AllRowMajor<TBlockX, TBlockY>;
+
+                template <uint32_t TBlockX, uint32_t TBlockY>
+                using CoopSchedulerB = typename Schedule::AllRowMajor<TBlockX, TBlockY>;
+
+                template <typename GlobalMapping,
+                          typename LdsMapping,
+                          typename CoopSchedulerA,
+                          typename CoopSchedulerB>
+                using GemmDriver
+                    = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
+            };
+
+            struct LdsTN
+            {
+                template <uint32_t BlockM,
+                          uint32_t BlockN,
+                          uint32_t BlockK,
+                          typename InputT,
+                          typename OutputT,
+                          typename ComputeT,
+                          typename LayoutA,
+                          typename LayoutB,
+                          typename LayoutC,
+                          typename LayoutD,
+                          uint32_t BlocksX,
+                          uint32_t BlocksY,
+                          uint32_t TBlockX,
+                          uint32_t TBlockY>
+                using GlobalMapping = GlobalMapping::WorkgroupLevelMapping<BlockM,
+                                                                           BlockN,
+                                                                           BlockK,
+                                                                           InputT,
+                                                                           OutputT,
+                                                                           ComputeT,
+                                                                           LayoutA,
+                                                                           LayoutB,
+                                                                           LayoutC,
+                                                                           LayoutD,
+                                                                           BlocksX,
+                                                                           BlocksY,
+                                                                           TBlockX,
+                                                                           TBlockY>;
+
+                template <typename GlobalMapping, typename LayoutLds>
+                using LdsMapping = LocalMapping::LdsMappingTN<GlobalMapping, LayoutLds>;
+
+                template <uint32_t TBlockX, uint32_t TBlockY>
+                using CoopSchedulerA = typename Schedule::AllRowMajor<TBlockX, TBlockY>;
+
+                template <uint32_t TBlockX, uint32_t TBlockY>
+                using CoopSchedulerB = typename Schedule::AllRowMajor<TBlockX, TBlockY>;
+
+                template <typename GlobalMapping,
+                          typename LdsMapping,
+                          typename CoopSchedulerA,
+                          typename CoopSchedulerB>
+                using GemmDriver
+                    = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
+            };
+
+        } // namespace WorkgroupLevel
+
     } // namespace CooperativeGemm
 
     template <>
@@ -319,6 +419,18 @@ namespace rocwmma
     constexpr const char* dataTypeToString<typename CooperativeGemm::WaveLevel::LdsTN>()
     {
         return "Wave_LdsTN";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<typename CooperativeGemm::WorkgroupLevel::LdsNT>()
+    {
+        return "Workgroup_LdsNT";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<typename CooperativeGemm::WorkgroupLevel::LdsTN>()
+    {
+        return "Workgroup_LdsTN";
     }
 
 } // namespace rocwmma
