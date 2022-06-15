@@ -99,10 +99,7 @@ namespace rocwmma
             KDim     = BlockK,
 
             MaxVectorWidth = detail::VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth,
-            VectorWidth
-            = (std::is_same<DataLayoutT, row_major>::value && BlockDim < AMDGCN_WAVE_SIZE)
-                  ? MaxVectorWidth
-                  : 1
+            VectorWidth    = std::is_same<DataLayoutT, row_major>::value ? MaxVectorWidth : 1
         };
 
         static_assert(!(std::is_same<DataLayoutT, col_major>::value && VectorWidth > 1),
@@ -162,10 +159,7 @@ namespace rocwmma
             KDim     = BlockK,
 
             MaxVectorWidth = detail::VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth,
-            VectorWidth
-            = (std::is_same<DataLayoutT, col_major>::value && BlockDim < AMDGCN_WAVE_SIZE)
-                  ? MaxVectorWidth
-                  : 1
+            VectorWidth    = std::is_same<DataLayoutT, col_major>::value ? MaxVectorWidth : 1
         };
 
         static_assert(!(std::is_same<DataLayoutT, row_major>::value && VectorWidth > 1),

@@ -55,6 +55,13 @@ namespace rocwmma
 
         } // namespace WaveLevel
 
+        namespace WorkgroupLevel
+        {
+            class LdsNT;
+            class LdsTN;
+
+        } // namespace WaveLevel
+
     } // namespace CooperativeGemm
 
     struct CommonTestParams
@@ -122,6 +129,12 @@ namespace rocwmma
 #endif // ROCWMMA_EXTENDED_TESTS \
     // Benchmark only wave-level as they are more performant
             std::tuple<typename CooperativeGemm::WaveLevel::LdsTN>>;
+
+        using TestGemmConfigsWgLevel = std::tuple<
+#if defined(ROCWMMA_VALIDATION_TESTS) || defined(ROCWMMA_EXTENDED_TESTS)
+            std::tuple<typename CooperativeGemm::WorkgroupLevel::LdsNT>,
+#endif // ROCWMMA_EXTENDED_TESTS
+            std::tuple<typename CooperativeGemm::WorkgroupLevel::LdsTN>>;
 
         ///
         /// Grouped compile time kernel parameters
