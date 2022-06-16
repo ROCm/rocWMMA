@@ -226,6 +226,7 @@ if(ROCWMMA_BUILD_BENCHMARK_TESTS)
   add_gemm_benchmark_test(barrier_test-bench ${BarrierTestSources})
   add_gemm_benchmark_test(mma_sync_test-bench ${MmaSyncTestSources})
   add_gemm_benchmark_test(mma_sync_multi_test-bench ${MmaSyncMultiTestSources})
+  add_gemm_benchmark_test(mma_sync_coop_wg_test-bench ${MmaSyncCoopWgTestSources})
   add_gemm_benchmark_test(mma_sync_multi_lds_test-bench ${MmaSyncMultiLdsTestSources})
 endif()
 
