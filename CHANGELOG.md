@@ -1,6 +1,23 @@
 # Change Log for rocWMMA
 Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://rocwmma.readthedocs.io/en/latest/).
-## rocWMMA 0.7
+## rocWMMA 0.8 for ROCm 5.3.0
+## Added
+- Added checks to disable tests on non-target GPUS
+- Added workgroup aware gemm kernels
+- Added workgroup aware validation and benchmark test suite
+- Added warmup run to existing tests
+
+### Changed
+- Refactored gemm global, lds mapping classes
+- Refactored gemm driver and scheduling classes
+- Modified resource allocation and tracking of gemm and dlrm buffers
+- Improved low-level data loading patterns
+- Reduced branching on cooperative load and store
+- Updated gemv sample
+- Updated gemm sample
+
+
+## rocWMMA 0.7 for ROCm 5.2.0
 ### Added
 - Added unit tests for DLRM kernels
 - Added GEMM sample
