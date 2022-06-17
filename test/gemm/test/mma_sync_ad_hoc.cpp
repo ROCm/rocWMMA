@@ -99,7 +99,7 @@ class MmaSyncMultiLdsTestAdHoc : public rocwmma::GemmTest
 
 TEST_P(MmaSyncMultiLdsTestAdHoc, RunKernel)
 {
-    this->RunKernel();
+    this->RunKernelWithoutWarmup();
 }
 
 INSTANTIATE_TEST_SUITE_P(
