@@ -111,7 +111,7 @@ namespace rocwmma
             template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
             struct AllColMajor
             {
-                using WaveSpace = detail::WaveSpace<TBlockY, TBlockY>;
+                using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
 
                 constexpr static inline auto waveIndex()
                 {
