@@ -27,9 +27,9 @@
 #include <type_traits>
 
 #include "detail/mma_sync_multi_lds.hpp"
+#include "gemm_config.hpp"
 #include "gemm_test.hpp"
 #include "kernel_generator.hpp"
-#include "lds_mapping_util.hpp"
 
 namespace rocwmma
 {

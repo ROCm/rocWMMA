@@ -38,12 +38,22 @@
 
 namespace rocwmma
 {
-
     namespace CooperativeGemm
     {
-        class LdsKH;
-        class LdsKW;
-        class LdsRF;
+        namespace BlockLevel
+        {
+            class LdsNT;
+            class LdsTN;
+            class LdsRF;
+
+        } // namespace BlockLevel
+
+        namespace WaveLevel
+        {
+            class LdsNT;
+            class LdsTN;
+
+        } // namespace WaveLevel
 
     } // namespace CooperativeGemm
 
@@ -103,10 +113,15 @@ namespace rocwmma
         // Supported LDS mappings
         using TestMappingsLds = std::tuple<
 #if defined(ROCWMMA_VALIDATION_TESTS) || defined(ROCWMMA_EXTENDED_TESTS)
-            std::tuple<typename CooperativeGemm::LdsKW>,
-            std::tuple<typename CooperativeGemm::LdsRF>,
-#endif // ROCWMMA_EXTENDED_TESTS
-            std::tuple<typename CooperativeGemm::LdsKH>>;
+            // Only validate the block level configs
+            //std::tuple<typename CooperativeGemm::BlockLevel::LdsNT>,
+            //std::tuple<typename CooperativeGemm::BlockLevel::LdsTN>,
+            //std::tuple<typename CooperativeGemm::BlockLevel::LdsRF>,
+            std::tuple<typename CooperativeGemm::WaveLevel::LdsNT>,
+            std::tuple<typename CooperativeGemm::BlockLevel::LdsRF>,
+#endif // ROCWMMA_EXTENDED_TESTS \
+    // Benchmark only wave-level as they are more performant
+            std::tuple<typename CooperativeGemm::WaveLevel::LdsTN>>;
 
         ///
         /// Grouped compile time kernel parameters
