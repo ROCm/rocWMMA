@@ -306,6 +306,8 @@ namespace rocwmma
             * This global read A/B fragments are not MFMA friendly, however when written to LDS
             * smaller MFMA friendly fragment may be read directly from the same LDS layout.
             * Larger GR may be more efficient in certain layouts for data pipelining.
+            *
+            * This layout can accommodate either compile time or runtime TBlockX/Y params.
             */
             using Base = detail::MappingBase<BlockM,
                                              BlockN,
@@ -376,8 +378,8 @@ namespace rocwmma
                   typename LayoutD,
                   uint32_t BlocksX,
                   uint32_t BlocksY,
-                  uint32_t TBlockX = 0,
-                  uint32_t TBlockY = 0>
+                  uint32_t TBlockX,
+                  uint32_t TBlockY>
         struct WorkgroupLevelMapping : public detail::MappingBase<BlockM,
                                                                   BlockN,
                                                                   BlockK,
@@ -393,6 +395,12 @@ namespace rocwmma
                                                                   TBlockX,
                                                                   TBlockY>
         {
+
+            // Must provide valid TBlockX/Y params at compile time.
+            static_assert((TBlockX > 0) && (TBlockX % AMDGCN_WAVE_SIZE == 0),
+                          "Invalid TBlockX dimension");
+            static_assert(TBlockY > 0, "Invalid TBlockY dimension");
+
             /*
             * This flavour of Global Mapping targets A/B as a single macro tile sized fragment.
             * C/D wave tiles are targeted iteratively in MFMA fragment chunks:
