@@ -66,28 +66,48 @@ namespace rocwmma
 
         /// WaveSpace
 
-        __device__ inline uint32_t WaveSpace::localLaneId()
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        __device__ inline uint32_t WaveSpace<TBlockX, TBlockY>::localLaneId()
         {
             return laneId();
         }
 
-        __device__ constexpr inline auto WaveSpace::localWaveCoord() -> WaveCoordT
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        __device__ constexpr inline auto WaveSpace<TBlockX, TBlockY>::localWaveCoord() -> WaveCoordT
         {
             return waveCount(std::make_pair(threadIdx.x, threadIdx.y));
         }
 
-        __device__ inline auto WaveSpace::globalWaveCoord() -> WaveCoordT
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        __device__ inline auto WaveSpace<TBlockX, TBlockY>::globalWaveCoord() -> WaveCoordT
+        {
+            return waveCount(std::make_pair(blockIdx.x * TBlockX + threadIdx.x,
+                                            blockIdx.y * TBlockY + threadIdx.y));
+        }
+
+        template <>
+        __device__ inline auto WaveSpace<0, 0>::globalWaveCoord() -> WaveCoordT
         {
             return waveCount(std::make_pair(blockIdx.x * blockDim.x + threadIdx.x,
                                             blockIdx.y * blockDim.y + threadIdx.y));
         }
 
-        __device__ constexpr inline auto WaveSpace::workgroupCoord() -> WorkgroupCoordT
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        __device__ constexpr inline auto WaveSpace<TBlockX, TBlockY>::workgroupCoord()
+            -> WorkgroupCoordT
         {
             return std::make_pair(blockIdx.x, blockIdx.y);
         }
 
-        __device__ constexpr inline auto WaveSpace::workgroupDim() -> WorkgroupDimT
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        __device__ constexpr inline auto WaveSpace<TBlockX, TBlockY>::workgroupDim()
+            -> WorkgroupDimT
+        {
+            return waveCount(std::make_pair(TBlockX, TBlockY));
+        }
+
+        template <>
+        __device__ constexpr inline auto WaveSpace<0, 0>::workgroupDim() -> WorkgroupDimT
         {
             return waveCount(std::make_pair(blockDim.x, blockDim.y));
         }

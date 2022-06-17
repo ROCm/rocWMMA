@@ -39,18 +39,20 @@ namespace rocwmma
     {
         namespace detail
         {
-            template <uint32_t BlockM,
-                      uint32_t BlockN,
-                      uint32_t BlockK,
-                      typename InputT,
-                      typename OutputT,
-                      typename ComputeT,
-                      typename LayoutA,
-                      typename LayoutB,
-                      typename LayoutC,
-                      typename LayoutD,
-                      uint32_t BlocksX,
-                      uint32_t BlocksY>
+            template <uint32_t BlockM, // MFMA BlockM
+                      uint32_t BlockN, // MFMA BlockN
+                      uint32_t BlockK, // MFMA BlockK
+                      typename InputT, // Type of A / B data
+                      typename OutputT, // Type of C / D data
+                      typename ComputeT, // Type of accumulator data
+                      typename LayoutA, // Data Layout of A (row / col major)
+                      typename LayoutB, // Data Layout of B (row / col major)
+                      typename LayoutC, // Data Layout of C (row / col major)
+                      typename LayoutD, // Data Layout of D (row / col major)
+                      uint32_t BlocksX, // MFMA blocks per wave in X direction
+                      uint32_t BlocksY, // MFMA blocks per wave in Y direction
+                      uint32_t TBlockX = 0, // Thread block X dimension
+                      uint32_t TBlockY = 0> // Thread block Y dimension
             struct MappingBase
             {
                 /*
@@ -113,14 +115,14 @@ namespace rocwmma
                 using MfmaFragD   = fragment<accumulator, BlockM, BlockN, BlockK, OutputT, LayoutD>;
                 using MfmaFragAcc = fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>;
 
-                // Mfma fragment buffers that are compatible with the gemm driver
+                // Mfma fragment buffers required for the gemm driver
                 using MfmaBuffA   = MfmaFragA[BlocksX];
                 using MfmaBuffB   = MfmaFragB[BlocksY];
                 using MfmaBuffC   = MfmaFragC[BlocksX][BlocksY];
                 using MfmaBuffD   = MfmaFragD[BlocksX][BlocksY];
                 using MfmaBuffAcc = MfmaFragAcc[BlocksX][BlocksY];
 
-                using WaveSpace = typename rocwmma::detail::WaveSpace;
+                using WaveSpace = typename rocwmma::detail::WaveSpace<TBlockX, TBlockY>;
 
                 // Projection of C coordinate in direction of A
                 template <typename CoordC>
@@ -130,7 +132,10 @@ namespace rocwmma
                 template <typename CoordC>
                 __device__ constexpr static inline auto projCoordB(CoordC const& coordC);
 
-                // Tile sizes:
+                ///
+                /// Dimensions
+                ///
+
                 // Macro tile = tile processed by entire workgroup
                 // Wave tile = tile processed by current wave
                 // Block size = mfma block size
@@ -139,10 +144,11 @@ namespace rocwmma
                 __device__ constexpr static inline auto blockSizeC();
                 __device__ constexpr static inline auto kDim();
 
-                // Global matrix coordinate of macro tile for the current workgroup
-                __device__ constexpr static inline auto macroTileCoordC();
+                ///
+                /// Offsets
+                ///
 
-                // The offset from macro tile for current wave
+                // The offset from macro tile to the mfma tiles for current wave
                 __device__ constexpr static inline auto waveOffsetA();
                 __device__ constexpr static inline auto waveOffsetB();
                 __device__ constexpr static inline auto waveOffsetC();
@@ -152,15 +158,19 @@ namespace rocwmma
                 __device__ constexpr static inline auto blockOffsetB();
                 __device__ constexpr static inline auto blockOffsetC();
 
-                // The base global matrix coordinate of the current wave tile.
-                // MacroTile coord + wave offset
-                __device__ constexpr static inline auto matrixCoordA();
-                __device__ constexpr static inline auto matrixCoordB();
-                __device__ constexpr static inline auto matrixCoordC();
-
                 // The matrix offset to the next step in the k dimension
-                __device__ constexpr static inline auto kStepA();
-                __device__ constexpr static inline auto kStepB();
+                __device__ constexpr static inline auto kStepOffsetA();
+                __device__ constexpr static inline auto kStepOffsetB();
+
+                ///
+                /// Global matrix coords
+                ///
+
+                // Global matrix coordinate of macro tile for the current workgroup
+                __device__ constexpr static inline auto macroTileCoordC();
+
+                // Global matrix coordinate of wave tile for the current wave
+                __device__ constexpr static inline auto waveTileCoordC();
             };
 
         } // namespace detail
@@ -176,7 +186,9 @@ namespace rocwmma
                   typename LayoutC,
                   typename LayoutD,
                   uint32_t BlocksX,
-                  uint32_t BlocksY>
+                  uint32_t BlocksY,
+                  uint32_t TBlockX = 0,
+                  uint32_t TBlockY = 0>
         struct BlockLevelMapping : public detail::MappingBase<BlockM,
                                                               BlockN,
                                                               BlockK,
@@ -188,13 +200,16 @@ namespace rocwmma
                                                               LayoutC,
                                                               LayoutD,
                                                               BlocksX,
-                                                              BlocksY>
+                                                              BlocksY,
+                                                              TBlockX,
+                                                              TBlockY>
         {
             /*
-            * This flavour of Global Mapping targets individual waves iteratively
-            * to their MFMA blocks in a grid:
-            * BlocksX x (BlockM x BlockK) for A and
-            * BlocksY x (BlockN x BlockK) for B.
+            * This flavour of Global Mapping targets A/B/C/D wave tiles iteratively
+            * in MFMA fragment chunks:
+            * BlocksX x (BlockM x BlockK) for A
+            * BlocksY x (BlockN x BlockK) for B
+            * BlocksX x BlocksY x (BlockM x BlockN) for C / D
             *
             * This leads to favourable MFMA layouts directly from Global Reads,
             * but may not be the most efficient in some layouts.
@@ -211,13 +226,45 @@ namespace rocwmma
                                              LayoutC,
                                              LayoutD,
                                              BlocksX,
-                                             BlocksY>;
+                                             BlocksY,
+                                             TBlockX,
+                                             TBlockY>;
 
+            // Global wave tile R/W be in sections of MFMA sized fragments
             using GRFragA = typename Base::MfmaFragA;
             using GRFragB = typename Base::MfmaFragB;
+            using GRFragC = typename Base::MfmaFragC;
+            using GWFragD = typename Base::MfmaFragD;
 
-            using GRBuffA = typename Base::MfmaBuffA; // Multiple fragments
-            using GRBuffB = typename Base::MfmaBuffB; // Multiple fragments
+            // Global wave tile R/W will use MFMA sized fragment buffers
+            using GRBuffA = typename Base::MfmaBuffA;
+            using GRBuffB = typename Base::MfmaBuffB;
+            using GRBuffC = typename Base::MfmaBuffC;
+            using GWBuffD = typename Base::MfmaBuffD;
+
+            // The base global matrix coordinate of the current wave tile.
+            __device__ constexpr static inline auto readCoordA()
+            {
+                return Base::projCoordA(readCoordC());
+            }
+            __device__ constexpr static inline auto readCoordB()
+            {
+                return Base::projCoordB(readCoordC());
+            }
+            __device__ constexpr static inline auto readCoordC()
+            {
+                return Base::waveTileCoordC();
+            }
+            __device__ constexpr static inline auto writeCoordD()
+            {
+                return Base::waveTileCoordC();
+            }
+
+            // Indicate if global read for A and B are wave tiles
+            __device__ constexpr static inline auto readABWaveTile()
+            {
+                return true;
+            }
         };
 
         template <uint32_t BlockM,
@@ -231,7 +278,9 @@ namespace rocwmma
                   typename LayoutC,
                   typename LayoutD,
                   uint32_t BlocksX,
-                  uint32_t BlocksY>
+                  uint32_t BlocksY,
+                  uint32_t TBlockX = 0,
+                  uint32_t TBlockY = 0>
         struct WaveLevelMapping : public detail::MappingBase<BlockM,
                                                              BlockN,
                                                              BlockK,
@@ -243,15 +292,18 @@ namespace rocwmma
                                                              LayoutC,
                                                              LayoutD,
                                                              BlocksX,
-                                                             BlocksY>
+                                                             BlocksY,
+                                                             TBlockX,
+                                                             TBlockY>
         {
             /*
-            * This flavour of Global Mapping targets individual waves at one combined
-            * Global Read fragment sized:
-            * (BlocksX * BlockM) x BlockK for A and
-            * (BlocksY * BlockN) x BlockK for B.
+            * This flavour of Global Mapping targets A/B as a single wave tile sized fragment.
+            * C/D wave tiles are targeted iteratively in MFMA fragment chunks:
+            * (BlocksX * BlockM) x BlockK for A
+            * (BlocksY * BlockN) x BlockK for B
+            * BlocksX x BlocksY x (BlockM x BlockN) for C / D
             *
-            * This global read fragment is not MFMA friendly, however when written to LDS
+            * This global read A/B fragments are not MFMA friendly, however when written to LDS
             * smaller MFMA friendly fragment may be read directly from the same LDS layout.
             * Larger GR may be more efficient in certain layouts for data pipelining.
             */
@@ -266,13 +318,153 @@ namespace rocwmma
                                              LayoutC,
                                              LayoutD,
                                              BlocksX,
-                                             BlocksY>;
+                                             BlocksY,
+                                             TBlockX,
+                                             TBlockY>;
 
+            // Global reads for A/B are single fragment of wave tile size
+            // Global R/W for C/D are MFMA sized fragments
             using GRFragA = fragment<matrix_a, BlockM * BlocksX, BlockN, BlockK, InputT, LayoutA>;
             using GRFragB = fragment<matrix_b, BlockM, BlockN * BlocksY, BlockK, InputT, LayoutB>;
+            using GRFragC = typename Base::MfmaFragC;
+            using GWFragD = typename Base::MfmaFragD;
 
-            using GRBuffA = GRFragA; // Single fragment
-            using GRBuffB = GRFragB; // Single fragment
+            // Global reads for A/B will have one fragment buffer
+            // Global R/W for C/D will use MFMA sized multiple fragment buffer
+            using GRBuffA = GRFragA;
+            using GRBuffB = GRFragB;
+            using GRBuffC = typename Base::MfmaBuffC;
+            using GWBuffD = typename Base::MfmaBuffD;
+
+            // A/B global reads will collaborate on wave tile
+            __device__ constexpr static inline auto readCoordA()
+            {
+                return Base::projCoordA(readCoordC());
+            }
+            __device__ constexpr static inline auto readCoordB()
+            {
+                return Base::projCoordB(readCoordC());
+            }
+
+            // C/D global R/W on wave tile
+            __device__ constexpr static inline auto readCoordC()
+            {
+                return Base::waveTileCoordC();
+            }
+
+            __device__ constexpr static inline auto writeCoordD()
+            {
+                return Base::waveTileCoordC();
+            }
+
+            // Indicate if global read for A and B are wave tiles
+            __device__ constexpr static inline auto readABWaveTile()
+            {
+                return true;
+            }
+        };
+
+        template <uint32_t BlockM,
+                  uint32_t BlockN,
+                  uint32_t BlockK,
+                  typename InputT,
+                  typename OutputT,
+                  typename ComputeT,
+                  typename LayoutA,
+                  typename LayoutB,
+                  typename LayoutC,
+                  typename LayoutD,
+                  uint32_t BlocksX,
+                  uint32_t BlocksY,
+                  uint32_t TBlockX = 0,
+                  uint32_t TBlockY = 0>
+        struct WorkgroupLevelMapping : public detail::MappingBase<BlockM,
+                                                                  BlockN,
+                                                                  BlockK,
+                                                                  InputT,
+                                                                  OutputT,
+                                                                  ComputeT,
+                                                                  LayoutA,
+                                                                  LayoutB,
+                                                                  LayoutC,
+                                                                  LayoutD,
+                                                                  BlocksX,
+                                                                  BlocksY,
+                                                                  TBlockX,
+                                                                  TBlockY>
+        {
+            /*
+            * This flavour of Global Mapping targets A/B as a single macro tile sized fragment.
+            * C/D wave tiles are targeted iteratively in MFMA fragment chunks:
+            * (WgX * BlocksX * BlockM) x BlockK for A
+            * (WgY * BlocksY * BlockN) x BlockK for B
+            * BlocksX x BlocksY x (BlockM x BlockN) for C / D
+            *
+            * This global read A/B fragments are not MFMA friendly, however when written to LDS
+            * smaller MFMA friendly fragment may be read directly from the same LDS layout.
+            * Larger GR may be more efficient in certain layouts for data pipelining.
+            */
+            using Base = detail::MappingBase<BlockM,
+                                             BlockN,
+                                             BlockK,
+                                             InputT,
+                                             OutputT,
+                                             ComputeT,
+                                             LayoutA,
+                                             LayoutB,
+                                             LayoutC,
+                                             LayoutD,
+                                             BlocksX,
+                                             BlocksY,
+                                             TBlockX,
+                                             TBlockY>;
+
+            // Global reads for A/B are single fragment of macro tile size
+            // Global R/W for C/D are MFMA sized fragments
+            using GRFragA = fragment<matrix_a,
+                                     TBlockX / AMDGCN_WAVE_SIZE * BlocksX * BlockM,
+                                     BlockN,
+                                     BlockK,
+                                     InputT,
+                                     LayoutA>;
+            using GRFragB
+                = fragment<matrix_b, BlockM, TBlockY * BlocksY * BlockN, BlockK, InputT, LayoutB>;
+            using GRFragC = typename Base::MfmaFragC;
+            using GWFragD = typename Base::MfmaFragD;
+
+            // Global reads for A/B will have one fragment sized buffer
+            // Global R/W for C/D will use MFMA sized multiple fragment buffer
+            using GRBuffA = GRFragA;
+            using GRBuffB = GRFragB;
+            using GRBuffC = typename Base::MfmaBuffC;
+            using GWBuffD = typename Base::MfmaBuffD;
+
+            // A/B global reads will collaborate on macro tile
+            __device__ constexpr static inline auto readCoordA()
+            {
+                return Base::projCoordA(Base::macroTileCoordC());
+            }
+            __device__ constexpr static inline auto readCoordB()
+            {
+                return Base::projCoordB(Base::macroTileCoordC());
+            }
+
+            // C/D global R/W on wave tile
+            __device__ constexpr static inline auto readCoordC()
+            {
+                return Base::waveTileCoordC();
+            }
+
+            __device__ constexpr static inline auto writeCoordD()
+            {
+                return Base::waveTileCoordC();
+            }
+
+            // Indicate if global read for A and B are wave tiles
+            __device__ constexpr static inline auto readABWaveTile()
+            {
+                return false;
+            }
         };
 
     } // namespace GlobalMapping

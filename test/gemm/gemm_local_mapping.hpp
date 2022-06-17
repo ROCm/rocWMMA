@@ -127,9 +127,12 @@ namespace rocwmma
             __device__ constexpr static inline auto blockOffsetA();
             __device__ constexpr static inline auto blockOffsetB();
 
-            // The base lds matrix coordinate for current wave
-            __device__ constexpr static inline auto matrixCoordA();
-            __device__ constexpr static inline auto matrixCoordB();
+            // The base lds write / read coordinates
+            __device__ constexpr static inline auto writeCoordA();
+            __device__ constexpr static inline auto writeCoordB();
+
+            __device__ constexpr static inline auto readCoordA();
+            __device__ constexpr static inline auto readCoordB();
 
             // Dimensions of shared memory usage
             __device__ constexpr static inline auto sizeLds();
@@ -239,9 +242,12 @@ namespace rocwmma
             __device__ constexpr static inline auto blockOffsetA();
             __device__ constexpr static inline auto blockOffsetB();
 
-            // The base lds matrix coordinate for current wave
-            __device__ constexpr static inline auto matrixCoordA();
-            __device__ constexpr static inline auto matrixCoordB();
+            // The base lds write / read coordinates
+            __device__ constexpr static inline auto writeCoordA();
+            __device__ constexpr static inline auto writeCoordB();
+
+            __device__ constexpr static inline auto readCoordA();
+            __device__ constexpr static inline auto readCoordB();
 
             // Dimensions of shared memory usage
             __device__ constexpr static inline auto sizeLds();
@@ -361,9 +367,12 @@ namespace rocwmma
             __device__ constexpr static inline auto blockOffsetA();
             __device__ constexpr static inline auto blockOffsetB();
 
-            // The base lds matrix coordinate for current wave
-            __device__ constexpr static inline auto matrixCoordA();
-            __device__ constexpr static inline auto matrixCoordB();
+            // The base lds write / read coordinates
+            __device__ constexpr static inline auto writeCoordA();
+            __device__ constexpr static inline auto writeCoordB();
+
+            __device__ constexpr static inline auto readCoordA();
+            __device__ constexpr static inline auto readCoordB();
 
             // Dimensions of shared memory usage
             __device__ constexpr static inline auto sizeLds();
