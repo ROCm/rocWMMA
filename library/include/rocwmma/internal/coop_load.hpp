@@ -107,6 +107,55 @@ namespace rocwmma
                 ioIter += workItemIOInc;
             }
         }
+
+        template <uint32_t WaveCount, uint32_t SplitCount>
+        __device__ static inline void exec(typename Traits::OutputT& data,
+                                           DataT const*              dataPtr,
+                                           uint32_t                  ldm,
+                                           uint32_t                  waveIndex)
+        {
+            // Ensure that splitCount doesn't exceed our maximum
+            constexpr auto splitCount = std::min(SplitCount, (uint32_t)Traits::MaxSplit);
+
+            // For the cases where there are more waves than splits.
+            if(waveIndex >= splitCount)
+                return;
+
+            // Calculate the number of 'work items' for the current wave,
+            // as well as the IOCount per work item.
+            // NOTE: If there are in fact more waves than work items, make sure there
+            // is at least one work item per wave. Waves that can't contribute will be
+            // filtered out by the above check.
+            constexpr auto workItemCount   = std::max(splitCount / WaveCount, 1u);
+            constexpr auto workItemIOCount = IOTraits::IOCount / splitCount;
+
+            // Calculate the current wave's starting IO iterator index for the first work item.
+            // Calculate the IO offset between work items for the current wave.
+            auto& reducedFt = reinterpret_cast<
+                VecT<DataT, workItemCount * workItemIOCount * Traits::LoadT::size()>&>(data);
+            auto ioIter = reducedFt.template begin<Traits::LoadT::size()>();
+
+            // Align threads to starting matrix offset coordinates
+            auto baseOffset = MatrixLayout::baseOffset();
+
+            // Iterate through the work items for this wave only.
+            // Both loops may get unrolled if splitCount and waveCount are known at compile time.
+#pragma unroll
+            for(uint32_t i = 0; i < workItemCount; i++)
+            {
+                auto cumOffset = (i * WaveCount + waveIndex) * workItemIOCount;
+#pragma unroll
+                for(uint32_t j = 0; j < workItemIOCount; ++j)
+                {
+                    Traits::Loader::exec(
+                        *ioIter,
+                        dataPtr,
+                        DataLayout::fromMatrixCoord(
+                            baseOffset + MatrixLayout::cumulativeOffset(cumOffset++), ldm));
+                    ioIter++;
+                }
+            }
+        }
     };
 
 } // namespace rocwmma
