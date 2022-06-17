@@ -93,6 +93,18 @@ namespace rocwmma
             kernel->reportResults();
         }
 
+        virtual void RunKernelWithoutWarmup()
+        {
+            // Construct ProblemParams from
+            // incoming gtest parameterization
+            auto param  = Base::GetParam();
+            auto kernel = std::get<0>(param);
+
+            kernel->exec();
+            kernel->validateResults();
+            kernel->reportResults();
+        }
+
         void TearDown() override
         {
             // Construct ProblemParams from
