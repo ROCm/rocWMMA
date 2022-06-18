@@ -126,6 +126,23 @@ namespace rocwmma
                 }
             };
 
+            template <class Schedule>
+            struct WaveCountIsConstexpr;
+
+            // Schedule with non-zero TBlockX/Y values has constexpr waveCount();
+            template <template <uint32_t, uint32_t> class Schedule,
+                      uint32_t TBlockX,
+                      uint32_t TBlockY>
+            struct WaveCountIsConstexpr<Schedule<TBlockX, TBlockY>> : public std::true_type
+            {
+            };
+
+            // Schedule with TBlockX/Y = (0,0) values does not have constexpr waveCount();
+            template <template <uint32_t, uint32_t> class Schedule>
+            struct WaveCountIsConstexpr<Schedule<0u, 0u>> : public std::false_type
+            {
+            };
+
         } // namespace Schedule
 
     } // namespace CooperativeGemm
