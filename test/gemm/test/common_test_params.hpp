@@ -72,7 +72,7 @@ namespace rocwmma
         ///
 
         // Testing types as Input/Output/Compute (IOC)
-        using TestTypesIOC = std::tuple<
+        using TestTypesSmall = std::tuple<
         // Non-native bfloat16_t
 
 #if defined(ROCWMMA_EXTENDED_TESTS)
@@ -88,9 +88,6 @@ namespace rocwmma
 #endif // ROCWMMA_EXTENDED_TESTS
             std::tuple<float16_t, float32_t, float32_t>,
 
-            // Native fp32
-            std::tuple<float32_t, float32_t, float32_t>,
-
         // Non-native hfloat16_t (i.e. __half)
 #if defined(ROCWMMA_EXTENDED_TESTS)
             std::tuple<hfloat16_t, hfloat16_t, hfloat16_t>,
@@ -104,7 +101,10 @@ namespace rocwmma
 #endif // ROCWMMA_EXTENDED_TESTS
             std::tuple<int8_t, int32_t, int32_t>>;
 
-        // Native double
+        // Native single f32
+        using TestTypeSingle = std::tuple<std::tuple<float32_t, float32_t, float32_t>>;
+
+        // Native double f64
         using TestTypeDouble = std::tuple<std::tuple<float64_t, float64_t, float64_t>>;
 
         // Supported layout types
@@ -139,6 +139,9 @@ namespace rocwmma
         ///
         /// Grouped compile time kernel parameters
         ///
+
+        // Default base set of types to test
+        using TestTypesIOC = typename Concat<TestTypesSmall, TestTypeSingle>::Result;
 
         // 16 x 16 has support for double types
         using TestTypes16x16 = typename Concat<TestTypesIOC, TestTypeDouble>::Result;
