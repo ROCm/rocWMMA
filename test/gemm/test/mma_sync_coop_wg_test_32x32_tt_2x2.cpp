@@ -38,7 +38,7 @@ namespace rocwmma
     {
         using Base = CommonTestParams;
 
-        // Types: ALL + double
+        // Types: ALL
         // Block Sizes: 32 x 32 x BlockK
         // Layouts: TT
         using Types       = typename Base::TestTypes32x32;

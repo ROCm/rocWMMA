@@ -26,7 +26,7 @@
 
 #include <type_traits>
 
-#include "detail/mma_sync_coop_wg.hpp"
+#include "detail/mma_sync_multi_lds.hpp"
 #include "gemm_config.hpp"
 #include "gemm_test.hpp"
 #include "kernel_generator.hpp"
@@ -38,22 +38,22 @@ namespace rocwmma
     {
         using Base = CommonTestParams;
 
-        // Types: ALL + double
+        // Types: Small sizes
         // Block Sizes: 16 x 16 x BlockK
-        // Layouts: NN
-        using Types       = typename Base::TestTypesIOC;
+        // Layouts: NT
+        using Types       = typename Base::TestTypesSmall;
         using BlockSizes  = std::tuple<std::tuple<I<16>, I<16>, I<16>>>;
-        using Layouts     = typename Base::TestLayoutsNN;
+        using Layouts     = typename Base::TestLayoutsNT;
         using LayoutsLds  = typename Base::TestLdsLayoutTypes;
-        using GemmConfigs = typename Base::TestGemmConfigsWgLevel;
-        using BlocksXY    = std::tuple<std::tuple<I<8>, I<8>>>;
+        using MappingsLds = typename Base::TestMappingsLds;
+        using BlocksXY    = std::tuple<std::tuple<I<8>, I<4>>>;
         using KernelParams =
-            typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, GemmConfigs, BlocksXY>::
+            typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
                 Result;
 
         // Assemble the kernel generator
         // Kernel: MmaSyncMulti
-        using GeneratorImpl   = MmaSyncCoopWgGenerator;
+        using GeneratorImpl   = MmaSyncMultiLdsGenerator;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -69,18 +69,18 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class MmaSyncCoopWgTest16x16NN8x8 : public rocwmma::GemmTest
+class MmaSyncMultiLdsTest16x16NT8x8 : public rocwmma::GemmTest
 {
 };
 
-TEST_P(MmaSyncCoopWgTest16x16NN8x8, RunKernel)
+TEST_P(MmaSyncMultiLdsTest16x16NT8x8, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(
     GemmKernelTests,
-    MmaSyncCoopWgTest16x16NN8x8,
+    MmaSyncMultiLdsTest16x16NT8x8,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
                        ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
