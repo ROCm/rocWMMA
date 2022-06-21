@@ -232,6 +232,15 @@ endif()
 set(MmaSyncAdHocTestSources ${GemmCommonSources}
     ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_ad_hoc.cpp)
 
+set(MmaSyncMultiAdHocTestSources ${GemmCommonSources}
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_ad_hoc.cpp)
+
+set(MmaSyncMultiLdsAdHocTestSources ${GemmCommonSources}
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_ad_hoc.cpp)
+
+set(MmaSyncCoopWgAdHocTestSources ${GemmCommonSources}
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_coop_wg_ad_hoc.cpp)
+
 ### GEMM tests are built as either benchmark or validation
 
 # Benchmark GEMM tests
@@ -239,8 +248,12 @@ if(ROCWMMA_BUILD_BENCHMARK_TESTS)
   add_gemm_benchmark_test(barrier_test-bench ${BarrierTestSources})
   add_gemm_benchmark_test(mma_sync_test-bench ${MmaSyncTestSources})
   add_gemm_benchmark_test(mma_sync_multi_test-bench ${MmaSyncMultiTestSources})
-  add_gemm_benchmark_test(mma_sync_coop_wg_test-bench ${MmaSyncCoopWgTestSources})
   add_gemm_benchmark_test(mma_sync_multi_lds_test-bench ${MmaSyncMultiLdsTestSources})
+  add_gemm_benchmark_test(mma_sync_coop_wg_test-bench ${MmaSyncCoopWgTestSources})
+  add_gemm_benchmark_test(mma_sync_ad_hoc_test-bench ${MmaSyncAdHocTestSources})
+  add_gemm_benchmark_test(mma_sync_multi_ad_hoc_test-bench ${MmaSyncMultiAdHocTestSources})
+  add_gemm_benchmark_test(mma_sync_multi_lds_ad_hoc_test-bench ${MmaSyncMultiLdsAdHocTestSources})
+  add_gemm_benchmark_test(mma_sync_coop_wg_ad_hoc_test-bench ${MmaSyncCoopWgAdHocTestSources})
 endif()
 
 # Validation GEMM tests
@@ -250,5 +263,8 @@ if(ROCWMMA_BUILD_VALIDATION_TESTS)
   add_gemm_validation_test(mma_sync_multi_test-validate ${MmaSyncMultiTestSources})
   add_gemm_validation_test(mma_sync_multi_lds_test-validate ${MmaSyncMultiLdsTestSources})
   add_gemm_validation_test(mma_sync_coop_wg_test-validate ${MmaSyncCoopWgTestSources})
-  add_gemm_validation_test(mma_sync_ad_hoc_test ${MmaSyncAdHocTestSources})
+  add_gemm_validation_test(mma_sync_ad_hoc_test-validate ${MmaSyncAdHocTestSources})
+  add_gemm_validation_test(mma_sync_multi_ad_hoc_test-validate ${MmaSyncMultiAdHocTestSources})
+  add_gemm_validation_test(mma_sync_multi_lds_ad_hoc_test-validate ${MmaSyncMultiLdsAdHocTestSources})
+  add_gemm_validation_test(mma_sync_coop_wg_ad_hoc_test-validate ${MmaSyncCoopWgAdHocTestSources})
 endif()
