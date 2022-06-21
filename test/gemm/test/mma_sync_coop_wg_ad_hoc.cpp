@@ -26,7 +26,7 @@
 
 #include <type_traits>
 
-#include "detail/mma_sync.hpp"
+#include "detail/mma_sync_coop_wg.hpp"
 #include "gemm_config.hpp"
 #include "gemm_test.hpp"
 #include "kernel_generator.hpp"
@@ -53,8 +53,8 @@ namespace rocwmma
                 Result;
 
         // Assemble the kernel generator
-        // Kernel: MmaSyncMulti
-        using GeneratorImpl   = MmaSyncGenerator;
+        // Kernel: MmaSyncCoopWg
+        using GeneratorImpl   = MmaSyncCoopWgGenerator;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -93,18 +93,18 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class MmaSyncTestAdHoc : public rocwmma::GemmTest
+class MmaSyncCoopWgTestAdHoc : public rocwmma::GemmTest
 {
 };
 
-TEST_P(MmaSyncTestAdHoc, RunKernel)
+TEST_P(MmaSyncCoopWgTestAdHoc, RunKernel)
 {
     this->RunKernelWithoutWarmup();
 }
 
 INSTANTIATE_TEST_SUITE_P(
     GemmKernelTests,
-    MmaSyncTestAdHoc,
+    MmaSyncCoopWgTestAdHoc,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
                        ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
