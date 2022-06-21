@@ -46,7 +46,12 @@ namespace rocwmma
         using Layouts     = typename Base::TestLayoutsTN;
         using LayoutsLds  = typename Base::TestLdsLayoutTypes;
         using MappingsLds = typename Base::TestMappingsLds;
-        using BlocksXY    = std::tuple<std::tuple<I<4>, I<4>>>;
+
+#if __gfx908__
+        using BlocksXY = std::tuple<std::tuple<I<4>, I<4>>>;
+#else
+        using BlocksXY = std::tuple<std::tuple<I<4>, I<2>>>;
+#endif
         using KernelParams =
             typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
                 Result;
