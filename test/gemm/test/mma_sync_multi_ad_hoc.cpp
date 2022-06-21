@@ -26,7 +26,7 @@
 
 #include <type_traits>
 
-#include "detail/mma_sync.hpp"
+#include "detail/mma_sync_multi.hpp"
 #include "gemm_config.hpp"
 #include "gemm_test.hpp"
 #include "kernel_generator.hpp"
@@ -45,16 +45,14 @@ namespace rocwmma
         using BlockSizes = std::tuple<std::tuple<I<16>, I<16>, I<16>>>;
         using Layouts    = std::tuple<
             std::tuple<col_major, row_major, row_major>>; //typename Base::TestLayoutsNT;
-        using LayoutsLds  = std::tuple<col_major>; //typename Base::TestLayoutTypes;
-        using MappingsLds = std::tuple<typename CooperativeGemm::WaveLevel::LdsNT>;
         using BlocksXY    = std::tuple<std::tuple<I<4>, I<2>>>;
         using KernelParams =
-            typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
+            typename CombineLists<Types, BlockSizes, Layouts, BlocksXY>::
                 Result;
 
         // Assemble the kernel generator
         // Kernel: MmaSyncMulti
-        using GeneratorImpl   = MmaSyncGenerator;
+        using GeneratorImpl   = MmaSyncMultiGenerator;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -93,18 +91,18 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class MmaSyncTestAdHoc : public rocwmma::GemmTest
+class MmaSyncMultiTestAdHoc : public rocwmma::GemmTest
 {
 };
 
-TEST_P(MmaSyncTestAdHoc, RunKernel)
+TEST_P(MmaSyncMultiTestAdHoc, RunKernel)
 {
     this->RunKernelWithoutWarmup();
 }
 
 INSTANTIATE_TEST_SUITE_P(
     GemmKernelTests,
-    MmaSyncTestAdHoc,
+    MmaSyncMultiTestAdHoc,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
                        ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
