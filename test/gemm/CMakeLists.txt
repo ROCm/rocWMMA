@@ -115,29 +115,22 @@ set(MmaSyncMultiTestSources ${GemmCommonSources}
 if(ROCWMMA_BUILD_EXTENDED_TESTS)
   set(MmaSyncMultiTestSources ${MmaSyncMultiTestSources}
                               ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_nn_1x2.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_nn_2x1.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_nt_1x2.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_nt_2x1.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_tn_1x2.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_tn_2x1.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_tt_1x2.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_nn_2x1.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_nt_2x1.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_tn_2x1.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_tt_2x1.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_nn_1x2.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_nn_2x1.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_nt_1x2.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_nt_2x1.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_tn_1x2.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_tn_2x1.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_tt_1x2.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_nn_2x1.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_nt_2x1.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_tn_2x1.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_tt_2x1.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_nn_4x4.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_nt_4x4.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_tn_4x4.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_32x32_tt_4x4.cpp
-                              #${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_nn_8x8.cpp
-                              #${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_nt_8x8.cpp
-                              #${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_tn_8x8.cpp
-                              #${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_test_16x16_tt_8x8.cpp
+
                               )
 endif()
 
@@ -182,14 +175,14 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_test_32x32_tn_2x1.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_test_32x32_tt_1x2.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_test_32x32_tt_2x1.cpp
+                                 ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_test_16x16_nn_8x4.cpp
+                                 ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_test_16x16_nt_8x4.cpp
+                                 ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_test_16x16_tn_8x4.cpp
+                                 ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_test_16x16_tt_8x4.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_test_32x32_nn_4x4.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_test_32x32_nt_4x4.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_test_32x32_tn_4x4.cpp
                                  ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_test_32x32_tt_4x4.cpp
-                                #  ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_test_16x16_nn_8x8.cpp
-                                #  ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_test_16x16_nt_8x8.cpp
-                                #  ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_test_16x16_tn_8x8.cpp
-                                #  ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_multi_lds_test_16x16_tt_8x8.cpp
                                  )
 endif()
 
@@ -217,11 +210,11 @@ set(MmaSyncCoopWgTestSources ${GemmCommonSources}
 			                      )
 
 if(ROCWMMA_BUILD_EXTENDED_TESTS)
-set(MmaSyncCoopWgTestSources ${MmaSyncMultiLdsTestSources}
-                                ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_coop_wg_test_16x16_nn_8x8.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_coop_wg_test_16x16_nt_8x8.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_coop_wg_test_16x16_tn_8x8.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_coop_wg_test_16x16_tt_8x8.cpp
+  set(MmaSyncCoopWgTestSources ${MmaSyncCoopWgTestSources}
+                                ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_coop_wg_test_16x16_nn_8x4.cpp
+                                ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_coop_wg_test_16x16_nt_8x4.cpp
+                                ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_coop_wg_test_16x16_tn_8x4.cpp
+                                ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_coop_wg_test_16x16_tt_8x4.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_coop_wg_test_32x32_nn_4x4.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_coop_wg_test_32x32_nt_4x4.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/test/mma_sync_coop_wg_test_32x32_tn_4x4.cpp
