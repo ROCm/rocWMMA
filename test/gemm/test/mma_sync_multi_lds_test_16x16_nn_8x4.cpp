@@ -38,16 +38,15 @@ namespace rocwmma
     {
         using Base = CommonTestParams;
 
-        // Types: ALL + double
+        // Types: Small sizes
         // Block Sizes: 16 x 16 x BlockK
         // Layouts: NN
-        using Types = typename Base::TestTypesIOC;
-        using BlockSizes
-            = std::tuple<std::tuple<I<16>, I<16>, I<16>>, std::tuple<I<16>, I<16>, I<32>>>;
+        using Types       = typename Base::TestTypesSmall;
+        using BlockSizes  = std::tuple<std::tuple<I<16>, I<16>, I<16>>>;
         using Layouts     = typename Base::TestLayoutsNN;
         using LayoutsLds  = typename Base::TestLdsLayoutTypes;
         using MappingsLds = typename Base::TestMappingsLds;
-        using BlocksXY    = std::tuple<std::tuple<I<8>, I<8>>>;
+        using BlocksXY    = std::tuple<std::tuple<I<8>, I<4>>>;
         using KernelParams =
             typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
                 Result;

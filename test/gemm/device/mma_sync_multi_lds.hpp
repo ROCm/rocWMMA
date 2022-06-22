@@ -234,7 +234,7 @@ namespace rocwmma
         }
         else
         {
-            GemmDriver::fill(fragsC, 0);
+            GemmDriver::fill(fragsC, static_cast<OutputT>(0));
         }
 
         ///
