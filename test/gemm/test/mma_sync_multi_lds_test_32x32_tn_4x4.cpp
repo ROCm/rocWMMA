@@ -61,17 +61,23 @@ namespace rocwmma
         static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
                       "Kernels from this generator do not match testing interface");
 
-        static inline typename KernelGenerator::ResultT kernels()
-        {
-            return KernelGenerator::generate();
-        }
+        static inline typename KernelGenerator::ResultT kernels();
     };
 
 } // namespace rocwmma
 
-#ifndef __gfx90a__
-// TODO: Cannot build gfx90a version of this code due to compiler errors.
-// MUST SKIP this test at runtime for gfx90a
+#if __gfx908__
+
+// TODO: Cannot build gfx90a version of this test due to compiler errors.
+// Build only for gfx908, but MUST skip runtime tests of this size for gfx90a
+
+namespace rocwmma
+{
+    inline typename TestParams::KernelGenerator::ResultT TestParams::kernels()
+    {
+        return KernelGenerator::generate();
+    }
+}
 
 // Test suite for unique parameterization
 class MmaSyncMultiLdsTest32x32TN4x4 : public rocwmma::GemmTest
