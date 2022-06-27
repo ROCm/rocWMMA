@@ -100,7 +100,7 @@ namespace rocwmma
     {
         enum : uint32_t
         {
-            Multiplier = 512
+            Multiplier = 1024
         };
     };
 
