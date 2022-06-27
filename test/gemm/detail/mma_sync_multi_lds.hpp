@@ -87,6 +87,22 @@ namespace rocwmma
                    && ((BlockN * BlocksY * Base::mTBlockY) <= Base::mN) && (BlockK <= Base::mK);
         }
 
+        bool checkQuirks() const final
+        {
+            auto deviceArch = Base::DeviceInfo::instance()->getGcnArch();
+
+            // TODO: On gfx90a, TN config with 4x4 blocks of 32 x 32 x 8
+            // Produces compile time issues
+            auto cornerCaseCheck = !(
+                (deviceArch == Base::DeviceInfo::GFX90A) && // GFX90A
+                (std::is_same<LayoutA, row_major>::value && std::is_same<LayoutB, col_major>::value)
+                && // TN config
+                ((BlockM == BlockN == 32) && BlockK == 8) && // 32 x 32 x 8
+                (BlocksX == BlocksY == 4)); // BlocksX = 4, BlocksY = 4
+
+            return Base::checkQuirks() && cornerCaseCheck;
+        }
+
         // Lds memory usage in bytes
         uint32_t ldsUsage() const final
         {

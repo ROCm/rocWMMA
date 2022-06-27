@@ -46,12 +46,8 @@ namespace rocwmma
         using Layouts     = typename Base::TestLayoutsTN;
         using LayoutsLds  = typename Base::TestLdsLayoutTypes;
         using MappingsLds = typename Base::TestMappingsLds;
+        using BlocksXY    = std::tuple<std::tuple<I<4>, I<4>>>;
 
-#if __gfx908__
-        using BlocksXY = std::tuple<std::tuple<I<4>, I<4>>>;
-#else
-        using BlocksXY = std::tuple<std::tuple<I<4>, I<2>>>;
-#endif
         using KernelParams =
             typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
                 Result;
@@ -73,6 +69,10 @@ namespace rocwmma
 
 } // namespace rocwmma
 
+#ifndef __gfx90a__
+// TODO: Cannot build gfx90a version of this code due to compiler errors.
+// MUST SKIP this test at runtime for gfx90a
+
 // Test suite for unique parameterization
 class MmaSyncMultiLdsTest32x32TN4x4 : public rocwmma::GemmTest
 {
@@ -91,3 +91,5 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
                        ::testing::ValuesIn(rocwmma::TestParams::alphas()),
                        ::testing::ValuesIn(rocwmma::TestParams::betas())));
+
+#endif // !__gfx90a__
