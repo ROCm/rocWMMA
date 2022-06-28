@@ -126,8 +126,7 @@ namespace rocwmma
             //std::tuple<typename CooperativeGemm::BlockLevel::LdsRF>,
             std::tuple<typename CooperativeGemm::WaveLevel::LdsNT>,
             std::tuple<typename CooperativeGemm::BlockLevel::LdsRF>,
-#endif // ROCWMMA_EXTENDED_TESTS \
-    // Benchmark only wave-level as they are more performant
+#endif // ROCWMMA_EXTENDED_TESTS
             std::tuple<typename CooperativeGemm::WaveLevel::LdsTN>>;
 
         using TestGemmConfigsWgLevel = std::tuple<

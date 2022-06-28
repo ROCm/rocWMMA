@@ -90,7 +90,14 @@ namespace rocwmma
         bool checkQuirks() const final
         {
             // Don't run the kernel if the threadblock size is not supported
-            return (kernelImpl() != nullptr);
+            auto kernelImplCheck = (kernelImpl() != nullptr);
+
+            // TODO: Fp64 fails validation for BlockK > 16 for 16 x 16.
+            auto fp64Check16x16
+                = !(std::is_same<InputT, float64_t>::value && (BlockM == 16) && (BlockN == 16)
+                    && (BlockK > 16) && (BlocksX * BlocksY >= 16));
+
+            return Base::checkQuirks() && kernelImplCheck && fp64Check16x16;
         }
 
         // Lds memory usage in bytes
