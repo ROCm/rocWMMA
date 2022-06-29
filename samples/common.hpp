@@ -44,6 +44,21 @@
     }
 #endif
 
+bool checkCurrentDeviceIsgfx908()
+{
+    int deviceId = 0;
+    CHECK_HIP_ERROR(hipGetDevice(&deviceId));
+    hipDeviceProp_t prop;
+    CHECK_HIP_ERROR(hipGetDeviceProperties(&prop, deviceId));
+    std::string deviceName(prop.gcnArchName);
+    bool is_gfx908 = false;
+    if(deviceName.find("gfx908") != std::string::npos)
+    {
+        is_gfx908 = true;
+    }
+    return is_gfx908;
+}
+
 template <uint x>
 struct Log2
 {

@@ -62,5 +62,5 @@ endfunction()
 
 # Create sample targets
 add_rocwmma_sample(simple_gemm ${CMAKE_CURRENT_SOURCE_DIR}/simple_gemm.cpp)
-add_rocwmma_sample(sgemmv ${CMAKE_CURRENT_SOURCE_DIR}/sgemmv.cpp)
+add_rocwmma_sample(gemv ${CMAKE_CURRENT_SOURCE_DIR}/gemv.cpp)
 add_rocwmma_sample(simple_dlrm ${CMAKE_CURRENT_SOURCE_DIR}/simple_dlrm.cpp)
