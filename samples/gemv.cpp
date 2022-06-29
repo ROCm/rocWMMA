@@ -343,10 +343,10 @@ __host__ void gemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float b
 
 int main()
 {
-    const uint32_t m = 16;
-    const uint32_t k = 16;
+    const uint32_t m = 256;
+    const uint32_t k = 256;
     const uint32_t n = T_BLOCK_Y * ROCWMMA_N;
-    std::cout << "*******Running rocwmma_sgemv sample*******" << std::endl;
+    std::cout << "*******Running SGEMV sample*******" << std::endl;
     gemv_test<float16_t, float32_t>(m, n, k, 2.1f, 2.1f);
 
     bool is_gfx908 = checkCurrentDeviceIsgfx908();
@@ -355,7 +355,7 @@ int main()
     #if !__gfx908__
     if(!is_gfx908)
     {
-        std::cout << std::endl << "*******Running rocwmma_dgemv sample*******" << std::endl; 
+        std::cout << std::endl << "*******Running DGEMV sample*******" << std::endl; 
         gemv_test<float64_t, float64_t>(m, n, k, 2.1f, 2.1f);
     }
     #endif
