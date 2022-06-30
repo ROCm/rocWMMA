@@ -238,9 +238,9 @@ dlrm/dlrm_dot_lds_test-*               a DLRM implementation using rocWMMA API w
 gemm/mma_sync_test-*                   a simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API 
 gemm/mma_sync_multi_test-*             a modified GEMM operation, each wave targets a sub-grid of output blocks using rocWMMA API
 gemm/mma_sync_multi_ad_hoc_test-*      an adhoc version of mma_sync_multi_test-*
-gemm/mma_sync_multi_lds_test-*         a modified GEMM operation, each wave targets a sub-grid of output blocks using LDS memory and rocWMMA API
+gemm/mma_sync_multi_lds_test-*         a modified GEMM operation, each wave targets a sub-grid of output blocks using LDS memory and rocWMMA API and wave-level collaboration
 gemm/mma_sync_multi_lds_ad_hoc_test-*  an adhoc version of mma_sync_multi_lds_test-*
-gemm/mma_sync_coop_wg_test-*           a modified GEMM operation, each wave targets a sub-grid of output blocks using LDS memory and rocWMMA API
+gemm/mma_sync_coop_wg_test-*           a modified GEMM operation, each wave targets a sub-grid of output blocks using LDS memory and rocWMMA API and workgroup-level collaboration
 gemm/mma_sync_coop_wg_ad_hoc_test-*    an adhoc version of mma_sync_coop_wg_test-*
 gemm/barrier_test-*                    a simple GEMM operation with wave synchronization
 unit/fill_fragment_test                tests fill_fragment API function
