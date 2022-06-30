@@ -32,6 +32,7 @@
 #include "constants.hpp"
 #include "mapping_util.hpp"
 #include "types.hpp"
+#include "utils.hpp"
 
 namespace rocwmma
 {
@@ -39,49 +40,74 @@ namespace rocwmma
     namespace detail
     {
         // Workgroup configuration
-        // According to our assumption, the major thread dimension is X, so
-        // this determines our laneId.
+        // Assumption: major thread dimension is X
+        // Notation (x, y) = (row, col)
         __device__ inline uint32_t laneId()
         {
-            return threadIdx.x % AMDGCN_WAVE_SIZE;
+            // threadIdx.x % AMDGCN_WAVE_SIZE;
+            return threadIdx.x & (AMDGCN_WAVE_SIZE - 1);
         }
 
         __device__ constexpr inline Coord2d waveCount(Coord2d const& threadCount)
         {
-            return std::make_pair(std::get<0>(threadCount) / AMDGCN_WAVE_SIZE, // ROW
-                                  std::get<1>(threadCount)); // COL
+            // waveCount.x = threadCount.x / AMDGCN_WAVE_SIZE
+            // waveCount.y = threadCount.y
+            return std::make_pair(std::get<0>(threadCount) >> Log2<AMDGCN_WAVE_SIZE>::value,
+                                  std::get<1>(threadCount));
         }
 
         __device__ constexpr inline Coord2d threadCount(Coord2d const& waveCount)
         {
-            return std::make_pair(std::get<0>(waveCount) * AMDGCN_WAVE_SIZE, // ROW
-                                  std::get<1>(waveCount)); // COL
+            // threadCount.x = waveCount.x * AMDGCN_WAVE_SIZE
+            // threadCount.y = waveCount.y
+            return std::make_pair(std::get<0>(waveCount) << Log2<AMDGCN_WAVE_SIZE>::value,
+                                  std::get<1>(waveCount));
         }
 
         /// WaveSpace
 
-        __device__ inline uint32_t WaveSpace::localLaneId()
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        __device__ inline uint32_t WaveSpace<TBlockX, TBlockY>::localLaneId()
         {
             return laneId();
         }
 
-        __device__ inline auto WaveSpace::localWaveCoord() -> WaveCoordT
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        __device__ constexpr inline auto WaveSpace<TBlockX, TBlockY>::localWaveCoord() -> WaveCoordT
         {
             return waveCount(std::make_pair(threadIdx.x, threadIdx.y));
         }
 
-        __device__ inline auto WaveSpace::globalWaveCoord() -> WaveCoordT
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        __device__ inline auto WaveSpace<TBlockX, TBlockY>::globalWaveCoord() -> WaveCoordT
+        {
+            return waveCount(std::make_pair(blockIdx.x * TBlockX + threadIdx.x,
+                                            blockIdx.y * TBlockY + threadIdx.y));
+        }
+
+        template <>
+        __device__ inline auto WaveSpace<0, 0>::globalWaveCoord() -> WaveCoordT
         {
             return waveCount(std::make_pair(blockIdx.x * blockDim.x + threadIdx.x,
                                             blockIdx.y * blockDim.y + threadIdx.y));
         }
 
-        __device__ inline auto WaveSpace::workgroupCoord() -> WorkgroupCoordT
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        __device__ constexpr inline auto WaveSpace<TBlockX, TBlockY>::workgroupCoord()
+            -> WorkgroupCoordT
         {
             return std::make_pair(blockIdx.x, blockIdx.y);
         }
 
-        __device__ inline auto WaveSpace::workgroupDim() -> WorkgroupDimT
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        __device__ constexpr inline auto WaveSpace<TBlockX, TBlockY>::workgroupDim()
+            -> WorkgroupDimT
+        {
+            return waveCount(std::make_pair(TBlockX, TBlockY));
+        }
+
+        template <>
+        __device__ constexpr inline auto WaveSpace<0, 0>::workgroupDim() -> WorkgroupDimT
         {
             return waveCount(std::make_pair(blockDim.x, blockDim.y));
         }
@@ -99,16 +125,17 @@ namespace rocwmma
 
         /// DataSpace
         template <typename DataOrientation>
-        __device__ inline uint32_t
+        __device__ constexpr inline auto
+            DataSpace<DataOrientation>::leadingDim(MatrixSizeT const& matrixSize)
+        {
+            return std::get<MinorIndex>(matrixSize);
+        }
+
+        template <typename DataOrientation>
+        __device__ constexpr inline auto
             DataSpace<DataOrientation>::fromMatrixCoord(MatrixCoordT const& matrixCoord,
                                                         uint32_t            leadingDim)
         {
-            enum : uint32_t
-            {
-                MajorIndex = std::is_same<DataOrientation, row_major>::value ? 0 : 1,
-                MinorIndex = std::is_same<DataOrientation, row_major>::value ? 1 : 0
-            };
-
             // 1D data element offset transform
             return std::get<MajorIndex>(matrixCoord) * leadingDim
                    + std::get<MinorIndex>(matrixCoord);

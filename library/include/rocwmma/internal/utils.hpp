@@ -56,16 +56,15 @@ namespace std
 ///////////////////////////////////////////////////////////
 namespace std
 {
-
     // Single operand for swap
     template <typename T>
-    __host__ __device__ inline pair<T, T> swap(pair<T, T> const& p)
+    __host__ __device__ constexpr static inline pair<T, T> swap(pair<T, T> const& p)
     {
         return std::make_pair(std::get<1>(p), std::get<0>(p));
     }
 
     template <typename T>
-    __host__ __device__ inline pair<T, T>& swap(pair<T, T>& p)
+    __host__ __device__ constexpr static inline pair<T, T>& swap(pair<T, T>& p)
     {
         std::swap(std::get<0>(p), std::get<1>(p));
         return p;
@@ -73,13 +72,15 @@ namespace std
 
     // Add, sub operators
     template <typename T>
-    __host__ __device__ inline pair<T, T> operator+(pair<T, T> const& lhs, pair<T, T> const& rhs)
+    __host__ __device__ constexpr static inline pair<T, T> operator+(pair<T, T> const& lhs,
+                                                                     pair<T, T> const& rhs)
     {
         return make_pair(get<0>(lhs) + get<0>(rhs), get<1>(lhs) + get<1>(rhs));
     }
 
     template <typename T>
-    __host__ __device__ inline pair<T, T>& operator+=(pair<T, T>& lhs, pair<T, T> const& rhs)
+    __host__ __device__ constexpr static inline pair<T, T>& operator+=(pair<T, T>&       lhs,
+                                                                       pair<T, T> const& rhs)
     {
         get<0>(lhs) += get<0>(rhs);
         get<1>(lhs) += get<1>(rhs);
@@ -87,13 +88,31 @@ namespace std
     }
 
     template <typename T>
-    __host__ __device__ inline pair<T, T> operator-(pair<T, T> const& lhs, pair<T, T> const& rhs)
+    __host__ __device__ constexpr static inline pair<T, T> operator*(pair<T, T> const& lhs,
+                                                                     pair<T, T> const& rhs)
+    {
+        return make_pair(get<0>(lhs) * get<0>(rhs), get<1>(lhs) * get<1>(rhs));
+    }
+
+    template <typename T>
+    __host__ __device__ constexpr static inline pair<T, T>& operator*=(pair<T, T>&       lhs,
+                                                                       pair<T, T> const& rhs)
+    {
+        get<0>(lhs) *= get<0>(rhs);
+        get<1>(lhs) *= get<1>(rhs);
+        return lhs;
+    }
+
+    template <typename T>
+    __host__ __device__ constexpr static inline pair<T, T> operator-(pair<T, T> const& lhs,
+                                                                     pair<T, T> const& rhs)
     {
         return make_pair(get<0>(lhs) - get<0>(rhs), get<1>(lhs) - get<1>(rhs));
     }
 
     template <typename T>
-    __host__ __device__ inline pair<T, T>& operator-=(pair<T, T>& lhs, pair<T, T> const& rhs)
+    __host__ __device__ constexpr static inline pair<T, T>& operator-=(pair<T, T>&       lhs,
+                                                                       pair<T, T> const& rhs)
     {
         get<0>(lhs) -= get<0>(rhs);
         get<1>(lhs) -= get<1>(rhs);
@@ -120,7 +139,7 @@ namespace rocwmma
     struct Log2
     {
         static constexpr uint32_t value = 1 + Log2<(x >> 1)>::value;
-        static_assert(x % 2 == 0, "Integer input must be a multiple of 2");
+        static_assert(x % 2 == 0, "Integer input must be a power of 2");
     };
 
     template <>

@@ -26,10 +26,10 @@
 
 #include <type_traits>
 
-#include "detail/mma_sync_multi_lds.hpp"
+#include "detail/mma_sync.hpp"
+#include "gemm_config.hpp"
 #include "gemm_test.hpp"
 #include "kernel_generator.hpp"
-#include "lds_mapping_util.hpp"
 
 namespace rocwmma
 {
@@ -44,17 +44,17 @@ namespace rocwmma
         using Types      = std::tuple<std::tuple<float16_t, float32_t, float32_t>>;
         using BlockSizes = std::tuple<std::tuple<I<16>, I<16>, I<16>>>;
         using Layouts    = std::tuple<
-            std::tuple<row_major, row_major, row_major>>; //typename Base::TestLayoutsNT;
-        using LayoutsLds  = std::tuple<row_major>; //typename Base::TestLayoutTypes;
-        using MappingsLds = typename Base::TestMappingsLds;
-        using BlocksXY    = std::tuple<std::tuple<I<2>, I<2>>>;
+            std::tuple<col_major, row_major, row_major>>; //typename Base::TestLayoutsNT;
+        using LayoutsLds  = std::tuple<col_major>; //typename Base::TestLayoutTypes;
+        using MappingsLds = std::tuple<typename CooperativeGemm::WaveLevel::LdsNT>;
+        using BlocksXY    = std::tuple<std::tuple<I<4>, I<2>>>;
         using KernelParams =
             typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
                 Result;
 
         // Assemble the kernel generator
         // Kernel: MmaSyncMulti
-        using GeneratorImpl   = MmaSyncMultiLdsGenerator;
+        using GeneratorImpl   = MmaSyncGenerator;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -77,15 +77,14 @@ namespace rocwmma
 
         static inline std::vector<ProblemSizeT> problemSizes()
         {
-            return {
-                //{64, 64, 1024},
-                //         {32, 64, 1024},
-                // {64, 32, 1024},
-                // {256, 256, 1024},
-                //{1024, 1024, 1024},
-                {64, 64, 64},
-                //{2048, 2048, 2048},
-                //{8192, 8192, 8192}
+            return {//{64, 64, 1024},
+                    //         {32, 64, 1024},
+                    // {64, 32, 1024},
+                    // {256, 256, 1024},
+                    //{1024, 1024, 1024},
+                    //{64, 64, 64},
+                    //{2048, 2048, 2048},
+                    {8192, 8192, 8192}
 
             };
         }
@@ -94,18 +93,18 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class MmaSyncMultiLdsTestAdHoc : public rocwmma::GemmTest
+class MmaSyncTestAdHoc : public rocwmma::GemmTest
 {
 };
 
-TEST_P(MmaSyncMultiLdsTestAdHoc, RunKernel)
+TEST_P(MmaSyncTestAdHoc, RunKernel)
 {
-    this->RunKernel();
+    this->RunKernelWithoutWarmup();
 }
 
 INSTANTIATE_TEST_SUITE_P(
     GemmKernelTests,
-    MmaSyncMultiLdsTestAdHoc,
+    MmaSyncTestAdHoc,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
                        ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),

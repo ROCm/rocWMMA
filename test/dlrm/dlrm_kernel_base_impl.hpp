@@ -100,7 +100,7 @@ namespace rocwmma
     bool DlrmKernelBase<TileSize, DataT>::checkDevice() const
     {
         auto deviceArch = DeviceInfo::instance()->getGcnArch();
-        return (deviceArch != DeviceInfo::UNKNOWN
+        return (deviceArch != DeviceInfo::UNSUPPORTED
                 && !(deviceArch == DeviceInfo::GFX908 && std::is_same<DataT, float64_t>::value));
     }
 

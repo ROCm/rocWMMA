@@ -38,10 +38,9 @@ namespace rocwmma
     template <uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
-              class DataMapper,
-              class MatrixMapper,
-              uint32_t VectorWidth,
-              uint32_t SpCount = 0>
+              class DataLayout,
+              class MatrixLayout,
+              uint32_t VectorWidth>
     struct CooperativeLoad
     {
         using IOTraits = IOTraits<BlockDim, BlockK, DataT, VectorWidth>;
@@ -49,378 +48,112 @@ namespace rocwmma
         {
             enum : uint32_t
             {
-                SplitCount   = SpCount,
-                SplitIOCount = IOTraits::IOCount / SplitCount
+                MaxSplit = IOTraits::IOCount
             };
 
             // Load implementation
-            // Iteratively loads the entire block
             using Loader = detail::amdgcn_opaque_load<DataT, VectorWidth>;
             using LoadT  = typename Loader::LoadT;
 
             // Block output vector
             using OutputT = VecT<DataT, IOTraits::UnpackedSize>;
-
-            static_assert(SplitCount > 0 && SplitCount <= IOTraits::IOCount,
-                          "Invalid SplitCount range");
-            static_assert(IOTraits::IOCount % SplitCount == 0,
-                          "IOCount must be divisible by SplitCount");
-            static_assert(OutputT::size() % SplitCount == 0,
-                          "Register count not divisible by SplitCount");
-            static_assert(OutputT::size() / SplitCount >= 1, "Partial registers not supported");
         };
 
-        __device__ static inline void exec(typename Traits::OutputT& output,
-                                           DataT const*              loadPtr,
+        __device__ static inline void exec(typename Traits::OutputT& data,
+                                           DataT const*              dataPtr,
                                            uint32_t                  ldm,
                                            uint32_t                  waveIndex,
-                                           uint32_t                  waveCount)
+                                           uint32_t                  waveCount,
+                                           uint32_t                  splitCount)
         {
-            using Loader = typename Traits::Loader;
+            // Ensure that splitCount doesn't exceed our maximum
+            splitCount = std::min(splitCount, (uint32_t)Traits::MaxSplit);
 
-            // For the cases where there are more groups than splits.
-            if(waveIndex >= Traits::SplitCount)
+            // For the cases where there are more waves than splits.
+            if(waveIndex >= splitCount)
                 return;
 
-            // Align threads to starting positions
-            auto baseOffset = MatrixMapper::baseOffset();
+            // Calculate the number of 'work items' for the current wave,
+            // as well as the IOCount per work item.
+            // NOTE: If there are in fact more waves than work items, make sure there
+            // is at least one work item per wave. Waves that can't contribute will be
+            // filtered out by the above check.
+            auto workItemCount   = std::max(splitCount / waveCount, 1u);
+            auto workItemIOCount = IOTraits::IOCount / splitCount;
 
-            // Break down block into iterable loads
-            auto splitIter = output.template begin<Traits::LoadT::size()>();
+            // Calculate the current wave's starting IO iterator index for the first work item.
+            // Calculate the IO offset between work items for the current wave.
+            auto ioIter = data.template it<Traits::LoadT::size()>(waveIndex * workItemIOCount);
+            auto workItemIOInc = waveCount * workItemIOCount;
 
-#pragma unroll
-            for(uint32_t i = 0; i < Traits::SplitCount; ++i)
+            // Align threads to starting matrix offset coordinates
+            auto baseOffset = MatrixLayout::baseOffset();
+
+            // Iterate through the work items for this wave only.
+            // Both loops may get unrolled if splitCount and waveCount are known at compile time.
+            for(uint32_t i = 0; i < workItemCount; i++)
             {
-                if(i % waveCount == waveIndex)
+                auto workItemIOIter = ioIter;
+                for(uint32_t j = 0; j < workItemIOCount; ++j)
                 {
-                    auto ioIter = splitIter;
-#pragma unroll
-                    for(uint32_t j = 0; j < Traits::SplitIOCount; ++j)
-                    {
-                        *ioIter = *Loader::exec(
-                            loadPtr,
-                            DataMapper::fromMatrixCoord(
-                                baseOffset + MatrixMapper::cumulativeOffset(ioIter.index()), ldm));
-                        ioIter++;
-                    }
+                    Traits::Loader::exec(
+                        *workItemIOIter,
+                        dataPtr,
+                        DataLayout::fromMatrixCoord(
+                            baseOffset + MatrixLayout::cumulativeOffset(workItemIOIter.index()),
+                            ldm));
+                    workItemIOIter++;
                 }
-                splitIter += Traits::SplitIOCount;
-            }
-        }
-    };
-
-    // Wrapper for runtime wave count
-    template <uint32_t BlockDim,
-              uint32_t BlockK,
-              typename DataT,
-              class DataMapper,
-              class MatrixMapper,
-              uint32_t VectorWidth>
-    struct CooperativeLoad<BlockDim, BlockK, DataT, DataMapper, MatrixMapper, VectorWidth, 0>
-    {
-        template <uint32_t SplitCount>
-        using CoopLoad = CooperativeLoad<BlockDim,
-                                         BlockK,
-                                         DataT,
-                                         DataMapper,
-                                         MatrixMapper,
-                                         VectorWidth,
-                                         SplitCount>;
-
-        struct Traits
-        {
-            using IOTraits = IOTraits<BlockDim, BlockK, DataT, VectorWidth>;
-
-            enum : uint32_t
-            {
-                MaxSplit = IOTraits::IOCount
-            };
-
-            // All loads will have the same result type
-            using OutputT = typename CoopLoad<1>::Traits::OutputT;
-        };
-
-        /*
-    * While we try to do the runtime dispatching, we need to make sure that we only
-    * instantiate splitting functions that make sense. The maximum possible split is the
-    * same value as IOCount, which for now we will limit to 8.
-    *
-    * Note: The additional template parameter OutgoingT sets us up for proper forwarding
-    * technique while allowing us to use it as the dependent parameter to exploit SFINAE
-    * and hide instantiations that would be otherwise not compileable.
-    */
-
-        // IOCount of 8+ can potentially split work between 8 waves
-        template <typename OutgoingT,
-                  typename std::enable_if<std::is_same<typename Traits::OutputT,
-                                                       typename std::decay<OutgoingT>::type>::value
-                                              && Traits::MaxSplit >= 64,
-                                          int>::type
-                  = 0>
-        __device__ static inline void exec(OutgoingT&&  output,
-                                           DataT const* dataPtr,
-                                           uint32_t     ldm,
-                                           uint32_t     waveIndex,
-                                           uint32_t     waveCount,
-                                           uint32_t     splitCount)
-        {
-            if(splitCount >= 64)
-            {
-                CoopLoad<64>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 32)
-            {
-                CoopLoad<32>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 16)
-            {
-                CoopLoad<16>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 8)
-            {
-                CoopLoad<8>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 4)
-            {
-                CoopLoad<4>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 2)
-            {
-                CoopLoad<2>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 1)
-            {
-                CoopLoad<1>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else
-            {
-                assert(0 && "Unsupported split count. Try reducing workgroup waves.");
+                ioIter += workItemIOInc;
             }
         }
 
-        template <typename OutgoingT,
-                  typename std::enable_if<std::is_same<typename Traits::OutputT,
-                                                       typename std::decay<OutgoingT>::type>::value
-                                              && Traits::MaxSplit == 32,
-                                          int>::type
-                  = 0>
-        __device__ static inline void exec(OutgoingT&&  output,
-                                           DataT const* dataPtr,
-                                           uint32_t     ldm,
-                                           uint32_t     waveIndex,
-                                           uint32_t     waveCount,
-                                           uint32_t     splitCount)
+        template <uint32_t WaveCount, uint32_t SplitCount>
+        __device__ static inline void exec(typename Traits::OutputT& data,
+                                           DataT const*              dataPtr,
+                                           uint32_t                  ldm,
+                                           uint32_t                  waveIndex)
         {
-            if(splitCount >= 32)
-            {
-                CoopLoad<32>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 16)
-            {
-                CoopLoad<16>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 8)
-            {
-                CoopLoad<8>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 4)
-            {
-                CoopLoad<4>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 2)
-            {
-                CoopLoad<2>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 1)
-            {
-                CoopLoad<1>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else
-            {
-                assert(0 && "Unsupported split count. Try reducing workgroup waves.");
-            }
-        }
+            // Ensure that splitCount doesn't exceed our maximum
+            constexpr auto splitCount = std::min(SplitCount, (uint32_t)Traits::MaxSplit);
 
-        template <typename OutgoingT,
-                  typename std::enable_if<std::is_same<typename Traits::OutputT,
-                                                       typename std::decay<OutgoingT>::type>::value
-                                              && Traits::MaxSplit == 16,
-                                          int>::type
-                  = 0>
-        __device__ static inline void exec(OutgoingT&&  output,
-                                           DataT const* dataPtr,
-                                           uint32_t     ldm,
-                                           uint32_t     waveIndex,
-                                           uint32_t     waveCount,
-                                           uint32_t     splitCount)
-        {
-            if(splitCount >= 16)
-            {
-                CoopLoad<16>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 8)
-            {
-                CoopLoad<8>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 4)
-            {
-                CoopLoad<4>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 2)
-            {
-                CoopLoad<2>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 1)
-            {
-                CoopLoad<1>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else
-            {
-                assert(0 && "Unsupported split count. Try reducing workgroup waves.");
-            }
-        }
+            // For the cases where there are more waves than splits.
+            if(waveIndex >= splitCount)
+                return;
 
-        template <typename OutgoingT,
-                  typename std::enable_if<std::is_same<typename Traits::OutputT,
-                                                       typename std::decay<OutgoingT>::type>::value
-                                              && Traits::MaxSplit == 8,
-                                          int>::type
-                  = 0>
-        __device__ static inline void exec(OutgoingT&&  output,
-                                           DataT const* dataPtr,
-                                           uint32_t     ldm,
-                                           uint32_t     waveIndex,
-                                           uint32_t     waveCount,
-                                           uint32_t     splitCount)
-        {
-            if(splitCount >= 8)
-            {
-                CoopLoad<8>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 4)
-            {
-                CoopLoad<4>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 2)
-            {
-                CoopLoad<2>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 1)
-            {
-                CoopLoad<1>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else
-            {
-                assert(0 && "Unsupported split count. Try reducing workgroup waves.");
-            }
-        }
+            // Calculate the number of 'work items' for the current wave,
+            // as well as the IOCount per work item.
+            // NOTE: If there are in fact more waves than work items, make sure there
+            // is at least one work item per wave. Waves that can't contribute will be
+            // filtered out by the above check.
+            constexpr auto workItemCount   = std::max(splitCount / WaveCount, 1u);
+            constexpr auto workItemIOCount = IOTraits::IOCount / splitCount;
 
-        template <typename OutgoingT,
-                  typename std::enable_if<std::is_same<typename Traits::OutputT,
-                                                       typename std::decay<OutgoingT>::type>::value
-                                              && Traits::MaxSplit == 4,
-                                          int>::type
-                  = 0>
-        __device__ static inline void exec(OutgoingT&&  output,
-                                           DataT const* dataPtr,
-                                           uint32_t     ldm,
-                                           uint32_t     waveIndex,
-                                           uint32_t     waveCount,
-                                           uint32_t     splitCount)
-        {
-            if(splitCount >= 4)
-            {
-                CoopLoad<4>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 2)
-            {
-                CoopLoad<2>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 1)
-            {
-                CoopLoad<1>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else
-            {
-                assert(0 && "Unsupported split count. Try reducing workgroup waves.");
-            }
-        }
+            // Calculate the current wave's starting IO iterator index for the first work item.
+            // Calculate the IO offset between work items for the current wave.
+            auto& reducedFt = reinterpret_cast<
+                VecT<DataT, workItemCount * workItemIOCount * Traits::LoadT::size()>&>(data);
+            auto ioIter = reducedFt.template begin<Traits::LoadT::size()>();
 
-        template <typename OutgoingT,
-                  typename std::enable_if<std::is_same<typename Traits::OutputT,
-                                                       typename std::decay<OutgoingT>::type>::value
-                                              && Traits::MaxSplit == 2,
-                                          int>::type
-                  = 0>
-        __device__ static inline void exec(OutgoingT&&  output,
-                                           DataT const* dataPtr,
-                                           uint32_t     ldm,
-                                           uint32_t     waveIndex,
-                                           uint32_t     waveCount,
-                                           uint32_t     splitCount)
-        {
-            if(splitCount >= 2)
-            {
-                CoopLoad<2>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else if(splitCount == 1)
-            {
-                CoopLoad<1>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else
-            {
-                assert(0 && "Unsupported split count. Try reducing workgroup waves.");
-            }
-        }
+            // Align threads to starting matrix offset coordinates
+            auto baseOffset = MatrixLayout::baseOffset();
 
-        template <typename OutgoingT,
-                  typename std::enable_if<std::is_same<typename Traits::OutputT,
-                                                       typename std::decay<OutgoingT>::type>::value
-                                              && Traits::MaxSplit == 1,
-                                          int>::type
-                  = 0>
-        __device__ static inline void exec(OutgoingT&&  output,
-                                           DataT const* dataPtr,
-                                           uint32_t     ldm,
-                                           uint32_t     waveIndex,
-                                           uint32_t     waveCount,
-                                           uint32_t     splitCount)
-        {
-            if(splitCount >= 1)
+            // Iterate through the work items for this wave only.
+            // Both loops may get unrolled if splitCount and waveCount are known at compile time.
+#pragma unroll
+            for(uint32_t i = 0; i < workItemCount; i++)
             {
-                CoopLoad<1>::exec(
-                    std::forward<OutgoingT>(output), dataPtr, ldm, waveIndex, waveCount);
-            }
-            else
-            {
-                assert(0 && "Unsupported split count. Try reducing workgroup waves.");
+                auto cumOffset = (i * WaveCount + waveIndex) * workItemIOCount;
+#pragma unroll
+                for(uint32_t j = 0; j < workItemIOCount; ++j)
+                {
+                    Traits::Loader::exec(
+                        *ioIter,
+                        dataPtr,
+                        DataLayout::fromMatrixCoord(
+                            baseOffset + MatrixLayout::cumulativeOffset(cumOffset++), ldm));
+                    ioIter++;
+                }
             }
         }
     };

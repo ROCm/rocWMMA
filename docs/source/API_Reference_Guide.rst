@@ -124,40 +124,34 @@ Below is a simple example code for calling rocWMMA functions load_matrix_sync, s
        // @tp3: block size K
        // @tp4: fragment data type
        // @tp5: data layout = row_major, col_major or void (default)
-       auto fragA = rocwmma::fragment<rocwmma::matrix_a, WMMA_M, WMMA_N, WMMA_K, float16_t, rocwmma::row_major>();
-       auto fragB = rocwmma::fragment<rocwmma::matrix_b, WMMA_M, WMMA_N, WMMA_K, float16_t, rocwmma::col_major>();
-       auto fragC   = rocwmma::fragment<rocwmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t>();
-       auto fragAcc = rocwmma::fragment<rocwmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float32_t>();
+       auto fragA = rocwmma::fragment<rocwmma::matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t, rocwmma::row_major>();
+       auto fragB = rocwmma::fragment<rocwmma::matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t, rocwmma::col_major>();
+       auto fragC   = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
+       auto fragAcc = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
 
        // Initialize accumulator fragment
        rocwmma::fill_fragment(fragAcc, 0.0f);
 
-       // Tile using a 2D grid
-       auto warpM = (blockIdx.x * blockDim.x + threadIdx.x) / WAVE_SIZE;
-       auto warpN = (blockIdx.y * blockDim.y + threadIdx.y);
+        // Tile using a 2D grid
+        auto majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / WAVE_SIZE;
+        auto minorWarp = (blockIdx.y * blockDim.y + threadIdx.y);
 
-       // Target C block
-       auto cRow = warpM * WMMA_M;
-       auto cCol = warpN * WMMA_N;
+        // Target C block
+        auto cRow = majorWarp * ROCWMMA_M;
+        auto cCol = minorWarp * ROCWMMA_N;
 
        // Bounds check
        if(cRow < m && cCol < n)
        {
-           // Accumulate AxB in steps of block K into fragAcc
-           for(int i = 0; i < k; i += WMMA_K)
-           {
-               int aRow = cRow;
-               int aCol = i;
+            // fragAcc = A x B
+            for(int i = 0; i < k; i += ROCWMMA_K)
+            {
+                // Load the inputs
+                rocwmma::load_matrix_sync(fragA, a + (cRow * lda + i), lda);
+                rocwmma::load_matrix_sync(fragB, b + (i + cCol * ldb), ldb);
 
-               int bRow = i;
-               int bCol = cCol;
-
-               // Load the inputs
-               rocwmma::load_matrix_sync(fragA, a + (aRow * lda + aCol), lda);
-               rocwmma::load_matrix_sync(fragB, b + (bRow + bCol * ldb), ldb);
-
-               // Matrix multiply-accumulate using matrix cores
-               rocwmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
+                // Matrix multiply - accumulate using MFMA units
+                rocwmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
             }
 
             // Fetch C matrix
@@ -178,8 +172,8 @@ Below is a simple example code for calling rocWMMA functions load_matrix_sync, s
    __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, float32_t beta)
    {
        // Problem size check
-       if((m < (WMMA_M * T_BLOCK_X / WAVE_SIZE) || n < (WMMA_N * T_BLOCK_Y) || k < WMMA_K)
-           || (m % WMMA_M || n % WMMA_N || k % WMMA_K))
+       if((m < (ROCWMMA_M * T_BLOCK_X / WAVE_SIZE) || n < (ROCWMMA_N * T_BLOCK_Y) || k < ROCWMMA_K)
+           || (m % ROCWMMA_M || n % ROCWMMA_N || k % ROCWMMA_K))
         {
             std::cout << "Unsupported size!\n";
             return;
@@ -227,8 +221,8 @@ Below is a simple example code for calling rocWMMA functions load_matrix_sync, s
         CHECK_HIP_ERROR(hipMemcpy(d_d, matrixD.data(), bytesD, hipMemcpyHostToDevice));
 
          auto blockDim = dim3(T_BLOCK_X, T_BLOCK_Y);
-         auto gridDim  = dim3(rocwmma::ceilDiv(m, WMMA_M * T_BLOCK_X / WAVE_SIZE),
-                rocwmma::ceilDiv(n, WMMA_N * T_BLOCK_Y));
+         auto gridDim  = dim3(rocwmma::ceilDiv(m, ROCWMMA_M * T_BLOCK_X / WAVE_SIZE),
+                rocwmma::ceilDiv(n, ROCWMMA_N * T_BLOCK_Y));
 
          std::cout << "Launching GEMM kernel..." << std::endl;
 
@@ -456,7 +450,7 @@ IOConfig
 IOShape
 ''''''''''''
 
-.. doxygenstruct:: rocwmma::detail::IOShape
+.. doxygenstruct:: rocwmma::IOShape
 
 
 rocWMMA Enumeration

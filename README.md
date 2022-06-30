@@ -38,13 +38,15 @@ Optional:
     <T, T, N, N>, <T, T, T, T>
 
 - Thread Block Sizes <TBlockX, TBlockY> =
-**Note: TBlockX must be a multiple of 64 **
+**Note: TBlockX must be a multiple of WaveSize **
+Currently for GEMM, rocWMMA focuses on thread blocks of up to 4 waves for optimal resource usage / occupancy.
+Larger thread block sizes are possible but are not officially supported.
 
     <64, 1>, <64, 2>, <64, 4>
 
-    <128, 1>, <128, 2>, <128, 4>
+    <128, 1>, <128, 2>
 
-    <256, 1>, <256, 2>, <256, 4>
+    <256, 1>
 
 - Data Types <Ti / To / Tc> = <Input type / Output Type / Compute Type>
 
@@ -60,7 +62,7 @@ Optional:
         <th>Ti / To / Tc</th>
         <th>BlockM</th>
         <th>BlockN</th>
-        <th>BlockK</th>
+        <th>BlockK Range<br /> (powers of 2)</th>
         <th>Notes</th>
       </tr>
     </thead>
@@ -69,159 +71,159 @@ Optional:
             <td rowspan=2>i8 / i32 / i32</td>
             <td>16</td>
             <td>16</td>
-            <td>Min: 16, pow2</td>
+            <td>[16, 256]</td>
             <td></td>
         </tr>
         <tr>
             <td>32</td>
             <td>32</td>
-            <td>Min: 8, pow2</td>
+            <td>[8, 128]</td>
             <td></td>
         </tr>
         <tr>
             <td rowspan=2>i8 / i8 / i32</td>
             <td>16</td>
             <td>16</td>
-            <td>Min: 16, pow2</td>
+            <td>[16, 256]</td>
             <td></td>
         </tr>
         <tr>
             <td>32</td>
             <td>32</td>
-            <td>Min: 8, pow2</td>
+            <td>[8, 128]</td>
             <td></td>
         </tr>
         <tr>
             <td rowspan=2>f16 / f32 / f32</td>
             <td>16</td>
             <td>16</td>
-            <td>Min: 16, pow2</td>
+            <td>[16, 256]</td>
             <td></td>
         </tr>
         <tr>
             <td>32</td>
             <td>32</td>
-            <td>Min: 8, pow2</td>
+            <td>[8, 128]</td>
             <td></td>
         </tr>
         <tr>
             <td rowspan=2>f16 / f16 / f32</td>
             <td>16</td>
             <td>16</td>
-            <td>Min: 16, pow2</td>
+            <td>[16, 256]</td>
             <td></td>
         </tr>
         <tr>
             <td>32</td>
             <td>32</td>
-            <td>Min: 8, pow2</td>
+            <td>[8, 128]</td>
             <td></td>
         </tr>
         <tr>
             <td rowspan=2>f16 / f16 / f16*</td>
             <td>16</td>
             <td>16</td>
-            <td>Min: 16, pow2</td>
+            <td>[16, 256]</td>
             <td rowspan=2>*= FMA is natively f32, downcasted to fp16</td>
         </tr>
         <tr>
             <td>32</td>
             <td>32</td>
-            <td>Min: 8, pow2</td>
+            <td>[8, 128]</td>
         </tr>
         <tr>
             <td rowspan=2>__half / f32 / f32</td>
             <td>16</td>
             <td>16</td>
-            <td>Min: 16, pow2</td>
+            <td>[16, 256]</td>
             <td></td>
         </tr>
         <tr>
             <td>32</td>
             <td>32</td>
-            <td>Min: 8, pow2</td>
+            <td>[8, 128]</td>
             <td></td>
         </tr>
         <tr>
             <td rowspan=2>__half / __half / f32</td>
             <td>16</td>
             <td>16</td>
-            <td>Min: 16, pow2</td>
+            <td>[16, 256]</td>
             <td></td>
         </tr>
         <tr>
             <td>32</td>
             <td>32</td>
-            <td>Min: 8, pow2</td>
+            <td>[8, 128]</td>
             <td></td>
         </tr>
         <tr>
             <td rowspan=2>__half / __half / __half*</td>
             <td>16</td>
             <td>16</td>
-            <td>Min: 16, pow2</td>
+            <td>[16, 256]</td>
             <td rowspan=2>*= FMA is natively f32, downcasted to __half</td>
         </tr>
         <tr>
             <td>32</td>
             <td>32</td>
-            <td>Min: 8, pow2</td>
+            <td>[8, 128]</td>
         </tr>
         <tr>
             <td rowspan=2>bf16 / f32 / f32</td>
             <td>16</td>
             <td>16</td>
-            <td>Min: 8, pow2</td>
+            <td>[8, 256]</td>
             <td></td>
         </tr>
         <tr>
             <td>32</td>
             <td>32</td>
-            <td>Min: 4, pow2</td>
+            <td>[4, 128]</td>
             <td></td>
         </tr>
         <tr>
             <td rowspan=2>bf16 / bf16 / f32</td>
             <td>16</td>
             <td>16</td>
-            <td>Min: 8, pow2</td>
+            <td>[8, 256]</td>
             <td></td>
         </tr>
         <tr>
             <td>32</td>
             <td>32</td>
-            <td>Min: 4, pow2</td>
+            <td>[4, 128]</td>
             <td></td>
         </tr>
         <tr>
             <td rowspan=2>bf16 / bf16 / bf16*</td>
             <td>16</td>
             <td>16</td>
-            <td>Min: 8, pow2</td>
+            <td>[8, 256]</td>
             <td rowspan=2>*= FMA is natively f32, downcasted to bf16</td>
         </tr>
         <tr>
             <td>32</td>
             <td>32</td>
-            <td>Min: 4, pow2</td>
+            <td>[4, 128]</td>
         </tr>
         <tr>
             <td rowspan=2>f32 / f32 / f32</td>
             <td>16</td>
             <td>16</td>
-            <td>Min: 4, pow2</td>
+            <td>[4, 256]</td>
             <td rowspan=2></td>
         </tr>
         <tr>
             <td>32</td>
             <td>32</td>
-            <td>Min: 2, pow2</td>
+            <td>[2, 128]</td>
         </tr>
         <tr>
             <td>f64 / f64 / f64*</td>
             <td>16</td>
             <td>16</td>
-            <td>Min: 4, pow2</td>
+            <td>[4, 256]</td>
             <td rowspan=2>*= Supported on MI-200 +</td>
         </tr>
     </tbody>
@@ -313,6 +315,7 @@ After configuration, build with `cmake --build <build_dir> -- -j`
 - Select ROCWMMA_BUILD_DOCS=OFF
 - Select ROCWMMA_BUILD_EXTENDED_TESTS=OFF
 - Select either ROCWMMA_BUILD_VALIDATION_TESTS or ROCWMMA_BUILD_BENCHMARK_TESTS as ON, and the other as OFF.
+- For investigating particular kernels, build the ad-hoc test with the parameters you are interested in.
 - Manually build specific tests:
 ```
 cd <build_dir>
@@ -371,9 +374,11 @@ Implements a GEMM blocking algorithm using rocWMMA for all supported configurati
 
 **Mma Sync Test** is the simplest blocked GEMM example which targets one output block of matrix multiplication per wave. 
 
-**Mma Sync Multi Test** implements blocked GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks, scaling the outer workgroup macro tile size.
+**Mma Sync Multi Test** implements blocked GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks. Does not use LDS or wave collaboration.
 
-**Mma Sync Multi Lds Test** implements the blocked multi-GEMM leveraging shared memory to implement data prefetching and movement pipelining to improve performance. 
+**Mma Sync Multi Lds Test** implements the blocked GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks, leveraging shared memory to implement data prefetching and movement pipelining to improve performance. Uses LDS memory and wave-level collaboration on wave-tile data movement.
+
+**Mma Sync Coop WG Test** implements the blocked GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks, leveraging shared memory to implement data prefetching and movement pipelining to improve performance. Uses LDS memory and full workgroup-level collaboration on macro tile data movement.
 
 **Barrier Test** is a simple blocked GEMM example, using a wave barrier to showcase benefits of synchronizing waves for performance and synchronization.
 
@@ -384,6 +389,7 @@ Run validation tests:
 <build_dir>/test/gemm/mma_sync_test-validate
 <build_dir>/test/gemm/mma_sync_multi_test-validate
 <build_dir>/test/gemm/mma_sync_multi_lds_test-validate
+<build_dir>/test/gemm/mma_sync_coop_wg_test-validate
 <build_dir>/test/gemm/barrier_test-validate
 ```
 
@@ -392,12 +398,21 @@ Run benchmark only: **Benchmark runs can take several hours to complete**
 <build_dir>/test/gemm/mma_sync_test-bench
 <build_dir>/test/gemm/mma_sync_multi_test-bench
 <build_dir>/test/gemm/mma_sync_multi_lds_test-bench
+<build_dir>/test/gemm/mma_sync_coop_wg_test-bench
 <build_dir>/test/gemm/barrier_test-bench
 ```
 
 Run ad-hoc test:
 ```
-<build_dir>/test/gemm/mma_sync_ad_hoc_test
+<build_dir>/test/gemm/mma_sync_ad_hoc_test-validate
+<build_dir>/test/gemm/mma_sync_multi_ad_hoc_test-validate
+<build_dir>/test/gemm/mma_sync_multi_lds_ad_hoc_test-validate
+<build_dir>/test/gemm/mma_sync_coop_wg_ad_hoc_test-validate
+
+<build_dir>/test/gemm/mma_sync_ad_hoc_test-bench
+<build_dir>/test/gemm/mma_sync_multi_ad_hoc_test-bench
+<build_dir>/test/gemm/mma_sync_multi_lds_ad_hoc_test-bench
+<build_dir>/test/gemm/mma_sync_coop_wg_ad_hoc_test-bench
 ```
 
 ### Tips to reduce run time:

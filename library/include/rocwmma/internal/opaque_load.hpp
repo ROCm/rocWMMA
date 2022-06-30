@@ -43,11 +43,11 @@ namespace rocwmma
         {
             static_assert(VectorWidth > 0, "Vector width must be greater than 0");
 
-            using LoadT = VecT<typename PackTraits<DataT>::UnpackedT, VectorWidth>;
-            __device__ static inline auto exec(DataT const* dataPtr, index_t offset = 0) -> LoadT
+            using LoadT = VecT<DataT, VectorWidth>;
+            __device__ static inline void
+                exec(LoadT& data, DataT const* dataPtr, index_t offset = 0)
             {
-                return LoadT(
-                    *reinterpret_cast<typename LoadT::StorageT const*>(&(dataPtr[offset])));
+                data = *reinterpret_cast<LoadT const*>(&(dataPtr[offset]));
             }
         };
 
@@ -56,8 +56,8 @@ namespace rocwmma
     template <uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
-              class DataMapper,
-              class MatrixMapper,
+              class DataLayout,
+              class MatrixLayout,
               uint32_t VectorWidth>
     struct OpaqueLoad
     {
@@ -71,18 +71,12 @@ namespace rocwmma
             using OutputT = VecT<DataT, IOTraits::UnpackedSize>;
         };
 
-        __device__ static auto exec(DataT const* localPtr, uint32_t ldm) -> typename Traits::OutputT
+        __device__ static void
+            exec(typename Traits::OutputT& data, DataT const* dataPtr, uint32_t ldm)
         {
-            // Extract traits
-            using Loader  = typename Traits::Loader;
-            using LoadT   = typename Traits::LoadT;
-            using OutputT = typename Traits::OutputT;
-
             // Arrange wave threads to starting matrix layout offsets.
-            auto baseOffset = MatrixMapper::baseOffset();
-
-            OutputT result;
-            auto    it = result.template begin<LoadT::size()>();
+            auto baseOffset = MatrixLayout::baseOffset();
+            auto it         = data.template begin<Traits::LoadT::size()>();
 
             static_assert(decltype(it)::range() == IOTraits::IOCount,
                           "IOCount inconsistent with iterator range");
@@ -91,11 +85,10 @@ namespace rocwmma
 #pragma unroll
             for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
             {
-                *it = *Loader::exec(localPtr, DataMapper::fromMatrixCoord(baseOffset, ldm));
+                Traits::Loader::exec(*it, dataPtr, DataLayout::fromMatrixCoord(baseOffset, ldm));
+                baseOffset += MatrixLayout::incrementalOffset(it.index());
                 it++;
-                baseOffset += MatrixMapper::incrementalOffset(i);
             }
-            return result;
         }
     };
 

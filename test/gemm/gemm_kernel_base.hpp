@@ -58,7 +58,7 @@ namespace rocwmma
         virtual void          validateResults()                                   = 0;
         virtual void          reportResults()                                     = 0;
         virtual void          tearDown()                                          = 0;
-        virtual HipResource*  getResource()                                       = 0;
+        virtual HipResource*  getResource() const                                 = 0;
         virtual std::ostream& printHeader(std::ostream& stream = std::cout) const = 0;
         virtual std::ostream& printKernel(std::ostream& stream = std::cout) const = 0;
 
@@ -140,7 +140,7 @@ namespace rocwmma
         virtual void          validateResults() override;
         virtual void          reportResults() override;
         virtual void          tearDown() override;
-        virtual HipResource*  getResource() override;
+        virtual HipResource*  getResource() const override;
         virtual std::ostream& printHeader(std::ostream& stream = std::cout) const override;
         virtual std::ostream& printKernel(std::ostream& stream = std::cout) const override;
 
