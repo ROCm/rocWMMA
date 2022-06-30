@@ -44,6 +44,21 @@ namespace rocwmma
     {
         namespace BlockLevel
         {
+            /* Block-Level cooperative GEMMs:
+            *  This GEMM configuration enables collaborative data movement
+            *  on individual blocks, or fragments. Wave collaboration depends
+            *  on locality:
+            *  - matrix_a collaborative waves in the same row
+            *  - matrix_b collaborative waves in the same col
+            *
+            *  Class name LDSXY indicates whether X = matrix_a or Y = matrix_b is
+            *  transposed (T) or non-transposed (N) upon writing to LDS memory.
+            *
+            *  Class name LDSRF indicates that both matrix_a and matrix_b are stored
+            *  as a register-file (RF) in LDS memory.
+            *
+            *  Due to collaboration, data is not MFMA friendly until written to LDS.
+            */
             struct LdsNT
             {
                 template <uint32_t BlockM,
@@ -191,6 +206,18 @@ namespace rocwmma
         } // BlockLevel
         namespace WaveLevel
         {
+            /* Wave-Level cooperative GEMMs:
+            *  This GEMM configuration enables collaborative data movement
+            *  on a collection of blocks (BlocksX x BlocksY) as a wave tile.
+            *  Wave collaboration depends on locality:
+            *  - matrix_a collaborative waves in the same row
+            *  - matrix_b collaborative waves in the same col
+            *
+            *  Class name LDSXY indicates whether X = matrix_a or Y = matrix_b is
+            *  transposed (T) or non-transposed (N) upon writing to LDS memory.
+            *
+            *  Due to collaboration, data is not MFMA friendly until written to LDS.
+            */
             struct LdsNT
             {
                 template <uint32_t BlockM,
@@ -291,6 +318,18 @@ namespace rocwmma
 
         namespace WorkgroupLevel
         {
+            /* Workgroup-Level cooperative GEMMs:
+            *  This GEMM configuration enables collaborative data movement
+            *  on a collection of wave tiles (BlocksX x BlocksY) x (WavesX x WavesY)
+            *  as a larger macro tile. Wave collaboration is among all waves in the
+            *  workgroup.
+            *
+            *  Class name LDSXY indicates whether X = matrix_a or Y = matrix_b is
+            *  transposed (T) or non-transposed (N) upon writing to LDS memory.
+            *
+            *  Due to collaboration, data is not MFMA friendly until written to LDS.
+            */
+
             struct LdsNT
             {
                 template <uint32_t BlockM,
