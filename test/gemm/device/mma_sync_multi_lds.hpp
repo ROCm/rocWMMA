@@ -39,41 +39,13 @@
 // for fp64 on all other targets which succeed MI-100.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "lds_mapping_util.hpp"
+#include "gemm_config.hpp"
 #include <rocwmma/rocwmma.hpp>
 #include <rocwmma/rocwmma_coop.hpp>
 #pragma GCC diagnostic pop
 
 namespace rocwmma
 {
-
-    // A few workarounds for some lack of std library support on GPU
-    template <typename T>
-    __device__ inline void assign(T& m, T const& val)
-    {
-        m = val;
-    }
-
-    template <typename T1, typename T2>
-    __device__ inline void assign(std::pair<T1, T2>& m, std::pair<T1, T2> const& val)
-    {
-        std::get<0>(m) = std::get<0>(val);
-        std::get<1>(m) = std::get<1>(val);
-    }
-
-    template <typename T, size_t X>
-    __device__ inline void assign(std::array<T, X>& m, int32_t x, T const& val)
-    {
-        assign(const_cast<T&>(m[x]), val);
-    }
-
-    template <typename T, size_t X, size_t Y>
-    __device__ inline void
-        assign(std::array<std::array<T, Y>, X>& m, int32_t x, int32_t y, T const& val)
-    {
-        assign(const_cast<std::array<T, Y>&>(m[x]), y, val);
-    }
-
     template <uint32_t BlockM,
               uint32_t BlockN,
               uint32_t BlockK,
@@ -85,256 +57,203 @@ namespace rocwmma
               typename LayoutC,
               typename LayoutD,
               typename LayoutLds,
-              typename LdsMapping,
+              typename GemmConfig,
               uint32_t BlocksX = 1,
-              uint32_t BlocksY = 1>
-    __global__ void __launch_bounds__(256, 1) mmaSyncMultiLds(uint32_t       m,
-                                                              uint32_t       n,
-                                                              uint32_t       k,
-                                                              InputT const*  a,
-                                                              InputT const*  b,
-                                                              OutputT const* c,
-                                                              OutputT*       d,
-                                                              uint32_t       lda,
-                                                              uint32_t       ldb,
-                                                              uint32_t       ldc,
-                                                              uint32_t       ldd,
-                                                              ComputeT       alpha,
-                                                              ComputeT       beta)
+              uint32_t BlocksY = 1,
+              uint32_t TBlockX = 0,
+              uint32_t TBlockY = 0>
+    __global__ void __launch_bounds__(256) mmaSyncMultiLds(uint32_t       m,
+                                                           uint32_t       n,
+                                                           uint32_t       k,
+                                                           InputT const*  a,
+                                                           InputT const*  b,
+                                                           OutputT const* c,
+                                                           OutputT*       d,
+                                                           uint32_t       lda,
+                                                           uint32_t       ldb,
+                                                           uint32_t       ldc,
+                                                           uint32_t       ldd,
+                                                           ComputeT       alpha,
+                                                           ComputeT       beta)
     {
-        // Setup global mapping
-        using MappingA = MappingUtil<BlockM, BlockK, InputT, LayoutA>;
-        using MappingB = MappingUtil<BlockK, BlockN, InputT, LayoutB>;
-        using MappingC = MappingUtil<BlockM, BlockN, OutputT, LayoutC>;
-        using MappingD = MappingUtil<BlockM, BlockN, OutputT, LayoutD>;
-        using CoordT   = typename MappingA::MatrixCoordT;
+        ///
+        /// Assemble the gemm driver from the incoming gemm configuration
+        ///
+        using GlobalMapping = typename GemmConfig::template GlobalMapping<BlockM,
+                                                                          BlockN,
+                                                                          BlockK,
+                                                                          InputT,
+                                                                          OutputT,
+                                                                          ComputeT,
+                                                                          LayoutA,
+                                                                          LayoutB,
+                                                                          LayoutC,
+                                                                          LayoutD,
+                                                                          BlocksX,
+                                                                          BlocksY,
+                                                                          TBlockX,
+                                                                          TBlockY>;
 
-        using FragA   = fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA>;
-        using FragB   = fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB>;
-        using FragC   = fragment<accumulator, BlockM, BlockN, BlockK, OutputT>;
-        using FragAcc = fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>;
+        using LdsMapping     = typename GemmConfig::template LdsMapping<GlobalMapping, LayoutLds>;
+        using CoopSchedulerA = typename GemmConfig::template CoopSchedulerA<TBlockX, TBlockY>;
+        using CoopSchedulerB = typename GemmConfig::template CoopSchedulerB<TBlockX, TBlockY>;
+        using GemmDriver     = typename GemmConfig::
+            template GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
 
-        // Will store to LDS as though it were a register file.
-        // Rows = register count
-        // Cols = unpacked register elements = 64
-        // Row major to minimize bank conflicts
+        // Global fragments used in pre-fetching
+        using GRFragA = typename GlobalMapping::GRFragA;
+        using GRFragB = typename GlobalMapping::GRFragB;
 
-        using MappingLds = LdsMappingUtil<BlockM,
-                                          BlockN,
-                                          BlockK,
-                                          InputT,
-                                          LayoutA,
-                                          LayoutB,
-                                          LayoutLds,
-                                          LdsMapping,
-                                          BlocksX,
-                                          BlocksY>;
+        // Fragments for mfma
+        using MfmaFragA   = typename GlobalMapping::MfmaFragA;
+        using MfmaFragB   = typename GlobalMapping::MfmaFragB;
+        using MfmaFragC   = typename GlobalMapping::MfmaFragC;
+        using MfmaFragD   = typename GlobalMapping::MfmaFragD;
+        using MfmaFragAcc = typename GlobalMapping::MfmaFragAcc;
 
-        using GlobalReadFragA = typename MappingLds::GlobalReadFragA;
-        using GlobalReadFragB = typename MappingLds::GlobalReadFragB;
+        // Mapping utils for each fragment type
+        using DataMappingA   = typename GetIOShape_t<MfmaFragA>::DataLayout;
+        using DataMappingB   = typename GetIOShape_t<MfmaFragB>::DataLayout;
+        using DataMappingC   = typename GetIOShape_t<MfmaFragC>::DataLayout;
+        using DataMappingD   = typename GetIOShape_t<MfmaFragD>::DataLayout;
+        using DataMappingLds = typename LdsMapping::DataLayout;
 
-        using LocalWriteFragA = typename MappingLds::LocalWriteFragA;
-        using LocalWriteFragB = typename MappingLds::LocalWriteFragB;
+        ///
+        /// Target starting C / D macro tile matrix coordinate on 2D grid
+        ///
+        auto matrixCoordC  = GlobalMapping::readCoordC();
+        auto waveTileDim   = GlobalMapping::waveTileSizeC();
+        auto waveTileBound = matrixCoordC + waveTileDim;
 
-        using LocalReadFragA = typename MappingLds::LocalReadFragA;
-        using LocalReadFragB = typename MappingLds::LocalReadFragB;
-
-        // Target starting C / D block on 2D grid, offset by blocks per wave
-        auto matrixCoordC = MappingC::matrixCoord();
-        std::get<0>(matrixCoordC) *= BlocksX;
-        std::get<1>(matrixCoordC) *= BlocksY;
-
-        if((std::get<0>(matrixCoordC) + BlocksX * BlockM) <= m
-           && (std::get<1>(matrixCoordC) + BlocksY * BlockN) <= n && (BlockK < k))
+        // Bounds check
+        if((std::get<0>(waveTileBound) > m) || (std::get<1>(waveTileBound) > n) || (BlockK > k))
         {
-            typename MappingC::MatrixCoordT subMatrixCoordsC[BlocksX][BlocksY];
-            FragAcc                         fragsAccum[BlocksX][BlocksY];
+            return;
+        }
 
-            /// Setup LDS addressing and start writing pre-fetch to LDS
-            ///
+        ///
+        /// Setup global addressing offsets in 1D
+        ///
+        auto globalReadOffsetA  = DataMappingA::fromMatrixCoord(GlobalMapping::readCoordA(), lda);
+        auto globalReadOffsetB  = DataMappingB::fromMatrixCoord(GlobalMapping::readCoordB(), ldb);
+        auto globalReadOffsetC  = DataMappingC::fromMatrixCoord(GlobalMapping::readCoordC(), ldc);
+        auto globalWriteOffsetD = DataMappingD::fromMatrixCoord(GlobalMapping::writeCoordD(), ldd);
 
-            HIP_DYNAMIC_SHARED(void*, localMemPtr);
-            auto* ldsPtrLo = reinterpret_cast<InputT*>(localMemPtr);
-            auto* ldsPtrHi = ldsPtrLo + MappingLds::ldsWidth() * MappingLds::ldsHeight();
+        auto kStepOffsetA = DataMappingA::fromMatrixCoord(GlobalMapping::kStepOffsetA(), lda);
+        auto kStepOffsetB = DataMappingB::fromMatrixCoord(GlobalMapping::kStepOffsetB(), ldb);
 
-            ///
-            /// Initialize sub matrix coords and accum frags
-            ///
-#pragma unroll
-            for(int i = 0; i < BlocksX; ++i)
+        ///
+        /// Start global prefetch
+        ///
+        typename GlobalMapping::GRBuffA grBuffA;
+        typename GlobalMapping::GRBuffB grBuffB;
+        GemmDriver::globalReadCoopA(grBuffA, a + globalReadOffsetA, lda);
+        GemmDriver::globalReadCoopB(grBuffB, b + globalReadOffsetB, ldb);
+        globalReadOffsetA += kStepOffsetA;
+        globalReadOffsetB += kStepOffsetB;
+
+        ///
+        /// Setup LDS addressing
+        /// This kernel will use 2 separate LDS blocks
+        /// for pipelining in the accumulation loop
+        ///
+        HIP_DYNAMIC_SHARED(void*, localMemPtr);
+        auto  sizeLds  = LdsMapping::sizeLds();
+        auto* ldsPtrLo = reinterpret_cast<InputT*>(localMemPtr);
+        auto* ldsPtrHi = ldsPtrLo + std::get<0>(sizeLds) * std::get<1>(sizeLds);
+
+        auto ldlds           = LdsMapping::ldLds();
+        auto ldsWriteOffsetA = DataMappingLds::fromMatrixCoord(LdsMapping::writeCoordA(), ldlds);
+        auto ldsWriteOffsetB = DataMappingLds::fromMatrixCoord(LdsMapping::writeCoordB(), ldlds);
+        auto ldsReadOffsetA  = DataMappingLds::fromMatrixCoord(LdsMapping::readCoordA(), ldlds);
+        auto ldsReadOffsetB  = DataMappingLds::fromMatrixCoord(LdsMapping::readCoordB(), ldlds);
+
+        ///
+        /// Write prefetch to local
+        ///
+        GemmDriver::localWriteCoopA(ldsPtrLo + ldsWriteOffsetA, grBuffA, ldlds);
+        GemmDriver::localWriteCoopB(ldsPtrLo + ldsWriteOffsetB, grBuffB, ldlds);
+
+        ///
+        /// Initialize accumulation frags
+        ///
+        typename GlobalMapping::MfmaBuffAcc fragsAcc;
+        GemmDriver::fill(fragsAcc, static_cast<ComputeT>(0));
+
+        ///
+        /// Synchronize waves and memory
+        ///
+        GemmDriver::syncWorkgroup();
+
+        ///
+        /// Accumulate A * B
+        ///
+        if(alpha)
+        {
+            for(int currentK = BlockK; currentK < k; currentK += BlockK)
             {
-#pragma unroll
-                for(int j = 0; j < BlocksY; ++j)
-                {
-                    // Initialize sub matrix coordinates
-                    auto subMatCoordC = matrixCoordC;
-                    std::get<0>(subMatCoordC) += i * BlockM;
-                    std::get<1>(subMatCoordC) += j * BlockN;
-                    assign(subMatrixCoordsC[i][j], subMatCoordC);
+                typename GlobalMapping::MfmaBuffA fragsA;
+                typename GlobalMapping::MfmaBuffB fragsB;
 
-                    // Initialize accumulators
-                    auto fragAcc = FragAcc();
-                    fill_fragment(fragAcc, static_cast<ComputeT>(0));
-                    fragsAccum[i][j] = fragAcc;
-                }
-            }
+                // Local read mfma frags
+                GemmDriver::localReadA(fragsA, ldsPtrLo + ldsReadOffsetA, ldlds);
+                GemmDriver::localReadB(fragsB, ldsPtrLo + ldsReadOffsetB, ldlds);
 
-            MappingLds::prefetchGlobalA(
-                ldsPtrLo,
-                MappingA::dataCoord(a, std::make_pair(std::get<0>(subMatrixCoordsC[0][0]), 0), lda),
-                lda);
+                // Start fetching next round of frags
+                GemmDriver::globalReadCoopA(grBuffA, a + globalReadOffsetA, lda);
+                GemmDriver::globalReadCoopB(grBuffB, b + globalReadOffsetB, ldb);
 
-            MappingLds::prefetchGlobalB(
-                ldsPtrLo,
-                MappingB::dataCoord(b, std::make_pair(0, std::get<1>(subMatrixCoordsC[0][0])), ldb),
-                ldb);
+                // Advance offsets to next k step
+                globalReadOffsetA += kStepOffsetA;
+                globalReadOffsetB += kStepOffsetB;
 
-            ///
-            /// Accumulate A * B
-            ///
-            if(alpha)
-            {
-                // Wait for A / B write LDS
-                synchronize_workgroup();
+                // accum(A * B)
+                GemmDriver::mfma(fragsAcc, fragsA, fragsB, fragsAcc);
 
-                ///
-                /// Step through and accumulate A * B
-                ///
-                for(int currentK = BlockK; currentK < k; currentK += BlockK)
-                {
-                    FragA cachedFragsA[BlocksX];
-                    FragB cachedFragsB[BlocksY];
+                GemmDriver::localWriteCoopA(ldsPtrHi + ldsWriteOffsetA, grBuffA, ldlds);
+                GemmDriver::localWriteCoopB(ldsPtrHi + ldsWriteOffsetB, grBuffB, ldlds);
 
-                    // Cache lds blocks to register
-                    MappingLds::prefetchLocalA(cachedFragsA, ldsPtrLo);
-                    MappingLds::prefetchLocalB(cachedFragsB, ldsPtrLo);
+                // Make sure that all waves have finished reading / writing to lds.
+                GemmDriver::syncWorkgroup();
 
-                    MappingLds::prefetchGlobalA(
-                        ldsPtrHi,
-                        MappingA::dataCoord(
-                            a, std::make_pair(std::get<0>(subMatrixCoordsC[0][0]), currentK), lda),
-                        lda);
-
-                    MappingLds::prefetchGlobalB(
-                        ldsPtrHi,
-                        MappingB::dataCoord(
-                            b, std::make_pair(currentK, std::get<1>(subMatrixCoordsC[0][0])), ldb),
-                        ldb);
-
-                    // A * B
-#pragma unroll
-                    for(int i = 0; i < BlocksX; i++)
-                    {
-#pragma unroll
-                        for(int j = 0; j < BlocksY; j++)
-                        {
-                            mma_sync(const_cast<FragAcc&>(fragsAccum[i][j]),
-                                     cachedFragsA[i],
-                                     cachedFragsB[j],
-                                     fragsAccum[i][j]);
-                        }
-                    }
-
-                    // Wait for A / B read LDS
-                    synchronize_workgroup();
-
-                    //std::swap(reinterpret_cast<float32_t*>(ldsPtrLo), reinterpret_cast<float32_t*>(ldsPtrHi));
-                    auto* tmp = ldsPtrLo;
-                    ldsPtrLo  = ldsPtrHi;
-                    ldsPtrHi  = tmp;
-                }
-
-                ///
-                /// Clean up tail MMA
-                ///
-
-                // Tail A * B
-                FragA cachedFragsA[BlocksX];
-                FragB cachedFragsB[BlocksY];
-
-                // Cache lds blocks to register
-                MappingLds::prefetchLocalA(cachedFragsA, ldsPtrLo);
-                MappingLds::prefetchLocalB(cachedFragsB, ldsPtrLo);
-
-                // A * B
-#pragma unroll
-                for(int i = 0; i < BlocksX; i++)
-                {
-#pragma unroll
-                    for(int j = 0; j < BlocksY; j++)
-                    {
-                        mma_sync(
-                            fragsAccum[i][j], cachedFragsA[i], cachedFragsB[j], fragsAccum[i][j]);
-                    }
-                }
-            }
-
-            ///
-            /// Initialize C frags
-            ///
-
-            FragC fragsC[BlocksX][BlocksY];
-
-#pragma unroll
-            for(int i = 0; i < BlocksX; ++i)
-            {
-#pragma unroll
-                for(int j = 0; j < BlocksY; ++j)
-                {
-                    // Initialize C frags
-                    auto fragC = FragC();
-                    fill_fragment(fragC, static_cast<OutputT>(0));
-                    fragsC[i][j] = fragC;
-                }
-            }
-
-            if(beta)
-            {
-#pragma unroll
-                for(int i = 0; i < BlocksX; i++)
-                {
-#pragma unroll
-                    for(int j = 0; j < BlocksY; j++)
-                    {
-                        auto* addrC = MappingC::dataCoord(c, subMatrixCoordsC[i][j], ldc);
-                        load_matrix_sync(fragsC[i][j],
-                                         addrC,
-                                         ldc,
-                                         std::is_same<LayoutC, row_major>::value ? mem_row_major
-                                                                                 : mem_col_major);
-                    }
-                }
-            }
-
-// D = alpha * accumAB + beta * C
-#pragma unroll
-            for(int i = 0; i < BlocksX; i++)
-            {
-#pragma unroll
-                for(int j = 0; j < BlocksY; j++)
-                {
-                    auto& fragAcc = fragsAccum[i][j];
-                    auto& fragC   = fragsC[i][j];
-
-#pragma unroll
-                    for(int k = 0; k < fragC.num_elements; ++k)
-                    {
-                        fragC.x[k]
-                            = OutputT(alpha * ComputeT(fragAcc.x[k]) + beta * ComputeT(fragC.x[k]));
-                    }
-
-                    // Output addresss
-                    auto* addrD = MappingD::dataCoord(d, subMatrixCoordsC[i][j], ldd);
-
-                    // Store the output
-                    store_matrix_sync(addrD,
-                                      fragC,
-                                      ldd,
-                                      std::is_same<LayoutD, row_major>::value ? mem_row_major
-                                                                              : mem_col_major);
-                }
+                // Swap Lds buffers
+                auto* tmp = ldsPtrLo;
+                ldsPtrLo  = ldsPtrHi;
+                ldsPtrHi  = tmp;
             }
         }
+
+        ///
+        /// Start loading C
+        ///
+
+        typename GlobalMapping::MfmaBuffC fragsC;
+        if(beta)
+        {
+            GemmDriver::globalReadC(fragsC, c + globalReadOffsetC, ldc);
+        }
+        else
+        {
+            GemmDriver::fill(fragsC, static_cast<OutputT>(0));
+        }
+
+        ///
+        /// Clean up tail A * B
+        ///
+
+        typename GlobalMapping::MfmaBuffA fragsA;
+        typename GlobalMapping::MfmaBuffB fragsB;
+
+        GemmDriver::localReadA(fragsA, ldsPtrLo + ldsReadOffsetA, ldlds);
+        GemmDriver::localReadB(fragsB, ldsPtrLo + ldsReadOffsetB, ldlds);
+        GemmDriver::mfma(fragsAcc, fragsA, fragsB, fragsAcc);
+
+        ///
+        /// D = alpha * accum + beta * C
+        ///
+        typename GlobalMapping::MfmaBuffD fragsD;
+        GemmDriver::uniformFma(fragsD, alpha, fragsAcc, beta, fragsC);
+        GemmDriver::globalWriteD(d + globalWriteOffsetD, fragsD, ldd);
     }
 
 } // namespace rocwmma

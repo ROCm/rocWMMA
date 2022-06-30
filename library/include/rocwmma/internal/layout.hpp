@@ -32,10 +32,18 @@
 
 namespace rocwmma
 {
+    namespace DataLayout
+    {
+        template <typename DataOrientation>
+        using Array1d = typename ::rocwmma::detail::template DataSpace<DataOrientation>;
+
+        using RowMajor = Array1d<row_major>;
+        using ColMajor = Array1d<col_major>;
+
+    } // namespace DataLayout
 
     namespace MatrixLayout
     {
-
         /**
          * \ingroup rocwmma
          * \defgroup Matrix Layouts
@@ -685,12 +693,10 @@ namespace rocwmma
             };
         };
 
+        template <typename LayoutT>
+        using OrthogonalLayout_t = typename detail::OrthogonalLayout<LayoutT>::Type;
+
     } // namespace MatrixLayout
-
-    namespace DataLayout
-    {
-
-    } // namespace DataLayout
 
 } // namespace rocwmma
 

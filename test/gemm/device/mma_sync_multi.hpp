@@ -43,34 +43,6 @@
 
 namespace rocwmma
 {
-
-    // A few workarounds for some lack of std library support on GPU
-    template <typename T>
-    __device__ inline void assign(T& m, T const& val)
-    {
-        m = val;
-    }
-
-    template <typename T1, typename T2>
-    __device__ inline void assign(std::pair<T1, T2>& m, std::pair<T1, T2> const& val)
-    {
-        std::get<0>(m) = std::get<0>(val);
-        std::get<1>(m) = std::get<1>(val);
-    }
-
-    template <typename T, size_t X>
-    __device__ inline void assign(std::array<T, X>& m, int32_t x, T const& val)
-    {
-        assign(const_cast<T&>(m[x]), val);
-    }
-
-    template <typename T, size_t X, size_t Y>
-    __device__ inline void
-        assign(std::array<std::array<T, Y>, X>& m, int32_t x, int32_t y, T const& val)
-    {
-        assign(const_cast<std::array<T, Y>&>(m[x]), y, val);
-    }
-
     template <uint32_t BlockM,
               uint32_t BlockN,
               uint32_t BlockK,
@@ -83,19 +55,19 @@ namespace rocwmma
               typename LayoutD,
               uint32_t BlocksX = 1,
               uint32_t BlocksY = 1>
-    __global__ void __launch_bounds__(256, 1) mmaSyncMulti(uint32_t       m,
-                                                           uint32_t       n,
-                                                           uint32_t       k,
-                                                           InputT const*  a,
-                                                           InputT const*  b,
-                                                           OutputT const* c,
-                                                           OutputT*       d,
-                                                           uint32_t       lda,
-                                                           uint32_t       ldb,
-                                                           uint32_t       ldc,
-                                                           uint32_t       ldd,
-                                                           ComputeT       alpha,
-                                                           ComputeT       beta)
+    __global__ void __launch_bounds__(256) mmaSyncMulti(uint32_t       m,
+                                                        uint32_t       n,
+                                                        uint32_t       k,
+                                                        InputT const*  a,
+                                                        InputT const*  b,
+                                                        OutputT const* c,
+                                                        OutputT*       d,
+                                                        uint32_t       lda,
+                                                        uint32_t       ldb,
+                                                        uint32_t       ldc,
+                                                        uint32_t       ldd,
+                                                        ComputeT       alpha,
+                                                        ComputeT       beta)
     {
         // Setup global mapping
         using MappingA = MappingUtil<BlockM, BlockK, InputT, LayoutA>;
@@ -118,9 +90,8 @@ namespace rocwmma
            && (std::get<1>(matrixCoordC) + BlocksY * BlockN) <= n && (BlockK < k))
         {
             // Targets for C sub-matrices
-            std::array<std::array<CoordT, BlocksY>, BlocksX>  subMatrixCoordsC;
-            std::array<std::array<FragAcc, BlocksY>, BlocksX> fragsAccum;
-            std::array<std::array<FragC, BlocksY>, BlocksX>   fragsC;
+            CoordT  subMatrixCoordsC[BlocksX][BlocksY];
+            FragAcc fragsAccum[BlocksX][BlocksY];
 
             /// Initialization
 #pragma unroll
@@ -130,23 +101,11 @@ namespace rocwmma
                 for(int j = 0; j < BlocksY; j++)
                 {
                     // Initialize sub matrix coordinates
-                    auto subMatCoordC = matrixCoordC;
-                    std::get<0>(subMatCoordC) += i * BlockM;
-                    std::get<1>(subMatCoordC) += j * BlockN;
-                    assign(subMatrixCoordsC, i, j, subMatCoordC);
-                    //subMatrixCoordsC[i][j] = subMatCoordC;
+                    std::get<0>(subMatrixCoordsC[i][j]) += std::get<0>(matrixCoordC) + i * BlockM;
+                    std::get<1>(subMatrixCoordsC[i][j]) += std::get<1>(matrixCoordC) + j * BlockN;
 
                     // Initialize accumulators
-                    auto fragAcc = FragAcc();
-                    fill_fragment(fragAcc, static_cast<ComputeT>(0));
-                    assign(fragsAccum, i, j, fragAcc);
-                    //fragsAccum[i][j] = fragAcc;
-
-                    // Initialize C frags
-                    auto fragC = FragC();
-                    fill_fragment(fragC, static_cast<OutputT>(0));
-                    assign(fragsC, i, j, fragC);
-                    //fragsC[i][j] = fragC;
+                    fill_fragment(fragsAccum[i][j], static_cast<ComputeT>(0));
                 }
             }
 
@@ -154,29 +113,23 @@ namespace rocwmma
             if(alpha)
             {
                 // Setup global read addresses
-                std::array<InputT const*, BlocksX> globalAddrsA;
-                std::array<InputT const*, BlocksY> globalAddrsB;
+                InputT const* globalAddrsA[BlocksX];
+                InputT const* globalAddrsB[BlocksY];
 
                 // Blocks in the same row share the same starting address for A
 #pragma unroll
                 for(int i = 0; i < BlocksX; i++)
                 {
-                    auto subMatARowRef = subMatrixCoordsC[i][0];
-                    assign(
-                        globalAddrsA,
-                        i,
-                        MappingA::dataCoord(a, std::make_pair(std::get<0>(subMatARowRef), 0), lda));
+                    globalAddrsA[i] = MappingA::dataCoord(
+                        a, std::make_pair(std::get<0>(subMatrixCoordsC[i][0]), 0), lda);
                 }
 
                 // Blocks in the same col share the same starting address for B
 #pragma unroll
                 for(int i = 0; i < BlocksY; i++)
                 {
-                    auto subMatBColRef = subMatrixCoordsC[0][i];
-                    assign(
-                        globalAddrsB,
-                        i,
-                        MappingB::dataCoord(b, std::make_pair(0, std::get<1>(subMatBColRef)), ldb));
+                    globalAddrsB[i] = MappingB::dataCoord(
+                        b, std::make_pair(0, std::get<1>(subMatrixCoordsC[0][i])), ldb);
                 }
 
                 // Setup address increments.
@@ -189,39 +142,37 @@ namespace rocwmma
                 for(int currentStep = 0; currentStep < stepsK; currentStep++)
                 {
                     // Cache the B-Blocks for re-use
-                    std::array<FragB, BlocksY> cachedFragsB;
+                    FragB cachedFragsB[BlocksY];
+                    FragA fragA;
 
                     // Synchronize workgroup increases chances for cache hits
                     synchronize_workgroup();
 
 #pragma unroll
+                    for(int j = 0; j < BlocksY; j++)
+                    {
+                        load_matrix_sync(cachedFragsB[j], globalAddrsB[j], ldb);
+                        globalAddrsB[j] += incrB;
+                    }
+
+                    //#pragma unroll
                     for(int i = 0; i < BlocksX; i++)
                     {
-
                         // A fragment will be re-used for each B
-                        auto fragA = FragA();
                         load_matrix_sync(fragA, globalAddrsA[i], lda);
-                        const_cast<InputT*&>(globalAddrsA[i]) += incrA;
+                        globalAddrsA[i] += incrA;
 
-#pragma unroll
+                        //#pragma unroll
                         for(int j = 0; j < BlocksY; j++)
                         {
-                            // Need to load the B fragments only once.
-                            if(i == 0)
-                            {
-                                load_matrix_sync(
-                                    const_cast<FragB&>(cachedFragsB[j]), globalAddrsB[j], ldb);
-                                const_cast<InputT*&>(globalAddrsB[j]) += incrB;
-                            }
-
-                            mma_sync(const_cast<FragAcc&>(fragsAccum[i][j]),
-                                     fragA,
-                                     cachedFragsB[j],
-                                     fragsAccum[i][j]);
+                            mma_sync(fragsAccum[i][j], fragA, cachedFragsB[j], fragsAccum[i][j]);
                         }
                     }
                 }
             }
+
+            // Initialize C frags
+            FragC fragsC[BlocksX][BlocksY];
 
             if(beta)
             {
@@ -232,11 +183,23 @@ namespace rocwmma
                     for(int j = 0; j < BlocksY; j++)
                     {
                         auto* addrC = MappingC::dataCoord(c, subMatrixCoordsC[i][j], ldc);
-                        load_matrix_sync(const_cast<FragC&>(fragsC[i][j]),
+                        load_matrix_sync(fragsC[i][j],
                                          addrC,
                                          ldc,
                                          std::is_same<LayoutC, row_major>::value ? mem_row_major
                                                                                  : mem_col_major);
+                    }
+                }
+            }
+            else
+            {
+#pragma unroll
+                for(int i = 0; i < BlocksX; i++)
+                {
+#pragma unroll
+                    for(int j = 0; j < BlocksY; j++)
+                    {
+                        fill_fragment(fragsC[i][j], static_cast<OutputT>(0));
                     }
                 }
             }
@@ -248,8 +211,8 @@ namespace rocwmma
 #pragma unroll
                 for(int j = 0; j < BlocksY; j++)
                 {
-                    auto& fragAcc = const_cast<FragAcc&>(fragsAccum[i][j]);
-                    auto& fragC   = const_cast<FragC&>(fragsC[i][j]);
+                    auto& fragAcc = fragsAccum[i][j];
+                    auto& fragC   = fragsC[i][j];
 
 #pragma unroll
                     for(int i = 0; i < fragC.num_elements; ++i)

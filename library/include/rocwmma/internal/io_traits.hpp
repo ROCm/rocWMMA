@@ -154,18 +154,19 @@ namespace rocwmma
         };
 
         /*
-* The following class is intended to provide optimistic suggestions for
-* IO vector widths. Given a certain block size, search for largest
-* vector width that could potentially be used during IO.
-*
-* Start testing at a default width of BlockK. Keep halving the vector width
-* until it can fit the entire block, or split evenly amongst IO iterations.
-*/
+        * The following class is intended to provide optimistic suggestions for
+        * IO vector widths. Given a certain block size, search for largest
+        * vector width that could potentially be used during IO, up to a maximum of
+        * dwordx4.
+        *
+        * Start testing at a default width of BlockK. Keep halving the vector width
+        * until it can fit the entire block, or split evenly amongst IO iterations.
+        */
 
         template <uint32_t BlockDim,
                   uint32_t BlockK,
                   typename DataT,
-                  uint32_t TestWidth = AMDGCN_CACHE_LINE_SIZE_BYTES / sizeof(DataT)>
+                  uint32_t TestWidth = AMDGCN_DWORD_SIZE_BYTES * 8 / sizeof(DataT)>
         struct VecWidthTraits
         {
             enum : uint32_t
@@ -232,9 +233,9 @@ namespace rocwmma
             UnpackedVRegCount = PackedVRegCount * detail::PackTraits<DataT>::PackRatio
         };
 
-        static_assert((BlockDim <= ElementsPerIO) ?
-                      ((ElementsPerIO % BlockDim) == 0 || (ElementsPerIO % BlockK) == 0) :
-                      ((BlockDim % ElementsPerIO) == 0 || (BlockK % ElementsPerIO) == 0), 
+        static_assert((BlockDim <= ElementsPerIO)
+                          ? ((ElementsPerIO % BlockDim) == 0 || (ElementsPerIO % BlockK) == 0)
+                          : ((BlockDim % ElementsPerIO) == 0 || (BlockK % ElementsPerIO) == 0),
                       "I/O operation elements not a multiple of BlockDim");
         static_assert((ElementCount % ElementsPerIO) == 0,
                       "I/O element count not divisible into equal operations");

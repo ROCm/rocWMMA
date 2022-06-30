@@ -27,9 +27,9 @@
 #include <type_traits>
 
 #include "detail/mma_sync_multi_lds.hpp"
+#include "gemm_config.hpp"
 #include "gemm_test.hpp"
 #include "kernel_generator.hpp"
-#include "lds_mapping_util.hpp"
 
 namespace rocwmma
 {
@@ -38,17 +38,16 @@ namespace rocwmma
     {
         using Base = CommonTestParams;
 
-        // Types: ALL + double
+        // Types: Small sizes
         // Block Sizes: 32 x 32 x BlockK
         // Layouts: TN
-        using Types       = typename Base::TestTypes32x32;
-        using BlockSizes  = std::tuple<std::tuple<I<32>, I<32>, I<8>>,
-                                      std::tuple<I<32>, I<32>, I<16>>,
-                                      std::tuple<I<32>, I<32>, I<32>>>;
+        using Types       = typename Base::TestTypesSmall;
+        using BlockSizes  = std::tuple<std::tuple<I<32>, I<32>, I<8>>>;
         using Layouts     = typename Base::TestLayoutsTN;
         using LayoutsLds  = typename Base::TestLdsLayoutTypes;
         using MappingsLds = typename Base::TestMappingsLds;
         using BlocksXY    = std::tuple<std::tuple<I<4>, I<4>>>;
+
         using KernelParams =
             typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
                 Result;
@@ -62,13 +61,23 @@ namespace rocwmma
         static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
                       "Kernels from this generator do not match testing interface");
 
-        static inline typename KernelGenerator::ResultT kernels()
-        {
-            return KernelGenerator::generate();
-        }
+        static inline typename KernelGenerator::ResultT kernels();
     };
 
 } // namespace rocwmma
+
+#if __gfx908__
+
+// TODO: Cannot build gfx90a version of this test due to compiler errors.
+// Build only for gfx908, but MUST skip runtime tests of this size for gfx90a
+
+namespace rocwmma
+{
+    inline typename TestParams::KernelGenerator::ResultT TestParams::kernels()
+    {
+        return KernelGenerator::generate();
+    }
+}
 
 // Test suite for unique parameterization
 class MmaSyncMultiLdsTest32x32TN4x4 : public rocwmma::GemmTest
@@ -88,3 +97,5 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
                        ::testing::ValuesIn(rocwmma::TestParams::alphas()),
                        ::testing::ValuesIn(rocwmma::TestParams::betas())));
+
+#endif // !__gfx90a__

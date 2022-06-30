@@ -198,7 +198,7 @@ namespace rocwmma
                         LayoutD>::checkDevice() const
     {
         auto deviceArch = DeviceInfo::instance()->getGcnArch();
-        return (deviceArch != DeviceInfo::UNKNOWN
+        return (deviceArch != DeviceInfo::UNSUPPORTED
                 && !(deviceArch == DeviceInfo::GFX908 && std::is_same<InputT, float64_t>::value));
     }
 
@@ -338,7 +338,7 @@ namespace rocwmma
                                 LayoutA,
                                 LayoutB,
                                 LayoutC,
-                                LayoutD>::getResource()
+                                LayoutD>::getResource() const
     {
         return DataStorage::instance().get();
     }
@@ -504,8 +504,10 @@ namespace rocwmma
             MatrixUtil<LayoutA>::fillLaunchKernel(dataInstance->deviceA().get(), mM, mK);
             MatrixUtil<LayoutB>::fillLaunchKernel(dataInstance->deviceB().get(), mK, mN);
             MatrixUtil<LayoutC>::fillLaunchKernel(dataInstance->deviceC().get(), mM, mN);
-            MatrixUtil<LayoutD>::fillLaunchKernel(
-                dataInstance->deviceD().get(), mM, mN, std::numeric_limits<OutputT>::signaling_NaN());
+            MatrixUtil<LayoutD>::fillLaunchKernel(dataInstance->deviceD().get(),
+                                                  mM,
+                                                  mN,
+                                                  std::numeric_limits<OutputT>::signaling_NaN());
 
             // Copy to host if performing cpu validation
 #if !defined(ROCWMMA_VALIDATE_WITH_ROCBLAS) && defined(ROCWMMA_VALIDATION_TESTS)
@@ -671,7 +673,10 @@ namespace rocwmma
 
                 // Reset device D with NaN
                 MatrixUtil<LayoutD>::fillLaunchKernel(
-                    dataInstance->deviceD().get(), mM, mN, std::numeric_limits<OutputT>::signaling_NaN());
+                    dataInstance->deviceD().get(),
+                    mM,
+                    mN,
+                    std::numeric_limits<OutputT>::signaling_NaN());
 
                 // Move the ROCWMMA result to host for analysis
                 dataInstance->copyData(dataInstance->hostD(), rocwmmaResult, mM * mN);

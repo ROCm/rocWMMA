@@ -27,9 +27,9 @@
 #include <type_traits>
 
 #include "detail/mma_sync_multi_lds.hpp"
+#include "gemm_config.hpp"
 #include "gemm_test.hpp"
 #include "kernel_generator.hpp"
-#include "lds_mapping_util.hpp"
 
 namespace rocwmma
 {
@@ -41,7 +41,7 @@ namespace rocwmma
         // Types: ALL + double
         // Block Sizes: 16 x 16 x BlockK
         // Layouts: NN
-        using Types = typename Base::TestTypesIOC;
+        using Types = typename Base::TestTypes16x16;
         using BlockSizes
             = std::tuple<std::tuple<I<16>, I<16>, I<16>>, std::tuple<I<16>, I<16>, I<32>>>;
         using Layouts     = typename Base::TestLayoutsNN;

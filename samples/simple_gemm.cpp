@@ -155,12 +155,12 @@ __global__ void gemm_rocwmma_d(uint32_t         m,
     rocwmma::fill_fragment(fragAcc, 0.0f);
 
     // Tile using a 2D grid
-    auto warpM = (blockIdx.x * blockDim.x + threadIdx.x) / WAVE_SIZE;
-    auto warpN = (blockIdx.y * blockDim.y + threadIdx.y);
+    auto majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / WAVE_SIZE;
+    auto minorWarp = (blockIdx.y * blockDim.y + threadIdx.y);
 
     // Target C block
-    auto cRow = warpM * ROCWMMA_M;
-    auto cCol = warpN * ROCWMMA_N;
+    auto cRow = majorWarp * ROCWMMA_M;
+    auto cCol = minorWarp * ROCWMMA_N;
 
     // Bounds check
     if(cRow < m && cCol < n)
@@ -168,15 +168,9 @@ __global__ void gemm_rocwmma_d(uint32_t         m,
         // fragAcc = A x B
         for(int i = 0; i < k; i += ROCWMMA_K)
         {
-            int aRow = cRow;
-            int aCol = i;
-
-            int bRow = i;
-            int bCol = cCol;
-
             // Load the inputs
-            rocwmma::load_matrix_sync(fragA, a + (aRow * lda + aCol), lda);
-            rocwmma::load_matrix_sync(fragB, b + (bRow + bCol * ldb), ldb);
+            rocwmma::load_matrix_sync(fragA, a + (cRow * lda + i), lda);
+            rocwmma::load_matrix_sync(fragB, b + (i + cCol * ldb), ldb);
 
             // Matrix multiply - accumulate using MFMA units
             rocwmma::mma_sync(fragAcc, fragA, fragB, fragAcc);

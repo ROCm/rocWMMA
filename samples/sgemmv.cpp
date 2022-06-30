@@ -174,63 +174,61 @@ __global__ void gemv_rocwmma_d(uint32_t         m,
                                float16_t const* a,
                                float16_t const* b,
                                float32_t*       c,
+                               float32_t*       d,
+                               uint32_t         lda,
+                               uint32_t         ldb,
+                               uint32_t         ldc,
+                               uint32_t         ldd,
                                float32_t        alpha,
                                float32_t        beta)
 {
-    uint32_t lda = m;
-    uint32_t ldb = k;
-    uint32_t ldc = m;
+    // Create frags
+    auto fragA = rocwmma::fragment<rocwmma::matrix_a,
+                                   ROCWMMA_M,
+                                   ROCWMMA_N,
+                                   ROCWMMA_K,
+                                   float16_t,
+                                   rocwmma::row_major>();
+    auto fragB = rocwmma::fragment<rocwmma::matrix_b,
+                                   ROCWMMA_M,
+                                   ROCWMMA_N,
+                                   ROCWMMA_K,
+                                   float16_t,
+                                   rocwmma::col_major>();
+    auto fragC
+        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
+    auto fragAcc
+        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
 
-    // Global warp id, warpN is 0.
-    int warpM = (blockIdx.x * blockDim.x + threadIdx.x) / WAVE_SIZE;
+    rocwmma::fill_fragment(fragAcc, 0.0f);
 
-    // Declare the fragments
-    rocwmma::
-        fragment<rocwmma::matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t, rocwmma::row_major>
-            a_frag;
-    rocwmma::
-        fragment<rocwmma::matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t, rocwmma::col_major>
-                                                                                        b_frag;
-    rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t> acc_frag;
-    rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t> c_frag;
+    int majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / WAVE_SIZE;
 
-    rocwmma::fill_fragment(acc_frag, 0.0f);
-
-    // Loop over k
-    for(int i = 0; i < k; i += ROCWMMA_K)
-    {
-        int aRow = warpM * ROCWMMA_M;
-        int aCol = i;
-
-        int bRow = i;
-
-        // Bounds checking
-        if(aRow < m)
-        {
-            // Load the inputs
-            rocwmma::load_matrix_sync(a_frag, a + aRow + aCol * lda, lda);
-            rocwmma::load_matrix_sync(b_frag, b + bRow, ldb);
-
-            // Perform the matrix vector multiplication
-            rocwmma::mma_sync(acc_frag, a_frag, b_frag, acc_frag);
-        }
-    }
-
-    // Load in the current value of c, scale it by beta, and add this our result
-    // scaled by alpha
-    int cRow = warpM * ROCWMMA_M;
+    // Target C block
+    int cRow = majorWarp * ROCWMMA_M;
 
     if(cRow < m)
     {
-        rocwmma::load_matrix_sync(c_frag, c + cRow, ldc, rocwmma::mem_col_major);
-
-        for(int i = 0; i < c_frag.num_elements; i++)
+        // fragAcc = A x B
+        for(int i = 0; i < k; i += ROCWMMA_K)
         {
-            c_frag.x[i] = alpha * acc_frag.x[i] + beta * c_frag.x[i];
+            // Load the inputs
+            rocwmma::load_matrix_sync(fragA, a + (cRow + i * lda), lda);
+            rocwmma::load_matrix_sync(fragB, b + i, ldb);
+
+            // Matrix multiply - accumulate using MFMA units
+            rocwmma::mma_sync(fragAcc, fragA, fragB, fragAcc);
+        }
+
+        rocwmma::load_matrix_sync(fragC, c + cRow, ldc, rocwmma::mem_col_major);
+
+        for(int i = 0; i < fragC.num_elements; i++)
+        {
+            fragC.x[i] = alpha * fragAcc.x[i] + beta * fragC.x[i];
         }
 
         // Store the output
-        rocwmma::store_matrix_sync(c + cRow, c_frag, ldc, rocwmma::mem_col_major);
+        rocwmma::store_matrix_sync(d + cRow, fragC, ldc, rocwmma::mem_col_major);
     }
 }
 
@@ -242,6 +240,11 @@ __host__ void gemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float b
         std::cout << "Unsupported size!\n";
         return;
     }
+
+    int lda = m;
+    int ldb = k;
+    int ldc = m;
+    int ldd = ldc;
 
     std::cout << "Initializing host data..." << std::endl;
     // Initialize input matrices
@@ -293,6 +296,11 @@ __host__ void gemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float b
                           d_a,
                           d_b,
                           d_c,
+                          d_c,
+                          lda,
+                          ldb,
+                          ldc,
+                          ldd,
                           alpha,
                           beta);
 

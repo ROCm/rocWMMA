@@ -40,7 +40,7 @@
         exit(EXIT_FAILURE);                           \
     }
 
-#include <rocblas.h>
+#include <rocblas/rocblas.h>
 
 #include "common.hpp"
 #include <rocwmma/internal/types.hpp>

@@ -36,7 +36,7 @@ namespace rocwmma
     class LazySingleton
     {
     public:
-        static std::unique_ptr<T> const& instance()
+        static inline std::unique_ptr<T> const& instance()
         {
             static auto sInstance = std::make_unique<T>();
             return sInstance;
