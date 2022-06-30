@@ -28,6 +28,14 @@
 
 namespace rocwmma
 {
+    /* GemmDriver class:
+    * This class implements a generic GEMM workflow to be used within kernel
+    * device code. It implements workflow steps using meta-data information
+    * from Global, Lds and Scheduler classes. It enables either Block-Level,
+    * Wave-Level or Workgroup-Level kernel workflows based on ADL and input
+    * fragment types.
+    */
+
     namespace CooperativeGemm
     {
         template <typename GlobalMapping,
