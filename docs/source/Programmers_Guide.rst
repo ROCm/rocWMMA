@@ -29,7 +29,7 @@ library/include/internal
 Internal include files for:
 
 - Type support
-- Input / output configuration and traits
+- Input / output configuration, shapes and traits
 - Layout
 - Mapping Utility
 - Packing and unpacking
