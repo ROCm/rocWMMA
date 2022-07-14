@@ -60,12 +60,35 @@ namespace rocwmma
     //
     // Concat: Concatenation of types together.
     // E.g.
+    // Concat( A ) = tuple<A>
     // Concat( A, B ) = tuple<A, B>
     // Concat( tuple<A>, B ) = tuple<A, B>
     // Concat( A, tuple<B> ) = tuple<A, B>
     // Concat( tuple<A>, tuple<B> ) = tuple<A, B>
+    // Concat( A, B, C, ...) = Concat( A, Concat(B, Concat(C, ...)))
+    template <typename... Args>
+    struct Concat;
+
+    template <typename Arg>
+    struct Concat<Arg>
+    {
+        using Result = decltype(std::make_tuple(Arg()));
+    };
+
+    template <typename... Args>
+    struct Concat<std::tuple<Args...>>
+    {
+        using Result = std::tuple<Args...>;
+    };
+
+    template <typename Lhs, typename Rhs, typename... Rest>
+    struct Concat<Lhs, Rhs, Rest...>
+    {
+        using Result = typename Concat<typename Concat<Lhs, Rhs>::Result, Rest...>::Result;
+    };
+
     template <typename Lhs, typename Rhs>
-    struct Concat
+    struct Concat<Lhs, Rhs>
     {
         using Result = decltype(std::make_tuple(Lhs(), Rhs()));
     };
