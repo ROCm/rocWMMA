@@ -38,117 +38,96 @@
 
 namespace rocwmma
 {
-    namespace CooperativeGemm
-    {
-        namespace BlockLevel
-        {
-            class LdsNT;
-            class LdsTN;
-            class LdsRF;
-
-        } // namespace BlockLevel
-
-        namespace WaveLevel
-        {
-            class LdsNT;
-            class LdsTN;
-
-        } // namespace WaveLevel
-
-        namespace WorkgroupLevel
-        {
-            class LdsNT;
-            class LdsTN;
-
-        } // namespace WaveLevel
-
-    } // namespace CooperativeGemm
-
+    ///
+    /// Generalized kernel params for most tests
+    ///
     struct CommonTestParams
     {
         ///
-        /// Compile-time params used with KernelGenerator to
-        /// instantiate kernel objects
+        /// Testing types as Input/Output/Compute (IOC)
         ///
 
-        // Testing types as Input/Output/Compute (IOC)
-        using TestTypesSmall = std::tuple<
-        // Non-native bfloat16_t
-
-#if defined(ROCWMMA_EXTENDED_TESTS)
-            std::tuple<bfloat16_t, bfloat16_t, bfloat16_t>,
-            std::tuple<bfloat16_t, bfloat16_t, float32_t>,
-#endif // ROCWMMA_EXTENDED_TESTS
-            std::tuple<bfloat16_t, float32_t, float32_t>,
-
-        // Native fp16
-#if defined(ROCWMMA_EXTENDED_TESTS)
-            std::tuple<float16_t, float16_t, float16_t>,
-            std::tuple<float16_t, float16_t, float32_t>,
-#endif // ROCWMMA_EXTENDED_TESTS
-            std::tuple<float16_t, float32_t, float32_t>,
-
-        // Non-native hfloat16_t (i.e. __half)
-#if defined(ROCWMMA_EXTENDED_TESTS)
-            std::tuple<hfloat16_t, hfloat16_t, hfloat16_t>,
-            std::tuple<hfloat16_t, hfloat16_t, float32_t>,
-#endif // ROCWMMA_EXTENDED_TESTS
-            std::tuple<hfloat16_t, float32_t, float32_t>,
-
         // Native int8
+        using TestTypesI8 = std::tuple<
 #if defined(ROCWMMA_EXTENDED_TESTS)
             std::tuple<int8_t, int8_t, int32_t>,
 #endif // ROCWMMA_EXTENDED_TESTS
             std::tuple<int8_t, int32_t, int32_t>>;
 
+        // Non-native bfloat16_t
+        using TestTypesBF16 = std::tuple<
+#if defined(ROCWMMA_EXTENDED_TESTS)
+            std::tuple<bfloat16_t, bfloat16_t, bfloat16_t>,
+            std::tuple<bfloat16_t, bfloat16_t, float32_t>,
+#endif // ROCWMMA_EXTENDED_TESTS
+            std::tuple<bfloat16_t, float32_t, float32_t>>;
+
+        // Native f16
+        using TestTypesF16 = std::tuple<
+#if defined(ROCWMMA_EXTENDED_TESTS)
+            std::tuple<float16_t, float16_t, float16_t>,
+            std::tuple<float16_t, float16_t, float32_t>,
+#endif // ROCWMMA_EXTENDED_TESTS
+            std::tuple<float16_t, float32_t, float32_t>>;
+
+        // Non-native hfloat16_t (i.e. __half)
+        using TestTypesH16 = std::tuple<
+#if defined(ROCWMMA_EXTENDED_TESTS)
+            std::tuple<hfloat16_t, hfloat16_t, hfloat16_t>,
+            std::tuple<hfloat16_t, hfloat16_t, float32_t>,
+#endif // ROCWMMA_EXTENDED_TESTS
+            std::tuple<hfloat16_t, float32_t, float32_t>>;
+
         // Native single f32
-        using TestTypeSingle = std::tuple<std::tuple<float32_t, float32_t, float32_t>>;
+        using TestTypesF32 = std::tuple<std::tuple<float32_t, float32_t, float32_t>>;
 
         // Native double f64
-        using TestTypeDouble = std::tuple<std::tuple<float64_t, float64_t, float64_t>>;
+        using TestTypesF64 = std::tuple<std::tuple<float64_t, float64_t, float64_t>>;
 
-        // Supported layout types
-        using TestLayoutTypes = std::tuple<row_major, col_major>;
+        // Aggregate types <= 16 bit
+        using TestTypesSmall =
+            typename Concat<TestTypesI8, TestTypesBF16, TestTypesF16, TestTypesH16>::Result;
 
-        using TestLdsLayoutTypes = std::tuple<row_major
-#if defined(ROCWMMA_VALIDATION_TESTS) || defined(ROCWMMA_EXTENDED_TESTS)
-                                              ,
-                                              col_major
-#endif // ROCWMMA_EXTENDED_TESTS
-                                              >;
+        // Aggregate types <= 32 bit
+        using TestTypesMedium = typename Concat<TestTypesSmall, TestTypesF32>::Result;
 
-        // Supported LDS mappings
-        using TestMappingsLds = std::tuple<
-#if defined(ROCWMMA_VALIDATION_TESTS) || defined(ROCWMMA_EXTENDED_TESTS)
-            // Only validate the block level configs
-            //std::tuple<typename CooperativeGemm::BlockLevel::LdsNT>,
-            //std::tuple<typename CooperativeGemm::BlockLevel::LdsTN>,
-            //std::tuple<typename CooperativeGemm::BlockLevel::LdsRF>,
-            std::tuple<typename CooperativeGemm::WaveLevel::LdsNT>,
-            std::tuple<typename CooperativeGemm::BlockLevel::LdsRF>,
-#endif // ROCWMMA_EXTENDED_TESTS
-            std::tuple<typename CooperativeGemm::WaveLevel::LdsTN>>;
+        // Aggregate types <= 64 bit
+        using TestTypesLarge = typename Concat<TestTypesMedium, TestTypesF64>::Result;
 
-        using TestGemmConfigsWgLevel = std::tuple<
-#if defined(ROCWMMA_VALIDATION_TESTS) || defined(ROCWMMA_EXTENDED_TESTS)
-            std::tuple<typename CooperativeGemm::WorkgroupLevel::LdsNT>,
-#endif // ROCWMMA_EXTENDED_TESTS
-            std::tuple<typename CooperativeGemm::WorkgroupLevel::LdsTN>>;
+        // 16 x 16 supports up to f64
+        using TestTypes16x16 = TestTypesLarge;
+
+        // 32 x 32 supports up to f32
+        using TestTypes32x32 = TestTypesMedium;
 
         ///
-        /// Grouped compile time kernel parameters
+        /// Data Layout types: col_major (N) or row_major (T)
+        /// Matrices layouts: A / B / C / D
+        /// Lds Layouts: Lds data
         ///
 
-        // Default base set of types to test
-        using TestTypesIOC = typename Concat<TestTypesSmall, TestTypeSingle>::Result;
+        // Supported generalized data layouts
+        using TestDataLayouts = std::tuple<row_major, col_major>;
 
-        // 16 x 16 has support for double types
-        using TestTypes16x16 = typename Concat<TestTypesIOC, TestTypeDouble>::Result;
+        // Lds data layouts
+        using TestLdsDataLayouts = TestDataLayouts;
 
-        // 32 x 32 does not support double types
-        using TestTypes32x32 = TestTypesIOC;
+        // Aggregate data layout combinations A / B / CD
+        // Note: for the following sets, assume C = D
+        using TestLayoutsNN =
+            typename CombineOne<std::tuple<col_major, col_major>, TestDataLayouts>::Result;
+        using TestLayoutsNT =
+            typename CombineOne<std::tuple<col_major, row_major>, TestDataLayouts>::Result;
+        using TestLayoutsTN =
+            typename CombineOne<std::tuple<row_major, col_major>, TestDataLayouts>::Result;
+        using TestLayoutsTT =
+            typename CombineOne<std::tuple<row_major, row_major>, TestDataLayouts>::Result;
 
-        // BlockK variances for particular BlockM, BlockN
+        ///
+        /// MFMA block sizes
+        /// BlockK variances for particular BlockM, BlockN
+        ///
+
         using TestBlockSizes16x16 = std::tuple<std::tuple<I<16>, I<16>, I<16>>,
                                                std::tuple<I<16>, I<16>, I<32>>,
                                                std::tuple<I<16>, I<16>, I<64>>
@@ -169,16 +148,6 @@ namespace rocwmma
 #endif // ROCWMMA_EXTENDED_TESTS
                                                >;
 
-        // Layout groupings
-        using TestLayoutsNN =
-            typename CombineOne<std::tuple<col_major, col_major>, TestLayoutTypes>::Result;
-        using TestLayoutsNT =
-            typename CombineOne<std::tuple<col_major, row_major>, TestLayoutTypes>::Result;
-        using TestLayoutsTN =
-            typename CombineOne<std::tuple<row_major, col_major>, TestLayoutTypes>::Result;
-        using TestLayoutsTT =
-            typename CombineOne<std::tuple<row_major, row_major>, TestLayoutTypes>::Result;
-
         ///
         /// Run-time kernel argument parameters
         ///
@@ -194,34 +163,47 @@ namespace rocwmma
         {
             return
             {
+                // clang-format off
+                // Don't benchmark wg less than 4 waves by default
 #if defined(ROCWMMA_VALIDATION_TESTS) || defined(ROCWMMA_EXTENDED_TESTS)
-                // Don't benchmark wg less than 4 waves
                 {64, 1}, // 1 wave
-                    {64, 2}, {128, 1}, // 2 wave
+                {64, 2}, {128, 1}, // 2 wave
 #endif // ROCWMMA_VALIDATION_TESTS
-                    {64, 4}, {128, 2},
-                {
-                    256, 1
-                }
-            }; // 4 wave
+                {64, 4}, {128, 2}, // 4 wave
+                {256, 1}  // 4 wave
+                // clang-format on
+            };
         }
 
         static inline std::vector<ProblemSizeT> problemSizes()
         {
+
             return
             {
-                {64, 64, 1024}, {32, 64, 1024}, {64, 32, 1024}, {256, 256, 1024}, {2048, 64, 1024},
-                    {64, 2048, 1024}, {1024, 1024, 1024},
-
+                // clang-format off
+                {64, 64, 1024},
+                {32, 64, 1024},
+                {64, 32, 1024},
+                {256, 256, 1024},
+                {2048, 64, 1024},
+                {64, 2048, 1024},
+                {1024, 1024, 1024},
+                // Skip validation on larger sizes
+                // due to very slow.
 #if !defined(ROCWMMA_VALIDATION_TESTS)
-                    {2048, 2048, 2048}, {2560, 2560, 2560}, {3072, 3072, 3072}, {3584, 3584, 3584},
-                    {4096, 4096, 4096}, {5120, 5120, 5120},
-
+                {2048, 2048, 2048},
+                {2560, 2560, 2560},
+                {3072, 3072, 3072},
+                {3584, 3584, 3584},
+                {4096, 4096, 4096},
+                {5120, 5120, 5120},
 #ifdef ROCWMMA_EXTENDED_TESTS
-                    {6144, 6144, 6144}, {7168, 7168, 7168}, {8192, 8192, 8192},
+                {6144, 6144, 6144},
+                {7168, 7168, 7168},
+                {8192, 8192, 8192},
 #endif // ROCWMMA_EXTENDED_TESTS
-
-#endif // !ROCWMMA_VALIDATION_TESTS
+#endif // !ROCWMMA_VALIDATION_TESTS \
+    // clang-format on
             };
         }
 
@@ -237,5 +219,46 @@ namespace rocwmma
     };
 
 } // namespace rocwmma
+
+///
+/// Test suite instantiation
+///
+#define ROCWMMA_INSTANTIATE_GTEST_SUITE(test_suite_prefix, test_suite_name)          \
+    class test_suite_name : public rocwmma::GemmTest                                 \
+    {                                                                                \
+    };                                                                               \
+                                                                                     \
+    TEST_P(test_suite_name, RunKernel)                                               \
+    {                                                                                \
+        this->RunKernel();                                                           \
+    }                                                                                \
+                                                                                     \
+    INSTANTIATE_TEST_SUITE_P(                                                        \
+        test_suite_prefix,                                                           \
+        test_suite_name,                                                             \
+        ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),      \
+                           ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()), \
+                           ::testing::ValuesIn(rocwmma::TestParams::problemSizes()), \
+                           ::testing::ValuesIn(rocwmma::TestParams::alphas()),       \
+                           ::testing::ValuesIn(rocwmma::TestParams::betas())));
+
+#define ROCWMMA_INSTANTIATE_GTEST_SUITE_NO_WARMUP(test_suite_prefix, test_suite_name) \
+    class test_suite_name : public rocwmma::GemmTest                                  \
+    {                                                                                 \
+    };                                                                                \
+                                                                                      \
+    TEST_P(test_suite_name, RunKernel)                                                \
+    {                                                                                 \
+        this->RunKernelWithoutWarmup();                                               \
+    }                                                                                 \
+                                                                                      \
+    INSTANTIATE_TEST_SUITE_P(                                                         \
+        test_suite_prefix,                                                            \
+        test_suite_name,                                                              \
+        ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),       \
+                           ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),  \
+                           ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),  \
+                           ::testing::ValuesIn(rocwmma::TestParams::alphas()),        \
+                           ::testing::ValuesIn(rocwmma::TestParams::betas())));
 
 #endif // ROCWMMA_GEMM_COMMON_TEST_PARAMS_HPP
