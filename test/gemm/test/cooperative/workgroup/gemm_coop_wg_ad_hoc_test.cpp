@@ -94,4 +94,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-ROCWMMA_INSTANTIATE_GTEST_SUITE_NO_WARMUP(GemmCoopWgAdHocTest, GemmCoopWgTests);
+ROCWMMA_INSTANTIATE_GTEST_SUITE_NO_WARMUP(GemmCoopWgTests, GemmCoopWgAdHocTest);
