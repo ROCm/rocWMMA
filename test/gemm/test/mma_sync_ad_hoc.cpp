@@ -41,16 +41,14 @@ namespace rocwmma
         // Types: ALL + double
         // Block Sizes: 16 x 16 x BlockK
         // Layouts: NT
-        using Types      = std::tuple<std::tuple<float16_t, float32_t, float32_t>>;
-        using BlockSizes = std::tuple<std::tuple<I<16>, I<16>, I<16>>>;
+        using Types      = std::tuple<std::tuple<float32_t, float32_t, float32_t>>;
+        using BlockSizes = std::tuple<std::tuple<I<32>, I<32>, I<8>>>;
         using Layouts    = std::tuple<
-            std::tuple<col_major, row_major, row_major>>; //typename Base::TestLayoutsNT;
-        using LayoutsLds  = std::tuple<col_major>; //typename Base::TestLayoutTypes;
-        using MappingsLds = std::tuple<typename CooperativeGemm::WaveLevel::LdsNT>;
-        using BlocksXY    = std::tuple<std::tuple<I<4>, I<2>>>;
-        using KernelParams =
-            typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
-                Result;
+            std::tuple<col_major, row_major, col_major>>; //typename Base::TestLayoutsNT;
+        using LayoutsLds   = std::tuple<col_major>; //typename Base::TestLayoutTypes;
+        using MappingsLds  = std::tuple<typename CooperativeGemm::BlockLevel::LdsRF>;
+        using BlocksXY     = std::tuple<std::tuple<I<2>, I<1>>>;
+        using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
 
         // Assemble the kernel generator
         // Kernel: MmaSyncMulti
@@ -84,7 +82,7 @@ namespace rocwmma
                     //{1024, 1024, 1024},
                     //{64, 64, 64},
                     //{2048, 2048, 2048},
-                    {8192, 8192, 8192}
+                    {7168, 7168, 7168}
 
             };
         }
