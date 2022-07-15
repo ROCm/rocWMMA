@@ -24,36 +24,28 @@
  *
  *******************************************************************************/
 
-#include <type_traits>
-
-#include "detail/mma_sync_multi_lds.hpp"
-#include "gemm_config.hpp"
-#include "gemm_test.hpp"
-#include "kernel_generator.hpp"
+#include "gemm_coop_wave_test_includes.hpp"
 
 namespace rocwmma
 {
 
-    struct TestParams : public CommonTestParams
+    struct TestParams : public CooperativeTestParams
     {
-        using Base = CommonTestParams;
+        using Base = CooperativeTestParams;
 
-        // Types: Small sizes
-        // Block Sizes: 32 x 32 x BlockK
-        // Layouts: NT
+        // Assemble testing parameters
         using Types       = typename Base::TestTypesSmall;
-        using BlockSizes  = std::tuple<std::tuple<I<32>, I<32>, I<8>>>;
+        using BlockSizes  = typename Base::TestBlockSizes32x32LargeMT;
         using Layouts     = typename Base::TestLayoutsNT;
-        using LayoutsLds  = typename Base::TestLdsLayoutTypes;
-        using MappingsLds = typename Base::TestMappingsLds;
-        using BlocksXY    = std::tuple<std::tuple<I<4>, I<4>>>;
+        using LayoutsLds  = typename Base::TestLdsDataLayouts;
+        using GemmConfigs = typename Base::TestGemmConfigsWaveLevel;
+        using BlocksXY    = typename Base::TestBlocks4x4;
         using KernelParams =
-            typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
+            typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, GemmConfigs, BlocksXY>::
                 Result;
 
         // Assemble the kernel generator
-        // Kernel: MmaSyncMulti
-        using GeneratorImpl   = MmaSyncMultiLdsGenerator;
+        using GeneratorImpl   = typename Base::KernelGeneratorImplWaveLevel;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -68,21 +60,5 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-// Test suite for unique parameterization
-class MmaSyncMultiLdsTest32x32NT4x4 : public rocwmma::GemmTest
-{
-};
-
-TEST_P(MmaSyncMultiLdsTest32x32NT4x4, RunKernel)
-{
-    this->RunKernel();
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    GemmKernelTests,
-    MmaSyncMultiLdsTest32x32NT4x4,
-    ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
-                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
-                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
-                       ::testing::ValuesIn(rocwmma::TestParams::alphas()),
-                       ::testing::ValuesIn(rocwmma::TestParams::betas())));
+// Instantiate kernels as a test suite
+ROCWMMA_INSTANTIATE_GTEST_SUITE(GemmCoopWaveTests, GemmCoopWaveTest32x32NT4x4);

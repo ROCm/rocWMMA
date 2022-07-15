@@ -24,12 +24,7 @@
  *
  *******************************************************************************/
 
-#include <type_traits>
-
-#include "detail/mma_sync_multi_lds.hpp"
-#include "gemm_config.hpp"
-#include "gemm_test.hpp"
-#include "kernel_generator.hpp"
+#include "gemm_coop_wave_test_includes.hpp"
 
 namespace rocwmma
 {
@@ -46,7 +41,7 @@ namespace rocwmma
         using Layouts    = std::tuple<
             std::tuple<row_major, col_major, row_major>>; //typename Base::TestLayoutsNT;
         using LayoutsLds  = std::tuple<row_major>; //typename Base::TestLayoutTypes;
-        using MappingsLds = std::tuple<typename CooperativeGemm::BlockLevel::LdsRF>;
+        using MappingsLds = std::tuple<typename CooperativeGemm::WaveLevel::LdsNT>;
         using BlocksXY    = std::tuple<std::tuple<I<2>, I<2>>>;
         using KernelParams =
             typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
@@ -54,7 +49,7 @@ namespace rocwmma
 
         // Assemble the kernel generator
         // Kernel: MmaSyncMultiLds
-        using GeneratorImpl   = MmaSyncMultiLdsGenerator;
+        using GeneratorImpl   = typename Base::KernelGeneratorImplWaveLevel;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -92,21 +87,5 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-// Test suite for unique parameterization
-class MmaSyncMultiLdsTestAdHoc : public rocwmma::GemmTest
-{
-};
-
-TEST_P(MmaSyncMultiLdsTestAdHoc, RunKernel)
-{
-    this->RunKernelWithoutWarmup();
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    GemmKernelTests,
-    MmaSyncMultiLdsTestAdHoc,
-    ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
-                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
-                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
-                       ::testing::ValuesIn(rocwmma::TestParams::alphas()),
-                       ::testing::ValuesIn(rocwmma::TestParams::betas())));
+// Instantiate kernels as a test suite
+ROCWMMA_INSTANTIATE_GTEST_SUITE(GemmCoopWaveTests, GemmCoopWaveAdHocTest);

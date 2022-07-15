@@ -24,38 +24,28 @@
  *
  *******************************************************************************/
 
-#include <type_traits>
-
-#include "detail/mma_sync_multi_lds.hpp"
-#include "gemm_config.hpp"
-#include "gemm_test.hpp"
-#include "kernel_generator.hpp"
+#include "gemm_coop_wave_test_includes.hpp"
 
 namespace rocwmma
 {
 
-    struct TestParams : public CommonTestParams
+    struct TestParams : public CooperativeTestParams
     {
-        using Base = CommonTestParams;
+        using Base = CooperativeTestParams;
 
-        // Types: ALL + double
-        // Block Sizes: 32 x 32 x BlockK
-        // Layouts: NN
+        // Assemble testing parameters
         using Types       = typename Base::TestTypes32x32;
-        using BlockSizes  = std::tuple<std::tuple<I<32>, I<32>, I<8>>,
-                                      std::tuple<I<32>, I<32>, I<16>>,
-                                      std::tuple<I<32>, I<32>, I<32>>>;
+        using BlockSizes  = typename Base::TestBlockSizes32x32SmallMT;
         using Layouts     = typename Base::TestLayoutsNN;
-        using LayoutsLds  = typename Base::TestLdsLayoutTypes;
-        using MappingsLds = typename Base::TestMappingsLds;
-        using BlocksXY    = std::tuple<std::tuple<I<2>, I<1>>>;
+        using LayoutsLds  = typename Base::TestLdsDataLayouts;
+        using GemmConfigs = typename Base::TestGemmConfigsWaveLevel;
+        using BlocksXY    = typename Base::TestBlocks2x1;
         using KernelParams =
-            typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, MappingsLds, BlocksXY>::
+            typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, GemmConfigs, BlocksXY>::
                 Result;
 
         // Assemble the kernel generator
-        // Kernel: MmaSyncMulti
-        using GeneratorImpl   = MmaSyncMultiLdsGenerator;
+        using GeneratorImpl   = typename Base::KernelGeneratorImplWaveLevel;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -70,21 +60,5 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-// Test suite for unique parameterization
-class MmaSyncMultiLdsTest32x32NN2x1 : public rocwmma::GemmTest
-{
-};
-
-TEST_P(MmaSyncMultiLdsTest32x32NN2x1, RunKernel)
-{
-    this->RunKernel();
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    GemmKernelTests,
-    MmaSyncMultiLdsTest32x32NN2x1,
-    ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
-                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
-                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
-                       ::testing::ValuesIn(rocwmma::TestParams::alphas()),
-                       ::testing::ValuesIn(rocwmma::TestParams::betas())));
+// Instantiate kernels as a test suite
+ROCWMMA_INSTANTIATE_GTEST_SUITE(GemmCoopWaveTests, GemmCoopWaveTest32x32NN2x1);
