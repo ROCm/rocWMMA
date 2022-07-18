@@ -55,8 +55,7 @@ namespace rocwmma
                 Result;
 
         // Assemble the kernel generator
-        // Kernel: MmaSyncCoopWg
-        using GeneratorImpl   = MmaSyncCoopWgGenerator;
+        using GeneratorImpl   = KernelGeneratorImplWgLevel;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -94,4 +93,6 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-ROCWMMA_INSTANTIATE_GTEST_SUITE_NO_WARMUP(GemmCoopWgTests, GemmCoopWgAdHocTest);
+ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE_NO_WARMUP(GemmCoopWgTests,
+                                               GemmCoopWgAdHocTest,
+                                               rocwmma::TestParams);
