@@ -24,14 +24,11 @@
  *
  *******************************************************************************/
 
-#include <type_traits>
+#include "gemm_coop_block_test_includes.hpp"
 
-#include "gemm_config.hpp"
-#include "kernel_generator.hpp"
-
-#include "detail/mma_sync_coop_wg.hpp"
-#include "test/cooperative/cooperative_test_params.hpp"
-#include "test/gemm_test.hpp"
+///
+/// Kernel ad-hoc tests, with manual overrides to test specific parameters quickly.
+///
 
 namespace rocwmma
 {
@@ -48,7 +45,7 @@ namespace rocwmma
         using Layouts    = std::tuple<
             std::tuple<col_major, row_major, row_major>>; //typename Base::TestLayoutsNT;
         using LayoutsLds  = std::tuple<col_major>; //typename Base::TestLayoutTypes;
-        using GemmConfigs = std::tuple<typename CooperativeGemm::WorkgroupLevel::LdsNT>;
+        using GemmConfigs = std::tuple<typename CooperativeGemm::BlockLevel::LdsNT>;
         using BlocksXY    = std::tuple<std::tuple<I<4>, I<2>>>;
         using KernelParams =
             typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, GemmConfigs, BlocksXY>::
@@ -56,7 +53,7 @@ namespace rocwmma
 
         // Assemble the kernel generator
         // Kernel: MmaSyncCoopWg
-        using GeneratorImpl   = MmaSyncCoopWgGenerator;
+        using GeneratorImpl   = KernelGeneratorImplBlockLevel;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -94,4 +91,7 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-ROCWMMA_INSTANTIATE_GTEST_SUITE_NO_WARMUP(GemmCoopWgTests, GemmCoopWgAdHocTest);
+// Instantiate kernels as a test suite
+ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE_NO_WARMUP(GemmCoopBlockTests,
+                                               GemmCoopBlockAdHocTest,
+                                               rocwmma::TestParams);

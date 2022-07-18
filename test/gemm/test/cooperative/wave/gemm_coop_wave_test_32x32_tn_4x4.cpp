@@ -31,27 +31,21 @@ namespace rocwmma
 
     struct TestParams : public CooperativeTestParams
     {
-        using Base = CooperativeTestParams;
+        /* Use combinatorial logic to generate a set of kernel params from the input. */
+        using KernelParams    = typename CombineLists<TestTypesSmall,
+                                                   TestBlockSizes32x32LargeMT,
+                                                   TestLayoutsTN,
+                                                   TestLdsDataLayouts,
+                                                   TestGemmConfigsWaveLevel,
+                                                   TestBlocks4x4>::Result;
+        using KernelGenerator = KernelGenerator<KernelParams, KernelGeneratorImplWaveLevel>;
 
-        // Assemble testing parameters
-        using Types       = typename Base::TestTypesSmall;
-        using BlockSizes  = typename Base::TestBlockSizes32x32LargeMT;
-        using Layouts     = typename Base::TestLayoutsTN;
-        using LayoutsLds  = typename Base::TestLdsDataLayouts;
-        using GemmConfigs = typename Base::TestGemmConfigsWaveLevel;
-        using BlocksXY    = typename Base::TestBlocks4x4;
-        using KernelParams =
-            typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, GemmConfigs, BlocksXY>::
-                Result;
-
-        // Assemble the kernel generator
-        using GeneratorImpl   = typename Base::KernelGeneratorImplWaveLevel;
-        using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
-
-        // Sanity check for kernel generator
-        static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
+        /* Sanity check to make sure the generator produces kernels expected by the test interface */
+        static_assert(std::is_same<typename KernelGeneratorImplWaveLevel::ResultT,
+                                   typename CooperativeTestParams::KernelT>::value,
                       "Kernels from this generator do not match testing interface");
 
+        /* Generate the set of kernels to be tested */
         static inline typename KernelGenerator::ResultT kernels();
     };
 
@@ -71,6 +65,8 @@ namespace rocwmma
 }
 
 // Instantiate kernels as a test suite
-ROCWMMA_INSTANTIATE_GTEST_SUITE(GemmCoopWaveTests, GemmCoopWaveTest32x32TN4x4);
+ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE(GemmCoopWaveTests,
+                                     GemmCoopWaveTest32x32TN4x4,
+                                     rocwmma::TestParams);
 
 #endif // __gfx908__
