@@ -24,11 +24,7 @@
  *
  *******************************************************************************/
 
-#include <type_traits>
-
-#include "detail/mma_sync.hpp"
-#include "gemm_test.hpp"
-#include "kernel_generator.hpp"
+#include "gemm_naive_test_includes.hpp"
 
 namespace rocwmma
 {
@@ -39,10 +35,12 @@ namespace rocwmma
 
         // Types: ALL + double
         // Block Sizes: 16 x 16 x BlockK
-        // Layouts: NN
-        using Types        = typename Base::TestTypes16x16;
-        using BlockSizes   = typename Base::TestBlockSizes16x16;
-        using Layouts      = typename Base::TestLayoutsNN;
+        // Layouts: NT
+        using Types      = std::tuple<std::tuple<float32_t, float32_t, float32_t>>;
+        using BlockSizes = std::tuple<std::tuple<I<32>, I<32>, I<8>>>;
+        using Layouts    = std::tuple<
+            std::tuple<col_major, row_major, col_major>>; //typename Base::TestLayoutsNT;
+
         using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
 
         // Assemble the kernel generator
@@ -58,25 +56,34 @@ namespace rocwmma
         {
             return KernelGenerator::generate();
         }
+
+        static inline std::vector<ThreadBlockT> threadBlocks()
+        {
+            return {
+                //{64, 1},
+                {128, 2},
+                //{64, 4}, {128, 1}, {128, 2}, {256, 1}
+            };
+        }
+
+        static inline std::vector<ProblemSizeT> problemSizes()
+        {
+            return {//{64, 64, 1024},
+                    //         {32, 64, 1024},
+                    // {64, 32, 1024},
+                    // {256, 256, 1024},
+                    //{1024, 1024, 1024},
+                    //{64, 64, 64},
+                    //{2048, 2048, 2048},
+                    {7168, 7168, 7168}
+
+            };
+        }
     };
 
 } // namespace rocwmma
 
-// Test suite for unique parameterization
-class MmaSyncTest16x16NN : public rocwmma::GemmTest
-{
-};
-
-TEST_P(MmaSyncTest16x16NN, RunKernel)
-{
-    this->RunKernel();
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    GemmKernelTests,
-    MmaSyncTest16x16NN,
-    ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
-                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
-                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
-                       ::testing::ValuesIn(rocwmma::TestParams::alphas()),
-                       ::testing::ValuesIn(rocwmma::TestParams::betas())));
+// Instantiate kernels as a test suite
+ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE(GemmNonCoopNaiveTests,
+                                     GemmNaiveAdHocTest,
+                                     rocwmma::TestParams);
