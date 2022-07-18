@@ -29,36 +29,19 @@
 namespace rocwmma
 {
 
-    struct TestParams : public CooperativeTestParams
-    {
-        using Base = CooperativeTestParams;
-
-        // Assemble testing parameters
-        using Types       = typename Base::TestTypes16x16;
-        using BlockSizes  = typename Base::TestBlockSizes16x16SmallMT;
-        using Layouts     = typename Base::TestLayoutsNN;
-        using LayoutsLds  = typename Base::TestLdsDataLayouts;
-        using GemmConfigs = typename Base::TestGemmConfigsWgLevel;
-        using BlocksXY    = typename Base::TestBlocks4x4;
-        using KernelParams =
-            typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, GemmConfigs, BlocksXY>::
-                Result;
-
-        // Assemble the kernel generator
-        using GeneratorImpl   = typename Base::KernelGeneratorImplWorkgroupLevel;
-        using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
-
-        // Sanity check for kernel generator
-        static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
-                      "Kernels from this generator do not match testing interface");
-
-        static inline typename KernelGenerator::ResultT kernels()
-        {
-            return KernelGenerator::generate();
-        }
-    };
+    ROCWMMA_GENERATE_GEMM_GTEST_SUITE_PARAMS(TestParams,
+                                             CooperativeTestParams,
+                                             KernelGeneratorImplWgLevel,
+                                             TestTypes16x16,
+                                             TestBlockSizes16x16SmallMT,
+                                             TestLayoutsNN,
+                                             TestLdsDataLayouts,
+                                             TestGemmConfigsWgLevel,
+                                             TestBlocks4x4);
 
 } // namespace rocwmma
 
 // Instantiate kernels as a test suite
-ROCWMMA_INSTANTIATE_GTEST_SUITE(GemmCoopWgTests, GemmCoopWgTest16x16NN4x4);
+ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE(GemmCoopWgTests,
+                                     GemmCoopWgTest16x16NN4x4,
+                                     rocwmma::TestParams);
