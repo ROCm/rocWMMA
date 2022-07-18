@@ -29,36 +29,19 @@
 namespace rocwmma
 {
 
-    struct TestParams : public CooperativeTestParams
-    {
-        using Base = CooperativeTestParams;
-
-        // Assemble testing parameters
-        using Types       = typename Base::TestTypes32x32;
-        using BlockSizes  = typename Base::TestBlockSizes32x32SmallMT;
-        using Layouts     = typename Base::TestLayoutsNN;
-        using LayoutsLds  = typename Base::TestLdsDataLayouts;
-        using GemmConfigs = typename Base::TestGemmConfigsWaveLevel;
-        using BlocksXY    = typename Base::TestBlocks2x1;
-        using KernelParams =
-            typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, GemmConfigs, BlocksXY>::
-                Result;
-
-        // Assemble the kernel generator
-        using GeneratorImpl   = typename Base::KernelGeneratorImplWaveLevel;
-        using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
-
-        // Sanity check for kernel generator
-        static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
-                      "Kernels from this generator do not match testing interface");
-
-        static inline typename KernelGenerator::ResultT kernels()
-        {
-            return KernelGenerator::generate();
-        }
-    };
+    ROCWMMA_GENERATE_GEMM_GTEST_SUITE_PARAMS(TestParams,
+                                             CooperativeTestParams,
+                                             KernelGeneratorImplWaveLevel,
+                                             TestTypes32x32,
+                                             TestBlockSizes32x32SmallMT,
+                                             TestLayoutsNN,
+                                             TestLdsDataLayouts,
+                                             TestGemmConfigsWaveLevel,
+                                             TestBlocks2x1);
 
 } // namespace rocwmma
 
 // Instantiate kernels as a test suite
-ROCWMMA_INSTANTIATE_GTEST_SUITE(GemmCoopWaveTests, GemmCoopWaveTest32x32NN2x1);
+ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE(GemmCoopWaveTests,
+                                     GemmCoopWaveTest32x32NN2x1,
+                                     rocwmma::TestParams);

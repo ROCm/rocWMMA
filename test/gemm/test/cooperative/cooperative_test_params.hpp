@@ -56,7 +56,7 @@ namespace rocwmma
 
         } // namespace WaveLevel
 
-        namespace WorkgroupLevel
+        namespace WgLevel
         {
             class LdsNT;
             class LdsTN;
@@ -115,15 +115,15 @@ namespace rocwmma
                          std::tuple<typename CooperativeGemm::WaveLevel::LdsTN>>;
 
         using TestGemmConfigsWgLevel
-            = std::tuple<std::tuple<typename CooperativeGemm::WorkgroupLevel::LdsNT>,
-                         std::tuple<typename CooperativeGemm::WorkgroupLevel::LdsTN>>;
+            = std::tuple<std::tuple<typename CooperativeGemm::WgLevel::LdsNT>,
+                         std::tuple<typename CooperativeGemm::WgLevel::LdsTN>>;
 
         ///
         /// Kernel generator impl objects
         ///
-        using KernelGeneratorImplBlockLevel     = MmaSyncMultiLdsGenerator;
-        using KernelGeneratorImplWaveLevel      = MmaSyncMultiLdsGenerator;
-        using KernelGeneratorImplWorkgroupLevel = MmaSyncCoopWgGenerator;
+        using KernelGeneratorImplBlockLevel = MmaSyncMultiLdsGenerator;
+        using KernelGeneratorImplWaveLevel  = MmaSyncMultiLdsGenerator;
+        using KernelGeneratorImplWgLevel    = MmaSyncCoopWgGenerator;
 
         ///
         /// Per-wave output block coverage

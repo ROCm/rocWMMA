@@ -88,4 +88,4 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Instantiate kernels as a test suite
-ROCWMMA_INSTANTIATE_GTEST_SUITE(GemmCoopWaveTests, GemmCoopWaveAdHocTest);
+ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE(GemmCoopWaveTests, GemmCoopWaveAdHocTest, rocwmma::TestParams);

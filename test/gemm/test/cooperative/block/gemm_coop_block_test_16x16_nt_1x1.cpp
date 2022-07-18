@@ -61,4 +61,6 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Instantiate kernels as a test suite
-ROCWMMA_INSTANTIATE_GTEST_SUITE(GemmCoopBlockTests, GemmCoopBlockTest16x16NT1x1);
+ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE(GemmCoopBlockTests,
+                                     GemmCoopBlockTest16x16NT1x1,
+                                     rocwmma::TestParams);
