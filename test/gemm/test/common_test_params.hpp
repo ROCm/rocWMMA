@@ -221,44 +221,94 @@ namespace rocwmma
 } // namespace rocwmma
 
 ///
-/// Test suite instantiation
+/// Test suite parameters definition
+/// @params
+/// test_params_name : name of the resulting class
+/// common_base_params : base parameter class holding common symbols
+/// kernel_generator_impl : kernel generator implementation class
+/// ... (__VA_ARGS__) : a list of kernel parameters that will be combined to create a set of test kernels.
 ///
-#define ROCWMMA_INSTANTIATE_GTEST_SUITE(test_suite_prefix, test_suite_name)          \
-    class test_suite_name : public rocwmma::GemmTest                                 \
+#define ROCWMMA_GENERATE_GEMM_GTEST_SUITE_PARAMS(test_params_name, common_base_params, kernel_generator_impl, ...)  \
+    struct test_params_name : public common_base_params                                                            \
+    {                                                                                                              \
+        /* Use combinatorial logic to generate a set of kernel params from the input. */                           \
+        using KernelParams = typename CombineLists<__VA_ARGS__>::Result;                                           \
+        using KernelGenerator = KernelGenerator<KernelParams, kernel_generator_impl>;                              \
+                                                                                                                   \
+        /* Sanity check to make sure the generator produces kernels expected by the test interface */              \
+        static_assert(std::is_same<typename kernel_generator_impl::ResultT,                                        \
+                                   typename common_base_params::KernelT>::value,                                   \
+                  "Kernels from this generator do not match testing interface");                                   \
+                                                                                                                   \
+        /* Generate the set of kernels to be tested */                                                             \
+        static inline typename KernelGenerator::ResultT kernels()                                                  \
+        {                                                                                                          \
+            return KernelGenerator::generate();                                                                    \
+        }                                                                                                          \
+    };
+
+///
+/// Test suite instantiation (gtest integration)
+/// @params
+/// test_suite_prefix: context describing the test suite (e.g. gemm_tests)
+/// test_suite_name: name of the specific test suite (e.g. gemm_kernel_5_NN_Layout)
+/// test_interface: base gtest interface class
+/// test_invoke: name of the test function to invoke on the test suite
+/// test_param_triage: triage of parameters delivered to tests (e.g macro to match test_interface with runtime params)
+/// test_params: testing parameters used to generate the test suite
+///
+#define ROCWMMA_INSTANTIATE_GTEST_SUITE(test_suite_prefix, test_suite_name, test_interface, test_invoke, test_param_triage, test_params) \
+    class test_suite_name : public test_interface                                    \
     {                                                                                \
     };                                                                               \
                                                                                      \
-    TEST_P(test_suite_name, RunKernel)                                               \
+    TEST_P(test_suite_name, test_invoke)                                             \
     {                                                                                \
-        this->RunKernel();                                                           \
+        this->test_invoke();                                                         \
     }                                                                                \
                                                                                      \
     INSTANTIATE_TEST_SUITE_P(                                                        \
         test_suite_prefix,                                                           \
         test_suite_name,                                                             \
-        ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),      \
-                           ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()), \
-                           ::testing::ValuesIn(rocwmma::TestParams::problemSizes()), \
-                           ::testing::ValuesIn(rocwmma::TestParams::alphas()),       \
-                           ::testing::ValuesIn(rocwmma::TestParams::betas())));
+        test_param_triage(test_params));
 
-#define ROCWMMA_INSTANTIATE_GTEST_SUITE_NO_WARMUP(test_suite_prefix, test_suite_name) \
-    class test_suite_name : public rocwmma::GemmTest                                  \
-    {                                                                                 \
-    };                                                                                \
-                                                                                      \
-    TEST_P(test_suite_name, RunKernel)                                                \
-    {                                                                                 \
-        this->RunKernelWithoutWarmup();                                               \
-    }                                                                                 \
-                                                                                      \
-    INSTANTIATE_TEST_SUITE_P(                                                         \
-        test_suite_prefix,                                                            \
-        test_suite_name,                                                              \
-        ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),       \
-                           ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),  \
-                           ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),  \
-                           ::testing::ValuesIn(rocwmma::TestParams::alphas()),        \
-                           ::testing::ValuesIn(rocwmma::TestParams::betas())));
+///
+/// Assignment of test parameters, specific to GEMM tests.
+///
+#define ROCWMMA_GEMM_GTEST_PARAM_TRIAGE(test_params)                                 \
+        ::testing::Combine(::testing::ValuesIn(test_params::kernels()),              \
+                           ::testing::ValuesIn(test_params::threadBlocks()),         \
+                           ::testing::ValuesIn(test_params::problemSizes()),         \
+                           ::testing::ValuesIn(test_params::alphas()),               \
+                           ::testing::ValuesIn(test_params::betas()))
+
+///
+/// Specific to GEMM
+/// test_interface = rocwmma::GemmTest (gtest derivative)
+/// test_param_assignment = ROCWMMA_GEMM_GTEST_PARAM_TRIAGE
+/// test_invoke = RunKernel()
+///
+#define ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE(test_suite_prefix, test_suite_name, test_params) \
+    ROCWMMA_INSTANTIATE_GTEST_SUITE(test_suite_prefix,                  \
+                                    test_suite_name,                    \
+                                    rocwmma::GemmTest,                  \
+                                    RunKernel,                          \
+                                    ROCWMMA_GEMM_GTEST_PARAM_TRIAGE,    \
+                                    test_params)
+
+///
+/// Specific to GEMM
+/// test_interface = rocwmma::GemmTest (gtest derivative)
+/// test_param_assignment = ROCWMMA_GEMM_GTEST_PARAM_TRIAGE
+/// test_invoke = RunKernelWithoutWarmup()
+///
+#define ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE_NO_WARMUP(test_suite_prefix, test_suite_name, test_params) \
+    ROCWMMA_INSTANTIATE_GTEST_SUITE(test_suite_prefix,                  \
+                                    test_suite_name,                    \
+                                    rocwmma::GemmTest,                  \
+                                    RunKernelWithoutWarmup,             \
+                                    ROCWMMA_GEMM_GTEST_PARAM_TRIAGE,    \
+                                    test_params)
+
 
 #endif // ROCWMMA_GEMM_COMMON_TEST_PARAMS_HPP
