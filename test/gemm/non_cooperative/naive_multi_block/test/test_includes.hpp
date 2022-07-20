@@ -5,6 +5,7 @@
 #include "detail/mma_sync_multi.hpp"
 #include "gemm_common_test_params.hpp"
 #include "gemm_test.hpp"
+#include "gemm_test_macros.hpp"
 
 #include "kernel_generator.hpp"
 
