@@ -41,7 +41,7 @@ FetchContent_MakeAvailable(googletest)
 
 include(GoogleTest)
 
-set(ROCWMMA_TEST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(ROCWMMA_TEST_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
 set(ROCWMMA_COMMON_TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/hip_device.cpp)
 
 # Regular gtests that don't require any special
@@ -54,7 +54,7 @@ function(add_rocwmma_test TEST_TARGET TEST_SOURCE)
   target_link_libraries(${TEST_TARGET} OpenMP::OpenMP_CXX "-L${HIP_CLANG_ROOT}/lib" "-Wl,-rpath=${HIP_CLANG_ROOT}/lib")
   target_include_directories(${TEST_TARGET} PRIVATE
                              ${CMAKE_CURRENT_SOURCE_DIR}
-                             ${ROCWMMA_TEST_INCLUDE_DIR})
+                             ${ROCWMMA_TEST_INCLUDE_DIRS})
 
   # Add support to include extended test coverage
   if(ROCWMMA_BUILD_EXTENDED_TESTS)
