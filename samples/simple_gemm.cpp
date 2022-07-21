@@ -281,19 +281,19 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
 
     // GEMM flops converge to 2*mnk
     auto gFlops       = 2.0 * static_cast<double>(m * n * k) * 1.0e-9;
-    auto gFlopsPerSec = gFlops / static_cast<double>(elapsedTimeMs) * 1.0e3;
+    auto tFlopsPerSec = gFlops / static_cast<double>(elapsedTimeMs);
 
     // Echo performance
     std::cout << "BlkM, BlkN, BlkK, "
               << "MatM, MatN, MatK, "
               << "alpha, lda, ldb, "
               << "beta, ldc, ldd, "
-              << "elapsedMs, GFlops, GFlops/s" << std::endl;
+              << "elapsedMs, Problem Size(GFlops), TFlops/s" << std::endl;
 
     std::cout << ROCWMMA_M << ", " << ROCWMMA_N << ", " << ROCWMMA_K << ", " << m << ", " << n
               << ", " << k << ", " << alpha << ", " << lda << ", " << ldb << ", " << beta << ", "
               << ldc << ", " << ldd << ", " << elapsedTimeMs << ", " << gFlops << ", "
-              << gFlopsPerSec << std::endl;
+              << tFlopsPerSec << std::endl;
 
     std::cout << "Validating result with reference..." << std::endl;
 

@@ -131,8 +131,9 @@ namespace rocwmma
 
         mRunFlag = true;
 
-        mTotalGFlops = mMeasuredGFlopsPerSec = 0.0;
-        mElapsedTimeMs = mEfficiency = 0.0;
+        mTotalGFlops = mMeasuredTFlopsPerSec = 0.0;
+        mElapsedTimeMs = 0.0;
+        mEfficiency = -1;
 
         passDirection = DlrmDirection_t::Forward;
 
@@ -158,8 +159,8 @@ namespace rocwmma
                       << "tolerance, "
 #endif
                       << "elapsedMs, "
-                      << "GFlops, "
-                      << "GFlops/s, "
+                      << "Problem Size(GFlops), "
+                      << "TFlops/s, "
                       << "Efficiency(%)" << std::endl;
     }
 
@@ -173,7 +174,7 @@ namespace rocwmma
 #if defined(ROCWMMA_VALIDATION_TESTS)
                       << mMaxRelativeError << ", "
 #endif
-                      << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredGFlopsPerSec
+                      << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredTFlopsPerSec
                       << ", " << mEfficiency << ", "
 #if defined(ROCWMMA_VALIDATION_TESTS)
                       << (mValidationResult ? "PASSED" : "FAILED")
@@ -358,9 +359,9 @@ namespace rocwmma
 
             mElapsedTimeMs        = float64_t(timeMs);
             mTotalGFlops          = calculateGFlops(outputSize, mB, mK);
-            mMeasuredGFlopsPerSec = calculateGFlopsPerSec(outputSize, mB, mK, mElapsedTimeMs)
+            mMeasuredTFlopsPerSec = calculateTFlopsPerSec(outputSize, mB, mK, mElapsedTimeMs)
                                     * static_cast<float64_t>(mRepeats);
-            mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
+            mEfficiency = (int)((double)(mMeasuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0));
 
             CHECK_HIP_ERROR(hipEventDestroy(startEvent));
             CHECK_HIP_ERROR(hipEventDestroy(stopEvent));

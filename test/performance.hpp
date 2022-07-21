@@ -263,9 +263,9 @@ namespace rocwmma
                * 1.0e-9;
     }
 
-    inline double calculateGFlopsPerSec(uint32_t m, uint32_t n, uint32_t k, double elapsedTimeMs)
+    inline double calculateTFlopsPerSec(uint32_t m, uint32_t n, uint32_t k, double elapsedTimeMs)
     {
-        return calculateGFlops(m, n, k) / elapsedTimeMs * 1.0e3;
+        return calculateGFlops(m, n, k) / elapsedTimeMs;
     }
 
     template <typename InputT,
