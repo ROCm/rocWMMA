@@ -315,8 +315,8 @@ namespace rocwmma
         mValidationResult = false;
         mMaxRelativeError = 0.0;
 
-        mElapsedTimeMs = mTotalGFlops = mMeasuredGFlopsPerSec = 0.0;
-        mEfficiency = mReferenceEfficiency = -1.0;
+        mElapsedTimeMs = mTotalGFlops = mMeasuredTFlopsPerSec = 0.0;
+        mEfficiency = mReferenceEfficiency = -1;
     }
 
     template <uint32_t BlockM,
@@ -372,8 +372,8 @@ namespace rocwmma
                       << "LytA_LytB_LytC_LytD, "
                       << "Ti_To_Tc, "
                       << "elapsedMs, "
-                      << "GFlops, "
-                      << "GFlops/s, "
+                      << "Problem Size(GFlops), "
+                      << "TFlops/s, "
                       << "Efficiency(%), "
 #if defined(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
                       << "rocBLAS Efficiency(%), "
@@ -429,7 +429,7 @@ namespace rocwmma
         else
         {
 
-            stream << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredGFlopsPerSec
+            stream << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredTFlopsPerSec
                    << ", " << mEfficiency << ", "
 #if defined(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
                    << mReferenceEfficiency << ", "
@@ -597,9 +597,9 @@ namespace rocwmma
 
                 mElapsedTimeMs        = float64_t(timeMs);
                 mTotalGFlops          = calculateGFlops(mM, mN, mK);
-                mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
+                mMeasuredTFlopsPerSec = calculateTFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
                                         * static_cast<float64_t>(mRepeats);
-                mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
+                mEfficiency = (int)((double)(mMeasuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0));
 
                 CHECK_HIP_ERROR(hipEventDestroy(startEvent));
                 CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
@@ -733,9 +733,9 @@ namespace rocwmma
                     auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<InputT>();
 
                     auto elapsedTimeMs        = float64_t(timeMs);
-                    auto measuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, elapsedTimeMs)
+                    auto measuredTFlopsPerSec = calculateTFlopsPerSec(mM, mN, mK, elapsedTimeMs)
                                                 * static_cast<float64_t>(mRepeats);
-                    mReferenceEfficiency = measuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
+                    mReferenceEfficiency = (int)((double)(measuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0));
                 }
 
                 CHECK_HIP_ERROR(hipEventDestroy(startEvent));
