@@ -87,8 +87,8 @@ set(GemmCommonSources ${ROCWMMA_COMMON_TEST_SOURCES}
                       ${CMAKE_CURRENT_SOURCE_DIR}/gemm_kernel_base.cpp)
 
 # Tests for cooperative kernel classes
-add_subdirectory(cooperative/double_buffer_prefetch)
+add_subdirectory(gemm_PGR1_LB2_MP0_MB_CP)
 
 # Tests for non-cooperative kernel classes
-add_subdirectory(non_cooperative/naive)
-add_subdirectory(non_cooperative/naive_multi_block)
+add_subdirectory(gemm_PGR0_LB0_MP0_SB_NC)
+add_subdirectory(gemm_PGR0_LB0_MP0_MB_NC)

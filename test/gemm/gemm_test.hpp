@@ -35,17 +35,18 @@
 namespace rocwmma
 {
     struct GemmTest
-        : public ::testing::TestWithParam<std::tuple<typename CommonTestParams::KernelT,
-                                                     typename CommonTestParams::ThreadBlockT,
-                                                     typename CommonTestParams::ProblemSizeT,
-                                                     typename CommonTestParams::AlphaT,
-                                                     typename CommonTestParams::BetaT>>
+        : public ::testing::TestWithParam<std::tuple<typename GemmCommonTestParams::KernelT,
+                                                     typename GemmCommonTestParams::ThreadBlockT,
+                                                     typename GemmCommonTestParams::ProblemSizeT,
+                                                     typename GemmCommonTestParams::AlphaT,
+                                                     typename GemmCommonTestParams::BetaT>>
     {
-        using Base = ::testing::TestWithParam<std::tuple<typename CommonTestParams::KernelT,
-                                                         typename CommonTestParams::ThreadBlockT,
-                                                         typename CommonTestParams::ProblemSizeT,
-                                                         typename CommonTestParams::AlphaT,
-                                                         typename CommonTestParams::BetaT>>;
+        using Base
+            = ::testing::TestWithParam<std::tuple<typename GemmCommonTestParams::KernelT,
+                                                  typename GemmCommonTestParams::ThreadBlockT,
+                                                  typename GemmCommonTestParams::ProblemSizeT,
+                                                  typename GemmCommonTestParams::AlphaT,
+                                                  typename GemmCommonTestParams::BetaT>>;
 
         void SetUp() override
         {
