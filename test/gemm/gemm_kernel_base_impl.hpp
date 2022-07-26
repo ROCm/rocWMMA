@@ -28,6 +28,7 @@
 #define ROCWMMA_KERNEL_BASE_IMPL_HPP
 
 #include <tuple>
+#include <cmath>
 
 #include <hip/hip_ext.h>
 #include <hip/hip_runtime_api.h>
@@ -599,7 +600,7 @@ namespace rocwmma
                 mTotalGFlops          = calculateGFlops(mM, mN, mK);
                 mMeasuredTFlopsPerSec = calculateTFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
                                         * static_cast<float64_t>(mRepeats);
-                mEfficiency = (int)((double)(mMeasuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0));
+                mEfficiency = round(mMeasuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0);
 
                 CHECK_HIP_ERROR(hipEventDestroy(startEvent));
                 CHECK_HIP_ERROR(hipEventDestroy(stopEvent));

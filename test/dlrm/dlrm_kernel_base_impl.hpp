@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <tuple>
+#include <cmath>
 
 #include <hip/hip_ext.h>
 #include <hip/hip_runtime.h>
@@ -361,7 +362,7 @@ namespace rocwmma
             mTotalGFlops          = calculateGFlops(outputSize, mB, mK);
             mMeasuredTFlopsPerSec = calculateTFlopsPerSec(outputSize, mB, mK, mElapsedTimeMs)
                                     * static_cast<float64_t>(mRepeats);
-            mEfficiency = (int)((double)(mMeasuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0));
+            mEfficiency = round(mMeasuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0);
 
             CHECK_HIP_ERROR(hipEventDestroy(startEvent));
             CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
