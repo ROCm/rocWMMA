@@ -29,7 +29,7 @@
 namespace rocwmma
 {
 
-    struct TestParams : public CooperativeTestParams
+    struct TestParams : public CommonTestParams
     {
         /* Use combinatorial logic to generate a set of kernel params from the input. */
         using KernelParams    = typename CombineLists<TestTypesSmall,
@@ -38,11 +38,11 @@ namespace rocwmma
                                                    TestLdsDataLayouts,
                                                    TestGemmConfigsWaveLevel,
                                                    TestBlocks4x4>::Result;
-        using KernelGenerator = KernelGenerator<KernelParams, KernelGeneratorImplWaveLevel>;
+        using KernelGenerator = KernelGenerator<KernelParams, KernelGeneratorImpl>;
 
         /* Sanity check to make sure the generator produces kernels expected by the test interface */
-        static_assert(std::is_same<typename KernelGeneratorImplWaveLevel::ResultT,
-                                   typename CooperativeTestParams::KernelT>::value,
+        static_assert(std::is_same<typename KernelGeneratorImpl::ResultT,
+                                   typename CommonTestParams::KernelT>::value,
                       "Kernels from this generator do not match testing interface");
 
         /* Generate the set of kernels to be tested */
