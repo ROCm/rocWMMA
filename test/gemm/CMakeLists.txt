@@ -35,6 +35,7 @@ if(ROCWMMA_VALIDATE_WITH_ROCBLAS OR ROCWMMA_BENCHMARK_WITH_ROCBLAS)
 endif()
 
 set(ROCWMMA_TEST_GEMM_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${ROCWMMA_TEST_GEMM_INCLUDE_DIRS})
+set(ROCWMMA_GEMM_TEST_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 ### GEMM tests that have rocBLAS support
 # Use rocBLAS for validation
@@ -46,6 +47,9 @@ function(add_gemm_validation_test TEST_TARGET TEST_SOURCE)
 
   # Add gemm include directory
   target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_GEMM_INCLUDE_DIRS})
+
+  # Put binary outputs in the same directory
+  set_target_properties(${TEST_TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ROCWMMA_GEMM_TEST_OUTPUT_DIR})
 
   # Link to rocBLAS
   if(ROCWMMA_VALIDATE_WITH_ROCBLAS)
@@ -63,6 +67,9 @@ function(add_gemm_benchmark_test TEST_TARGET TEST_SOURCE)
 
   # Add gemm include directory
   target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_GEMM_INCLUDE_DIRS})
+
+  # Put binary outputs in the same directory
+  set_target_properties(${TEST_TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ROCWMMA_GEMM_TEST_OUTPUT_DIR})
 
   # Link to rocBLAS
   if(ROCWMMA_BENCHMARK_WITH_ROCBLAS)

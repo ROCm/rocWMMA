@@ -27,6 +27,11 @@
 #ifndef ROCWMMA_GEMM_TEST_DETAIL_KERNEL_GENERATOR
 #define ROCWMMA_GEMM_TEST_DETAIL_KERNEL_GENERATOR
 
+#include <memory>
+#include <tuple>
+
+#include "kernel_impl.hpp"
+
 namespace rocwmma
 {
     struct KernelGenerator_PGR1_LB2_MP0_MB_CP
