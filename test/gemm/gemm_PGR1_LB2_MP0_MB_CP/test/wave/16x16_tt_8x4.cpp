@@ -33,7 +33,7 @@ namespace rocwmma
                                              CommonTestParams,
                                              KernelGeneratorImpl,
                                              TestTypesSmall,
-                                             TestBlockSizes16x16LargeMT,
+                                             TestBlockSizes16x16TinyBlockK,
                                              TestLayoutsTT,
                                              TestLdsDataLayouts,
                                              TestGemmConfigsWaveLevel,
