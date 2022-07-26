@@ -41,7 +41,7 @@ namespace rocwmma
     ///
     /// Generalized kernel params for most tests
     ///
-    struct CommonTestParams
+    struct GemmCommonTestParams
     {
         ///
         /// Testing types as Input/Output/Compute (IOC)
@@ -125,28 +125,28 @@ namespace rocwmma
 #if defined(ROCWMMA_EXTENDED_TESTS)
             typename CombineOne<std::tuple<col_major, col_major>, TestDataLayouts>::Result;
 #else
-            std::tuple<col_major, col_major, col_major>;
+            std::tuple<std::tuple<col_major, col_major, col_major>>;
 #endif // ROCWMMA_EXTENDED_TESTS
 
         using TestLayoutsNT =
 #if defined(ROCWMMA_EXTENDED_TESTS)
             typename CombineOne<std::tuple<col_major, row_major>, TestDataLayouts>::Result;
 #else
-            std::tuple<col_major, row_major, col_major>;
+            std::tuple<std::tuple<col_major, row_major, col_major>>;
 #endif // ROCWMMA_EXTENDED_TESTS
 
         using TestLayoutsTN =
 #if defined(ROCWMMA_EXTENDED_TESTS)
             typename CombineOne<std::tuple<row_major, col_major>, TestDataLayouts>::Result;
 #else
-            std::tuple<row_major, col_major, col_major>;
+            std::tuple<std::tuple<row_major, col_major, col_major>>;
 #endif // ROCWMMA_EXTENDED_TESTS
 
         using TestLayoutsTT =
 #if defined(ROCWMMA_EXTENDED_TESTS)
             typename CombineOne<std::tuple<row_major, row_major>, TestDataLayouts>::Result;
 #else
-            std::tuple<row_major, row_major, col_major>;
+            std::tuple<std::tuple<row_major, row_major, col_major>>;
 #endif // ROCWMMA_EXTENDED_TESTS
 
         ///
