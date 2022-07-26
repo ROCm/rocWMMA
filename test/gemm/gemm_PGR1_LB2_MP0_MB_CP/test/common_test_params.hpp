@@ -68,36 +68,6 @@ namespace rocwmma
     ///
     struct CommonTestParams : public GemmCommonTestParams
     {
-
-        ///
-        /// MFMA block sizes
-        /// BlockK variances for particular BlockM, BlockN
-        /// Cooperative tests generally have larger Macro Tiles (MT)
-        /// therefore to limit register usage we reduce the variation
-        /// in BlocK sizes.
-        /// Small MT  <= 4x4 blocks
-        /// Large MT  > 4x4 blocks
-        ///
-
-        using TestBlockSizes16x16SmallMT = std::tuple<std::tuple<I<16>, I<16>, I<16>>
-#if defined(ROCWMMA_EXTENDED_TESTS)
-                                                      ,
-                                                      std::tuple<I<16>, I<16>, I<32>>
-#endif // ROCWMMA_EXTENDED_TESTS
-                                                      >;
-
-        using TestBlockSizes16x16LargeMT = std::tuple<std::tuple<I<16>, I<16>, I<16>>>;
-
-        using TestBlockSizes32x32SmallMT = std::tuple<std::tuple<I<32>, I<32>, I<8>>,
-                                                      std::tuple<I<32>, I<32>, I<16>>
-#if defined(ROCWMMA_EXTENDED_TESTS)
-                                                      ,
-                                                      std::tuple<I<32>, I<32>, I<32>>
-#endif // ROCWMMA_EXTENDED_TESTS
-                                                      >;
-
-        using TestBlockSizes32x32LargeMT = std::tuple<std::tuple<I<32>, I<32>, I<8>>>;
-
         ///
         /// Cooperative GEMM configurations
         /// Block, Wave and Workgroup levels

@@ -33,7 +33,7 @@ namespace rocwmma
     {
         /* Use combinatorial logic to generate a set of kernel params from the input. */
         using KernelParams    = typename CombineLists<TestTypesSmall,
-                                                   TestBlockSizes32x32LargeMT,
+                                                   TestBlockSizes32x32TinyBlockK,
                                                    TestLayoutsTN,
                                                    TestLdsDataLayouts,
                                                    TestGemmConfigsWaveLevel,
