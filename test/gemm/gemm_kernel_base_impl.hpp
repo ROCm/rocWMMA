@@ -736,7 +736,7 @@ namespace rocwmma
                     auto elapsedTimeMs        = float64_t(timeMs);
                     auto measuredTFlopsPerSec = calculateTFlopsPerSec(mM, mN, mK, elapsedTimeMs)
                                                 * static_cast<float64_t>(mRepeats);
-                    mReferenceEfficiency = (int)((double)(measuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0));
+                    mReferenceEfficiency = round(measuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0);
                 }
 
                 CHECK_HIP_ERROR(hipEventDestroy(startEvent));
