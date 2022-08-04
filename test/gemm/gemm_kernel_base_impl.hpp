@@ -300,16 +300,16 @@ namespace rocwmma
                         LayoutC,
                         LayoutD>::reset()
     {
-        mTBlockX = mTBlockY = 0;
-        mM = mN = mK = 0;
-        mLda = mLdb = mLdc = mLdd = 0;
-        mAlpha = mBeta = ComputeT(0.0f);
+        mTBlockX = mTBlockY = 0u;
+        mM = mN = mK = 0u;
+        mLda = mLdb = mLdc = mLdd = 0u;
+        mAlpha = mBeta = static_cast<ComputeT>(0u);
 
         mRepeats =
 #ifdef ROCWMMA_VALIDATION_TESTS
-            1;
+            1u;
 #else
-            5;
+            5u;
 #endif
         mRunFlag          = true;
         mValidationResult = false;
@@ -622,7 +622,7 @@ namespace rocwmma
             using HandleGuardT = std::unique_ptr<rocblas_handle, void (*)(rocblas_handle*)>;
             auto handleGuard   = HandleGuardT(&handle, [](rocblas_handle* handle) {
                 CHECK_ROCBLAS_ERROR(rocblas_destroy_handle(*handle));
-              });
+            });
 
             auto rocBlasKernel = [this, &handle]() {
                 auto& dataInstance = DataStorage::instance();
