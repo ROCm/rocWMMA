@@ -40,6 +40,18 @@
 
 namespace rocwmma
 {
+    ///
+    /// This class of kernel is a naive kernel whereas
+    /// each wave is responsible for calculating a macro tile area of
+    /// a single block: BlockM x BlockN
+    ///
+    /// Kernel behaviour is described by:
+    /// PGR0 = Prefetch Global Read = 0, no prefetch
+    /// LB0 = Lds Blocks = 0, no Lds usage
+    /// MP0 = Mfma Priority = 0, no setprio
+    /// SB = Single-block
+    /// NC = Non-cooperative
+    ///
 
     template <uint32_t BlockM,
               uint32_t BlockN,
@@ -67,8 +79,8 @@ namespace rocwmma
     {
         using FragA   = fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA>;
         using FragB   = fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB>;
-        using FragC   = fragment<accumulator, BlockM, BlockN, BlockK, OutputT>;
-        using FragAcc = fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>;
+        using FragC   = fragment<accumulator, BlockM, BlockN, BlockK, OutputT, LayoutC>;
+        using FragAcc = fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutD>;
 
         using MappingA = MappingUtil<BlockM, BlockK, InputT, LayoutA>;
         using MappingB = MappingUtil<BlockK, BlockN, InputT, LayoutB>;
@@ -78,79 +90,71 @@ namespace rocwmma
         // Target C / D block on 2D grid
         auto matrixCoordC = MappingC::matrixCoord();
 
-        if(std::get<0>(matrixCoordC) < m && std::get<1>(matrixCoordC) < n)
+        if(std::get<0>(matrixCoordC) + BlockM > m || std::get<1>(matrixCoordC) + BlockN > n)
         {
-            // Initialize accumulator
-            auto fragAcc = FragAcc();
-            fill_fragment(fragAcc, static_cast<ComputeT>(0));
-
-            // Accumulate A * B
-            if(alpha)
-            {
-                // Setup starting addresses
-                // Offset A to col 0
-                // Offset B to row 0
-                auto* addrA = MappingA::dataCoord(a, MappingC::matrixCoordN(0), lda);
-                auto* addrB = MappingB::dataCoord(b, MappingC::matrixCoordM(0), ldb);
-
-                // Setup address increments.
-                // A steps BlockK through m x k
-                // B steps BlockK through k x n
-                auto incrA = MappingA::dataOffset(std::make_pair(0, BlockK), lda);
-                auto incrB = MappingB::dataOffset(std::make_pair(BlockK, 0), ldb);
-
-                auto count = k / BlockK;
-                for(int i = 0; i < count; i++)
-                {
-                    // Keeping the workgroup in sync here is not necessary for correctness.
-                    // HOWEVER, if we keep waves in sync chances are good we may
-                    // benefit from cache hits on re-used data from A and B global loads.
-                    synchronize_workgroup();
-
-                    auto fragA = FragA();
-                    auto fragB = FragB();
-
-                    // Load and multiply
-                    load_matrix_sync(fragA, addrA, lda);
-                    load_matrix_sync(fragB, addrB, ldb);
-                    mma_sync(fragAcc, fragA, fragB, fragAcc);
-
-                    addrA += incrA;
-                    addrB += incrB;
-                }
-            }
-
-            // Load C
-            auto fragC = FragC();
-            fill_fragment(fragC, static_cast<OutputT>(0));
-            if(beta)
-            {
-                // Setup address
-                auto* addrC = MappingC::dataCoord(c, matrixCoordC, ldc);
-                load_matrix_sync(fragC,
-                                 addrC,
-                                 ldc,
-                                 std::is_same<LayoutC, row_major>::value ? mem_row_major
-                                                                         : mem_col_major);
-            }
-
-            // D = alpha * accumAB + beta * C
-#pragma unroll
-            for(int i = 0; i < fragC.num_elements; ++i)
-            {
-                fragC.x[i] = OutputT(alpha * ComputeT(fragAcc.x[i]) + beta * ComputeT(fragC.x[i]));
-            }
-
-            // Output addresss
-            auto* addrD = MappingD::dataCoord(d, matrixCoordC, ldd);
-
-            // Store the output
-            store_matrix_sync(addrD,
-                              fragC,
-                              ldd,
-                              std::is_same<LayoutD, row_major>::value ? mem_row_major
-                                                                      : mem_col_major);
+            return;
         }
+
+        if(BlockK > k)
+        {
+            return;
+        }
+
+        // Initialize accumulator
+        auto fragAcc = FragAcc();
+        fill_fragment(fragAcc, static_cast<ComputeT>(0));
+
+        // Setup starting addresses
+        // Offset A to col 0
+        // Offset B to row 0
+        auto* addrA = MappingA::dataCoord(a, MappingC::matrixCoordN(0), lda);
+        auto* addrB = MappingB::dataCoord(b, MappingC::matrixCoordM(0), ldb);
+
+        // Setup address increments.
+        // A steps BlockK through m x k
+        // B steps BlockK through k x n
+        auto incrA = MappingA::dataOffset(std::make_pair(0, BlockK), lda);
+        auto incrB = MappingB::dataOffset(std::make_pair(BlockK, 0), ldb);
+        auto count = k / BlockK;
+
+        // Accumulate A * B
+        for(int i = 0; i < count; i++)
+        {
+            // Keeping the workgroup in sync here is not necessary for correctness.
+            // HOWEVER, if we keep waves in sync chances are good we may
+            // benefit from cache hits on re-used data from A and B global loads.
+            synchronize_workgroup();
+
+            auto fragA = FragA();
+            auto fragB = FragB();
+
+            // Load and multiply
+            load_matrix_sync(fragA, addrA, lda);
+            load_matrix_sync(fragB, addrB, ldb);
+            mma_sync(fragAcc, fragA, fragB, fragAcc);
+
+            addrA += incrA;
+            addrB += incrB;
+        }
+
+        auto fragC = FragC();
+
+        // Setup address and load C
+        auto* addrC = MappingC::dataCoord(c, matrixCoordC, ldc);
+        load_matrix_sync(fragC, addrC, ldc);
+
+        // D = alpha * accumAB + beta * C
+#pragma unroll
+        for(int i = 0; i < fragC.num_elements; ++i)
+        {
+            fragC.x[i] = OutputT(alpha * ComputeT(fragAcc.x[i]) + beta * ComputeT(fragC.x[i]));
+        }
+
+        // Output addresss
+        auto* addrD = MappingD::dataCoord(d, matrixCoordC, ldd);
+
+        // Store the output
+        store_matrix_sync(addrD, fragC, ldd);
     }
 
 } // namespace rocwmma

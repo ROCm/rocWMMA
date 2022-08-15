@@ -242,13 +242,22 @@ namespace rocwmma
         /// Per-wave output block coverage
         ///
         using TestBlocks1x1 = std::tuple<std::tuple<I<1>, I<1>>>;
-        using TestBlocks2x1 = std::tuple<std::tuple<I<2>, I<1>>>;
         using TestBlocks1x2 = std::tuple<std::tuple<I<1>, I<2>>>;
+        using TestBlocks1x4 = std::tuple<std::tuple<I<1>, I<4>>>;
+        using TestBlocks1x8 = std::tuple<std::tuple<I<1>, I<8>>>;
+
+        using TestBlocks2x1 = std::tuple<std::tuple<I<2>, I<1>>>;
         using TestBlocks2x2 = std::tuple<std::tuple<I<2>, I<2>>>;
         using TestBlocks2x4 = std::tuple<std::tuple<I<2>, I<4>>>;
+        using TestBlocks2x8 = std::tuple<std::tuple<I<2>, I<8>>>;
+
+        using TestBlocks4x1 = std::tuple<std::tuple<I<4>, I<1>>>;
         using TestBlocks4x2 = std::tuple<std::tuple<I<4>, I<2>>>;
         using TestBlocks4x4 = std::tuple<std::tuple<I<4>, I<4>>>;
         using TestBlocks4x8 = std::tuple<std::tuple<I<4>, I<8>>>;
+
+        using TestBlocks8x1 = std::tuple<std::tuple<I<8>, I<1>>>;
+        using TestBlocks8x2 = std::tuple<std::tuple<I<8>, I<2>>>;
         using TestBlocks8x4 = std::tuple<std::tuple<I<8>, I<4>>>;
         using TestBlocks8x8 = std::tuple<std::tuple<I<8>, I<8>>>;
 
@@ -313,12 +322,12 @@ namespace rocwmma
 
         static inline std::vector<AlphaT> alphas()
         {
-            return {2.0};
+            return {static_cast<AlphaT>(2)};
         }
 
         static inline std::vector<BetaT> betas()
         {
-            return {2.0};
+            return {static_cast<BetaT>(2)};
         }
     };
 

@@ -49,6 +49,7 @@ namespace rocwmma
     /// LB2 = Lds Buffer, x2 buffers
     /// MP0 = Mfma Priority, 0
     /// MB = Multi-block output
+    /// CP = Cooperative wave-wise global read
     ///
     template <uint32_t BlockM,
               uint32_t BlockN,
@@ -130,7 +131,12 @@ namespace rocwmma
         auto waveTileBound = matrixCoordC + waveTileDim;
 
         // Bounds check
-        if((std::get<0>(waveTileBound) > m) || (std::get<1>(waveTileBound) > n) || (BlockK > k))
+        if((std::get<0>(waveTileBound) > m) || (std::get<1>(waveTileBound) > n))
+        {
+            return;
+        }
+
+        if(BlockK > k)
         {
             return;
         }
@@ -192,39 +198,36 @@ namespace rocwmma
         ///
         /// Accumulate A * B
         ///
-        if(alpha)
+        for(int currentK = BlockK; currentK < k; currentK += BlockK)
         {
-            for(int currentK = BlockK; currentK < k; currentK += BlockK)
-            {
-                typename GlobalMapping::MfmaBuffA fragsA;
-                typename GlobalMapping::MfmaBuffB fragsB;
+            typename GlobalMapping::MfmaBuffA fragsA;
+            typename GlobalMapping::MfmaBuffB fragsB;
 
-                // Local read mfma frags
-                GemmDriver::localReadA(fragsA, ldsPtrLo + ldsReadOffsetA, ldlds);
-                GemmDriver::localReadB(fragsB, ldsPtrLo + ldsReadOffsetB, ldlds);
+            // Local read mfma frags
+            GemmDriver::localReadA(fragsA, ldsPtrLo + ldsReadOffsetA, ldlds);
+            GemmDriver::localReadB(fragsB, ldsPtrLo + ldsReadOffsetB, ldlds);
 
-                // Start fetching next round of frags
-                GemmDriver::globalReadCoopA(grBuffA, a + globalReadOffsetA, lda);
-                GemmDriver::globalReadCoopB(grBuffB, b + globalReadOffsetB, ldb);
+            // Start fetching next round of frags
+            GemmDriver::globalReadCoopA(grBuffA, a + globalReadOffsetA, lda);
+            GemmDriver::globalReadCoopB(grBuffB, b + globalReadOffsetB, ldb);
 
-                // Advance offsets to next k step
-                globalReadOffsetA += kStepOffsetA;
-                globalReadOffsetB += kStepOffsetB;
+            // Advance offsets to next k step
+            globalReadOffsetA += kStepOffsetA;
+            globalReadOffsetB += kStepOffsetB;
 
-                // accum(A * B)
-                GemmDriver::mfma(fragsAcc, fragsA, fragsB, fragsAcc);
+            // accum(A * B)
+            GemmDriver::mfma(fragsAcc, fragsA, fragsB, fragsAcc);
 
-                GemmDriver::localWriteCoopA(ldsPtrHi + ldsWriteOffsetA, grBuffA, ldlds);
-                GemmDriver::localWriteCoopB(ldsPtrHi + ldsWriteOffsetB, grBuffB, ldlds);
+            GemmDriver::localWriteCoopA(ldsPtrHi + ldsWriteOffsetA, grBuffA, ldlds);
+            GemmDriver::localWriteCoopB(ldsPtrHi + ldsWriteOffsetB, grBuffB, ldlds);
 
-                // Make sure that all waves have finished reading / writing to lds.
-                GemmDriver::syncWorkgroup();
+            // Make sure that all waves have finished reading / writing to lds.
+            GemmDriver::syncWorkgroup();
 
-                // Swap Lds buffers
-                auto* tmp = ldsPtrLo;
-                ldsPtrLo  = ldsPtrHi;
-                ldsPtrHi  = tmp;
-            }
+            // Swap Lds buffers
+            auto* tmp = ldsPtrLo;
+            ldsPtrLo  = ldsPtrHi;
+            ldsPtrHi  = tmp;
         }
 
         ///
@@ -232,14 +235,7 @@ namespace rocwmma
         ///
 
         typename GlobalMapping::MfmaBuffC fragsC;
-        if(beta)
-        {
-            GemmDriver::globalReadC(fragsC, c + globalReadOffsetC, ldc);
-        }
-        else
-        {
-            GemmDriver::fill(fragsC, static_cast<OutputT>(0));
-        }
+        GemmDriver::globalReadC(fragsC, c + globalReadOffsetC, ldc);
 
         ///
         /// Clean up tail A * B
