@@ -166,7 +166,7 @@ namespace rocwmma
         template <uint32_t BlockDim,
                   uint32_t BlockK,
                   typename DataT,
-                  uint32_t TestWidth = AMDGCN_DWORD_SIZE_BYTES * 8 / sizeof(DataT)>
+                  uint32_t TestWidth = AMDGCN_DWORD_SIZE_BYTES * 4 / sizeof(DataT)>
         struct VecWidthTraits
         {
             enum : uint32_t
