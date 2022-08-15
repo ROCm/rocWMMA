@@ -295,11 +295,14 @@ namespace rocwmma
               typename InputT,
               typename ComputeT,
               typename LayoutA,
-              typename LayoutB>
-    __device__ void mma_sync(fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>&           d,
-                             fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA> const& a,
-                             fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB> const& b,
-                             fragment<accumulator, BlockM, BlockN, BlockK, ComputeT> const&     c)
+              typename LayoutB,
+              typename LayoutC,
+              typename LayoutD>
+    __device__ void
+        mma_sync(fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutD>&       d,
+                 fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA> const&      a,
+                 fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB> const&      b,
+                 fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutC> const& c)
     {
         using MFMA  = Mfma<InputT, ComputeT, BlockM, BlockN, BlockK>;
         using FragA = typename std::decay<decltype(a)>::type;
