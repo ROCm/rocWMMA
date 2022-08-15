@@ -176,8 +176,9 @@ namespace rocwmma
         DlrmDirection_t passDirection = DlrmDirection_t::Forward;
 
         // Performance
-        float64_t mTotalGFlops, mMeasuredGFlopsPerSec;
-        float64_t mElapsedTimeMs, mEfficiency;
+        float64_t mTotalGFlops, mMeasuredTFlopsPerSec;
+        float64_t mElapsedTimeMs;
+        int32_t mEfficiency;
     };
 
 } // namespace rocwmma
