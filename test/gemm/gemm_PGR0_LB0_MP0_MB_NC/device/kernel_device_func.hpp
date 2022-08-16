@@ -87,8 +87,8 @@ namespace rocwmma
 
         using FragA   = fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA>;
         using FragB   = fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB>;
-        using FragC   = fragment<accumulator, BlockM, BlockN, BlockK, OutputT>;
-        using FragAcc = fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>;
+        using FragC   = fragment<accumulator, BlockM, BlockN, BlockK, OutputT, LayoutC>;
+        using FragAcc = fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutD>;
 
         // Target starting C / D block on 2D grid, offset by blocks per wave
         auto matrixCoordC = MappingC::matrixCoord();
@@ -195,11 +195,7 @@ namespace rocwmma
             for(int j = 0; j < BlocksY; j++)
             {
                 auto* addrC = MappingC::dataCoord(c, subMatrixCoordsC[i][j], ldc);
-                load_matrix_sync(fragsC[i][j],
-                                 addrC,
-                                 ldc,
-                                 std::is_same<LayoutC, row_major>::value ? mem_row_major
-                                                                         : mem_col_major);
+                load_matrix_sync(fragsC[i][j], addrC, ldc);
             }
         }
 
@@ -224,11 +220,7 @@ namespace rocwmma
                 auto* addrD = MappingD::dataCoord(d, subMatrixCoordsC[i][j], ldd);
 
                 // Store the output
-                store_matrix_sync(addrD,
-                                  fragC,
-                                  ldd,
-                                  std::is_same<LayoutD, row_major>::value ? mem_row_major
-                                                                          : mem_col_major);
+                store_matrix_sync(addrD, fragC, ldd);
             }
         }
     }

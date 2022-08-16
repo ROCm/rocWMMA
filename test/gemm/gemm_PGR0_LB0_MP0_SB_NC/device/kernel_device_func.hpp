@@ -79,8 +79,8 @@ namespace rocwmma
     {
         using FragA   = fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA>;
         using FragB   = fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB>;
-        using FragC   = fragment<accumulator, BlockM, BlockN, BlockK, OutputT>;
-        using FragAcc = fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>;
+        using FragC   = fragment<accumulator, BlockM, BlockN, BlockK, OutputT, LayoutC>;
+        using FragAcc = fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutD>;
 
         using MappingA = MappingUtil<BlockM, BlockK, InputT, LayoutA>;
         using MappingB = MappingUtil<BlockK, BlockN, InputT, LayoutB>;
@@ -141,10 +141,7 @@ namespace rocwmma
 
         // Setup address and load C
         auto* addrC = MappingC::dataCoord(c, matrixCoordC, ldc);
-        load_matrix_sync(fragC,
-                         addrC,
-                         ldc,
-                         std::is_same<LayoutC, row_major>::value ? mem_row_major : mem_col_major);
+        load_matrix_sync(fragC, addrC, ldc);
 
         // D = alpha * accumAB + beta * C
 #pragma unroll
@@ -157,10 +154,7 @@ namespace rocwmma
         auto* addrD = MappingD::dataCoord(d, matrixCoordC, ldd);
 
         // Store the output
-        store_matrix_sync(addrD,
-                          fragC,
-                          ldd,
-                          std::is_same<LayoutD, row_major>::value ? mem_row_major : mem_col_major);
+        store_matrix_sync(addrD, fragC, ldd);
     }
 
 } // namespace rocwmma
