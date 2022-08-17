@@ -155,18 +155,21 @@ namespace rocwmma
 
         /*
         * The following class is intended to provide optimistic suggestions for
-        * IO vector widths. Given a certain block size, search for largest
-        * vector width that could potentially be used during IO, up to a maximum of
-        * dwordx4.
+        * IO vector widths, up to a maximum of dwordx4 which is the largest data
+        * movement instruction. Keep halving the vector width until it can fit
+        * the entire block, or split evenly amongst IO iterations.
         *
-        * Start testing at a default width of BlockK. Keep halving the vector width
-        * until it can fit the entire block, or split evenly amongst IO iterations.
+        * TODO: As of ROCm 5.3, the compiler has issue with fp64 TestWidth = 2 in some
+        * corner cases.
         */
 
         template <uint32_t BlockDim,
                   uint32_t BlockK,
                   typename DataT,
-                  uint32_t TestWidth = AMDGCN_DWORD_SIZE_BYTES * 4 / sizeof(DataT)>
+                  uint32_t TestWidth = std::is_same<DataT, float64_t>::value
+                                           ? 8u * AMDGCN_DWORD_SIZE_BYTES / (uint32_t)sizeof(DataT)
+                                           : // TODO: fp64 compiler bug
+                                           4u * AMDGCN_DWORD_SIZE_BYTES / (uint32_t)sizeof(DataT)>
         struct VecWidthTraits
         {
             enum : uint32_t
