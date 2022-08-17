@@ -198,7 +198,7 @@ namespace rocwmma
         ///
         /// Accumulate A * B
         ///
-        for(int currentK = BlockK; currentK < k; currentK += BlockK)
+        for(auto currentK = BlockK; currentK < k; currentK += BlockK)
         {
             typename GlobalMapping::MfmaBuffA fragsA;
             typename GlobalMapping::MfmaBuffB fragsB;
