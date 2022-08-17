@@ -27,8 +27,8 @@
 #ifndef ROCWMMA_KERNEL_BASE_IMPL_HPP
 #define ROCWMMA_KERNEL_BASE_IMPL_HPP
 
-#include <tuple>
 #include <cmath>
+#include <tuple>
 
 #include <hip/hip_ext.h>
 #include <hip/hip_runtime_api.h>
@@ -623,7 +623,7 @@ namespace rocwmma
             using HandleGuardT = std::unique_ptr<rocblas_handle, void (*)(rocblas_handle*)>;
             auto handleGuard   = HandleGuardT(&handle, [](rocblas_handle* handle) {
                 CHECK_ROCBLAS_ERROR(rocblas_destroy_handle(*handle));
-            });
+              });
 
             auto rocBlasKernel = [this, &handle]() {
                 auto& dataInstance = DataStorage::instance();
@@ -736,7 +736,8 @@ namespace rocwmma
                     auto elapsedTimeMs        = float64_t(timeMs);
                     auto measuredTFlopsPerSec = calculateTFlopsPerSec(mM, mN, mK, elapsedTimeMs)
                                                 * static_cast<float64_t>(mRepeats);
-                    mReferenceEfficiency = round(measuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0);
+                    mReferenceEfficiency
+                        = round(measuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0);
                 }
 
                 CHECK_HIP_ERROR(hipEventDestroy(startEvent));
@@ -804,8 +805,11 @@ namespace rocwmma
                 = compareEqualLaunchKernel<OutputT, OutputT, DeviceLayoutD, LayoutD>(
                     dataInstance->deviceD().get(), reference.get(), mM, mN, errorTolerance);
 
-            // MatrixUtil<DeviceLayoutD>::print(result0.get(), mM, mN);
-            // MatrixUtil<LayoutD>::print(result1.get(), mM, mN);
+            // auto result = dataInstance->template allocHost<OutputT>(sizeD);
+            // dataInstance->copyData(result, dataInstance->deviceD(), sizeD);
+
+            // MatrixUtil<DeviceLayoutD>::print(dataInstance->hostD().get(), mM, mN);
+            // MatrixUtil<LayoutD>::print(result.get(), mM, mN);
 
             EXPECT_TRUE(mValidationResult) << "Max relative error: " << mMaxRelativeError;
         }

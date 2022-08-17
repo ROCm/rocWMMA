@@ -29,14 +29,14 @@
 namespace rocwmma
 {
 
-    static constexpr uint32_t AMDGCN_WAVE_SIZE                   = 64;
-    static constexpr uint32_t AMDGCN_REGISTER_ELEMENT_SIZE_BYTES = 4;
+    static constexpr uint32_t AMDGCN_WAVE_SIZE                   = 64u;
+    static constexpr uint32_t AMDGCN_REGISTER_ELEMENT_SIZE_BYTES = 4u;
     static constexpr uint32_t AMDGCN_REGISTER_SIZE_BYTES
         = AMDGCN_REGISTER_ELEMENT_SIZE_BYTES * AMDGCN_WAVE_SIZE;
 
-    static constexpr uint32_t AMDGCN_LDS_MAX_SIZE_BYTES    = 65536;
-    static constexpr uint32_t AMDGCN_CACHE_LINE_SIZE_BYTES = 64;
-    static constexpr uint32_t AMDGCN_DWORD_SIZE_BYTES = 4;
+    static constexpr uint32_t AMDGCN_LDS_MAX_SIZE_BYTES    = 65536u;
+    static constexpr uint32_t AMDGCN_CACHE_LINE_SIZE_BYTES = 64u;
+    static constexpr uint32_t AMDGCN_DWORD_SIZE_BYTES      = 4u;
 
 } // namespace rocwmma
 
