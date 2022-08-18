@@ -46,7 +46,7 @@ set(${ROCWMMA_TARGET_SOURCES} ${${ROCWMMA_TARGET_SOURCES}}
                               ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nt_4x4.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tn_4x4.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_4x4.cpp
-                              PARENT_SCOPE)
+                              )
 
 if(ROCWMMA_BUILD_EXTENDED_TESTS)
   set(${ROCWMMA_TARGET_SOURCES} ${${ROCWMMA_TARGET_SOURCES}}
@@ -58,5 +58,8 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nt_4x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tn_4x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tt_4x2.cpp
-                                PARENT_SCOPE)
+                                )
 endif()
+
+# Push local changes back up to parent scope
+set(${ROCWMMA_TARGET_SOURCES} ${${ROCWMMA_TARGET_SOURCES}} PARENT_SCOPE)
