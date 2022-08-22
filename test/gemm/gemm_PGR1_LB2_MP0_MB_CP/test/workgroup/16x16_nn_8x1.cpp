@@ -36,12 +36,10 @@ namespace rocwmma
                                              TestBlockSizes16x16SmallBlockK,
                                              TestLayoutsNN,
                                              TestLdsDataLayouts,
-                                             TestGemmConfigsWorkgroupLevel,
+                                             TestGemmConfigsWgLevel,
                                              TestBlocks8x1);
 
 } // namespace rocwmma
 
 // Instantiate kernels as a test suite
-ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE(Gemm_PGR1_LB2_MP0_MB_CP,
-                                     BLK_16x16_NN_8x1,
-                                     rocwmma::TestParams);
+ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE(Gemm_PGR1_LB2_MP0_MB_CP, WG_16x16_NN_8x1, rocwmma::TestParams);
