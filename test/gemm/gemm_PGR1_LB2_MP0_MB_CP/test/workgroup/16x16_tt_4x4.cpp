@@ -33,13 +33,15 @@ namespace rocwmma
                                              CommonTestParams,
                                              KernelGeneratorImpl,
                                              TestTypes16x16,
-                                             TestBlockSizes16x16SmallBlockK,
+                                             TestBlockSizes16x16TinyBlockK,
                                              TestLayoutsTT,
                                              TestLdsDataLayouts,
-                                             TestGemmConfigsWgLevel,
+                                             TestGemmConfigsWorkgroupLevel,
                                              TestBlocks4x4);
 
 } // namespace rocwmma
 
 // Instantiate kernels as a test suite
-ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE(Gemm_PGR1_LB2_MP0_MB_CP, WG_16x16_TT_4x4, rocwmma::TestParams);
+ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE(Gemm_PGR1_LB2_MP0_MB_CP,
+                                     BLK_16x16_TT_4x4,
+                                     rocwmma::TestParams);
