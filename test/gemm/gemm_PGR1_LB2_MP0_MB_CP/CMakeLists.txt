@@ -40,8 +40,8 @@ set(${ROCWMMA_TARGET_SOURCES} ${GemmCommonSources})
 
 # Include all sources from testing contexts
 add_subdirectory(test/block)
-#add_subdirectory(test/wave)
-#add_subdirectory(test/workgroup)
+add_subdirectory(test/wave)
+add_subdirectory(test/workgroup)
 
 # Ad hoc test
 set(${ROCWMMA_AD_HOC_TARGET_SOURCES} ${GemmCommonSources}
