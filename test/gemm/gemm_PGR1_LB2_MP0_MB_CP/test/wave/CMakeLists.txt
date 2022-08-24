@@ -160,5 +160,5 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                 )
 endif()
 
-# Push local changes back up to parent scope
-set(${ROCWMMA_TARGET_SOURCES} ${${ROCWMMA_TARGET_SOURCES}} PARENT_SCOPE)
+# Create target
+add_gemm_test(${ROCWMMA_TARGET_NAME}_WV  ${${ROCWMMA_TARGET_SOURCES}})
