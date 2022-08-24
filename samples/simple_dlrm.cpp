@@ -593,15 +593,15 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
 
     // DLRM flops converge to 2*mmkb
     auto gFlops       = 2.0 * static_cast<double>(m * m * k * b) * 1.0e-9;
-    auto gFlopsPerSec = gFlops / static_cast<double>(timeMs) * 1.0e3;
+    auto tFlopsPerSec = gFlops / static_cast<double>(timeMs);
 
     // Echo performance
     std::cout << "TileSize, "
               << "MatM, MatK, Batches, "
-              << "elapsedMs, GFlops, GFlops/s" << std::endl;
+              << "elapsedMs, Problem Size(GFlops), TFlops/s" << std::endl;
 
     std::cout << TILE_DIM << ", " << m << ", " << k << ", " << b << ", " << timeMs << ", " << gFlops
-              << ", " << gFlopsPerSec << std::endl;
+              << ", " << tFlopsPerSec << std::endl;
 
     std::cout << "Validating result with reference..." << std::endl;
 

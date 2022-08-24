@@ -27,6 +27,7 @@
 #ifndef ROCWMMA_KERNEL_BASE_IMPL_HPP
 #define ROCWMMA_KERNEL_BASE_IMPL_HPP
 
+#include <cmath>
 #include <tuple>
 
 #include <hip/hip_ext.h>
@@ -300,23 +301,23 @@ namespace rocwmma
                         LayoutC,
                         LayoutD>::reset()
     {
-        mTBlockX = mTBlockY = 0;
-        mM = mN = mK = 0;
-        mLda = mLdb = mLdc = mLdd = 0;
-        mAlpha = mBeta = ComputeT(0.0f);
+        mTBlockX = mTBlockY = 0u;
+        mM = mN = mK = 0u;
+        mLda = mLdb = mLdc = mLdd = 0u;
+        mAlpha = mBeta = static_cast<ComputeT>(0u);
 
         mRepeats =
 #ifdef ROCWMMA_VALIDATION_TESTS
-            1;
+            1u;
 #else
-            5;
+            5u;
 #endif
         mRunFlag          = true;
         mValidationResult = false;
         mMaxRelativeError = 0.0;
 
-        mElapsedTimeMs = mTotalGFlops = mMeasuredGFlopsPerSec = 0.0;
-        mEfficiency = mReferenceEfficiency = -1.0;
+        mElapsedTimeMs = mTotalGFlops = mMeasuredTFlopsPerSec = 0.0;
+        mEfficiency = mReferenceEfficiency = -1;
     }
 
     template <uint32_t BlockM,
@@ -372,8 +373,8 @@ namespace rocwmma
                       << "LytA_LytB_LytC_LytD, "
                       << "Ti_To_Tc, "
                       << "elapsedMs, "
-                      << "GFlops, "
-                      << "GFlops/s, "
+                      << "Problem Size(GFlops), "
+                      << "TFlops/s, "
                       << "Efficiency(%), "
 #if defined(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
                       << "rocBLAS Efficiency(%), "
@@ -429,7 +430,7 @@ namespace rocwmma
         else
         {
 
-            stream << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredGFlopsPerSec
+            stream << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredTFlopsPerSec
                    << ", " << mEfficiency << ", "
 #if defined(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
                    << mReferenceEfficiency << ", "
@@ -597,9 +598,9 @@ namespace rocwmma
 
                 mElapsedTimeMs        = float64_t(timeMs);
                 mTotalGFlops          = calculateGFlops(mM, mN, mK);
-                mMeasuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
+                mMeasuredTFlopsPerSec = calculateTFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
                                         * static_cast<float64_t>(mRepeats);
-                mEfficiency = mMeasuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
+                mEfficiency = round(mMeasuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0);
 
                 CHECK_HIP_ERROR(hipEventDestroy(startEvent));
                 CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
@@ -733,9 +734,10 @@ namespace rocwmma
                     auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<InputT>();
 
                     auto elapsedTimeMs        = float64_t(timeMs);
-                    auto measuredGFlopsPerSec = calculateGFlopsPerSec(mM, mN, mK, elapsedTimeMs)
+                    auto measuredTFlopsPerSec = calculateTFlopsPerSec(mM, mN, mK, elapsedTimeMs)
                                                 * static_cast<float64_t>(mRepeats);
-                    mReferenceEfficiency = measuredGFlopsPerSec / devicePeakGFlopsPerSec * 100.0;
+                    mReferenceEfficiency
+                        = round(measuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0);
                 }
 
                 CHECK_HIP_ERROR(hipEventDestroy(startEvent));
@@ -803,8 +805,11 @@ namespace rocwmma
                 = compareEqualLaunchKernel<OutputT, OutputT, DeviceLayoutD, LayoutD>(
                     dataInstance->deviceD().get(), reference.get(), mM, mN, errorTolerance);
 
-            // MatrixUtil<DeviceLayoutD>::print(result0.get(), mM, mN);
-            // MatrixUtil<LayoutD>::print(result1.get(), mM, mN);
+            // auto result = dataInstance->template allocHost<OutputT>(sizeD);
+            // dataInstance->copyData(result, dataInstance->deviceD(), sizeD);
+
+            // MatrixUtil<DeviceLayoutD>::print(dataInstance->hostD().get(), mM, mN);
+            // MatrixUtil<LayoutD>::print(result.get(), mM, mN);
 
             EXPECT_TRUE(mValidationResult) << "Max relative error: " << mMaxRelativeError;
         }
