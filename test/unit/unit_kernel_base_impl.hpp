@@ -118,8 +118,9 @@ namespace rocwmma
         mValidationResult = false;
         mMaxRelativeError = 0.0;
 
-        mTotalGFlops = mMeasuredGFlopsPerSec = 0.0;
-        mElapsedTimeMs = mEfficiency = 0.0;
+        mTotalGFlops = mMeasuredTFlopsPerSec = 0.0;
+        mElapsedTimeMs = 0.0;
+        mEfficiency = -1;
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
@@ -128,7 +129,7 @@ namespace rocwmma
     {
 
         return stream << "TBlkX, TBlkY, BlkM, BlkN, MatM, MatN, Param1, ld, Param2, "
-                         "Lyt, Td, elapsedMs, GFlops, GFlops/s, Efficiency(%), "
+                         "Lyt, Td, elapsedMs, Problem Size(GFlops), TFlops/s, Efficiency(%), "
                          "Result"
                       << std::endl;
     }
@@ -155,7 +156,7 @@ namespace rocwmma
         }
         else
         {
-            stream << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredGFlopsPerSec
+            stream << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredTFlopsPerSec
                    << ", " << mEfficiency << ", " << (mValidationResult ? "PASSED" : "FAILED")
                    << std::endl;
         }

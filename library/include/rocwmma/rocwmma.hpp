@@ -369,11 +369,14 @@ namespace rocwmma
               typename InputT,
               typename ComputeT,
               typename LayoutA,
-              typename LayoutB>
-    __device__ void mma_sync(fragment<accumulator, BlockM, BlockN, BlockK, ComputeT>&           d,
-                             fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA> const& a,
-                             fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB> const& b,
-                             fragment<accumulator, BlockM, BlockN, BlockK, ComputeT> const&     c);
+              typename LayoutB,
+              typename LayoutC,
+              typename LayoutD>
+    __device__ void
+        mma_sync(fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutD>&       d,
+                 fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA> const&      a,
+                 fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB> const&      b,
+                 fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutC> const& c);
 
     //! Synchronization point for all wavefronts in a workgroup.
     __device__ void synchronize_workgroup();

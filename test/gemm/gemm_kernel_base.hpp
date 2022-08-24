@@ -158,8 +158,8 @@ namespace rocwmma
         double   mMaxRelativeError;
 
         // Performance
-        float64_t mElapsedTimeMs, mTotalGFlops, mMeasuredGFlopsPerSec;
-        float64_t mEfficiency, mReferenceEfficiency;
+        float64_t mElapsedTimeMs, mTotalGFlops, mMeasuredTFlopsPerSec;
+        int32_t mEfficiency, mReferenceEfficiency;
     };
 
 } // namespace rocwmma
