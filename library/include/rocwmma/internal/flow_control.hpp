@@ -78,7 +78,7 @@ namespace rocwmma
 
             __device__ static inline auto exec()
             {
-                __builtin_amdgcn_s_waitcnt(vmcnt);
+                return __builtin_amdgcn_s_waitcnt(vmcnt);
             }
         };
 
@@ -92,7 +92,7 @@ namespace rocwmma
 
             __device__ static inline auto exec()
             {
-                __builtin_amdgcn_s_waitcnt(lgmcnt);
+                return __builtin_amdgcn_s_waitcnt(lgmcnt);
             }
         };
 
@@ -108,7 +108,7 @@ namespace rocwmma
 
             __device__ static inline auto exec()
             {
-                __builtin_amdgcn_s_waitcnt(cnt);
+                return __builtin_amdgcn_s_waitcnt(cnt);
             }
         };
 
