@@ -32,10 +32,10 @@
 #include "rocwmma.hpp"
 
 #include "internal/accessors.hpp"
-#include "internal/barrier.hpp"
 #include "internal/broadcast.hpp"
 #include "internal/constants.hpp"
 #include "internal/convert.hpp"
+#include "internal/flow_control.hpp"
 #include "internal/io_config.hpp"
 #include "internal/io_shape.hpp"
 #include "internal/io_traits.hpp"
@@ -318,6 +318,41 @@ namespace rocwmma
     __device__ void synchronize_workgroup()
     {
         Barrier::exec();
+    }
+
+    template <int32_t priority>
+    __device__ void prioritize_wavefront()
+    {
+        using SetPrio = SetPrio<priority>;
+        SetPrio::exec();
+    }
+
+    template <int32_t mask>
+    __device__ void sched_barrier()
+    {
+        using SchedBarrier = SchedBarrier<mask>;
+        SchedBarrier::exec();
+    }
+
+    template <int32_t vmcnt, int32_t lgmcnt>
+    __device__ void wave_mem_barrier()
+    {
+        using Waitcnt = Waitcnt<vmcnt, lgmcnt>;
+        Waitcnt::exec();
+    }
+
+    template <int32_t vmcnt>
+    __device__ void wave_vector_mem_barrier()
+    {
+        using WaitcntVmcnt = WaitcntVmcnt<vmcnt>;
+        WaitcntVmcnt::exec();
+    }
+
+    template <int32_t lgmcnt>
+    __device__ void wave_lds_mem_barrier()
+    {
+        using WaitcntLgkmcnt = WaitcntLgkmcnt<lgmcnt>;
+        WaitcntLgkmcnt::exec();
     }
 
 } // namespace rocwmma
