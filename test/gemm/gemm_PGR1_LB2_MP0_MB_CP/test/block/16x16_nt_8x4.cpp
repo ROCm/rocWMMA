@@ -31,7 +31,7 @@ namespace rocwmma
     ROCWMMA_GENERATE_GEMM_GTEST_SUITE_PARAMS(TestParams,
                                              CommonTestParams,
                                              KernelGeneratorImpl,
-                                             TestTypes16x16,
+                                             TestTypesMedium,
                                              TestBlockSizes16x16TinyBlockK,
                                              TestLayoutsNT,
                                              TestLdsDataLayouts,
