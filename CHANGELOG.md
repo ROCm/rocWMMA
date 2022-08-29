@@ -1,7 +1,7 @@
 # Change Log for rocWMMA
 Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://rocwmma.readthedocs.io/en/latest/).
 ## rocWMMA 0.8 for ROCm 5.3.0
-## Added
+### Added
 - Added runtime checks to disable tests on non-target GPUS
 - Added workgroup aware gemm kernels
 - Added workgroup aware validation and benchmark test suite
