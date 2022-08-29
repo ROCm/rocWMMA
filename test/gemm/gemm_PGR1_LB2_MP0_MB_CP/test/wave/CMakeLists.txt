@@ -123,7 +123,7 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nn_4x1.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nn_4x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nn_8x1.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nn_8x2.cpp
+                                #${CMAKE_CURRENT_SOURCE_DIR}/32x32_nn_8x2.cpp
 
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nt_1x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nt_1x4.cpp
@@ -134,7 +134,7 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nt_4x1.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nt_4x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nt_8x1.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nt_8x2.cpp
+                                #${CMAKE_CURRENT_SOURCE_DIR}/32x32_nt_8x2.cpp
 
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tn_1x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tn_1x4.cpp
@@ -145,7 +145,7 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tn_4x1.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tn_4x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tn_8x1.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tn_8x2.cpp
+                                #${CMAKE_CURRENT_SOURCE_DIR}/32x32_tn_8x2.cpp
 
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tt_1x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tt_1x4.cpp
@@ -156,7 +156,7 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tt_4x1.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tt_4x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tt_8x1.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tt_8x2.cpp
+                                #${CMAKE_CURRENT_SOURCE_DIR}/32x32_tt_8x2.cpp
                                 )
 endif()
 
