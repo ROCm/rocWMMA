@@ -29,15 +29,16 @@
 namespace rocwmma
 {
 
-    ROCWMMA_GENERATE_GEMM_GTEST_SUITE_PARAMS(TestParams,
-                                             CommonTestParams,
-                                             KernelGeneratorImpl,
-                                             TestTypesSmall,
-                                             TestBlockSizes32x32TinyBlockK,
-                                             TestLayoutsNT,
-                                             TestLdsDataLayouts,
-                                             TestGemmConfigsBlockLevel,
-                                             TestBlocks8x2);
+    ROCWMMA_GENERATE_GEMM_GTEST_SUITE_PARAMS(
+        TestParams,
+        CommonTestParams,
+        KernelGeneratorImpl,
+        TestTypesSmall,
+        TestBlockSizes32x32TinyBlockK,
+        TestLayoutsNT,
+        TestLdsDataLayouts,
+        TestGemmConfigsBlockLevelSmall, // TODO: Revert back to TestGemmConfigsBlockLevel
+        TestBlocks8x2);
 
 } // namespace rocwmma
 

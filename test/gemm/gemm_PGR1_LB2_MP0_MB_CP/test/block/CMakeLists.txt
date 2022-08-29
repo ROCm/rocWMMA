@@ -70,7 +70,8 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_8x1.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_8x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_8x4.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_8x8.cpp
+                                # TODO: MI-100 Compile restriction
+                                #${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_8x8.cpp
 
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nt_1x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nt_1x4.cpp
@@ -84,7 +85,7 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nt_8x1.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nt_8x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nt_8x4.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nt_8x8.cpp
+                                #${CMAKE_CURRENT_SOURCE_DIR}/16x16_nt_8x8.cpp
 
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tn_1x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tn_1x4.cpp
@@ -98,7 +99,7 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tn_8x1.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tn_8x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tn_8x4.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tn_8x8.cpp
+                                #${CMAKE_CURRENT_SOURCE_DIR}/16x16_tn_8x8.cpp
 
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_1x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_1x4.cpp
@@ -112,7 +113,7 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_8x1.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_8x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_8x4.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_8x8.cpp
+                                #${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_8x8.cpp
 
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nn_1x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nn_1x4.cpp
@@ -134,7 +135,7 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nt_4x1.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nt_4x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nt_8x1.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nt_8x2.cpp
+                                #${CMAKE_CURRENT_SOURCE_DIR}/32x32_nt_8x2.cpp
 
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tn_1x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tn_1x4.cpp
@@ -145,7 +146,7 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tn_4x1.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tn_4x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tn_8x1.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tn_8x2.cpp
+                                #${CMAKE_CURRENT_SOURCE_DIR}/32x32_tn_8x2.cpp
 
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tt_1x2.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_tt_1x4.cpp

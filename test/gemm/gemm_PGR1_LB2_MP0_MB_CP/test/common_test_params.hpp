@@ -78,6 +78,10 @@ namespace rocwmma
                          std::tuple<typename CooperativeGemm::BlockLevel::LdsTN>,
                          std::tuple<typename CooperativeGemm::BlockLevel::LdsRF>>;
 
+        using TestGemmConfigsBlockLevelSmall
+            = std::tuple<std::tuple<typename CooperativeGemm::BlockLevel::LdsNT>,
+                         std::tuple<typename CooperativeGemm::BlockLevel::LdsTN>>;
+
         using TestGemmConfigsWaveLevel
             = std::tuple<std::tuple<typename CooperativeGemm::WaveLevel::LdsNT>,
                          std::tuple<typename CooperativeGemm::WaveLevel::LdsTN>>;
