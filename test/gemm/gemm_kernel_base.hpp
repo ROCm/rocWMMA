@@ -159,11 +159,9 @@ namespace rocwmma
 
         // Performance
         float64_t mElapsedTimeMs, mTotalGFlops, mMeasuredTFlopsPerSec;
-        int32_t mEfficiency, mReferenceEfficiency;
+        int32_t   mEfficiency, mReferenceEfficiency;
     };
 
 } // namespace rocwmma
-
-#include "gemm_kernel_base_impl.hpp"
 
 #endif // ROCWMMA_KERNEL_BASE_HPP
