@@ -47,6 +47,4 @@ add_subdirectory(test/workgroup)
 set(${ROCWMMA_AD_HOC_TARGET_SOURCES} ${GemmCommonSources}
                                      ${CMAKE_CURRENT_SOURCE_DIR}/test/ad_hoc_test.cpp)
 
-# Create targets
-add_gemm_test(${ROCWMMA_TARGET_NAME}  ${${ROCWMMA_TARGET_SOURCES}})
 add_gemm_test(${ROCWMMA_AD_HOC_TARGET_NAME} ${${ROCWMMA_AD_HOC_TARGET_SOURCES}})
