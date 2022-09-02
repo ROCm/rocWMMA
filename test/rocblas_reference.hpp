@@ -84,12 +84,20 @@ namespace rocwmma
             return "bf16_r";
         case rocblas_datatype_bf16_c:
             return "bf16_c";
+        case rocblas_datatype_invalid:;
         }
         return "invalid";
     }
 
     template <typename DataT>
-    struct rocblas_types;
+    struct rocblas_types
+    {
+        using DataType = DataT;
+        constexpr static inline rocblas_datatype type()
+        {
+            return rocblas_datatype_invalid;
+        }
+    };
 
     template <>
     struct rocblas_types<int8_t>
