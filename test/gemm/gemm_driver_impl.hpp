@@ -470,24 +470,24 @@ namespace rocwmma
         }
 
         template <GemmDriverT>
-        template <int32_t vmcnt, int32_t lgmcnt>
-        __device__ inline void GemmDriver<GemmDriverT_impl>::wave_mem_barrier()
+        template <int32_t vmcnt, int32_t lgkmcnt>
+        __device__ inline void GemmDriver<GemmDriverT_impl>::mem_barrier()
         {
-            rocwmma::wave_mem_barrier<vmcnt, lgmcnt>();
+            rocwmma::mem_barrier<vmcnt, lgkmcnt>();
         }
 
         template <GemmDriverT>
         template <int32_t vmcnt>
-        __device__ inline void GemmDriver<GemmDriverT_impl>::wave_vector_mem_barrier()
+        __device__ inline void GemmDriver<GemmDriverT_impl>::vector_mem_barrier()
         {
-            rocwmma::wave_vector_mem_barrier<vmcnt>();
+            rocwmma::vector_mem_barrier<vmcnt>();
         }
 
         template <GemmDriverT>
-        template <int32_t lgmcnt>
-        __device__ inline void GemmDriver<GemmDriverT_impl>::wave_lds_mem_barrier()
+        template <int32_t lgkmcnt>
+        __device__ inline void GemmDriver<GemmDriverT_impl>::lds_mem_barrier()
         {
-            rocwmma::wave_vector_mem_barrier<lgmcnt>();
+            rocwmma::lds_mem_barrier<lgkmcnt>();
         }
 
 #undef GemmDriverT

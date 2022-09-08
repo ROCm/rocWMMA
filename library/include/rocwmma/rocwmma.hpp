@@ -389,16 +389,16 @@ namespace rocwmma
     __device__ void sched_barrier();
 
     //! Wait for the counts of outstanding lds, vector-memory operations.
-    template <int32_t vmcnt = -1, int32_t lgmcnt = -1>
-    __device__ void wave_mem_barrier();
+    template <int32_t vmcnt, int32_t lgkmcnt>
+    __device__ void mem_barrier();
 
     //! Wait for the counts of outstanding vector-memory operations.
-    template <int32_t vmcnt = -1>
-    __device__ void wave_vector_mem_barrier();
+    template <int32_t vmcnt>
+    __device__ void vector_mem_barrier();
 
     //! Wait for the counts of outstanding lds operations.
-    template <int32_t lgmcnt = -1>
-    __device__ void wave_lds_mem_barrier();
+    template <int32_t lgkmcnt>
+    __device__ void lds_mem_barrier();
 
 } // namespace rocwmma
 
