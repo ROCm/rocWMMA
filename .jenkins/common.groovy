@@ -37,9 +37,7 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
 
 def runTestCommand (platform, project)
 {
-    String centos = platform.jenkinsLabel.contains('centos') ? '3' : ''
-
-    def testCommand = "ctest${centos} --output-on-failure "
+    def testCommand = "ctest --output-on-failure "
     def testCommandExclude = ""
 
     def command = """#!/usr/bin/env bash
