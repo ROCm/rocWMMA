@@ -220,14 +220,14 @@ namespace rocwmma
             template <int32_t mask = 0>
             __device__ static inline void sched_barrier();
 
-            template <int32_t vmcnt = -1, int32_t lgmcnt = -1>
-            __device__ static inline void wave_mem_barrier();
+            template <int32_t vmcnt = 0, int32_t lgkmcnt = 0>
+            __device__ static inline void mem_barrier();
 
-            template <int32_t vmcnt = -1>
-            __device__ static inline void wave_vector_mem_barrier();
+            template <int32_t vmcnt = 0>
+            __device__ static inline void vector_mem_barrier();
 
-            template <int32_t lgmcnt = -1>
-            __device__ static inline void wave_lds_mem_barrier();
+            template <int32_t lgkmcnt = 0>
+            __device__ static inline void lds_mem_barrier();
         };
 
     } // namespace CooperativeGemm

@@ -40,20 +40,17 @@ namespace rocwmma
             }
         };
 
+        // Fine tune scheduler behavior
         template <int32_t mask = 0>
         struct amdgcn_sched_barrier
         {
-            enum : const int16_t
-            {
-                mask16 = mask
-            };
-
             __device__ static inline auto exec()
             {
-                return __builtin_amdgcn_sched_barrier(mask16);
+                return __builtin_amdgcn_sched_barrier(mask);
             }
         };
 
+        // Modifies the priority of the current wavefront
         template <int32_t priority = 0>
         struct amdgcn_setprio
         {
@@ -64,52 +61,41 @@ namespace rocwmma
 
             __device__ static inline auto exec()
             {
+                static_assert(priority16 >= 0 && priority16 <= 3, "Priority must be from 0 to 3");
+
                 return __builtin_amdgcn_s_setprio(priority16);
             }
         };
 
-        template <int32_t vmcnt = -1>
-        struct amdgcn_s_waitcnt_vmcnt
+        template <int32_t vmcnt, int32_t lgkmcnt>
+        struct amdgcn_s_waitcnt
         {
             enum : const int16_t
             {
-                vmcnt16 = (vmcnt == -1) ? 0 : ((0xF) & vmcnt) & (((0x30) & vmcnt) << 10)
+                vmcnt16   = (((0xF) & vmcnt) | (((0x30) & vmcnt) << 10)),
+                lgkmcnt16 = (((0xF) & lgkmcnt) << 8),
+                cnt       = vmcnt16 | lgkmcnt16
             };
 
             __device__ static inline auto exec()
             {
-                return __builtin_amdgcn_s_waitcnt(vmcnt);
-            }
-        };
+                static_assert(vmcnt >= 0 && vmcnt < 64,
+                              "Vector memory operations allocated a maximum of 6 bits");
+                static_assert(lgkmcnt >= 0 && lgkmcnt < 16,
+                              "Scalar mem/LDS/GDS allocated a maximum of 4 bits");
 
-        template <int32_t lgmcnt = -1>
-        struct amdgcn_s_waitcnt_lgkmcnt
-        {
-            enum : const int16_t
-            {
-                lgmcnt16 = (lgmcnt == -1) ? 0 : (((0xF) & lgmcnt) << 8)
-            };
-
-            __device__ static inline auto exec()
-            {
-                return __builtin_amdgcn_s_waitcnt(lgmcnt);
-            }
-        };
-
-        template <int32_t vmcnt = -1, int32_t lgmcnt = -1>
-        struct andgcn_s_waitcnt
-        {
-            enum : const int16_t
-            {
-                vmcnt16  = (vmcnt == -1) ? 0 : (((0xF) & vmcnt) & (((0x30) & vmcnt) << 10)),
-                lgmcnt16 = (lgmcnt == -1) ? 0 : (((0xF) & lgmcnt) << 8),
-                cnt      = vmcnt16 & lgmcnt16
-            };
-
-            __device__ static inline auto exec()
-            {
                 return __builtin_amdgcn_s_waitcnt(cnt);
             }
+        };
+
+        template <int32_t vmcnt>
+        struct amdgcn_s_vmcnt : public amdgcn_s_waitcnt<vmcnt, 0>
+        {
+        };
+
+        template <int32_t lgkmcnt>
+        struct amdgcn_s_lgkmcnt : public amdgcn_s_waitcnt<0, lgkmcnt>
+        {
         };
 
     } // namespace detail
@@ -122,14 +108,14 @@ namespace rocwmma
     template <int32_t priority>
     using SetPrio = detail::amdgcn_setprio<priority>;
 
+    template <int32_t vmcnt, int32_t lgkmcnt>
+    using Waitcnt = detail::amdgcn_s_waitcnt<vmcnt, lgkmcnt>;
+
     template <int32_t vmcnt>
-    using WaitcntVmcnt = detail::amdgcn_s_waitcnt_vmcnt<vmcnt>;
+    using WaitVmcnt = detail::amdgcn_s_vmcnt<vmcnt>;
 
-    template <int32_t lgmcnt>
-    using WaitcntLgkmcnt = detail::amdgcn_s_waitcnt_lgkmcnt<lgmcnt>;
-
-    template <int32_t vmcnt, int32_t lgmcnt>
-    using Waitcnt = detail::andgcn_s_waitcnt<vmcnt, lgmcnt>;
+    template <int32_t lgkmcnt>
+    using WaitLgkmcnt = detail::amdgcn_s_lgkmcnt<lgkmcnt>;
 
 } // namespace rocwmma
 

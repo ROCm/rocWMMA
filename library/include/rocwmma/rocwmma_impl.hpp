@@ -334,25 +334,25 @@ namespace rocwmma
         SchedBarrier::exec();
     }
 
-    template <int32_t vmcnt, int32_t lgmcnt>
-    __device__ void wave_mem_barrier()
+    template <int32_t vmcnt, int32_t lgkmcnt>
+    __device__ void mem_barrier()
     {
-        using Waitcnt = Waitcnt<vmcnt, lgmcnt>;
+        using Waitcnt = Waitcnt<vmcnt, lgkmcnt>;
         Waitcnt::exec();
     }
 
     template <int32_t vmcnt>
-    __device__ void wave_vector_mem_barrier()
+    __device__ void vector_mem_barrier()
     {
-        using WaitcntVmcnt = WaitcntVmcnt<vmcnt>;
-        WaitcntVmcnt::exec();
+        using WaitVmcnt = WaitVmcnt<vmcnt>;
+        WaitVmcnt::exec();
     }
 
-    template <int32_t lgmcnt>
-    __device__ void wave_lds_mem_barrier()
+    template <int32_t lgkmcnt>
+    __device__ void lds_mem_barrier()
     {
-        using WaitcntLgkmcnt = WaitcntLgkmcnt<lgmcnt>;
-        WaitcntLgkmcnt::exec();
+        using WaitLgkmcnt = WaitLgkmcnt<lgkmcnt>;
+        WaitLgkmcnt::exec();
     }
 
 } // namespace rocwmma
