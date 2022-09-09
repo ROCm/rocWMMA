@@ -31,6 +31,7 @@
 
 #include "gemm_common_test_params.hpp"
 #include "gemm_kernel_base.hpp"
+#include "rocwmma_logging.hpp"
 
 namespace rocwmma
 {
@@ -82,6 +83,9 @@ namespace rocwmma
             auto param  = Base::GetParam();
             auto kernel = std::get<0>(param);
 
+            using Options = rocwmma::RocwmmaLogging;
+            auto& loggingOptions = Options::instance();
+
             static bool ranWarmup = false;
             if(!ranWarmup)
             {
@@ -91,7 +95,26 @@ namespace rocwmma
 
             kernel->exec();
             kernel->validateResults();
-            kernel->reportResults();
+
+            if (!loggingOptions->omitCout())
+            {
+                kernel->reportResults(std::cout, 
+                                    false,
+                                    loggingOptions->omitSkipped(),
+                                    loggingOptions->omitFailed(),
+                                    loggingOptions->omitPassed());
+            }
+            
+            if (loggingOptions->ostream().isOpen())
+            {
+                kernel->reportResults(loggingOptions->ostream().fstream(),
+                                      true,
+                                      loggingOptions->omitSkipped(),
+                                      loggingOptions->omitFailed(),
+                                      loggingOptions->omitPassed());
+            }
+
+            // if fout reportResults(fout)
         }
 
         virtual void RunKernelWithoutWarmup()
@@ -101,9 +124,28 @@ namespace rocwmma
             auto param  = Base::GetParam();
             auto kernel = std::get<0>(param);
 
+            using Options = rocwmma::RocwmmaLogging;
+            auto& loggingOptions = Options::instance();
+
             kernel->exec();
             kernel->validateResults();
-            kernel->reportResults();
+            
+            if (!loggingOptions->omitCout())
+            {
+                kernel->reportResults(std::cout, 
+                                    false,
+                                    loggingOptions->omitSkipped(),
+                                    loggingOptions->omitFailed(),
+                                    loggingOptions->omitPassed());
+            }
+
+            
+            if (loggingOptions->ostream().isOpen())
+                kernel->reportResults(loggingOptions->ostream().fstream(),
+                                      true,
+                                      loggingOptions->omitSkipped(),
+                                      loggingOptions->omitFailed(),
+                                      loggingOptions->omitPassed());
         }
 
         void TearDown() override
