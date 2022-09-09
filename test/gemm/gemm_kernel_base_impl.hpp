@@ -401,7 +401,7 @@ namespace rocwmma
                                  LayoutA,
                                  LayoutB,
                                  LayoutC,
-                                 LayoutD>::printKernel(std::ostream& stream /* = std::cout */) const
+                                 LayoutD>::printKernel(std::ostream& stream) const
     {
         stream << mTBlockX << ", " << mTBlockY << ", " << BlockM << ", " << BlockN << ", " << BlockK
                << ", " << mM << ", " << mN << ", " << mK << ", " << mAlpha << ", " << mLda << ", "
@@ -835,16 +835,29 @@ namespace rocwmma
                         LayoutA,
                         LayoutB,
                         LayoutC,
-                        LayoutD>::reportResults()
+                        LayoutD>::reportResults(std::ostream& stream,
+                                                bool isFstream,
+                                                bool omitSkipped,
+                                                bool omitFailed,
+                                                bool omitPassed)
     {
-
-        if(!KernelI::sHeaderPrinted)
+        // Print header to std::cout
+        if (!KernelI::sHeaderPrinted && !isFstream) 
         {
-            printHeader();
+            printHeader(stream);
             KernelI::sHeaderPrinted = true;
         }
 
-        printKernel();
+        // Print header to file if requested
+        if (!KernelI::sFHeaderPrinted && isFstream)
+        {
+            printHeader(stream);
+            KernelI::sFHeaderPrinted = true;
+        }
+
+        // Conditionally print kernel outputs
+        if ((mRunFlag || !omitSkipped) && (mValidationResult || !omitFailed) && (!mValidationResult || !omitPassed))
+            printKernel(stream);
     }
 
     template <uint32_t BlockM,
