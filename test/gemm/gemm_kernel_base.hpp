@@ -64,7 +64,6 @@ namespace rocwmma
         virtual void          tearDown()                                          = 0;
         virtual HipResource*  getResource() const                                 = 0;
         virtual std::ostream& printHeader(std::ostream& stream) const = 0;
-        // add booleans for omits
         virtual std::ostream& printKernel(std::ostream& stream) const = 0;
 
         static bool sHeaderPrinted;
