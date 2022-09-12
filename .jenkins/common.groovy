@@ -9,7 +9,7 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
     if (project.installLibraryDependenciesFromCI) {
         project.libraryDependencies.each
         { libraryName ->
-            getDependenciesCommand += auxiliary.getLibrary(libraryName, platform.jenkinsLabel, 'release/rocm-rel-5.2')
+            getDependenciesCommand += auxiliary.getLibrary(libraryName, platform.jenkinsLabel, 'develop')
         }
     }
 
