@@ -248,21 +248,6 @@ MFMA accumulation is performed with fragment data. Fragment A elements are multi
 ### synchronize_workgroup
 Performs synchronization across multiple wavefronts in a workgroup. It also ensures the synchronization of shared/global memory accesses across wavefronts.
 
-### prioritize_wavefront
-Scheduler prioritization setting for wavefronts executing concurrently on a compute unit (occupancy > 1). Accepts values between 0 (lowest) and 3 (highest). Wavefronts are by default equal priority 0 which can be promoted whenever real-time precedence is required.
-
-### sched_barrier
-The compiler is generally able (under various circumstances) to re-order assembly instructions in optimization passes to satisfy constraints in resource usage or performance models while maintaining correctness. That means there are no guarantees the C++ code will generate assembly instructions in the order it is written, as long as the result is the same. Introducing a sched_barrier provides hints to the compiler that C++ code up until the barrier MUST be scheduled in assembly before the barrier occurs. Schedule barriers can be used to provide explicit restraints on execution order.
-
-### mem_barrier
-Similar to a schedule barrier which influences execution order of instructions, mem_barrier provides explicit scheduling hints for memory operations. Specifically for rocWMMA, barriers may be introduced for either global memory (vmcnt) or local memory (lgkmcnt) operations. Memory instructions issued before the barrier are scheduled to complete no later than the barrier.
-
-### vector_mem_barrier
-A specialization of the mem_barrier, affecting only previously issued global memory instructions.
-
-### lds_mem_barrier
-A specialization of the mem_barrier, affecting only previously issued local memory instructions.
-
 ## Cooperative API Functions
 
 ### load_matrix_coop_sync / store_matrix_coop_sync
