@@ -455,6 +455,12 @@ Run ad-hoc test:
 <build_dir>/test/gemm/gemm_PGR1_LB2_MP0_MB_CP_ad_hoc-bench
 ```
 
+### GEMM test logging arguments:
+|Compact|Verbose|Description|
+|---|---|---|
+|-os <output_file>.csv |--output_stream <output_file>.csv| stream GEMM testing output to CSV file |
+|  |--omit <int> | omits certain outputs : <code>1 = SKIPPED tests</code> <code>2 - FAILED tests</code> <code>4 - PASSED tests</code> <code>8 - All non-gtest output</code>|
+
 ### Tips to reduce run time:
 - Use gtest filters, target specific test names:
 ```
