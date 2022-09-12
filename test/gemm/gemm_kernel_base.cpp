@@ -830,8 +830,7 @@
 
 namespace rocwmma
 {
-    bool KernelI::sHeaderPrinted  = false;
-    bool KernelI::sFHeaderPrinted = false;
+    bool KernelI::sHeaderPrinted = false;
 
     // All supported instantiations
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(int8_t, int32_t, int32_t);

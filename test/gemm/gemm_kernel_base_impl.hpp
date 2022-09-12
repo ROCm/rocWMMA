@@ -623,7 +623,7 @@ namespace rocwmma
             using HandleGuardT = std::unique_ptr<rocblas_handle, void (*)(rocblas_handle*)>;
             auto handleGuard   = HandleGuardT(&handle, [](rocblas_handle* handle) {
                 CHECK_ROCBLAS_ERROR(rocblas_destroy_handle(*handle));
-              });
+            });
 
             auto rocBlasKernel = [this, &handle]() {
                 auto& dataInstance = DataStorage::instance();
@@ -836,28 +836,23 @@ namespace rocwmma
                         LayoutB,
                         LayoutC,
                         LayoutD>::reportResults(std::ostream& stream,
-                                                bool isFstream,
-                                                bool omitSkipped,
-                                                bool omitFailed,
-                                                bool omitPassed)
+                                                bool          omitHeader,
+                                                bool          omitSkipped,
+                                                bool          omitFailed,
+                                                bool          omitPassed)
     {
         // Print header to std::cout
-        if (!KernelI::sHeaderPrinted && !isFstream) 
+        if(!omitHeader)
         {
             printHeader(stream);
-            KernelI::sHeaderPrinted = true;
-        }
-
-        // Print header to file if requested
-        if (!KernelI::sFHeaderPrinted && isFstream)
-        {
-            printHeader(stream);
-            KernelI::sFHeaderPrinted = true;
         }
 
         // Conditionally print kernel outputs
-        if ((mRunFlag || !omitSkipped) && (mValidationResult || !omitFailed) && (!mValidationResult || !omitPassed))
+        if((mRunFlag || !omitSkipped) && (mValidationResult || !omitFailed)
+           && (!mValidationResult || !omitPassed))
+        {
             printKernel(stream);
+        }
     }
 
     template <uint32_t BlockM,
