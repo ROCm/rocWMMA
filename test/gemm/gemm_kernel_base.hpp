@@ -53,21 +53,21 @@ namespace rocwmma
         KernelI() {}
         virtual ~KernelI(){};
 
-        virtual void          setup(ProblemParams const& problem)                 = 0;
-        virtual void          exec()                                              = 0;
-        virtual void          validateResults()                                   = 0;
-        virtual void          reportResults(std::ostream& stream,
-                                            bool isFstream,
-                                            bool omitSkipped,
-                                            bool omitFailed,
-                                            bool omitPassed)                      = 0;
-        virtual void          tearDown()                                          = 0;
-        virtual HipResource*  getResource() const                                 = 0;
+        virtual void setup(ProblemParams const& problem) = 0;
+        virtual void exec()                              = 0;
+        virtual void validateResults()                   = 0;
+        virtual void reportResults(std::ostream& stream,
+                                   bool          isFstream,
+                                   bool          omitSkipped,
+                                   bool          omitFailed,
+                                   bool          omitPassed)
+            = 0;
+        virtual void          tearDown()                              = 0;
+        virtual HipResource*  getResource() const                     = 0;
         virtual std::ostream& printHeader(std::ostream& stream) const = 0;
         virtual std::ostream& printKernel(std::ostream& stream) const = 0;
 
         static bool sHeaderPrinted;
-        static bool sFHeaderPrinted;
     };
 
     inline std::ostream& operator<<(std::ostream& stream, KernelI const& kernel)
@@ -144,10 +144,10 @@ namespace rocwmma
         virtual void          exec() override;
         virtual void          validateResults() override;
         virtual void          reportResults(std::ostream& stream,
-                                            bool isFstream,
-                                            bool omitSkipped,
-                                            bool omitFailed,
-                                            bool omitPassed) override;
+                                            bool          isFstream,
+                                            bool          omitSkipped,
+                                            bool          omitFailed,
+                                            bool          omitPassed) override;
         virtual void          tearDown() override;
         virtual HipResource*  getResource() const override;
         virtual std::ostream& printHeader(std::ostream& stream) const override;

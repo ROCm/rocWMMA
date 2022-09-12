@@ -83,7 +83,7 @@ namespace rocwmma
             auto param  = Base::GetParam();
             auto kernel = std::get<0>(param);
 
-            using Options = rocwmma::RocwmmaLogging;
+            using Options        = rocwmma::RocwmmaLogging;
             auto& loggingOptions = Options::instance();
 
             static bool ranWarmup = false;
@@ -96,25 +96,29 @@ namespace rocwmma
             kernel->exec();
             kernel->validateResults();
 
-            if (!loggingOptions->omitCout())
+            if(!loggingOptions->omitCout())
             {
-                kernel->reportResults(std::cout, 
-                                    false,
-                                    loggingOptions->omitSkipped(),
-                                    loggingOptions->omitFailed(),
-                                    loggingOptions->omitPassed());
-            }
-            
-            if (loggingOptions->ostream().isOpen())
-            {
-                kernel->reportResults(loggingOptions->ostream().fstream(),
-                                      true,
+                kernel->reportResults(std::cout,
+                                      KernelI::sHeaderPrinted,
                                       loggingOptions->omitSkipped(),
                                       loggingOptions->omitFailed(),
                                       loggingOptions->omitPassed());
             }
 
-            // if fout reportResults(fout)
+            if(loggingOptions->ostream().isOpen())
+            {
+                kernel->reportResults(loggingOptions->ostream().fstream(),
+                                      KernelI::sHeaderPrinted,
+                                      loggingOptions->omitSkipped(),
+                                      loggingOptions->omitFailed(),
+                                      loggingOptions->omitPassed());
+            }
+
+            // Print the header only once
+            if(!KernelI::sHeaderPrinted)
+            {
+                KernelI::sHeaderPrinted = true;
+            }
         }
 
         virtual void RunKernelWithoutWarmup()
@@ -124,28 +128,35 @@ namespace rocwmma
             auto param  = Base::GetParam();
             auto kernel = std::get<0>(param);
 
-            using Options = rocwmma::RocwmmaLogging;
+            using Options        = rocwmma::RocwmmaLogging;
             auto& loggingOptions = Options::instance();
 
             kernel->exec();
             kernel->validateResults();
-            
-            if (!loggingOptions->omitCout())
-            {
-                kernel->reportResults(std::cout, 
-                                    false,
-                                    loggingOptions->omitSkipped(),
-                                    loggingOptions->omitFailed(),
-                                    loggingOptions->omitPassed());
-            }
 
-            
-            if (loggingOptions->ostream().isOpen())
-                kernel->reportResults(loggingOptions->ostream().fstream(),
-                                      true,
+            if(!loggingOptions->omitCout())
+            {
+                kernel->reportResults(std::cout,
+                                      KernelI::sHeaderPrinted,
                                       loggingOptions->omitSkipped(),
                                       loggingOptions->omitFailed(),
                                       loggingOptions->omitPassed());
+            }
+
+            if(loggingOptions->ostream().isOpen())
+            {
+                kernel->reportResults(loggingOptions->ostream().fstream(),
+                                      KernelI::sHeaderPrinted,
+                                      loggingOptions->omitSkipped(),
+                                      loggingOptions->omitFailed(),
+                                      loggingOptions->omitPassed());
+            }
+
+            // Print the header only once
+            if(!KernelI::sHeaderPrinted)
+            {
+                KernelI::sHeaderPrinted = true;
+            }
         }
 
         void TearDown() override

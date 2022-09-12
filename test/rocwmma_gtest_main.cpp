@@ -24,16 +24,16 @@
  *
  *******************************************************************************/
 
-#include <gtest/gtest.h>
 #include "common.hpp"
 #include "rocwmma_logging.hpp"
+#include <gtest/gtest.h>
 
 int main(int argc, char** argv)
 {
-    using Options = rocwmma::RocwmmaLogging;
+    using Options        = rocwmma::RocwmmaLogging;
     auto& loggingOptions = Options::instance();
     loggingOptions->parseOptions(argc, argv);
-    
+
     // Initialize Google Tests
     testing::InitGoogleTest(&argc, argv);
 

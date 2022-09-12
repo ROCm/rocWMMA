@@ -27,51 +27,53 @@
 #ifndef ROCWMMA_OSTREAM_HPP
 #define ROCWMMA_OSTREAM_HPP
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <utility>
 
 namespace rocwmma
 {
     struct rocwmmaOStream
     {
-        public:
-            void initializeStream(std::string fileName)
+    public:
+        void initializeStream(std::string fileName)
+        {
+            if(fileName.length() > 0)
             {
-                if (fileName.length() > 0)
-                {
-                    mFstream.open(fileName);
-                }
+                mFstream.open(fileName);
             }
+        }
 
-            bool isOpen()
-            {
-                return mFstream.is_open();
-            }
-        
-            // Default output for non-enumeration types
-            template <typename T, std::enable_if_t<!std::is_enum<std::decay_t<T>>{}, int> = 0>
-            rocwmmaOStream& operator<<(T&& x)
-            {
-                if (mFstream.is_open())
-                    mFstream << std::forward<T>(x);
-            }
+        bool isOpen()
+        {
+            return mFstream.is_open();
+        }
 
-            // Default output for enumeration types
-            template <typename T, std::enable_if_t<std::is_enum<std::decay_t<T>>{}, int> = 0>
-            rocwmmaOStream& operator<<(T&& x)
-            {
-                if (mFstream.is_open())
-                    mFstream << std::underlying_type_t<std::decay_t<T>>(x);
-            }
+        // Default output for non-enumeration types
+        template <typename T, std::enable_if_t<!std::is_enum<std::decay_t<T>>{}, int> = 0>
+        rocwmmaOStream& operator<<(T&& x)
+        {
+            if(mFstream.is_open())
+                mFstream << std::forward<T>(x);
+        }
 
-            std::ofstream& fstream()
+        // Default output for enumeration types
+        template <typename T, std::enable_if_t<std::is_enum<std::decay_t<T>>{}, int> = 0>
+        rocwmmaOStream& operator<<(T&& x)
+        {
+            if(mFstream.is_open())
             {
-                return mFstream;
+                mFstream << std::underlying_type_t<std::decay_t<T>>(x);
             }
+        }
 
-        protected:
-            std::ofstream mFstream;
+        std::ofstream& fstream()
+        {
+            return mFstream;
+        }
+
+    protected:
+        std::ofstream mFstream;
     };
 } // namespace rocwmma
 

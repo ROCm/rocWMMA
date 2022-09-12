@@ -27,8 +27,8 @@
 #ifndef ROCWMMA_LOGGING_HPP
 #define ROCWMMA_LOGGING_HPP
 
-#include "singleton.hpp"
 #include "rocwmma_ostream.hpp"
+#include "singleton.hpp"
 #include <stdlib.h>
 
 namespace rocwmma
@@ -38,101 +38,99 @@ namespace rocwmma
         // For static initialization
         friend std::unique_ptr<RocwmmaLogging> std::make_unique<RocwmmaLogging>();
 
-        private: // No public instantiation except make_unique.
-                 // No copy
-            RocwmmaLogging(RocwmmaLogging const&) = delete;
-            RocwmmaLogging& operator=(RocwmmaLogging const&) = delete;
+    private: // No public instantiation except make_unique.
+             // No copy
+        RocwmmaLogging(RocwmmaLogging const&)            = delete;
+        RocwmmaLogging& operator=(RocwmmaLogging const&) = delete;
 
-        public:
-            RocwmmaLogging(RocwmmaLogging&&);
-            ~RocwmmaLogging() = default;
+    public:
+        RocwmmaLogging(RocwmmaLogging&&) = default;
+        ~RocwmmaLogging()                = default;
 
-            RocwmmaLogging()
-                : mOstream()
-                , mOmitSkipped(false)
-                , mOmitFailed(false)
-                , mOmitPassed(false)
-                , mOmitCout(false)
+        RocwmmaLogging()
+            : mOstream()
+            , mOmitSkipped(false)
+            , mOmitFailed(false)
+            , mOmitPassed(false)
+            , mOmitCout(false)
+        {
+        }
+
+        void setOmits(int mask)
+        {
+            if(mask & 1)
+                mOmitSkipped = true;
+            if(mask & 2)
+                mOmitFailed = true;
+            if(mask & 4)
+                mOmitPassed = true;
+            if(mask & 8)
+                mOmitCout = true;
+        }
+
+        void parseOptions(int argc, char** argv)
+        {
+            const std::vector<std::string> args(argv + 1, argv + argc);
+            std::string                    fileName;
+
+            for(auto i = 0; i < argc - 1; i++)
             {
-            }
-
-            void setOmits(int mask)
-            {
-                if (mask & 1)
-                    mOmitSkipped = true;
-                if (mask & 2)
-                    mOmitFailed = true;
-                if (mask & 4)
-                    mOmitPassed = true;
-                if (mask & 8)
-                    mOmitCout = true;
-            }
-
-            void parseOptions(int argc, char** argv)
-            {
-                const std::vector<std::string> args(argv + 1, argv + argc);
-                std::string fileName;
-
-                for (auto i = 0; i < argc - 1; i++)
+                if(args[i] == "-os" || args[i] == "--output_stream")
                 {
-                    if (args[i] == "-os" || args[i] == "--output_stream")
+                    if(i + 2 >= argc)
                     {
-                        if (i + 2 >= argc)
-                        {
-                            std::cerr << "Missing output stream\n";
-                            std::cerr << "Usage: -os || --output_stream *file.csv*\n";
-                            exit(EXIT_FAILURE);
-                        }
-                        fileName = args[i + 1];
-                        i++;
+                        std::cerr << "Missing output stream\n";
+                        std::cerr << "Usage: -os || --output_stream *file.csv*\n";
+                        exit(EXIT_FAILURE);
                     }
-                    if (args[i] == "--omit")
-                    {
-                        if (i + 2 >= argc)
-                        {
-                            std::cerr << "Missing omit integer mask\n";
-                            std::cerr << "Usage: --omit *integer_mask*\n";
-                            exit(EXIT_FAILURE);
-                        }
-                        setOmits(std::stoi(args[i + 1]));
-                    }
+                    fileName = args[i + 1];
+                    i++;
                 }
-
-                mOstream.initializeStream(fileName);
-            }
-            
-
-            rocwmmaOStream& ostream()
-            {
-                return mOstream;
-            }
-
-            bool omitSkipped()
-            {
-                return mOmitSkipped;
+                if(args[i] == "--omit")
+                {
+                    if(i + 2 >= argc)
+                    {
+                        std::cerr << "Missing omit integer mask\n";
+                        std::cerr << "Usage: --omit *integer_mask*\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    setOmits(std::stoi(args[i + 1]));
+                }
             }
 
-            bool omitFailed()
-            {
-                return mOmitFailed;
-            }
+            mOstream.initializeStream(fileName);
+        }
 
-            bool omitPassed()
-            {
-                return mOmitPassed;
-            }
+        rocwmmaOStream& ostream()
+        {
+            return mOstream;
+        }
 
-            bool omitCout()
-            {
-                return mOmitCout;
-            }
+        bool omitSkipped()
+        {
+            return mOmitSkipped;
+        }
 
-        protected:
-            rocwmmaOStream mOstream;
+        bool omitFailed()
+        {
+            return mOmitFailed;
+        }
 
-            bool mOmitSkipped, mOmitFailed, mOmitPassed, mOmitCout;
+        bool omitPassed()
+        {
+            return mOmitPassed;
+        }
+
+        bool omitCout()
+        {
+            return mOmitCout;
+        }
+
+    protected:
+        rocwmmaOStream mOstream;
+
+        bool mOmitSkipped, mOmitFailed, mOmitPassed, mOmitCout;
     };
 }
-
 
 #endif // ROCWMMA_LOGGING_HPP
