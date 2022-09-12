@@ -57,7 +57,7 @@ namespace rocwmma
         virtual void exec()                              = 0;
         virtual void validateResults()                   = 0;
         virtual void reportResults(std::ostream& stream,
-                                   bool          isFstream,
+                                   bool          omitHeader,
                                    bool          omitSkipped,
                                    bool          omitFailed,
                                    bool          omitPassed)
@@ -144,7 +144,7 @@ namespace rocwmma
         virtual void          exec() override;
         virtual void          validateResults() override;
         virtual void          reportResults(std::ostream& stream,
-                                            bool          isFstream,
+                                            bool          omitHeader,
                                             bool          omitSkipped,
                                             bool          omitFailed,
                                             bool          omitPassed) override;
