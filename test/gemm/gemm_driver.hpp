@@ -213,6 +213,21 @@ namespace rocwmma
             /// Wave synchronization
             ///
             __device__ static inline void syncWorkgroup();
+
+            template <int32_t priority = 0>
+            __device__ static inline void prioritize_wavefront();
+
+            template <int32_t mask = 0>
+            __device__ static inline void sched_barrier();
+
+            template <int32_t vmcnt = 0, int32_t lgkmcnt = 0>
+            __device__ static inline void mem_barrier();
+
+            template <int32_t vmcnt = 0>
+            __device__ static inline void vector_mem_barrier();
+
+            template <int32_t lgkmcnt = 0>
+            __device__ static inline void lds_mem_barrier();
         };
 
     } // namespace CooperativeGemm
