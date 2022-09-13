@@ -381,25 +381,6 @@ namespace rocwmma
     //! Synchronization point for all wavefronts in a workgroup.
     __device__ void synchronize_workgroup();
 
-    //!  User settable wave priority is set to SIMM16[1:0]. 0 = lowest, 3 = highest.
-    template <int32_t priority = 0>
-    __device__ void prioritize_wavefront();
-
-    template <int32_t mask = 0>
-    __device__ void sched_barrier();
-
-    //! Wait for the counts of outstanding lds, vector-memory operations.
-    template <int32_t vmcnt, int32_t lgkmcnt>
-    __device__ void mem_barrier();
-
-    //! Wait for the counts of outstanding vector-memory operations.
-    template <int32_t vmcnt>
-    __device__ void vector_mem_barrier();
-
-    //! Wait for the counts of outstanding lds operations.
-    template <int32_t lgkmcnt>
-    __device__ void lds_mem_barrier();
-
 } // namespace rocwmma
 
 #include "rocwmma_impl.hpp"
