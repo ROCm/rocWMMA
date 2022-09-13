@@ -16,13 +16,13 @@ rocWMMA is released as a header library, but also includes test and sample proje
 
 ## Minimum Software Requirements
 * ROCm stack minimum version 5.4
-* [ROCm-cmake version 5.0](https://github.com/RadeonOpenCompute/rocm-cmake/tree/rocm-5.0.0)
+* ROCm-cmake minimum version 0.8.0 for ROCm 5.3
 * C++ 14
 * CMake >=3.6
 * OpenMP
 
 Optional:
-* [rocBLAS 2.39.0 for ROCm 4.3.0](https://github.com/ROCmSoftwarePlatform/rocBLAS/releases/tag/rocm-4.3.0) (for rocBLAS validation / benchmarks)
+* rocBLAS minimum version 2.46.0 for ROCm 5.4 (for rocBLAS validation / benchmarks)
 * doxygen (for building documentation)
 
 ## Currently supported configurations (ongoing)
