@@ -25,7 +25,7 @@
  *******************************************************************************/
 #ifndef ROCWMMA_FLOW_CONTROL_HPP
 #define ROCWMMA_FLOW_CONTROL_HPP
-
+ 
 namespace rocwmma
 {
 
