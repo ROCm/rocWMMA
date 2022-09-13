@@ -15,7 +15,7 @@ rocWMMA is released as a header library, but also includes test and sample proje
 * Note: Double precision FP64 datatype support minimum MI-200 +
 
 ## Minimum Software Requirements
-* ROCm stack minimum version 4.3
+* ROCm stack minimum version 5.4
 * [ROCm-cmake version 5.0](https://github.com/RadeonOpenCompute/rocm-cmake/tree/rocm-5.0.0)
 * C++ 14
 * CMake >=3.6
@@ -304,7 +304,7 @@ Here are some of the examples for the configuration:
 |Debug build|`CC=hipcc CXX=hipcc cmake -B<build_dir> . -DCMAKE_BUILD_TYPE=Debug` |
 |Build without rocBLAS (default on)|`CC=hipcc CXX=hipcc cmake -B<build_dir> . -DROCWMMA_VALIDATE_WITH_ROCBLAS=OFF -DROCWMMA_BENCHMARK_WITH_ROCBLAS=OFF` |
 
-After configuration, build with `cmake --build <build_dir> -- -j`
+After configuration, build with `cmake --build <build_dir> -- -j<nproc>`
 
 **Warning: Build time for all projects can take several minutes**
 
@@ -326,94 +326,140 @@ make <target_name> -j64
 ## Running Unit Tests
 rocWMMA library features are showcased, validated and benchmarked if applicable in GTest applications.
 
+With ctest enabled, you may run the entire test suite by running ctest in the build folder (e.g.):
+```
+cd <build_dir>
+ctest --output-on-failure
+```
+Otherwise, individual tests can be run as below.
+
 ### Fill Fragment Test
 Tests the rocwmma::fill_fragment API function for all supported configurations. Tests broadcasting of a desired value to all elements in the fragment.
 Run validation:
 ```
-<build_dir>/test/fill_fragment_test
+<build_dir>/test/unit/fill_fragment_test
 ```
 
 ### Load / Store Matrix Sync Test
 Tests the rocwmma::load_matrix_sync and rocwmma::store_matrix_sync API functions for all supported configurations. Tests proper emplacement of data during loads and stores.
 Run validation:
 ```
-<build_dir>/test/load_store_matrix_sync_test
-<build_dir>/test/load_store_matrix_coop_sync_test
+<build_dir>/test/unit/load_store_matrix_sync_test
+<build_dir>/test/unit/load_store_matrix_coop_sync_test
 ```
 
 ### Contamination Test
 Unit tests for loading and storing API to verify data boundaries are not crossed and pristine data remains untouched.
 Run validation:
 ```
-<build_dir>/test/contamination_test
+<build_dir>/test/unit/contamination_test
 ```
 
 ### Layout Test
 Unit tests for the internal collect / scatter matrix element to register mapping transforms.
 Run validation:
 ```
-<build_dir>/test/layout_test
+<build_dir>/test/unit/layout_test
 ```
 
 ### Mapping Util Test
 Unit tests for the utility class used to calculate transforms and offsets between grid, matrix and data coordinate systems.
 Run validation:
 ```
-<build_dir>/test/mapping_util_test
+<build_dir>/test/unit/mapping_util_test
 ```
 
 ### Vector Iterator Test
 Unit tests for internal vector iteration and navigation during access and storage.
 Run validation:
 ```
-<build_dir>/test/vector_iterator_test
+<build_dir>/test/unit/vector_iterator_test
 ```
 
 ### GEMM tests
-Implements a GEMM blocking algorithm using rocWMMA for all supported configurations. Validates on CPU algorithm or rocBLAS if available. Validation runs are performed on a reduced subset of matrix sizes. Benchmark runs are on a larger set of matrix sizes. There are currently 3 variants of blocked GEMM kernels. 
+Implements a GEMM blocking algorithm using rocWMMA for all supported parametric configurations. Validates on CPU algorithm or rocBLAS if available. Validation runs are performed on a reduced subset of matrix sizes. Benchmark runs are on a larger set of matrix sizes. Extended tests provide comprehensive parameter coverage and larger matrix sizes.
 
-**Mma Sync Test** is the simplest blocked GEMM example which targets one output block of matrix multiplication per wave. 
+#### GEMM kernel naming nomenclature
+As of rocWMMA v0.8, GEMM kernel naming nomenclature has been introduced to allow compact representation of and quick identifical of kernel implementation features. rocWMMA GEMM test library includes kernels that support the following features:
+```
+PGR# - Prefetch Global Read lookup stages. PGR0 = no global read prefetch. PGR1 = 1 stage global read prefetch.
+LB# - Lds buffer count. LB0 = no lds usage, LB2 = 2 Lds buffers used for swap.
+MP# - MFMA instruction priority. MP0 = default MFMA instruction priority of 0. MP1 = raise MFMA instruction priority to 1.
+MB - Multiple output blocks targeted per wave
+SB - Single output block target per wave
+NC - Non-Cooperative load / store
+CP - Cooperative load / store
+BLK - Cooperative load / store per block tile
+WV - Cooperative load / store per wave tile
+WG - Cooperative load / store per macro tile
+```
 
-**Mma Sync Multi Test** implements blocked GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks. Does not use LDS or wave collaboration.
+**gemm_PGR0_LB0_MP0_SB_NC** is the simplest blocked GEMM example which targets one output block of matrix multiplication per wave. No prefetch, no lds usage, default MFMA prioritization, single block output and non-collaborative.
 
-**Mma Sync Multi Lds Test** implements the blocked GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks, leveraging shared memory to implement data prefetching and movement pipelining to improve performance. Uses LDS memory and wave-level collaboration on wave-tile data movement.
+**gemm_PGR0_LB0_MP0_MB_NC** implements a multi-block GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks. No prefetch, no lds usage, default MFMA prioritization, multiple blocks output and non-collaborative.
 
-**Mma Sync Coop WG Test** implements the blocked GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks, leveraging shared memory to implement data prefetching and movement pipelining to improve performance. Uses LDS memory and full workgroup-level collaboration on macro tile data movement.
+**gemm_PGR1_LB2_MP0_MB_CP_BLK** implements a multi-block GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to implement a data prefetching pipeline and collaborates with other waves to improve performance. Implements single stage prefetch, double lds buffer, default MFMA prioritization, multiple blocks output and is block-tile collaborative in global read / local write.
 
-**Barrier Test** is a simple blocked GEMM example, using a wave barrier to showcase benefits of synchronizing waves for performance and synchronization.
+**gemm_PGR1_LB2_MP0_MB_CP_WV** implements a multi-block GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to implement a data prefetching pipeline and collaborates with other waves to improve performance. Implements single stage prefetch, double lds buffer, default MFMA prioritization, multiple blocks output and is wave-tile collaborative in global read / local write. 
+
+**gemm_PGR1_LB2_MP0_MB_CP_WG** implements a multi-block GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to implement a data prefetching pipeline and collaborates with other waves to improve performance. Implements single stage prefetch, double lds buffer, default MFMA prioritization, multiple blocks output and is macro-tile collaborative in global read / local write.
 
 **Ad Hoc Test** is an executable that focuses on a specific set of kernel parameters. This is used as a quick mock-up of situational investigation of a particular GEMM kernel.
 
+#### Naming migration path
+To ensure equivalent validation and performance tracking, kernel names from previous releases are migrated as follows:
+```
+Mma Sync Test <=> gemm_PGR0_LB0_MP0_SB_NC
+Mma Sync Multi Test <=> gemm_PGR0_LB0_MP0_MB_NC
+Mma Sync Multi Lds Test <=> gemm_PGR1_LB2_MP0_MB_CP_WV
+```
+
+New kernels implemented for this release:
+```
+gemm_PGR1_LB2_MP0_MB_CP_BLK
+gemm_PGR1_LB2_MP0_MB_CP_WG
+```
+
+Validation tests are post-fixed with "-validate"
+
+Benchmark tests are post-fixed with "-bench"
+
+Barrier tests have been removed from the GEMM test suite.
+
 Run validation tests:
 ```
-<build_dir>/test/gemm/mma_sync_test-validate
-<build_dir>/test/gemm/mma_sync_multi_test-validate
-<build_dir>/test/gemm/mma_sync_multi_lds_test-validate
-<build_dir>/test/gemm/mma_sync_coop_wg_test-validate
-<build_dir>/test/gemm/barrier_test-validate
+<build_dir>/test/gemm/gemm_PGR0_LB0_MP0_SB_NC-validate
+<build_dir>/test/gemm/gemm_PGR0_LB0_MP0_MB_NC-validate
+<build_dir>/test/gemm/gemm_PGR1_LB2_MP0_MB_CP_BLK-validate
+<build_dir>/test/gemm/gemm_PGR1_LB2_MP0_MB_CP_WV-validate
+<build_dir>/test/gemm/gemm_PGR1_LB2_MP0_MB_CP_WG-validate
 ```
 
 Run benchmark only: **Benchmark runs can take several hours to complete**
 ```
-<build_dir>/test/gemm/mma_sync_test-bench
-<build_dir>/test/gemm/mma_sync_multi_test-bench
-<build_dir>/test/gemm/mma_sync_multi_lds_test-bench
-<build_dir>/test/gemm/mma_sync_coop_wg_test-bench
-<build_dir>/test/gemm/barrier_test-bench
+<build_dir>/test/gemm/gemm_PGR0_LB0_MP0_SB_NC-bench
+<build_dir>/test/gemm/gemm_PGR0_LB0_MP0_MB_NC-bench
+<build_dir>/test/gemm/gemm_PGR1_LB2_MP0_MB_CP_BLK-bench
+<build_dir>/test/gemm/gemm_PGR1_LB2_MP0_MB_CP_WV-bench
+<build_dir>/test/gemm/gemm_PGR1_LB2_MP0_MB_CP_WG-bench
 ```
 
 Run ad-hoc test:
 ```
-<build_dir>/test/gemm/mma_sync_ad_hoc_test-validate
-<build_dir>/test/gemm/mma_sync_multi_ad_hoc_test-validate
-<build_dir>/test/gemm/mma_sync_multi_lds_ad_hoc_test-validate
-<build_dir>/test/gemm/mma_sync_coop_wg_ad_hoc_test-validate
+<build_dir>/test/gemm/gemm_PGR0_LB0_MP0_SB_NC_ad_hoc-validate
+<build_dir>/test/gemm/gemm_PGR0_LB0_MP0_MB_NC_ad_hoc-validate
+<build_dir>/test/gemm/gemm_PGR1_LB2_MP0_MB_CP_ad_hoc-validate
 
-<build_dir>/test/gemm/mma_sync_ad_hoc_test-bench
-<build_dir>/test/gemm/mma_sync_multi_ad_hoc_test-bench
-<build_dir>/test/gemm/mma_sync_multi_lds_ad_hoc_test-bench
-<build_dir>/test/gemm/mma_sync_coop_wg_ad_hoc_test-bench
+<build_dir>/test/gemm/gemm_PGR0_LB0_MP0_SB_NC_ad_hoc-bench
+<build_dir>/test/gemm/gemm_PGR0_LB0_MP0_MB_NC_ad_hoc-bench
+<build_dir>/test/gemm/gemm_PGR1_LB2_MP0_MB_CP_ad_hoc-bench
 ```
+
+### GEMM test logging arguments:
+|Compact|Verbose|Description|
+|---|---|---|
+|-os <output_file>.csv |--output_stream <output_file>.csv| stream GEMM testing output to CSV file |
+|  |--omit <int> | omits certain outputs : <code>1 = SKIPPED tests</code> <code>2 - FAILED tests</code> <code>4 - PASSED tests</code> <code>8 - All non-gtest output</code>|
 
 ### Tips to reduce run time:
 - Use gtest filters, target specific test names:
