@@ -401,7 +401,7 @@ namespace rocwmma
                                  LayoutA,
                                  LayoutB,
                                  LayoutC,
-                                 LayoutD>::printKernel(std::ostream& stream /* = std::cout */) const
+                                 LayoutD>::printKernel(std::ostream& stream) const
     {
         stream << mTBlockX << ", " << mTBlockY << ", " << BlockM << ", " << BlockN << ", " << BlockK
                << ", " << mM << ", " << mN << ", " << mK << ", " << mAlpha << ", " << mLda << ", "
@@ -623,7 +623,7 @@ namespace rocwmma
             using HandleGuardT = std::unique_ptr<rocblas_handle, void (*)(rocblas_handle*)>;
             auto handleGuard   = HandleGuardT(&handle, [](rocblas_handle* handle) {
                 CHECK_ROCBLAS_ERROR(rocblas_destroy_handle(*handle));
-              });
+            });
 
             auto rocBlasKernel = [this, &handle]() {
                 auto& dataInstance = DataStorage::instance();
@@ -835,16 +835,24 @@ namespace rocwmma
                         LayoutA,
                         LayoutB,
                         LayoutC,
-                        LayoutD>::reportResults()
+                        LayoutD>::reportResults(std::ostream& stream,
+                                                bool          omitHeader,
+                                                bool          omitSkipped,
+                                                bool          omitFailed,
+                                                bool          omitPassed)
     {
-
-        if(!KernelI::sHeaderPrinted)
+        // Print header to std::cout
+        if(!omitHeader)
         {
-            printHeader();
-            KernelI::sHeaderPrinted = true;
+            printHeader(stream);
         }
 
-        printKernel();
+        // Conditionally print kernel outputs
+        if((mRunFlag || !omitSkipped) && (mValidationResult || !omitFailed)
+           && (!mValidationResult || !omitPassed))
+        {
+            printKernel(stream);
+        }
     }
 
     template <uint32_t BlockM,

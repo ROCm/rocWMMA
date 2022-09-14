@@ -32,7 +32,7 @@ namespace rocwmma
     ROCWMMA_GENERATE_GEMM_GTEST_SUITE_PARAMS(TestParams,
                                              CommonTestParams,
                                              KernelGeneratorImpl,
-                                             TestTypesSmall,
+                                             TestTypes32x32,
                                              TestBlockSizes32x32TinyBlockK,
                                              TestLayoutsNT,
                                              TestLdsDataLayouts,

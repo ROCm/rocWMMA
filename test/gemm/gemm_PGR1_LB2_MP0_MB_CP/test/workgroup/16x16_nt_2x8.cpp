@@ -23,28 +23,23 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_BARRIER_HPP
-#define ROCWMMA_BARRIER_HPP
+
+#include "test/test_includes.hpp"
 
 namespace rocwmma
 {
 
-    namespace detail
-    {
-
-        // Perform synchronization across fragments(wavefronts) in a workgroup
-        struct amdgcn_barrier
-        {
-            __device__ static inline auto exec()
-            {
-                return __builtin_amdgcn_s_barrier();
-            }
-        };
-
-    } // namespace detail
-
-    using Barrier = detail::amdgcn_barrier;
+    ROCWMMA_GENERATE_GEMM_GTEST_SUITE_PARAMS(TestParams,
+                                             CommonTestParams,
+                                             KernelGeneratorImpl,
+                                             TestTypesMedium,
+                                             TestBlockSizes16x16TinyBlockK,
+                                             TestLayoutsNT,
+                                             TestLdsDataLayouts,
+                                             TestGemmConfigsWgLevel,
+                                             TestBlocks2x8);
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_BARRIER_HPP
+// Instantiate kernels as a test suite
+ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE(Gemm_PGR1_LB2_MP0_MB_CP, WG_16x16_NT_2x8, rocwmma::TestParams);
