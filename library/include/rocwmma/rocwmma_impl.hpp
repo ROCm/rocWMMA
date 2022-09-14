@@ -32,10 +32,10 @@
 #include "rocwmma.hpp"
 
 #include "internal/accessors.hpp"
-#include "internal/barrier.hpp"
 #include "internal/broadcast.hpp"
 #include "internal/constants.hpp"
 #include "internal/convert.hpp"
+#include "internal/flow_control.hpp"
 #include "internal/io_config.hpp"
 #include "internal/io_shape.hpp"
 #include "internal/io_traits.hpp"

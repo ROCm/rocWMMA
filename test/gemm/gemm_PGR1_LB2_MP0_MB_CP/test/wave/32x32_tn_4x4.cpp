@@ -29,42 +29,17 @@
 namespace rocwmma
 {
 
-    struct TestParams : public CommonTestParams
-    {
-        /* Use combinatorial logic to generate a set of kernel params from the input. */
-        using KernelParams    = typename CombineLists<TestTypesSmall,
-                                                   TestBlockSizes32x32TinyBlockK,
-                                                   TestLayoutsTN,
-                                                   TestLdsDataLayouts,
-                                                   TestGemmConfigsWaveLevel,
-                                                   TestBlocks4x4>::Result;
-        using KernelGenerator = KernelGenerator<KernelParams, KernelGeneratorImpl>;
-
-        /* Sanity check to make sure the generator produces kernels expected by the test interface */
-        static_assert(std::is_same<typename KernelGeneratorImpl::ResultT,
-                                   typename CommonTestParams::KernelT>::value,
-                      "Kernels from this generator do not match testing interface");
-
-        /* Generate the set of kernels to be tested */
-        static inline typename KernelGenerator::ResultT kernels();
-    };
+    ROCWMMA_GENERATE_GEMM_GTEST_SUITE_PARAMS(TestParams,
+                                             CommonTestParams,
+                                             KernelGeneratorImpl,
+                                             TestTypesSmall,
+                                             TestBlockSizes32x32TinyBlockK,
+                                             TestLayoutsTN,
+                                             TestLdsDataLayouts,
+                                             TestGemmConfigsWaveLevel,
+                                             TestBlocks4x4);
 
 } // namespace rocwmma
 
-#if __gfx908__
-
-// TODO: Cannot build gfx90a version of this test due to compiler errors.
-// Build only for gfx908, but MUST skip runtime tests of this size for gfx90a
-
-namespace rocwmma
-{
-    inline typename TestParams::KernelGenerator::ResultT TestParams::kernels()
-    {
-        return KernelGenerator::generate();
-    }
-}
-
 // Instantiate kernels as a test suite
 ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE(Gemm_PGR1_LB2_MP0_MB_CP, WV_32x32_TN_4x4, rocwmma::TestParams);
-
-#endif // __gfx908__

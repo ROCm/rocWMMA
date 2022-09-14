@@ -87,7 +87,7 @@ namespace rocwmma
     private: // No public instantiation except make_unique.
              // No copy
         GemmResource();
-        GemmResource(const GemmResource&) = delete;
+        GemmResource(const GemmResource&)            = delete;
         GemmResource& operator=(const GemmResource&) = delete;
 
     public:
@@ -121,7 +121,5 @@ namespace rocwmma
     };
 
 } // namespace rocwmma
-
-#include "gemm_resource_impl.hpp"
 
 #endif // ROCWMMA_GEMM_RESOURCE_HPP

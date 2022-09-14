@@ -455,6 +455,46 @@ namespace rocwmma
             rocwmma::synchronize_workgroup();
         }
 
+        template <GemmDriverT>
+        template <int32_t priority>
+        __device__ inline void GemmDriver<GemmDriverT_impl>::prioritize_wavefront()
+        {
+            using SetPrio = SetPrio<priority>;
+            SetPrio::exec();
+        }
+
+        template <GemmDriverT>
+        template <int32_t mask>
+        __device__ inline void GemmDriver<GemmDriverT_impl>::sched_barrier()
+        {
+            using SchedBarrier = SchedBarrier<mask>;
+            SchedBarrier::exec();
+        }
+
+        template <GemmDriverT>
+        template <int32_t vmcnt, int32_t lgkmcnt>
+        __device__ inline void GemmDriver<GemmDriverT_impl>::mem_barrier()
+        {
+            using Waitcnt = Waitcnt<vmcnt, lgkmcnt>;
+            Waitcnt::exec();
+        }
+
+        template <GemmDriverT>
+        template <int32_t vmcnt>
+        __device__ inline void GemmDriver<GemmDriverT_impl>::vector_mem_barrier()
+        {
+            using WaitVmcnt = WaitVmcnt<vmcnt>;
+            WaitVmcnt::exec();
+        }
+
+        template <GemmDriverT>
+        template <int32_t lgkmcnt>
+        __device__ inline void GemmDriver<GemmDriverT_impl>::lds_mem_barrier()
+        {
+            using WaitLgkmcnt = WaitLgkmcnt<lgkmcnt>;
+            WaitLgkmcnt::exec();
+        }
+
 #undef GemmDriverT
 #undef GemmDriverT_impl
 

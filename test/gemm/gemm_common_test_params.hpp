@@ -300,10 +300,11 @@ namespace rocwmma
                 {256, 256, 1024},
                 {2048, 64, 1024},
                 {64, 2048, 1024},
-                {1024, 1024, 1024},
+                {512, 512, 512},
                 // Skip validation on larger sizes
                 // due to very slow.
 #if !defined(ROCWMMA_VALIDATION_TESTS)
+                {1024, 1024, 1024},
                 {2048, 2048, 2048},
                 {2560, 2560, 2560},
                 {3072, 3072, 3072},
