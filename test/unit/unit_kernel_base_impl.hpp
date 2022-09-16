@@ -87,7 +87,13 @@ namespace rocwmma
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
     bool UnitKernelBase<BlockM, BlockN, DataT, Layout>::checkSizes() const
     {
-        return (mM >= (BlockM * mTBlockX / AMDGCN_WAVE_SIZE) && mN >= (BlockN * mTBlockY));
+        // gridDim() takes the upper bound of block coverage.
+        // In case of uneven division, this might put us out of bounds.
+        // Forfeit the run because there is no tail for cleanup of remainders.
+        auto tileSize = std::make_pair(BlockM * mTBlockX / AMDGCN_WAVE_SIZE, BlockN * mTBlockY);
+        auto gridDims = gridDim();
+        return (gridDims.x * std::get<0>(tileSize) == mM)
+               && (gridDims.y * std::get<1>(tileSize) == mN);
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
@@ -119,8 +125,8 @@ namespace rocwmma
         mMaxRelativeError = 0.0;
 
         mTotalGFlops = mMeasuredTFlopsPerSec = 0.0;
-        mElapsedTimeMs = 0.0;
-        mEfficiency = -1;
+        mElapsedTimeMs                       = 0.0;
+        mEfficiency                          = -1;
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>

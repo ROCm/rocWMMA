@@ -224,8 +224,13 @@ namespace rocwmma
                         LayoutC,
                         LayoutD>::checkSizes() const
     {
-        return (mM >= (BlockM * mTBlockX / rocwmma::AMDGCN_WAVE_SIZE) && mN >= (BlockN * mTBlockY)
-                && mK >= BlockK);
+        // gridDim() takes the upper bound of block coverage.
+        // In case of uneven division, this might put us out of bounds.
+        // Forfeit the run because there is no tail for cleanup of remainders.
+        auto tileSize = std::make_pair(BlockM * mTBlockX / AMDGCN_WAVE_SIZE, BlockN * mTBlockY);
+        auto gridDims = gridDim();
+        return (gridDims.x * std::get<0>(tileSize) == mM)
+               && (gridDims.y * std::get<1>(tileSize) == mN) && (mK % BlockK == 0) && BlockK <= mK;
     }
 
     template <uint32_t BlockM,
@@ -623,7 +628,7 @@ namespace rocwmma
             using HandleGuardT = std::unique_ptr<rocblas_handle, void (*)(rocblas_handle*)>;
             auto handleGuard   = HandleGuardT(&handle, [](rocblas_handle* handle) {
                 CHECK_ROCBLAS_ERROR(rocblas_destroy_handle(*handle));
-              });
+            });
 
             auto rocBlasKernel = [this, &handle]() {
                 auto& dataInstance = DataStorage::instance();
