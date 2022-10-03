@@ -45,6 +45,9 @@ namespace rocwmma
         {
             GFX908 = 0x908,
             GFX90A = 0x90A,
+            GFX1100 = 0x1100,
+            GFX1101 = 0x1101,
+            GFX1102 = 0x1102,
             UNSUPPORTED,
         };
 
