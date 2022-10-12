@@ -94,6 +94,13 @@ function(add_rocwmma_test TEST_TARGET TEST_SOURCE)
     COMPONENT tests
   )
 
+  get_target_property(EXE_NAME ${TEST_TARGET} RUNTIME_OUTPUT_NAME)
+  if(EXE_NAME STREQUAL "EXE_NAME-NOTFOUND")
+      get_target_property(EXE_NAME ${TEST_TARGET} OUTPUT_NAME)
+      if(EXE_NAME STREQUAL "EXE_NAME-NOTFOUND")
+          set(EXE_NAME "${TEST_TARGET}")
+      endif()
+  endif()
   file(APPEND "${INSTALL_TEST_FILE}" "add_test(${TEST_TARGET} \"../${EXE_NAME}\")\n")
 endfunction()
 
