@@ -470,24 +470,132 @@ namespace rocwmma
         TYPE w;                                 \
     };
 
+#define ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK8(TYPE) \
+    struct                                      \
+    {                                           \
+        TYPE x0;                                \
+        TYPE y0;                                \
+        TYPE z0;                                \
+        TYPE w0;                                \
+        TYPE x1;                                \
+        TYPE y1;                                \
+        TYPE z1;                                \
+        TYPE w1;                                \
+    };
+
+#define ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK16(TYPE) \
+    struct                                       \
+    {                                            \
+        TYPE x0;                                 \
+        TYPE y0;                                 \
+        TYPE z0;                                 \
+        TYPE w0;                                 \
+        TYPE x1;                                 \
+        TYPE y1;                                 \
+        TYPE z1;                                 \
+        TYPE w1;                                 \
+        TYPE x2;                                 \
+        TYPE y2;                                 \
+        TYPE z2;                                 \
+        TYPE w2;                                 \
+        TYPE x3;                                 \
+        TYPE y3;                                 \
+        TYPE z3;                                 \
+        TYPE w3;                                 \
+    };
+
+#define ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK32(TYPE) \
+    struct                                       \
+    {                                            \
+        TYPE x0;                                 \
+        TYPE y0;                                 \
+        TYPE z0;                                 \
+        TYPE w0;                                 \
+        TYPE x1;                                 \
+        TYPE y1;                                 \
+        TYPE z1;                                 \
+        TYPE w1;                                 \
+        TYPE x2;                                 \
+        TYPE y2;                                 \
+        TYPE z2;                                 \
+        TYPE w2;                                 \
+        TYPE x3;                                 \
+        TYPE y3;                                 \
+        TYPE z3;                                 \
+        TYPE w3;                                 \
+        TYPE x4;                                 \
+        TYPE y4;                                 \
+        TYPE z4;                                 \
+        TYPE w4;                                 \
+        TYPE x5;                                 \
+        TYPE y5;                                 \
+        TYPE z5;                                 \
+        TYPE w5;                                 \
+        TYPE x6;                                 \
+        TYPE y6;                                 \
+        TYPE z6;                                 \
+        TYPE w6;                                 \
+        TYPE x7;                                 \
+        TYPE y7;                                 \
+        TYPE z7;                                 \
+        TYPE w7;                                 \
+    };
+
 #else
 
 #define ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK1(TYPE) hip_impl::Scalar_accessor<TYPE, Native_vec_, 0> x;
 
-#define ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK2(TYPE)        \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 0> x; \
+#define ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK2(TYPE) \
+    ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK1(TYPE)     \
     hip_impl::Scalar_accessor<TYPE, Native_vec_, 1> y;
 
-#define ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK3(TYPE)        \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 0> x; \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 1> y; \
+#define ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK3(TYPE) \
+    ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK2(TYPE)     \
     hip_impl::Scalar_accessor<TYPE, Native_vec_, 2> z;
 
-#define ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK4(TYPE)        \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 0> x; \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 1> y; \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 2> z; \
+#define ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK4(TYPE) \
+    ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK3(TYPE)     \
     hip_impl::Scalar_accessor<TYPE, Native_vec_, 3> w;
+
+#define ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK8(TYPE)         \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 0> x0; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 1> y0; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 2> z0; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 3> w0; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 4> x1; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 5> y1; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 6> z1; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 7> w1;
+
+#define ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK16(TYPE)         \
+    ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK8(TYPE)              \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 8>  x2; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 9>  y2; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 10> z2; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 11> w2; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 12> x3; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 13> y3; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 14> z3; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 15> w3;
+
+#define ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK32(TYPE)         \
+    ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK16(TYPE)             \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 16> x4; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 17> y4; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 18> z4; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 19> w4; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 20> x5; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 21> y5; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 22> z5; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 23> w5; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 24> x6; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 25> y6; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 26> z6; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 27> w6; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 28> x7; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 29> y7; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 30> z7; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 31> w7;
 
 #endif
 
@@ -609,5 +717,143 @@ template struct HIP_vector_type<rocwmma::hfloat16_t, 1>;
 template struct HIP_vector_type<rocwmma::hfloat16_t, 2>;
 template struct HIP_vector_type<rocwmma::hfloat16_t, 3>;
 template struct HIP_vector_type<rocwmma::hfloat16_t, 4>;
+
+// Vector iterator class: handles for const and non-const vectors
+template <class VecT, uint32_t SubVecSize = 1>
+struct VectorIterator;
+
+template <typename DataT, uint32_t Rank, uint32_t SubVecSize>
+struct VectorIterator<HIP_vector_type<DataT, Rank>, SubVecSize>
+{
+    template <typename VDataT, uint32_t VRank>
+    using VecT = HIP_vector_type<VDataT, VRank>;
+
+    using RefVecT = HIP_vector_type<DataT, Rank>;
+    using ItVecT  = HIP_vector_type<DataT, SubVecSize>;
+
+    struct iterator
+    {
+        RefVecT const& mRef;
+        uint32_t       mIdx;
+
+        struct Traits
+        {
+            enum : int32_t
+            {
+                Range = Rank / SubVecSize
+            };
+        };
+
+        static_assert(Rank % SubVecSize == 0, "VecSize not iterable by SubVecSize");
+        static_assert(sizeof(RefVecT) == sizeof(typename RefVecT::Native_vec_),
+                      "Cannot alias subvector");
+
+        __HOST_DEVICE__ constexpr iterator(RefVecT const& ref, uint32_t idx = 0) noexcept
+            : mRef(ref)
+            , mIdx(idx)
+        {
+        }
+        __HOST_DEVICE__ ~iterator() = default;
+
+        __HOST_DEVICE__ inline ItVecT const& operator*() const
+        {
+            return *reinterpret_cast<ItVecT const*>((&mRef.data) + (mIdx * SubVecSize));
+        }
+
+        __HOST_DEVICE__ inline ItVecT& operator*()
+        {
+            return *reinterpret_cast<ItVecT*>((&const_cast<RefVecT&>(mRef).data)
+                                              + (mIdx * SubVecSize));
+        }
+
+        __HOST_DEVICE__ inline iterator& operator++()
+        {
+            mIdx++;
+            return *this;
+        }
+        __HOST_DEVICE__ inline iterator operator++(int)
+        {
+            auto retval = *this;
+            ++mIdx;
+            return retval;
+        }
+
+        __HOST_DEVICE__ inline iterator& operator+=(int i)
+        {
+            mIdx += i;
+            return *this;
+        }
+
+        __HOST_DEVICE__ inline iterator& operator--()
+        {
+            mIdx--;
+            return *this;
+        }
+        __HOST_DEVICE__ inline iterator operator--(int)
+        {
+            auto retval = *this;
+            --mIdx;
+            return retval;
+        }
+        __HOST_DEVICE__ inline iterator& operator-=(int i)
+        {
+            mIdx -= i;
+            return *this;
+        }
+
+        __HOST_DEVICE__ inline bool operator==(iterator const& other)
+        {
+            return (&mRef == &other.mRef) && (mIdx == other.mIdx);
+        }
+        __HOST_DEVICE__ inline bool operator!=(iterator const& other)
+        {
+            return !(*this == other);
+        }
+
+        //__device__ inline Iterator<SubVecSize, IsConst> next() const;
+        // __device__ inline Iterator<SubVecSize, IsConst> prev() const;
+        // __device__ inline int32_t                       index() const;
+        // __device__ bool                                 valid() const;
+
+        __device__ constexpr static inline int32_t range();
+        // __device__ constexpr static inline bool    isConst();
+    };
+
+    constexpr VectorIterator(RefVecT const& refVec) noexcept
+        : mRef(refVec)
+    {
+    }
+    ~VectorIterator() = default;
+
+    iterator it(uint32_t startIdx = 0)
+    {
+        return iterator(mRef, startIdx);
+    }
+    iterator begin()
+    {
+        return iterator(mRef, 0u);
+    }
+    iterator end()
+    {
+        return iterator(mRef, Rank / SubVecSize);
+    }
+
+    RefVecT const& mRef;
+};
+
+template <uint32_t SubVecSize = 1, typename VecT = void>
+constexpr auto makeVectorIterator(VecT const& vec)
+{
+    return VectorIterator<VecT, SubVecSize>{vec};
+}
+
+inline void doStuff()
+{
+    HIP_vector_type<rocwmma::bfloat16_t, 4> yubnub{rocwmma::bfloat16_t(5.0f)};
+    for(auto const l : makeVectorIterator(yubnub))
+    {
+        std::cout << (l.data[0]) << ' '; // 3 4 5
+    }
+}
 
 #endif // ROCWMMA_VECTOR_HPP
