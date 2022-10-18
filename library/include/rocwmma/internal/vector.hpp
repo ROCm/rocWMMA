@@ -1,23 +1,18 @@
 #ifndef ROCWMMA_VECTOR_HPP
 #define ROCWMMA_VECTOR_HPP
 
+#include "types.hpp"
 #include "types_ext.hpp"
 #include <hip/hip_fp16.h>
 #include <hip/hip_vector_types.h>
 
-#include <iostream>
-#include <utility>
-using uint32_t = unsigned int;
-using int32_t  = int;
-
-inline constexpr unsigned int next_pot(unsigned int x)
+inline constexpr auto next_pow2(uint32_t x)
 {
     // Precondition: x > 1.
-    return x > 1 ? (1u << (32u - __builtin_clz(x - 1u))) : x;
+    return x > 1u ? (1u << (32u - __builtin_clz(x - 1u))) : x;
 }
 namespace rocwmma
 {
-
     namespace detail
     {
         namespace ArithmeticOp
@@ -246,7 +241,7 @@ namespace rocwmma
         using Seq  = std::make_integer_sequence<uint32_t, Rank>;
 
         // Relational vector result type
-        using BoolVecT = uint32_t __attribute__((ext_vector_type(next_pot(Rank))));
+        using BoolVecT = uint32_t __attribute__((ext_vector_type(next_pow2(Rank))));
         using VecT     = non_native_vector_base<T, Rank>;
 
         /// Ctor, dtor, assignment
@@ -599,17 +594,29 @@ namespace rocwmma
 
 #endif
 
-#define ROCWMMA_REGISTER_NON_NATIVE_VECTOR(TYPE, RANK)                            \
+#define ROCWMMA_NON_NATIVE_VECTOR_STORAGE_IMPL(TYPE, RANK)           \
+    using Native_vec_ = rocwmma::non_native_vector_base<TYPE, RANK>; \
+                                                                     \
+    union alignas(hip_impl::next_pot(RANK * sizeof(TYPE)))           \
+    {                                                                \
+        Native_vec_ data;                                            \
+        ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK##RANK(TYPE);                \
+    };
+
+#define ROCWMMA_NATIVE_VECTOR_STORAGE_IMPL(TYPE, RANK)               \
+    using Native_vec_ = TYPE __attribute__((ext_vector_type(RANK))); \
+                                                                     \
+    union                                                            \
+    {                                                                \
+        Native_vec_ data;                                            \
+        ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK##RANK(TYPE);                \
+    };
+
+#define ROCWMMA_REGISTER_VECTOR_BASE(TYPE, RANK, STORAGE_IMPL)                    \
     template <>                                                                   \
     struct HIP_vector_base<TYPE, RANK>                                            \
     {                                                                             \
-        using Native_vec_ = rocwmma::non_native_vector_base<TYPE, RANK>;          \
-                                                                                  \
-        union alignas(hip_impl::next_pot(RANK * sizeof(TYPE)))                    \
-        {                                                                         \
-            Native_vec_ data;                                                     \
-            ROCWMMA_ACCESSOR_ALIAS_IMPL_RANK##RANK(TYPE);                         \
-        };                                                                        \
+        STORAGE_IMPL(TYPE, RANK);                                                 \
                                                                                   \
         using value_type = TYPE;                                                  \
                                                                                   \
@@ -635,225 +642,166 @@ namespace rocwmma
         HIP_vector_base& operator=(const HIP_vector_base& x_) noexcept = default; \
     };
 
+#define ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(TYPE, RANK) \
+    ROCWMMA_REGISTER_VECTOR_BASE(TYPE, RANK, ROCWMMA_NATIVE_VECTOR_STORAGE_IMPL)
+
+#define ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(TYPE, RANK) \
+    ROCWMMA_REGISTER_VECTOR_BASE(TYPE, RANK, ROCWMMA_NON_NATIVE_VECTOR_STORAGE_IMPL)
+
+#define ROCWMMA_SPECIALIZE_BFLOAT16_VECTOR_OPERATORS(RANK)                \
+    template <>                                                           \
+    __HOST_DEVICE__ inline HIP_vector_type<rocwmma::bfloat16_t, RANK>&    \
+        HIP_vector_type<rocwmma::bfloat16_t, RANK>::operator++() noexcept \
+    {                                                                     \
+        return *this += HIP_vector_type<rocwmma::bfloat16_t, RANK>{       \
+                   static_cast<rocwmma::bfloat16_t>(1.0f)};               \
+    }                                                                     \
+                                                                          \
+    template <>                                                           \
+    __HOST_DEVICE__ inline HIP_vector_type<rocwmma::bfloat16_t, RANK>&    \
+        HIP_vector_type<rocwmma::bfloat16_t, RANK>::operator--() noexcept \
+    {                                                                     \
+        return *this -= HIP_vector_type<rocwmma::bfloat16_t, RANK>{       \
+                   static_cast<rocwmma::bfloat16_t>(1.0f)};               \
+    }
+
 /// Register bfloat16 vector types
+// At this point, HIP_vector_type should already be defined (via including hip_vector_types).
+// Entry point for bfloat16_t is by defining the HIP_vector_base<blfloat16_t, *> backends:
+// bfloat16_t cannot be vectorized natively.
 
-ROCWMMA_REGISTER_NON_NATIVE_VECTOR(rocwmma::bfloat16_t, 1);
-ROCWMMA_REGISTER_NON_NATIVE_VECTOR(rocwmma::bfloat16_t, 2);
-ROCWMMA_REGISTER_NON_NATIVE_VECTOR(rocwmma::bfloat16_t, 3);
-ROCWMMA_REGISTER_NON_NATIVE_VECTOR(rocwmma::bfloat16_t, 4);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::bfloat16_t, 1);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::bfloat16_t, 2);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::bfloat16_t, 3);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::bfloat16_t, 4);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::bfloat16_t, 8);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::bfloat16_t, 16);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::bfloat16_t, 32);
 
-// Explicit specialization for ++ / -- operators: bfloat16_t doesn't have automatic conversion from integers.
-// Need to override such that increments use 1.f instead of 1(int)
+// Quirk: explicit specialization for ++ / -- operators in HIP_vector_type<bfloat16_t, *>.
+// Why? bfloat16_t doesn't have automatic conversion from integers;
+// Need to override such that in(de)crements use 1.f instead of 1(int)
 
-template <>
-__HOST_DEVICE__ inline HIP_vector_type<rocwmma::bfloat16_t, 1>&
-    HIP_vector_type<rocwmma::bfloat16_t, 1>::operator++() noexcept
-{
-    return *this += HIP_vector_type<rocwmma::bfloat16_t, 1>{static_cast<rocwmma::bfloat16_t>(1.0f)};
-}
+ROCWMMA_SPECIALIZE_BFLOAT16_VECTOR_OPERATORS(1);
+ROCWMMA_SPECIALIZE_BFLOAT16_VECTOR_OPERATORS(2);
+ROCWMMA_SPECIALIZE_BFLOAT16_VECTOR_OPERATORS(3);
+ROCWMMA_SPECIALIZE_BFLOAT16_VECTOR_OPERATORS(4);
+ROCWMMA_SPECIALIZE_BFLOAT16_VECTOR_OPERATORS(8);
+ROCWMMA_SPECIALIZE_BFLOAT16_VECTOR_OPERATORS(16);
+ROCWMMA_SPECIALIZE_BFLOAT16_VECTOR_OPERATORS(32);
 
-template <>
-__HOST_DEVICE__ inline HIP_vector_type<rocwmma::bfloat16_t, 1>&
-    HIP_vector_type<rocwmma::bfloat16_t, 1>::operator--() noexcept
-{
-    return *this -= HIP_vector_type<rocwmma::bfloat16_t, 1>{static_cast<rocwmma::bfloat16_t>(1.0f)};
-}
-
-template <>
-__HOST_DEVICE__ inline HIP_vector_type<rocwmma::bfloat16_t, 2>&
-    HIP_vector_type<rocwmma::bfloat16_t, 2>::operator++() noexcept
-{
-    return *this += HIP_vector_type<rocwmma::bfloat16_t, 2>{static_cast<rocwmma::bfloat16_t>(1.0f)};
-}
-
-template <>
-__HOST_DEVICE__ inline HIP_vector_type<rocwmma::bfloat16_t, 2>&
-    HIP_vector_type<rocwmma::bfloat16_t, 2>::operator--() noexcept
-{
-    return *this -= HIP_vector_type<rocwmma::bfloat16_t, 2>{static_cast<rocwmma::bfloat16_t>(1.0f)};
-}
-
-template <>
-__HOST_DEVICE__ inline HIP_vector_type<rocwmma::bfloat16_t, 3>&
-    HIP_vector_type<rocwmma::bfloat16_t, 3>::operator++() noexcept
-{
-    return *this += HIP_vector_type<rocwmma::bfloat16_t, 3>{static_cast<rocwmma::bfloat16_t>(1.0f)};
-}
-
-template <>
-__HOST_DEVICE__ inline HIP_vector_type<rocwmma::bfloat16_t, 3>&
-    HIP_vector_type<rocwmma::bfloat16_t, 3>::operator--() noexcept
-{
-    return *this -= HIP_vector_type<rocwmma::bfloat16_t, 3>{static_cast<rocwmma::bfloat16_t>(1.0f)};
-}
-
-template <>
-__HOST_DEVICE__ inline HIP_vector_type<rocwmma::bfloat16_t, 4>&
-    HIP_vector_type<rocwmma::bfloat16_t, 4>::operator++() noexcept
-{
-    return *this += HIP_vector_type<rocwmma::bfloat16_t, 4>{static_cast<rocwmma::bfloat16_t>(1.0f)};
-}
-
-template <>
-__HOST_DEVICE__ inline HIP_vector_type<rocwmma::bfloat16_t, 4>&
-    HIP_vector_type<rocwmma::bfloat16_t, 4>::operator--() noexcept
-{
-    return *this -= HIP_vector_type<rocwmma::bfloat16_t, 4>{static_cast<rocwmma::bfloat16_t>(1.0f)};
-}
-
+// Explicit instantiation for vector sizes up to 32
 template struct HIP_vector_type<rocwmma::bfloat16_t, 1>;
 template struct HIP_vector_type<rocwmma::bfloat16_t, 2>;
 template struct HIP_vector_type<rocwmma::bfloat16_t, 3>;
 template struct HIP_vector_type<rocwmma::bfloat16_t, 4>;
+template struct HIP_vector_type<rocwmma::bfloat16_t, 8>;
+template struct HIP_vector_type<rocwmma::bfloat16_t, 16>;
+template struct HIP_vector_type<rocwmma::bfloat16_t, 32>;
 
 /// Register __half vector types
 
-ROCWMMA_REGISTER_NON_NATIVE_VECTOR(rocwmma::hfloat16_t, 1);
-ROCWMMA_REGISTER_NON_NATIVE_VECTOR(rocwmma::hfloat16_t, 2);
-ROCWMMA_REGISTER_NON_NATIVE_VECTOR(rocwmma::hfloat16_t, 3);
-ROCWMMA_REGISTER_NON_NATIVE_VECTOR(rocwmma::hfloat16_t, 4);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::hfloat16_t, 1);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::hfloat16_t, 2);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::hfloat16_t, 3);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::hfloat16_t, 4);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::hfloat16_t, 8);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::hfloat16_t, 16);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::hfloat16_t, 32);
 
+// Explicit instantiation for vector sizes up to 32
 template struct HIP_vector_type<rocwmma::hfloat16_t, 1>;
 template struct HIP_vector_type<rocwmma::hfloat16_t, 2>;
 template struct HIP_vector_type<rocwmma::hfloat16_t, 3>;
 template struct HIP_vector_type<rocwmma::hfloat16_t, 4>;
+template struct HIP_vector_type<rocwmma::hfloat16_t, 8>;
+template struct HIP_vector_type<rocwmma::hfloat16_t, 16>;
+template struct HIP_vector_type<rocwmma::hfloat16_t, 32>;
 
-// Vector iterator class: handles for const and non-const vectors
-template <class VecT, uint32_t SubVecSize = 1>
-struct VectorIterator;
+#if __has_attribute(ext_vector_type)
 
-template <typename DataT, uint32_t Rank, uint32_t SubVecSize>
-struct VectorIterator<HIP_vector_type<DataT, Rank>, SubVecSize>
-{
-    template <typename VDataT, uint32_t VRank>
-    using VecT = HIP_vector_type<VDataT, VRank>;
+ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(rocwmma::float16_t, 8);
+ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(rocwmma::float16_t, 16);
+ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(rocwmma::float16_t, 32);
 
-    using RefVecT = HIP_vector_type<DataT, Rank>;
-    using ItVecT  = HIP_vector_type<DataT, SubVecSize>;
+ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(rocwmma::float32_t, 8);
+ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(rocwmma::float32_t, 16);
+ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(rocwmma::float32_t, 32);
 
-    struct iterator
-    {
-        RefVecT const& mRef;
-        uint32_t       mIdx;
+ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(rocwmma::float64_t, 8);
+ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(rocwmma::float64_t, 16);
+ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(rocwmma::float64_t, 32);
 
-        struct Traits
-        {
-            enum : int32_t
-            {
-                Range = Rank / SubVecSize
-            };
-        };
+ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(rocwmma::int8_t, 8);
+ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(rocwmma::int8_t, 16);
+ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(rocwmma::int8_t, 32);
 
-        static_assert(Rank % SubVecSize == 0, "VecSize not iterable by SubVecSize");
-        static_assert(sizeof(RefVecT) == sizeof(typename RefVecT::Native_vec_),
-                      "Cannot alias subvector");
+ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(rocwmma::int32_t, 8);
+ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(rocwmma::int32_t, 16);
+ROCWMMA_REGISTER_NATIVE_VECTOR_BASE(rocwmma::int32_t, 32);
 
-        __HOST_DEVICE__ constexpr iterator(RefVecT const& ref, uint32_t idx = 0) noexcept
-            : mRef(ref)
-            , mIdx(idx)
-        {
-        }
-        __HOST_DEVICE__ ~iterator() = default;
+#else
 
-        __HOST_DEVICE__ inline ItVecT const& operator*() const
-        {
-            return *reinterpret_cast<ItVecT const*>((&mRef.data) + (mIdx * SubVecSize));
-        }
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::float16_t, 8);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::float16_t, 16);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::float16_t, 32);
 
-        __HOST_DEVICE__ inline ItVecT& operator*()
-        {
-            return *reinterpret_cast<ItVecT*>((&const_cast<RefVecT&>(mRef).data)
-                                              + (mIdx * SubVecSize));
-        }
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::float32_t, 8);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::float32_t, 16);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::float32_t, 32);
 
-        __HOST_DEVICE__ inline iterator& operator++()
-        {
-            mIdx++;
-            return *this;
-        }
-        __HOST_DEVICE__ inline iterator operator++(int)
-        {
-            auto retval = *this;
-            ++mIdx;
-            return retval;
-        }
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::float64_t, 8);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::float64_t, 16);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::float64_t, 32);
 
-        __HOST_DEVICE__ inline iterator& operator+=(int i)
-        {
-            mIdx += i;
-            return *this;
-        }
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::int8_t, 8);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::int8_t, 16);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::int8_t, 32);
 
-        __HOST_DEVICE__ inline iterator& operator--()
-        {
-            mIdx--;
-            return *this;
-        }
-        __HOST_DEVICE__ inline iterator operator--(int)
-        {
-            auto retval = *this;
-            --mIdx;
-            return retval;
-        }
-        __HOST_DEVICE__ inline iterator& operator-=(int i)
-        {
-            mIdx -= i;
-            return *this;
-        }
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::int32_t, 8);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::int32_t, 16);
+ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::int32_t, 32);
 
-        __HOST_DEVICE__ inline bool operator==(iterator const& other)
-        {
-            return (&mRef == &other.mRef) && (mIdx == other.mIdx);
-        }
-        __HOST_DEVICE__ inline bool operator!=(iterator const& other)
-        {
-            return !(*this == other);
-        }
+#endif
 
-        //__device__ inline Iterator<SubVecSize, IsConst> next() const;
-        // __device__ inline Iterator<SubVecSize, IsConst> prev() const;
-        // __device__ inline int32_t                       index() const;
-        // __device__ bool                                 valid() const;
+template struct HIP_vector_type<rocwmma::float16_t, 1>;
+template struct HIP_vector_type<rocwmma::float16_t, 2>;
+template struct HIP_vector_type<rocwmma::float16_t, 3>;
+template struct HIP_vector_type<rocwmma::float16_t, 4>;
+template struct HIP_vector_type<rocwmma::float16_t, 8>;
+template struct HIP_vector_type<rocwmma::float16_t, 16>;
+template struct HIP_vector_type<rocwmma::float16_t, 32>;
 
-        __device__ constexpr static inline int32_t range();
-        // __device__ constexpr static inline bool    isConst();
-    };
+template struct HIP_vector_type<rocwmma::float32_t, 1>;
+template struct HIP_vector_type<rocwmma::float32_t, 2>;
+template struct HIP_vector_type<rocwmma::float32_t, 3>;
+template struct HIP_vector_type<rocwmma::float32_t, 4>;
+template struct HIP_vector_type<rocwmma::float32_t, 8>;
+template struct HIP_vector_type<rocwmma::float32_t, 16>;
+template struct HIP_vector_type<rocwmma::float32_t, 32>;
 
-    constexpr VectorIterator(RefVecT const& refVec) noexcept
-        : mRef(refVec)
-    {
-    }
-    ~VectorIterator() = default;
+template struct HIP_vector_type<rocwmma::float64_t, 1>;
+template struct HIP_vector_type<rocwmma::float64_t, 2>;
+template struct HIP_vector_type<rocwmma::float64_t, 3>;
+template struct HIP_vector_type<rocwmma::float64_t, 4>;
+template struct HIP_vector_type<rocwmma::float64_t, 8>;
+template struct HIP_vector_type<rocwmma::float64_t, 16>;
+template struct HIP_vector_type<rocwmma::float64_t, 32>;
 
-    iterator it(uint32_t startIdx = 0)
-    {
-        return iterator(mRef, startIdx);
-    }
-    iterator begin()
-    {
-        return iterator(mRef, 0u);
-    }
-    iterator end()
-    {
-        return iterator(mRef, Rank / SubVecSize);
-    }
+template struct HIP_vector_type<rocwmma::int8_t, 1>;
+template struct HIP_vector_type<rocwmma::int8_t, 2>;
+template struct HIP_vector_type<rocwmma::int8_t, 3>;
+template struct HIP_vector_type<rocwmma::int8_t, 4>;
+template struct HIP_vector_type<rocwmma::int8_t, 8>;
+template struct HIP_vector_type<rocwmma::int8_t, 16>;
+template struct HIP_vector_type<rocwmma::int8_t, 32>;
 
-    RefVecT const& mRef;
-};
-
-template <uint32_t SubVecSize = 1, typename VecT = void>
-constexpr auto makeVectorIterator(VecT const& vec)
-{
-    return VectorIterator<VecT, SubVecSize>{vec};
-}
-
-inline void doStuff()
-{
-    HIP_vector_type<rocwmma::bfloat16_t, 4> yubnub{rocwmma::bfloat16_t(5.0f)};
-    for(auto const l : makeVectorIterator(yubnub))
-    {
-        std::cout << (l.data[0]) << ' '; // 3 4 5
-    }
-}
+template struct HIP_vector_type<rocwmma::int32_t, 1>;
+template struct HIP_vector_type<rocwmma::int32_t, 2>;
+template struct HIP_vector_type<rocwmma::int32_t, 3>;
+template struct HIP_vector_type<rocwmma::int32_t, 4>;
+template struct HIP_vector_type<rocwmma::int32_t, 8>;
+template struct HIP_vector_type<rocwmma::int32_t, 16>;
+template struct HIP_vector_type<rocwmma::int32_t, 32>;
 
 #endif // ROCWMMA_VECTOR_HPP
