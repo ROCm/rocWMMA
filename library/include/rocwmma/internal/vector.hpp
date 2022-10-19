@@ -764,44 +764,44 @@ ROCWMMA_REGISTER_NON_NATIVE_VECTOR_BASE(rocwmma::int32_t, 32);
 
 #endif
 
-template struct HIP_vector_type<rocwmma::float16_t, 1>;
-template struct HIP_vector_type<rocwmma::float16_t, 2>;
-template struct HIP_vector_type<rocwmma::float16_t, 3>;
-template struct HIP_vector_type<rocwmma::float16_t, 4>;
-template struct HIP_vector_type<rocwmma::float16_t, 8>;
-template struct HIP_vector_type<rocwmma::float16_t, 16>;
-template struct HIP_vector_type<rocwmma::float16_t, 32>;
+// template struct HIP_vector_type<rocwmma::float16_t, 1>;
+// template struct HIP_vector_type<rocwmma::float16_t, 2>;
+// template struct HIP_vector_type<rocwmma::float16_t, 3>;
+// template struct HIP_vector_type<rocwmma::float16_t, 4>;
+// template struct HIP_vector_type<rocwmma::float16_t, 8>;
+// template struct HIP_vector_type<rocwmma::float16_t, 16>;
+// template struct HIP_vector_type<rocwmma::float16_t, 32>;
 
-template struct HIP_vector_type<rocwmma::float32_t, 1>;
-template struct HIP_vector_type<rocwmma::float32_t, 2>;
-template struct HIP_vector_type<rocwmma::float32_t, 3>;
-template struct HIP_vector_type<rocwmma::float32_t, 4>;
-template struct HIP_vector_type<rocwmma::float32_t, 8>;
-template struct HIP_vector_type<rocwmma::float32_t, 16>;
-template struct HIP_vector_type<rocwmma::float32_t, 32>;
+// template struct HIP_vector_type<rocwmma::float32_t, 1>;
+// template struct HIP_vector_type<rocwmma::float32_t, 2>;
+// template struct HIP_vector_type<rocwmma::float32_t, 3>;
+// template struct HIP_vector_type<rocwmma::float32_t, 4>;
+// template struct HIP_vector_type<rocwmma::float32_t, 8>;
+// template struct HIP_vector_type<rocwmma::float32_t, 16>;
+// template struct HIP_vector_type<rocwmma::float32_t, 32>;
 
-template struct HIP_vector_type<rocwmma::float64_t, 1>;
-template struct HIP_vector_type<rocwmma::float64_t, 2>;
-template struct HIP_vector_type<rocwmma::float64_t, 3>;
-template struct HIP_vector_type<rocwmma::float64_t, 4>;
-template struct HIP_vector_type<rocwmma::float64_t, 8>;
-template struct HIP_vector_type<rocwmma::float64_t, 16>;
-template struct HIP_vector_type<rocwmma::float64_t, 32>;
+// template struct HIP_vector_type<rocwmma::float64_t, 1>;
+// template struct HIP_vector_type<rocwmma::float64_t, 2>;
+// template struct HIP_vector_type<rocwmma::float64_t, 3>;
+// template struct HIP_vector_type<rocwmma::float64_t, 4>;
+// template struct HIP_vector_type<rocwmma::float64_t, 8>;
+// template struct HIP_vector_type<rocwmma::float64_t, 16>;
+// template struct HIP_vector_type<rocwmma::float64_t, 32>;
 
-template struct HIP_vector_type<rocwmma::int8_t, 1>;
-template struct HIP_vector_type<rocwmma::int8_t, 2>;
-template struct HIP_vector_type<rocwmma::int8_t, 3>;
-template struct HIP_vector_type<rocwmma::int8_t, 4>;
-template struct HIP_vector_type<rocwmma::int8_t, 8>;
-template struct HIP_vector_type<rocwmma::int8_t, 16>;
-template struct HIP_vector_type<rocwmma::int8_t, 32>;
+// template struct HIP_vector_type<rocwmma::int8_t, 1>;
+// template struct HIP_vector_type<rocwmma::int8_t, 2>;
+// template struct HIP_vector_type<rocwmma::int8_t, 3>;
+// template struct HIP_vector_type<rocwmma::int8_t, 4>;
+// template struct HIP_vector_type<rocwmma::int8_t, 8>;
+// template struct HIP_vector_type<rocwmma::int8_t, 16>;
+// template struct HIP_vector_type<rocwmma::int8_t, 32>;
 
-template struct HIP_vector_type<rocwmma::int32_t, 1>;
-template struct HIP_vector_type<rocwmma::int32_t, 2>;
-template struct HIP_vector_type<rocwmma::int32_t, 3>;
-template struct HIP_vector_type<rocwmma::int32_t, 4>;
-template struct HIP_vector_type<rocwmma::int32_t, 8>;
-template struct HIP_vector_type<rocwmma::int32_t, 16>;
-template struct HIP_vector_type<rocwmma::int32_t, 32>;
+// template struct HIP_vector_type<rocwmma::int32_t, 1>;
+// template struct HIP_vector_type<rocwmma::int32_t, 2>;
+// template struct HIP_vector_type<rocwmma::int32_t, 3>;
+// template struct HIP_vector_type<rocwmma::int32_t, 4>;
+// template struct HIP_vector_type<rocwmma::int32_t, 8>;
+// template struct HIP_vector_type<rocwmma::int32_t, 16>;
+// template struct HIP_vector_type<rocwmma::int32_t, 32>;
 
 #endif // ROCWMMA_VECTOR_HPP
