@@ -92,11 +92,10 @@ namespace rocwmma
 
         // Target starting C / D block on 2D grid, offset by blocks per wave
         auto matrixCoordC = MappingC::matrixCoord();
-        std::get<0>(matrixCoordC) *= BlocksX;
-        std::get<1>(matrixCoordC) *= BlocksY;
+        matrixCoordC.x *= BlocksX;
+        matrixCoordC.y *= BlocksY;
 
-        if(std::get<0>(matrixCoordC) + BlocksX * BlockM > m
-           || std::get<1>(matrixCoordC) + BlocksY * BlockN > n)
+        if(matrixCoordC.x + BlocksX * BlockM > m || matrixCoordC.y + BlocksY * BlockN > n)
         {
             return;
         }
@@ -118,8 +117,8 @@ namespace rocwmma
             for(int j = 0; j < BlocksY; j++)
             {
                 // Initialize sub matrix coordinates
-                std::get<0>(subMatrixCoordsC[i][j]) += std::get<0>(matrixCoordC) + i * BlockM;
-                std::get<1>(subMatrixCoordsC[i][j]) += std::get<1>(matrixCoordC) + j * BlockN;
+                subMatrixCoordsC[i][j].x += matrixCoordC.x + i * BlockM;
+                subMatrixCoordsC[i][j].y += matrixCoordC.y + j * BlockN;
 
                 // Initialize accumulators
                 fill_fragment(fragsAccum[i][j], static_cast<ComputeT>(0));
@@ -134,23 +133,21 @@ namespace rocwmma
 #pragma unroll
         for(int i = 0; i < BlocksX; i++)
         {
-            globalAddrsA[i] = MappingA::dataCoord(
-                a, std::make_pair(std::get<0>(subMatrixCoordsC[i][0]), 0), lda);
+            globalAddrsA[i] = MappingA::dataCoord(a, Coord2d(subMatrixCoordsC[i][0].x, 0), lda);
         }
 
         // Blocks in the same col share the same starting address for B
 #pragma unroll
         for(int i = 0; i < BlocksY; i++)
         {
-            globalAddrsB[i] = MappingB::dataCoord(
-                b, std::make_pair(0, std::get<1>(subMatrixCoordsC[0][i])), ldb);
+            globalAddrsB[i] = MappingB::dataCoord(b, Coord2d(0, subMatrixCoordsC[0][i].y), ldb);
         }
 
         /// Setup address increments.
         // A steps BlockK through m x k
         // B steps BlockK through k x n
-        auto incrA  = MappingA::dataOffset(std::make_pair(0, BlockK), lda);
-        auto incrB  = MappingB::dataOffset(std::make_pair(BlockK, 0), ldb);
+        auto incrA  = MappingA::dataOffset(Coord2d(0, BlockK), lda);
+        auto incrB  = MappingB::dataOffset(Coord2d(BlockK, 0), ldb);
         auto stepsK = k / BlockK;
 
         /// Accumulate A * B

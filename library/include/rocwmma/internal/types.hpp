@@ -28,6 +28,7 @@
 
 #include <hip/hip_bfloat16.h>
 #include <hip/hip_fp16.h>
+#include <hip/hip_vector_types.h>
 
 #include <array>
 #include <type_traits>
@@ -115,7 +116,7 @@ namespace rocwmma
 
     namespace detail
     {
-        using Coord2d = std::pair<uint32_t, uint32_t>;
+        using Coord2d = HIP_vector_type<uint32_t, 2>;
 
         /*! \struct VectorStorage
         *  \brief Vectorized internal storage

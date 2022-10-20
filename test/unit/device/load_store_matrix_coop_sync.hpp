@@ -64,8 +64,8 @@ namespace rocwmma
         // 0 = row/col 0 waves will cooperate
         // 1 = row/col 1 waves will cooperate
         // ...
-        auto getFirst  = [](typename Mapping::WaveCoordT const& coord) { return coord.first; };
-        auto getSecond = [](typename Mapping::WaveCoordT const& coord) { return coord.second; };
+        auto getFirst  = [](typename Mapping::WaveCoordT const& coord) { return coord.x; };
+        auto getSecond = [](typename Mapping::WaveCoordT const& coord) { return coord.y; };
 
         auto sharingDim   = (uint32_t)param1;
         auto shareElement = (sharingDim == 0 ? getFirst : getSecond);
@@ -81,17 +81,15 @@ namespace rocwmma
 
             // Start at the first block in WG coverage
             auto startBlockCoord
-                = std::make_pair(std::get<0>(currentBlockCoord) - std::get<0>(waveCoord),
-                                 std::get<1>(currentBlockCoord) - std::get<1>(waveCoord));
+                = Coord2d(currentBlockCoord.x - waveCoord.x, currentBlockCoord.y - waveCoord.y);
 
             // Do cooperative loads for all blocks covered by WG
-            for(int i = 0; i < std::get<0>(workgroupDim); i++)
+            for(int i = 0; i < workgroupDim.x; i++)
             {
-                for(int j = 0; j < std::get<1>(workgroupDim); j++)
+                for(int j = 0; j < workgroupDim.y; j++)
                 {
                     // Map, load and store.
-                    auto  blockCoord = std::make_pair(std::get<0>(startBlockCoord) + i,
-                                                      std::get<1>(startBlockCoord) + j);
+                    auto  blockCoord = Coord2d(startBlockCoord.x + i, startBlockCoord.y + j);
                     auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
                     auto* write = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
                     load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
@@ -131,8 +129,8 @@ namespace rocwmma
         // 0 = row/col 0 waves will cooperate
         // 1 = row/col 1 waves will cooperate
         // ...
-        auto getFirst  = [](typename Mapping::WaveCoordT const& coord) { return coord.first; };
-        auto getSecond = [](typename Mapping::WaveCoordT const& coord) { return coord.second; };
+        auto getFirst  = [](typename Mapping::WaveCoordT const& coord) { return coord.x; };
+        auto getSecond = [](typename Mapping::WaveCoordT const& coord) { return coord.y; };
 
         auto sharingDim   = (uint32_t)param1;
         auto shareElement = (sharingDim == 0 ? getFirst : getSecond);
@@ -148,17 +146,15 @@ namespace rocwmma
 
             // Start at the first block in WG coverage
             auto startBlockCoord
-                = std::make_pair(std::get<0>(currentBlockCoord) - std::get<0>(waveCoord),
-                                 std::get<1>(currentBlockCoord) - std::get<1>(waveCoord));
+                = Coord2d(currentBlockCoord.x - waveCoord.x, currentBlockCoord.y - waveCoord.y);
 
             // Do cooperative loads for all blocks covered by WG
-            for(int i = 0; i < std::get<0>(workgroupDim); i++)
+            for(int i = 0; i < workgroupDim.x; i++)
             {
-                for(int j = 0; j < std::get<1>(workgroupDim); j++)
+                for(int j = 0; j < workgroupDim.y; j++)
                 {
                     // Map, load and store.
-                    auto  blockCoord = std::make_pair(std::get<0>(startBlockCoord) + i,
-                                                      std::get<1>(startBlockCoord) + j);
+                    auto  blockCoord = Coord2d(startBlockCoord.x + i, startBlockCoord.y + j);
                     auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
                     auto* write = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
                     load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
@@ -198,8 +194,8 @@ namespace rocwmma
         // 0 = row/col 0 waves will cooperate
         // 1 = row/col 1 waves will cooperate
         // ...
-        auto getFirst  = [](typename Mapping::WaveCoordT const& coord) { return coord.first; };
-        auto getSecond = [](typename Mapping::WaveCoordT const& coord) { return coord.second; };
+        auto getFirst  = [](typename Mapping::WaveCoordT const& coord) { return coord.x; };
+        auto getSecond = [](typename Mapping::WaveCoordT const& coord) { return coord.y; };
 
         auto sharingDim   = (uint32_t)param1;
         auto shareElement = (sharingDim == 0 ? getFirst : getSecond);
@@ -214,17 +210,15 @@ namespace rocwmma
 
             // Start at the first block in WG coverage
             auto startBlockCoord
-                = std::make_pair(std::get<0>(currentBlockCoord) - std::get<0>(waveCoord),
-                                 std::get<1>(currentBlockCoord) - std::get<1>(waveCoord));
+                = Coord2d(currentBlockCoord.x - waveCoord.x, currentBlockCoord.y - waveCoord.y);
 
             // Do cooperative loads for all blocks covered by WG
-            for(int i = 0; i < std::get<0>(workgroupDim); i++)
+            for(int i = 0; i < workgroupDim.x; i++)
             {
-                for(int j = 0; j < std::get<1>(workgroupDim); j++)
+                for(int j = 0; j < workgroupDim.y; j++)
                 {
                     // Map, load and store.
-                    auto  blockCoord = std::make_pair(std::get<0>(startBlockCoord) + i,
-                                                      std::get<1>(startBlockCoord) + j);
+                    auto  blockCoord = Coord2d(startBlockCoord.x + i, startBlockCoord.y + j);
                     auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
                     auto* write = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
                     load_matrix_coop_sync(frag, read, ld, workIndex, workCount);

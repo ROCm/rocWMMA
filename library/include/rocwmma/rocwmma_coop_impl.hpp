@@ -142,8 +142,10 @@ namespace rocwmma
         // Matrix B / Accumulator:
         // - shares work with waves on same col (different row)
         // - waves in different cols work on different blocks
-        auto waveIndex = std::get<Config::CoopIndex>(MappingUtil::waveCoord());
-        auto waveCount = std::get<Config::CoopIndex>(MappingUtil::workgroupDim());
+        auto waveIndex
+            = Config::CoopIndex ? MappingUtil::waveCoord().y : MappingUtil::waveCoord().x;
+        auto waveCount
+            = Config::CoopIndex ? MappingUtil::workgroupDim().y : MappingUtil::workgroupDim().x;
         load_matrix_coop_sync(frag, data, ldm, waveIndex, waveCount);
     }
 
@@ -257,8 +259,10 @@ namespace rocwmma
         // Matrix B / Accumulator:
         // - shares work with waves on same col (different row)
         // - waves in different cols work on different blocks
-        auto waveIndex = std::get<Config::CoopIndex>(MappingUtil::waveCoord());
-        auto waveCount = std::get<Config::CoopIndex>(MappingUtil::workgroupDim());
+        auto waveIndex
+            = Config::CoopIndex ? MappingUtil::waveCoord().y : MappingUtil::waveCoord().x;
+        auto waveCount
+            = Config::CoopIndex ? MappingUtil::workgroupDim().y : MappingUtil::workgroupDim().x;
         store_matrix_coop_sync(data, frag, ldm, waveIndex, waveCount);
     }
 

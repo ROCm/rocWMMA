@@ -177,8 +177,8 @@ namespace rocwmma
         __device__ static inline auto ldsHeight()
         {
             auto workgroupDim = LdsOffsets::workgroupDim();
-            return LocalWriteFragA::size() * BlocksX * std::get<0>(workgroupDim)
-                   + LocalWriteFragB::size() * BlocksY * std::get<1>(workgroupDim);
+            return LocalWriteFragA::size() * BlocksX * workgroupDim.x
+                   + LocalWriteFragB::size() * BlocksY * workgroupDim.y;
         }
 
         __device__ static inline uint32_t ld()
@@ -193,34 +193,34 @@ namespace rocwmma
 
         __device__ static inline uint32_t baseOffsetB()
         {
-            auto matrixCoord = std::make_pair(
-                LocalWriteFragA::size() * BlocksX * std::get<0>(LdsOffsets::workgroupDim()), 0);
+            auto matrixCoord
+                = Coord2d(LocalWriteFragA::size() * BlocksX * LdsOffsets::workgroupDim().x, 0);
             return LdsOffsets::dataOffset(matrixCoord, ld());
         }
 
         __device__ static inline uint32_t waveOffsetA()
         {
-            auto matrixCoord = std::make_pair(
-                LocalWriteFragA::size() * BlocksX * std::get<0>(LdsOffsets::waveCoord()), 0);
+            auto matrixCoord
+                = Coord2d(LocalWriteFragA::size() * BlocksX * LdsOffsets::waveCoord().x, 0);
             return LdsOffsets::dataOffset(matrixCoord, ld());
         }
 
         __device__ static inline uint32_t waveOffsetB()
         {
-            auto matrixCoord = std::make_pair(
-                LocalWriteFragB::size() * BlocksY * std::get<1>(LdsOffsets::waveCoord()), 0);
+            auto matrixCoord
+                = Coord2d(LocalWriteFragB::size() * BlocksY * LdsOffsets::waveCoord().y, 0);
             return LdsOffsets::dataOffset(matrixCoord, ld());
         }
 
         __device__ static inline uint32_t blockOffsetA(uint32_t blockX)
         {
-            auto matrixCoord = std::make_pair(LocalWriteFragA::size() * blockX, 0);
+            auto matrixCoord = Coord2d(LocalWriteFragA::size() * blockX, 0);
             return LdsOffsets::dataOffset(matrixCoord, ld());
         }
 
         __device__ static inline uint32_t blockOffsetB(uint32_t blockY)
         {
-            auto matrixCoord = std::make_pair(LocalWriteFragB::size() * blockY, 0);
+            auto matrixCoord = Coord2d(LocalWriteFragB::size() * blockY, 0);
             return LdsOffsets::dataOffset(matrixCoord, ld());
         }
 
@@ -233,8 +233,8 @@ namespace rocwmma
             // same data responsibility.
             auto           workgroupDim = GlobalAOffsets::workgroupDim();
             auto           waveCoord    = GlobalAOffsets::waveCoord();
-            auto           waveIndex    = std::get<1>(waveCoord);
-            auto           waveCount    = std::get<1>(workgroupDim);
+            auto           waveIndex    = waveCoord.y;
+            auto           waveCount    = workgroupDim.y;
             constexpr auto splitCount
                 = std::min((uint32_t)GlobalReadFragA::IOConfig::IOTraits::IOCount,
                            (uint32_t)LocalWriteFragA::IOConfig::IOTraits::IOCount);
@@ -248,13 +248,13 @@ namespace rocwmma
             {
                 // Issue global read
                 GlobalReadFragA fetchA;
-                load_matrix_coop_sync(
-                    fetchA,
-                    baseA + GlobalAOffsets::dataOffset(std::make_pair(BlockM * i, 0), lda),
-                    lda,
-                    waveIndex,
-                    waveCount,
-                    splitCount);
+                load_matrix_coop_sync(fetchA,
+                                      baseA
+                                          + GlobalAOffsets::dataOffset(Coord2d(BlockM * i, 0), lda),
+                                      lda,
+                                      waveIndex,
+                                      waveCount,
+                                      splitCount);
 
                 // Issue local store
                 store_matrix_coop_sync(baseLds + baseOffsetA() + waveOffsetA() + blockOffsetA(i),
@@ -275,8 +275,8 @@ namespace rocwmma
             // same data responsibility.
             auto           workgroupDim = GlobalBOffsets::workgroupDim();
             auto           waveCoord    = GlobalBOffsets::waveCoord();
-            auto           waveIndex    = std::get<0>(waveCoord);
-            auto           waveCount    = std::get<0>(workgroupDim);
+            auto           waveIndex    = waveCoord.x;
+            auto           waveCount    = workgroupDim.x;
             constexpr auto splitCount
                 = std::min((uint32_t)GlobalReadFragB::IOConfig::IOTraits::IOCount,
                            (uint32_t)LocalWriteFragB::IOConfig::IOTraits::IOCount);
@@ -290,13 +290,13 @@ namespace rocwmma
             {
                 // Issue global read
                 GlobalReadFragB fetchB;
-                load_matrix_coop_sync(
-                    fetchB,
-                    baseB + GlobalBOffsets::dataOffset(std::make_pair(0, BlockN * i), ldb),
-                    ldb,
-                    waveIndex,
-                    waveCount,
-                    splitCount);
+                load_matrix_coop_sync(fetchB,
+                                      baseB
+                                          + GlobalBOffsets::dataOffset(Coord2d(0, BlockN * i), ldb),
+                                      ldb,
+                                      waveIndex,
+                                      waveCount,
+                                      splitCount);
 
                 // Issue local store
                 store_matrix_coop_sync(baseLds + baseOffsetB() + waveOffsetB() + blockOffsetB(i),
@@ -316,9 +316,7 @@ namespace rocwmma
                 // Issue global read
                 GlobalReadFragA fetchA;
                 load_matrix_sync(
-                    fetchA,
-                    baseA + GlobalAOffsets::dataOffset(std::make_pair(BlockM * i, 0), lda),
-                    lda);
+                    fetchA, baseA + GlobalAOffsets::dataOffset(Coord2d(BlockM * i, 0), lda), lda);
 
                 // Issue local store
                 store_matrix_sync(baseLds + baseOffsetA() + waveOffsetA() + blockOffsetA(i),
@@ -335,9 +333,7 @@ namespace rocwmma
                 // Issue global read
                 GlobalReadFragB fetchB;
                 load_matrix_sync(
-                    fetchB,
-                    baseB + GlobalBOffsets::dataOffset(std::make_pair(0, BlockN * i), ldb),
-                    ldb);
+                    fetchB, baseB + GlobalBOffsets::dataOffset(Coord2d(0, BlockN * i), ldb), ldb);
 
                 // Issue local store
                 store_matrix_sync(baseLds + baseOffsetB() + waveOffsetB() + blockOffsetB(i),

@@ -134,7 +134,7 @@ namespace rocwmma
         auto matrixCoord = TileMapping::matrixCoord();
 
         // Target output gradient block to perform reverse bmm
-        if(std::get<0>(matrixCoord) < m && std::get<1>(matrixCoord) < k)
+        if(matrixCoord.x < m && matrixCoord.y < k)
         {
             // Initialize accumulator
             auto fragAcc = FragAcc();
@@ -143,10 +143,8 @@ namespace rocwmma
             // Setup starting addresses
             auto* accWithOffset   = acc + accBatchOffset * blockIdx.z;
             auto* inputWithOffset = input + inputBatchOffset * blockIdx.z;
-            auto* addrA           = TileMapping::dataCoord(
-                          accWithOffset, std::make_pair(std::get<0>(matrixCoord), 0), m);
-            auto* addrB = TileMapping::dataCoord(
-                inputWithOffset, std::make_pair(0, std::get<1>(matrixCoord)), k);
+            auto* addrA = TileMapping::dataCoord(accWithOffset, Coord2d(matrixCoord.x, 0), m);
+            auto* addrB = TileMapping::dataCoord(inputWithOffset, Coord2d(0, matrixCoord.y), k);
 
             /// Setup LDS addressing and start writing pre-fetch to LDS
             HIP_DYNAMIC_SHARED(void*, localMemPtr);
@@ -174,8 +172,8 @@ namespace rocwmma
             auto fragA = FragA();
             auto fragB = FragB();
 
-            auto incrA = TileMapping::dataOffset(std::make_pair(0, TILE_DIM), m);
-            auto incrB = TileMapping::dataOffset(std::make_pair(TILE_DIM, 0), k);
+            auto incrA = TileMapping::dataOffset(Coord2d(0, TILE_DIM), m);
+            auto incrB = TileMapping::dataOffset(Coord2d(TILE_DIM, 0), k);
 
             auto endA = addrA + incrA * (m / TILE_DIM);
 

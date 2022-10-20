@@ -50,11 +50,11 @@ namespace rocwmma
 
                 constexpr static inline auto waveIndex()
                 {
-                    return std::get<1>(WaveSpace::localWaveCoord());
+                    return WaveSpace::localWaveCoord().y;
                 }
                 constexpr static inline auto waveCount()
                 {
-                    return std::get<1>(WaveSpace::workgroupDim());
+                    return WaveSpace::workgroupDim().y;
                 }
             };
 
@@ -73,11 +73,11 @@ namespace rocwmma
 
                 constexpr static inline auto waveIndex()
                 {
-                    return std::get<0>(WaveSpace::localWaveCoord());
+                    return WaveSpace::localWaveCoord().x;
                 }
                 constexpr static inline auto waveCount()
                 {
-                    return std::get<0>(WaveSpace::workgroupDim());
+                    return WaveSpace::workgroupDim().x;
                 }
             };
 
@@ -93,13 +93,12 @@ namespace rocwmma
                 constexpr static inline auto waveIndex()
                 {
                     auto localWaveCoord = WaveSpace::localWaveCoord();
-                    return std::get<0>(localWaveCoord) * std::get<1>(WaveSpace::workgroupDim())
-                           + std::get<1>(localWaveCoord);
+                    return localWaveCoord.x * WaveSpace::workgroupDim().y + localWaveCoord.y;
                 }
                 constexpr static inline auto waveCount()
                 {
                     auto wgDim = WaveSpace::workgroupDim();
-                    return std::get<0>(wgDim) * std::get<1>(wgDim);
+                    return wgDim.x * wgDim.y;
                 }
             };
 
@@ -116,13 +115,12 @@ namespace rocwmma
                 constexpr static inline auto waveIndex()
                 {
                     auto localWaveCoord = WaveSpace::localWaveCoord();
-                    return std::get<1>(localWaveCoord) * std::get<0>(WaveSpace::workgroupDim())
-                           + std::get<0>(localWaveCoord);
+                    return localWaveCoord.y * WaveSpace::workgroupDim().x + localWaveCoord.x;
                 }
                 constexpr static inline auto waveCount()
                 {
                     auto wgDim = WaveSpace::workgroupDim();
-                    return std::get<0>(wgDim) * std::get<1>(wgDim);
+                    return wgDim.x * wgDim.y;
                 }
             };
 

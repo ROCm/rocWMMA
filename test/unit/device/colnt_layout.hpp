@@ -68,9 +68,9 @@ namespace rocwmma
         {
             for(int j = 0; j < VectorWidth; j++)
             {
-                auto index
-                    = (std::get<MajorIndex>(matrixCoord) * ld + std::get<MinorIndex>(matrixCoord))
-                      + Mapping::dataOffset(baseOffset, ld) + j;
+                auto index = (MajorIndex ? matrixCoord.y : matrixCoord.x) * ld
+                             + (MinorIndex ? matrixCoord.y : matrixCoord.x)
+                             + Mapping::dataOffset(baseOffset, ld) + j;
                 out[index] = in[index];
             }
             baseOffset += LayoutT::incrementalOffset(i);

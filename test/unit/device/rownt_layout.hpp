@@ -52,8 +52,8 @@ namespace rocwmma
             KDim     = BlockM,
 
             MaxVectorWidth = std::is_same<DataT, float64_t>::value
-                                    ? 1
-                                    : detail::VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth,
+                                 ? 1
+                                 : detail::VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth,
             VectorWidth    = std::is_same<LayoutP, col_major>::value ? MaxVectorWidth : 1,
         };
 
@@ -76,9 +76,9 @@ namespace rocwmma
         {
             for(uint32_t j = 0; j < VectorWidth; j++)
             {
-                auto index
-                    = (std::get<MajorIndex>(matrixCoord) * ld + std::get<MinorIndex>(matrixCoord))
-                      + Mapping::dataOffset(baseOffset, ld) + j;
+                auto index = (MajorIndex ? matrixCoord.y : matrixCoord.x) * ld
+                             + (MinorIndex ? matrixCoord.y : matrixCoord.x)
+                             + Mapping::dataOffset(baseOffset, ld) + j;
                 out[index] = in[index];
             }
             baseOffset += LayoutT::incrementalOffset(i);

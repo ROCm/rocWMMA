@@ -52,16 +52,14 @@ namespace rocwmma
         {
             // waveCount.x = threadCount.x / AMDGCN_WAVE_SIZE
             // waveCount.y = threadCount.y
-            return std::make_pair(std::get<0>(threadCount) >> Log2<AMDGCN_WAVE_SIZE>::value,
-                                  std::get<1>(threadCount));
+            return Coord2d(threadCount.x >> Log2<AMDGCN_WAVE_SIZE>::value, threadCount.y);
         }
 
         __device__ constexpr inline Coord2d threadCount(Coord2d const& waveCount)
         {
             // threadCount.x = waveCount.x * AMDGCN_WAVE_SIZE
             // threadCount.y = waveCount.y
-            return std::make_pair(std::get<0>(waveCount) << Log2<AMDGCN_WAVE_SIZE>::value,
-                                  std::get<1>(waveCount));
+            return Coord2d(waveCount.x << Log2<AMDGCN_WAVE_SIZE>::value, waveCount.y);
         }
 
         /// WaveSpace
@@ -75,41 +73,41 @@ namespace rocwmma
         template <uint32_t TBlockX, uint32_t TBlockY>
         __device__ constexpr inline auto WaveSpace<TBlockX, TBlockY>::localWaveCoord() -> WaveCoordT
         {
-            return waveCount(std::make_pair(threadIdx.x, threadIdx.y));
+            return waveCount(Coord2d(threadIdx.x, threadIdx.y));
         }
 
         template <uint32_t TBlockX, uint32_t TBlockY>
         __device__ inline auto WaveSpace<TBlockX, TBlockY>::globalWaveCoord() -> WaveCoordT
         {
-            return waveCount(std::make_pair(blockIdx.x * TBlockX + threadIdx.x,
-                                            blockIdx.y * TBlockY + threadIdx.y));
+            return waveCount(
+                Coord2d(blockIdx.x * TBlockX + threadIdx.x, blockIdx.y * TBlockY + threadIdx.y));
         }
 
         template <>
         __device__ inline auto WaveSpace<0, 0>::globalWaveCoord() -> WaveCoordT
         {
-            return waveCount(std::make_pair(blockIdx.x * blockDim.x + threadIdx.x,
-                                            blockIdx.y * blockDim.y + threadIdx.y));
+            return waveCount(Coord2d(blockIdx.x * blockDim.x + threadIdx.x,
+                                     blockIdx.y * blockDim.y + threadIdx.y));
         }
 
         template <uint32_t TBlockX, uint32_t TBlockY>
         __device__ constexpr inline auto WaveSpace<TBlockX, TBlockY>::workgroupCoord()
             -> WorkgroupCoordT
         {
-            return std::make_pair(blockIdx.x, blockIdx.y);
+            return Coord2d(blockIdx.x, blockIdx.y);
         }
 
         template <uint32_t TBlockX, uint32_t TBlockY>
         __device__ constexpr inline auto WaveSpace<TBlockX, TBlockY>::workgroupDim()
             -> WorkgroupDimT
         {
-            return waveCount(std::make_pair(TBlockX, TBlockY));
+            return waveCount(Coord2d(TBlockX, TBlockY));
         }
 
         template <>
         __device__ constexpr inline auto WaveSpace<0, 0>::workgroupDim() -> WorkgroupDimT
         {
-            return waveCount(std::make_pair(blockDim.x, blockDim.y));
+            return waveCount(Coord2d(blockDim.x, blockDim.y));
         }
 
         /// MatrixSpace
@@ -119,8 +117,8 @@ namespace rocwmma
                 -> MatrixCoordT
         {
             // Map block to matrix coordinate space.
-            return std::make_pair(std::get<0>(blockCoord) * BlockHeight, // ROW
-                                  std::get<1>(blockCoord) * BlockWidth); // COL
+            return Coord2d(blockCoord.x * BlockHeight, // ROW
+                           blockCoord.y * BlockWidth); // COL
         }
 
         /// DataSpace
@@ -128,7 +126,8 @@ namespace rocwmma
         __device__ constexpr inline auto
             DataSpace<DataOrientation>::leadingDim(MatrixSizeT const& matrixSize)
         {
-            return std::get<MinorIndex>(matrixSize);
+            // MinorIndex 1 : y, 0 : x
+            return MinorIndex ? matrixSize.y : matrixSize.x;
         }
 
         template <typename DataOrientation>
@@ -137,8 +136,8 @@ namespace rocwmma
                                                         uint32_t            leadingDim)
         {
             // 1D data element offset transform
-            return std::get<MajorIndex>(matrixCoord) * leadingDim
-                   + std::get<MinorIndex>(matrixCoord);
+            return ((MajorIndex ? matrixCoord.y : matrixCoord.x) * leadingDim)
+                   + (MinorIndex ? matrixCoord.y : matrixCoord.x);
         }
 
     } // namespace detail
@@ -203,8 +202,8 @@ namespace rocwmma
         MappingUtil<BlockHeight, BlockWidth, DataT, DataLayout>::blockCoordM(uint32_t m)
             -> BlockCoordT
     {
-        auto coord         = blockCoord();
-        std::get<0>(coord) = m;
+        auto coord = blockCoord();
+        coord.x    = m;
         return coord;
     }
 
@@ -213,8 +212,8 @@ namespace rocwmma
         MappingUtil<BlockHeight, BlockWidth, DataT, DataLayout>::blockCoordN(uint32_t n)
             -> BlockCoordT
     {
-        auto coord         = blockCoord();
-        std::get<1>(coord) = n;
+        auto coord = blockCoord();
+        coord.y    = n;
         return coord;
     }
 
@@ -223,8 +222,8 @@ namespace rocwmma
         MappingUtil<BlockHeight, BlockWidth, DataT, DataLayout>::matrixCoordM(uint32_t m)
             -> MatrixCoordT
     {
-        auto coord         = matrixCoord();
-        std::get<0>(coord) = m;
+        auto coord = matrixCoord();
+        coord.x    = m;
         return coord;
     }
 
@@ -233,8 +232,8 @@ namespace rocwmma
         MappingUtil<BlockHeight, BlockWidth, DataT, DataLayout>::matrixCoordN(uint32_t n)
             -> MatrixCoordT
     {
-        auto coord         = matrixCoord();
-        std::get<1>(coord) = n;
+        auto coord = matrixCoord();
+        coord.y    = n;
         return coord;
     }
 

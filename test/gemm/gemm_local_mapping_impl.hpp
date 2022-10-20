@@ -41,7 +41,7 @@ namespace rocwmma
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::waveOffsetA()
         {
-            return std::swap(GlobalMapping::waveOffsetA());
+            return Coord2d(GlobalMapping::waveOffsetA().y, GlobalMapping::waveOffsetA().x);
         }
 
         template <LdsMappingT>
@@ -53,7 +53,7 @@ namespace rocwmma
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::blockOffsetA()
         {
-            return std::swap(GlobalMapping::blockOffsetA());
+            return Coord2d(GlobalMapping::blockOffsetA().y, GlobalMapping::blockOffsetA().x);
         }
 
         template <LdsMappingT>
@@ -67,7 +67,7 @@ namespace rocwmma
         {
             // Base lds coordA = (0, 0).
             // For local write, must add wave offset if global read tile is a wave tile
-            auto baseCoordA = std::make_pair(0u, 0u);
+            auto baseCoordA = Coord2d(0u, 0u);
             return GlobalMapping::readABWaveTile() ? baseCoordA + waveOffsetA() : baseCoordA;
         }
 
@@ -76,7 +76,8 @@ namespace rocwmma
         {
             // B data will start right after A data
             // For local write, must add wave offset if global read tile is a wave tile
-            auto baseCoordB = std::swap(GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()));
+            auto baseCoordB = Coord2d(GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()).y,
+                                      GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()).x);
             return GlobalMapping::readABWaveTile() ? baseCoordB + waveOffsetB() : baseCoordB;
         }
 
@@ -85,7 +86,7 @@ namespace rocwmma
         {
             // Base lds coordA = (0, 0).
             // For local read, will be in MFMA format, so we need the wave offset
-            auto baseCoordA = std::make_pair(0u, 0u);
+            auto baseCoordA = Coord2d(0u, 0u);
             return baseCoordA + waveOffsetA();
         }
 
@@ -94,7 +95,8 @@ namespace rocwmma
         {
             // B data will start right after A data
             // For local read, will be in MFMA format, so we need the wave offset
-            auto baseCoordB = std::swap(GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()));
+            auto baseCoordB = Coord2d(GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()).y,
+                                      GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()).x);
             return baseCoordB + waveOffsetB();
         }
 
@@ -102,7 +104,7 @@ namespace rocwmma
         __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::sizeLds()
         {
             auto macroTileC = GlobalMapping::macroTileSizeC();
-            return std::make_pair(LdsHeight, std::get<0>(macroTileC) + std::get<1>(macroTileC));
+            return Coord2d(LdsHeight, macroTileC.x + macroTileC.y);
         }
 
         template <LdsMappingT>
@@ -127,7 +129,7 @@ namespace rocwmma
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::waveOffsetB()
         {
-            return std::swap(GlobalMapping::waveOffsetB());
+            return Coord2d(GlobalMapping::waveOffsetB().y, GlobalMapping::waveOffsetB().x);
         }
 
         template <LdsMappingT>
@@ -139,7 +141,7 @@ namespace rocwmma
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::blockOffsetB()
         {
-            return std::swap(GlobalMapping::blockOffsetB());
+            return Coord2d(GlobalMapping::blockOffsetB().y, GlobalMapping::blockOffsetB().x);
         }
 
         template <LdsMappingT>
@@ -147,7 +149,7 @@ namespace rocwmma
         {
             // Base lds coordA = (0, 0).
             // For local write, must add wave offset if global read tile is a wave tile
-            auto baseCoordA = std::make_pair(0u, 0u);
+            auto baseCoordA = Coord2d(0u, 0u);
             return GlobalMapping::readABWaveTile() ? baseCoordA + waveOffsetA() : baseCoordA;
         }
 
@@ -165,7 +167,7 @@ namespace rocwmma
         {
             // Base lds coordA = (0, 0).
             // For local write, must add wave offset if global read tile is a wave tile
-            auto baseCoordA = std::make_pair(0u, 0u);
+            auto baseCoordA = Coord2d(0u, 0u);
             return baseCoordA + waveOffsetA();
         }
 
@@ -182,7 +184,7 @@ namespace rocwmma
         __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::sizeLds()
         {
             auto macroTileC = GlobalMapping::macroTileSizeC();
-            return std::make_pair(std::get<0>(macroTileC) + std::get<1>(macroTileC), LdsWidth);
+            return Coord2d(macroTileC.x + macroTileC.y, LdsWidth);
         }
 
         template <LdsMappingT>
@@ -206,7 +208,7 @@ namespace rocwmma
             LdsMappingRF<LdsMappingT_impl>::projCoordA(Coord2d const& coordA)
         {
             // Scale the A coordinate to register file height
-            return std::make_pair(std::get<0>(coordA) * GlobalMapping::kDim() / LdsWidth, 0u);
+            return Coord2d(coordA.x * GlobalMapping::kDim() / LdsWidth, 0u);
         }
 
         template <LdsMappingT>
@@ -214,7 +216,7 @@ namespace rocwmma
             LdsMappingRF<LdsMappingT_impl>::projCoordB(Coord2d const& coordB)
         {
             // Scale the B coordinate to register file height
-            return std::make_pair(std::get<1>(coordB) * GlobalMapping::kDim() / LdsWidth, 0u);
+            return Coord2d(coordB.y * GlobalMapping::kDim() / LdsWidth, 0u);
         }
 
         template <LdsMappingT>
@@ -271,9 +273,8 @@ namespace rocwmma
         __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::sizeLds()
         {
             auto macroTileC = GlobalMapping::macroTileSizeC();
-            return std::make_pair((std::get<0>(macroTileC) + std::get<1>(macroTileC))
-                                      * GlobalMapping::kDim() / LdsWidth,
-                                  LdsWidth);
+            return Coord2d((macroTileC.x + macroTileC.y) * GlobalMapping::kDim() / LdsWidth,
+                           LdsWidth);
         }
 
         template <LdsMappingT>

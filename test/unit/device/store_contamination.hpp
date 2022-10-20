@@ -56,10 +56,9 @@ namespace rocwmma
         uint32_t paddedLd
             = ld
               + 2 * static_cast<uint32_t>(std::is_same<Layout, row_major>::value ? param2 : param1);
-        auto writeMatCoord = Mapping::matrixCoord();
-        auto writeMatCoordPadded
-            = std::make_pair(std::get<0>(writeMatCoord) + static_cast<uint32_t>(param1),
-                             std::get<1>(writeMatCoord) + static_cast<uint32_t>(param2));
+        auto writeMatCoord       = Mapping::matrixCoord();
+        auto writeMatCoordPadded = Coord2d(writeMatCoord.x + static_cast<uint32_t>(param1),
+                                           writeMatCoord.y + static_cast<uint32_t>(param2));
         // Map, load and store.
         auto* read  = Mapping::dataCoord(in, ld);
         auto* write = Mapping::dataCoord(out, writeMatCoordPadded, paddedLd);
@@ -90,10 +89,9 @@ namespace rocwmma
         uint32_t paddedLd
             = ld
               + 2 * static_cast<uint32_t>(std::is_same<Layout, row_major>::value ? param2 : param1);
-        auto writeMatCoord = Mapping::matrixCoord();
-        auto writeMatCoordPadded
-            = std::make_pair(std::get<0>(writeMatCoord) + static_cast<uint32_t>(param1),
-                             std::get<1>(writeMatCoord) + static_cast<uint32_t>(param2));
+        auto writeMatCoord       = Mapping::matrixCoord();
+        auto writeMatCoordPadded = Coord2d(writeMatCoord.x + static_cast<uint32_t>(param1),
+                                           writeMatCoord.y + static_cast<uint32_t>(param2));
         // Map, load and store.
         auto* read  = Mapping::dataCoord(in, ld);
         auto* write = Mapping::dataCoord(out, writeMatCoordPadded, paddedLd);
@@ -124,10 +122,9 @@ namespace rocwmma
         uint32_t paddedLd
             = ld
               + 2 * static_cast<uint32_t>(std::is_same<Layout, row_major>::value ? param2 : param1);
-        auto writeMatCoord = Mapping::matrixCoord();
-        auto writeMatCoordPadded
-            = std::make_pair(std::get<0>(writeMatCoord) + static_cast<uint32_t>(param1),
-                             std::get<1>(writeMatCoord) + static_cast<uint32_t>(param2));
+        auto writeMatCoord       = Mapping::matrixCoord();
+        auto writeMatCoordPadded = Coord2d(writeMatCoord.x + static_cast<uint32_t>(param1),
+                                           writeMatCoord.y + static_cast<uint32_t>(param2));
         // Map, load and store.
         auto* read  = Mapping::dataCoord(in, ld);
         auto* write = Mapping::dataCoord(out, writeMatCoordPadded, paddedLd);

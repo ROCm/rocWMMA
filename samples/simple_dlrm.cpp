@@ -205,7 +205,7 @@ __global__ void dlrmDotFwd(const float16_t* __restrict input,
     // Target output block
     auto matrixCoordC = MappingC::matrixCoord();
 
-    if(std::get<0>(matrixCoordC) < m && std::get<1>(matrixCoordC) < m)
+    if(matrixCoordC.x < m && matrixCoordC.y < m)
     {
         // Initialize accumulator
         auto fragAcc = FragAcc();
@@ -213,16 +213,14 @@ __global__ void dlrmDotFwd(const float16_t* __restrict input,
 
         // Setup starting addresses
         auto* inputWithOffset = input + inputBatchOffset * blockIdx.z;
-        auto* addrA
-            = MappingA::dataCoord(inputWithOffset, std::make_pair(std::get<0>(matrixCoordC), 0), k);
-        auto* addrB
-            = MappingB::dataCoord(inputWithOffset, std::make_pair(0, std::get<1>(matrixCoordC)), k);
+        auto* addrA = MappingA::dataCoord(inputWithOffset, rocwmma::Coord2d(matrixCoordC.x, 0), k);
+        auto* addrB = MappingB::dataCoord(inputWithOffset, rocwmma::Coord2d(0, matrixCoordC.y), k);
 
         // Setup address increments.
         // A steps BlockK through m x k
         // B steps BlockK through k x m
-        auto incrA = MappingA::dataOffset(std::make_pair(0, TILE_DIM), k);
-        auto incrB = MappingB::dataOffset(std::make_pair(TILE_DIM, 0), k);
+        auto incrA = MappingA::dataOffset(rocwmma::Coord2d(0, TILE_DIM), k);
+        auto incrB = MappingB::dataOffset(rocwmma::Coord2d(TILE_DIM, 0), k);
 
         auto count = k / TILE_DIM;
         for(int i = 0; i < count; i++)
@@ -249,7 +247,7 @@ __global__ void dlrmDotFwd(const float16_t* __restrict input,
 
         // Copy lower triangular from acc to output
         auto fragColIdx   = threadIdx.x % TILE_DIM;
-        auto globalColIdx = std::get<1>(matrixCoordC) + fragColIdx;
+        auto globalColIdx = matrixCoordC.y + fragColIdx;
         auto rowsPerStep  = rocwmma::AMDGCN_WAVE_SIZE / TILE_DIM;
 
         count = (TILE_DIM * TILE_DIM) >> Log2<rocwmma::AMDGCN_WAVE_SIZE>::value;
@@ -257,7 +255,7 @@ __global__ void dlrmDotFwd(const float16_t* __restrict input,
         {
             auto fragRowIdx
                 = i * rowsPerStep + ((threadIdx.x & (rocwmma::AMDGCN_WAVE_SIZE - 1)) / TILE_DIM);
-            auto globalRowIdx = std::get<0>(matrixCoordC) + fragRowIdx;
+            auto globalRowIdx = matrixCoordC.x + fragRowIdx;
             if(globalRowIdx > globalColIdx)
             {
                 auto outputOffset = k + ((globalRowIdx * (globalRowIdx - 1)) >> 1);
@@ -374,7 +372,7 @@ __global__ void dlrmDotBwd(const float16_t* __restrict input,
     auto matrixCoordC = TileMapping::matrixCoord();
 
     // Target output gradient block to perform reverse bmm
-    if(std::get<0>(matrixCoordC) < m && std::get<1>(matrixCoordC) < k)
+    if(matrixCoordC.x < m && matrixCoordC.y < k)
     {
         // Initialize accumulator
         auto fragAcc = FragAcc();
@@ -383,16 +381,15 @@ __global__ void dlrmDotBwd(const float16_t* __restrict input,
         // Setup starting addresses
         auto* accWithOffset   = acc + accBatchOffset * blockIdx.z;
         auto* inputWithOffset = input + inputBatchOffset * blockIdx.z;
-        auto* addrA           = TileMapping::dataCoord(
-                      accWithOffset, std::make_pair(std::get<0>(matrixCoordC), 0), m);
-        auto* addrB = TileMapping::dataCoord(
-            inputWithOffset, std::make_pair(0, std::get<1>(matrixCoordC)), k);
+        auto* addrA = TileMapping::dataCoord(accWithOffset, rocwmma::Coord2d(matrixCoordC.x, 0), m);
+        auto* addrB
+            = TileMapping::dataCoord(inputWithOffset, rocwmma::Coord2d(0, matrixCoordC.y), k);
 
         // Setup address increments.
         // A steps BlockK through m x m
         // B steps BlockK through m x k
-        auto incrA = TileMapping::dataOffset(std::make_pair(0, TILE_DIM), m);
-        auto incrB = TileMapping::dataOffset(std::make_pair(TILE_DIM, 0), k);
+        auto incrA = TileMapping::dataOffset(rocwmma::Coord2d(0, TILE_DIM), m);
+        auto incrB = TileMapping::dataOffset(rocwmma::Coord2d(TILE_DIM, 0), k);
 
         auto count = m / TILE_DIM;
         for(int i = 0; i < count; i++)
