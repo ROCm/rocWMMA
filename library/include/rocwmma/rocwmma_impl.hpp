@@ -47,6 +47,8 @@
 #include "internal/pack.hpp"
 #include "internal/types.hpp"
 #include "internal/unpack.hpp"
+#include "internal/vector.hpp"
+#include "internal/vector_iterator.hpp"
 
 namespace rocwmma
 {
@@ -97,7 +99,7 @@ namespace rocwmma
     __device__ inline DataT&
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator[](uint32_t index)
     {
-        return mAccess[index];
+        return mAccess.data[index];
     }
 
     template <typename MatrixT,
@@ -121,7 +123,7 @@ namespace rocwmma
     __device__ inline DataT const&
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator[](uint32_t index) const
     {
-        return mAccess[index];
+        return mAccess.data[index];
     }
 
     template <typename MatrixT,
@@ -191,7 +193,6 @@ namespace rocwmma
                                    typename FragT::Traits::AccessT>::value,
                       "Broadcast input and fragment access types do not match");
 
-        // Broadcast then implicit pack
         Broadcaster::exec(frag.mAccess, value);
     }
 

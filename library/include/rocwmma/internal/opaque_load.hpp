@@ -28,9 +28,8 @@
 
 #include "io_traits.hpp"
 #include "layout.hpp"
-#include "mapping_util.hpp"
 #include "types.hpp"
-#include "utils.hpp"
+#include "vector_iterator.hpp"
 
 namespace rocwmma
 {
@@ -42,6 +41,8 @@ namespace rocwmma
         struct amdgcn_opaque_load
         {
             static_assert(VectorWidth > 0, "Vector width must be greater than 0");
+            static_assert(sizeof(DataT[VectorWidth]) == sizeof(VecT<DataT, VectorWidth>),
+                          "Cannot vectorize input");
 
             using LoadT = VecT<DataT, VectorWidth>;
             __device__ static inline void
@@ -76,7 +77,7 @@ namespace rocwmma
         {
             // Arrange wave threads to starting matrix layout offsets.
             auto baseOffset = MatrixLayout::baseOffset();
-            auto it         = data.template begin<Traits::LoadT::size()>();
+            auto it         = makeVectorIterator<VectorWidth>(data).begin();
 
             static_assert(decltype(it)::range() == IOTraits::IOCount,
                           "IOCount inconsistent with iterator range");

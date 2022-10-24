@@ -83,7 +83,7 @@ namespace rocwmma
 
             // Calculate the current wave's starting IO iterator index for the first work item.
             // Calculate the IO offset between work items for the current wave.
-            auto ioIter = data.template it<Traits::LoadT::size()>(waveIndex * workItemIOCount);
+            auto ioIter = makeVectorIterator<VectorWidth>(data).it(waveIndex * workItemIOCount);
             auto workItemIOInc = waveCount * workItemIOCount;
 
             // Align threads to starting matrix offset coordinates
@@ -131,9 +131,10 @@ namespace rocwmma
 
             // Calculate the current wave's starting IO iterator index for the first work item.
             // Calculate the IO offset between work items for the current wave.
-            auto& reducedFt = reinterpret_cast<
-                VecT<DataT, workItemCount * workItemIOCount * Traits::LoadT::size()>&>(data);
-            auto ioIter = reducedFt.template begin<Traits::LoadT::size()>();
+            auto& reducedFt
+                = reinterpret_cast<VecT<DataT, workItemCount * workItemIOCount * VectorWidth>&>(
+                    data);
+            auto ioIter = makeVectorIterator<VectorWidth>(reducedFt).begin();
 
             // Align threads to starting matrix offset coordinates
             auto baseOffset = MatrixLayout::baseOffset();
