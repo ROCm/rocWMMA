@@ -31,6 +31,7 @@
 #include "pack.hpp"
 #include "types.hpp"
 #include "unpack.hpp"
+#include "vector.hpp"
 
 namespace rocwmma
 {
@@ -62,8 +63,10 @@ namespace rocwmma
                                                typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
-                return typename Traits::DRegsT(
-                    __builtin_amdgcn_mfma_f32_16x16x16f16(*regsA, *regsB, *regsC, 0, 0, 0));
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_f32_16x16x16f16(
+                    regsA.data, regsB.data, regsC.data, 0, 0, 0)};
+                return result;
             }
         };
 
@@ -124,8 +127,10 @@ namespace rocwmma
                                                typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
-                return typename Traits::DRegsT(
-                    __builtin_amdgcn_mfma_f32_32x32x8f16(*regsA, *regsB, *regsC, 0, 0, 0));
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_f32_32x32x8f16(
+                    regsA.data, regsB.data, regsC.data, 0, 0, 0)};
+                return result;
             }
         };
 
@@ -212,8 +217,10 @@ namespace rocwmma
                                                typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
-                return typename Traits::DRegsT(
-                    __builtin_amdgcn_mfma_f32_16x16x16bf16_1k(*regsA, *regsB, *regsC, 0, 0, 0));
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_f32_16x16x16bf16_1k(
+                    regsA.data, regsB.data, regsC.data, 0, 0, 0)};
+                return result;
             }
         };
 
@@ -273,8 +280,10 @@ namespace rocwmma
                                                typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
-                return typename Traits::DRegsT(
-                    __builtin_amdgcn_mfma_f32_32x32x8bf16_1k(*regsA, *regsB, *regsC, 0, 0, 0));
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_f32_32x32x8bf16_1k(
+                    regsA.data, regsB.data, regsC.data, 0, 0, 0)};
+                return result;
             }
         };
 
@@ -343,13 +352,16 @@ namespace rocwmma
 
                 static_assert(sizeof(TypeIn) == sizeof(decltype(regsA)),
                               "Inconsistent data formats");
-                return typename Traits::DRegsT(
-                    __builtin_amdgcn_mfma_f32_16x16x8bf16(*reinterpret_cast<TypeIn const&>(regsA),
-                                                          *reinterpret_cast<TypeIn const&>(regsB),
-                                                          *regsC,
-                                                          0,
-                                                          0,
-                                                          0));
+
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_f32_16x16x8bf16(
+                    reinterpret_cast<TypeIn const&>(regsA).data,
+                    reinterpret_cast<TypeIn const&>(regsB).data,
+                    regsC.data,
+                    0,
+                    0,
+                    0)};
+                return result;
             }
         };
 
@@ -415,13 +427,16 @@ namespace rocwmma
 
                 static_assert(sizeof(TypeIn) == sizeof(decltype(regsA)),
                               "Inconsistent data formats");
-                return typename Traits::DRegsT(
-                    __builtin_amdgcn_mfma_f32_32x32x4bf16(*reinterpret_cast<TypeIn const&>(regsA),
-                                                          *reinterpret_cast<TypeIn const&>(regsB),
-                                                          *regsC,
-                                                          0,
-                                                          0,
-                                                          0));
+
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_f32_32x32x4bf16(
+                    reinterpret_cast<TypeIn const&>(regsA).data,
+                    reinterpret_cast<TypeIn const&>(regsB).data,
+                    regsC.data,
+                    0,
+                    0,
+                    0)};
+                return result;
             }
         };
 
@@ -483,8 +498,10 @@ namespace rocwmma
                                                typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
-                return typename Traits::DRegsT(
-                    __builtin_amdgcn_mfma_f32_16x16x4f32(*regsA, *regsB, *regsC, 0, 0, 0));
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_f32_16x16x4f32(
+                    regsA.data[0], regsB.data[0], regsC.data, 0, 0, 0)};
+                return result;
             }
         };
 
@@ -510,8 +527,10 @@ namespace rocwmma
                                                typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
-                return typename Traits::DRegsT(
-                    __builtin_amdgcn_mfma_f32_32x32x2f32(*regsA, *regsB, *regsC, 0, 0, 0));
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_f32_32x32x2f32(
+                    regsA.data[0], regsB.data[0], regsC.data, 0, 0, 0)};
+                return result;
             }
         };
 
@@ -536,8 +555,10 @@ namespace rocwmma
                                                typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
-                return typename Traits::DRegsT(
-                    __builtin_amdgcn_mfma_i32_16x16x16i8(*regsA, *regsB, *regsC, 0, 0, 0));
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_i32_16x16x16i8(
+                    regsA.data[0], regsB.data[0], regsC.data, 0, 0, 0)};
+                return result;
             }
         };
 
@@ -562,8 +583,10 @@ namespace rocwmma
                                                typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
-                return typename Traits::DRegsT(
-                    __builtin_amdgcn_mfma_i32_32x32x8i8(*regsA, *regsB, *regsC, 0, 0, 0));
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_i32_32x32x8i8(
+                    regsA.data[0], regsB.data[0], regsC.data, 0, 0, 0)};
+                return result;
             }
         };
 
@@ -591,8 +614,10 @@ namespace rocwmma
                                                typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
-                return typename Traits::DRegsT(
-                    __builtin_amdgcn_mfma_f64_16x16x4f64(*regsA, *regsB, *regsC, 0, 0, 0));
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_f64_16x16x4f64(
+                    regsA.data[0], regsB.data[0], regsC.data, 0, 0, 0)};
+                return result;
             }
         };
 

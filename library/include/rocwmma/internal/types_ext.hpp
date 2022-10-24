@@ -323,14 +323,24 @@ namespace rocwmma
         return fp16.h16;
     }
 
+    __host__ inline hfloat16_t operator+(const hfloat16_t& x, const hfloat16_t& y)
+    {
+        return static_cast<hfloat16_t>(static_cast<float16_t>(x) + static_cast<float16_t>(y));
+    }
+
+    __host__ inline hfloat16_t operator-(const hfloat16_t& x, const hfloat16_t& y)
+    {
+        return static_cast<hfloat16_t>(static_cast<float16_t>(x) - static_cast<float16_t>(y));
+    }
+
     __host__ inline hfloat16_t operator*(const hfloat16_t& x, const hfloat16_t& y)
     {
         return static_cast<hfloat16_t>(static_cast<float16_t>(x) * static_cast<float16_t>(y));
     }
 
-    __host__ inline hfloat16_t operator+(const hfloat16_t& x, const hfloat16_t& y)
+    __host__ inline hfloat16_t operator/(const hfloat16_t& x, const hfloat16_t& y)
     {
-        return static_cast<hfloat16_t>(static_cast<float16_t>(x) + static_cast<float16_t>(y));
+        return static_cast<hfloat16_t>(static_cast<float16_t>(x) / static_cast<float16_t>(y));
     }
 
     __host__ inline hfloat16_t& operator+=(hfloat16_t& x, const hfloat16_t& y)
@@ -338,101 +348,52 @@ namespace rocwmma
         return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) + static_cast<float16_t>(y));
     }
 
-    ///////////////////////////////////////////////////////////
-    ///////////  rocwmma::dataTypeToString overloads  /////////
-    ///////////////////////////////////////////////////////////
-
-    template <>
-    constexpr const char* dataTypeToString<float16_t>()
+    __host__ inline hfloat16_t& operator-=(hfloat16_t& x, const hfloat16_t& y)
     {
-        return "f16";
+        return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) - static_cast<float16_t>(y));
     }
 
-    template <>
-    constexpr const char* dataTypeToString<hfloat16_t>()
+    __host__ inline hfloat16_t& operator*=(hfloat16_t& x, const hfloat16_t& y)
     {
-        return "h16";
+        return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) * static_cast<float16_t>(y));
     }
 
-    template <>
-    constexpr const char* dataTypeToString<bfloat16_t>()
+    __host__ inline hfloat16_t& operator/=(hfloat16_t& x, const hfloat16_t& y)
     {
-        return "bf16";
+        return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) / static_cast<float16_t>(y));
     }
 
-    template <>
-    constexpr const char* dataTypeToString<float32_t>()
-    {
-        return "f32";
-    }
-
-    template <>
-    constexpr const char* dataTypeToString<float64_t>()
-    {
-        return "f64";
-    }
-
-    template <>
-    constexpr const char* dataTypeToString<int8_t>()
-    {
-        return "i8";
-    }
-
-    template <>
-    constexpr const char* dataTypeToString<uint8_t>()
-    {
-        return "u8";
-    }
-
-    template <>
-    constexpr const char* dataTypeToString<int32_t>()
-    {
-        return "i32";
-    }
-
-    template <>
-    constexpr const char* dataTypeToString<uint32_t>()
-    {
-        return "u32";
-    }
-
-    template <>
-    constexpr const char* dataTypeToString<row_major>()
-    {
-        return "T";
-    }
-
-    template <>
-    constexpr const char* dataTypeToString<col_major>()
-    {
-        return "N";
-    }
-
-    template<typename T,
-    typename std::enable_if_t<std::is_integral<T>::value, int> = 0>
-    constexpr auto maxExactInteger() -> decltype(std::numeric_limits<T>::max()) 
+    template <typename T, typename std::enable_if_t<std::is_integral<T>::value, int> = 0>
+    constexpr auto maxExactInteger() -> decltype(std::numeric_limits<T>::max())
     {
         return std::numeric_limits<T>::max();
     }
 
-    template<typename T,
-    typename std::enable_if_t<std::is_floating_point<T>::value && std::numeric_limits<T>::digits, int> = 0>
-    constexpr auto maxExactInteger() -> typename std::conditional_t<std::is_same<T, float64_t>::value, int64_t, int32_t>
+    template <typename T,
+              typename std::enable_if_t<std::is_floating_point<T>::value
+                                            && std::numeric_limits<T>::digits,
+                                        int>
+              = 0>
+    constexpr auto maxExactInteger() ->
+        typename std::conditional_t<std::is_same<T, float64_t>::value, int64_t, int32_t>
     {
-        using RetT = typename std::conditional_t<std::is_same<T, float64_t>::value, int64_t, int32_t>;
+        using RetT =
+            typename std::conditional_t<std::is_same<T, float64_t>::value, int64_t, int32_t>;
         return ((RetT)1 << std::numeric_limits<T>::digits);
     }
 
-    template<typename T,
-    typename std::enable_if_t<std::is_same<T, hfloat16_t>::value || std::is_same<T, float16_t>::value, int> = 0>
+    template <typename T,
+              typename std::enable_if_t<std::is_same<T, hfloat16_t>::value
+                                            || std::is_same<T, float16_t>::value,
+                                        int>
+              = 0>
     constexpr auto maxExactInteger() -> int32_t
     {
         // f16 mantissa is 10 bits
         return ((int32_t)1 << 11);
     }
 
-    template<typename T,
-    typename std::enable_if_t<std::is_same<T, bfloat16_t>::value, int> = 0>
+    template <typename T, typename std::enable_if_t<std::is_same<T, bfloat16_t>::value, int> = 0>
     constexpr auto maxExactInteger() -> int32_t
     {
         // b16 mantissa is 7 bits
