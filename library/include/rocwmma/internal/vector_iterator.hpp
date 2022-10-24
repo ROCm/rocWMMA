@@ -179,15 +179,6 @@ namespace rocwmma
         return VectorIterator<VecT, SubVecSize>{vec};
     }
 
-    inline void doStuff()
-    {
-        HIP_vector_type<rocwmma::bfloat16_t, 4> yubnub{rocwmma::bfloat16_t(5.0f)};
-        for(auto const l : makeVectorIterator(yubnub))
-        {
-            std::cout << (l.data[0]) << ' '; // 3 4 5
-        }
-    }
-
 } // namespace rocwmma
 
 #endif // ROCWMMA_VECTOR_ITERATOR_HPP
