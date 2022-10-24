@@ -66,12 +66,12 @@ namespace rocwmma
             dataInstance->copyData(dataInstance->hostOut(), dataInstance->deviceOut(), 1);
 
             // Check the single output result
-            Base::mValidationResult = (dataInstance->hostOut().get()[0] == DataT(SUCCESS));
+            Base::mValidationResult = (dataInstance->hostOut().get()[0] == DataT(SUCCESS_VALUE));
         }
 
         typename Base::KernelFunc kernelImpl() const final
         {
-            return typename Base::KernelFunc(VectorIterator<VecSize, DataT>);
+            return typename Base::KernelFunc(vectorIteratorTest<DataT, VecSize>);
         }
     };
 
