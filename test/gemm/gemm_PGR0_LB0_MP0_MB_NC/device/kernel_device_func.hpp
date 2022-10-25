@@ -117,8 +117,8 @@ namespace rocwmma
             for(int j = 0; j < BlocksY; j++)
             {
                 // Initialize sub matrix coordinates
-                subMatrixCoordsC[i][j].x += matrixCoordC.x + i * BlockM;
-                subMatrixCoordsC[i][j].y += matrixCoordC.y + j * BlockN;
+                subMatrixCoordsC[i][j].x = matrixCoordC.x + i * BlockM;
+                subMatrixCoordsC[i][j].y = matrixCoordC.y + j * BlockN;
 
                 // Initialize accumulators
                 fill_fragment(fragsAccum[i][j], static_cast<ComputeT>(0));

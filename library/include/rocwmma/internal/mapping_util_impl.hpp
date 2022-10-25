@@ -243,14 +243,16 @@ namespace rocwmma
     __device__ inline auto MappingUtil<BlockHeight, BlockWidth, DataT, DataLayout>::matrixCoord(
         BlockCoordT const& blockCoord) -> MatrixCoordT
     {
-        return MatrixSpace::fromBlockCoord(std::forward<BlockCoordT const>(blockCoord));
+        // return MatrixSpace::fromBlockCoord(std::forward<BlockCoordT const>(blockCoord));
+        return MatrixSpace::fromBlockCoord(blockCoord);
     }
 
     template <uint32_t BlockHeight, uint32_t BlockWidth, typename DataT, typename DataLayout>
     __device__ inline uint32_t MappingUtil<BlockHeight, BlockWidth, DataT, DataLayout>::dataOffset(
         MatrixCoordT const& matrixCoord, uint32_t ldm)
     {
-        return DataSpace::fromMatrixCoord(std::forward<MatrixCoordT const>(matrixCoord), ldm);
+        // return DataSpace::fromMatrixCoord(std::forward<MatrixCoordT const>(matrixCoord), ldm);
+        return DataSpace::fromMatrixCoord(matrixCoord, ldm);
     }
 
     template <uint32_t BlockHeight, uint32_t BlockWidth, typename DataT, typename DataLayout>
@@ -258,16 +260,18 @@ namespace rocwmma
         MappingUtil<BlockHeight, BlockWidth, DataT, DataLayout>::dataCoord(
             DataT const* baseAddr, MatrixCoordT const& matrixCoord, uint32_t ldm)
     {
-        return baseAddr
-               + DataSpace::fromMatrixCoord(std::forward<MatrixCoordT const>(matrixCoord), ldm);
+        // return baseAddr
+        //        + DataSpace::fromMatrixCoord(std::forward<MatrixCoordT const>(matrixCoord), ldm);
+        return baseAddr + DataSpace::fromMatrixCoord(matrixCoord, ldm);
     }
 
     template <uint32_t BlockHeight, uint32_t BlockWidth, typename DataT, typename DataLayout>
     __device__ inline DataT* MappingUtil<BlockHeight, BlockWidth, DataT, DataLayout>::dataCoord(
         DataT* baseAddr, MatrixCoordT const& matrixCoord, uint32_t ldm)
     {
-        return baseAddr
-               + DataSpace::fromMatrixCoord(std::forward<MatrixCoordT const>(matrixCoord), ldm);
+        // return baseAddr
+        //        + DataSpace::fromMatrixCoord(std::forward<MatrixCoordT const>(matrixCoord), ldm);
+        return baseAddr + DataSpace::fromMatrixCoord(matrixCoord, ldm);
     }
 
 } // namespace rocwmma
