@@ -662,41 +662,57 @@ namespace rocwmma
     template <typename InputT, typename ComputeT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
     struct Mfma
     {
+        // Full-fragment IO traits
         using IOTraitsA   = IOTraits<BlockM, BlockK, InputT>;
         using IOTraitsB   = IOTraits<BlockK, BlockN, InputT>;
         using IOTraitsAcc = IOTraits<BlockM, BlockN, ComputeT>;
+
+        // Functional
+        using MFMA = detail::amdgcn_mfma<InputT, ComputeT, BlockM, BlockN>;
+
+        // Per-MFMA iterative vector requirements
+        using VecTraitsA = VecTraits<typename MFMA::Traits::ARegsT>;
+        using VecTraitsB = VecTraits<typename MFMA::Traits::BRegsT>;
+        using VecTraitsC = VecTraits<typename MFMA::Traits::CRegsT>;
+        using VecTraitsD = VecTraits<typename MFMA::Traits::DRegsT>;
+
         struct Traits
         {
-            using MFMA = detail::amdgcn_mfma<InputT, ComputeT, BlockM, BlockN>;
-
             enum : uint32_t
             {
                 MfmaCount = BlockK / MFMA::Traits::KPerMfma,
                 MinK      = MFMA::Traits::KPerMfma,
             };
 
-            // Propagate individual MFMA types to full block inputs.
-            using ARegsT = VecT<typename MFMA::Traits::ARegsT::DataT,
-                                MfmaCount * MFMA::Traits::ARegsT::size()>;
-            using BRegsT = VecT<typename MFMA::Traits::BRegsT::DataT,
-                                MfmaCount * MFMA::Traits::BRegsT::size()>;
-            using CRegsT = VecT<typename MFMA::Traits::CRegsT::DataT, MFMA::Traits::CRegsT::size()>;
-            using DRegsT = VecT<typename MFMA::Traits::DRegsT::DataT, MFMA::Traits::DRegsT::size()>;
+            // Create full-fragment vector sizes
+            using ARegsT = typename VecTraitsA::template VecT<typename VecTraitsA::DataT,
+                                                              MfmaCount * VecTraitsA::size()>;
+            using BRegsT = typename VecTraitsB::template VecT<typename VecTraitsA::DataT,
+                                                              MfmaCount * VecTraitsB::size()>;
+            using CRegsT = typename VecTraitsC::template VecT<>;
+            using DRegsT = typename VecTraitsD::template VecT<>;
 
             // Sanity checks
             static_assert(BlockK >= MinK, "BlockK is not a minimum of MinK");
             static_assert(BlockK % MinK == 0, "BlockK is not a multiple of MinK");
-            static_assert(std::is_same<ARegsT, BRegsT>::value,
-                          "A and B registers must be of same type");
-            static_assert(std::is_same<CRegsT, DRegsT>::value,
-                          "C and D registers must be of same type");
-            static_assert(ARegsT::size() == IOTraitsA::PackedSize,
+
+            // A / B  and C / D types must match
+            static_assert(
+                std::is_same<typename VecTraitsA::DataT, typename VecTraitsB::DataT>::value,
+                "A and B registers must be of same type");
+            static_assert(
+                std::is_same<typename VecTraitsC::DataT, typename VecTraitsD::DataT>::value,
+                "C and D registers must be of same type");
+
+            // Full fragment counts must match packed IO counts
+            // MFMA expects packed elements
+            static_assert(VecTraits<ARegsT>::size() == IOTraitsA::PackedSize,
                           "Unexpected packed vector size for A");
-            static_assert(BRegsT::size() == IOTraitsB::PackedSize,
+            static_assert(VecTraits<BRegsT>::size() == IOTraitsB::PackedSize,
                           "Unexpected packed vector size for B");
-            static_assert(CRegsT::size() == IOTraitsAcc::PackedSize,
+            static_assert(VecTraits<CRegsT>::size() == IOTraitsAcc::PackedSize,
                           "Unexpected packed vector size for C");
-            static_assert(DRegsT::size() == IOTraitsAcc::PackedSize,
+            static_assert(VecTraits<DRegsT>::size() == IOTraitsAcc::PackedSize,
                           "Unexpected packed vector size for D");
         };
 
@@ -707,13 +723,15 @@ namespace rocwmma
         {
             typename Traits::DRegsT result = regsC;
 
-            // Accumulate into result regs
-            auto aIt = regsA.template begin<Traits::MFMA::Traits::ARegsT::size()>();
-            auto bIt = regsB.template begin<Traits::MFMA::Traits::BRegsT::size()>();
+            // Iterate over MFMA input requirements
+            auto aIt = makeVectorIterator<VecTraitsA::size()>(regsA).begin();
+            auto bIt = makeVectorIterator<VecTraitsB::size()>(regsB).begin();
+
+            // Accumulate over MFMA count
 #pragma unroll
             for(unsigned i = 0; i < Traits::MfmaCount; i++)
             {
-                result = Traits::MFMA::exec(*aIt, *bIt, result);
+                result = MFMA::exec(*aIt, *bIt, result);
                 aIt++;
                 bIt++;
             }

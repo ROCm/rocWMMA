@@ -247,9 +247,9 @@ namespace rocwmma
         // Compatibility with nvcuda::wmma
         union
         {
-            typename Traits::StorageT mStorage; // Packed
-            typename Traits::AccessT  mAccess; // Unpacked
-            typename Traits::AccessT  x; // Nuanced access
+            typename Traits::StorageT             mStorage; // Packed
+            typename Traits::AccessT              mAccess; // Unpacked
+            typename Traits::AccessT::Native_vec_ x; // Nuanced access
             static_assert(sizeof(typename Traits::AccessT) == sizeof(typename Traits::StorageT),
                           "Storage type and access type should be views into the same raw data");
         };
