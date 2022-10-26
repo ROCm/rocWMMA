@@ -60,6 +60,8 @@ namespace rocwmma
             using InputT = VecT<DataT, IOTraits::UnpackedSize>;
         };
 
+        using StoreVecTraits = VecTraits<typename Traits::StoreT>;
+
         __device__ static inline void exec(DataT*                         dataPtr,
                                            typename Traits::InputT const& data,
                                            uint32_t                       ldm,
@@ -84,7 +86,8 @@ namespace rocwmma
 
             // Calculate the current wave's starting IO iterator index for the first work item.
             // Calculate the IO offset between work items for the current wave.
-            auto ioIter = makeVectorIterator<VectorWidth>(data).it(waveIndex * workItemIOCount);
+            auto ioIter
+                = makeVectorIterator<StoreVecTraits::size()>(data).it(waveIndex * workItemIOCount);
             auto workItemIOInc = waveCount * workItemIOCount;
 
             // Align threads to starting matrix offset coordinates
@@ -131,9 +134,10 @@ namespace rocwmma
             constexpr auto workItemIOCount = IOTraits::IOCount / splitCount;
 
             // Calculate the current wave's starting IO iterator index for the first work item.
-            auto const& reducedFt = reinterpret_cast<
-                VecT<DataT, workItemCount * workItemIOCount * Traits::StoreT::size()> const&>(data);
-            auto ioIter = makeVectorIterator<VectorWidth>(reducedFt).begin();
+            auto const& reducedFt = reinterpret_cast<typename StoreVecTraits::template VecT<
+                DataT,
+                workItemCount * workItemIOCount * StoreVecTraits::size()> const&>(data);
+            auto        ioIter    = makeVectorIterator<StoreVecTraits::size()>(reducedFt).begin();
 
             // Align threads to starting matrix offset coordinates
             auto baseOffset = MatrixLayout::baseOffset();

@@ -41,6 +41,10 @@ namespace rocwmma
             static_assert(Rank % SubVecSize == 0, "VecSize not iterable by SubVecSize");
             static_assert(sizeof(RefVecT) == sizeof(typename RefVecT::Native_vec_),
                           "Cannot alias subvector");
+            static_assert(sizeof(ItVecT) == sizeof(typename ItVecT::Native_vec_),
+                          "Cannot alias subvector");
+            static_assert(sizeof(RefVecT) == sizeof(ItVecT) * Traits::Range,
+                          "Cannot alias subvector");
 
             __HOST_DEVICE__ constexpr iterator() noexcept = delete;
 
@@ -54,17 +58,14 @@ namespace rocwmma
 
             __HOST_DEVICE__ inline ItVecT const& operator*() const
             {
-                // Cast mRef.data as an array of DataT, then apply offset.
-                // Finally, reinterpret as a vector of SubVecSize
-                return *reinterpret_cast<ItVecT const*>((DataT*)(&mRef.data) + mIdx * SubVecSize);
+                // Cast as array of sub-vectors
+                return reinterpret_cast<ItVecT const*>(&mRef)[mIdx];
             }
 
             __HOST_DEVICE__ inline ItVecT& operator*()
             {
-                // Cast mRef.data as an array of DataT, then apply offset.
-                // Finally, reinterpret as a vector of SubVecSize
-                return *reinterpret_cast<ItVecT*>((DataT*)(&const_cast<RefVecT&>(mRef))
-                                                  + mIdx * SubVecSize);
+                // Cast as array of sub-vectors
+                return reinterpret_cast<ItVecT*>(&const_cast<RefVecT&>(mRef))[mIdx];
             }
 
             __HOST_DEVICE__ inline iterator& operator++()

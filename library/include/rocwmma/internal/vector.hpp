@@ -288,4 +288,28 @@ ROCWMMA_REGISTER_HIP_BFLOAT16_VECTOR_TYPE(256);
 
 #endif // !__HIPCC_RTC__
 
+namespace rocwmma
+{
+    template <typename VecT>
+    struct VecTraits;
+
+    template <typename T, uint32_t VecSize>
+    struct VecTraits<HIP_vector_type<T, VecSize>>
+    {
+        // Vector class blueprint
+        template <typename DataT = T, uint32_t size = VecSize>
+        using VecT = HIP_vector_type<T, size>;
+
+        // Current data type
+        using DataT = typename VecT<>::value_type;
+
+        // Current vector size
+        constexpr static inline uint32_t size()
+        {
+            return VecSize;
+        }
+    };
+
+} // namespace rocwmma
+
 #endif // ROCWMMA_VECTOR_HPP

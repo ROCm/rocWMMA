@@ -71,12 +71,14 @@ namespace rocwmma
             using InputT = VecT<DataT, IOTraits::UnpackedSize>;
         };
 
+        using StoreVecTraits = VecTraits<typename Traits::StoreT>;
+
         __device__ static void
             exec(DataT* dataPtr, typename Traits::InputT const& data, uint32_t ldm)
         {
             // Arrange wave threads to starting matrix layout offsets.
             auto baseOffset = MatrixLayout::baseOffset();
-            auto it         = makeVectorIterator<VectorWidth>(data).begin();
+            auto it         = makeVectorIterator<StoreVecTraits::size()>(data).begin();
 
             static_assert(decltype(it)::range() == IOTraits::IOCount,
                           "IOCount inconsistent with iterator range");

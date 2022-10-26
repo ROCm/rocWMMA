@@ -45,6 +45,7 @@ namespace rocwmma
                           "Cannot vectorize input");
 
             using LoadT = VecT<DataT, VectorWidth>;
+
             __device__ static inline void
                 exec(LoadT& data, DataT const* dataPtr, index_t offset = 0)
             {
@@ -72,12 +73,14 @@ namespace rocwmma
             using OutputT = VecT<DataT, IOTraits::UnpackedSize>;
         };
 
+        using LoadVecTraits = VecTraits<typename Traits::LoadT>;
+
         __device__ static void
             exec(typename Traits::OutputT& data, DataT const* dataPtr, uint32_t ldm)
         {
             // Arrange wave threads to starting matrix layout offsets.
             auto baseOffset = MatrixLayout::baseOffset();
-            auto it         = makeVectorIterator<VectorWidth>(data).begin();
+            auto it         = makeVectorIterator<LoadVecTraits::size()>(data).begin();
 
             static_assert(decltype(it)::range() == IOTraits::IOCount,
                           "IOCount inconsistent with iterator range");
