@@ -75,6 +75,42 @@ namespace rocwmma
         return err;
     }
 
+    template <typename DataT,
+              uint32_t VecSize,
+              uint32_t StrideSize,
+              typename std::enable_if<(StrideSize >= 1)>::type* = nullptr>
+    __device__ static inline bool iteratorStrideIndexTest(VecT<DataT, VecSize> const& vec)
+    {
+        bool err = false;
+
+        // Iterate over vector in strides of half
+        auto it  = makeVectorIterator<StrideSize>(vec).begin();
+        auto end = makeVectorIterator<StrideSize>(vec).end();
+
+        // Check iterator range
+        err = err || (VecSize != (it.range() * StrideSize));
+
+        // Check that the index increments properly
+        for(uint32_t i = 0; i < it.range(); i++, it++)
+        {
+            err = err || (i != it.index());
+        }
+
+        // Should have reached the end
+        err = err || (it != end);
+
+        return err;
+    }
+
+    template <typename DataT,
+              uint32_t VecSize,
+              uint32_t StrideSize,
+              typename std::enable_if<(StrideSize == 0)>::type* = nullptr>
+    __device__ static inline bool iteratorStrideIndexTest(VecT<DataT, VecSize> const& vec)
+    {
+        return false;
+    }
+
     template <typename DataT, uint32_t VecSize>
     __device__ static inline bool iteratorStrideIndexTest()
     {
@@ -83,18 +119,14 @@ namespace rocwmma
         // Vector data unused
         VecT<DataT, VecSize> vec;
 
-        // Iterate over vector in strides of half
-        constexpr uint32_t iterSize = std::max(VecSize / 2u, 1u);
-        auto               it       = makeVectorIterator<iterSize>(vec).begin();
-
-        // Check iterator range
-        err = err || (VecSize != (it.range() * iterSize));
-
-        // Check that the index increments properly
-        for(uint32_t i = 0; i < it.range(); i++, it++)
-        {
-            err = err || (i != it.index());
-        }
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize>(vec);
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize / 2>(vec);
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize / 4>(vec);
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize / 8>(vec);
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize / 16>(vec);
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize / 32>(vec);
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize / 64>(vec);
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize / 128>(vec);
 
         return err;
     }
@@ -124,6 +156,38 @@ namespace rocwmma
         return err;
     }
 
+    template <typename DataT,
+              uint32_t VecSize,
+              uint32_t StrideSize,
+              typename std::enable_if<(StrideSize >= 1)>::type* = nullptr>
+    __device__ static inline bool iteratorStrideValueTest(VecT<DataT, VecSize> const& vec)
+    {
+        bool err = false;
+        auto it  = makeVectorIterator<StrideSize>(vec).begin();
+
+        // Check range over stride
+        err = err || (VecSize != (it.range() * StrideSize));
+
+        // Check values over iteration
+        for(uint32_t i = 0; i < it.range(); i++, it++)
+        {
+            for(uint32_t j = 0; j < StrideSize; j++)
+            {
+                err = err || (vec.data[i * StrideSize + j] != (*it).data[j]);
+            }
+        }
+        return err;
+    }
+
+    template <typename DataT,
+              uint32_t VecSize,
+              uint32_t StrideSize,
+              typename std::enable_if<(StrideSize == 0)>::type* = nullptr>
+    __device__ static inline bool iteratorStrideValueTest(VecT<DataT, VecSize> const& v)
+    {
+        return false;
+    }
+
     template <typename DataT, uint32_t VecSize>
     __device__ static inline bool iteratorStrideValueTest()
     {
@@ -136,21 +200,14 @@ namespace rocwmma
             vec.data[i] = static_cast<DataT>(i);
         }
 
-        // Iterate over vector in strides of half
-        constexpr uint32_t iterSize = std::max(VecSize / 2u, 1u);
-        auto               it       = makeVectorIterator<iterSize>(vec).begin();
-
-        // Check range over stride
-        err = err || (VecSize != (it.range() * iterSize));
-
-        // Check values over iteration
-        for(uint32_t i = 0; i < it.range(); i++, it++)
-        {
-            for(uint32_t j = 0; j < iterSize; j++)
-            {
-                err = err || (vec.data[i * iterSize + j] != (*it).data[j]);
-            }
-        }
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize>(vec);
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 2>(vec);
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 4>(vec);
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 8>(vec);
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 16>(vec);
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 32>(vec);
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 64>(vec);
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 128>(vec);
 
         return err;
     }
