@@ -90,7 +90,7 @@ namespace rocwmma
         // Target C / D block on 2D grid
         auto matrixCoordC = MappingC::matrixCoord();
 
-        if(std::get<0>(matrixCoordC) + BlockM > m || std::get<1>(matrixCoordC) + BlockN > n)
+        if(get<0>(matrixCoordC) + BlockM > m || get<1>(matrixCoordC) + BlockN > n)
         {
             return;
         }

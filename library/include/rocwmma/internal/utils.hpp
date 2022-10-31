@@ -26,6 +26,19 @@
 #ifndef ROCWMMA_UTILS_HPP
 #define ROCWMMA_UTILS_HPP
 
+#if defined(__HIPCC_RTC__)
+#include "pair.hpp"
+namespace rocwmma
+{
+    template <typename T0, typename T1>
+    using pair = rocwmma_pair<T0, T1>;
+
+    using detail::get;
+    using detail::make_pair;
+    using detail::swap;
+}
+
+#else
 #include <tuple>
 #include <utility>
 
@@ -122,6 +135,16 @@ namespace std
     }
 
 } // namespace std
+
+namespace rocwmma
+{
+    template <typename T0, typename T1>
+    using pair = std::pair<T0, T1>;
+    using std::get;
+    using std::make_pair;
+    using std::swap;
+}
+#endif
 
 namespace rocwmma
 {
