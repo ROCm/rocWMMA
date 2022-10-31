@@ -50,7 +50,7 @@ namespace rocwmma
             __device__ constexpr inline auto
                 MappingBase<MappingBaseT_impl>::projCoordA(CoordC const& coordC)
             {
-                return std::make_pair(std::get<0>(coordC), 0u);
+                return std::make_pair(get<0>(coordC), 0u);
             }
 
             template <MappingBaseT>
@@ -58,7 +58,7 @@ namespace rocwmma
             __device__ constexpr inline auto
                 MappingBase<MappingBaseT_impl>::projCoordB(CoordC const& coordC)
             {
-                return std::make_pair(0u, std::get<1>(coordC));
+                return std::make_pair(0u, get<1>(coordC));
             }
 
             ///

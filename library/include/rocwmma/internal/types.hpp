@@ -33,6 +33,8 @@
 #include <type_traits>
 #include <utility>
 
+#include <rocwmma/internal/utils.hpp>
+
 namespace rocwmma
 {
 
@@ -115,7 +117,7 @@ namespace rocwmma
 
     namespace detail
     {
-        using Coord2d = std::pair<uint32_t, uint32_t>;
+        using Coord2d = rocwmma::pair<uint32_t, uint32_t>;
 
         /*! \struct VectorStorage
         *  \brief Vectorized internal storage

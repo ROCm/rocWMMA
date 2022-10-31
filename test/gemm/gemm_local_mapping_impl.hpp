@@ -41,7 +41,7 @@ namespace rocwmma
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::waveOffsetA()
         {
-            return std::swap(GlobalMapping::waveOffsetA());
+            return swap(GlobalMapping::waveOffsetA());
         }
 
         template <LdsMappingT>
@@ -53,7 +53,7 @@ namespace rocwmma
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::blockOffsetA()
         {
-            return std::swap(GlobalMapping::blockOffsetA());
+            return swap(GlobalMapping::blockOffsetA());
         }
 
         template <LdsMappingT>
@@ -76,7 +76,7 @@ namespace rocwmma
         {
             // B data will start right after A data
             // For local write, must add wave offset if global read tile is a wave tile
-            auto baseCoordB = std::swap(GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()));
+            auto baseCoordB = swap(GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()));
             return GlobalMapping::readABWaveTile() ? baseCoordB + waveOffsetB() : baseCoordB;
         }
 
@@ -94,7 +94,7 @@ namespace rocwmma
         {
             // B data will start right after A data
             // For local read, will be in MFMA format, so we need the wave offset
-            auto baseCoordB = std::swap(GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()));
+            auto baseCoordB = swap(GlobalMapping::projCoordA(GlobalMapping::macroTileSizeC()));
             return baseCoordB + waveOffsetB();
         }
 
@@ -102,7 +102,7 @@ namespace rocwmma
         __device__ constexpr inline auto LdsMappingTN<LdsMappingT_impl>::sizeLds()
         {
             auto macroTileC = GlobalMapping::macroTileSizeC();
-            return std::make_pair(LdsHeight, std::get<0>(macroTileC) + std::get<1>(macroTileC));
+            return std::make_pair(LdsHeight, get<0>(macroTileC) + get<1>(macroTileC));
         }
 
         template <LdsMappingT>
@@ -127,7 +127,7 @@ namespace rocwmma
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::waveOffsetB()
         {
-            return std::swap(GlobalMapping::waveOffsetB());
+            return swap(GlobalMapping::waveOffsetB());
         }
 
         template <LdsMappingT>
@@ -139,7 +139,7 @@ namespace rocwmma
         template <LdsMappingT>
         __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::blockOffsetB()
         {
-            return std::swap(GlobalMapping::blockOffsetB());
+            return swap(GlobalMapping::blockOffsetB());
         }
 
         template <LdsMappingT>
@@ -182,7 +182,7 @@ namespace rocwmma
         __device__ constexpr inline auto LdsMappingNT<LdsMappingT_impl>::sizeLds()
         {
             auto macroTileC = GlobalMapping::macroTileSizeC();
-            return std::make_pair(std::get<0>(macroTileC) + std::get<1>(macroTileC), LdsWidth);
+            return std::make_pair(get<0>(macroTileC) + get<1>(macroTileC), LdsWidth);
         }
 
         template <LdsMappingT>
@@ -206,7 +206,7 @@ namespace rocwmma
             LdsMappingRF<LdsMappingT_impl>::projCoordA(Coord2d const& coordA)
         {
             // Scale the A coordinate to register file height
-            return std::make_pair(std::get<0>(coordA) * GlobalMapping::kDim() / LdsWidth, 0u);
+            return std::make_pair(get<0>(coordA) * GlobalMapping::kDim() / LdsWidth, 0u);
         }
 
         template <LdsMappingT>
@@ -214,7 +214,7 @@ namespace rocwmma
             LdsMappingRF<LdsMappingT_impl>::projCoordB(Coord2d const& coordB)
         {
             // Scale the B coordinate to register file height
-            return std::make_pair(std::get<1>(coordB) * GlobalMapping::kDim() / LdsWidth, 0u);
+            return std::make_pair(get<1>(coordB) * GlobalMapping::kDim() / LdsWidth, 0u);
         }
 
         template <LdsMappingT>
@@ -271,8 +271,8 @@ namespace rocwmma
         __device__ constexpr inline auto LdsMappingRF<LdsMappingT_impl>::sizeLds()
         {
             auto macroTileC = GlobalMapping::macroTileSizeC();
-            return std::make_pair((std::get<0>(macroTileC) + std::get<1>(macroTileC))
-                                      * GlobalMapping::kDim() / LdsWidth,
+            return std::make_pair((get<0>(macroTileC) + get<1>(macroTileC)) * GlobalMapping::kDim()
+                                      / LdsWidth,
                                   LdsWidth);
         }
 

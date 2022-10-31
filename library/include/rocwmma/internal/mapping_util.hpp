@@ -34,7 +34,7 @@ namespace rocwmma
 {
 
     // 2D Coordinate
-    using Coord2d = std::pair<uint32_t, uint32_t>;
+    using Coord2d = pair<uint32_t, uint32_t>;
 
     // Fwd declaration
     struct row_major;
