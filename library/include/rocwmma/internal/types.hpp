@@ -36,6 +36,8 @@
 #include <type_traits>
 #include <utility>
 
+#include <rocwmma/internal/utils.hpp>
+
 namespace rocwmma
 {
 
@@ -121,7 +123,6 @@ namespace rocwmma
     namespace detail
     {
         using Coord2d = std::pair<uint32_t, uint32_t>;
-    } // namespace detail
 
 } // namespace rocwmma
 
