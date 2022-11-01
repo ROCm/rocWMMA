@@ -43,7 +43,7 @@ namespace rocwmma
 
         // Vector Sizes.
         // Test up to VecSize = 128. Anything bigger is impractical.
-        using VecSizes = std::tuple<I<1>, I<2>, I<4>, I<8>, I<16>, I<32>, I<64>, I<128>>;
+        using VecSizes = std::tuple<I<1>, I<2>, I<4>, I<8>, I<16>, I<32>, I<64>>;
 
         using KernelParams = typename CombineLists<VecSizes, Types>::Result;
 
