@@ -64,7 +64,7 @@ namespace rocwmma
             __device__ constexpr static inline WorkgroupCoordT workgroupCoord();
 
             // Size of workgroup, normalized to wave count.
-            __device__ constexpr static inline WorkgroupDimT workgroupDim();
+            __device__ static inline WorkgroupDimT workgroupDim();
         };
 
         /*

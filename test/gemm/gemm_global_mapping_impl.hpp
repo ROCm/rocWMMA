@@ -50,7 +50,7 @@ namespace rocwmma
             __device__ constexpr inline auto
                 MappingBase<MappingBaseT_impl>::projCoordA(CoordC const& coordC)
             {
-                return std::make_pair(get<0>(coordC), 0u);
+                return make_pair(get<0>(coordC), 0u);
             }
 
             template <MappingBaseT>
@@ -58,7 +58,7 @@ namespace rocwmma
             __device__ constexpr inline auto
                 MappingBase<MappingBaseT_impl>::projCoordB(CoordC const& coordC)
             {
-                return std::make_pair(0u, get<1>(coordC));
+                return make_pair(0u, get<1>(coordC));
             }
 
             ///
@@ -74,14 +74,14 @@ namespace rocwmma
             template <MappingBaseT>
             __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::waveTileSizeC()
             {
-                return blockSizeC() * std::make_pair(BlocksX, BlocksY);
+                return blockSizeC() * make_pair(BlocksX, BlocksY);
             }
 
             template <MappingBaseT>
             __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::blockSizeC()
             {
-                return std::make_pair((uint32_t)GetIOShape_t<MfmaFragC>::BlockHeight,
-                                      (uint32_t)GetIOShape_t<MfmaFragC>::BlockWidth);
+                return make_pair((uint32_t)GetIOShape_t<MfmaFragC>::BlockHeight,
+                                 (uint32_t)GetIOShape_t<MfmaFragC>::BlockWidth);
             }
 
             template <MappingBaseT>
@@ -133,13 +133,13 @@ namespace rocwmma
             template <MappingBaseT>
             __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::kStepOffsetA()
             {
-                return std::make_pair(0u, BlockK);
+                return make_pair(0u, BlockK);
             }
 
             template <MappingBaseT>
             __device__ constexpr inline auto MappingBase<MappingBaseT_impl>::kStepOffsetB()
             {
-                return std::make_pair(BlockK, 0u);
+                return make_pair(BlockK, 0u);
             }
 
             ///
