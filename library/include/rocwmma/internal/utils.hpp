@@ -26,7 +26,9 @@
 #ifndef ROCWMMA_UTILS_HPP
 #define ROCWMMA_UTILS_HPP
 
-#if defined(__HIPCC_RTC__)
+#define __HIPCC_RTC_TEST__
+
+#if defined(__HIPCC_RTC_TEST__)
 #include "pair.hpp"
 namespace rocwmma
 {

@@ -113,8 +113,8 @@ namespace rocwmma
         // Setup address increments.
         // A steps BlockK through m x k
         // B steps BlockK through k x n
-        auto incrA = MappingA::dataOffset(std::make_pair(0, BlockK), lda);
-        auto incrB = MappingB::dataOffset(std::make_pair(BlockK, 0), ldb);
+        auto incrA = MappingA::dataOffset(make_pair(0u, BlockK), lda);
+        auto incrB = MappingB::dataOffset(make_pair(BlockK, 0u), ldb);
         auto count = k / BlockK;
 
         // Accumulate A * B

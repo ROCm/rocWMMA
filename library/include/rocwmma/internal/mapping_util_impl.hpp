@@ -74,7 +74,8 @@ namespace rocwmma
         template <uint32_t TBlockX, uint32_t TBlockY>
         __device__ constexpr inline auto WaveSpace<TBlockX, TBlockY>::localWaveCoord() -> WaveCoordT
         {
-            return waveCount(make_pair(threadIdx.x, threadIdx.y));
+            return waveCount(
+                make_pair(static_cast<uint32_t>(threadIdx.x), static_cast<uint32_t>(threadIdx.y)));
         }
 
         template <uint32_t TBlockX, uint32_t TBlockY>
@@ -95,20 +96,23 @@ namespace rocwmma
         __device__ constexpr inline auto WaveSpace<TBlockX, TBlockY>::workgroupCoord()
             -> WorkgroupCoordT
         {
-            return make_pair(blockIdx.x, blockIdx.y);
+            return make_pair(static_cast<uint32_t>(blockIdx.x), static_cast<uint32_t>(blockIdx.y));
         }
 
         template <uint32_t TBlockX, uint32_t TBlockY>
-        __device__ constexpr inline auto WaveSpace<TBlockX, TBlockY>::workgroupDim()
-            -> WorkgroupDimT
+        __device__ inline auto WaveSpace<TBlockX, TBlockY>::workgroupDim() -> WorkgroupDimT
         {
             return waveCount(make_pair(TBlockX, TBlockY));
         }
 
         template <>
-        __device__ constexpr inline auto WaveSpace<0, 0>::workgroupDim() -> WorkgroupDimT
+        __device__ inline auto WaveSpace<0, 0>::workgroupDim() -> WorkgroupDimT
         {
-            return waveCount(make_pair(blockDim.x, blockDim.y));
+            // constexpr dim3 dims{static_cast<uint32_t>(__ockl_get_local_size(0)),
+            //                     static_cast<uint32_t>(__ockl_get_local_size(1))};
+            // return waveCount(make_pair(static_cast<uint32_t>(dims.x), static_cast<uint32_t>(dims.y)));
+            return waveCount(
+                make_pair(static_cast<uint32_t>(blockDim.x), static_cast<uint32_t>(blockDim.y)));
         }
 
         /// MatrixSpace

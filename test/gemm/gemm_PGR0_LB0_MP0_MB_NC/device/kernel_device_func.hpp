@@ -135,7 +135,7 @@ namespace rocwmma
         for(int i = 0; i < BlocksX; i++)
         {
             globalAddrsA[i]
-                = MappingA::dataCoord(a, std::make_pair(get<0>(subMatrixCoordsC[i][0]), 0), lda);
+                = MappingA::dataCoord(a, make_pair(get<0>(subMatrixCoordsC[i][0]), 0), lda);
         }
 
         // Blocks in the same col share the same starting address for B
@@ -143,14 +143,14 @@ namespace rocwmma
         for(int i = 0; i < BlocksY; i++)
         {
             globalAddrsB[i]
-                = MappingB::dataCoord(b, std::make_pair(0, get<1>(subMatrixCoordsC[0][i])), ldb);
+                = MappingB::dataCoord(b, make_pair(0u, get<1>(subMatrixCoordsC[0][i])), ldb);
         }
 
         /// Setup address increments.
         // A steps BlockK through m x k
         // B steps BlockK through k x n
-        auto incrA  = MappingA::dataOffset(std::make_pair(0, BlockK), lda);
-        auto incrB  = MappingB::dataOffset(std::make_pair(BlockK, 0), ldb);
+        auto incrA  = MappingA::dataOffset(make_pair(0u, BlockK), lda);
+        auto incrB  = MappingB::dataOffset(make_pair(BlockK, 0u), ldb);
         auto stepsK = k / BlockK;
 
         /// Accumulate A * B
