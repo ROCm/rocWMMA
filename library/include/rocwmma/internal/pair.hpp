@@ -35,10 +35,30 @@ namespace rocwmma
 
     namespace detail
     {
-        template <class T>
-        __host__ __device__ constexpr static inline rocwmma_pair<T, T> make_pair(T&& x, T&& y)
+        template <class T0, class T1>
+        __host__ __device__ constexpr static inline rocwmma_pair<std::decay_t<T0>, std::decay_t<T1>>
+                 make_pair(T0&& x, T1&& y)
         {
-            return rocwmma_pair<T, T>(x, y);
+            return rocwmma_pair<std::decay_t<T0>, std::decay_t<T0>>(x, y);
+        }
+
+        __host__ __device__ constexpr static inline rocwmma_pair<uint32_t, uint32_t>
+                 make_pair(uint32_t&& x, int&& y)
+        {
+            return rocwmma_pair<uint32_t, uint32_t>(x, static_cast<uint32_t>(y));
+        }
+
+        __host__ __device__ constexpr static inline rocwmma_pair<uint32_t, uint32_t>
+                 make_pair(int&& x, uint32_t&& y)
+        {
+            return rocwmma_pair<uint32_t, uint32_t>(static_cast<uint32_t>(x), y);
+        }
+
+        __host__ __device__ constexpr static inline rocwmma_pair<uint32_t, uint32_t>
+                 make_pair(int&& x, int&& y)
+        {
+            return rocwmma_pair<uint32_t, uint32_t>(static_cast<uint32_t>(x),
+                                                    static_cast<uint32_t>(y));
         }
 
         template <uint32_t idx, typename T>
