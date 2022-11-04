@@ -219,6 +219,8 @@ namespace rocwmma
             using AccessT  = VecT<UnpackedElementT, IOTraits::UnpackedSize>;
             using StorageT = VecT<PackedElementT, IOTraits::PackedSize>;
 
+            constexpr static uint32_t Size = IOTraits::UnpackedSize;
+
             static_assert(IOTraits::PackedVRegCount >= 1,
                           "Fragments must occupy at least one packed register");
             static_assert(IOTraits::UnpackedSize % IOTraits::PackedSize == 0,
@@ -245,13 +247,13 @@ namespace rocwmma
         // Compatibility with nvcuda::wmma
         union
         {
-            typename Traits::StorageT mStorage; // Packed
-            typename Traits::AccessT  mAccess; // Unpacked
-            typename Traits::AccessT  x; // Nuanced access
+            typename Traits::StorageT             mStorage; // Packed
+            typename Traits::AccessT              mAccess; // Unpacked
+            typename Traits::AccessT::Native_vec_ x; // Nuanced access
             static_assert(sizeof(typename Traits::AccessT) == sizeof(typename Traits::StorageT),
                           "Storage type and access type should be views into the same raw data");
         };
-        constexpr static uint32_t num_elements = Traits::AccessT::Size;
+        constexpr static uint32_t num_elements = Traits::Size;
         using element_type                     = DataT;
     };
 

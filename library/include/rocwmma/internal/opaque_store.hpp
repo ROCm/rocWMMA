@@ -29,6 +29,7 @@
 #include "io_traits.hpp"
 #include "layout.hpp"
 #include "types.hpp"
+#include "vector_iterator.hpp"
 
 namespace rocwmma
 {
@@ -40,6 +41,8 @@ namespace rocwmma
         struct amdgcn_opaque_store
         {
             static_assert(VectorWidth > 0, "Vector width must be greater than 0");
+            static_assert(sizeof(DataT[VectorWidth]) == sizeof(VecT<DataT, VectorWidth>),
+                          "Cannot vectorize output");
 
             using StoreT = VecT<DataT, VectorWidth>;
             __device__ static inline void
@@ -68,13 +71,15 @@ namespace rocwmma
             using InputT = VecT<DataT, IOTraits::UnpackedSize>;
         };
 
+        using StoreVecTraits = VecTraits<typename Traits::StoreT>;
+
         __device__ static void
             exec(DataT* dataPtr, typename Traits::InputT const& data, uint32_t ldm)
         {
             // Arrange wave threads to starting matrix layout offsets.
             auto baseOffset = MatrixLayout::baseOffset();
+            auto it         = makeVectorIterator<StoreVecTraits::size()>(data).begin();
 
-            auto it = data.template cbegin<Traits::StoreT::size()>();
             static_assert(decltype(it)::range() == IOTraits::IOCount,
                           "IOCount inconsistent with iterator range");
 

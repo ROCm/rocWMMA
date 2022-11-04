@@ -40,13 +40,9 @@ namespace rocwmma
             using BroadcastT = VecT<DataT, VectorSize>;
         };
 
-        __device__ static inline void exec(typename Traits::BroadcastT& data, DataT val)
+        __device__ static inline void exec(typename Traits::BroadcastT& vec, DataT val)
         {
-#pragma unroll
-            for(unsigned int i = 0; i < Traits::BroadcastT::size(); i++)
-            {
-                data[i] = val;
-            }
+            vec = typename Traits::BroadcastT{(DataT)val};
         }
     };
 

@@ -28,344 +28,518 @@
 #define ROCWMMA_DEVICE_VECTOR_ITERATOR_HPP
 
 #include <rocwmma/internal/types.hpp>
+#include <rocwmma/internal/vector_iterator.hpp>
 
-static constexpr uint32_t ERROR_VALUE = 7;
-static constexpr uint32_t SUCCESS     = 0;
+static constexpr uint32_t ERROR_VALUE   = 7;
+static constexpr uint32_t SUCCESS_VALUE = 0;
 
 namespace rocwmma
 {
 
-    template <uint32_t VectSize, typename DataT>
-    __device__ static inline bool defaultConstructorTest()
+    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool bcastTest()
     {
-        // defaultConstructorTest
-        VecT<DataT, VectSize> vectData;
-        return (vectData.size() == VectSize);
-    }
+        bool err = false;
 
-    template <uint32_t VectSize, typename DataT>
-    __device__ static inline bool copyConstructorTest()
-    {
-        // copyConstructorTest0
-        VecT<DataT, VectSize> vectData;
-        bool ret = (vectData.size() == VectSize);
+        // Vector data unused
+        //non_native_vector_base<DataT, VecSize> vec{static_cast<DataT>(5.0f)};
+        HIP_vector_type<DataT, VecSize> vec{static_cast<DataT>(5.0f)};
 
-        for(uint32_t i = 0; i < VectSize; i++)
-            vectData[i] = static_cast<DataT>(i);
-
-        VecT<DataT, VectSize> copyVectData(vectData);
-        ret &= (copyVectData.size() == vectData.size());
-        for(uint32_t i = 0; i < copyVectData.size(); i++)
-            ret &= (copyVectData[i] == vectData[i]);
-
-        VecT<DataT, VectSize> copyStorageData(*vectData);
-        ret &= (copyStorageData.size() == vectData.size());
-        for(uint32_t i = 0; i < copyStorageData.size(); i++)
-            ret &= (copyStorageData[i] == vectData[i]);
-
-        VecT<DataT, VectSize> moveStorageData(std::move(*vectData));
-        ret &= (moveStorageData.size() == vectData.size());
-        for(uint32_t i = 0; i < moveStorageData.size(); i++)
-            ret &= (moveStorageData[i] == vectData[i]);
-
-        return ret;
-    }
-
-    template <uint32_t VectSize, typename DataT>
-    __device__ static inline bool dereferenceTest()
-    {
-        // dereferenceTest
-        VecT<DataT, VectSize> vectData;
-        bool ret = (vectData.size() == VectSize);
-        for(uint32_t i = 0; i < VectSize; i++)
-            vectData[i] = static_cast<DataT>(i);
-
-        VecT<DataT, VectSize> copyVectData(vectData);
-
-        typename VecT<DataT, VectSize>::StorageT storageT = *copyVectData;
-        ret &= (sizeof(storageT) == (sizeof(DataT) * vectData.size()));
-
-        for(uint32_t i = 0; i < copyVectData.size(); i++)
-            ret &= (storageT[i] == copyVectData[i]);
-
-        return ret;
-    }
-
-    template <uint32_t VectSize, typename DataT>
-    __device__ static inline bool iteratorTest()
-    {
-        // iteratorTest
-        VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
-        for(uint32_t i = 0; i < VectSize; i++)
-            iterVectData[i] = static_cast<DataT>(i);
-
-        const uint32_t iterSize = VectSize / 2;
-        auto it  = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
-        ret &= (iterVectData.size() == (it.range() * iterSize));
-
-        for(uint32_t i = 0; i < it.range(); i++, it++)
+        for(int i = 0; i < VecSize; i++)
         {
-            for(uint32_t j = 0; j < iterSize; j++)
-            {
-                ret &= (iterVectData[i * iterSize + j] == iterVectData[(*it)[j]]);
-            }
+            //err |= (vec.d[i] != static_cast<DataT>(5.0f));
+            err |= (vec.data[i] != static_cast<DataT>(5.0f));
         }
 
-        return ret;
+        return err;
     }
 
-    template <uint32_t VectSize, typename DataT>
-    __device__ static inline bool iteratorValidityTest()
-    {
-        // iteratorValidityTest
-        VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
-        for(uint32_t i = 0; i < VectSize; i++)
-            iterVectData[i] = static_cast<DataT>(i);
-
-        const uint32_t iterSize = VectSize / 2;
-        auto it  = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
-        ret &= it.valid();
-
-        ret &= (iterVectData.size() == (it.range() * iterSize));
-
-        return ret;
-    }
-
-    template <uint32_t VectSize, typename DataT>
+    template <typename DataT, uint32_t VecSize>
     __device__ static inline bool iteratorIndexTest()
     {
-        // iteratorIndexTest
-        VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
-        for(uint32_t i = 0; i < VectSize; i++)
-            iterVectData[i] = static_cast<DataT>(i);
+        bool err = false;
 
-        const uint32_t iterSize = VectSize / 2;
-        auto it  = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
-        ret &= it.valid();
+        // Vector data unused
+        VecT<DataT, VecSize> vec;
 
-        ret &= (iterVectData.size() == (it.range() * iterSize));
-        ret &= (it.index() == 0);
+        // Check iterator range
+        auto it = makeVectorIterator(vec).begin();
+        err     = err || (VecSize != it.range());
 
-        auto nextit = it.next();
-
-        ret &= (nextit.valid());
-        ret &= (nextit.index() == 1);
-
-        return ret;
-    }
-
-    template <uint32_t VectSize, typename DataT>
-    __device__ static inline bool iteratorRangeTest()
-    {
-        // iteratorRangeTest
-        VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
-        for(uint32_t i = 0; i < VectSize; i++)
-            iterVectData[i] = static_cast<DataT>(i);
-
-        const uint32_t iterSize = VectSize / 2;
-        auto it  = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
-        ret &= it.valid();
-
-        ret &= ((iterVectData.size() / iterSize) == it.range());
-
-        return ret;
-    }
-
-    template <uint32_t VectSize, typename DataT>
-    __device__ static inline bool iteratorBeginEndTest()
-    {
-        // iteratorBeginTest
-        VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
-        for(uint32_t i = 0; i < VectSize; i++)
-            iterVectData[i] = static_cast<DataT>(i);
-
-        const uint32_t iterSize = VectSize / 2;
-        auto           itBegin       = iterVectData.template begin<iterSize>();
-        ret &= (iterVectData.size() == (itBegin.range() * iterSize));
-
-        ret &= (itBegin.valid());
-        ret &= (iterVectData[0] == iterVectData[(*itBegin)[0]]);
-
-        auto           itEnd       = iterVectData.template end<iterSize>();
-        ret &= (iterVectData.size() == (itEnd.range() * iterSize));
-
-        ret &= (iterVectData[0] == iterVectData[(*itEnd)[0]]);
-
-        return ret;
-    }
-
-    template <uint32_t VectSize, typename DataT>
-    __device__ static inline bool iteratorObjTest()
-    {
-        // iteratorEndTest
-        VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
-        for(uint32_t i = 0; i < VectSize; i++)
-            iterVectData[i] = static_cast<DataT>(i);
-
-        const uint32_t iterSize = VectSize / 2;
-        auto           it       = iterVectData.template it<iterSize>();
-        ret &= (iterVectData.size() == (it.range() * iterSize));
-
-        ret &= (iterVectData[0] == iterVectData[(*it)[0]]);
-
-        return ret;
-    }
-
-    template <uint32_t VectSize, typename DataT>
-    __device__ static inline bool iteratorIncDecTest()
-    {
-        // iteratorIncTest
-        VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
-        for(uint32_t i = 0; i < VectSize; i++)
-            iterVectData[i] = static_cast<DataT>(i);
-
-        const uint32_t iterSize = VectSize / 2;
-
-        auto itInc = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
-        ret &= (iterVectData.size() == (itInc.range() * iterSize));
-        for(uint32_t i = 0; i < itInc.range(); i++)
+        // Check that the index increments properly
+        for(uint32_t i = 0; i < it.range(); i++, it++)
         {
-            ret &= (itInc.valid());
-            ret &= (iterVectData[i * iterSize] == iterVectData[(*itInc)[0]]);
-            ++itInc;
+            err = err || (i != it.index());
         }
 
-        auto itDec       = iterVectData.template end<iterSize>();
-        ret &= (iterVectData.size() == (itDec.range() * iterSize));
-        for(uint32_t i = 0; i < itDec.range(); i++)
+        return err;
+    }
+
+    template <typename DataT,
+              uint32_t VecSize,
+              uint32_t StrideSize,
+              typename std::enable_if<(StrideSize >= 1)>::type* = nullptr>
+    __device__ static inline bool iteratorStrideIndexTest(VecT<DataT, VecSize> const& vec)
+    {
+        bool err = false;
+
+        // Iterate over vector in strides of half
+        auto it  = makeVectorIterator<StrideSize>(vec).begin();
+        auto end = makeVectorIterator<StrideSize>(vec).end();
+
+        // Check iterator range
+        err = err || (VecSize != (it.range() * StrideSize));
+
+        // Check that the index increments properly
+        for(uint32_t i = 0; i < it.range(); i++, it++)
         {
-            ret &= (iterVectData[i * iterSize] == iterVectData[(*itDec)[0]]);
-            --itDec;
-            ret &= (itDec.valid());
+            err = err || (i != it.index());
         }
 
-        return ret;
+        // Should have reached the end
+        err = err || (it != end);
+
+        return err;
     }
 
-    template <uint32_t VectSize, typename DataT>
-    __device__ static inline bool iteratorNextPrevTest()
+    template <typename DataT,
+              uint32_t VecSize,
+              uint32_t StrideSize,
+              typename std::enable_if<(StrideSize == 0)>::type* = nullptr>
+    __device__ static inline bool iteratorStrideIndexTest(VecT<DataT, VecSize> const& vec)
     {
-        // iteratorNextTest
-        VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
-        for(uint32_t i = 0; i < VectSize; i++)
-            iterVectData[i] = static_cast<DataT>(i);
-
-        const uint32_t iterSize = VectSize / 2;
-        auto it = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
-        ret &= (iterVectData.size() == (it.range() * iterSize));
-
-        ret &= (it.valid());
-        ret &= (iterVectData[0] == iterVectData[(*it)[0]]);
-        
-        auto nextit = it.next();
-        ret &= (nextit.valid());
-        ret &= (iterVectData[iterSize] == iterVectData[(*nextit)[0]]);
-
-        auto previt = nextit.prev();
-        ret &= (previt.valid());
-        ret &= (iterVectData[0] == iterVectData[(*previt)[0]]);
-        return ret;
+        return false;
     }
 
-    template <uint32_t VectSize, typename DataT>
-    __global__ void VectorIterator(uint32_t     m,
-                                   uint32_t     n,
-                                   DataT const* in,
-                                   DataT*       out,
-                                   uint32_t     ld,
-                                   DataT        param1,
-                                   DataT        param2)
+    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool iteratorStrideIndexTest()
+    {
+        bool err = false;
+
+        // Vector data unused
+        VecT<DataT, VecSize> vec;
+
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize>(vec);
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize / 2>(vec);
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize / 4>(vec);
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize / 8>(vec);
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize / 16>(vec);
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize / 32>(vec);
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize / 64>(vec);
+        err = err || iteratorStrideIndexTest<DataT, VecSize, VecSize / 128>(vec);
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool iteratorValueTest()
+    {
+        bool err = false;
+
+        // Init data as linear values
+        VecT<DataT, VecSize> vec;
+        for(uint32_t i = 0; i < VecSize; i++)
+        {
+            vec.data[i] = static_cast<DataT>(i);
+        }
+
+        // Iterate over vector
+        auto it = makeVectorIterator(vec).begin();
+
+        err = err || (VecSize != it.range());
+        for(uint32_t i = 0; i < it.range(); i++, it++)
+        {
+            // 0th element check as the iterator stride = 1
+            err = err || (vec.data[i] != (*it).data[0]);
+        }
+
+        return err;
+    }
+
+    template <typename DataT,
+              uint32_t VecSize,
+              uint32_t StrideSize,
+              typename std::enable_if<(StrideSize >= 1)>::type* = nullptr>
+    __device__ static inline bool iteratorStrideValueTest(VecT<DataT, VecSize> const& vec)
+    {
+        bool err = false;
+        auto it  = makeVectorIterator<StrideSize>(vec).begin();
+
+        // Check range over stride
+        err = err || (VecSize != (it.range() * StrideSize));
+
+        // Check values over iteration
+        for(uint32_t i = 0; i < it.range(); i++, it++)
+        {
+            for(uint32_t j = 0; j < StrideSize; j++)
+            {
+                err = err || (vec.data[i * StrideSize + j] != (*it).data[j]);
+            }
+        }
+        return err;
+    }
+
+    template <typename DataT,
+              uint32_t VecSize,
+              uint32_t StrideSize,
+              typename std::enable_if<(StrideSize == 0)>::type* = nullptr>
+    __device__ static inline bool iteratorStrideValueTest(VecT<DataT, VecSize> const& v)
+    {
+        return false;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool iteratorStrideValueTest()
+    {
+        bool err = false;
+
+        // Init data as linear values
+        VecT<DataT, VecSize> vec;
+        for(uint32_t i = 0; i < VecSize; i++)
+        {
+            vec.data[i] = static_cast<DataT>(i);
+        }
+
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize>(vec);
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 2>(vec);
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 4>(vec);
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 8>(vec);
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 16>(vec);
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 32>(vec);
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 64>(vec);
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 128>(vec);
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool iteratorSubVectorTypeTest()
+    {
+        bool err = false;
+
+        // Uninitialized vec
+        VecT<DataT, VecSize> vec;
+
+        // Iterate over vector in strides of half
+        constexpr uint32_t iterSize = std::max(VecSize / 2u, 1u);
+        auto               it       = makeVectorIterator<iterSize>(vec).begin();
+
+        return err || (!std::is_same<std::decay_t<decltype(*it)>, VecT<DataT, iterSize>>::value);
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool iteratorBeginTest()
+    {
+        bool err = false;
+
+        // Uninitialized vec
+        VecT<DataT, VecSize> vec;
+
+        // Iterate over vector in strides of 1
+        auto it = makeVectorIterator(vec).begin();
+
+        // Begins at idx 0
+        err = err || (it.index() != 0u);
+
+        // Is valid
+        err = err || (it.valid() != true);
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool iteratorEndTest()
+    {
+        bool err = false;
+
+        // Uninitialized vec
+        VecT<DataT, VecSize> vec;
+
+        // Iterate over vector in strides of 1
+        auto it = makeVectorIterator(vec).end();
+
+        // Begins at idx VecSize
+        err = err || (it.index() != VecSize);
+
+        // Is not valid
+        err = err || (it.valid() != false);
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool iteratorItTest()
+    {
+        bool err = false;
+
+        // Uninitialized vec
+        VecT<DataT, VecSize> vec;
+
+        // Iterate over vector in strides of 1
+        const uint32_t idx = std::min(VecSize - 1u, 2u);
+        auto           it  = makeVectorIterator(vec).it(idx);
+
+        // Begins at idx
+        err = err || (it.index() != idx);
+
+        // Is valid
+        err = err || (it.valid() != true);
+
+        // Iterate over vector in strides of 1
+        auto it1 = makeVectorIterator(vec).it(VecSize + 1u);
+
+        // Begins at idx VecSize + 1
+        err = err || (it1.index() != (VecSize + 1u));
+
+        // Is not valid
+        err = err || (it1.valid() != false);
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool iteratorPostIncDecTest()
+    {
+        bool err = false;
+
+        // Vector data unused
+        VecT<DataT, VecSize> vec;
+
+        auto it = makeVectorIterator(vec).begin();
+
+        auto it1 = it++;
+
+        // Check that indices are not same
+        err = err || (it.index() == it1.index());
+
+        // Check index difference is +1
+        err = err || ((it.index() - it1.index()) != 1);
+
+        auto it2 = it--;
+
+        // Check that indices are not same
+        err = err || (it.index() == it2.index());
+
+        // Check index difference is -1
+        err = err || ((it.index() - it2.index()) != -1);
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool iteratorPreIncDecTest()
+    {
+        bool err = false;
+
+        // Vector data unused
+        VecT<DataT, VecSize> vec;
+
+        auto it = makeVectorIterator(vec).begin();
+
+        // As a copy
+        auto it1 = ++it;
+
+        // Check that indices are same
+        err = err || (it.index() != it1.index());
+
+        // Check index difference is 0
+        err = err || ((it.index() - it1.index()) != 0);
+
+        // As a reference
+        auto& it2 = --it;
+
+        // Check that indices are same
+        err = err || (it.index() != it2.index());
+
+        // Check that indices not the same
+        err = err || (it1.index() == it2.index());
+
+        // Check index difference is 0
+        err = err || ((it.index() - it2.index()) != 0);
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool iteratorPlusMinusTest()
+    {
+        bool err = false;
+
+        // Vector data unused
+        VecT<DataT, VecSize> vec;
+
+        auto it = makeVectorIterator(vec).begin();
+
+        auto it1 = it + 5;
+
+        // Check that index has not changed
+        err = err || (it.index() == 5);
+
+        // Check that new index has changed
+        err = err || (it1.index() != 5);
+
+        // Check that indices are not same
+        err = err || (it.index() == it1.index());
+
+        // Check index difference is -5
+        err = err || ((it.index() - it1.index()) != -5);
+
+        auto it2 = it1 - 2;
+
+        // Check that old index has not changed
+        err = err || (it1.index() == 3);
+
+        // Check that old index has not changed
+        err = err || (it2.index() != 3);
+
+        // Check that indices are not same
+        err = err || (it1.index() == it2.index());
+
+        // Check index difference is +2
+        err = err || ((it1.index() - it2.index()) != 2);
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool iteratorPlusMinusEqTest()
+    {
+        bool err = false;
+
+        // Vector data unused
+        VecT<DataT, VecSize> vec;
+
+        auto it = makeVectorIterator(vec).begin();
+
+        // As a copy
+        auto it1 = it += 5;
+
+        // Check that index has changed
+        err = err || (it.index() != 5);
+
+        // Check that indices are same
+        err = err || (it.index() != it1.index());
+
+        // Check index difference is 0
+        err = err || ((it.index() - it1.index()) != 0);
+
+        // As a reference
+        auto& it2 = it -= 2;
+
+        // Check that index has changed
+        err = err || (it.index() != 3);
+
+        // Check that indices are same
+        err = err || (it.index() != it2.index());
+
+        // Check that copy is different than ref
+        err = err || (it1.index() == it2.index());
+
+        // Check that copy is different than ref
+        err = err || ((it1.index() - it2.index()) != 2);
+
+        // Check index difference is 0
+        err = err || ((it.index() - it2.index()) != 0);
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool iteratorEqTest()
+    {
+        bool err = false;
+
+        // Vector data unused
+        VecT<DataT, VecSize> vec;
+        VecT<DataT, VecSize> vec1;
+
+        auto it  = makeVectorIterator(vec).begin();
+        auto it1 = makeVectorIterator(vec).it(0);
+
+        auto it2 = makeVectorIterator(vec1).begin();
+        auto it3 = makeVectorIterator(vec1).end();
+        auto it4 = makeVectorIterator(vec1).it(VecSize);
+
+        // Check idx = 0 and begin on same vec
+        err = err || (it != it1);
+
+        // Check that begin on diff vec is not same
+        err = err || (it == it2);
+
+        // Check that begin is not end
+        err = err || (it2 == it3);
+
+        // Check idx = VecSize is end
+        err = err || (it3 != it4);
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool iteratorRangeBasedForTest()
+    {
+        bool err = false;
+
+        // Vector data unused
+        VecT<DataT, VecSize> vec;
+        auto                 count = 0u;
+        for(auto const& l : makeVectorIterator(vec))
+        {
+            count++;
+        }
+
+        for(auto& l : makeVectorIterator(vec))
+        {
+            count++;
+        }
+
+        return err || (count != (VecSize * 2));
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    __global__ void vectorIteratorTest(uint32_t     m,
+                                       uint32_t     n,
+                                       DataT const* in,
+                                       DataT*       out,
+                                       uint32_t     ld,
+                                       DataT        param1,
+                                       DataT        param2)
     {
         // Just need one thread
-        if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0 &&
-           blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0)
+        if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0 && blockIdx.x == 0
+           && blockIdx.y == 0 && blockIdx.z == 0)
         {
-            out[0] = static_cast<DataT>(SUCCESS);
+            bool err = false;
 
-            bool err = defaultConstructorTest<VectSize, DataT>();
-            if(err == false)
-            {
-                out[0] = static_cast<DataT>(ERROR_VALUE);
-                return;
-            }
+            err = err ? err : bcastTest<DataT, VecSize>();
 
-            err &= copyConstructorTest<VectSize, DataT>();
-            if(err == false)
-            {
-                out[0] = static_cast<DataT>(ERROR_VALUE);
-                return;
-            }
+            err = err ? err : iteratorIndexTest<DataT, VecSize>();
 
-            err &= dereferenceTest<VectSize, DataT>();
-            if(err == false)
-            {
-                out[0] = static_cast<DataT>(ERROR_VALUE);
-                return;
-            }
+            err = err ? err : iteratorStrideIndexTest<DataT, VecSize>();
 
-            err &= iteratorTest<VectSize, DataT>();
-            if(err == false)
-            {
-                out[0] = static_cast<DataT>(ERROR_VALUE);
-                return;
-            }
+            err = err ? err : iteratorStrideValueTest<DataT, VecSize>();
 
-            err &= iteratorValidityTest<VectSize, DataT>();
-            if(err == false)
-            {
-                out[0] = static_cast<DataT>(ERROR_VALUE);
-                return;
-            }
+            err = err ? err : iteratorSubVectorTypeTest<DataT, VecSize>();
 
-            err &= iteratorIndexTest<VectSize, DataT>();
-            if(err == false)
-            {
-                out[0] = static_cast<DataT>(ERROR_VALUE);
-                return;
-            }
+            err = err ? err : iteratorBeginTest<DataT, VecSize>();
 
-            err &= iteratorRangeTest<VectSize, DataT>();
-            if(err == false)
-            {
-                out[0] = static_cast<DataT>(ERROR_VALUE);
-                return;
-            }
+            err = err ? err : iteratorEndTest<DataT, VecSize>();
 
-            err &= iteratorBeginEndTest<VectSize, DataT>();
-            if(err == false)
-            {
-                out[0] = static_cast<DataT>(ERROR_VALUE);
-                return;
-            }
+            err = err ? err : iteratorItTest<DataT, VecSize>();
 
-            err &= iteratorObjTest<VectSize, DataT>();
-            if(err == false)
-            {
-                out[0] = static_cast<DataT>(ERROR_VALUE);
-                return;
-            }
+            err = err ? err : iteratorPostIncDecTest<DataT, VecSize>();
 
-            err &= iteratorIncDecTest<VectSize, DataT>();
-            if(err == false)
-            {
-                out[0] = static_cast<DataT>(ERROR_VALUE);
-                return;
-            }
+            err = err ? err : iteratorPreIncDecTest<DataT, VecSize>();
 
-            err &= iteratorNextPrevTest<VectSize, DataT>();
-            if(err == false)
-            {
-                out[0] = static_cast<DataT>(ERROR_VALUE);
-                return;
-            }
+            err = err ? err : iteratorPlusMinusTest<DataT, VecSize>();
+
+            err = err ? err : iteratorPlusMinusEqTest<DataT, VecSize>();
+
+            err = err ? err : iteratorEqTest<DataT, VecSize>();
+
+            err = err ? err : iteratorRangeBasedForTest<DataT, VecSize>();
+
+            out[0] = static_cast<DataT>(err ? ERROR_VALUE : SUCCESS_VALUE);
         }
     }
 

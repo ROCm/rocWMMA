@@ -1,0 +1,751 @@
+/*******************************************************************************
+ *
+ * MIT License
+ *
+ * Copyright 2022 Advanced Micro Devices, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ *******************************************************************************/
+
+#ifndef ROCWMMA_VECTOR_IMPL_HPP
+#define ROCWMMA_VECTOR_IMPL_HPP
+
+#include "vector.hpp"
+
+namespace rocwmma
+{
+    namespace detail
+    {
+        namespace ArithmeticOp
+        {
+            struct Add
+            {
+                template <typename TT>
+                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                {
+                    return lhs + rhs;
+                }
+            };
+            struct Sub
+            {
+                template <typename TT>
+                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                {
+                    return lhs - rhs;
+                }
+            };
+            struct Mult
+            {
+                template <typename TT>
+                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                {
+                    return lhs * rhs;
+                }
+            };
+            struct Div
+            {
+                template <typename TT>
+                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                {
+                    return lhs / rhs;
+                }
+            };
+            struct Mod
+            {
+                template <typename TT,
+                          typename std::enable_if<std::is_integral<TT>{}>::type* = nullptr>
+                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                {
+                    return lhs % rhs;
+                }
+            };
+            struct Minus
+            {
+                template <typename TT,
+                          typename std::enable_if<std::is_signed<TT>{}>::type* = nullptr>
+                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs)
+                {
+                    return -lhs;
+                }
+            };
+
+        } // namespace ArithmeticOp
+
+        namespace BitwiseOp
+        {
+            struct And
+            {
+                template <typename TT,
+                          typename std::enable_if<std::is_integral<TT>{}>::type* = nullptr>
+                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                {
+                    return lhs & rhs;
+                }
+            };
+
+            struct Or
+            {
+                template <typename TT,
+                          typename std::enable_if<std::is_integral<TT>{}>::type* = nullptr>
+                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                {
+                    return lhs | rhs;
+                }
+            };
+
+            struct Not
+            {
+                template <typename TT,
+                          typename std::enable_if<std::is_integral<TT>{}>::type* = nullptr>
+                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs)
+                {
+                    return ~lhs;
+                }
+            };
+
+            struct Xor
+            {
+                template <typename TT,
+                          typename std::enable_if<std::is_integral<TT>{}>::type* = nullptr>
+                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                {
+                    return lhs ^ rhs;
+                }
+            };
+
+            struct ShiftR
+            {
+                template <typename TT,
+                          typename std::enable_if<std::is_integral<TT>{}>::type* = nullptr>
+                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                {
+                    return lhs >> rhs;
+                }
+            };
+
+            struct ShiftL
+            {
+                template <typename TT,
+                          typename std::enable_if<std::is_integral<TT>{}>::type* = nullptr>
+                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                {
+                    return lhs >> rhs;
+                }
+            };
+
+        } // namespace BitwiseOp
+
+        namespace LogicalOp
+        {
+            struct And
+            {
+                template <typename TT,
+                          typename std::enable_if<std::is_convertible<TT, bool>{}>::type* = nullptr>
+                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                {
+                    return lhs && rhs;
+                }
+            };
+
+            struct Or
+            {
+                template <typename TT,
+                          typename std::enable_if<std::is_convertible<TT, bool>{}>::type* = nullptr>
+                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                {
+                    return lhs || rhs;
+                }
+            };
+
+            struct Not
+            {
+                template <typename TT,
+                          typename std::enable_if<std::is_convertible<TT, bool>{}>::type* = nullptr>
+                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs)
+                {
+                    return !lhs;
+                }
+            };
+
+        } // namespace LogicalOp
+
+        namespace RelationalOp
+        {
+            struct Eq
+            {
+                template <typename TT>
+                __HOST_DEVICE__ constexpr static inline uint32_t exec(TT lhs, TT rhs)
+                {
+                    return lhs == rhs;
+                }
+            };
+
+            struct Neq
+            {
+                template <typename TT>
+                __HOST_DEVICE__ constexpr static inline uint32_t exec(TT lhs, TT rhs)
+                {
+                    return lhs != rhs;
+                }
+            };
+
+            struct Gte
+            {
+                template <typename TT>
+                __HOST_DEVICE__ constexpr static inline uint32_t exec(TT lhs, TT rhs)
+                {
+                    return lhs >= rhs;
+                }
+            };
+
+            struct Lte
+            {
+                template <typename TT>
+                __HOST_DEVICE__ constexpr static inline uint32_t exec(TT lhs, TT rhs)
+                {
+                    return lhs <= rhs;
+                }
+            };
+
+            struct Gt
+            {
+                template <typename TT>
+                __HOST_DEVICE__ constexpr static inline uint32_t exec(TT lhs, TT rhs)
+                {
+                    return lhs > rhs;
+                }
+            };
+
+            struct Lt
+            {
+                template <typename TT>
+                __HOST_DEVICE__ constexpr static inline uint32_t exec(TT lhs, TT rhs)
+                {
+                    return lhs < rhs;
+                }
+            };
+
+        } // namespace RelationalOp
+
+        template <class IntT, IntT val>
+        struct integral_constant
+        {
+            static constexpr IntT value = val;
+            using value_type            = IntT;
+            using type                  = integral_constant;
+            constexpr operator value_type() const noexcept
+            {
+                return value;
+            }
+            constexpr value_type operator()() const noexcept
+            {
+                return value;
+            }
+        };
+
+        template <typename Int, Int... Ints>
+        struct integer_sequence
+        {
+            using value_type = Int;
+            constexpr integer_sequence() {}
+            static constexpr std::size_t size() noexcept
+            {
+                return sizeof...(Ints);
+            }
+        };
+
+        template <std::size_t... Indices>
+        using index_sequence = integer_sequence<std::size_t, Indices...>;
+
+        namespace
+        {
+            // Merge two integer sequences, adding an offset to the right-hand side.
+            template <typename Offset, typename Lhs, typename Rhs>
+            struct merge;
+
+            template <typename Int, Int Offset, Int... Lhs, Int... Rhs>
+            struct merge<integral_constant<Int, Offset>,
+                         integer_sequence<Int, Lhs...>,
+                         integer_sequence<Int, Rhs...>>
+            {
+                using type = integer_sequence<Int, Lhs..., (Offset + Rhs)...>;
+            };
+
+            template <typename Int, typename N>
+            struct log_make_sequence
+            {
+                using L    = integral_constant<Int, N::value / 2>;
+                using R    = integral_constant<Int, N::value - L::value>;
+                using type = typename merge<L,
+                                            typename log_make_sequence<Int, L>::type,
+                                            typename log_make_sequence<Int, R>::type>::type;
+            };
+
+            // An empty sequence.
+            template <typename Int>
+            struct log_make_sequence<Int, integral_constant<Int, 0>>
+            {
+                using type = integer_sequence<Int>;
+            };
+
+            // A single-element sequence.
+            template <typename Int>
+            struct log_make_sequence<Int, integral_constant<Int, 1>>
+            {
+                using type = integer_sequence<Int, 0>;
+            };
+        }
+
+        template <typename Int, Int N>
+        using make_integer_sequence =
+            typename log_make_sequence<Int, integral_constant<Int, N>>::type;
+
+        template <std::size_t N>
+        using make_index_sequence = make_integer_sequence<std::size_t, N>;
+
+        // Helpers for expression expansion, specific to non_native_vector_base
+        template <uint32_t... ns>
+        using SeqT = integer_sequence<uint32_t, ns...>;
+        template <uint32_t Rank>
+        using Seq = make_integer_sequence<uint32_t, Rank>;
+
+        // Use with operations that have 2 operands
+        template <class BinOp, typename VecT, uint32_t... indices>
+        __HOST_DEVICE__ constexpr static inline VecT
+            binOp(VecT const& lhs, VecT const& rhs, SeqT<indices...>) noexcept
+        {
+            // Construct a new vector via fold expression over all indices
+            return VecT{(BinOp::exec(lhs.d[indices], rhs.d[indices]))...};
+        }
+
+        // Use with operations that have 1 operands
+        template <class UnOp, typename VecT, uint32_t... indices>
+        __HOST_DEVICE__ constexpr static inline VecT unOp(VecT const& lhs,
+                                                          SeqT<indices...>) noexcept
+        {
+            return VecT{(UnOp::exec(lhs.d[indices]))...};
+        }
+
+        // Use with relational operations that have 2 operands
+        template <class BoolOp, typename VecT, uint32_t... indices>
+        __HOST_DEVICE__ constexpr static inline VecT
+            boolOp(VecT const& lhs, VecT const& rhs, SeqT<indices...>) noexcept
+        {
+            return typename VecT::BoolVecT{(BoolOp::exec(lhs.d[indices], rhs.d[indices]))...};
+        }
+
+        // Used to broadcast a single value to the entire vector.
+        template <typename VecT, typename T, uint32_t... indices>
+        __HOST_DEVICE__ constexpr static inline VecT bCast(T val, SeqT<indices...>) noexcept
+        {
+            // Indices value ignored, but broadcast for all
+            return VecT{((void)indices, val)...};
+        }
+
+    } // namespace detail
+
+    // NOTE: The single-valued 'broadcast' constructor can only be used with Rank > 1.
+    // Why? The bCast function constructs the vector with <Rank> copies of the input val.
+    // When Rank == 1, this would create an endless ctor->bcast->ctor->bcast... loop.
+    // As a solution, Rank == 1 should fall into the ctor(Ts... args) for initializer
+    // list construction, and NOT bCast initialization.
+    template <typename T, unsigned int Rank>
+    template <typename U, typename std::enable_if<(std::is_same<U, T>{}) && (Rank > 1)>::type*>
+    __HOST_DEVICE__ constexpr non_native_vector_base<T, Rank>::non_native_vector_base(T x_) noexcept
+        : non_native_vector_base(detail::template bCast<VecT>(x_, detail::Seq<Rank>{}))
+    {
+    }
+
+    template <typename T, unsigned int Rank>
+    template <typename... Ts,
+              typename U,
+              typename std::enable_if<(sizeof...(Ts) == Rank)
+#if(__cplusplus >= 201703L)
+                                      && (std::is_same<U, Ts>{} && ...)
+#endif
+                                      >::type*>
+    __HOST_DEVICE__ constexpr non_native_vector_base<T, Rank>::non_native_vector_base(
+        Ts... args) noexcept
+        : d{args...}
+    {
+    }
+
+    template <typename T, unsigned int Rank>
+    __HOST_DEVICE__ inline T& non_native_vector_base<T, Rank>::operator[](unsigned int idx) noexcept
+    {
+        return d[idx];
+    }
+
+    template <typename T, unsigned int Rank>
+    __HOST_DEVICE__ inline T
+        non_native_vector_base<T, Rank>::operator[](unsigned int idx) const noexcept
+    {
+        return d[idx];
+    }
+
+    template <typename T, unsigned int Rank>
+    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator+=(const VecT& x_) noexcept
+        -> VecT&
+    {
+        return (*this = detail::binOp<detail::ArithmeticOp::Add>(*this, x_, detail::Seq<Rank>{}));
+    }
+
+    template <typename T, unsigned int Rank>
+    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator-=(const VecT& x_) noexcept
+        -> VecT&
+    {
+        return (*this = detail::binOp<detail::ArithmeticOp::Sub>(*this, x_, detail::Seq<Rank>{}));
+    }
+
+    template <typename T, unsigned int Rank>
+    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator*=(const VecT& x_) noexcept
+        -> VecT&
+    {
+        return (*this = detail::binOp<detail::ArithmeticOp::Mult>(*this, x_, detail::Seq<Rank>{}));
+    }
+
+    template <typename T, unsigned int Rank>
+    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator/=(const VecT& x_) noexcept
+        -> VecT&
+    {
+        return (*this = detail::binOp<detail::ArithmeticOp::Div>(*this, x_, detail::Seq<Rank>{}));
+    }
+
+    template <typename T, unsigned int Rank>
+    template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
+    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator%=(const VecT& x_) noexcept
+        -> VecT&
+    {
+        return (*this = detail::binOp<detail::ArithmeticOp::Mod>(*this, x_, detail::Seq<Rank>{}));
+    }
+
+    template <typename T, unsigned int Rank>
+    template <typename U, typename std::enable_if<std::is_signed<U>{}>::type*>
+    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator-() const noexcept -> VecT
+    {
+        return detail::unOp<detail::ArithmeticOp::Minus>(*this, detail::Seq<Rank>{});
+    }
+
+    template <typename T, unsigned int Rank>
+    template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
+    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator&=(const VecT& x_) noexcept
+        -> VecT&
+    {
+        return (*this = detail::binOp<detail::BitwiseOp::And>(*this, x_, detail::Seq<Rank>{}));
+    }
+
+    template <typename T, unsigned int Rank>
+    template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
+    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator|=(const VecT& x_) noexcept
+        -> VecT&
+    {
+        return (*this = detail::binOp<detail::BitwiseOp::Or>(*this, x_, detail::Seq<Rank>{}));
+    }
+
+    template <typename T, unsigned int Rank>
+    template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
+    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator~() const noexcept -> VecT
+    {
+        return detail::unOp<detail::BitwiseOp::Not>(*this, detail::Seq<Rank>{});
+    }
+
+    template <typename T, unsigned int Rank>
+    template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
+    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator^=(const VecT& x_) noexcept
+        -> VecT&
+    {
+        return (*this = detail::binOp<detail::BitwiseOp::Xor>(*this, x_, detail::Seq<Rank>{}));
+    }
+
+    template <typename T, unsigned int Rank>
+    template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
+    __HOST_DEVICE__ inline auto
+        non_native_vector_base<T, Rank>::operator>>=(const VecT& x_) noexcept -> VecT&
+    {
+        return (*this = detail::binOp<detail::BitwiseOp::ShiftR>(*this, x_, detail::Seq<Rank>{}));
+    }
+
+    template <typename T, unsigned int Rank>
+    template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
+    __HOST_DEVICE__ inline auto
+        non_native_vector_base<T, Rank>::operator<<=(const VecT& x_) noexcept -> VecT&
+    {
+        return (*this = detail::binOp<detail::BitwiseOp::ShiftL>(*this, x_, detail::Seq<Rank>{}));
+    }
+
+    template <typename T, unsigned int Rank>
+    __HOST_DEVICE__ inline auto
+        non_native_vector_base<T, Rank>::operator==(const VecT& x_) const noexcept -> BoolVecT
+    {
+        return detail::boolOp<detail::RelationalOp::Eq>(*this, x_, detail::Seq<Rank>{});
+    }
+
+    template <typename T, unsigned int Rank>
+    __HOST_DEVICE__ inline auto
+        non_native_vector_base<T, Rank>::operator!=(const VecT& x_) const noexcept -> BoolVecT
+    {
+        return detail::boolOp<detail::RelationalOp::Neq>(*this, x_, detail::Seq<Rank>{});
+    }
+
+    template <typename T, unsigned int Rank>
+    __HOST_DEVICE__ inline auto
+        non_native_vector_base<T, Rank>::operator>=(const VecT& x_) const noexcept -> BoolVecT
+    {
+        return detail::boolOp<detail::RelationalOp::Gte>(*this, x_, detail::Seq<Rank>{});
+    }
+
+    template <typename T, unsigned int Rank>
+    __HOST_DEVICE__ inline auto
+        non_native_vector_base<T, Rank>::operator<=(const VecT& x_) const noexcept -> BoolVecT
+    {
+        return detail::boolOp<detail::RelationalOp::Lte>(*this, x_, detail::Seq<Rank>{});
+    }
+
+    template <typename T, unsigned int Rank>
+    __HOST_DEVICE__ inline auto
+        non_native_vector_base<T, Rank>::operator>(const VecT& x_) const noexcept -> BoolVecT
+    {
+        return detail::boolOp<detail::RelationalOp::Gt>(*this, x_, detail::Seq<Rank>{});
+    }
+
+    template <typename T, unsigned int Rank>
+    __HOST_DEVICE__ inline auto
+        non_native_vector_base<T, Rank>::operator<(const VecT& x_) const noexcept -> BoolVecT
+    {
+        return detail::boolOp<detail::RelationalOp::Lt>(*this, x_, detail::Seq<Rank>{});
+    }
+
+} // namespace rocwmma
+
+////
+/// VECTORIZATION:
+///
+/// NATIVE data types (char, int, float, _Float16 etc...) may have support for native vector types
+/// if extensions are available (see ROCWMMA_NATIVE_VECTOR_STORAGE_IMPL). Where available,
+/// native vector types shall be used for native data types. Otherwise, vectors will
+/// be implemented as built-in arrays (see ROCWMMA_NON_NATIVE_VECTOR_STORAGE_IMPL).
+///
+/// NON_NATIVE data types (hip_bfloat16, __half, etc.. any struct or class that is not system-native)
+/// do not have native vector support, therefore they are always implemented as built-in arrays.
+/// (see ROCWMMA_NON_NATIVE_VECTOR_STORAGE_IMPL)
+///
+/// ADDING VECTORIZATION SUPPORT in HIP:
+/// - For NATIVE data types: ROCWMMA_REGISTER_NATIVE_VECTOR_TYPE(TYPE, RANK)
+/// - For NON_NATIVE data types: ROCWMMA_REGISTER_NATIVE_VECTOR_TYPE(TYPE, RANK)
+////
+
+//////////////////////////////////////
+/// Definition of accessor aliases ///
+//////////////////////////////////////
+
+#if __HIP_CLANG_ONLY__
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK1(TYPE) \
+    struct                                          \
+    {                                               \
+        TYPE x;                                     \
+    };
+
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK2(TYPE) \
+    struct                                          \
+    {                                               \
+        TYPE x;                                     \
+        TYPE y;                                     \
+    };
+
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK3(TYPE) \
+    struct                                          \
+    {                                               \
+        TYPE x;                                     \
+        TYPE y;                                     \
+        TYPE z;                                     \
+    };
+
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK4(TYPE) \
+    struct                                          \
+    {                                               \
+        TYPE x;                                     \
+        TYPE y;                                     \
+        TYPE z;                                     \
+        TYPE w;                                     \
+    };
+
+// Untenable individual accessor maintenance for larger vectors: skip them
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK8(TYPE)
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK16(TYPE)
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK32(TYPE)
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK64(TYPE)
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK128(TYPE)
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK256(TYPE)
+
+#else
+
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK1(TYPE) \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 0> x;
+
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK2(TYPE)    \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 0> x; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 1> y;
+
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK3(TYPE)    \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 0> x; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 1> y; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 2> z;
+
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK4(TYPE)    \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 0> x; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 1> y; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 2> z; \
+    hip_impl::Scalar_accessor<TYPE, Native_vec_, 3> w;
+
+// Untenable individual accessor maintenance for larger vectors: skip them
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK8(TYPE)
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK16(TYPE)
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK32(TYPE)
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK64(TYPE)
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK128(TYPE)
+#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK256(TYPE)
+
+#endif
+
+/////////////////////////////////////////////////////////////////////////////////
+/// Definition of storage implementation (vector extension vs built-in array) ///
+/////////////////////////////////////////////////////////////////////////////////
+
+#define ROCWMMA_HIP_NON_NATIVE_VECTOR_STORAGE_IMPL(TYPE, RANK)       \
+    using Native_vec_ = rocwmma::non_native_vector_base<TYPE, RANK>; \
+                                                                     \
+    union alignas(next_pow2(RANK * sizeof(TYPE)))                    \
+    {                                                                \
+        Native_vec_ data;                                            \
+        ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK##RANK(TYPE);            \
+    };
+
+#define ROCWMMA_HIP_NATIVE_VECTOR_STORAGE_IMPL(TYPE, RANK)           \
+    using Native_vec_ = TYPE __attribute__((ext_vector_type(RANK))); \
+                                                                     \
+    union                                                            \
+    {                                                                \
+        Native_vec_ data;                                            \
+        ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK##RANK(TYPE);            \
+    };
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+/// Definition of HIP_vector_base override for any type and rank, using above storage impl   ///
+///                                                                                          ///
+/// NOTE: Same Rank restrictions on broadcast construction, as previously seen with the      ///
+/// implementation of non_native_vector<T, Rank>.                                            ///
+/// Why is this needed again here? Because STORAGE_IMPL may be either non_native_vector_type ///
+/// OR native vector extension. The latter doesn't have the required built-in broadcast.     ///
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+#define ROCWMMA_REGISTER_HIP_VECTOR_BASE(TYPE, RANK, STORAGE_IMPL)                             \
+    template <>                                                                                \
+    struct HIP_vector_base<TYPE, RANK>                                                         \
+    {                                                                                          \
+        STORAGE_IMPL(TYPE, RANK);                                                              \
+                                                                                               \
+        using value_type = TYPE;                                                               \
+                                                                                               \
+        __HOST_DEVICE__                                                                        \
+        HIP_vector_base() = default;                                                           \
+        template <typename... ArgsT,                                                           \
+                  typename U                                                 = TYPE,           \
+                  typename std::enable_if<(sizeof...(ArgsT) == RANK)>::type* = nullptr>        \
+        __HOST_DEVICE__ constexpr HIP_vector_base(ArgsT... args) noexcept                      \
+            : data{args...}                                                                    \
+        {                                                                                      \
+        }                                                                                      \
+                                                                                               \
+        template <                                                                             \
+            typename U                                                              = TYPE,    \
+            typename std::enable_if<(std::is_same<U, TYPE>{}) && (RANK > 1)>::type* = nullptr> \
+        __HOST_DEVICE__ constexpr explicit HIP_vector_base(TYPE val) noexcept                  \
+            : HIP_vector_base(rocwmma::detail::template bCast<HIP_vector_base>(                \
+                val, rocwmma::detail::Seq<RANK>{}))                                            \
+        {                                                                                      \
+        }                                                                                      \
+                                                                                               \
+        __HOST_DEVICE__                                                                        \
+        constexpr HIP_vector_base(const HIP_vector_base&) = default;                           \
+                                                                                               \
+        __HOST_DEVICE__                                                                        \
+        constexpr HIP_vector_base(HIP_vector_base&&) = default;                                \
+                                                                                               \
+        __HOST_DEVICE__                                                                        \
+        ~HIP_vector_base() = default;                                                          \
+                                                                                               \
+        __HOST_DEVICE__                                                                        \
+        HIP_vector_base& operator=(const HIP_vector_base& x_) noexcept = default;              \
+    };
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/// Setup macros to implement HIP_vector_type for any T and Rank, specifying if platform native ///
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+#if __has_attribute(ext_vector_type)
+
+#define ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(TYPE, RANK) \
+    ROCWMMA_REGISTER_HIP_VECTOR_BASE(TYPE, RANK, ROCWMMA_HIP_NATIVE_VECTOR_STORAGE_IMPL)
+
+#else
+
+#define ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(TYPE, RANK) \
+    ROCWMMA_REGISTER_HIP_VECTOR_BASE(TYPE, RANK, ROCWMMA_HIP_NON_NATIVE_VECTOR_STORAGE_IMPL)
+
+#endif // __has_attribute(ext_vector_type)
+
+#define ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(TYPE, RANK) \
+    ROCWMMA_REGISTER_HIP_VECTOR_BASE(TYPE, RANK, ROCWMMA_HIP_NON_NATIVE_VECTOR_STORAGE_IMPL)
+
+////////////////////////
+/// Bfloat16 support ///
+////////////////////////
+
+// HIP bfloat16_t is not supported in RTC environment
+#if !defined(__HIPCC_RTC__)
+
+// Quirk: explicit specialization for ++ / -- operators in HIP_vector_type<bfloat16_t, N>.
+// Why? bfloat16_t doesn't have automatic conversion from integers so we must override the default implementation;
+// Override such that in(de)crement operators use 1.f instead of 1(int)
+#define ROCWMMA_SPECIALIZE_BFLOAT16_VECTOR_OPERATORS(RANK)                \
+    template <>                                                           \
+    __HOST_DEVICE__ inline HIP_vector_type<rocwmma::bfloat16_t, RANK>&    \
+        HIP_vector_type<rocwmma::bfloat16_t, RANK>::operator++() noexcept \
+    {                                                                     \
+        return *this += HIP_vector_type<rocwmma::bfloat16_t, RANK>{       \
+                   static_cast<rocwmma::bfloat16_t>(1.0f)};               \
+    }                                                                     \
+                                                                          \
+    template <>                                                           \
+    __HOST_DEVICE__ inline HIP_vector_type<rocwmma::bfloat16_t, RANK>&    \
+        HIP_vector_type<rocwmma::bfloat16_t, RANK>::operator--() noexcept \
+    {                                                                     \
+        return *this -= HIP_vector_type<rocwmma::bfloat16_t, RANK>{       \
+                   static_cast<rocwmma::bfloat16_t>(1.0f)};               \
+    }
+
+// Roll the quirk into the registration macro
+#define ROCWMMA_REGISTER_HIP_BFLOAT16_VECTOR_TYPE(RANK)                    \
+    ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat16_t, RANK) \
+    ROCWMMA_SPECIALIZE_BFLOAT16_VECTOR_OPERATORS(RANK)
+
+#endif // !__HIPCC_RTC__
+
+#endif // ROCWMMA_VECTOR_IMPL_HPP
