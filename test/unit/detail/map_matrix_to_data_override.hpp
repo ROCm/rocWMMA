@@ -118,8 +118,8 @@ namespace rocwmma
 
             // Scale from workgroup grid to wave grid
             auto waveGridDim
-                = make_pair(Base::gridDim().x * (Base::blockDim().x / AMDGCN_WAVE_SIZE),
-                            Base::gridDim().y * Base::blockDim().y);
+                = make_coord2d(Base::gridDim().x * (Base::blockDim().x / AMDGCN_WAVE_SIZE),
+                               Base::gridDim().y * Base::blockDim().y);
 
 // Calculate the expected output from the inputs
 #pragma omp parallel for
@@ -130,18 +130,19 @@ namespace rocwmma
                 {
                     // Setup read / write matrix coords for block
                     auto overrideVal = static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1));
-                    auto readBase = make_pair(mOverride == OVERRIDE_M ? overrideVal : row * BlockM,
-                                              mOverride == OVERRIDE_N ? overrideVal : col * BlockN);
+                    auto readBase
+                        = make_coord2d(mOverride == OVERRIDE_M ? overrideVal : row * BlockM,
+                                       mOverride == OVERRIDE_N ? overrideVal : col * BlockN);
 
-                    auto writeBase = make_pair(row * BlockM, col * BlockN);
+                    auto writeBase = make_coord2d(row * BlockM, col * BlockN);
 
                     // Loop through entire read block and copy to dest block
                     for(auto rowOffset = 0u; rowOffset < BlockM; rowOffset++)
                     {
                         for(auto colOffset = 0u; colOffset < BlockN; colOffset++)
                         {
-                            auto matrixRead  = readBase + make_pair(rowOffset, colOffset);
-                            auto matrixWrite = writeBase + make_pair(rowOffset, colOffset);
+                            auto matrixRead  = readBase + make_coord2d(rowOffset, colOffset);
+                            auto matrixWrite = writeBase + make_coord2d(rowOffset, colOffset);
 
                             *(hostResult.get() + arrayOffset(matrixWrite, ld))
                                 = *(hostInput.get() + arrayOffset(matrixRead, ld));

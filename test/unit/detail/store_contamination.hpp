@@ -54,10 +54,10 @@ namespace rocwmma
             using SizeT  = typename Base::DataStorage::ProblemSize;
             using IndexT = typename std::tuple_element<0, SizeT>::type;
             auto paddedProbSize
-                = std::make_pair(std::get<0>(probSize) + 2 * static_cast<IndexT>(Base::mParam1),
-                                 std::get<1>(probSize) + 2 * static_cast<IndexT>(Base::mParam2));
+                = make_coord2d(get<0>(probSize) + 2 * static_cast<IndexT>(Base::mParam1),
+                               get<1>(probSize) + 2 * static_cast<IndexT>(Base::mParam2));
 
-            auto paddedElements = std::get<0>(paddedProbSize) * std::get<1>(paddedProbSize);
+            auto paddedElements = get<0>(paddedProbSize) * get<1>(paddedProbSize);
 
             // Initialize matrix storage with padded size.
             // Padded size >= MxN
@@ -70,10 +70,11 @@ namespace rocwmma
 
             // Initialize output data on host (padded size, all with marker elements)
             MatrixUtil<Layout>::fill(dataInstance->hostOut().get(),
-                                     std::get<0>(paddedProbSize),
-                                     std::get<1>(paddedProbSize),
+                                     get<0>(paddedProbSize),
+                                     get<1>(paddedProbSize),
                                      std::numeric_limits<DataT>::max());
-            dataInstance->copyData(dataInstance->deviceOut(), dataInstance->hostOut(), paddedElements);
+            dataInstance->copyData(
+                dataInstance->deviceOut(), dataInstance->hostOut(), paddedElements);
         }
 
         void validateResultsImpl() final
@@ -83,7 +84,7 @@ namespace rocwmma
 
             // Use padded MxN as output is padded
             auto          paddedSize     = dataInstance->problemSize();
-            const int64_t paddedElements = std::get<0>(paddedSize) * std::get<1>(paddedSize);
+            const int64_t paddedElements = get<0>(paddedSize) * get<1>(paddedSize);
 
             // Cache current kernel result from device
             dataInstance->copyData(kernelResult, dataInstance->deviceOut(), paddedElements);

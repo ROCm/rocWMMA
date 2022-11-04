@@ -52,15 +52,16 @@ namespace rocwmma
         {
             // waveCount.x = threadCount.x / AMDGCN_WAVE_SIZE
             // waveCount.y = threadCount.y
-            return make_pair(get<0>(threadCount) >> Log2<AMDGCN_WAVE_SIZE>::value,
-                             get<1>(threadCount));
+            return make_coord2d(get<0>(threadCount) >> Log2<AMDGCN_WAVE_SIZE>::value,
+                                get<1>(threadCount));
         }
 
         __device__ constexpr inline Coord2d threadCount(Coord2d const& waveCount)
         {
             // threadCount.x = waveCount.x * AMDGCN_WAVE_SIZE
             // threadCount.y = waveCount.y
-            return make_pair(get<0>(waveCount) << Log2<AMDGCN_WAVE_SIZE>::value, get<1>(waveCount));
+            return make_coord2d(get<0>(waveCount) << Log2<AMDGCN_WAVE_SIZE>::value,
+                                get<1>(waveCount));
         }
 
         /// WaveSpace
@@ -74,35 +75,46 @@ namespace rocwmma
         template <uint32_t TBlockX, uint32_t TBlockY>
         __device__ constexpr inline auto WaveSpace<TBlockX, TBlockY>::localWaveCoord() -> WaveCoordT
         {
-            return waveCount(
-                make_pair(static_cast<uint32_t>(threadIdx.x), static_cast<uint32_t>(threadIdx.y)));
+            return waveCount(make_coord2d(static_cast<uint32_t>(threadIdx.x),
+                                          static_cast<uint32_t>(threadIdx.y)));
         }
 
         template <uint32_t TBlockX, uint32_t TBlockY>
         __device__ inline auto WaveSpace<TBlockX, TBlockY>::globalWaveCoord() -> WaveCoordT
         {
-            return waveCount(
-                make_pair(blockIdx.x * TBlockX + threadIdx.x, blockIdx.y * TBlockY + threadIdx.y));
+            return waveCount(make_coord2d(blockIdx.x * TBlockX + threadIdx.x,
+                                          blockIdx.y * TBlockY + threadIdx.y));
         }
 
         template <>
         __device__ inline auto WaveSpace<0, 0>::globalWaveCoord() -> WaveCoordT
         {
-            return waveCount(make_pair(blockIdx.x * blockDim.x + threadIdx.x,
-                                       blockIdx.y * blockDim.y + threadIdx.y));
+            return waveCount(make_coord2d(blockIdx.x * blockDim.x + threadIdx.x,
+                                          blockIdx.y * blockDim.y + threadIdx.y));
         }
 
         template <uint32_t TBlockX, uint32_t TBlockY>
         __device__ constexpr inline auto WaveSpace<TBlockX, TBlockY>::workgroupCoord()
             -> WorkgroupCoordT
         {
-            return make_pair(static_cast<uint32_t>(blockIdx.x), static_cast<uint32_t>(blockIdx.y));
+            return make_coord2d(static_cast<uint32_t>(blockIdx.x),
+                                static_cast<uint32_t>(blockIdx.y));
+        }
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        template <bool IsConst /* = (TBlockX > 0u && TBlockY > 0u) */,
+                  typename std::enable_if_t<IsConst>* /* = nullptr */>
+        __device__ constexpr inline auto WaveSpace<TBlockX, TBlockY>::workgroupDim()
+            -> WorkgroupDimT
+        {
+            return waveCount(make_coord2d(TBlockX, TBlockY));
         }
 
         template <uint32_t TBlockX, uint32_t TBlockY>
+        template <bool IsConst /* = (TBlockX > 0u && TBlockY > 0u) */,
+                  typename std::enable_if_t<!IsConst>* /* = nullptr */>
         __device__ inline auto WaveSpace<TBlockX, TBlockY>::workgroupDim() -> WorkgroupDimT
         {
-            return waveCount(make_pair(TBlockX, TBlockY));
+            return waveCount(make_coord2d(blockDim.x, blockDim.y));
         }
 
         template <>
@@ -110,9 +122,9 @@ namespace rocwmma
         {
             // constexpr dim3 dims{static_cast<uint32_t>(__ockl_get_local_size(0)),
             //                     static_cast<uint32_t>(__ockl_get_local_size(1))};
-            // return waveCount(make_pair(static_cast<uint32_t>(dims.x), static_cast<uint32_t>(dims.y)));
+            // return waveCount(make_coord2d(static_cast<uint32_t>(dims.x), static_cast<uint32_t>(dims.y)));
             return waveCount(
-                make_pair(static_cast<uint32_t>(blockDim.x), static_cast<uint32_t>(blockDim.y)));
+                make_coord2d(static_cast<uint32_t>(blockDim.x), static_cast<uint32_t>(blockDim.y)));
         }
 
         /// MatrixSpace
@@ -122,8 +134,8 @@ namespace rocwmma
                 -> MatrixCoordT
         {
             // Map block to matrix coordinate space.
-            return make_pair(get<0>(blockCoord) * BlockHeight, // ROW
-                             get<1>(blockCoord) * BlockWidth); // COL
+            return make_coord2d(get<0>(blockCoord) * BlockHeight, // ROW
+                                get<1>(blockCoord) * BlockWidth); // COL
         }
 
         /// DataSpace
