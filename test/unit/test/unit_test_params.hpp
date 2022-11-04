@@ -51,10 +51,10 @@ namespace rocwmma
                                         float16_t,
                                         hfloat16_t,
                                         float32_t,
-                                        int8_t
+                                        int8_t,
+                                        int32_t
 #ifdef ROCWMMA_EXTENDED_TESTS
                                         ,
-                                        int32_t,
                                         uint8_t,
                                         uint32_t
 #endif // ROCWMMA_EXTENDED_TESTS
@@ -72,25 +72,25 @@ namespace rocwmma
 
         // Variances for particular BlockM, BlockN
         using TestBlockSizes16 = std::tuple<std::tuple<I<16>, I<16>>,
-                                               std::tuple<I<16>, I<32>>,
-                                               std::tuple<I<16>, I<64>>
+                                            std::tuple<I<16>, I<32>>,
+                                            std::tuple<I<16>, I<64>>
 #ifdef ROCWMMA_EXTENDED_TESTS
-                                               ,
-                                               std::tuple<I<16>, I<128>>,
-                                               std::tuple<I<16>, I<256>>
+                                            ,
+                                            std::tuple<I<16>, I<128>>,
+                                            std::tuple<I<16>, I<256>>
 #endif // ROCWMMA_EXTENDED_TESTS
-                                               >;
+                                            >;
 
         using TestBlockSizes32 = std::tuple<std::tuple<I<32>, I<8>>,
-                                               std::tuple<I<32>, I<16>>,
-                                               std::tuple<I<32>, I<32>>,
-                                               std::tuple<I<32>, I<64>>
+                                            std::tuple<I<32>, I<16>>,
+                                            std::tuple<I<32>, I<32>>,
+                                            std::tuple<I<32>, I<64>>
 #ifdef ROCWMMA_EXTENDED_TESTS
-                                               ,
-                                               std::tuple<I<32>, I<128>>,
-                                               std::tuple<I<32>, I<256>>
+                                            ,
+                                            std::tuple<I<32>, I<128>>,
+                                            std::tuple<I<32>, I<256>>
 #endif // ROCWMMA_EXTENDED_TESTS
-                                               >;
+                                            >;
 
         using TestBlockSizes64 = std::tuple<std::tuple<I<64>, I<8>>,
                                             std::tuple<I<64>, I<16>>,
