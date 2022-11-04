@@ -29,11 +29,24 @@
 
 #include <rocwmma/internal/types.hpp>
 
+#include <../test/gemm/gemm_coop_schedule.hpp>
+#include <rocwmma/internal/mapping_util.hpp>
+
 static constexpr uint32_t ERROR_VALUE = 7;
 static constexpr uint32_t SUCCESS     = 0;
 
 namespace rocwmma
 {
+
+    template <uint32_t VectSize, typename DataT>
+    __device__ static inline bool somethingTest()
+    {
+        // defaultConstructorTest
+        constexpr non_native_vector_base<uint32_t, 2> coord{2u, 2u};
+        constexpr non_native_vector_base<uint32_t, 2> coord2{2u, 3u};
+        constexpr uint32_t item = CooperativeGemm::Schedule::SameRowFwd<64, 1>::waveCount();
+        return (false);
+    }
 
     template <uint32_t VectSize, typename DataT>
     __device__ static inline bool defaultConstructorTest()
@@ -48,7 +61,7 @@ namespace rocwmma
     {
         // copyConstructorTest0
         VecT<DataT, VectSize> vectData;
-        bool ret = (vectData.size() == VectSize);
+        bool                  ret = (vectData.size() == VectSize);
 
         for(uint32_t i = 0; i < VectSize; i++)
             vectData[i] = static_cast<DataT>(i);
@@ -76,7 +89,7 @@ namespace rocwmma
     {
         // dereferenceTest
         VecT<DataT, VectSize> vectData;
-        bool ret = (vectData.size() == VectSize);
+        bool                  ret = (vectData.size() == VectSize);
         for(uint32_t i = 0; i < VectSize; i++)
             vectData[i] = static_cast<DataT>(i);
 
@@ -96,12 +109,12 @@ namespace rocwmma
     {
         // iteratorTest
         VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
+        bool                  ret = (iterVectData.size() == VectSize);
         for(uint32_t i = 0; i < VectSize; i++)
             iterVectData[i] = static_cast<DataT>(i);
 
         const uint32_t iterSize = VectSize / 2;
-        auto it  = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
+        auto it = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
         ret &= (iterVectData.size() == (it.range() * iterSize));
 
         for(uint32_t i = 0; i < it.range(); i++, it++)
@@ -120,12 +133,12 @@ namespace rocwmma
     {
         // iteratorValidityTest
         VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
+        bool                  ret = (iterVectData.size() == VectSize);
         for(uint32_t i = 0; i < VectSize; i++)
             iterVectData[i] = static_cast<DataT>(i);
 
         const uint32_t iterSize = VectSize / 2;
-        auto it  = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
+        auto it = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
         ret &= it.valid();
 
         ret &= (iterVectData.size() == (it.range() * iterSize));
@@ -138,12 +151,12 @@ namespace rocwmma
     {
         // iteratorIndexTest
         VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
+        bool                  ret = (iterVectData.size() == VectSize);
         for(uint32_t i = 0; i < VectSize; i++)
             iterVectData[i] = static_cast<DataT>(i);
 
         const uint32_t iterSize = VectSize / 2;
-        auto it  = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
+        auto it = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
         ret &= it.valid();
 
         ret &= (iterVectData.size() == (it.range() * iterSize));
@@ -162,12 +175,12 @@ namespace rocwmma
     {
         // iteratorRangeTest
         VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
+        bool                  ret = (iterVectData.size() == VectSize);
         for(uint32_t i = 0; i < VectSize; i++)
             iterVectData[i] = static_cast<DataT>(i);
 
         const uint32_t iterSize = VectSize / 2;
-        auto it  = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
+        auto it = typename VecT<DataT, VectSize>::template iterator<iterSize>(iterVectData);
         ret &= it.valid();
 
         ret &= ((iterVectData.size() / iterSize) == it.range());
@@ -180,18 +193,18 @@ namespace rocwmma
     {
         // iteratorBeginTest
         VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
+        bool                  ret = (iterVectData.size() == VectSize);
         for(uint32_t i = 0; i < VectSize; i++)
             iterVectData[i] = static_cast<DataT>(i);
 
         const uint32_t iterSize = VectSize / 2;
-        auto           itBegin       = iterVectData.template begin<iterSize>();
+        auto           itBegin  = iterVectData.template begin<iterSize>();
         ret &= (iterVectData.size() == (itBegin.range() * iterSize));
 
         ret &= (itBegin.valid());
         ret &= (iterVectData[0] == iterVectData[(*itBegin)[0]]);
 
-        auto           itEnd       = iterVectData.template end<iterSize>();
+        auto itEnd = iterVectData.template end<iterSize>();
         ret &= (iterVectData.size() == (itEnd.range() * iterSize));
 
         ret &= (iterVectData[0] == iterVectData[(*itEnd)[0]]);
@@ -204,7 +217,7 @@ namespace rocwmma
     {
         // iteratorEndTest
         VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
+        bool                  ret = (iterVectData.size() == VectSize);
         for(uint32_t i = 0; i < VectSize; i++)
             iterVectData[i] = static_cast<DataT>(i);
 
@@ -222,7 +235,7 @@ namespace rocwmma
     {
         // iteratorIncTest
         VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
+        bool                  ret = (iterVectData.size() == VectSize);
         for(uint32_t i = 0; i < VectSize; i++)
             iterVectData[i] = static_cast<DataT>(i);
 
@@ -237,7 +250,7 @@ namespace rocwmma
             ++itInc;
         }
 
-        auto itDec       = iterVectData.template end<iterSize>();
+        auto itDec = iterVectData.template end<iterSize>();
         ret &= (iterVectData.size() == (itDec.range() * iterSize));
         for(uint32_t i = 0; i < itDec.range(); i++)
         {
@@ -254,7 +267,7 @@ namespace rocwmma
     {
         // iteratorNextTest
         VecT<DataT, VectSize> iterVectData;
-        bool ret = (iterVectData.size() == VectSize);
+        bool                  ret = (iterVectData.size() == VectSize);
         for(uint32_t i = 0; i < VectSize; i++)
             iterVectData[i] = static_cast<DataT>(i);
 
@@ -264,7 +277,7 @@ namespace rocwmma
 
         ret &= (it.valid());
         ret &= (iterVectData[0] == iterVectData[(*it)[0]]);
-        
+
         auto nextit = it.next();
         ret &= (nextit.valid());
         ret &= (iterVectData[iterSize] == iterVectData[(*nextit)[0]]);
@@ -285,8 +298,8 @@ namespace rocwmma
                                    DataT        param2)
     {
         // Just need one thread
-        if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0 &&
-           blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0)
+        if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0 && blockIdx.x == 0
+           && blockIdx.y == 0 && blockIdx.z == 0)
         {
             out[0] = static_cast<DataT>(SUCCESS);
 

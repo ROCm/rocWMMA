@@ -104,10 +104,10 @@ namespace rocwmma
             /// Initialize reference for validation
 
             // Setup addressing for DataLayout
-            auto rowMjrOffset = [](pair<uint32_t, uint32_t> const& matrixCoord, uint32_t ld) {
+            auto rowMjrOffset = [](std::pair<uint32_t, uint32_t> const& matrixCoord, uint32_t ld) {
                 return get<0>(matrixCoord) * ld + get<1>(matrixCoord);
             };
-            auto colMjrOffset = [](pair<uint32_t, uint32_t> const& matrixCoord, uint32_t ld) {
+            auto colMjrOffset = [](std::pair<uint32_t, uint32_t> const& matrixCoord, uint32_t ld) {
                 return get<1>(matrixCoord) * ld + get<0>(matrixCoord);
             };
             auto ld          = std::is_same<Layout, row_major>::value ? Base::mN : Base::mM;
@@ -115,8 +115,8 @@ namespace rocwmma
 
             // Scale from workgroup grid to wave grid
             auto waveGridDim
-                = make_pair(Base::gridDim().x * (Base::blockDim().x / AMDGCN_WAVE_SIZE),
-                            Base::gridDim().y * Base::blockDim().y);
+                = std::make_pair(Base::gridDim().x * (Base::blockDim().x / AMDGCN_WAVE_SIZE),
+                                 Base::gridDim().y * Base::blockDim().y);
 
 // Calculate the expected output from the inputs
 #pragma omp parallel for
@@ -128,18 +128,18 @@ namespace rocwmma
                     // Setup read / write matrix coords for block
                     auto overrideVal = static_cast<uint32_t>(static_cast<float32_t>(Base::mParam1));
                     auto readBase
-                        = make_pair((mOverride == OVERRIDE_M ? overrideVal : row) * BlockM,
-                                    (mOverride == OVERRIDE_N ? overrideVal : col) * BlockN);
+                        = std::make_pair((mOverride == OVERRIDE_M ? overrideVal : row) * BlockM,
+                                         (mOverride == OVERRIDE_N ? overrideVal : col) * BlockN);
 
-                    auto writeBase = make_pair(row * BlockM, col * BlockN);
+                    auto writeBase = std::make_pair(row * BlockM, col * BlockN);
 
                     // Loop through entire read block and copy to dest block
                     for(auto rowOffset = 0u; rowOffset < BlockM; rowOffset++)
                     {
                         for(auto colOffset = 0u; colOffset < BlockN; colOffset++)
                         {
-                            auto matrixRead  = readBase + make_pair(rowOffset, colOffset);
-                            auto matrixWrite = writeBase + make_pair(rowOffset, colOffset);
+                            auto matrixRead  = readBase + std::make_pair(rowOffset, colOffset);
+                            auto matrixWrite = writeBase + std::make_pair(rowOffset, colOffset);
 
                             *(hostResult.get() + arrayOffset(matrixWrite, ld))
                                 = *(hostInput.get() + arrayOffset(matrixRead, ld));

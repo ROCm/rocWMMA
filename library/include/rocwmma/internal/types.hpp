@@ -33,8 +33,6 @@
 #include <type_traits>
 #include <utility>
 
-#include <rocwmma/internal/utils.hpp>
-
 namespace rocwmma
 {
 
@@ -117,8 +115,6 @@ namespace rocwmma
 
     namespace detail
     {
-        using Coord2d = rocwmma::pair<uint32_t, uint32_t>;
-
         /*! \struct VectorStorage
         *  \brief Vectorized internal storage
         *  @tparam T Storage type
@@ -333,6 +329,119 @@ namespace rocwmma
     // Helper for string representations of types
     template <typename DataT>
     constexpr const char* dataTypeToString();
+
+    inline constexpr auto next_pow2(uint32_t x)
+    {
+        // Precondition: x > 1.
+        return x > 1u ? (1u << (32u - __builtin_clz(x - 1u))) : x;
+    }
+
+    template <typename T, unsigned int Rank>
+    struct non_native_vector_base
+    {
+        /// Types
+        using BoolVecT = uint32_t __attribute__((ext_vector_type(next_pow2(Rank))));
+        using VecT     = non_native_vector_base<T, Rank>;
+
+        /// Ctor, dtor, assignment
+        __HOST_DEVICE__
+        non_native_vector_base() = default;
+
+        __HOST_DEVICE__
+        constexpr non_native_vector_base(const VecT&) = default;
+
+        __HOST_DEVICE__
+        constexpr non_native_vector_base(VecT&&) = default;
+
+        __HOST_DEVICE__
+        ~non_native_vector_base() = default;
+
+        __HOST_DEVICE__
+        inline VecT& operator=(const VecT&) = default;
+
+        __HOST_DEVICE__
+        inline VecT& operator=(VecT&&) = default;
+
+        template <typename U                                                           = T,
+                  typename std::enable_if<(std::is_same<U, T>{}) && (Rank > 1)>::type* = nullptr>
+        __HOST_DEVICE__ explicit constexpr non_native_vector_base(T x_) noexcept;
+
+        template <typename... Ts,
+                  typename U = T,
+                  typename std::enable_if<(sizeof...(Ts) == Rank)
+#if(__cplusplus >= 201703L)
+                                          && (std::is_same<U, Ts>{} && ...)
+#endif
+                                          >::type* = nullptr>
+        __HOST_DEVICE__ constexpr non_native_vector_base(Ts... args) noexcept;
+
+        __HOST_DEVICE__
+        constexpr inline T& operator[](unsigned int idx) noexcept;
+
+        __HOST_DEVICE__
+        constexpr inline T operator[](unsigned int idx) const noexcept;
+
+        __HOST_DEVICE__
+        inline VecT& operator+=(const VecT& x_) noexcept;
+
+        __HOST_DEVICE__
+        inline VecT& operator-=(const VecT& x_) noexcept;
+
+        __HOST_DEVICE__
+        inline VecT& operator*=(const VecT& x_) noexcept;
+
+        __HOST_DEVICE__
+        inline VecT& operator/=(const VecT& x_) noexcept;
+
+        template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
+        __HOST_DEVICE__ inline VecT& operator%=(const VecT& x_) noexcept;
+
+        template <typename U = T, typename std::enable_if<std::is_signed<U>{}>::type* = nullptr>
+        __HOST_DEVICE__ inline VecT operator-() const noexcept;
+
+        template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
+        __HOST_DEVICE__ inline VecT& operator&=(const VecT& x_) noexcept;
+
+        template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
+        __HOST_DEVICE__ inline VecT& operator|=(const VecT& x_) noexcept;
+
+        template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
+        __HOST_DEVICE__ inline VecT operator~() const noexcept;
+
+        template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
+        __HOST_DEVICE__ inline VecT& operator^=(const VecT& x_) noexcept;
+
+        template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
+        __HOST_DEVICE__ inline VecT& operator>>=(const VecT& x_) noexcept;
+
+        template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
+        __HOST_DEVICE__ inline VecT& operator<<=(const VecT& x_) noexcept;
+
+        __HOST_DEVICE__
+        inline BoolVecT operator==(const VecT& x_) const noexcept;
+
+        __HOST_DEVICE__
+        inline BoolVecT operator!=(const VecT& x_) const noexcept;
+
+        __HOST_DEVICE__
+        inline BoolVecT operator>=(const VecT& x_) const noexcept;
+
+        __HOST_DEVICE__
+        inline BoolVecT operator<=(const VecT& x_) const noexcept;
+
+        __HOST_DEVICE__
+        inline BoolVecT operator>(const VecT& x_) const noexcept;
+
+        __HOST_DEVICE__
+        inline BoolVecT operator<(const VecT& x_) const noexcept;
+
+        /// Storage
+        T d[Rank];
+    };
+
+    using Coord2dDataT = uint32_t;
+    //using Coord2d = HIP_vector_type<Coord2dDataT, 2>;
+    using Coord2d = non_native_vector_base<Coord2dDataT, 2>;
 
 } // namespace rocwmma
 

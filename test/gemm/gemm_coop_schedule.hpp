@@ -52,7 +52,7 @@ namespace rocwmma
                 {
                     return get<1>(WaveSpace::localWaveCoord());
                 }
-                constexpr static inline auto waveCount()
+                constexpr static inline uint32_t waveCount()
                 {
                     return get<1>(WaveSpace::workgroupDim());
                 }
@@ -75,7 +75,7 @@ namespace rocwmma
                 {
                     return get<0>(WaveSpace::localWaveCoord());
                 }
-                constexpr static inline auto waveCount()
+                constexpr static inline uint32_t waveCount()
                 {
                     return get<0>(WaveSpace::workgroupDim());
                 }
@@ -96,7 +96,7 @@ namespace rocwmma
                     return get<0>(localWaveCoord) * get<1>(WaveSpace::workgroupDim())
                            + get<1>(localWaveCoord);
                 }
-                constexpr static inline auto waveCount()
+                constexpr static inline uint32_t waveCount()
                 {
                     auto wgDim = WaveSpace::workgroupDim();
                     return get<0>(wgDim) * get<1>(wgDim);
@@ -119,7 +119,7 @@ namespace rocwmma
                     return get<1>(localWaveCoord) * get<0>(WaveSpace::workgroupDim())
                            + get<0>(localWaveCoord);
                 }
-                constexpr static inline auto waveCount()
+                constexpr static inline uint32_t waveCount()
                 {
                     auto wgDim = WaveSpace::workgroupDim();
                     return get<0>(wgDim) * get<1>(wgDim);
