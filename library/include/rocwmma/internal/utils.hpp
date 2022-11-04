@@ -26,23 +26,71 @@
 #ifndef ROCWMMA_UTILS_HPP
 #define ROCWMMA_UTILS_HPP
 
-#define __HIPCC_RTC_TEST__
-
-#if defined(__HIPCC_RTC_TEST__)
-#include "pair.hpp"
 namespace rocwmma
 {
-    template <typename T0, typename T1>
-    using pair = rocwmma_pair<T0, T1>;
+    ///////////////////////////////////////////////////////////////////
+    ///           HIP_vector_type<T, N> utility overrides           ///
+    ///                                                             ///
+    /// Note: HIP_vector_type<T, N> uses vector extensions.         ///
+    /// Element-wise access of vectors in constexpr is forbidden.   ///
+    ///////////////////////////////////////////////////////////////////
+    template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    __host__ __device__ constexpr inline DataT& get(HIP_vector_type<DataT, VecSize>& v)
+    {
+        return reinterpret_cast<DataT*>(&v.data)[Idx];
+    }
 
-    using detail::get;
-    using detail::make_pair;
-    using detail::swap;
-}
+    template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    __host__ __device__ constexpr inline DataT get(HIP_vector_type<DataT, VecSize> const& v)
+    {
+        return v.data[Idx];
+    }
 
-#else
-#include <tuple>
-#include <utility>
+    template <typename DataT>
+    __host__ __device__ constexpr inline auto swap(HIP_vector_type<DataT, 2> const& v)
+    {
+        return HIP_vector_type<DataT, 2>{get<1>(v), get<0>(v)};
+    }
+
+    ///////////////////////////////////////////////////////////////////
+    ///     non_native_vector_base<T, N> utility overrides          ///
+    ///////////////////////////////////////////////////////////////////
+    template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    __host__ __device__ constexpr static inline DataT&
+        get(non_native_vector_base<DataT, VecSize>& v)
+    {
+        return v[Idx];
+    }
+
+    template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    __host__ __device__ constexpr static inline DataT
+        get(non_native_vector_base<DataT, VecSize> const& v)
+    {
+        return v[Idx];
+    }
+
+    // Unary swap only considered in 2d vectors.
+    template <typename DataT>
+    __host__ __device__ constexpr static inline auto swap(non_native_vector_base<DataT, 2> const& v)
+    {
+        return non_native_vector_base<DataT, 2>{get<1>(v), get<0>(v)};
+    }
+
+    ///////////////////////////////////////////////////////////////////
+    ///                 Coord2d utility overrides                   ///
+    ///                                                             ///
+    /// Note: Coord2d MUST be constexpr compatible                  ///
+    ///////////////////////////////////////////////////////////////////
+    __host__ __device__ constexpr static inline auto make_coord2d(Coord2dDataT x, Coord2dDataT y)
+    {
+        return Coord2d{x, y};
+    }
+
+    __host__ __device__ constexpr static inline auto swap(Coord2d const& p)
+    {
+        return Coord2d{get<1>(p), get<0>(p)};
+    }
+} // namespace rocwmma
 
 #include "types.hpp"
 
@@ -73,20 +121,6 @@ namespace std
 ///////////////////////////////////////////////////////////
 namespace std
 {
-    // Single operand for swap
-    template <typename T>
-    __host__ __device__ constexpr static inline pair<T, T> swap(pair<T, T> const& p)
-    {
-        return std::make_pair(std::get<1>(p), std::get<0>(p));
-    }
-
-    template <typename T>
-    __host__ __device__ constexpr static inline pair<T, T>& swap(pair<T, T>& p)
-    {
-        std::swap(std::get<0>(p), std::get<1>(p));
-        return p;
-    }
-
     // Add, sub operators
     template <typename T>
     __host__ __device__ constexpr static inline pair<T, T> operator+(pair<T, T> const& lhs,
@@ -137,16 +171,6 @@ namespace std
     }
 
 } // namespace std
-
-namespace rocwmma
-{
-    template <typename T0, typename T1>
-    using pair = std::pair<T0, T1>;
-    using std::get;
-    using std::make_pair;
-    using std::swap;
-}
-#endif
 
 namespace rocwmma
 {

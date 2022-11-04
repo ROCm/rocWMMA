@@ -530,7 +530,7 @@ namespace rocwmma
                         Log2WaveSegs     = Log2<WaveSegs>::value
                     };
 
-                    using MatrixCoordT = pair<uint32_t, uint32_t>;
+                    using MatrixCoordT = Coord2d;
                 };
 
                 __device__ static inline typename Traits::MatrixCoordT baseOffset()
@@ -538,13 +538,13 @@ namespace rocwmma
                     // TODO: Use constexpr if on C++17
                     if(Traits::LargeDim)
                     {
-                        return make_pair(threadIdx.x % Traits::WaveSize, 0u);
+                        return make_coord2d(threadIdx.x % Traits::WaveSize, 0u);
                     }
                     else
                     {
-                        return make_pair(threadIdx.x % BlockDim,
-                                         (threadIdx.x / BlockDim) * MaxVectorWidth
-                                             % Traits::MaxKPerIO);
+                        return make_coord2d(threadIdx.x % BlockDim,
+                                            (threadIdx.x / BlockDim) * MaxVectorWidth
+                                                % Traits::MaxKPerIO);
                     }
                 }
                 __device__ static inline typename Traits::MatrixCoordT
@@ -579,7 +579,7 @@ namespace rocwmma
                         int32_t majorStepMask
                             = static_cast<bool>((iteration + 1) & TotalSegsModMask) - 1;
 
-                        return make_pair(
+                        return make_coord2d(
                             (IncXMinorStep & minorStepMask) + (majorStepMask & IncXMajorStep),
                             IncYMinorStep + ((minorStepMask ^ majorStepMask) & IncYMajorStep));
                     }
@@ -598,7 +598,7 @@ namespace rocwmma
                         int32_t majorStepMask
                             = static_cast<bool>((iteration + 1) & VWSegsModMask) - 1;
 
-                        return make_pair(0u, IncYMinorStep + (majorStepMask & IncYMajorStep));
+                        return make_coord2d(0u, IncYMinorStep + (majorStepMask & IncYMajorStep));
                     }
                 }
                 __device__ static inline typename Traits::MatrixCoordT
@@ -607,17 +607,17 @@ namespace rocwmma
                     // TODO: Use constexpr if on C++17
                     if(Traits::LargeDim)
                     {
-                        return make_pair(
+                        return make_coord2d(
                             iteration / Traits::VWSegs % Traits::BlockDimSegs * Traits::WaveSize,
                             iteration / (Traits::VWSegs * Traits::BlockDimSegs) * MaxVectorWidth
                                 + iteration % Traits::VWSegs * VectorWidth);
                     }
                     else
                     {
-                        return make_pair(0u,
-                                         iteration / Traits::VWSegs
-                                                 * (MaxVectorWidth * Traits::WaveSegs)
-                                             + iteration % Traits::VWSegs * VectorWidth);
+                        return make_coord2d(0u,
+                                            iteration / Traits::VWSegs
+                                                    * (MaxVectorWidth * Traits::WaveSegs)
+                                                + iteration % Traits::VWSegs * VectorWidth);
                     }
                 }
             };
@@ -733,7 +733,7 @@ namespace rocwmma
                     static_assert(BlockK % MaxVectorWidth == 0,
                                   "BlockK must be a multiple of MaxVectorWidth");
 
-                    using MatrixCoordT = pair<uint32_t, uint32_t>;
+                    using MatrixCoordT = Coord2d;
                 };
 
                 __device__ static inline typename Traits::MatrixCoordT baseOffset()
@@ -741,14 +741,14 @@ namespace rocwmma
                     // TODO: Use constexpr if when C++ 17
                     if(Traits::LargeDim)
                     {
-                        return make_pair(threadIdx.x * MaxVectorWidth % Traits::MaxElementsPerIO,
-                                         0u);
+                        return make_coord2d(threadIdx.x * MaxVectorWidth % Traits::MaxElementsPerIO,
+                                            0u);
                     }
                     else
                     {
-                        return make_pair(threadIdx.x * MaxVectorWidth % BlockDim,
-                                         threadIdx.x * MaxVectorWidth / BlockDim
-                                             % Traits::MaxKPerIO);
+                        return make_coord2d(threadIdx.x * MaxVectorWidth % BlockDim,
+                                            threadIdx.x * MaxVectorWidth / BlockDim
+                                                % Traits::MaxKPerIO);
                     }
                 }
 
@@ -779,10 +779,10 @@ namespace rocwmma
                         int32_t TotalSegsStepMask
                             = static_cast<bool>((iteration + 1) & TotalSegsModMask) - 1;
 
-                        return make_pair(IncX0MinorStep - (VWSegsStepMask & IncX0MajorStep)
-                                             + (VWSegsStepMask & IncX1MinorStep)
-                                             - (TotalSegsStepMask & IncX1MajorStep),
-                                         TotalSegsStepMask & IncYMajorStep);
+                        return make_coord2d(IncX0MinorStep - (VWSegsStepMask & IncX0MajorStep)
+                                                + (VWSegsStepMask & IncX1MinorStep)
+                                                - (TotalSegsStepMask & IncX1MajorStep),
+                                            TotalSegsStepMask & IncYMajorStep);
                     }
                     else
                     {
@@ -800,8 +800,8 @@ namespace rocwmma
                         // Reference calculation:
                         // Iterative offsetX = VW - ((iteration + 1) % (MaxVectorWidth / VectorWidth) == 0) * MaxVW
                         // Iterative offsetY = ((iteration + 1) % (MaxVectorWidth / VectorWidth) == 0) * MaxKPerIO
-                        return make_pair(IncXMinorStep - (majorStepMask & IncXMajorStep),
-                                         majorStepMask & IncYMajorStep);
+                        return make_coord2d(IncXMinorStep - (majorStepMask & IncXMajorStep),
+                                            majorStepMask & IncYMajorStep);
                     }
                 }
 
@@ -819,7 +819,7 @@ namespace rocwmma
                         // Cumulative offsetX = (iteration / VWSegs) % BlockDimSegs * MaxElementsPerIO +
                         //                      (iteration % VWSegs) * VW,
                         // Cumulative offsetY = iteration / TotalSegs;
-                        return make_pair(
+                        return make_coord2d(
                             (iteration << (Traits::Log2MaxElementsPerIO - Traits::Log2VWSegs))
                                 & (BlockDimSegsModMask << Traits::Log2MaxElementsPerIO)
                                           + (iteration & VWSegsModMask)
@@ -832,8 +832,9 @@ namespace rocwmma
 
                         // Cumulative offsetX = (iteration % VWSegs) * VW
                         // Cumulative offsetY = iteration / VWSegs * (MaxKPerIO)
-                        return make_pair((iteration & VWSegsModMask) << Traits::Log2VW,
-                                         iteration >> Traits::Log2VWSegs << Traits::Log2MaxKPerIO);
+                        return make_coord2d((iteration & VWSegsModMask) << Traits::Log2VW,
+                                            iteration >> Traits::Log2VWSegs
+                                                             << Traits::Log2MaxKPerIO);
                     }
                 }
             };
@@ -850,7 +851,7 @@ namespace rocwmma
                 {
                     using OrthoLayout
                         = ColInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>;
-                    using MatrixCoordT = pair<uint32_t, uint32_t>;
+                    using MatrixCoordT = Coord2d;
                 };
 
                 // Matrix coord offsets
@@ -883,7 +884,7 @@ namespace rocwmma
                     using OrthoLayout
                         = ColOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>;
 
-                    using MatrixCoordT = pair<uint32_t, uint32_t>;
+                    using MatrixCoordT = Coord2d;
                 };
 
                 // Matrix coord offsets

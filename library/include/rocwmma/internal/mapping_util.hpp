@@ -32,10 +32,6 @@
 
 namespace rocwmma
 {
-
-    // 2D Coordinate
-    using Coord2d = pair<uint32_t, uint32_t>;
-
     // Fwd declaration
     struct row_major;
     struct col_major;
@@ -44,7 +40,7 @@ namespace rocwmma
     {
         // TBlockX, TBlockY default to runtime variable query of blockDim.x, blockDim.y
         // if not known at compile time.
-        template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
+        template <uint32_t TBlockX = 0u, uint32_t TBlockY = 0u>
         struct WaveSpace
         {
             using WaveCoordT      = Coord2d;
@@ -64,6 +60,12 @@ namespace rocwmma
             __device__ constexpr static inline WorkgroupCoordT workgroupCoord();
 
             // Size of workgroup, normalized to wave count.
+            template <bool IsConst                        = (TBlockX > 0u && TBlockY > 0u),
+                      typename std::enable_if_t<IsConst>* = nullptr>
+            __device__ constexpr static inline WorkgroupDimT workgroupDim();
+
+            template <bool IsConst                         = (TBlockX > 0u && TBlockY > 0u),
+                      typename std::enable_if_t<!IsConst>* = nullptr>
             __device__ static inline WorkgroupDimT workgroupDim();
         };
 

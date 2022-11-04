@@ -50,11 +50,16 @@ namespace rocwmma
 
                 constexpr static inline auto waveIndex()
                 {
-                    return get<1>(WaveSpace::localWaveCoord());
+                    // TODO: get<> functionality for unions requires C++20:
+                    // return get<1>(WaveSpace::localWaveCoord());
+
+                    return WaveSpace::localWaveCoordY();
                 }
                 constexpr static inline auto waveCount()
                 {
-                    return get<1>(WaveSpace::workgroupDim());
+                    // return get<1>(WaveSpace::workgroupDim());
+
+                    return WaveSpace::workgroupDimY();
                 }
             };
 
@@ -73,11 +78,15 @@ namespace rocwmma
 
                 constexpr static inline auto waveIndex()
                 {
-                    return get<0>(WaveSpace::localWaveCoord());
+                    // return get<0>(WaveSpace::localWaveCoord());
+
+                    return WaveSpace::localWaveCoordX();
                 }
                 constexpr static inline auto waveCount()
                 {
-                    return get<0>(WaveSpace::workgroupDim());
+                    // return get<0>(WaveSpace::workgroupDim());
+
+                    return WaveSpace::workgroupDimX();
                 }
             };
 
@@ -92,14 +101,19 @@ namespace rocwmma
                 using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
                 constexpr static inline auto waveIndex()
                 {
-                    auto localWaveCoord = WaveSpace::localWaveCoord();
-                    return get<0>(localWaveCoord) * get<1>(WaveSpace::workgroupDim())
-                           + get<1>(localWaveCoord);
+                    // auto localWaveCoord = WaveSpace::localWaveCoord();
+                    // return get<0>(localWaveCoord) * get<1>(WaveSpace::workgroupDim())
+                    //        + get<1>(localWaveCoord);
+
+                    return WaveSpace::localWaveCoordX() * WaveSpace::workgroupDimY()
+                           + WaveSpace::localWaveCoordY();
                 }
                 constexpr static inline auto waveCount()
                 {
-                    auto wgDim = WaveSpace::workgroupDim();
-                    return get<0>(wgDim) * get<1>(wgDim);
+                    // auto wgDim = WaveSpace::workgroupDim();
+                    // return get<0>(wgDim) * get<1>(wgDim);
+
+                    return WaveSpace::workgroupDimX() * WaveSpace::workgroupDimY();
                 }
             };
 
@@ -115,14 +129,19 @@ namespace rocwmma
 
                 constexpr static inline auto waveIndex()
                 {
-                    auto localWaveCoord = WaveSpace::localWaveCoord();
-                    return get<1>(localWaveCoord) * get<0>(WaveSpace::workgroupDim())
-                           + get<0>(localWaveCoord);
+                    // auto localWaveCoord = WaveSpace::localWaveCoord();
+                    // return get<1>(localWaveCoord) * get<0>(WaveSpace::workgroupDim())
+                    //        + get<0>(localWaveCoord);
+
+                    return WaveSpace::localWaveCoordY() * WaveSpace::workgroupDimX()
+                           + WaveSpace::localWaveCoordX();
                 }
                 constexpr static inline auto waveCount()
                 {
-                    auto wgDim = WaveSpace::workgroupDim();
-                    return get<0>(wgDim) * get<1>(wgDim);
+                    // auto wgDim = WaveSpace::workgroupDim();
+                    // return get<0>(wgDim) * get<1>(wgDim);
+
+                    return WaveSpace::workgroupDimX() * WaveSpace::workgroupDimY();
                 }
             };
 
