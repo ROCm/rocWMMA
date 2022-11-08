@@ -26,6 +26,9 @@
 #ifndef ROCWMMA_UTILS_HPP
 #define ROCWMMA_UTILS_HPP
 
+#include "types.hpp"
+#include "vector.hpp"
+
 namespace rocwmma
 {
     ///////////////////////////////////////////////////////////////////
@@ -91,8 +94,6 @@ namespace rocwmma
         return Coord2d{get<1>(p), get<0>(p)};
     }
 } // namespace rocwmma
-
-#include "types.hpp"
 
 ///////////////////////////////////////////////////////////
 ////////  std::apply fold expressions (<= C++14)  /////////

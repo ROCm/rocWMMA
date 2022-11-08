@@ -26,7 +26,10 @@
 #ifndef ROCWMMA_TYPES_EXT_HPP
 #define ROCWMMA_TYPES_EXT_HPP
 
+#if !defined(__HIPCC_RTC__)
 #include <hip/hip_bfloat16.h>
+#endif // !__HIPCC_RTC__
+
 #include <hip/hip_fp16.h>
 
 #include <cmath>
@@ -67,11 +70,11 @@ namespace rocwmma
         {
             union
             {
-                uint16_t      i16;
-                float16_t     f16;
-                hfloat16_t    h16;
-                bfloat16_t    b16;
-                unsigned char c16[16];
+                rocwmma::uint16_t   i16;
+                rocwmma::float16_t  f16;
+                rocwmma::hfloat16_t h16;
+                rocwmma::bfloat16_t b16;
+                unsigned char       c16[16];
             };
             constexpr Fp16Bits(uint16_t initVal)
                 : i16(initVal)
