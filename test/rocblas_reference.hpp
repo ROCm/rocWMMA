@@ -42,6 +42,10 @@
 
 #include <rocblas/rocblas.h>
 
+#if(ROCBLAS_VERSION_MAJOR >= 2) && (ROCBLAS_VERSION_MINOR > 45)
+#define ROCBLAS_DATA_TYPE_INVALID
+#endif
+
 #include "common.hpp"
 #include <rocwmma/internal/types.hpp>
 
@@ -84,20 +88,25 @@ namespace rocwmma
             return "bf16_r";
         case rocblas_datatype_bf16_c:
             return "bf16_c";
+#if defined(ROCBLAS_DATA_TYPE_INVALID)
         case rocblas_datatype_invalid:;
+#endif // ROCBLAS_DATA_TYPE_INVALID
         }
         return "invalid";
     }
 
     template <typename DataT>
     struct rocblas_types
+#if defined(ROCBLAS_DATA_TYPE_INVALID)
     {
         using DataType = DataT;
         constexpr static inline rocblas_datatype type()
         {
             return rocblas_datatype_invalid;
         }
-    };
+    }
+#endif //ROCBLAS_DATA_TYPE_INVALID
+    ;
 
     template <>
     struct rocblas_types<int8_t>
