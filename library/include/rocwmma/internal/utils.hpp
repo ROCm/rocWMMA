@@ -93,6 +93,18 @@ namespace rocwmma
     {
         return Coord2d{get<1>(p), get<0>(p)};
     }
+
+    __host__ __device__ constexpr static inline Coord2d operator*(Coord2d const& lhs,
+                                                                  Coord2d const& rhs)
+    {
+        return make_coord2d(get<0>(lhs) * get<0>(rhs), get<1>(lhs) * get<1>(rhs));
+    }
+
+    __host__ __device__ constexpr static inline Coord2d operator+(Coord2d const& lhs,
+                                                                  Coord2d const& rhs)
+    {
+        return make_coord2d(get<0>(lhs) + get<0>(rhs), get<1>(lhs) + get<1>(rhs));
+    }
 } // namespace rocwmma
 
 ///////////////////////////////////////////////////////////

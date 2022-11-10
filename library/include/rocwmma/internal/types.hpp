@@ -36,8 +36,6 @@
 #include <type_traits>
 #include <utility>
 
-#include <rocwmma/internal/utils.hpp>
-
 namespace rocwmma
 {
 

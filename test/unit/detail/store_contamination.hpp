@@ -54,8 +54,8 @@ namespace rocwmma
             using SizeT  = typename Base::DataStorage::ProblemSize;
             using IndexT = typename std::tuple_element<0, SizeT>::type;
             auto paddedProbSize
-                = make_coord2d(get<0>(probSize) + 2 * static_cast<IndexT>(Base::mParam1),
-                               get<1>(probSize) + 2 * static_cast<IndexT>(Base::mParam2));
+                = std::make_pair(get<0>(probSize) + 2 * static_cast<IndexT>(Base::mParam1),
+                                 get<1>(probSize) + 2 * static_cast<IndexT>(Base::mParam2));
 
             auto paddedElements = get<0>(paddedProbSize) * get<1>(paddedProbSize);
 

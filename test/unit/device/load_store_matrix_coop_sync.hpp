@@ -64,8 +64,8 @@ namespace rocwmma
         // 0 = row/col 0 waves will cooperate
         // 1 = row/col 1 waves will cooperate
         // ...
-        auto getFirst  = [](typename Mapping::WaveCoordT const& coord) { return coord.first; };
-        auto getSecond = [](typename Mapping::WaveCoordT const& coord) { return coord.second; };
+        auto getFirst  = [](typename Mapping::WaveCoordT const& coord) { return get<0>(coord); };
+        auto getSecond = [](typename Mapping::WaveCoordT const& coord) { return get<1>(coord); };
 
         auto sharingDim   = (uint32_t)param1;
         auto shareElement = (sharingDim == 0 ? getFirst : getSecond);
@@ -130,8 +130,8 @@ namespace rocwmma
         // 0 = row/col 0 waves will cooperate
         // 1 = row/col 1 waves will cooperate
         // ...
-        auto getFirst  = [](typename Mapping::WaveCoordT const& coord) { return coord.first; };
-        auto getSecond = [](typename Mapping::WaveCoordT const& coord) { return coord.second; };
+        auto getFirst  = [](typename Mapping::WaveCoordT const& coord) { return get<0>(coord); };
+        auto getSecond = [](typename Mapping::WaveCoordT const& coord) { return get<1>(coord); };
 
         auto sharingDim   = (uint32_t)param1;
         auto shareElement = (sharingDim == 0 ? getFirst : getSecond);
@@ -196,8 +196,8 @@ namespace rocwmma
         // 0 = row/col 0 waves will cooperate
         // 1 = row/col 1 waves will cooperate
         // ...
-        auto getFirst  = [](typename Mapping::WaveCoordT const& coord) { return coord.first; };
-        auto getSecond = [](typename Mapping::WaveCoordT const& coord) { return coord.second; };
+        auto getFirst  = [](typename Mapping::WaveCoordT const& coord) { return get<0>(coord); };
+        auto getSecond = [](typename Mapping::WaveCoordT const& coord) { return get<1>(coord); };
 
         auto sharingDim   = (uint32_t)param1;
         auto shareElement = (sharingDim == 0 ? getFirst : getSecond);
