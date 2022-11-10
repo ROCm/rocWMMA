@@ -100,6 +100,7 @@ namespace rocwmma
             return make_coord2d(static_cast<uint32_t>(blockIdx.x),
                                 static_cast<uint32_t>(blockIdx.y));
         }
+
         template <uint32_t TBlockX, uint32_t TBlockY>
         template <bool IsConst /* = (TBlockX > 0u && TBlockY > 0u) */,
                   typename std::enable_if_t<IsConst>* /* = nullptr */>
@@ -115,16 +116,6 @@ namespace rocwmma
         __device__ inline auto WaveSpace<TBlockX, TBlockY>::workgroupDim() -> WorkgroupDimT
         {
             return waveCount(make_coord2d(blockDim.x, blockDim.y));
-        }
-
-        template <>
-        __device__ inline auto WaveSpace<0, 0>::workgroupDim() -> WorkgroupDimT
-        {
-            // constexpr dim3 dims{static_cast<uint32_t>(__ockl_get_local_size(0)),
-            //                     static_cast<uint32_t>(__ockl_get_local_size(1))};
-            // return waveCount(make_coord2d(static_cast<uint32_t>(dims.x), static_cast<uint32_t>(dims.y)));
-            return waveCount(
-                make_coord2d(static_cast<uint32_t>(blockDim.x), static_cast<uint32_t>(blockDim.y)));
         }
 
         /// MatrixSpace

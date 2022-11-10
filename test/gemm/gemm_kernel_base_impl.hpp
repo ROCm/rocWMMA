@@ -810,11 +810,11 @@ namespace rocwmma
                 = compareEqualLaunchKernel<OutputT, OutputT, DeviceLayoutD, LayoutD>(
                     dataInstance->deviceD().get(), reference.get(), mM, mN, errorTolerance);
 
-            auto result = dataInstance->template allocHost<OutputT>(sizeD);
-            dataInstance->copyData(result, dataInstance->deviceD(), sizeD);
+            // auto result = dataInstance->template allocHost<OutputT>(sizeD);
+            // dataInstance->copyData(result, dataInstance->deviceD(), sizeD);
 
-            MatrixUtil<DeviceLayoutD>::print(dataInstance->hostD().get(), mM, mN);
-            MatrixUtil<LayoutD>::print(result.get(), mM, mN);
+            // MatrixUtil<DeviceLayoutD>::print(dataInstance->hostD().get(), mM, mN);
+            // MatrixUtil<LayoutD>::print(result.get(), mM, mN);
 
             EXPECT_TRUE(mValidationResult) << "Max relative error: " << mMaxRelativeError;
         }

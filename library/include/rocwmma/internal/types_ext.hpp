@@ -70,11 +70,11 @@ namespace rocwmma
         {
             union
             {
-                rocwmma::uint16_t   i16;
-                rocwmma::float16_t  f16;
-                rocwmma::hfloat16_t h16;
-                rocwmma::bfloat16_t b16;
-                unsigned char       c16[16];
+                uint16_t      i16;
+                float16_t     f16;
+                hfloat16_t    h16;
+                bfloat16_t    b16;
+                unsigned char c16[16];
             };
             constexpr Fp16Bits(uint16_t initVal)
                 : i16(initVal)
