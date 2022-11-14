@@ -31,6 +31,7 @@
 
 #include "rocwmma.hpp"
 
+#include "internal/config.hpp"
 #include "internal/accessors.hpp"
 #include "internal/broadcast.hpp"
 #include "internal/constants.hpp"
@@ -42,7 +43,6 @@
 #include "internal/io_traits.hpp"
 #include "internal/layout.hpp"
 #include "internal/mapping_util.hpp"
-#include "internal/config.hpp"
 #if defined(ROCWMMA_ARCH_MI)
 #include "internal/mfma.hpp"
 #elif defined(ROCWMMA_ARCH_NAVI)
