@@ -35,7 +35,7 @@ namespace rocwmma
     {
         enum Properties : uint32_t
         {
-            // Operation IDs
+            // 32b Element Operation IDs
             OP_ID_ROTATE  = 0x00,
             OP_ID_SHIFT   = 0x01,
             OP_ID_SHUFFLE = 0x02,
@@ -44,9 +44,13 @@ namespace rocwmma
             OP_ID_BCAST   = 0x05,
             OP_ID_FFT     = 0x06,
 
+            // Block Operation IDs
+            OP_ID_BLOCK_BCAST = 0x07,
+
             // Identifiers of backend implementation
             OP_IMPL_DPP     = 0x30,
             OP_IMPL_SWIZZLE = 0x31,
+            OP_IMPL_PERMUTE = 0x32,
 
             // Directional properties
             OP_DIR_L = 0x00, // = left  (towards LSB)
@@ -310,6 +314,29 @@ namespace rocwmma
             constexpr static uint32_t fftCtrl()
             {
                 return FFT_CTRL;
+            }
+        };
+
+        /*! \class BlockBCast
+        *  \brief Performs broadcast of one block of elements to all other blocks.
+        *
+        * @tparam BlockIdx - block index to broadcast to rest of the other blocks.
+        */
+        template <uint32_t BlockIdx, uint32_t BlockSize, uint32_t OpImpl, uint32_t OpCtrl>
+        struct BlockBCast : public OpBase<Properties::OP_ID_BLOCK_BCAST,
+                                          AMDGCN_WAVE_SIZE,
+                                          BlockSize,
+                                          OpImpl,
+                                          OpCtrl>
+        {
+            enum : uint32_t
+            {
+                ELEMENT_IDX = BlockIdx,
+            };
+
+            constexpr static uint32_t elementIdx()
+            {
+                return BlockIdx;
             }
         };
 

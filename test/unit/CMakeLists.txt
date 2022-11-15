@@ -191,6 +191,7 @@ set(VectorIteratorTestSources ${UnitCommonSources}
 
 set(CrossLaneOpsTestSources ${UnitCommonSources}
 
+                           # DPP
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_bcast_2.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_bcast_4.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_bcast_16.cpp
@@ -251,6 +252,13 @@ set(CrossLaneOpsTestSources ${UnitCommonSources}
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_swap_4.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_swap_8.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_swap_16.cpp
+
+                           ### Permute
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_2.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_4.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_8.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_16.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_32.cpp
 )
 
 # Benchmark Unit
