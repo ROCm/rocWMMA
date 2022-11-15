@@ -35,6 +35,7 @@
 #include "internal/broadcast.hpp"
 #include "internal/constants.hpp"
 #include "internal/convert.hpp"
+#include "internal/dpp.hpp"
 #include "internal/flow_control.hpp"
 #include "internal/io_config.hpp"
 #include "internal/io_shape.hpp"
@@ -49,6 +50,8 @@
 #include "internal/opaque_load.hpp"
 #include "internal/opaque_store.hpp"
 #include "internal/pack.hpp"
+#include "internal/permute.hpp"
+#include "internal/swizzle.hpp"
 #include "internal/types.hpp"
 #include "internal/unpack.hpp"
 #include "internal/vector.hpp"
@@ -317,11 +320,11 @@ namespace rocwmma
         //              "A and B fragment layouts must be orthogonal");
 
 #if defined(__gfx908__) || defined(__gfx90a__)
-        using MFMA  = Mfma<InputT, ComputeT, BlockM, BlockN, BlockK>;
-        (*d) = MFMA::exec(*a, *b, *c);
+        using MFMA = Mfma<InputT, ComputeT, BlockM, BlockN, BlockK>;
+        (*d)       = MFMA::exec(*a, *b, *c);
 #elif defined(__gfx1100__) || defined(__gfx1101__) || defined(__gfx1102__)
-        using WMMA  = detail::Wmma<InputT, ComputeT, BlockM, BlockN, BlockK>;
-        (*d) = WMMA::exec(*a, *b, *c);
+        using WMMA = detail::Wmma<InputT, ComputeT, BlockM, BlockN, BlockK>;
+        (*d)       = WMMA::exec(*a, *b, *c);
 #endif
     }
 

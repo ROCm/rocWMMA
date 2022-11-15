@@ -26,6 +26,8 @@
 #ifndef ROCWMMA_PERMUTE_IMPL_HPP
 #define ROCWMMA_PERMUTE_IMPL_HPP
 
+#include "permute.hpp"
+
 namespace rocwmma
 {
 
