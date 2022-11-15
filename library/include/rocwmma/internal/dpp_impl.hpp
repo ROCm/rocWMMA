@@ -121,7 +121,7 @@ namespace rocwmma
                 }
             };
 
-            struct amdgcn_dpp_row_reverse_half
+            struct amdgcn_dpp_half_row_reverse
             {
             private:
                 enum Traits : uint32_t
@@ -186,30 +186,8 @@ namespace rocwmma
                 }
             };
 
-            template <uint32_t ShiftDir, uint32_t ShiftDistance>
-            struct amdgcn_dpp_wave_shift
-            {
-            private:
-                enum Traits : uint32_t
-                {
-                    SELECT_0 = (0u + (ShiftDir ? ShiftDistance : -ShiftDistance)),
-                    SELECT_1 = (1u + (ShiftDir ? ShiftDistance : -ShiftDistance)),
-                    SELECT_2 = (2u + (ShiftDir ? ShiftDistance : -ShiftDistance)),
-                    SELECT_3 = (3u + (ShiftDir ? ShiftDistance : -ShiftDistance)),
-
-                    DPP_CTRL
-                    = amdgcn_dpp_shuffle_4<SELECT_0, SELECT_1, SELECT_2, SELECT_3>::opCtrl()
-                };
-
-            public:
-                constexpr static uint32_t opCtrl()
-                {
-                    return Traits::DPP_CTRL;
-                }
-            };
-
             template <uint32_t ShiftDir>
-            struct amdgcn_dpp_wave_shift<ShiftDir, 1u>
+            struct amdgcn_dpp_wave_shift1
             {
             private:
                 enum Traits : uint32_t
@@ -232,16 +210,43 @@ namespace rocwmma
             };
 
             template <uint32_t RotateDir, uint32_t RotateDistance>
-            struct amdgcn_dpp_wave_rotate
+            struct amdgcn_dpp_bank_rotate
             {
             private:
                 enum Traits : uint32_t
                 {
-                    ROTATE_DISTANCE = RotateDistance % 4u,
-                    SELECT_0 = (0u + (RotateDir ? ROTATE_DISTANCE : 4u - ROTATE_DISTANCE)) % 4u,
-                    SELECT_1 = (1u + (RotateDir ? ROTATE_DISTANCE : 4u - ROTATE_DISTANCE)) % 4u,
-                    SELECT_2 = (2u + (RotateDir ? ROTATE_DISTANCE : 4u - ROTATE_DISTANCE)) % 4u,
-                    SELECT_3 = (3u + (RotateDir ? ROTATE_DISTANCE : 4u - ROTATE_DISTANCE)) % 4u,
+                    ROTATE_DISTANCE
+                    = (RotateDir == CrossLaneOps::Properties::OP_DIR_L ? RotateDistance
+                                                                       : 4u - RotateDistance),
+                    SELECT_0 = (0u + ROTATE_DISTANCE) % 4u,
+                    SELECT_1 = (1u + ROTATE_DISTANCE) % 4u,
+                    SELECT_2 = (2u + ROTATE_DISTANCE) % 4u,
+                    SELECT_3 = (3u + ROTATE_DISTANCE) % 4u,
+
+                    DPP_CTRL
+                    = amdgcn_dpp_shuffle_4<SELECT_0, SELECT_1, SELECT_2, SELECT_3>::opCtrl()
+                };
+
+            public:
+                constexpr static uint32_t opCtrl()
+                {
+                    return Traits::DPP_CTRL;
+                }
+            };
+
+            template <uint32_t RotateDir, uint32_t RotateDistance>
+            struct amdgcn_dpp_half_bank_rotate
+            {
+            private:
+                enum Traits : uint32_t
+                {
+                    ROTATE_DISTANCE
+                    = (RotateDir == CrossLaneOps::Properties::OP_DIR_L ? RotateDistance
+                                                                       : 2u - RotateDistance),
+                    SELECT_0 = (0u + ROTATE_DISTANCE) % 2u,
+                    SELECT_1 = (1u + ROTATE_DISTANCE) % 2u,
+                    SELECT_2 = 2u + SELECT_0,
+                    SELECT_3 = 2u + SELECT_1,
 
                     DPP_CTRL
                     = amdgcn_dpp_shuffle_4<SELECT_0, SELECT_1, SELECT_2, SELECT_3>::opCtrl()
@@ -255,7 +260,7 @@ namespace rocwmma
             };
 
             template <uint32_t RotateDir>
-            struct amdgcn_dpp_wave_rotate<RotateDir, 1u>
+            struct amdgcn_dpp_wave_rotate1
             {
             private:
                 enum Traits : uint32_t
@@ -287,24 +292,26 @@ namespace rocwmma
         {
             __device__ static inline DataT exec(DataT input)
             {
-                return reinterpret_cast<int32_t&>(input) = __builtin_amdgcn_update_dpp(
-                           reinterpret_cast<int32_t const&>(input), // use self as prev
-                           reinterpret_cast<int32_t const&>(input),
-                           DppCtrl, // DPP control code
-                           WriteRowMask, // Mask for affected rows
-                           WriteBankMask, // Mask for affected banks
-                           BoundCtrl); // Fill in 0 on invalid indices
+                reinterpret_cast<int32_t&>(input) = __builtin_amdgcn_update_dpp(
+                    reinterpret_cast<int32_t const&>(input), // use self as prev
+                    reinterpret_cast<int32_t const&>(input),
+                    DppCtrl, // DPP control code
+                    WriteRowMask, // Mask for affected rows
+                    WriteBankMask, // Mask for affected banks
+                    BoundCtrl); // Fill in 0 on invalid indices
+                return input;
             }
 
             __device__ static inline DataT exec(DataT input, DataT prev)
             {
-                return reinterpret_cast<int32_t&>(input) = __builtin_amdgcn_update_dpp(
-                           reinterpret_cast<int32_t const&>(prev), // fill prev value
-                           reinterpret_cast<int32_t const&>(input),
-                           DppCtrl, // DPP control code
-                           WriteRowMask, // Mask for affected rows
-                           WriteBankMask, // Mask for affected banks
-                           BoundCtrl); // Fill in 0 on invalid indices
+                reinterpret_cast<int32_t&>(input) = __builtin_amdgcn_update_dpp(
+                    reinterpret_cast<int32_t const&>(prev), // fill prev value
+                    reinterpret_cast<int32_t const&>(input),
+                    DppCtrl, // DPP control code
+                    WriteRowMask, // Mask for affected rows
+                    WriteBankMask, // Mask for affected banks
+                    BoundCtrl); // Fill in 0 on invalid indices
+                return input;
             }
         };
 
