@@ -226,6 +226,56 @@ namespace rocwmma
         }
     }
 
+    template <uint32_t BlockIdx,
+              uint32_t WaveSize,
+              uint32_t BlockSize,
+              uint32_t RowMask /* = 0xF */,
+              uint32_t BankMask /* = 0xF */,
+              bool     BoundCtrl /* = false */>
+    void cross_lane_block_bcast_CPU(uint32_t*       dataOut,
+                                    uint32_t const* dataIn,
+                                    uint32_t        elementCount,
+                                    uint32_t        fillVal /* = 0u */)
+    {
+        auto const loopCnt = elementCount / WaveSize;
+
+        for(uint32_t i = 0u; i < loopCnt; ++i)
+        {
+            // setup the base ptr (each WaveSize elements)
+            auto const baseOffset = i * WaveSize;
+
+            // For each wave group
+            auto const groupCnt = WaveSize / BlockSize;
+            for(uint32_t j = 0u; j < groupCnt; j++)
+            {
+                auto const groupOffset = j * BlockSize;
+
+                for(uint32_t k = 0u; k < BlockSize; k++)
+                {
+                    auto const writeOffset = groupOffset + k;
+                    auto const readOffset  = BlockIdx * BlockSize + k;
+
+                    if(((0x1 << (writeOffset % WaveSize / 16u)) & RowMask)
+                       && ((0x1 << (writeOffset % 16u / 4u)) & BankMask))
+                    {
+                        if(BlockIdx >= groupCnt)
+                        {
+                            dataOut[baseOffset + writeOffset] = BoundCtrl ? 0u : fillVal;
+                        }
+                        else
+                        {
+                            dataOut[baseOffset + writeOffset] = dataIn[baseOffset + readOffset];
+                        }
+                    }
+                    else
+                    {
+                        dataOut[baseOffset + writeOffset] = fillVal;
+                    }
+                }
+            }
+        }
+    }
+
     template <uint32_t WaveSize,
               uint32_t GroupSize,
               uint32_t RowMask /* = 0xF */,
@@ -490,15 +540,17 @@ namespace rocwmma
     // TODO: When using C++ 17, switch to constexpr if to remove enable_if
 
     // Using BCast
-    template <typename DataT,
-              typename CrossLaneOp,
-              uint32_t RowMask   = 0xF,
-              uint32_t BankMask  = 0xF,
-              bool     BoundCtrl = false,
-              typename std::enable_if_t<(CrossLaneOp::opId()
-                                         == rocwmma::CrossLaneOps::Properties::OP_ID_BCAST),
-                                        void*>
-              = nullptr>
+    template <
+        typename DataT,
+        typename CrossLaneOp,
+        uint32_t RowMask   = 0xF,
+        uint32_t BankMask  = 0xF,
+        bool     BoundCtrl = false,
+        typename std::enable_if_t<
+            (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_BCAST)
+                || (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_BLOCK_BCAST),
+            void*>
+        = nullptr>
     void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
                                      DataT const* dataIn,
                                      uint32_t     elementCount,
@@ -523,6 +575,14 @@ namespace rocwmma
                                  RowMask,
                                  BankMask,
                                  BoundCtrl>(write32Out, read32In, elementCount, fillVal32);
+            break;
+        case rocwmma::CrossLaneOps::Properties::OP_ID_BLOCK_BCAST:
+            cross_lane_block_bcast_CPU<CrossLaneOp::elementIdx(),
+                                       CrossLaneOp::waveSize(),
+                                       CrossLaneOp::groupSize(),
+                                       RowMask,
+                                       BankMask,
+                                       BoundCtrl>(write32Out, read32In, elementCount, fillVal32);
             break;
         default:;
         }

@@ -75,6 +75,18 @@ namespace rocwmma
             return (Base::mTBlockY == 1);
         }
 
+        bool checkDevice() const final
+        {
+            auto deviceArch = Base::DeviceInfo::instance()->getGcnArch();
+
+            // gfx908 doesn't support dpp BCast16
+            return Base::checkDevice()
+                   && !((deviceArch == Base::DeviceInfo::GFX908)
+                        && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
+                        && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_BCAST)
+                        && (CrossLaneOp::groupSize() == 16u));
+        }
+
         std::ostream& printHeader(std::ostream& stream = std::cout) const final
         {
             return stream << "DataT,"
@@ -206,6 +218,21 @@ namespace rocwmma
         }
     };
 
+    template <typename DataT, typename CrossLaneOp>
+    struct PermuteOpsKernel final : public CrossLaneOpsKernelBase<DataT, CrossLaneOp>
+    {
+        using Base = UnitKernelBase<1, 1, DataT, col_major>;
+
+    public:
+        PermuteOpsKernel()  = default;
+        ~PermuteOpsKernel() = default;
+
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return typename Base::KernelFunc(permuteOpsTest<DataT, CrossLaneOp>);
+        }
+    };
+
     // This is the GeneratorImpl class
     struct DppOpsGenerator
     {
@@ -256,6 +283,31 @@ namespace rocwmma
             using TestParamsT = std::tuple<Ts...>;
             using KernelT
                 = SwizzleOpsKernel<std::tuple_element_t<DataT, TestParamsT>, // DataT
+                                   std::tuple_element_t<CrossLaneOp, TestParamsT> // CrossLaneOp
+                                   >;
+
+            return std::make_shared<KernelT>();
+        }
+    };
+
+    struct PermuteOpsGenerator
+    {
+        // Indices to test parameters
+        enum : uint32_t
+        {
+            DataT       = 0,
+            CrossLaneOp = 1
+        };
+
+        using ResultT = std::shared_ptr<KernelI>;
+
+        template <typename... Ts>
+        static ResultT generate(std::tuple<Ts...> testParams)
+        {
+            // Map GTest params to Kernel params
+            using TestParamsT = std::tuple<Ts...>;
+            using KernelT
+                = PermuteOpsKernel<std::tuple_element_t<DataT, TestParamsT>, // DataT
                                    std::tuple_element_t<CrossLaneOp, TestParamsT> // CrossLaneOp
                                    >;
 
