@@ -78,9 +78,8 @@ namespace rocwmma
                     SWIZZLE_CTRL = SWIZZLE_MODE | ROTATION_DIR | ROTATION_DIST | GROUP_SIZE
                 };
 
-                static_assert(Log2<Traits::GROUP_SIZE>::value, "GroupSize must be a power of 2");
-                static_assert(Traits::ROTATION_DIR <= 1u,
-                              "Rotation dir must be either 0: left or 1: right");
+                static_assert(Log2<GroupSize>::value, "GroupSize must be a power of 2");
+                static_assert(RotationDir <= 1u, "RotationDir must be either 0: left or 1: right");
 
             public:
                 constexpr static uint32_t opCtrl()
