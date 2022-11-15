@@ -31,11 +31,6 @@
 #endif // !__HIPCC_RTC__
 
 #include <hip/hip_fp16.h>
-
-#include <array>
-#include <type_traits>
-#include <utility>
-
 namespace rocwmma
 {
 

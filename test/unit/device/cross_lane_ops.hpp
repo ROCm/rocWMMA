@@ -27,10 +27,7 @@
 #ifndef ROCWMMA_DEVICE_CROSS_LANE_OPS_HPP
 #define ROCWMMA_DEVICE_CROSS_LANE_OPS_HPP
 
-#include <rocwmma/internal/dpp.hpp>
-#include <rocwmma/internal/permute.hpp>
-#include <rocwmma/internal/swizzle.hpp>
-#include <rocwmma/internal/types.hpp>
+#include <rocwmma/rocwmma.hpp>
 
 namespace rocwmma
 {
