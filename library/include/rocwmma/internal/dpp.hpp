@@ -52,129 +52,104 @@ namespace rocwmma
          * in the DppCtrl namespace.
          */
 
+        // clang-format off
+
         // These definitions are for DPP support, so we specify this backend here.
         // Operation directions can also be propagated to the ctrl
         constexpr uint32_t OP_IMPL  = CrossLaneOps::Properties::OP_IMPL_DPP;
         constexpr uint32_t OP_DIR_L = CrossLaneOps::Properties::OP_DIR_L;
         constexpr uint32_t OP_DIR_R = CrossLaneOps::Properties::OP_DIR_R;
 
-        // Rotation variants
-        template <uint32_t RotateDistance>
-        using RotateR16 = CrossLaneOps::RotateR<
-            RotateDistance,
-            16u,
-            OP_IMPL,
-            detail::DppCtrl::amdgcn_dpp_row_rotate_r<RotateDistance>::opCtrl()>;
-        template <uint32_t RotateDistance>
-        using RotateL4 = CrossLaneOps::RotateL<
-            RotateDistance,
-            4u,
-            OP_IMPL,
-            detail::DppCtrl::amdgcn_dpp_wave_rotate<OP_DIR_L, RotateDistance>::opCtrl()>;
-        template <uint32_t RotateDistance>
-        using RotateR4 = CrossLaneOps::RotateR<
-            RotateDistance,
-            4u,
-            OP_IMPL,
-            detail::DppCtrl::amdgcn_dpp_wave_rotate<OP_DIR_R, RotateDistance>::opCtrl()>;
-
-        // Shift variants
-        template <uint32_t ShiftDistance>
-        using ShiftL16 = CrossLaneOps::ShiftL<
-            ShiftDistance,
-            16u,
-            OP_IMPL,
-            detail::DppCtrl::amdgcn_dpp_row_shift<OP_DIR_L, ShiftDistance>::opCtrl()>;
-        template <uint32_t ShiftDistance>
-        using ShiftR16 = CrossLaneOps::ShiftR<
-            ShiftDistance,
-            16u,
-            OP_IMPL,
-            detail::DppCtrl::amdgcn_dpp_row_shift<OP_DIR_R, ShiftDistance>::opCtrl()>;
-        template <uint32_t ShiftDistance>
-        using ShiftL4 = CrossLaneOps::ShiftL<
-            ShiftDistance,
-            4u,
-            OP_IMPL,
-            detail::DppCtrl::amdgcn_dpp_wave_shift<OP_DIR_L, ShiftDistance>::opCtrl()>;
-        template <uint32_t ShiftDistance>
-        using ShiftR4 = CrossLaneOps::ShiftR<
-            ShiftDistance,
-            4u,
-            OP_IMPL,
-            detail::DppCtrl::amdgcn_dpp_wave_shift<OP_DIR_R, ShiftDistance>::opCtrl()>;
-
-        // Reversal variants
-        using Reverse16 = CrossLaneOps::
-            Reverse<16u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_reverse::opCtrl()>;
-        using Reverse8 = CrossLaneOps::
-            Reverse<8u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_reverse_half::opCtrl()>;
-        using Reverse4 = CrossLaneOps::Reverse<
-            4u,
-            OP_IMPL,
-            detail::DppCtrl::amdgcn_dpp_shuffle_4<0x3, 0x2, 0x1, 0x0>::opCtrl()>;
-        using Reverse2 = CrossLaneOps::Reverse<
-            2u,
-            OP_IMPL,
-            detail::DppCtrl::amdgcn_dpp_shuffle_4<0x1, 0x0, 0x3, 0x2>::opCtrl()>;
-
-        // Swap variants
-        using Swap2 = CrossLaneOps::Swap<
-            2u,
-            OP_IMPL,
-            detail::DppCtrl::amdgcn_dpp_shuffle_4<0x02, 0x03, 0x00, 0x01>::opCtrl()>;
-
         // BCast variants
         template <uint32_t ElementIdx>
-        using BCast16
-            = CrossLaneOps::BCast<ElementIdx,
-                                  16u,
-                                  OP_IMPL,
-                                  detail::DppCtrl::amdgcn_dpp_row_bcast<ElementIdx>::opCtrl()>;
+        using BCast16 = CrossLaneOps::BCast<ElementIdx, 16u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_bcast<ElementIdx>::opCtrl()>;
+
         template <uint32_t ElementIdx>
-        using BCast4 = CrossLaneOps::BCast<
-            ElementIdx,
-            4u,
-            OP_IMPL,
-            detail::DppCtrl::amdgcn_dpp_shuffle_4<ElementIdx, ElementIdx, ElementIdx, ElementIdx>::
-                opCtrl()>;
+        using BCast4 = CrossLaneOps::BCast<ElementIdx, 4u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_shuffle_4<ElementIdx, ElementIdx, ElementIdx, ElementIdx>::opCtrl()>;
+
         template <uint32_t ElementIdx>
-        using BCast2
-            = CrossLaneOps::BCast<ElementIdx,
-                                  2u,
-                                  OP_IMPL,
-                                  detail::DppCtrl::amdgcn_dpp_shuffle_4<ElementIdx,
-                                                                        ElementIdx,
-                                                                        ElementIdx + 2u,
-                                                                        ElementIdx + 2u>::opCtrl()>;
+        using BCast2 = CrossLaneOps::BCast<ElementIdx, 2u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_shuffle_4<ElementIdx,
+                                                                                                         ElementIdx,
+                                                                                                         ElementIdx + 2u,
+                                                                                                         ElementIdx + 2u>::opCtrl()>;
 
         // Special BCast variants:
         // BCast<M>x<N>, where:
         // <M> = subgroup size
         // <N> = element idx
         // NOTE: These functions only broadcast the <N>th element of the current subgroup to the NEXT subgroup
-        using BCast16x15 = CrossLaneOps::
-            BCast<15u, 16u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_bcast15::opCtrl()>;
-        using BCast32x31 = CrossLaneOps::
-            BCast<31u, 32u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_bcast31::opCtrl()>;
+        using BCast16x15 = CrossLaneOps::BCast<15u, 16u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_bcast15::opCtrl()>;
+
+        using BCast32x31 = CrossLaneOps::BCast<31u, 32u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_bcast31::opCtrl()>;
+
+
+        // Reversal variants
+        using Reverse16 = CrossLaneOps::Reverse<16u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_reverse::opCtrl()>;
+
+        using Reverse8 = CrossLaneOps::Reverse<8u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_half_row_reverse::opCtrl()>;
+
+        using Reverse4 = CrossLaneOps::Reverse<4u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_shuffle_4<0x3, 0x2, 0x1, 0x0>::opCtrl()>;
+
+        using Reverse2 = CrossLaneOps::Reverse<2u,OP_IMPL,detail::DppCtrl::amdgcn_dpp_shuffle_4<0x1, 0x0, 0x3, 0x2>::opCtrl()>;
+
+
+        /// Rotation variants
+
+        // Rotate the entire wave by 1
+        using RotateWaveR1 = CrossLaneOps::RotateR<1u, AMDGCN_WAVE_SIZE, OP_IMPL, detail::DppCtrl::amdgcn_dpp_wave_rotate1<OP_DIR_R>::opCtrl()>;
+
+        using RotateWaveL1 = CrossLaneOps::RotateL<1u, AMDGCN_WAVE_SIZE, OP_IMPL, detail::DppCtrl::amdgcn_dpp_wave_rotate1<OP_DIR_L>::opCtrl()>;
+
+        // Rotate in element groups
+        template <uint32_t RotateDistance>
+        using RotateR16 = CrossLaneOps::RotateR<RotateDistance, 16u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_rotate_r<RotateDistance>::opCtrl()>;
+
+        template <uint32_t RotateDistance>
+        using RotateL4 = CrossLaneOps::RotateL<RotateDistance, 4u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_bank_rotate<OP_DIR_L, RotateDistance>::opCtrl()>;
+
+        template <uint32_t RotateDistance>
+        using RotateR4 = CrossLaneOps::RotateR<RotateDistance, 4u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_bank_rotate<OP_DIR_R, RotateDistance>::opCtrl()>;
+
+        template <uint32_t RotateDistance>
+        using RotateL2 = CrossLaneOps::RotateL<RotateDistance, 2u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_half_bank_rotate<OP_DIR_L, RotateDistance>::opCtrl()>;
+
+        template <uint32_t RotateDistance>
+        using RotateR2 = CrossLaneOps::RotateR<RotateDistance, 2u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_half_bank_rotate<OP_DIR_R, RotateDistance>::opCtrl()>;
+
+        /// Shift variants
+
+        // Rotate the entire wave by 1
+        using ShiftWaveL1 = CrossLaneOps::ShiftL<1u, AMDGCN_WAVE_SIZE, OP_IMPL, detail::DppCtrl::amdgcn_dpp_wave_shift1<OP_DIR_L>::opCtrl()>;
+
+        using ShiftWaveR1 = CrossLaneOps::ShiftR<1u, AMDGCN_WAVE_SIZE, OP_IMPL, detail::DppCtrl::amdgcn_dpp_wave_shift1<OP_DIR_R>::opCtrl()>;
+
+        // Rotate in element groups
+        template <uint32_t ShiftDistance>
+        using ShiftL16 = CrossLaneOps::ShiftL<ShiftDistance, 16u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_shift<OP_DIR_L, ShiftDistance>::opCtrl()>;
+
+        template <uint32_t ShiftDistance>
+        using ShiftR16 = CrossLaneOps::ShiftR<ShiftDistance, 16u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_shift<OP_DIR_R, ShiftDistance>::opCtrl()>;
+
 
         // Shuffle variants
         template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
-        using Shuffle4 = CrossLaneOps::Shuffle4<
-            Select0,
-            Select1,
-            Select2,
-            Select3,
-            OP_IMPL,
-            detail::DppCtrl::amdgcn_dpp_shuffle_4<Select0, Select1, Select2, Select3>::opCtrl()>;
+        using Shuffle4 = CrossLaneOps::Shuffle4<Select0,
+                                                Select1,
+                                                Select2,
+                                                Select3,
+                                                OP_IMPL,
+                                                detail::DppCtrl::amdgcn_dpp_shuffle_4<Select0, Select1, Select2, Select3>::opCtrl()>;
 
         template <uint32_t Select0, uint32_t Select1>
-        using Shuffle2 = CrossLaneOps::Shuffle2<
-            Select0,
-            Select1,
-            OP_IMPL,
-            detail::DppCtrl::amdgcn_dpp_shuffle_4<Select0, Select1, Select0 + 2u, Select1 + 2u>::
-                opCtrl()>;
+        using Shuffle2 = CrossLaneOps::Shuffle2<Select0,
+                                                Select1,
+                                                OP_IMPL,
+                                                detail::DppCtrl::amdgcn_dpp_shuffle_4<Select0, Select1, Select0 + 2u, Select1 + 2u>::opCtrl()>;
+
+    // Swap variants
+    using Swap2 = CrossLaneOps::Swap<2u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_shuffle_4<0x02, 0x03, 0x00, 0x01>::opCtrl()>;
+
+        // clang-format on
 
     } // namespace DppOps
 
@@ -192,17 +167,23 @@ namespace rocwmma
      * [X, Y] = Includes X and Y
      * [X - Y] = X, powers of 2 in between and including Y
      *
-     * RotateR (Subgroups[4, 16])
-     * RotateL (Subgroups[4])
-     * ShiftR (Subgroups[4, 16])
-     * ShiftL (Subgroups[4, 16])
-     * Shuffle (Subgroups[2, 4])
-     * Swap (Subgroups[2])
-     * Reverse (Subgroups[2-16])
      * BCast (Subgroups[2, 4, 16])
-     *
      * BCast16x15 -> waterfall broadcast (see DppOps)
      * BCast32x31 -> waterfall broadcast (see DppOps)
+     *
+     * Reverse (Subgroups[2-16])
+     *
+     * RotateR (Subgroups[2, 4, 16, WaveSize*])
+     * RotateL (Subgroups[2, 4, WaveSize*])
+     *
+     * ShiftR (Subgroups[16], WaveSize*)
+     * ShiftL (Subgroups[16], WaveSize*)
+     *
+     * Shuffle (Subgroups[2, 4])
+     *
+     * Swap (Subgroups[2])
+     *
+     * WaveSize* = architecture wave size (wave64 for MI* and wave32 for Navi3x)
      *
      * The dpp backend does not support Fft. It also has limited group size support for
      * functionalities.
@@ -256,6 +237,15 @@ namespace rocwmma
 
         // Self as prev.
         template <typename DataT>
+        __device__ static DataT exec(DataT const& val)
+        {
+            using DppFunc = detail::
+                amdgcn_mov_dpp<DataT, DppOp::opCtrl(), WriteRowMask, WriteBankMask, BoundCtrl>;
+
+            return DppFunc::exec(val);
+        }
+
+        template <typename DataT>
         __device__ static void exec(DataT& val)
         {
             using DppFunc = detail::
@@ -272,6 +262,16 @@ namespace rocwmma
                 amdgcn_mov_dpp<DataT, DppOp::opCtrl(), WriteRowMask, WriteBankMask, BoundCtrl>;
 
             val = DppFunc::exec(val, prev);
+        }
+
+        // Self as prev.
+        template <typename DataT>
+        __device__ static DataT exec(DataT const& val, DataT prev)
+        {
+            using DppFunc = detail::
+                amdgcn_mov_dpp<DataT, DppOp::opCtrl(), WriteRowMask, WriteBankMask, BoundCtrl>;
+
+            return DppFunc::exec(val, prev);
         }
 
         // Self as prev.
