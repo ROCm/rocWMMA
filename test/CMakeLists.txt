@@ -35,11 +35,21 @@ include( FetchContent )
 
 FetchContent_Declare(
   googletest
-  URL https://github.com/google/googletest/archive/609281088cfefc76f9d0ce82e1ff6c30cc3591e5.zip
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG 609281088cfefc76f9d0ce82e1ff6c30cc3591e5
 )
-FetchContent_MakeAvailable(googletest)
-
-include(GoogleTest)
+FetchContent_GetProperties(googletest)
+if(NOT googletest_POPULATED)
+  # Fetch the content using default details
+  FetchContent_Populate(googletest)
+  # Save the shared libs setting, then force to static libs
+  set(BUILD_SHARED_LIBS_OLD ${BUILD_SHARED_LIBS})
+  set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "Build SHARED libraries" FORCE)
+  # Add gtest targets as static libs
+  add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
+  # Restore shared libs setting
+  set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_OLD} CACHE INTERNAL "Build SHARED libraries" FORCE)
+endif()
 
 set(ROCWMMA_TEST_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
 set(ROCWMMA_COMMON_TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/hip_device.cpp
