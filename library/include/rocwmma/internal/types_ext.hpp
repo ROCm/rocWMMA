@@ -26,7 +26,10 @@
 #ifndef ROCWMMA_TYPES_EXT_HPP
 #define ROCWMMA_TYPES_EXT_HPP
 
+#if !defined(__HIPCC_RTC__)
 #include <hip/hip_bfloat16.h>
+#endif // !__HIPCC_RTC__
+
 #include <hip/hip_fp16.h>
 
 #include <cmath>
@@ -97,6 +100,7 @@ namespace rocwmma
 
 namespace std
 {
+#if !defined(__HIPCC_RTC__)
     ///////////////////////////////////////////////////////////
     //////////  std::ostream::operator<<(float16_t)  //////////
     ///////////////////////////////////////////////////////////
@@ -114,7 +118,7 @@ namespace std
     {
         return stream << __half2float(val);
     }
-
+#endif // !defined(__HIPCC_RTC__)
     ///////////////////////////////////////////////////////////
     ///////////  std::numeric_limits<float16_t>  //////////////
     ///////////////////////////////////////////////////////////

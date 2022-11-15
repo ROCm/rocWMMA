@@ -74,7 +74,7 @@ namespace rocwmma
         // Target output block
         auto matrixCoordC = MappingC::matrixCoord();
 
-        if(std::get<0>(matrixCoordC) < m && std::get<1>(matrixCoordC) < m)
+        if(get<0>(matrixCoordC) < m && get<1>(matrixCoordC) < m)
         {
             // Initialize accumulator
             auto fragAcc = FragAcc();
@@ -82,16 +82,16 @@ namespace rocwmma
 
             // Setup starting addresses
             auto* inputWithOffset = input + inputBatchOffset * blockIdx.z;
-            auto* addrA           = MappingA::dataCoord(
-                          inputWithOffset, std::make_pair(std::get<0>(matrixCoordC), 0), k);
-            auto* addrB = MappingB::dataCoord(
-                inputWithOffset, std::make_pair(0, std::get<1>(matrixCoordC)), k);
+            auto* addrA
+                = MappingA::dataCoord(inputWithOffset, make_coord2d(get<0>(matrixCoordC), 0), k);
+            auto* addrB
+                = MappingB::dataCoord(inputWithOffset, make_coord2d(0, get<1>(matrixCoordC)), k);
 
             // Setup address increments.
             // A steps BlockK through m x k
             // B steps BlockK through k x m
-            auto incrA = MappingA::dataOffset(std::make_pair(0, TILE_DIM), k);
-            auto incrB = MappingB::dataOffset(std::make_pair(TILE_DIM, 0), k);
+            auto incrA = MappingA::dataOffset(make_coord2d(0, TILE_DIM), k);
+            auto incrB = MappingB::dataOffset(make_coord2d(TILE_DIM, 0), k);
 
             auto count = k / TILE_DIM;
             for(int i = 0; i < count; i++)
@@ -115,7 +115,7 @@ namespace rocwmma
 
             // Copy lower triangular from acc to output
             auto fragColIdx   = threadIdx.x % TILE_DIM;
-            auto globalColIdx = std::get<1>(matrixCoordC) + fragColIdx;
+            auto globalColIdx = get<1>(matrixCoordC) + fragColIdx;
             auto rowsPerStep  = AMDGCN_WAVE_SIZE / TILE_DIM;
 
             count = (TILE_DIM * TILE_DIM) >> Log2<AMDGCN_WAVE_SIZE>::value;
@@ -123,7 +123,7 @@ namespace rocwmma
             {
                 auto fragRowIdx
                     = i * rowsPerStep + ((threadIdx.x & (AMDGCN_WAVE_SIZE - 1)) / TILE_DIM);
-                auto globalRowIdx = std::get<0>(matrixCoordC) + fragRowIdx;
+                auto globalRowIdx = get<0>(matrixCoordC) + fragRowIdx;
                 if(globalRowIdx > globalColIdx)
                 {
                     auto outputOffset = k + ((globalRowIdx * (globalRowIdx - 1)) >> 1);

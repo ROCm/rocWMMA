@@ -90,7 +90,7 @@ namespace rocwmma
         // Target C / D block on 2D grid
         auto matrixCoordC = MappingC::matrixCoord();
 
-        if(std::get<0>(matrixCoordC) + BlockM > m || std::get<1>(matrixCoordC) + BlockN > n)
+        if(get<0>(matrixCoordC) + BlockM > m || get<1>(matrixCoordC) + BlockN > n)
         {
             return;
         }
@@ -113,8 +113,8 @@ namespace rocwmma
         // Setup address increments.
         // A steps BlockK through m x k
         // B steps BlockK through k x n
-        auto incrA = MappingA::dataOffset(std::make_pair(0, BlockK), lda);
-        auto incrB = MappingB::dataOffset(std::make_pair(BlockK, 0), ldb);
+        auto incrA = MappingA::dataOffset(make_coord2d(0u, BlockK), lda);
+        auto incrB = MappingB::dataOffset(make_coord2d(BlockK, 0u), ldb);
         auto count = k / BlockK;
 
         // Accumulate A * B

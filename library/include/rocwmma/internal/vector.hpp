@@ -153,10 +153,10 @@ namespace rocwmma
         __HOST_DEVICE__ constexpr non_native_vector_base(Ts... args) noexcept;
 
         __HOST_DEVICE__
-        inline T& operator[](unsigned int idx) noexcept;
+        constexpr inline T& operator[](unsigned int idx) noexcept;
 
         __HOST_DEVICE__
-        inline T operator[](unsigned int idx) const noexcept;
+        constexpr inline T operator[](unsigned int idx) const noexcept;
 
         __HOST_DEVICE__
         inline VecT& operator+=(const VecT& x_) noexcept;
