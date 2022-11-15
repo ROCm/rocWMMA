@@ -31,6 +31,8 @@
 #include "kernel_generator.hpp"
 #include "test/unit_test.hpp"
 
+#if !__gfx908__
+
 namespace rocwmma
 {
 
@@ -115,3 +117,5 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
                        ::testing::ValuesIn(rocwmma::TestParams::param1s()),
                        ::testing::ValuesIn(rocwmma::TestParams::param2s())));
+
+#endif // !__gfx908__

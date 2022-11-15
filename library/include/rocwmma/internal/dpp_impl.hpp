@@ -169,6 +169,7 @@ namespace rocwmma
                 }
             };
 
+#if !__gfx908__
             template <uint32_t ElementIdx>
             struct amdgcn_dpp_row_bcast
             {
@@ -185,6 +186,26 @@ namespace rocwmma
                     return Traits::DPP_CTRL;
                 }
             };
+#else
+
+            template <uint32_t ElementIdx>
+            struct amdgcn_dpp_row_bcast
+            {
+            private:
+                enum Traits : uint32_t
+                {
+                    DPP_CTRL = 0xE4, // Quad permute does nothing in case of usage
+                };
+
+            public:
+                __attribute__((deprecated(
+                    "amdgcn_dpp_row_bcast is not supported on MI-100"))) constexpr static uint32_t
+                    opCtrl()
+                {
+                    return Traits::DPP_CTRL;
+                }
+            };
+#endif // !__gfx908__
 
             template <uint32_t ShiftDir>
             struct amdgcn_dpp_wave_shift1
