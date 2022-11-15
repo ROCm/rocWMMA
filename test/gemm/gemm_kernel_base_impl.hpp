@@ -199,8 +199,15 @@ namespace rocwmma
                         LayoutD>::checkDevice() const
     {
         auto deviceArch = DeviceInfo::instance()->getGcnArch();
-        return (deviceArch != DeviceInfo::UNSUPPORTED
-                && !(deviceArch == DeviceInfo::GFX908 && std::is_same<InputT, float64_t>::value));
+
+        return ((deviceArch != DeviceInfo::UNSUPPORTED
+                && !(deviceArch == DeviceInfo::GFX908 && std::is_same<InputT, float64_t>::value))
+                && (!(((deviceArch == DeviceInfo::GFX1100) || (deviceArch == DeviceInfo::GFX1101) || (deviceArch == DeviceInfo::GFX1102)) && (BlockM == 16) && (BlockN == 16) && (BlockK >= 16)
+                    && (((std::is_same<InputT, float16_t>::value) && (std::is_same<OutputT, float16_t>::value) && (std::is_same<ComputeT, float16_t>::value))
+                    || ((std::is_same<InputT, float16_t>::value) && (std::is_same<OutputT, float32_t>::value) && (std::is_same<ComputeT, float32_t>::value))
+                    || ((std::is_same<InputT, bfloat16_t>::value) && (std::is_same<OutputT, bfloat16_t>::value) && (std::is_same<ComputeT, bfloat16_t>::value))
+                    || ((std::is_same<InputT, bfloat16_t>::value) && (std::is_same<OutputT, float32_t>::value) && (std::is_same<ComputeT, float32_t>::value))
+                    || ((std::is_same<InputT, uint8_t>::value) && (std::is_same<OutputT, int32_t>::value) && (std::is_same<ComputeT, int32_t>::value))))));
     }
 
     template <uint32_t BlockM,
