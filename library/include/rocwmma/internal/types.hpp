@@ -118,11 +118,6 @@ namespace rocwmma
         mem_col_major
     };
 
-    namespace detail
-    {
-        using Coord2d = std::pair<uint32_t, uint32_t>;
-    } // namespace detail
-
 } // namespace rocwmma
 
 // Add in some extensions to basic type support.
@@ -200,6 +195,9 @@ namespace rocwmma
     using AccRegF64x8  = VecT<float64_t, 8>;
     using AccRegF64x16 = VecT<float64_t, 16>;
     using AccRegF64x32 = VecT<float64_t, 32>;
+
+    using Coord2dDataT = uint32_t;
+    using Coord2d      = non_native_vector_base<Coord2dDataT, 2>;
 
 } // namespace rocwmma
 

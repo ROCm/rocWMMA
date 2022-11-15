@@ -55,12 +55,12 @@ namespace rocwmma
             ldminor    = std::is_same<Layout, row_major>::value ? BlockN : BlockM
         };
 
-        auto majCoord = (std::get<MajorIndex>(aCoord)
-                         + std::get<MajorIndex>(aCoord_wg) * std::get<MajorIndex>(aCoord_wgdim))
-                        * ldmajor;
-        auto minCoord = (std::get<MinorIndex>(aCoord)
-                         + std::get<MinorIndex>(aCoord_wg) * std::get<MinorIndex>(aCoord_wgdim))
-                        * ldminor;
+        auto majCoord
+            = (get<MajorIndex>(aCoord) + get<MajorIndex>(aCoord_wg) * get<MajorIndex>(aCoord_wgdim))
+              * ldmajor;
+        auto minCoord
+            = (get<MinorIndex>(aCoord) + get<MinorIndex>(aCoord_wg) * get<MinorIndex>(aCoord_wgdim))
+              * ldminor;
 
         for(int i = 0; i < ldminor; ++i)
         {

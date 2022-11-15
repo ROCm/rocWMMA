@@ -131,7 +131,7 @@ namespace rocwmma
         auto waveTileBound = matrixCoordC + waveTileDim;
 
         // Bounds check
-        if((std::get<0>(waveTileBound) > m) || (std::get<1>(waveTileBound) > n))
+        if((get<0>(waveTileBound) > m) || (get<1>(waveTileBound) > n))
         {
             return;
         }
@@ -170,7 +170,7 @@ namespace rocwmma
         HIP_DYNAMIC_SHARED(void*, localMemPtr);
         auto  sizeLds  = LdsMapping::sizeLds();
         auto* ldsPtrLo = reinterpret_cast<InputT*>(localMemPtr);
-        auto* ldsPtrHi = ldsPtrLo + std::get<0>(sizeLds) * std::get<1>(sizeLds);
+        auto* ldsPtrHi = ldsPtrLo + get<0>(sizeLds) * get<1>(sizeLds);
 
         auto ldlds           = LdsMapping::ldLds();
         auto ldsWriteOffsetA = DataMappingLds::fromMatrixCoord(LdsMapping::writeCoordA(), ldlds);

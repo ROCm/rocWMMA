@@ -50,11 +50,11 @@ namespace rocwmma
 
                 constexpr static inline auto waveIndex()
                 {
-                    return std::get<1>(WaveSpace::localWaveCoord());
+                    return get<1>(WaveSpace::localWaveCoord());
                 }
-                constexpr static inline auto waveCount()
+                constexpr static inline uint32_t waveCount()
                 {
-                    return std::get<1>(WaveSpace::workgroupDim());
+                    return get<1>(WaveSpace::workgroupDim());
                 }
             };
 
@@ -73,11 +73,11 @@ namespace rocwmma
 
                 constexpr static inline auto waveIndex()
                 {
-                    return std::get<0>(WaveSpace::localWaveCoord());
+                    return get<0>(WaveSpace::localWaveCoord());
                 }
-                constexpr static inline auto waveCount()
+                constexpr static inline uint32_t waveCount()
                 {
-                    return std::get<0>(WaveSpace::workgroupDim());
+                    return get<0>(WaveSpace::workgroupDim());
                 }
             };
 
@@ -93,13 +93,13 @@ namespace rocwmma
                 constexpr static inline auto waveIndex()
                 {
                     auto localWaveCoord = WaveSpace::localWaveCoord();
-                    return std::get<0>(localWaveCoord) * std::get<1>(WaveSpace::workgroupDim())
-                           + std::get<1>(localWaveCoord);
+                    return get<0>(localWaveCoord) * get<1>(WaveSpace::workgroupDim())
+                           + get<1>(localWaveCoord);
                 }
-                constexpr static inline auto waveCount()
+                constexpr static inline uint32_t waveCount()
                 {
                     auto wgDim = WaveSpace::workgroupDim();
-                    return std::get<0>(wgDim) * std::get<1>(wgDim);
+                    return get<0>(wgDim) * get<1>(wgDim);
                 }
             };
 
@@ -116,13 +116,13 @@ namespace rocwmma
                 constexpr static inline auto waveIndex()
                 {
                     auto localWaveCoord = WaveSpace::localWaveCoord();
-                    return std::get<1>(localWaveCoord) * std::get<0>(WaveSpace::workgroupDim())
-                           + std::get<0>(localWaveCoord);
+                    return get<1>(localWaveCoord) * get<0>(WaveSpace::workgroupDim())
+                           + get<0>(localWaveCoord);
                 }
-                constexpr static inline auto waveCount()
+                constexpr static inline uint32_t waveCount()
                 {
                     auto wgDim = WaveSpace::workgroupDim();
-                    return std::get<0>(wgDim) * std::get<1>(wgDim);
+                    return get<0>(wgDim) * get<1>(wgDim);
                 }
             };
 

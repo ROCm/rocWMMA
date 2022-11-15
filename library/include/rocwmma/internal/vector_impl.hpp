@@ -388,13 +388,14 @@ namespace rocwmma
     }
 
     template <typename T, unsigned int Rank>
-    __HOST_DEVICE__ inline T& non_native_vector_base<T, Rank>::operator[](unsigned int idx) noexcept
+    __HOST_DEVICE__ constexpr inline T&
+        non_native_vector_base<T, Rank>::operator[](unsigned int idx) noexcept
     {
         return d[idx];
     }
 
     template <typename T, unsigned int Rank>
-    __HOST_DEVICE__ inline T
+    __HOST_DEVICE__ constexpr inline T
         non_native_vector_base<T, Rank>::operator[](unsigned int idx) const noexcept
     {
         return d[idx];
