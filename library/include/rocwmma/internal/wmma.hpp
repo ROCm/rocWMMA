@@ -272,6 +272,8 @@ namespace rocwmma
                     //TODO : Verify permute
                     //Permute::exec(*upperSrcAIt, detail::laneId() % 16);
                     //Permute::exec(*lowerSrcAIt, detail::laneId() > 15 ? detail::laneId() : detail::laneId() + 16);
+                    //upperSrcAIt++;
+                    //lowerSrcAIt++;
                 } 
 
                 // update the src and dst iterators after data operation
@@ -301,6 +303,8 @@ namespace rocwmma
                     //TODO : Verify permute
                     //Permute::exec(*upperSrcBIt, detail::laneId()%16);
                     //Permute::exec(*lowerSrcBIt, detail::laneId() > 15 ? detail::laneId() : detail::laneId() + 16);
+                    //upperSrcBIt++;
+                    //lowerSrcBIt++;
                 }
 
                 auto dstBIt = makeVectorIterator<VecTraitsB::size() / AMDGCN_CDNA_RDNA_WAVE_RATIO>(regsB_Wmma).begin();
