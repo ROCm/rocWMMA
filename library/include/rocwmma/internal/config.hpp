@@ -31,44 +31,39 @@
 namespace rocwmma
 {
 #if defined(__gfx908__)
-    #define ROCWMMA_ARCH_GFX908
+#define ROCWMMA_ARCH_GFX908
 #elif defined(__gfx90a__)
-    #define ROCWMMA_ARCH_GFX90A
+#define ROCWMMA_ARCH_GFX90A
 #elif defined(__gfx1100__)
-    #define ROCWMMA_ARCH_GFX1100
+#define ROCWMMA_ARCH_GFX1100
 #elif defined(__gfx1101__)
-    #define ROCWMMA_ARCH_GFX1101
+#define ROCWMMA_ARCH_GFX1101
 #elif defined(__gfx1102__)
-    #define ROCWMMA_ARCH_GFX1102
+#define ROCWMMA_ARCH_GFX1102
 #else
-    #define ROCWMMA_ARCH_NONE
+#define ROCWMMA_ARCH_NONE
 #endif
 
 #if defined(ROCWMMA_ARCH_GFX908) || defined(ROCWMMA_ARCH_GFX90A)
-    #define ROCWMMA_ARCH_MI
-    #define ROCWMMA_WAVE64_MODE
-    #define ROCWMMA_BLOCK_DIM_32_SUPPORTED
-#elif defined(ROCWMMA_ARCH_GFX1100) || defined(ROCWMMA_ARCH_GFX1101) || defined(ROCWMMA_ARCH_GFX1102)
-    #define ROCWMMA_ARCH_NAVI 
-    #define ROCWMMA_WAVE32_MODE
-#else
-    #define ROCWMMA_ARCH_NONE
-#endif
-
-#if defined(ROCWMMA_ARCH_NONE)
-#error "Unsupported Architecture"
+#define ROCWMMA_ARCH_MI
+#define ROCWMMA_WAVE64_MODE
+#define ROCWMMA_BLOCK_DIM_32_SUPPORTED
+#elif defined(ROCWMMA_ARCH_GFX1100) || defined(ROCWMMA_ARCH_GFX1101) \
+    || defined(ROCWMMA_ARCH_GFX1102)
+#define ROCWMMA_ARCH_NAVI
+#define ROCWMMA_WAVE32_MODE
 #endif
 
 #if defined(ROCWMMA_ARCH_NAVI) && defined(ROCWMMA_BLOCK_DIM_32_SUPPORTED)
-    #error " Navi / 32 Block dimensions are not supported together"
+#error " Navi / 32 Block dimensions are not supported together"
 #endif
 
 #if defined(ROCWMMA_ARCH_NAVI) && defined(ROCWMMA_WAVE64_MODE)
-    #error " Navi / 64 Wave mode are not supported together"
+#error " Navi / 64 Wave mode are not supported together"
 #endif
 
 #if defined(ROCWMMA_ARCH_MI) && defined(ROCWMMA_WAVE32_MODE)
-    #error " MI / 32 Wave mode are not supported together"
+#error " MI / 32 Wave mode are not supported together"
 #endif
 
 } // namespace rocwmma
