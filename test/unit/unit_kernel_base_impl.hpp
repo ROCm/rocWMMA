@@ -57,7 +57,7 @@ namespace rocwmma
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
     uint32_t UnitKernelBase<BlockM, BlockN, DataT, Layout>::ldsUsage() const
     {
-        return 0;
+        return 0u;
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
@@ -126,7 +126,7 @@ namespace rocwmma
 
         mTotalGFlops = mMeasuredTFlopsPerSec = 0.0;
         mElapsedTimeMs                       = 0.0;
-        mEfficiency                          = -1;
+        mEfficiency                          = 0.0;
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
