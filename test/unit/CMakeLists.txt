@@ -189,6 +189,78 @@ set(VectorIteratorTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/vector_iterator_test/vector_iterator.cpp
                        )
 
+set(CrossLaneOpsTestSources ${UnitCommonSources}
+
+                           # DPP
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_bcast_2.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_bcast_4.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_bcast_16.cpp
+
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_reverse_2.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_reverse_4.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_reverse_8.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_reverse_16.cpp
+
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_rotate_l2.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_rotate_r2.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_rotate_l4.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_rotate_r4.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_rotate_r16.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_rotate_wave_l1.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_rotate_wave_r1.cpp
+
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_shift_l16.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_shift_r16.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_shift_wave_l1.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_shift_wave_r1.cpp
+
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_shuffle_2.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_shuffle_4.cpp
+
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_swap_2.cpp
+
+                           ### Swizzle
+
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_bcast_2.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_bcast_4.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_bcast_8.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_bcast_16.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_bcast_32.cpp
+
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_reverse_2.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_reverse_4.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_reverse_8.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_reverse_16.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_reverse_32.cpp
+
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_rotate_l2.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_rotate_l4.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_rotate_l8.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_rotate_l16.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_rotate_l32.cpp
+
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_rotate_r2.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_rotate_r4.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_rotate_r8.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_rotate_r16.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_rotate_r32.cpp
+
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_shuffle_2.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_shuffle_4.cpp
+
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_swap_2.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_swap_4.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_swap_8.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_swap_16.cpp
+
+                           ### Permute
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_2.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_4.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_8.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_16.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_32.cpp
+)
+
 # Benchmark Unit
 add_rocwmma_test(contamination_test ${ContaminationTestSources})
 add_rocwmma_test(layout_test ${LayoutTestSources})
@@ -197,4 +269,5 @@ add_rocwmma_test(load_store_matrix_sync_test ${LoadStoreMatrixSyncTestSources})
 add_rocwmma_test(load_store_matrix_coop_sync_test ${LoadStoreMatrixCoopSyncTestSources})
 add_rocwmma_test(fill_fragment_test ${FillFragmentTestSources})
 add_rocwmma_test(vector_iterator_test ${VectorIteratorTestSources})
+add_rocwmma_test(cross_lane_ops_test ${CrossLaneOpsTestSources})
 

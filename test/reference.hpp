@@ -28,6 +28,7 @@
 
 #include <type_traits>
 
+#include <rocwmma/internal/cross_lane_ops.hpp>
 #include <rocwmma/internal/types.hpp>
 
 namespace rocwmma
@@ -48,75 +49,11 @@ namespace rocwmma
                   OutputT const* c,
                   OutputT*       d,
                   ComputeT       alpha,
-                  ComputeT       beta)
-    {
-        int lda = std::is_same<LayoutA, row_major>::value ? k : m;
-        int ldb = std::is_same<LayoutB, row_major>::value ? n : k;
-        int ldc = std::is_same<LayoutC, row_major>::value ? n : m;
-        int ldd = std::is_same<LayoutD, row_major>::value ? n : m;
-
-        auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
-        auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
-
-        auto aIndex = std::is_same<LayoutA, row_major>::value ? rowMjr : colMjr;
-        auto bIndex = std::is_same<LayoutB, row_major>::value ? rowMjr : colMjr;
-        auto cIndex = std::is_same<LayoutC, row_major>::value ? rowMjr : colMjr;
-        auto dIndex = std::is_same<LayoutD, row_major>::value ? rowMjr : colMjr;
-
-#pragma omp parallel for
-        for(int i = 0; i < m; ++i)
-        {
-            for(int j = 0; j < n; ++j)
-            {
-                ComputeT accum = static_cast<ComputeT>(0);
-                for(int h = 0; h < k; ++h)
-                {
-                    accum += static_cast<ComputeT>(a[aIndex(i, h, lda)])
-                             * static_cast<ComputeT>(b[bIndex(h, j, ldb)]);
-                }
-                d[dIndex(i, j, ldd)] = static_cast<OutputT>(
-                    alpha * accum + beta * static_cast<ComputeT>(c[cIndex(i, j, ldc)]));
-            }
-        }
-    }
+                  ComputeT       beta);
 
     template <typename DataT>
-    void dlrm_fwd_CPU(DataT const* input, DataT* output, uint32_t m, uint32_t k, uint32_t batchSize)
-    {
-        auto batchOffset       = m * k;
-        uint outputBatchOffset = ((m * (m - 1)) / 2) + k;
-#pragma omp parallel for
-        for(int b = 0; b < batchSize; b++)
-        {
-            uint outputIdx = b * outputBatchOffset;
-
-            // Copy MLP to output
-            for(int i = 0; i < k; i++)
-            {
-
-                output[outputIdx] = input[b * batchOffset + i];
-                outputIdx++;
-            }
-            for(int i = 0; i < m; i++)
-            {
-                for(int j = 0; j < m; j++)
-                {
-                    float accum = static_cast<float>(0);
-                    for(int h = 0; h < k; h++)
-                    {
-                        accum += static_cast<float>(input[b * batchOffset + i * k + h])
-                                 * static_cast<float>(input[b * batchOffset + j * k + h]);
-                    }
-
-                    if(j < i)
-                    {
-                        output[outputIdx] = static_cast<DataT>(accum);
-                        outputIdx++;
-                    }
-                }
-            }
-        }
-    }
+    void
+        dlrm_fwd_CPU(DataT const* input, DataT* output, uint32_t m, uint32_t k, uint32_t batchSize);
 
     template <typename DataT>
     void dlrm_bwd_CPU(DataT const* input,
@@ -125,59 +62,101 @@ namespace rocwmma
                       DataT*       output,
                       uint32_t     m,
                       uint32_t     k,
-                      uint32_t     batchSize)
-    {
-        auto batchOffset = m * k;
-        auto accOffset   = m * m;
-        auto trilSize    = ((m * (m - 1)) / 2) + k;
-        auto acc         = new DataT[batchSize * m * m];
+                      uint32_t     batchSize);
 
-#pragma omp parallel for
-        for(int b = 0; b < batchSize; b++)
-        {
-            // Copy bottom MLP grad
-            for(int j = 0; j < k; j++)
-            {
-                bottomMlpGrad[b * k + j] = upstreamGrad[b * trilSize + j];
-            }
+    template <uint32_t ElementIdx,
+              uint32_t WaveSize,
+              uint32_t GroupSize,
+              uint32_t RowMask   = 0xF,
+              uint32_t BankMask  = 0xF,
+              bool     BoundCtrl = false>
+    void cross_lane_bcast_CPU(uint32_t*       dataOut,
+                              uint32_t const* dataIn,
+                              uint32_t        elementCount,
+                              uint32_t        fillVal = 0u);
 
-            // Remake tril
-            uint32_t upstreamIdx = b * trilSize + k;
-            for(int i = 0; i < m; i++)
-            {
-                for(int j = 0; j <= i; j++)
-                {
-                    if(i == j)
-                    {
-                        acc[b * accOffset + i * m + j] = 0;
-                    }
-                    else
-                    {
-                        acc[b * accOffset + i * m + j] = upstreamGrad[upstreamIdx];
-                        acc[b * accOffset + j * m + i] = upstreamGrad[upstreamIdx];
-                        upstreamIdx++;
-                    }
-                }
-            }
+    template <uint32_t BlockIdx,
+              uint32_t WaveSize,
+              uint32_t GroupSize,
+              uint32_t RowMask   = 0xF,
+              uint32_t BankMask  = 0xF,
+              bool     BoundCtrl = false>
+    void cross_lane_block_bcast_CPU(uint32_t*       dataOut,
+                                    uint32_t const* dataIn,
+                                    uint32_t        elementCount,
+                                    uint32_t        fillVal = 0u);
 
-            // Perform reverse bmm
-            for(int i = 0; i < m; i++)
-            {
-                for(int j = 0; j < k; j++)
-                {
-                    float accum = 0.0f;
-                    for(int h = 0; h < m; h++)
-                    {
-                        accum += static_cast<float>(acc[b * accOffset + i * m + h])
-                                 * static_cast<float>(input[b * batchOffset + h * k + j]);
-                    }
-                    output[b * batchOffset + i * k + j] = static_cast<DataT>(accum);
-                }
-            }
-        }
-        delete[] acc;
-    }
+    template <uint32_t WaveSize,
+              uint32_t GroupSize,
+              uint32_t RowMask   = 0xF,
+              uint32_t BankMask  = 0xF,
+              bool     BoundCtrl = false>
+    void cross_lane_reverse_CPU(uint32_t*       dataOut,
+                                uint32_t const* dataIn,
+                                uint32_t        elementCount,
+                                uint32_t        fillVal = 0u);
+
+    template <uint32_t RotateDir,
+              uint32_t RotateDist,
+              uint32_t WaveSize,
+              uint32_t GroupSize,
+              uint32_t RowMask   = 0xF,
+              uint32_t BankMask  = 0xF,
+              bool     BoundCtrl = false>
+    void cross_lane_rotate_CPU(uint32_t*       dataOut,
+                               uint32_t const* dataIn,
+                               uint32_t        elementCount,
+                               uint32_t        fillVal = 0u);
+
+    template <uint32_t ShiftDir,
+              uint32_t ShiftDist,
+              uint32_t WaveSize,
+              uint32_t GroupSize,
+              uint32_t RowMask   = 0xF,
+              uint32_t BankMask  = 0xF,
+              bool     BoundCtrl = false>
+    void cross_lane_shift_CPU(uint32_t*       dataOut,
+                              uint32_t const* dataIn,
+                              uint32_t        elementCount,
+                              uint32_t        fillVal = 0u);
+
+    template <uint32_t Select0,
+              uint32_t Select1,
+              uint32_t Select2,
+              uint32_t Select3,
+              uint32_t WaveSize,
+              uint32_t GroupSize,
+              uint32_t RowMask   = 0xF,
+              uint32_t BankMask  = 0xF,
+              bool     BoundCtrl = false>
+    void cross_lane_shuffle_CPU(uint32_t*       dataOut,
+                                uint32_t const* dataIn,
+                                uint32_t        elementCount,
+                                uint32_t        fillVal = 0u);
+
+    template <uint32_t WaveSize,
+              uint32_t GroupSize,
+              uint32_t RowMask   = 0xF,
+              uint32_t BankMask  = 0xF,
+              bool     BoundCtrl = false>
+    void cross_lane_swap_CPU(uint32_t*       dataOut,
+                             uint32_t const* dataIn,
+                             uint32_t        elementCount,
+                             uint32_t        fillVal = 0u);
+
+    template <typename DataT,
+              typename CrossLaneOp,
+              uint32_t RowMask   = 0xF,
+              uint32_t BankMask  = 0xF,
+              bool     BoundCtrl = false,
+              typename DispatchEnabler>
+    void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
+                                     DataT const* dataIn,
+                                     uint32_t     elementCount,
+                                     DataT        fillVal = DataT(0.0f));
 
 } // namespace rocwmma
+
+#include "reference_impl.hpp"
 
 #endif // ROCWMMA_REFERENCE_HPP
