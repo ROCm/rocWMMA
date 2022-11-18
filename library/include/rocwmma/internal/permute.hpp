@@ -39,7 +39,7 @@ namespace rocwmma
          *
          * @brief Cross-lane operations implemented with the amdgcn_ds_permute and amdgcn_ds_bpermute backends.
          *
-         * Here we build out the cross-lane properties specific permute, such as the backend (OP_IMPL).
+         * Here we build out the cross-lane properties specific to permute, such as the backend (OP_IMPL_PERMUTE).
          *
          * These definitions are for permute support, so we specify this backend here. These ops must
          * inherit the meta-data front end from CrossLaneOps, AND the thread index calculation from the backend.
@@ -66,7 +66,6 @@ namespace rocwmma
         struct BlockBCast2 : CrossLaneOps::BlockBCast<BlockIdx, 2u, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<AMDGCN_WAVE_SIZE, 2u, BlockIdx>{};
 
         // clang-format on
-
     }
 
     template <typename PermuteOp>
@@ -104,6 +103,7 @@ namespace rocwmma
             for(uint32_t i = 0; i < VecSize; ++i)
             {
                 *it = PermuteFunc::exec(*it, PermuteOp::threadCtrl(laneId));
+                it++;
             }
         }
     };
