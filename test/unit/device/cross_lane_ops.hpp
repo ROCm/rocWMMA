@@ -93,6 +93,26 @@ namespace rocwmma
             = rocwmma::Permute<CrossLaneOp>::exec(read32In[dataOffset], threadIdx.x);
     }
 
+    template <typename DataT, typename CrossLaneOp>
+    __global__ void blendOpsTest(uint32_t     m,
+                                 uint32_t     n,
+                                 DataT const* in,
+                                 DataT*       out,
+                                 uint32_t     ld,
+                                 DataT        param1,
+                                 DataT        param2)
+    {
+        // Each thread operates on 32b data
+        // Kernel uses out as src0 and in as src1, writing back to out
+        uint32_t*       write32Out = reinterpret_cast<uint32_t*>(out);
+        uint32_t const* read32In   = reinterpret_cast<uint32_t const*>(in);
+
+        // Get offset into 1D array where all threads are neighbours.
+        auto dataOffset = blockIdx.x * blockDim.x + threadIdx.x;
+        write32Out[dataOffset]
+            = rocwmma::Blend<CrossLaneOp>::exec(write32Out[dataOffset], read32In[dataOffset]);
+    }
+
 } // namespace rocwmma
 
 #endif // ROCWMMA_DEVICE_CROSS_LANE_OPS_HPP

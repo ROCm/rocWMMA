@@ -86,6 +86,21 @@ namespace rocwmma
                                     uint32_t        elementCount,
                                     uint32_t        fillVal = 0u);
 
+    template <uint32_t Select0,
+              uint32_t Select1,
+              uint32_t Select2,
+              uint32_t Select3,
+              uint32_t WaveSize,
+              uint32_t GroupSize,
+              uint32_t RowMask   = 0xF,
+              uint32_t BankMask  = 0xF,
+              bool     BoundCtrl = false>
+    void cross_lane_byte_blend_CPU(uint32_t*       dataOut,
+                                   uint32_t const* src0,
+                                   uint32_t const* src1,
+                                   uint32_t        elementCount,
+                                   uint32_t        fillVal = 0u);
+
     template <uint32_t WaveSize,
               uint32_t GroupSize,
               uint32_t RowMask   = 0xF,

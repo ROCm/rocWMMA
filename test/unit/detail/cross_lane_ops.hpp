@@ -45,7 +45,7 @@ namespace rocwmma
                                 DataT,
                                 col_major> // BlockM, BlockN, DataLayout are redundant for this test
     {
-    private:
+    protected:
         using Base   = UnitKernelBase<1, 1, DataT, col_major>;
         using Layout = col_major;
 
@@ -125,7 +125,7 @@ namespace rocwmma
             return stream;
         }
 
-        void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
+        virtual void setupImpl(typename Base::DataStorage::ProblemSize const& probsize)
         {
             // Allocate storage
             auto& dataInstance = Base::DataStorage::instance();
@@ -175,11 +175,71 @@ namespace rocwmma
 
             // for(int i=0; i < Base::mM * Base::mN; i++)
             // {
+            //     std::cout << std::hex;
             //     std::cout << "[" << dataInstance->hostOut().get()[i] << ", " << dataInstance->hostIn().get()[i] << "] " << std::endl;
+            //     std::cout << std::dec;
             // }
         }
 
         virtual typename Base::KernelFunc kernelImpl() const = 0;
+    };
+
+    template <typename DataT, typename CrossLaneOp>
+    struct BlendOpsKernel final : public CrossLaneOpsKernelBase<DataT, CrossLaneOp>
+    {
+        using Base = CrossLaneOpsKernelBase<DataT, CrossLaneOp>;
+
+    public:
+        BlendOpsKernel()  = default;
+        ~BlendOpsKernel() = default;
+
+        void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
+        {
+            // Allocate storage
+            auto& dataInstance = Base::DataStorage::instance();
+            dataInstance->resizeStorage(probsize);
+
+            // hostOut = src0
+            // hostIn = src1
+            MatrixUtil<typename Base::Layout>::fill(
+                dataInstance->hostIn().get(), Base::mM, Base::mN);
+            MatrixUtil<typename Base::Layout>::fill(
+                dataInstance->hostOut().get(), Base::mM, Base::mN);
+
+            // Mix things up so we don't test the same array.
+            std::srand(std::time(nullptr));
+            for(int i = 0; i < (Base::mM * Base::mN) / 3u; i++)
+            {
+                uint32_t swapL                      = uint32_t(std::rand()) % (Base::mM * Base::mN);
+                uint32_t swapR                      = uint32_t(std::rand()) % (Base::mM * Base::mN);
+                auto     tmp                        = dataInstance->hostIn().get()[swapL];
+                dataInstance->hostIn().get()[swapL] = dataInstance->hostIn().get()[swapR];
+                dataInstance->hostIn().get()[swapR] = tmp;
+            }
+
+            // for(int i=0; i < Base::mM * Base::mN; i++)
+            // {
+            //     dataInstance->hostIn().get()[i] = i;
+            //     dataInstance->hostOut().get()[i] = i | 0xFFFFFF00;
+
+            //     std::cout << std::hex;
+            //     std::cout << "[" << dataInstance->hostOut().get()[i] << ", " << dataInstance->hostIn().get()[i] << "] " << std::endl;
+            //     std::cout << std::dec;
+            // }
+
+            // Init device
+            dataInstance->copyData(
+                dataInstance->deviceIn(), dataInstance->hostIn(), Base::mM * Base::mN);
+            dataInstance->copyData(
+                dataInstance->deviceOut(), dataInstance->hostOut(), Base::mM * Base::mN);
+        }
+
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return typename Base::KernelFunc(blendOpsTest<DataT, CrossLaneOp>);
+        }
+
+        typename Base::DataStorage::HostPtrT mSrc1;
     };
 
     template <typename DataT,
@@ -310,6 +370,31 @@ namespace rocwmma
                 = PermuteOpsKernel<std::tuple_element_t<DataT, TestParamsT>, // DataT
                                    std::tuple_element_t<CrossLaneOp, TestParamsT> // CrossLaneOp
                                    >;
+
+            return std::make_shared<KernelT>();
+        }
+    };
+
+    struct BlendOpsGenerator
+    {
+        // Indices to test parameters
+        enum : uint32_t
+        {
+            DataT       = 0,
+            CrossLaneOp = 1
+        };
+
+        using ResultT = std::shared_ptr<KernelI>;
+
+        template <typename... Ts>
+        static ResultT generate(std::tuple<Ts...> testParams)
+        {
+            // Map GTest params to Kernel params
+            using TestParamsT = std::tuple<Ts...>;
+            using KernelT
+                = BlendOpsKernel<std::tuple_element_t<DataT, TestParamsT>, // DataT
+                                 std::tuple_element_t<CrossLaneOp, TestParamsT> // CrossLaneOp
+                                 >;
 
             return std::make_shared<KernelT>();
         }

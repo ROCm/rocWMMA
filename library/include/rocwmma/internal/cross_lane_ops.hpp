@@ -43,14 +43,16 @@ namespace rocwmma
             OP_ID_SWAP    = 0x04,
             OP_ID_BCAST   = 0x05,
             OP_ID_FFT     = 0x06,
+            OP_ID_BLEND   = 0x07,
 
             // Block Operation IDs
-            OP_ID_BLOCK_BCAST = 0x07,
+            OP_ID_BLOCK_BCAST = 0x08,
 
             // Identifiers of backend implementation
             OP_IMPL_DPP     = 0x30,
             OP_IMPL_SWIZZLE = 0x31,
             OP_IMPL_PERMUTE = 0x32,
+            OP_IMPL_VPERM   = 0x33,
 
             // Directional properties
             OP_DIR_L = 0x00, // = left  (towards LSB)
@@ -314,6 +316,47 @@ namespace rocwmma
             constexpr static uint32_t fftCtrl()
             {
                 return FFT_CTRL;
+            }
+        };
+
+        /*! \class Blend
+        *  \brief Perform byte-wise blending between all elements.
+        */
+        template <uint32_t Select0,
+                  uint32_t Select1,
+                  uint32_t Select2,
+                  uint32_t Select3,
+                  uint32_t OpImpl,
+                  uint32_t OpCtrl>
+        struct Blend4 : public OpBase<Properties::OP_ID_BLEND,
+                                      AMDGCN_WAVE_SIZE,
+                                      AMDGCN_WAVE_SIZE,
+                                      OpImpl,
+                                      OpCtrl>
+        {
+            enum : uint32_t
+            {
+                SELECT_0 = Select0,
+                SELECT_1 = Select1,
+                SELECT_2 = Select2,
+                SELECT_3 = Select3,
+            };
+
+            constexpr static uint32_t select0()
+            {
+                return SELECT_0;
+            }
+            constexpr static uint32_t select1()
+            {
+                return SELECT_1;
+            }
+            constexpr static uint32_t select2()
+            {
+                return SELECT_2;
+            }
+            constexpr static uint32_t select3()
+            {
+                return SELECT_3;
             }
         };
 
