@@ -276,6 +276,81 @@ namespace rocwmma
         }
     }
 
+    template <uint32_t Select0,
+              uint32_t Select1,
+              uint32_t Select2,
+              uint32_t Select3,
+              uint32_t WaveSize,
+              uint32_t GroupSize,
+              uint32_t RowMask /* = 0xF */,
+              uint32_t BankMask /* = 0xF */,
+              bool     BoundCtrl /* = false */>
+    void cross_lane_byte_blend_CPU(uint32_t*       dataOut,
+                                   uint32_t const* src0,
+                                   uint32_t const* src1,
+                                   uint32_t        elementCount,
+                                   uint32_t        fillVal /* = 0u */)
+    {
+        auto const loopCnt = elementCount / WaveSize;
+
+        for(uint32_t i = 0u; i < loopCnt; ++i)
+        {
+            // setup the base ptr (each WaveSize elements)
+            auto const baseOffset = i * WaveSize;
+
+            // For each wave group
+            auto const groupCnt = WaveSize / GroupSize;
+
+            for(uint32_t j = 0u; j < groupCnt; j++)
+            {
+                auto const groupOffset = j * GroupSize;
+
+                for(uint32_t k = 0u; k < GroupSize; k++)
+                {
+                    // For each 32b element, blend the bytes from Select values
+                    auto const writeOffset = groupOffset + k;
+                    auto const readOffset  = groupOffset + k;
+
+                    auto ele0 = src0[baseOffset + readOffset];
+                    auto ele1 = src1[baseOffset + readOffset];
+
+                    // 0 <= Select < 4  element 0
+                    // 4 <= Select < 8  element 1
+                    uint32_t bytes0 = ((Select0 < 4u) ? ele0 : ele1);
+                    uint32_t bytes1 = ((Select1 < 4u) ? ele0 : ele1);
+                    uint32_t bytes2 = ((Select2 < 4u) ? ele0 : ele1);
+                    uint32_t bytes3 = ((Select3 < 4u) ? ele0 : ele1);
+
+                    // Byte mask and bit shifts needed
+                    uint32_t byteMask  = 0xFF;
+                    uint32_t bitShift0 = Select0 % 4u * 8;
+                    uint32_t bitShift1 = Select1 % 4u * 8;
+                    uint32_t bitShift2 = Select2 % 4u * 8;
+                    uint32_t bitShift3 = Select3 % 4u * 8;
+
+                    // Shift byte mask to selected byte, and copy this selected byte into position
+                    uint32_t result = 0x0;
+                    result |= (((byteMask << bitShift0) & bytes0) >> bitShift0);
+                    result |= (((byteMask << bitShift1) & bytes1) >> bitShift1 << 8u);
+                    result |= (((byteMask << bitShift2) & bytes2) >> bitShift2 << 16u);
+                    result |= (((byteMask << bitShift3) & bytes3) >> bitShift3 << 24u);
+
+                    // Check the row / bank masking
+                    if(((0x1 << (writeOffset % WaveSize / 16u)) & RowMask)
+                       && ((0x1 << (writeOffset % 16u / 4u)) & BankMask))
+                    {
+                        dataOut[baseOffset + writeOffset] = result;
+                    }
+                    // BoundCtrl does not affect shuffle 4 as the indices are & with 0x3
+                    else
+                    {
+                        dataOut[baseOffset + writeOffset] = fillVal;
+                    }
+                }
+            }
+        }
+    }
+
     template <uint32_t WaveSize,
               uint32_t GroupSize,
               uint32_t RowMask /* = 0xF */,
@@ -583,6 +658,50 @@ namespace rocwmma
                                        RowMask,
                                        BankMask,
                                        BoundCtrl>(write32Out, read32In, elementCount, fillVal32);
+            break;
+        default:;
+        }
+    }
+
+    // Blend
+    template <typename DataT,
+              typename CrossLaneOp,
+              uint32_t RowMask   = 0xF,
+              uint32_t BankMask  = 0xF,
+              bool     BoundCtrl = false,
+              typename std::enable_if_t<(CrossLaneOp::opId()
+                                         == rocwmma::CrossLaneOps::Properties::OP_ID_BLEND),
+                                        void*>
+              = nullptr>
+    void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
+                                     DataT const* dataIn,
+                                     uint32_t     elementCount,
+                                     DataT        fillVal = DataT(0.0f))
+    {
+        // Must scale in 32b chunks
+        uint32_t*       write32Out = reinterpret_cast<uint32_t*>(dataOut);
+        uint32_t const* src032In   = reinterpret_cast<uint32_t const*>(dataOut);
+        uint32_t const* src132In   = reinterpret_cast<uint32_t const*>(dataIn);
+        uint32_t        fillVal32  = static_cast<uint32_t>(fillVal);
+        elementCount               = static_cast<uint32_t>(
+            roundf(static_cast<float32_t>(sizeof(DataT)) / static_cast<float32_t>(sizeof(uint32_t))
+                   * static_cast<float32_t>(elementCount)));
+
+        // From here forth is in 32b land...
+
+        switch(CrossLaneOp::opId())
+        {
+        case rocwmma::CrossLaneOps::Properties::OP_ID_BLEND:
+            cross_lane_byte_blend_CPU<CrossLaneOp::select0(),
+                                      CrossLaneOp::select1(),
+                                      CrossLaneOp::select2(),
+                                      CrossLaneOp::select3(),
+                                      CrossLaneOp::waveSize(),
+                                      CrossLaneOp::groupSize(),
+                                      RowMask,
+                                      BankMask,
+                                      BoundCtrl>(
+                write32Out, src032In, src132In, elementCount, fillVal32);
             break;
         default:;
         }
