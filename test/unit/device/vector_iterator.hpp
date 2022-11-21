@@ -27,8 +27,7 @@
 #ifndef ROCWMMA_DEVICE_VECTOR_ITERATOR_HPP
 #define ROCWMMA_DEVICE_VECTOR_ITERATOR_HPP
 
-#include <rocwmma/internal/types.hpp>
-#include <rocwmma/internal/vector_iterator.hpp>
+#include <rocwmma/rocwmma.hpp>
 
 static constexpr uint32_t ERROR_VALUE   = 7;
 static constexpr uint32_t SUCCESS_VALUE = 0;
@@ -505,41 +504,51 @@ namespace rocwmma
                                        DataT        param1,
                                        DataT        param2)
     {
-        // Just need one thread
+        __shared__ int result;
+        result = 0;
+        synchronize_workgroup();
+
+        bool err = false;
+
+        err = err ? err : bcastTest<DataT, VecSize>();
+
+        err = err ? err : iteratorIndexTest<DataT, VecSize>();
+
+        err = err ? err : iteratorStrideIndexTest<DataT, VecSize>();
+
+        err = err ? err : iteratorStrideValueTest<DataT, VecSize>();
+
+        err = err ? err : iteratorSubVectorTypeTest<DataT, VecSize>();
+
+        err = err ? err : iteratorBeginTest<DataT, VecSize>();
+
+        err = err ? err : iteratorEndTest<DataT, VecSize>();
+
+        err = err ? err : iteratorItTest<DataT, VecSize>();
+
+        err = err ? err : iteratorPostIncDecTest<DataT, VecSize>();
+
+        err = err ? err : iteratorPreIncDecTest<DataT, VecSize>();
+
+        err = err ? err : iteratorPlusMinusTest<DataT, VecSize>();
+
+        err = err ? err : iteratorPlusMinusEqTest<DataT, VecSize>();
+
+        err = err ? err : iteratorEqTest<DataT, VecSize>();
+
+        err = err ? err : iteratorRangeBasedForTest<DataT, VecSize>();
+
+        // Reduce error count
+        atomicAdd(&result, (int)err);
+
+        // Wait for all threads
+        synchronize_workgroup();
+
+        // Just need one thread to update output
         if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0 && blockIdx.x == 0
            && blockIdx.y == 0 && blockIdx.z == 0)
         {
-            bool err = false;
-
-            err = err ? err : bcastTest<DataT, VecSize>();
-
-            err = err ? err : iteratorIndexTest<DataT, VecSize>();
-
-            err = err ? err : iteratorStrideIndexTest<DataT, VecSize>();
-
-            err = err ? err : iteratorStrideValueTest<DataT, VecSize>();
-
-            err = err ? err : iteratorSubVectorTypeTest<DataT, VecSize>();
-
-            err = err ? err : iteratorBeginTest<DataT, VecSize>();
-
-            err = err ? err : iteratorEndTest<DataT, VecSize>();
-
-            err = err ? err : iteratorItTest<DataT, VecSize>();
-
-            err = err ? err : iteratorPostIncDecTest<DataT, VecSize>();
-
-            err = err ? err : iteratorPreIncDecTest<DataT, VecSize>();
-
-            err = err ? err : iteratorPlusMinusTest<DataT, VecSize>();
-
-            err = err ? err : iteratorPlusMinusEqTest<DataT, VecSize>();
-
-            err = err ? err : iteratorEqTest<DataT, VecSize>();
-
-            err = err ? err : iteratorRangeBasedForTest<DataT, VecSize>();
-
-            out[0] = static_cast<DataT>(err ? ERROR_VALUE : SUCCESS_VALUE);
+            out[0] = static_cast<DataT>(result == 0 ? SUCCESS_VALUE : ERROR_VALUE);
         }
     }
 
