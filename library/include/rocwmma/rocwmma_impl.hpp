@@ -55,6 +55,7 @@
 #include "internal/swizzle.hpp"
 #include "internal/types.hpp"
 #include "internal/unpack.hpp"
+#include "internal/utils.hpp"
 #include "internal/vector.hpp"
 #include "internal/vector_iterator.hpp"
 
