@@ -189,6 +189,14 @@ set(VectorIteratorTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/vector_iterator_test/vector_iterator.cpp
                        )
 
+set(IoTraitsTestSources ${UnitCommonSources}
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/io_traits_test/io_traits_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/io_traits_test/io_traits_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/io_traits_test/io_traits_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/io_traits_test/io_traits_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/io_traits_test/io_traits_256.cpp
+                       )
+
 set(CrossLaneOpsTestSources ${UnitCommonSources}
 
                            # DPP
@@ -269,5 +277,6 @@ add_rocwmma_test(load_store_matrix_sync_test ${LoadStoreMatrixSyncTestSources})
 add_rocwmma_test(load_store_matrix_coop_sync_test ${LoadStoreMatrixCoopSyncTestSources})
 add_rocwmma_test(fill_fragment_test ${FillFragmentTestSources})
 add_rocwmma_test(vector_iterator_test ${VectorIteratorTestSources})
+add_rocwmma_test(io_traits_test ${IoTraitsTestSources})
 add_rocwmma_test(cross_lane_ops_test ${CrossLaneOpsTestSources})
 
