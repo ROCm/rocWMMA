@@ -249,7 +249,7 @@ namespace rocwmma
                                                    VecTraitsA::size()
                                                        / AMDGCN_CDNA_RDNA_WAVE_RATIO>;
             using BRegsTPWmma =
-                typename VecTraitsB::template VecT<typename VecTraitsA::DataT,
+                typename VecTraitsB::template VecT<typename VecTraitsB::DataT,
                                                    VecTraitsB::size()
                                                        / AMDGCN_CDNA_RDNA_WAVE_RATIO>;
 
@@ -299,7 +299,7 @@ namespace rocwmma
                 typename Traits::ARegsTPWmma regsALower(*aIt);
 
                 //Create and initialize Wmma input A register
-                typename WMMA::Traits::ARegsT regsA_Wmma(0);
+                typename WMMA::Traits::ARegsT regsA_Wmma(InputT(0));
 
                 //Iterators for upper half and lower half of wmma registers
                 auto upperSrcAIt = makeVectorIterator(regsAUpper).begin();
@@ -311,10 +311,10 @@ namespace rocwmma
                 for(int j = 0; j < upperSrcAIt.range(); j++)
                 {
                     //TODO : Verify permute
-                    //Permute::exec(*upperSrcAIt, detail::laneId() % 16);
-                    //Permute::exec(*lowerSrcAIt, detail::laneId() > 15 ? detail::laneId() : detail::laneId() + 16);
-                    //upperSrcAIt++;
-                    //lowerSrcAIt++;
+                    Permute<PermuteOps::BlockBCast16<0>>::exec(*lowerSrcAIt, detail::laneId());
+                    Permute<PermuteOps::BlockBCast16<1>>::exec(*upperSrcAIt, detail::laneId());
+                    upperSrcAIt++;
+                    lowerSrcAIt++;
                 }
 
                 // update the src and dst iterators after data operation
@@ -339,7 +339,7 @@ namespace rocwmma
                 typename Traits::BRegsTPWmma regsBLower(*bIt);
 
                 //Create and initialize Wmma input B register
-                typename WMMA::Traits::BRegsT regsB_Wmma(0);
+                typename WMMA::Traits::BRegsT regsB_Wmma(InputT(0));
 
                 //Iterators for upper half and lower half of wmma registers
                 auto upperSrcBIt = makeVectorIterator(regsBUpper).begin();
@@ -350,11 +350,10 @@ namespace rocwmma
 
                 for(int j = 0; j < upperSrcBIt.range(); j++)
                 {
-                    //TODO : Verify permute
-                    //Permute::exec(*upperSrcBIt, detail::laneId()%16);
-                    //Permute::exec(*lowerSrcBIt, detail::laneId() > 15 ? detail::laneId() : detail::laneId() + 16);
-                    //upperSrcBIt++;
-                    //lowerSrcBIt++;
+                    Permute<PermuteOps::BlockBCast16<0>>::exec(*lowerSrcBIt, detail::laneId());
+                    Permute<PermuteOps::BlockBCast16<1>>::exec(*upperSrcBIt, detail::laneId());
+                    upperSrcBIt++;
+                    lowerSrcBIt++;
                 }
 
                 auto dstBIt = makeVectorIterator<VecTraitsB::size() / AMDGCN_CDNA_RDNA_WAVE_RATIO>(
