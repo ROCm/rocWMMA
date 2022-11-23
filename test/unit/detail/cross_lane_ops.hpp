@@ -80,11 +80,34 @@ namespace rocwmma
             auto deviceArch = Base::DeviceInfo::instance()->getGcnArch();
 
             // gfx908 doesn't support dpp BCast16
-            return Base::checkDevice()
-                   && !((deviceArch == Base::DeviceInfo::GFX908)
-                        && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
-                        && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_BCAST)
-                        && (CrossLaneOp::groupSize() == 16u));
+            bool dppBCast16Check
+                = !((deviceArch == Base::DeviceInfo::GFX908)
+                    && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
+                    && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_BCAST)
+                    && (CrossLaneOp::groupSize() == 16u));
+
+            // gfx11 doesn't support dpp wave shift / rotate, bcast15x16 or bcast31x32
+            bool isGfx11 = (deviceArch == Base::DeviceInfo::GFX1100
+                            || deviceArch == Base::DeviceInfo::GFX1101
+                            || deviceArch == Base::DeviceInfo::GFX1102);
+
+            bool dppWaveShiftCheck
+                = !(isGfx11 && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
+                    && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_SHIFT)
+                    && (CrossLaneOp::groupSize() == AMDGCN_WAVE_SIZE));
+
+            bool dppWaveRotateCheck
+                = !(isGfx11 && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
+                    && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_ROTATE)
+                    && (CrossLaneOp::groupSize() == AMDGCN_WAVE_SIZE));
+
+            bool dppWaterfallBCastCheck
+                = !(isGfx11 && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
+                    && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_BCAST)
+                    && (CrossLaneOp::groupSize() == AMDGCN_WAVE_SIZE));
+
+            return Base::checkDevice() && dppBCast16Check && dppWaveShiftCheck && dppWaveRotateCheck
+                   && dppWaterfallBCastCheck;
         }
 
         std::ostream& printHeader(std::ostream& stream = std::cout) const final

@@ -137,6 +137,100 @@ namespace rocwmma
                 }
             };
 
+// GPU exclusion for unsupported targets, but assume host is valid
+// for testing purposes.
+#if !__gfx908__ // + Host
+
+            template <uint32_t ElementIdx>
+            struct amdgcn_dpp_row_bcast
+            {
+            private:
+                enum Traits : uint32_t
+                {
+                    // Bcast mode base offset: 0x0150
+                    DPP_CTRL = 0x0150 + ElementIdx,
+                };
+
+            public:
+                constexpr static uint32_t opCtrl()
+                {
+                    return Traits::DPP_CTRL;
+                }
+            };
+
+#else // __gfx908__
+
+            template <uint32_t ElementIdx>
+            struct amdgcn_dpp_row_bcast
+            {
+            private:
+                enum Traits : uint32_t
+                {
+                    // Quad permute does nothing
+                    DPP_CTRL = amdgcn_dpp_shuffle_4<0u, 1u, 2u, 3u>::opCtrl(),
+                };
+
+            public:
+                __attribute__((deprecated(
+                    "amdgcn_dpp_row_bcast is not supported on MI-100"))) constexpr static uint32_t
+                    opCtrl()
+                {
+                    return Traits::DPP_CTRL;
+                }
+            };
+
+#endif // !__gfx908__
+
+// GPU exclusion for unsupported targets, but assume host is valid
+// for testing purposes.
+#if !__gfx1100__ && !__gfx1101__ && !__gfx1102__ // + Host
+
+            template <uint32_t ShiftDir>
+            struct amdgcn_dpp_wave_shift1
+            {
+            private:
+                enum Traits : uint32_t
+                {
+                    // Shift mode base offset: 0x0130
+                    // Shift dir [3] : 0 = left, 1 = right
+                    // wave_shift1_L = 0x0130
+                    // wave_shift1_R = 0x0138
+                    DPP_BASE  = 0x0130,
+                    SHIFT_DIR = (ShiftDir & 0x1) << 3,
+
+                    DPP_CTRL = DPP_BASE | SHIFT_DIR
+                };
+
+            public:
+                constexpr static uint32_t opCtrl()
+                {
+                    return Traits::DPP_CTRL;
+                }
+            };
+
+            template <uint32_t RotateDir>
+            struct amdgcn_dpp_wave_rotate1
+            {
+            private:
+                enum Traits : uint32_t
+                {
+                    // Rotate mode base offset: 0x0134
+                    // Rotate dir [3] : 0 = left, 1 = right
+                    // wave_rotate1_L = 0x0134
+                    // wave_rotate1_R = 0x013c
+                    DPP_BASE   = 0x0134,
+                    ROTATE_DIR = (RotateDir & 0x1) << 3,
+
+                    DPP_CTRL = DPP_BASE | ROTATE_DIR
+                };
+
+            public:
+                constexpr static uint32_t opCtrl()
+                {
+                    return Traits::DPP_CTRL;
+                }
+            };
+
             struct amdgcn_dpp_row_bcast15
             {
             private:
@@ -169,43 +263,7 @@ namespace rocwmma
                 }
             };
 
-#if !__gfx908__
-            template <uint32_t ElementIdx>
-            struct amdgcn_dpp_row_bcast
-            {
-            private:
-                enum Traits : uint32_t
-                {
-                    // Bcast mode base offset: 0x0150
-                    DPP_CTRL = 0x0150 + ElementIdx,
-                };
-
-            public:
-                constexpr static uint32_t opCtrl()
-                {
-                    return Traits::DPP_CTRL;
-                }
-            };
-#else
-
-            template <uint32_t ElementIdx>
-            struct amdgcn_dpp_row_bcast
-            {
-            private:
-                enum Traits : uint32_t
-                {
-                    DPP_CTRL = 0xE4, // Quad permute does nothing in case of usage
-                };
-
-            public:
-                __attribute__((deprecated(
-                    "amdgcn_dpp_row_bcast is not supported on MI-100"))) constexpr static uint32_t
-                    opCtrl()
-                {
-                    return Traits::DPP_CTRL;
-                }
-            };
-#endif // !__gfx908__
+#else // __gfx1100__ || __gfx1101__ || __gfx1102__
 
             template <uint32_t ShiftDir>
             struct amdgcn_dpp_wave_shift1
@@ -213,22 +271,75 @@ namespace rocwmma
             private:
                 enum Traits : uint32_t
                 {
-                    // Shift mode base offset: 0x0130
-                    // Shift dir [3] : 0 = left, 1 = right
-                    // wave_shift1_L = 0x0130
-                    // wave_shift1_R = 0x0138
-                    DPP_BASE  = 0x0130,
-                    SHIFT_DIR = (ShiftDir & 0x1) << 3,
-
-                    DPP_CTRL = DPP_BASE | SHIFT_DIR
+                    // Quad permute does nothing
+                    DPP_CTRL = amdgcn_dpp_shuffle_4<0u, 1u, 2u, 3u>::opCtrl(),
                 };
 
             public:
-                constexpr static uint32_t opCtrl()
+                __attribute__((deprecated(
+                    "amdgcn_dpp_wave_shift1 is not supported on GFX10+"))) constexpr static uint32_t
+                    opCtrl()
                 {
                     return Traits::DPP_CTRL;
                 }
             };
+
+            template <uint32_t RotateDir>
+            struct amdgcn_dpp_wave_rotate1
+            {
+            private:
+                enum Traits : uint32_t
+                {
+                    // Quad permute does nothing
+                    DPP_CTRL = amdgcn_dpp_shuffle_4<0u, 1u, 2u, 3u>::opCtrl(),
+                };
+
+            public:
+                __attribute__((deprecated("amdgcn_dpp_wave_rotate1 is not supported on "
+                                          "GFX10+"))) constexpr static uint32_t
+                    opCtrl()
+                {
+                    return Traits::DPP_CTRL;
+                }
+            };
+
+            struct amdgcn_dpp_row_bcast15
+            {
+            private:
+                enum Traits : uint32_t
+                {
+                    // Quad permute does nothing
+                    DPP_CTRL = amdgcn_dpp_shuffle_4<0u, 1u, 2u, 3u>::opCtrl(),
+                };
+
+            public:
+                __attribute__((deprecated(
+                    "amdgcn_dpp_row_bcast15 is not supported on GFX10+"))) constexpr static uint32_t
+                    opCtrl()
+                {
+                    return Traits::DPP_CTRL;
+                }
+            };
+
+            struct amdgcn_dpp_row_bcast31
+            {
+            private:
+                enum Traits : uint32_t
+                {
+                    // Quad permute does nothing
+                    DPP_CTRL = amdgcn_dpp_shuffle_4<0u, 1u, 2u, 3u>::opCtrl(),
+                };
+
+            public:
+                __attribute__((deprecated(
+                    "amdgcn_dpp_row_bcast31 is not supported on MI-100"))) constexpr static uint32_t
+                    opCtrl()
+                {
+                    return Traits::DPP_CTRL;
+                }
+            };
+
+#endif // !__gfx1100__ && !__gfx1101__ && !__gfx1102__
 
             template <uint32_t RotateDir, uint32_t RotateDistance>
             struct amdgcn_dpp_bank_rotate
@@ -280,28 +391,6 @@ namespace rocwmma
                 }
             };
 
-            template <uint32_t RotateDir>
-            struct amdgcn_dpp_wave_rotate1
-            {
-            private:
-                enum Traits : uint32_t
-                {
-                    // Rotate mode base offset: 0x0134
-                    // Rotate dir [3] : 0 = left, 1 = right
-                    // wave_rotate1_L = 0x0134
-                    // wave_rotate1_R = 0x013c
-                    DPP_BASE   = 0x0134,
-                    ROTATE_DIR = (RotateDir & 0x1) << 3,
-
-                    DPP_CTRL = DPP_BASE | ROTATE_DIR
-                };
-
-            public:
-                constexpr static uint32_t opCtrl()
-                {
-                    return Traits::DPP_CTRL;
-                }
-            };
         } // namespace DppCtrl
 
         template <typename DataT,
