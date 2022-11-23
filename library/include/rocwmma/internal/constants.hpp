@@ -26,10 +26,15 @@
 #ifndef ROCWMMA_CONSTANTS_HPP
 #define ROCWMMA_CONSTANTS_HPP
 
+#include "config.hpp"
+
 namespace rocwmma
 {
-
-    static constexpr uint32_t AMDGCN_WAVE_SIZE                   = 64u;
+#if defined(ROCWMMA_ARCH_NAVI)
+    static constexpr uint32_t AMDGCN_WAVE_SIZE = 32u;
+#else
+    static constexpr uint32_t AMDGCN_WAVE_SIZE = 64u;
+#endif
     static constexpr uint32_t AMDGCN_REGISTER_ELEMENT_SIZE_BYTES = 4u;
     static constexpr uint32_t AMDGCN_REGISTER_SIZE_BYTES
         = AMDGCN_REGISTER_ELEMENT_SIZE_BYTES * AMDGCN_WAVE_SIZE;
@@ -37,6 +42,10 @@ namespace rocwmma
     static constexpr uint32_t AMDGCN_LDS_MAX_SIZE_BYTES    = 65536u;
     static constexpr uint32_t AMDGCN_CACHE_LINE_SIZE_BYTES = 64u;
     static constexpr uint32_t AMDGCN_DWORD_SIZE_BYTES      = 4u;
+
+#if defined(ROCWMMA_ARCH_NAVI)
+    static constexpr uint32_t AMDGCN_CDNA_RDNA_WAVE_RATIO = 2u;
+#endif
 
 } // namespace rocwmma
 
