@@ -189,6 +189,10 @@ set(VectorIteratorTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/vector_iterator_test/vector_iterator.cpp
                        )
 
+set(VectorTestSources ${UnitCommonSources}
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/vector_test/vector.cpp
+                       )
+
 set(CrossLaneOpsTestSources ${UnitCommonSources}
 
                            ### DPP
@@ -278,5 +282,6 @@ add_rocwmma_test(load_store_matrix_sync_test ${LoadStoreMatrixSyncTestSources})
 add_rocwmma_test(load_store_matrix_coop_sync_test ${LoadStoreMatrixCoopSyncTestSources})
 add_rocwmma_test(fill_fragment_test ${FillFragmentTestSources})
 add_rocwmma_test(vector_iterator_test ${VectorIteratorTestSources})
+add_rocwmma_test(vector_test ${VectorTestSources})
 add_rocwmma_test(cross_lane_ops_test ${CrossLaneOpsTestSources})
 
