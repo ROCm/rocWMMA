@@ -178,6 +178,8 @@ namespace rocwmma
     template <typename SwizzleOp>
     struct Swizzle
     {
+        using SwizzleFunc = detail::amdgcn_swizzle<SwizzleOp::opCtrl()>;
+
         // Sanity checks
         static_assert(SwizzleOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_SWIZZLE,
                       "SwizzleOp must use swizzle backend");
@@ -192,22 +194,18 @@ namespace rocwmma
         template <typename DataT>
         __device__ static void exec(DataT& v)
         {
-            using SwizzleFunc = detail::amdgcn_swizzle<DataT, SwizzleOp::opCtrl()>;
-            v                 = SwizzleFunc::exec(v);
+            v = SwizzleFunc::exec(v);
         }
 
         template <typename DataT>
         __device__ static DataT exec(DataT const& v)
         {
-            using SwizzleFunc = detail::amdgcn_swizzle<DataT, SwizzleOp::opCtrl()>;
             return SwizzleFunc::exec(v);
         }
 
         template <typename DataT, uint32_t VecSize>
         __device__ static void exec(VecT<DataT, VecSize>& v)
         {
-            using SwizzleFunc = detail::amdgcn_swizzle<DataT, SwizzleOp::opCtrl()>;
-
             auto it = makeVectorIterator(v).begin();
             static_assert(decltype(it)::range() == VecSize,
                           "VecSize inconsistent with iterator range");
