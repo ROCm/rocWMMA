@@ -148,7 +148,7 @@ namespace rocwmma
         };
 
         template <>
-        struct amdgcn_wmma<uint8_t, int32_t, 16, 16>
+        struct amdgcn_wmma<int8_t, int32_t, 16, 16>
         {
             // Packed register traits
             struct Traits
@@ -204,11 +204,9 @@ namespace rocwmma
         typename std::enable_if<
             ((std::is_same<InputT, float16_t>::value && std::is_same<ComputeT, float16_t>::value)
              || (std::is_same<InputT, float16_t>::value && std::is_same<ComputeT, float32_t>::value)
-             || (std::is_same<InputT, bfloat16_t>::value
-                 && std::is_same<ComputeT, bfloat16_t>::value)
-             || (std::is_same<InputT, bfloat16_t>::value
-                 && std::is_same<ComputeT, float32_t>::value)
-             || (std::is_same<InputT, uint8_t>::value && std::is_same<ComputeT, uint32_t>::value))
+             || (std::is_same<InputT, bfloat16_t>::value && std::is_same<ComputeT, bfloat16_t>::value)
+             || (std::is_same<InputT, bfloat16_t>::value && std::is_same<ComputeT, float32_t>::value)
+             || (std::is_same<InputT, int8_t>::value && std::is_same<ComputeT, int32_t>::value))
             && (BlockM == 16) && (BlockN == 16) && (BlockK >= 16)>::type>
     {
         // Full-fragment IO traits
@@ -310,7 +308,6 @@ namespace rocwmma
 
                 for(int j = 0; j < upperSrcAIt.range(); j++)
                 {
-                    //TODO : Verify permute
                     Permute<PermuteOps::BlockBCast16<0>>::exec(*lowerSrcAIt, detail::laneId());
                     Permute<PermuteOps::BlockBCast16<1>>::exec(*upperSrcAIt, detail::laneId());
                     upperSrcAIt++;
