@@ -26,6 +26,7 @@
 #ifndef ROCWMMA_IO_SHAPE_HPP
 #define ROCWMMA_IO_SHAPE_HPP
 
+#include "config.hpp"
 #include "constants.hpp"
 #include "io_traits.hpp"
 #include "layout.hpp"
@@ -218,8 +219,11 @@ namespace rocwmma
             BlockDim = BlockN,
             KDim     = BlockM,
 
-            MaxVectorWidth
-            = std::is_same<DataT, float64_t>::value ? 1 : 4, // Actual output of the mfma hardware
+#if defined(ROCWMMA_ARCH_NAVI)
+            MaxVectorWidth = 1, // Actual output of the navi3x hardware
+#else
+            MaxVectorWidth = std::is_same<DataT, float64_t>::value ? 1 : 4, // Actual output of the mfma hardware
+#endif
             VectorWidth = std::is_same<DataLayoutT, col_major>::value ? MaxVectorWidth : 1,
         };
 
