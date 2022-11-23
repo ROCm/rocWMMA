@@ -195,11 +195,14 @@ set(IoTraitsTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/io_traits_test/io_traits_64.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/io_traits_test/io_traits_128.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/io_traits_test/io_traits_256.cpp
+
+set(VectorTestSources ${UnitCommonSources}
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/vector_test/vector.cpp
                        )
 
 set(CrossLaneOpsTestSources ${UnitCommonSources}
 
-                           # DPP
+                           ### DPP
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_bcast_2.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_bcast_4.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_bcast_16.cpp
@@ -228,7 +231,6 @@ set(CrossLaneOpsTestSources ${UnitCommonSources}
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_swap_2.cpp
 
                            ### Swizzle
-
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_bcast_2.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_bcast_4.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_bcast_8.cpp
@@ -267,6 +269,16 @@ set(CrossLaneOpsTestSources ${UnitCommonSources}
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_8.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_16.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_32.cpp
+
+                           ### Blend
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/blend_unpack_byte_hi_lo.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/blend_unpack_byte_hi.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/blend_unpack_byte_lo.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/blend_unpack_word_hi.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/blend_unpack_word_lo.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/blend_zip_byte.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/blend_zip_word.cpp
+
 )
 
 # Benchmark Unit
@@ -278,5 +290,6 @@ add_rocwmma_test(load_store_matrix_coop_sync_test ${LoadStoreMatrixCoopSyncTestS
 add_rocwmma_test(fill_fragment_test ${FillFragmentTestSources})
 add_rocwmma_test(vector_iterator_test ${VectorIteratorTestSources})
 add_rocwmma_test(io_traits_test ${IoTraitsTestSources})
+add_rocwmma_test(vector_test ${VectorTestSources})
 add_rocwmma_test(cross_lane_ops_test ${CrossLaneOpsTestSources})
 

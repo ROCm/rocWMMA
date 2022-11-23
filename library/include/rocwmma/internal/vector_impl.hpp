@@ -345,7 +345,7 @@ namespace rocwmma
 
         // Use with relational operations that have 2 operands
         template <class BoolOp, typename VecT, uint32_t... indices>
-        __HOST_DEVICE__ constexpr static inline VecT
+        __HOST_DEVICE__ constexpr static inline typename VecT::BoolVecT
             boolOp(VecT const& lhs, VecT const& rhs, SeqT<indices...>) noexcept
         {
             return typename VecT::BoolVecT{(BoolOp::exec(lhs.d[indices], rhs.d[indices]))...};
