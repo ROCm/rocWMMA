@@ -78,9 +78,9 @@ namespace rocwmma
         // <M> = subgroup size
         // <N> = element idx
         // NOTE: These functions only broadcast the <N>th element of the current subgroup to the NEXT subgroup
-        using BCast16x15 = CrossLaneOps::BCast<15u, 16u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_bcast15::opCtrl()>;
+        using BCast16x15 = CrossLaneOps::WFallBCast<16u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_bcast15::opCtrl()>;
 
-        using BCast32x31 = CrossLaneOps::BCast<31u, 32u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_bcast31::opCtrl()>;
+        using BCast32x31 = CrossLaneOps::WFallBCast<32u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_bcast31::opCtrl()>;
 
 
         // Reversal variants
@@ -232,7 +232,8 @@ namespace rocwmma
                           || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_SHUFFLE)
                           || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_REVERSE)
                           || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_SWAP)
-                          || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_BCAST),
+                          || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_BCAST)
+                          || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_WFALL_BCAST),
                       "DppOp is unsupported");
 
         // Self as prev.
