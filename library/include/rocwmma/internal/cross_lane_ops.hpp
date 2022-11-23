@@ -385,7 +385,7 @@ namespace rocwmma
         /*! \class WFallBCast
         *  \brief Performs broadcast of the last sub-group element to the next sub-group.
         *
-        * @tparam BlockSize - size of the broadcast blocks.
+        * @tparam SubGroupSize - size of the broadcast blocks.
         */
         template <uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
         struct WFallBCast : public OpBase<Properties::OP_ID_WFALL_BCAST,

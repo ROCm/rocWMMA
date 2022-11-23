@@ -146,8 +146,8 @@ namespace rocwmma
                                                 OP_IMPL,
                                                 detail::DppCtrl::amdgcn_dpp_shuffle_4<Select0, Select1, Select0 + 2u, Select1 + 2u>::opCtrl()>;
 
-    // Swap variants
-    using Swap2 = CrossLaneOps::Swap<2u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_shuffle_4<0x02, 0x03, 0x00, 0x01>::opCtrl()>;
+        // Swap variants
+        using Swap2 = CrossLaneOps::Swap<2u, OP_IMPL, detail::DppCtrl::amdgcn_dpp_shuffle_4<0x02, 0x03, 0x00, 0x01>::opCtrl()>;
 
         // clang-format on
 
@@ -224,6 +224,9 @@ namespace rocwmma
               bool     BoundCtrl     = false>
     struct Dpp
     {
+        using DppFunc
+            = detail::amdgcn_mov_dpp<DppOp::opCtrl(), WriteRowMask, WriteBankMask, BoundCtrl>;
+
         // Sanity checks
         static_assert(DppOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP,
                       "DppOp must use dpp backend");
@@ -240,18 +243,12 @@ namespace rocwmma
         template <typename DataT>
         __device__ static DataT exec(DataT const& val)
         {
-            using DppFunc = detail::
-                amdgcn_mov_dpp<DataT, DppOp::opCtrl(), WriteRowMask, WriteBankMask, BoundCtrl>;
-
             return DppFunc::exec(val);
         }
 
         template <typename DataT>
         __device__ static void exec(DataT& val)
         {
-            using DppFunc = detail::
-                amdgcn_mov_dpp<DataT, DppOp::opCtrl(), WriteRowMask, WriteBankMask, BoundCtrl>;
-
             val = DppFunc::exec(val);
         }
 
@@ -259,9 +256,6 @@ namespace rocwmma
         template <typename DataT>
         __device__ static void exec(DataT& val, DataT prev)
         {
-            using DppFunc = detail::
-                amdgcn_mov_dpp<DataT, DppOp::opCtrl(), WriteRowMask, WriteBankMask, BoundCtrl>;
-
             val = DppFunc::exec(val, prev);
         }
 
@@ -269,9 +263,6 @@ namespace rocwmma
         template <typename DataT>
         __device__ static DataT exec(DataT const& val, DataT prev)
         {
-            using DppFunc = detail::
-                amdgcn_mov_dpp<DataT, DppOp::opCtrl(), WriteRowMask, WriteBankMask, BoundCtrl>;
-
             return DppFunc::exec(val, prev);
         }
 
@@ -279,9 +270,6 @@ namespace rocwmma
         template <typename DataT, uint32_t VecSize>
         __device__ static void exec(VecT<DataT, VecSize>& v)
         {
-            using DppFunc = detail::
-                amdgcn_mov_dpp<DataT, DppOp::opCtrl(), WriteRowMask, WriteBankMask, BoundCtrl>;
-
             auto it = makeVectorIterator(v).begin();
 
             static_assert(decltype(it)::range() == VecSize,
@@ -300,9 +288,6 @@ namespace rocwmma
         template <typename DataT, uint32_t VecSize>
         __device__ static void exec(VecT<DataT, VecSize>& v, DataT prev)
         {
-            using DppFunc = detail::
-                amdgcn_mov_dpp<DataT, DppOp::opCtrl(), WriteRowMask, WriteBankMask, BoundCtrl>;
-
             auto it = makeVectorIterator(v).begin();
             static_assert(decltype(it)::range() == VecSize,
                           "VecSize inconsistent with iterator range");
@@ -320,12 +305,6 @@ namespace rocwmma
         template <typename DataT, uint32_t VecSize>
         __device__ static void exec(VecT<DataT, VecSize>& v, VecT<DataT, VecSize> const& prev)
         {
-            using DppFunc = detail::amdgcn_mov_dpp<DataT,
-                                                   DppOp::Traits::OP_CTRL,
-                                                   WriteRowMask,
-                                                   WriteBankMask,
-                                                   BoundCtrl>;
-
             auto       it  = makeVectorIterator(v).begin();
             const auto itp = makeVectorIterator(prev).begin();
 
