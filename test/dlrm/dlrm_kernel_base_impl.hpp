@@ -101,8 +101,10 @@ namespace rocwmma
     bool DlrmKernelBase<TileSize, DataT>::checkDevice() const
     {
         auto deviceArch = DeviceInfo::instance()->getGcnArch();
-        return (deviceArch != DeviceInfo::UNSUPPORTED
-                && !(deviceArch == DeviceInfo::GFX908 && std::is_same<DataT, float64_t>::value));
+        return !(deviceArch == DeviceInfo::UNSUPPORTED
+                || (deviceArch == DeviceInfo::GFX908 && std::is_same<DataT, float64_t>::value)
+                || !(((deviceArch == DeviceInfo::GFX1100) || (deviceArch == DeviceInfo::GFX1101) || (deviceArch == DeviceInfo::GFX1102)) && (TileSize == 16)
+                    && ( std::is_same<DataT, float16_t>::value || std::is_same<DataT, bfloat16_t>::value || std::is_same<DataT, int8_t>::value)));
     }
 
     template <uint32_t TileSize, typename DataT>
