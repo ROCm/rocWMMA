@@ -91,6 +91,16 @@ namespace rocwmma
               uint32_t RowMask   = 0xF,
               uint32_t BankMask  = 0xF,
               bool     BoundCtrl = false>
+    void cross_lane_wfall_bcast_CPU(uint32_t*       dataOut,
+                                    uint32_t const* dataIn,
+                                    uint32_t        elementCount,
+                                    uint32_t        fillVal = 0u);
+
+    template <uint32_t WaveSize,
+              uint32_t GroupSize,
+              uint32_t RowMask   = 0xF,
+              uint32_t BankMask  = 0xF,
+              bool     BoundCtrl = false>
     void cross_lane_reverse_CPU(uint32_t*       dataOut,
                                 uint32_t const* dataIn,
                                 uint32_t        elementCount,

@@ -36,16 +36,15 @@ namespace rocwmma
         enum Properties : uint32_t
         {
             // 32b Element Operation IDs
-            OP_ID_ROTATE  = 0x00,
-            OP_ID_SHIFT   = 0x01,
-            OP_ID_SHUFFLE = 0x02,
-            OP_ID_REVERSE = 0x03,
-            OP_ID_SWAP    = 0x04,
-            OP_ID_BCAST   = 0x05,
-            OP_ID_FFT     = 0x06,
-
-            // Block Operation IDs
-            OP_ID_BLOCK_BCAST = 0x07,
+            OP_ID_ROTATE      = 0x00, // position rotation
+            OP_ID_SHIFT       = 0x01, // position shift
+            OP_ID_SHUFFLE     = 0x02, // position shuffle
+            OP_ID_REVERSE     = 0x03, // position mirror
+            OP_ID_SWAP        = 0x04, // neighbour swap
+            OP_ID_BCAST       = 0x05, // broadcast element
+            OP_ID_FFT         = 0x06, // fft shuffle
+            OP_ID_BLOCK_BCAST = 0x07, // broadcast block
+            OP_ID_WFALL_BCAST = 0x08, // broadcast last element to next block
 
             // Identifiers of backend implementation
             OP_IMPL_DPP     = 0x30,
@@ -338,6 +337,20 @@ namespace rocwmma
             {
                 return BlockIdx;
             }
+        };
+
+        /*! \class WFallBCast
+        *  \brief Performs broadcast of the last sub-group element to the next sub-group.
+        *
+        * @tparam BlockSize - size of the broadcast blocks.
+        */
+        template <uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
+        struct WFallBCast : public OpBase<Properties::OP_ID_WFALL_BCAST,
+                                          AMDGCN_WAVE_SIZE,
+                                          SubGroupSize,
+                                          OpImpl,
+                                          OpCtrl>
+        {
         };
 
     } // namespace CrossLaneOps

@@ -281,6 +281,58 @@ namespace rocwmma
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
               bool     BoundCtrl /* = false */>
+    void cross_lane_wfall_bcast_CPU(uint32_t*       dataOut,
+                                    uint32_t const* dataIn,
+                                    uint32_t        elementCount,
+                                    uint32_t        fillVal /* = 0u */)
+    {
+        auto const loopCnt = elementCount / WaveSize;
+
+        for(uint32_t i = 0u; i < loopCnt; ++i)
+        {
+            // setup the base ptr (each WaveSize elements)
+            auto const baseOffset = i * WaveSize;
+
+            // For each wave group
+            auto const groupCnt = WaveSize / GroupSize;
+            for(uint32_t j = 0u; j < groupCnt; j++)
+            {
+                auto const groupOffset = j * GroupSize;
+
+                // Read offset is last element of prev group
+                auto const readOffset = groupOffset - 1u;
+
+                for(uint32_t k = 0u; k < GroupSize; k++)
+                {
+                    auto const writeOffset = groupOffset + k;
+
+                    if(((0x1 << (writeOffset % WaveSize / 16u)) & RowMask)
+                       && ((0x1 << (writeOffset % 16u / 4u)) & BankMask))
+                    {
+                        // OOB, covers the case of first group is read-thru
+                        if(readOffset >= writeOffset)
+                        {
+                            dataOut[baseOffset + writeOffset] = dataIn[baseOffset + writeOffset];
+                        }
+                        else
+                        {
+                            dataOut[baseOffset + writeOffset] = dataIn[baseOffset + readOffset];
+                        }
+                    }
+                    else
+                    {
+                        dataOut[baseOffset + writeOffset] = fillVal;
+                    }
+                }
+            }
+        }
+    }
+
+    template <uint32_t WaveSize,
+              uint32_t GroupSize,
+              uint32_t RowMask /* = 0xF */,
+              uint32_t BankMask /* = 0xF */,
+              bool     BoundCtrl /* = false */>
     void cross_lane_reverse_CPU(uint32_t*       dataOut,
                                 uint32_t const* dataIn,
                                 uint32_t        elementCount,
@@ -589,16 +641,18 @@ namespace rocwmma
     }
 
     // Reverse, swap
-    template <typename DataT,
-              typename CrossLaneOp,
-              uint32_t RowMask   = 0xF,
-              uint32_t BankMask  = 0xF,
-              bool     BoundCtrl = false,
-              typename std::enable_if_t<
-                  (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_REVERSE)
-                      || (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_SWAP),
-                  void*>
-              = nullptr>
+    template <
+        typename DataT,
+        typename CrossLaneOp,
+        uint32_t RowMask   = 0xF,
+        uint32_t BankMask  = 0xF,
+        bool     BoundCtrl = false,
+        typename std::enable_if_t<
+            (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_REVERSE)
+                || (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_SWAP)
+                || (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_WFALL_BCAST),
+            void*>
+        = nullptr>
     void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
                                      DataT const* dataIn,
                                      uint32_t     elementCount,
@@ -631,6 +685,13 @@ namespace rocwmma
                                 RowMask,
                                 BankMask,
                                 BoundCtrl>(write32Out, read32In, elementCount, fillVal32);
+            break;
+        case rocwmma::CrossLaneOps::Properties::OP_ID_WFALL_BCAST:
+            cross_lane_wfall_bcast_CPU<CrossLaneOp::waveSize(),
+                                       CrossLaneOp::groupSize(),
+                                       RowMask,
+                                       BankMask,
+                                       BoundCtrl>(write32Out, read32In, elementCount, fillVal32);
             break;
         default:;
         }

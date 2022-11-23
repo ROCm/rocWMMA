@@ -191,7 +191,7 @@ set(VectorIteratorTestSources ${UnitCommonSources}
 
 set(CrossLaneOpsTestSources ${UnitCommonSources}
 
-                           # DPP
+                           ### DPP
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_bcast_2.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_bcast_4.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_bcast_16.cpp
@@ -218,6 +218,9 @@ set(CrossLaneOpsTestSources ${UnitCommonSources}
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_shuffle_4.cpp
 
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_swap_2.cpp
+
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_wfall_bcast_16.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_wfall_bcast_32.cpp
 
                            ### Swizzle
 
