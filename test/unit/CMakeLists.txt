@@ -274,6 +274,14 @@ set(CrossLaneOpsTestSources ${UnitCommonSources}
 
 )
 
+set(IoShapeTestSources ${UnitCommonSources}
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/io_shape_test/io_shape_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/io_shape_test/io_shape_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/io_shape_test/io_shape_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/io_shape_test/io_shape_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/io_shape_test/io_shape_256.cpp
+                       )
+
 # Benchmark Unit
 add_rocwmma_test(contamination_test ${ContaminationTestSources})
 add_rocwmma_test(layout_test ${LayoutTestSources})
@@ -284,4 +292,5 @@ add_rocwmma_test(fill_fragment_test ${FillFragmentTestSources})
 add_rocwmma_test(vector_iterator_test ${VectorIteratorTestSources})
 add_rocwmma_test(vector_test ${VectorTestSources})
 add_rocwmma_test(cross_lane_ops_test ${CrossLaneOpsTestSources})
+add_rocwmma_test(io_shape_test ${IoShapeTestSources})
 
