@@ -27,6 +27,7 @@
 #ifndef ROCWMMA_DETAIL_IO_TRAITS_HPP
 #define ROCWMMA_DETAIL_IO_TRAITS_HPP
 
+#include "device/io_traits.hpp"
 #include "unit_kernel_base.hpp"
 
 namespace rocwmma
@@ -53,63 +54,18 @@ namespace rocwmma
             dataInstance->resizeStorage(probsize);
 
             dataInstance->hostOut().get()[0] = static_cast<DataT>(ERROR_VALUE);
-        }
+            dataInstance->copyData(dataInstance->deviceOut(), dataInstance->hostOut(), 1);
 
-        void exec() final
-        {
-            if(Base::mRunFlag)
-            {
-                bool err = false;
-
-                using PackTraits = detail::PackTraits<DataT>;
-
-                // Check on pack ratio sizes
-                err |= (PackTraits::PackRatio * sizeof(typename PackTraits::UnpackedT)
-                        != sizeof(typename PackTraits::PackedT));
-                err |= (!std::is_same<DataT, typename PackTraits::UnpackedT>::value);
-
-                // Check consistency of packed vs unpacked types
-                if(std::is_floating_point<typename PackTraits::UnpackedT>::value)
-                {
-                    err |= (!std::is_floating_point<typename PackTraits::PackedT>::value);
-                }
-                else if(std::is_integral<typename PackTraits::UnpackedT>::value)
-                {
-                    err |= (!std::is_integral<typename PackTraits::PackedT>::value);
-                }
-
-                // VectorWidthTraits, C++ perspective
-                using IOTraits = IOTraits<BlockDim, BlockK, DataT, VectorWidth>;
-                err |= (IOTraits::ThreadsPerIO != AMDGCN_WAVE_SIZE);
-                err |= (IOTraits::ElementsPerIO != (AMDGCN_WAVE_SIZE * VectorWidth));
-                err |= (IOTraits::KPerIO
-                        != std::max(1u, (AMDGCN_WAVE_SIZE * VectorWidth / BlockDim)));
-                err |= (IOTraits::ElementCount != (BlockDim * BlockK));
-                err |= (IOTraits::IOCount
-                        != (BlockDim * BlockK / (AMDGCN_WAVE_SIZE * VectorWidth)));
-                err |= (IOTraits::UnpackedSize != (BlockDim * BlockK / AMDGCN_WAVE_SIZE));
-                err |= (IOTraits::PackedSize
-                        != (BlockDim * BlockK / AMDGCN_WAVE_SIZE / PackTraits::PackRatio));
-
-                // Physical hardware perspective
-                err |= (IOTraits::UnpackedVRegCount
-                        != (IOTraits::UnpackedSize
-                            * std::max(1u, (uint32_t)sizeof(DataT) / AMDGCN_DWORD_SIZE_BYTES)));
-                err |= (IOTraits::PackedVRegCount
-                        != (IOTraits::PackedSize
-                            * std::max(1u, (uint32_t)sizeof(DataT) / AMDGCN_DWORD_SIZE_BYTES)));
-
-                if(!err)
-                {
-                    auto& dataInstance               = Base::DataStorage::instance();
-                    dataInstance->hostOut().get()[0] = static_cast<DataT>(SUCCESS_VALUE);
-                }
-            }
+            // Pass in warpSize from host to validate
+            Base::mParam1 = static_cast<DataT>(Base::DeviceInfo::instance()->warpSize());
         }
 
         void validateResultsImpl() final
         {
             auto& dataInstance = Base::DataStorage::instance();
+
+            // Cache current kernel result from device
+            dataInstance->copyData(dataInstance->hostOut(), dataInstance->deviceOut(), 1);
 
             // Check the single output result
             Base::mValidationResult = (dataInstance->hostOut().get()[0] == DataT(SUCCESS_VALUE));
@@ -117,7 +73,7 @@ namespace rocwmma
 
         typename Base::KernelFunc kernelImpl() const final
         {
-            return typename Base::KernelFunc(nullptr);
+            return typename Base::KernelFunc(ioTraitsTest<DataT, BlockDim, BlockK, VectorWidth>);
         }
     };
 
