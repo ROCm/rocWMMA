@@ -63,7 +63,7 @@ namespace rocwmma
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
     dim3 UnitKernelBase<BlockM, BlockN, DataT, Layout>::gridDim() const
     {
-        return dim3(ceilDiv(mM, BlockM * mTBlockX / AMDGCN_WAVE_SIZE),
+        return dim3(ceilDiv(mM, BlockM * mTBlockX / DeviceInfo::instance()->warpSize()),
                     ceilDiv(mN, BlockN * mTBlockY));
     }
 
@@ -80,11 +80,8 @@ namespace rocwmma
     bool UnitKernelBase<BlockM, BlockN, DataT, Layout>::checkDevice() const
     {
         auto deviceArch = DeviceInfo::instance()->getGcnArch();
-        return !(deviceArch == DeviceInfo::UNSUPPORTED
-                || (deviceArch == DeviceInfo::GFX908 && std::is_same<DataT, float64_t>::value)
-                || !(((deviceArch == DeviceInfo::GFX1100) || (deviceArch == DeviceInfo::GFX1101) || (deviceArch == DeviceInfo::GFX1102)) && (BlockM == 16) && (BlockN == 16)
-                    && (std::is_same<DataT, float16_t>::value || std::is_same<DataT, bfloat16_t>::value || std::is_same<DataT, float32_t>::value
-                    || std::is_same<DataT, int8_t>::value || std::is_same<DataT, int32_t>::value)));
+        return (deviceArch != DeviceInfo::UNSUPPORTED_ARCH
+                && !(deviceArch == DeviceInfo::GFX908 && std::is_same<DataT, float64_t>::value));
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
@@ -93,7 +90,8 @@ namespace rocwmma
         // gridDim() takes the upper bound of block coverage.
         // In case of uneven division, this might put us out of bounds.
         // Forfeit the run because there is no tail for cleanup of remainders.
-        auto tileSize = std::make_pair(BlockM * mTBlockX / AMDGCN_WAVE_SIZE, BlockN * mTBlockY);
+        auto tileSize = std::make_pair(BlockM * mTBlockX / DeviceInfo::instance()->warpSize(),
+                                       BlockN * mTBlockY);
         auto gridDims = gridDim();
         return (gridDims.x * std::get<0>(tileSize) == mM)
                && (gridDims.y * std::get<1>(tileSize) == mN);
@@ -102,7 +100,7 @@ namespace rocwmma
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
     bool UnitKernelBase<BlockM, BlockN, DataT, Layout>::checkLds() const
     {
-        return ldsUsage() <= AMDGCN_LDS_MAX_SIZE_BYTES;
+        return ldsUsage() <= DeviceInfo::instance()->sharedMemSize();
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
@@ -137,7 +135,7 @@ namespace rocwmma
         std::ostream& stream /* = std::cout */) const
     {
 
-        return stream << "TBlkX, TBlkY, BlkM, BlkN, MatM, MatN, Param1, ld, Param2, "
+        return stream << "WSize, TBlkX, TBlkY, BlkM, BlkN, MatM, MatN, Param1, ld, Param2, "
                          "Lyt, Td, elapsedMs, Problem Size(GFlops), TFlops/s, Efficiency(%), "
                          "Result"
                       << std::endl;
@@ -147,9 +145,10 @@ namespace rocwmma
     std::ostream& UnitKernelBase<BlockM, BlockN, DataT, Layout>::printKernel(
         std::ostream& stream /* = std::cout */) const
     {
-        stream << mTBlockX << ", " << mTBlockY << ", " << BlockM << ", " << BlockN << ", " << mM
-               << ", " << mN << ", " << mLd << ", " << mParam1 << ", " << mParam2 << ", "
-               << dataTypeToString<Layout>() << ", " << dataTypeToString<DataT>() << ", ";
+        stream << "w" << DeviceInfo::instance()->warpSize() << ", " << mTBlockX << ", " << mTBlockY
+               << ", " << BlockM << ", " << BlockN << ", " << mM << ", " << mN << ", " << mLd
+               << ", " << mParam1 << ", " << mParam2 << ", " << dataTypeToString<Layout>() << ", "
+               << dataTypeToString<DataT>() << ", ";
 
         if(!mRunFlag)
         {

@@ -28,6 +28,8 @@
 
 #include "config.hpp"
 
+ //#if __gfx908__ || __gfx90a__ || __gfx1100__ || __gfx1101__ || __gfx1102
+
 namespace rocwmma
 {
 #if defined(ROCWMMA_ARCH_NAVI)
@@ -35,6 +37,7 @@ namespace rocwmma
 #else
     static constexpr uint32_t AMDGCN_WAVE_SIZE = 64u;
 #endif
+
     static constexpr uint32_t AMDGCN_REGISTER_ELEMENT_SIZE_BYTES = 4u;
     static constexpr uint32_t AMDGCN_REGISTER_SIZE_BYTES
         = AMDGCN_REGISTER_ELEMENT_SIZE_BYTES * AMDGCN_WAVE_SIZE;
@@ -46,7 +49,10 @@ namespace rocwmma
 #if defined(ROCWMMA_ARCH_NAVI)
     static constexpr uint32_t AMDGCN_CDNA_RDNA_WAVE_RATIO = 2u;
 #endif
+    
 
 } // namespace rocwmma
+
+//#endif // Device only.
 
 #endif // ROCWMMA_CONSTANTS_HPP

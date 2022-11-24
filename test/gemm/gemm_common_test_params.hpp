@@ -276,16 +276,18 @@ namespace rocwmma
 
         static inline std::vector<ThreadBlockT> threadBlocks()
         {
+            auto warpSize = HipDevice::instance()->warpSize();
+
             return
             {
                 // clang-format off
                 // Don't benchmark wg less than 4 waves by default
 #if defined(ROCWMMA_VALIDATION_TESTS) || defined(ROCWMMA_EXTENDED_TESTS)
-                {64, 1}, // 1 wave
-                {64, 2}, {128, 1}, // 2 wave
+                {warpSize, 1}, // 1 wave
+                {warpSize, 2}, {warpSize * 2, 1}, // 2 wave
 #endif // ROCWMMA_VALIDATION_TESTS
-                {64, 4}, {128, 2}, // 4 wave
-                {256, 1}  // 4 wave
+                {warpSize, 4}, {warpSize * 2, 2}, // 4 wave
+                {warpSize * 4, 1}  // 4 wave
                 // clang-format on
             };
         }

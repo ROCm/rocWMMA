@@ -74,13 +74,16 @@ namespace rocwmma
 
         dim3 gridDim() const final
         {
-            return dim3(ceilDiv(Base::mM, BlockM * BlocksX * Base::mTBlockX / AMDGCN_WAVE_SIZE),
+            return dim3(ceilDiv(Base::mM,
+                                BlockM * BlocksX * Base::mTBlockX
+                                    / Base::DeviceInfo::instance()->warpSize()),
                         ceilDiv(Base::mN, BlockN * BlocksY * Base::mTBlockY));
         }
 
         bool checkSizes() const final
         {
-            return ((BlockM * BlocksX * Base::mTBlockX / AMDGCN_WAVE_SIZE) <= Base::mM)
+            return ((BlockM * BlocksX * Base::mTBlockX / Base::DeviceInfo::instance()->warpSize())
+                    <= Base::mM)
                    && ((BlockN * BlocksY * Base::mTBlockY) <= Base::mN) && (BlockK <= Base::mK);
         }
 

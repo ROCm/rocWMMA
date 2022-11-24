@@ -77,13 +77,16 @@ namespace rocwmma
 
         dim3 gridDim() const final
         {
-            return dim3(ceilDiv(Base::mM, BlockM * BlocksX * Base::mTBlockX / AMDGCN_WAVE_SIZE),
+            return dim3(ceilDiv(Base::mM,
+                                BlockM * BlocksX * Base::mTBlockX
+                                    / Base::DeviceInfo::instance()->warpSize()),
                         ceilDiv(Base::mN, BlockN * BlocksY * Base::mTBlockY));
         }
 
         bool checkSizes() const final
         {
-            return ((BlockM * BlocksX * Base::mTBlockX / AMDGCN_WAVE_SIZE) <= Base::mM)
+            return ((BlockM * BlocksX * Base::mTBlockX / Base::DeviceInfo::instance()->warpSize())
+                    <= Base::mM)
                    && ((BlockN * BlocksY * Base::mTBlockY) <= Base::mN) && (BlockK <= Base::mK);
         }
 
@@ -127,7 +130,7 @@ namespace rocwmma
         {
             // Uses 2 lds blocks for prefetch loop
             return 2 * sizeof(InputT)
-                   * (Base::mTBlockX / AMDGCN_WAVE_SIZE * BlocksX * BlockM
+                   * (Base::mTBlockX / Base::DeviceInfo::instance()->warpSize() * BlocksX * BlockM
                       + Base::mTBlockY * BlocksY * BlockN)
                    * BlockK;
         }
@@ -137,7 +140,67 @@ namespace rocwmma
             // Runtime dispatcher to assign compile time TBlock params.
             auto kernelFunc = typename Base::KernelFunc(nullptr);
 
-            if(Base::mTBlockX == 64)
+            if(Base::mTBlockX == 32)
+            {
+                if(Base::mTBlockY == 1)
+                {
+                    kernelFunc = typename Base::KernelFunc(gemm_PGR1_LB2_MP0_MB_CP<BlockM,
+                                                                                   BlockN,
+                                                                                   BlockK,
+                                                                                   InputT,
+                                                                                   OutputT,
+                                                                                   ComputeT,
+                                                                                   LayoutA,
+                                                                                   LayoutB,
+                                                                                   LayoutC,
+                                                                                   LayoutD,
+                                                                                   LayoutLds,
+                                                                                   GemmConfig,
+                                                                                   BlocksX,
+                                                                                   BlocksY,
+                                                                                   32,
+                                                                                   1>);
+                }
+                else if(Base::mTBlockY == 2)
+                {
+                    kernelFunc = typename Base::KernelFunc(gemm_PGR1_LB2_MP0_MB_CP<BlockM,
+                                                                                   BlockN,
+                                                                                   BlockK,
+                                                                                   InputT,
+                                                                                   OutputT,
+                                                                                   ComputeT,
+                                                                                   LayoutA,
+                                                                                   LayoutB,
+                                                                                   LayoutC,
+                                                                                   LayoutD,
+                                                                                   LayoutLds,
+                                                                                   GemmConfig,
+                                                                                   BlocksX,
+                                                                                   BlocksY,
+                                                                                   32,
+                                                                                   2>);
+                }
+                else if(Base::mTBlockY == 4)
+                {
+                    kernelFunc = typename Base::KernelFunc(gemm_PGR1_LB2_MP0_MB_CP<BlockM,
+                                                                                   BlockN,
+                                                                                   BlockK,
+                                                                                   InputT,
+                                                                                   OutputT,
+                                                                                   ComputeT,
+                                                                                   LayoutA,
+                                                                                   LayoutB,
+                                                                                   LayoutC,
+                                                                                   LayoutD,
+                                                                                   LayoutLds,
+                                                                                   GemmConfig,
+                                                                                   BlocksX,
+                                                                                   BlocksY,
+                                                                                   32,
+                                                                                   4>);
+                }
+            }
+            else if(Base::mTBlockX == 64)
             {
                 if(Base::mTBlockY == 1)
                 {

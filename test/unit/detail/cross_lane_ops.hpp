@@ -77,7 +77,10 @@ namespace rocwmma
 
         bool checkDevice() const final
         {
-            auto deviceArch = Base::DeviceInfo::instance()->getGcnArch();
+            auto& deviceInfo = Base::DeviceInfo::instance();
+
+            auto deviceArch = deviceInfo->getGcnArch();
+            auto warpSize   = deviceInfo->warpSize();
 
             // gfx908 doesn't support dpp BCast16
             bool dppBCast16Check
@@ -94,17 +97,17 @@ namespace rocwmma
             bool dppWaveShiftCheck
                 = !(isGfx11 && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
                     && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_SHIFT)
-                    && (CrossLaneOp::groupSize() == AMDGCN_WAVE_SIZE));
+                    && (CrossLaneOp::groupSize() == warpSize));
 
             bool dppWaveRotateCheck
                 = !(isGfx11 && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
                     && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_ROTATE)
-                    && (CrossLaneOp::groupSize() == AMDGCN_WAVE_SIZE));
+                    && (CrossLaneOp::groupSize() == warpSize));
 
             bool dppWaterfallBCastCheck
                 = !(isGfx11 && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
-                    && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_BCAST)
-                    && (CrossLaneOp::groupSize() == AMDGCN_WAVE_SIZE));
+                    && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_WFALL_BCAST)
+                    && (CrossLaneOp::groupSize() == warpSize));
 
             return Base::checkDevice() && dppBCast16Check && dppWaveShiftCheck && dppWaveRotateCheck
                    && dppWaterfallBCastCheck;
@@ -130,7 +133,7 @@ namespace rocwmma
                    << CrossLaneOp::opImpl() << ", ";
             stream << std::showbase << std::hex << CrossLaneOp::opCtrl() << ", ";
             stream.flags(f);
-            stream << CrossLaneOp::waveSize() << ", " << CrossLaneOp::groupSize() << ", ";
+            stream << "w" << CrossLaneOp::waveSize() << ", " << CrossLaneOp::groupSize() << ", ";
             stream << std::showbase << std::hex << WriteRowMask << ", " << WriteBankMask << ", ";
             stream.flags(f);
             stream << BoundCtrl << ", ";
