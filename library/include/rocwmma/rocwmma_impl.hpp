@@ -32,6 +32,7 @@
 #include "rocwmma.hpp"
 
 #include "internal/accessors.hpp"
+#include "internal/blend.hpp"
 #include "internal/broadcast.hpp"
 #include "internal/constants.hpp"
 #include "internal/convert.hpp"

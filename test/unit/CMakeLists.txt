@@ -189,6 +189,10 @@ set(VectorIteratorTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/vector_iterator_test/vector_iterator.cpp
                        )
 
+set(VectorTestSources ${UnitCommonSources}
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/vector_test/vector.cpp
+                       )
+
 set(CrossLaneOpsTestSources ${UnitCommonSources}
 
                            ### DPP
@@ -223,7 +227,6 @@ set(CrossLaneOpsTestSources ${UnitCommonSources}
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/dpp_wfall_bcast_32.cpp
 
                            ### Swizzle
-
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_bcast_2.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_bcast_4.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/swizzle_bcast_8.cpp
@@ -262,7 +265,25 @@ set(CrossLaneOpsTestSources ${UnitCommonSources}
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_8.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_16.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/permute_block_bcast_32.cpp
+
+                           ### Blend
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/blend_unpack_byte_hi_lo.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/blend_unpack_byte_hi.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/blend_unpack_byte_lo.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/blend_unpack_word_hi.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/blend_unpack_word_lo.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/blend_zip_byte.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/cross_lane_ops_test/blend_zip_word.cpp
+
 )
+
+set(IoShapeTestSources ${UnitCommonSources}
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/io_shape_test/io_shape_16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/io_shape_test/io_shape_32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/io_shape_test/io_shape_64.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/io_shape_test/io_shape_128.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/io_shape_test/io_shape_256.cpp
+                       )
 
 # Benchmark Unit
 add_rocwmma_test(contamination_test ${ContaminationTestSources})
@@ -272,5 +293,7 @@ add_rocwmma_test(load_store_matrix_sync_test ${LoadStoreMatrixSyncTestSources})
 add_rocwmma_test(load_store_matrix_coop_sync_test ${LoadStoreMatrixCoopSyncTestSources})
 add_rocwmma_test(fill_fragment_test ${FillFragmentTestSources})
 add_rocwmma_test(vector_iterator_test ${VectorIteratorTestSources})
+add_rocwmma_test(vector_test ${VectorTestSources})
 add_rocwmma_test(cross_lane_ops_test ${CrossLaneOpsTestSources})
+add_rocwmma_test(io_shape_test ${IoShapeTestSources})
 
