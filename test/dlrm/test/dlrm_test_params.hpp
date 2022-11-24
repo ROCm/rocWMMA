@@ -58,7 +58,8 @@ namespace rocwmma
         }
         static inline std::vector<ThreadBlockT> threadBlocks()
         {
-            return {{128, 1}};
+            auto warpSize = HipDevice::instance()->warpSize();
+            return {{warpSize * 2, 1}};
         }
 
         static inline std::vector<PassDirectionT> passDirections()

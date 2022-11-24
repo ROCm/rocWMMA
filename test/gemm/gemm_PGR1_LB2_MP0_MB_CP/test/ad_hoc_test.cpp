@@ -66,10 +66,12 @@ namespace rocwmma
 
         static inline std::vector<ThreadBlockT> threadBlocks()
         {
+            auto warpSize = HipDevice::instance()->warpSize();
+
             return {
-                //{64, 1},
-                {128, 2},
-                //{64, 4}, {128, 1}, {128, 2}, {256, 1}
+                //{warpSize, 1},
+                {warpSize * 2, 2},
+                //{warpSize, 4}, {warpSize * 2, 1}, {warpSize * 2, 2}, {warpSize * 4, 1}
             };
         }
 
