@@ -28,11 +28,11 @@
 
 #include "config.hpp"
 
- //#if __gfx908__ || __gfx90a__ || __gfx1100__ || __gfx1101__ || __gfx1102
+//#if __gfx908__ || __gfx90a__ || __gfx1100__ || __gfx1101__ || __gfx1102
 
 namespace rocwmma
 {
-#if defined(ROCWMMA_ARCH_NAVI)
+#if !defined(ROCWMMA_ARCH_MI)
     static constexpr uint32_t AMDGCN_WAVE_SIZE = 32u;
 #else
     static constexpr uint32_t AMDGCN_WAVE_SIZE = 64u;
@@ -49,7 +49,6 @@ namespace rocwmma
 #if defined(ROCWMMA_ARCH_NAVI)
     static constexpr uint32_t AMDGCN_CDNA_RDNA_WAVE_RATIO = 2u;
 #endif
-    
 
 } // namespace rocwmma
 

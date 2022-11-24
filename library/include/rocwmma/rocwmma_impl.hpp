@@ -325,7 +325,7 @@ namespace rocwmma
         using MFMA = Mfma<InputT, ComputeT, BlockM, BlockN, BlockK>;
         (*d)       = MFMA::exec(*a, *b, *c);
 #elif defined(ROCWMMA_ARCH_NAVI)
-        using WMMA = detail::Wmma<InputT, ComputeT, BlockM, BlockN, BlockK>;
+        using WMMA = Wmma<InputT, ComputeT, BlockM, BlockN, BlockK>;
         (*d)       = WMMA::exec(*a, *b, *c);
 #endif
     }
