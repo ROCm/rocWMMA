@@ -45,7 +45,11 @@ namespace rocwmma
             OP_ID_FFT         = 0x06, // fft shuffle
             OP_ID_BLOCK_BCAST = 0x07, // broadcast block
             OP_ID_WFALL_BCAST = 0x08, // broadcast last element to next block
+<<<<<<< HEAD
             OP_ID_BLEND   = 0x09,
+=======
+            OP_ID_BLEND       = 0x09, // byte-wise element blending
+>>>>>>> fa5e013... Fix build errors
 
             // Identifiers of backend implementation
             OP_IMPL_DPP     = 0x30,
