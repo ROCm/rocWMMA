@@ -195,6 +195,7 @@ set(IoTraitsTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/io_traits_test/io_traits_64.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/io_traits_test/io_traits_128.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/io_traits_test/io_traits_256.cpp
+                       )
 
 set(VectorTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/vector_test/vector.cpp
