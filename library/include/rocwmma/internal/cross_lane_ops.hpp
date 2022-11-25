@@ -51,6 +51,15 @@ namespace rocwmma
             OP_ID_BLEND       = 0x09, // byte-wise element blending
 >>>>>>> fa5e013... Fix build errors
 
+            // Sub group size
+            OP_GROUP_SIZE_2    = 0x02, // Op affects sub-groups of 2
+            OP_GROUP_SIZE_4    = 0x04, // Op affects sub-groups of 4
+            OP_GROUP_SIZE_8    = 0x08, // Op affects sub-groups of 8
+            OP_GROUP_SIZE_16   = 0x10, // Op affects sub-groups of 16
+            OP_GROUP_SIZE_32   = 0x20, // Op affects sub-groups of 32
+            OP_GROUP_SIZE_64   = 0x40, // Op affects sub-groups of 64
+            OP_GROUP_SIZE_WARP = 0x4F, // Op affects entire warp
+
             // Identifiers of backend implementation
             OP_IMPL_DPP     = 0x30,
             OP_IMPL_SWIZZLE = 0x31,
@@ -71,11 +80,7 @@ namespace rocwmma
         * @tparam OpImpl backend implementation of the op: see Properties
         * @tparam OpCtrl backend-specific control code to invoke the operation.
         */
-        template <uint32_t OpId,
-                  uint32_t ThreadCount,
-                  uint32_t SubGroupSize,
-                  uint32_t OpImpl,
-                  uint32_t OpCtrl>
+        template <uint32_t OpId, uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
         struct OpBase
         {
             enum : uint32_t
@@ -83,7 +88,6 @@ namespace rocwmma
                 OP_ID      = OpId,
                 OP_IMPL    = OpImpl,
                 OP_CTRL    = OpCtrl,
-                WAVE_SIZE  = ThreadCount,
                 GROUP_SIZE = SubGroupSize,
             };
 
@@ -98,10 +102,6 @@ namespace rocwmma
             constexpr static uint32_t opCtrl()
             {
                 return OP_CTRL;
-            }
-            constexpr static uint32_t waveSize()
-            {
-                return WAVE_SIZE;
             }
             constexpr static uint32_t groupSize()
             {
@@ -120,11 +120,7 @@ namespace rocwmma
                   uint32_t SubGroupSize,
                   uint32_t OpImpl,
                   uint32_t OpCtrl>
-        struct Rotate : public OpBase<Properties::OP_ID_ROTATE,
-                                      AMDGCN_WAVE_SIZE,
-                                      SubGroupSize,
-                                      OpImpl,
-                                      OpCtrl>
+        struct Rotate : public OpBase<Properties::OP_ID_ROTATE, SubGroupSize, OpImpl, OpCtrl>
         {
             enum : uint32_t
             {
@@ -160,8 +156,7 @@ namespace rocwmma
                   uint32_t SubGroupSize,
                   uint32_t OpImpl,
                   uint32_t OpCtrl>
-        struct Shift
-            : public OpBase<Properties::OP_ID_SHIFT, AMDGCN_WAVE_SIZE, SubGroupSize, OpImpl, OpCtrl>
+        struct Shift : public OpBase<Properties::OP_ID_SHIFT, SubGroupSize, OpImpl, OpCtrl>
         {
             enum : uint32_t
             {
@@ -191,8 +186,7 @@ namespace rocwmma
         * @tparam ElementIdx - element index to broadcast to rest of the sub-group
         */
         template <uint32_t ElementIdx, uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
-        struct BCast
-            : public OpBase<Properties::OP_ID_BCAST, AMDGCN_WAVE_SIZE, SubGroupSize, OpImpl, OpCtrl>
+        struct BCast : public OpBase<Properties::OP_ID_BCAST, SubGroupSize, OpImpl, OpCtrl>
         {
             enum : uint32_t
             {
@@ -209,11 +203,7 @@ namespace rocwmma
         *  \brief Perform reversal of elements in sub-groups of <SubGroupSize> threads.
         */
         template <uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
-        struct Reverse : public OpBase<Properties::OP_ID_REVERSE,
-                                       AMDGCN_WAVE_SIZE,
-                                       SubGroupSize,
-                                       OpImpl,
-                                       OpCtrl>
+        struct Reverse : public OpBase<Properties::OP_ID_REVERSE, SubGroupSize, OpImpl, OpCtrl>
         {
         };
 
@@ -221,8 +211,7 @@ namespace rocwmma
         *  \brief Perform swap of neigbouring sub-groups of <SubGroupSize> threads.
         */
         template <uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
-        struct Swap
-            : public OpBase<Properties::OP_ID_SWAP, AMDGCN_WAVE_SIZE, SubGroupSize, OpImpl, OpCtrl>
+        struct Swap : public OpBase<Properties::OP_ID_SWAP, SubGroupSize, OpImpl, OpCtrl>
         {
         };
 
@@ -230,11 +219,7 @@ namespace rocwmma
         *  \brief Perform localized shuffling within sub-groups of <SubGroupSize> threads.
         */
         template <uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
-        struct Shuffle : public OpBase<Properties::OP_ID_SHUFFLE,
-                                       AMDGCN_WAVE_SIZE,
-                                       SubGroupSize,
-                                       OpImpl,
-                                       OpCtrl>
+        struct Shuffle : public OpBase<Properties::OP_ID_SHUFFLE, SubGroupSize, OpImpl, OpCtrl>
         {
         };
 
@@ -254,7 +239,7 @@ namespace rocwmma
                   uint32_t Select3,
                   uint32_t OpImpl,
                   uint32_t OpCtrl>
-        struct Shuffle4 : public Shuffle<4u, OpImpl, OpCtrl>
+        struct Shuffle4 : public Shuffle<Properties::OP_GROUP_SIZE_4, OpImpl, OpCtrl>
         {
             enum : uint32_t
             {
@@ -304,12 +289,8 @@ namespace rocwmma
         /*! \class Fft
         *  \brief Supports FFT-like cross-bar transforms
         */
-        template <uint32_t FftCtrl, uint32_t OpImpl, uint32_t OpCtrl>
-        struct Fft : public OpBase<Properties::OP_ID_FFT,
-                                   AMDGCN_WAVE_SIZE,
-                                   AMDGCN_WAVE_SIZE,
-                                   OpImpl,
-                                   OpCtrl>
+        template <uint32_t SubGroupSize, uint32_t FftCtrl, uint32_t OpImpl, uint32_t OpCtrl>
+        struct Fft : public OpBase<Properties::OP_ID_FFT, SubGroupSize, OpImpl, OpCtrl>
         {
             enum : uint32_t
             {
@@ -331,11 +312,8 @@ namespace rocwmma
                   uint32_t Select3,
                   uint32_t OpImpl,
                   uint32_t OpCtrl>
-        struct Blend4 : public OpBase<Properties::OP_ID_BLEND,
-                                      AMDGCN_WAVE_SIZE,
-                                      AMDGCN_WAVE_SIZE,
-                                      OpImpl,
-                                      OpCtrl>
+        struct Blend4
+            : public OpBase<Properties::OP_ID_BLEND, Properties::OP_GROUP_SIZE_WARP, OpImpl, OpCtrl>
         {
             enum : uint32_t
             {
@@ -369,11 +347,7 @@ namespace rocwmma
         * @tparam BlockIdx - block index to broadcast to rest of the other blocks.
         */
         template <uint32_t BlockIdx, uint32_t BlockSize, uint32_t OpImpl, uint32_t OpCtrl>
-        struct BlockBCast : public OpBase<Properties::OP_ID_BLOCK_BCAST,
-                                          AMDGCN_WAVE_SIZE,
-                                          BlockSize,
-                                          OpImpl,
-                                          OpCtrl>
+        struct BlockBCast : public OpBase<Properties::OP_ID_BLOCK_BCAST, BlockSize, OpImpl, OpCtrl>
         {
             enum : uint32_t
             {
@@ -392,11 +366,8 @@ namespace rocwmma
         * @tparam SubGroupSize - size of the broadcast blocks.
         */
         template <uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
-        struct WFallBCast : public OpBase<Properties::OP_ID_WFALL_BCAST,
-                                          AMDGCN_WAVE_SIZE,
-                                          SubGroupSize,
-                                          OpImpl,
-                                          OpCtrl>
+        struct WFallBCast
+            : public OpBase<Properties::OP_ID_WFALL_BCAST, SubGroupSize, OpImpl, OpCtrl>
         {
         };
 
