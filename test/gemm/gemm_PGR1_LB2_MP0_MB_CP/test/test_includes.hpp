@@ -37,6 +37,7 @@
 #include "gemm_config.hpp"
 #include "gemm_test.hpp"
 #include "gemm_test_macros.hpp"
+#include "hip_device.hpp"
 #include "kernel_generator.hpp"
 
 #endif // ROCWMMA_GEMM_TEST_INCLUDES

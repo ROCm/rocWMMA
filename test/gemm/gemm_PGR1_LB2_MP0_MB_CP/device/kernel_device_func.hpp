@@ -63,10 +63,12 @@ namespace rocwmma
               typename LayoutD,
               typename LayoutLds,
               typename GemmConfig,
-              uint32_t BlocksX = 1,
-              uint32_t BlocksY = 1,
-              uint32_t TBlockX = 0,
-              uint32_t TBlockY = 0>
+              uint32_t BlocksX                                                 = 1,
+              uint32_t BlocksY                                                 = 1,
+              uint32_t TBlockX                                                 = 0,
+              uint32_t TBlockY                                                 = 0,
+              typename std::enable_if_t<(!ROCWMMA_ARCH_HOST)
+                                        && (TBlockX % AMDGCN_WAVE_SIZE == 0)>* = nullptr>
     __global__ void __launch_bounds__(256) gemm_PGR1_LB2_MP0_MB_CP(uint32_t       m,
                                                                    uint32_t       n,
                                                                    uint32_t       k,
@@ -254,6 +256,40 @@ namespace rocwmma
         typename GlobalMapping::MfmaBuffD fragsD;
         GemmDriver::uniformFma(fragsD, alpha, fragsAcc, beta, fragsC);
         GemmDriver::globalWriteD(d + globalWriteOffsetD, fragsD, ldd);
+    }
+
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename InputT,
+              typename OutputT,
+              typename ComputeT,
+              typename LayoutA,
+              typename LayoutB,
+              typename LayoutC,
+              typename LayoutD,
+              typename LayoutLds,
+              typename GemmConfig,
+              uint32_t BlocksX                                                 = 1,
+              uint32_t BlocksY                                                 = 1,
+              uint32_t TBlockX                                                 = 0,
+              uint32_t TBlockY                                                 = 0,
+              typename std::enable_if_t<(ROCWMMA_ARCH_HOST)
+                                        || (TBlockX % AMDGCN_WAVE_SIZE != 0)>* = nullptr>
+    __global__ void __launch_bounds__(256) gemm_PGR1_LB2_MP0_MB_CP(uint32_t       m,
+                                                                   uint32_t       n,
+                                                                   uint32_t       k,
+                                                                   InputT const*  a,
+                                                                   InputT const*  b,
+                                                                   OutputT const* c,
+                                                                   OutputT*       d,
+                                                                   uint32_t       lda,
+                                                                   uint32_t       ldb,
+                                                                   uint32_t       ldc,
+                                                                   uint32_t       ldd,
+                                                                   ComputeT       alpha,
+                                                                   ComputeT       beta)
+    {
     }
 
 } // namespace rocwmma
