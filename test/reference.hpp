@@ -65,7 +65,6 @@ namespace rocwmma
                       uint32_t     batchSize);
 
     template <uint32_t ElementIdx,
-              uint32_t WaveSize,
               uint32_t GroupSize,
               uint32_t RowMask   = 0xF,
               uint32_t BankMask  = 0xF,
@@ -76,7 +75,6 @@ namespace rocwmma
                               uint32_t        fillVal = 0u);
 
     template <uint32_t BlockIdx,
-              uint32_t WaveSize,
               uint32_t GroupSize,
               uint32_t RowMask   = 0xF,
               uint32_t BankMask  = 0xF,
@@ -90,7 +88,6 @@ namespace rocwmma
               uint32_t Select1,
               uint32_t Select2,
               uint32_t Select3,
-              uint32_t WaveSize,
               uint32_t GroupSize,
               uint32_t RowMask   = 0xF,
               uint32_t BankMask  = 0xF,
@@ -101,8 +98,7 @@ namespace rocwmma
                                    uint32_t        elementCount,
                                    uint32_t        fillVal = 0u);
 
-    template <uint32_t WaveSize,
-              uint32_t GroupSize,
+    template <uint32_t GroupSize,
               uint32_t RowMask   = 0xF,
               uint32_t BankMask  = 0xF,
               bool     BoundCtrl = false>
@@ -111,8 +107,7 @@ namespace rocwmma
                                     uint32_t        elementCount,
                                     uint32_t        fillVal = 0u);
 
-    template <uint32_t WaveSize,
-              uint32_t GroupSize,
+    template <uint32_t GroupSize,
               uint32_t RowMask   = 0xF,
               uint32_t BankMask  = 0xF,
               bool     BoundCtrl = false>
@@ -123,7 +118,6 @@ namespace rocwmma
 
     template <uint32_t RotateDir,
               uint32_t RotateDist,
-              uint32_t WaveSize,
               uint32_t GroupSize,
               uint32_t RowMask   = 0xF,
               uint32_t BankMask  = 0xF,
@@ -135,7 +129,6 @@ namespace rocwmma
 
     template <uint32_t ShiftDir,
               uint32_t ShiftDist,
-              uint32_t WaveSize,
               uint32_t GroupSize,
               uint32_t RowMask   = 0xF,
               uint32_t BankMask  = 0xF,
@@ -149,7 +142,6 @@ namespace rocwmma
               uint32_t Select1,
               uint32_t Select2,
               uint32_t Select3,
-              uint32_t WaveSize,
               uint32_t GroupSize,
               uint32_t RowMask   = 0xF,
               uint32_t BankMask  = 0xF,
@@ -159,8 +151,7 @@ namespace rocwmma
                                 uint32_t        elementCount,
                                 uint32_t        fillVal = 0u);
 
-    template <uint32_t WaveSize,
-              uint32_t GroupSize,
+    template <uint32_t GroupSize,
               uint32_t RowMask   = 0xF,
               uint32_t BankMask  = 0xF,
               bool     BoundCtrl = false>

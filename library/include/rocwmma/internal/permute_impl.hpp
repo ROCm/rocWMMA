@@ -33,7 +33,7 @@ namespace rocwmma
 
     namespace detail
     {
-        template <uint32_t WaveSize, uint32_t BlockSize, uint32_t BlockIdx>
+        template <uint32_t BlockSize, uint32_t BlockIdx>
         struct amdgcn_bpermute_block_bcast
         {
         private:
