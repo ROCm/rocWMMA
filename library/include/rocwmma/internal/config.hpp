@@ -26,44 +26,108 @@
 #ifndef ROCWMMA_CONFIG_HPP
 #define ROCWMMA_CONFIG_HPP
 
-#include <iostream>
-
 namespace rocwmma
 {
+
+///
+/// Architecture support
+/// Guaranteed symbols:
+/// ROCWMMA_ARCH_GFX908
+/// ROCWMMA_ARCH_GFX90a
+/// ROCWMMA_ARCH_GFX1100
+/// ROCWMMA_ARCH_GFX1101
+/// ROCWMMA_ARCH_GFX1102
+///
 #if defined(__gfx908__)
-#define ROCWMMA_ARCH_GFX908
+#define ROCWMMA_ARCH_GFX908 __gfx908__
 #elif defined(__gfx90a__)
-#define ROCWMMA_ARCH_GFX90A
+#define ROCWMMA_ARCH_GFX90A __gfx90a__
 #elif defined(__gfx1100__)
-#define ROCWMMA_ARCH_GFX1100
+#define ROCWMMA_ARCH_GFX1100 __gfx1100__
 #elif defined(__gfx1101__)
-#define ROCWMMA_ARCH_GFX1101
+#define ROCWMMA_ARCH_GFX1101 __gfx1101__
 #elif defined(__gfx1102__)
-#define ROCWMMA_ARCH_GFX1102
+#define ROCWMMA_ARCH_GFX1102 __gfx1102__
 #else
-#define ROCWMMA_ARCH_NONE
+#define ROCWMMA_ARCH_HOST 1
 #endif
 
-#if defined(ROCWMMA_ARCH_GFX908) || defined(ROCWMMA_ARCH_GFX90A)
-#define ROCWMMA_ARCH_MI
-#define ROCWMMA_WAVE64_MODE
-#define ROCWMMA_BLOCK_DIM_32_SUPPORTED
-#elif defined(ROCWMMA_ARCH_GFX1100) || defined(ROCWMMA_ARCH_GFX1101) \
-    || defined(ROCWMMA_ARCH_GFX1102)
-#define ROCWMMA_ARCH_NAVI
-#define ROCWMMA_WAVE32_MODE
+#if !defined(ROCWMMA_ARCH_GFX908)
+#define ROCWMMA_ARCH_GFX908 0
+#endif
+#if !defined(ROCWMMA_ARCH_GFX90A)
+#define ROCWMMA_ARCH_GFX90A 0
+#endif
+#if !defined(ROCWMMA_ARCH_GFX1100)
+#define ROCWMMA_ARCH_GFX1100 0
+#endif
+#if !defined(ROCWMMA_ARCH_GFX1101)
+#define ROCWMMA_ARCH_GFX1101 0
+#endif
+#if !defined(ROCWMMA_ARCH_GFX1102)
+#define ROCWMMA_ARCH_GFX1102 0
+#endif
+#if !defined(ROCWMMA_ARCH_HOST)
+#define ROCWMMA_ARCH_HOST 0
 #endif
 
-#if defined(ROCWMMA_ARCH_NAVI) && defined(ROCWMMA_BLOCK_DIM_32_SUPPORTED)
-#error " Navi / 32 Block dimensions are not supported together"
+///
+/// Architecture configuration
+/// Guaranteed symbols:
+/// ROCWMMA_ARCH_MI
+/// ROCWMMA_ARCH_NAVI
+/// ROCWMMA_WAVE64_MODE
+/// ROCWMMA_WAVE32_MODE
+/// ROCWMMA_BLOCK_DIM_16_SUPPORTED
+/// ROCWMMA_BLOCK_DIM_32_SUPPORTED
+///
+#if ROCWMMA_ARCH_GFX908 || ROCWMMA_ARCH_GFX90A
+#define ROCWMMA_ARCH_MI 1
+#define ROCWMMA_WAVE64_MODE 1
+#define ROCWMMA_BLOCK_DIM_16_SUPPORTED 1
+#define ROCWMMA_BLOCK_DIM_32_SUPPORTED 1
 #endif
 
-#if defined(ROCWMMA_ARCH_NAVI) && defined(ROCWMMA_WAVE64_MODE)
-#error " Navi / 64 Wave mode are not supported together"
+#if ROCWMMA_ARCH_GFX1100 || ROCWMMA_ARCH_GFX1101 || ROCWMMA_ARCH_GFX1100
+#define ROCWMMA_ARCH_NAVI 1
+#define ROCWMMA_WAVE32_MODE 1
+#define ROCWMMA_BLOCK_DIM_16_SUPPORTED 1
 #endif
 
-#if defined(ROCWMMA_ARCH_MI) && defined(ROCWMMA_WAVE32_MODE)
-#error " MI / 32 Wave mode are not supported together"
+#if !defined(ROCWMMA_ARCH_MI)
+#define ROCWMMA_ARCH_MI 0
+#endif
+#if !defined(ROCWMMA_ARCH_NAVI)
+#define ROCWMMA_ARCH_NAVI 0
+#endif
+#if !defined(ROCWMMA_WAVE64_MODE)
+#define ROCWMMA_WAVE64_MODE 0
+#endif
+#if !defined(ROCWMMA_WAVE32_MODE)
+#define ROCWMMA_WAVE32_MODE 0
+#endif
+#if !defined(ROCWMMA_BLOCK_DIM_16_SUPPORTED)
+#define ROCWMMA_BLOCK_DIM_16_SUPPORTED 0
+#endif
+#if !defined(ROCWMMA_BLOCK_DIM_32_SUPPORTED)
+#define ROCWMMA_BLOCK_DIM_32_SUPPORTED 0
+#endif
+
+///
+/// Sanity checks
+///
+#if ROCWMMA_ARCH_NAVI
+    static_assert(ROCWMMA_WAVE32_MODE && !ROCWMMA_WAVE64_MODE,
+                  "rocWMMA supports only wave32 for navi arch");
+    static_assert(ROCWMMA_BLOCK_DIM_16_SUPPORTED && !ROCWMMA_BLOCK_DIM_32_SUPPORTED,
+                  "rocWMMA supports only block size of 16 for navi arch");
+#endif
+
+#if ROCWMMA_ARCH_MI
+    static_assert(!ROCWMMA_WAVE32_MODE && ROCWMMA_WAVE64_MODE,
+                  "rocWMMA supports only wave64 for MI arch");
+    static_assert(ROCWMMA_BLOCK_DIM_16_SUPPORTED && ROCWMMA_BLOCK_DIM_32_SUPPORTED,
+                  "rocWMMA requires block size of 16 and 32 for MI arch");
 #endif
 
 } // namespace rocwmma
