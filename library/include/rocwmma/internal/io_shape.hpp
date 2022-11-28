@@ -219,11 +219,8 @@ namespace rocwmma
             BlockDim = BlockN,
             KDim     = BlockM,
 
-#if defined(ROCWMMA_ARCH_NAVI)
-            MaxVectorWidth = 1, // Actual output of the navi3x hardware
-#else
-            MaxVectorWidth = std::is_same<DataT, float64_t>::value ? 1 : 4, // Actual output of the mfma hardware
-#endif
+            MaxVectorWidth = (std::is_same<DataT, float64_t>::value || ROCWMMA_ARCH_NAVI) ? 1 : 4,
+
             VectorWidth = std::is_same<DataLayoutT, col_major>::value ? MaxVectorWidth : 1,
         };
 
