@@ -43,11 +43,7 @@
 #include "internal/io_traits.hpp"
 #include "internal/layout.hpp"
 #include "internal/mapping_util.hpp"
-#if defined(ROCWMMA_ARCH_MI)
 #include "internal/mfma.hpp"
-#elif defined(ROCWMMA_ARCH_NAVI)
-#include "internal/wmma.hpp"
-#endif
 #include "internal/opaque_load.hpp"
 #include "internal/opaque_store.hpp"
 #include "internal/pack.hpp"
@@ -58,6 +54,7 @@
 #include "internal/utils.hpp"
 #include "internal/vector.hpp"
 #include "internal/vector_iterator.hpp"
+#include "internal/wmma.hpp"
 
 namespace rocwmma
 {
@@ -320,14 +317,11 @@ namespace rocwmma
         // Sanity check
         // static_assert(detail::MfmaCheck<FragA, FragB>::value,
         //              "A and B fragment layouts must be orthogonal");
+        using MMA = typename std::conditional_t<ROCWMMA_ARCH_MI,
+                                                Mfma<InputT, ComputeT, BlockM, BlockN, BlockK>,
+                                                Wmma<InputT, ComputeT, BlockM, BlockN, BlockK>>;
 
-#if defined(ROCWMMA_ARCH_MI)
-        using MFMA = Mfma<InputT, ComputeT, BlockM, BlockN, BlockK>;
-        (*d)       = MFMA::exec(*a, *b, *c);
-#elif defined(ROCWMMA_ARCH_NAVI)
-        using WMMA = Wmma<InputT, ComputeT, BlockM, BlockN, BlockK>;
-        (*d)       = WMMA::exec(*a, *b, *c);
-#endif
+        (*d) = MMA::exec(*a, *b, *c);
     }
 
     __device__ void synchronize_workgroup()

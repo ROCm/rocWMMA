@@ -26,174 +26,34 @@
 #ifndef ROCWMMA_WMMA_HPP
 #define ROCWMMA_WMMA_HPP
 
-#include "permute.hpp"
+#include "vector.hpp"
+#include "vector_iterator.hpp"
+
+#include "wmma_impl.hpp"
 
 namespace rocwmma
 {
-    namespace detail
-    {
-        template <typename InputT, typename ComputeT, uint32_t BlockM, uint32_t BlockN>
-        struct amdgcn_wmma;
-
-        template <>
-        struct amdgcn_wmma<float16_t, float32_t, 16, 16>
-        {
-            // Packed register traits
-            struct Traits
-            {
-                enum : uint32_t
-                {
-                    KPerWmma = 16,
-                };
-                using ARegsT = VRegF32x8;
-                using BRegsT = VRegF32x8;
-                using CRegsT = AccRegF32x8;
-                using DRegsT = AccRegF32x8;
-            };
-
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
-                typename Traits::DRegsT
-            {
-                typename Traits::DRegsT result;
-                result.data = {
-                    __builtin_amdgcn_wmma_f32_16x16x16_f16_w32(regsA.data, regsB.data, regsC.data)};
-                return result;
-            }
-        };
-
-        template <>
-        struct amdgcn_wmma<float16_t, float16_t, 16, 16>
-        {
-            // Packed register traits
-            struct Traits
-            {
-                enum : uint32_t
-                {
-                    KPerWmma = 16,
-                };
-                using ARegsT = VRegF32x8;
-                using BRegsT = VRegF32x8;
-                using CRegsT = AccRegF32x8;
-                using DRegsT = AccRegF32x8;
-            };
-
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
-                typename Traits::DRegsT
-            {
-                typename Traits::DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f16_16x16x16_f16_w32(
-                    regsA.data, regsB.data, regsC.data, 0)};
-                return result;
-            }
-        };
-
-        template <>
-        struct amdgcn_wmma<bfloat16_t, float32_t, 16, 16>
-        {
-            // Packed register traits
-            struct Traits
-            {
-                enum : uint32_t
-                {
-                    KPerWmma = 16,
-                };
-                using ARegsT = VRegF32x8;
-                using BRegsT = VRegF32x8;
-                using CRegsT = AccRegF32x8;
-                using DRegsT = AccRegF32x8;
-            };
-
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
-                typename Traits::DRegsT
-            {
-                typename Traits::DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f32_16x16x16_bf16_w32(
-                    regsA.data, regsB.data, regsC.data)};
-                return result;
-            }
-        };
-
-        template <>
-        struct amdgcn_wmma<bfloat16_t, bfloat16_t, 16, 16>
-        {
-            // Packed register traits
-            struct Traits
-            {
-                enum : uint32_t
-                {
-                    KPerWmma = 16,
-                };
-                using ARegsT = VRegF32x8;
-                using BRegsT = VRegF32x8;
-                using CRegsT = AccRegF32x8;
-                using DRegsT = AccRegF32x8;
-            };
-
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
-                typename Traits::DRegsT
-            {
-                typename Traits::DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32(
-                    regsA.data, regsB.data, regsC.data, 1)};
-                return result;
-            }
-        };
-
-        template <>
-        struct amdgcn_wmma<int8_t, int32_t, 16, 16>
-        {
-            // Packed register traits
-            struct Traits
-            {
-                enum : uint32_t
-                {
-                    KPerWmma = 16,
-                };
-                using ARegsT = VRegI32x4;
-                using BRegsT = VRegI32x4;
-                using CRegsT = AccRegI32x8;
-                using DRegsT = AccRegI32x8;
-            };
-
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
-                typename Traits::DRegsT
-            {
-                typename Traits::DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32(
-                    1, regsA.data, 1, regsB.data, regsC.data, 1)};
-                return result;
-            }
-        };
-    } // namespace detail
-
-    // Wmma class for unsupported types
+    // Wmma interface
     template <typename InputT,
               typename ComputeT,
               uint32_t BlockM,
               uint32_t BlockN,
               uint32_t BlockK,
-              class enable = void>
-    struct Wmma
+              typename Enabler = void>
+    struct Wmma : public detail::amdgcn_wmma<InputT, ComputeT, BlockM, BlockN>
     {
-        template <typename TypeA, typename TypeB, typename TypeC>
-        __device__ static inline auto
-            exec(TypeA const& regsA, TypeB const& regsB, TypeC const& regsC)
-        {
-            return regsC;
-        }
     };
 
-    // Specified Wmma class for supported Block Sizes/ Input/ Compute Types
+    // Unlock the WMMA for NAVI cards
+    // Supported Input/Compute types:
+    // float16_t / float16_t
+    // float16_t / float32_t
+    // hfloat16_t / float16_t
+    // hfloat16_t / float32_t
+    // bfloat16_t / bfloat16_t
+    // bfloat16_t / float32_t
+    // int8_t / int32_t
+    // Supported block sizes (M, N) = 16
     template <typename InputT, typename ComputeT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
     struct Wmma<
         InputT,
@@ -202,12 +62,21 @@ namespace rocwmma
         BlockN,
         BlockK,
         typename std::enable_if<
-            ((std::is_same<InputT, float16_t>::value && std::is_same<ComputeT, float16_t>::value)
-             || (std::is_same<InputT, float16_t>::value && std::is_same<ComputeT, float32_t>::value)
-             || (std::is_same<InputT, bfloat16_t>::value && std::is_same<ComputeT, bfloat16_t>::value)
-             || (std::is_same<InputT, bfloat16_t>::value && std::is_same<ComputeT, float32_t>::value)
-             || (std::is_same<InputT, int8_t>::value && std::is_same<ComputeT, int32_t>::value))
-            && (BlockM == 16) && (BlockN == 16) && (BlockK >= 16)>::type>
+            ROCWMMA_ARCH_NAVI // NAVI only
+            && ((std::is_same<InputT, float16_t>::value && std::is_same<ComputeT, float16_t>::value)
+                || (std::is_same<InputT, float16_t>::value
+                    && std::is_same<ComputeT, float32_t>::value)
+                || (std::is_same<InputT, hfloat16_t>::value
+                    && std::is_same<ComputeT, hfloat16_t>::value)
+                || (std::is_same<InputT, hfloat16_t>::value
+                    && std::is_same<ComputeT, float32_t>::value)
+                || (std::is_same<InputT, bfloat16_t>::value
+                    && std::is_same<ComputeT, bfloat16_t>::value)
+                || (std::is_same<InputT, bfloat16_t>::value
+                    && std::is_same<ComputeT, float32_t>::value)
+                || (std::is_same<InputT, int8_t>::value && std::is_same<ComputeT, int32_t>::value))
+            && (BlockM == 16) && (BlockN == 16) && (BlockK >= 16) // 16 block size only
+            >::type>
     {
         // Full-fragment IO traits
         using IOTraitsA   = IOTraits<BlockM, BlockK, InputT>;
@@ -229,27 +98,29 @@ namespace rocwmma
             {
                 WmmaCount = BlockK / WMMA::Traits::KPerWmma,
                 MinK      = WMMA::Traits::KPerWmma,
+
+                // WMMA instructions need to duplicate inputs and therefore
+                // must double fragment size.
+                WmmaInputMultiplier = 2u
             };
 
             // Create full-fragment vector sizes
             using ARegsT = typename VecTraitsA::template VecT<typename VecTraitsA::DataT,
                                                               WmmaCount * VecTraitsA::size()
-                                                                  / AMDGCN_CDNA_RDNA_WAVE_RATIO>;
+                                                                  / WmmaInputMultiplier>;
             using BRegsT = typename VecTraitsB::template VecT<typename VecTraitsB::DataT,
                                                               WmmaCount * VecTraitsB::size()
-                                                                  / AMDGCN_CDNA_RDNA_WAVE_RATIO>;
+                                                                  / WmmaInputMultiplier>;
             using CRegsT = typename VecTraitsC::template VecT<>;
             using DRegsT = typename VecTraitsD::template VecT<>;
 
             // Create per-wmma fragment vector sizes
             using ARegsTPWmma =
                 typename VecTraitsA::template VecT<typename VecTraitsA::DataT,
-                                                   VecTraitsA::size()
-                                                       / AMDGCN_CDNA_RDNA_WAVE_RATIO>;
+                                                   VecTraitsA::size() / WmmaInputMultiplier>;
             using BRegsTPWmma =
                 typename VecTraitsB::template VecT<typename VecTraitsB::DataT,
-                                                   VecTraitsB::size()
-                                                       / AMDGCN_CDNA_RDNA_WAVE_RATIO>;
+                                                   VecTraitsB::size() / WmmaInputMultiplier>;
 
             // Sanity checks
             static_assert(BlockK >= MinK, "BlockK is not a minimum of MinK");
@@ -283,9 +154,9 @@ namespace rocwmma
             typename Traits::DRegsT result = regsC;
 
             // Iterate over WMMA input requirements
-            auto aIt = makeVectorIterator<VecTraitsA::size() / AMDGCN_CDNA_RDNA_WAVE_RATIO>(regsA)
+            auto aIt = makeVectorIterator<VecTraitsA::size() / Traits::WmmaInputMultiplier>(regsA)
                            .begin();
-            auto bIt = makeVectorIterator<VecTraitsB::size() / AMDGCN_CDNA_RDNA_WAVE_RATIO>(regsB)
+            auto bIt = makeVectorIterator<VecTraitsB::size() / Traits::WmmaInputMultiplier>(regsB)
                            .begin();
 
             // Accumulate over WMMA count
@@ -315,7 +186,7 @@ namespace rocwmma
                 }
 
                 // update the src and dst iterators after data operation
-                auto dstAIt = makeVectorIterator<VecTraitsA::size() / AMDGCN_CDNA_RDNA_WAVE_RATIO>(
+                auto dstAIt = makeVectorIterator<VecTraitsA::size() / Traits::WmmaInputMultiplier>(
                                   regsA_Wmma)
                                   .begin();
 
@@ -345,7 +216,7 @@ namespace rocwmma
                     lowerSrcBIt++;
                 }
 
-                auto dstBIt = makeVectorIterator<VecTraitsB::size() / AMDGCN_CDNA_RDNA_WAVE_RATIO>(
+                auto dstBIt = makeVectorIterator<VecTraitsB::size() / Traits::WmmaInputMultiplier>(
                                   regsB_Wmma)
                                   .begin();
 
