@@ -556,7 +556,7 @@ namespace rocwmma
                        && ((0x1 << (writeOffset % 16u / 4u)) & BankMask))
                     {
                         // OOB would be > groupsize, as uint32_t type
-                        if(shiftOffset >= GroupSize)
+                        if(shiftOffset >= groupSize)
                         {
                             dataOut[baseOffset + writeOffset] = BoundCtrl ? 0u : fillVal;
                         }
