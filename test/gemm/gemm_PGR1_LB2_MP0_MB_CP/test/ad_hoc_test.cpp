@@ -40,7 +40,7 @@ namespace rocwmma
         // Types: ALL + double
         // Block Sizes: 16 x 16 x BlockK
         // Layouts: NT
-        using Types      = std::tuple<std::tuple<float32_t, float32_t, float32_t>>;
+        using Types      = std::tuple<std::tuple<float16_t, float32_t, float32_t>>;
         using BlockSizes = std::tuple<std::tuple<I<16>, I<16>, I<16>>>;
         using Layouts    = std::tuple<
             std::tuple<col_major, row_major, row_major>>; //typename Base::TestLayoutsNT;
