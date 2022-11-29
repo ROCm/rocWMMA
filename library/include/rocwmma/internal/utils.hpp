@@ -110,6 +110,7 @@ namespace rocwmma
 ///////////////////////////////////////////////////////////
 ////////  std::apply fold expressions (<= C++14)  /////////
 ///////////////////////////////////////////////////////////
+#if !defined(__HIPCC_RTC__)
 namespace std
 {
 
@@ -184,6 +185,31 @@ namespace std
     }
 
 } // namespace std
+#endif // !defined(__HIPCC_RTC__)
+
+///////////////////////////////////////////////////////////
+///////////  std::numeric_limits for hipRTC  //////////////
+///////////////////////////////////////////////////////////
+#if defined(__HIPCC_RTC__)
+namespace std
+{
+    template <typename T>
+    class numeric_limits
+    {
+    public:
+        static constexpr T min() noexcept;
+        static constexpr T lowest() noexcept;
+        static constexpr T max() noexcept;
+        static constexpr T epsilon() noexcept;
+        static constexpr T round_error() noexcept;
+        static constexpr T infinity() noexcept;
+        static constexpr T quiet_NaN() noexcept;
+        static constexpr T signaling_NaN() noexcept;
+        static constexpr T denorm_min() noexcept;
+    };
+
+} // namespace std
+#endif
 
 namespace rocwmma
 {

@@ -2,7 +2,6 @@
 #define ROCWMMA_VECTOR_ITERATOR_HPP
 
 #include "vector.hpp"
-#include <iostream>
 
 inline constexpr unsigned int next_pot(unsigned int x)
 {

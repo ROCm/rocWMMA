@@ -26,8 +26,6 @@
 #ifndef ROCWMMA_COOP_HPP
 #define ROCWMMA_COOP_HPP
 
-#include <type_traits>
-
 #include "rocwmma.hpp"
 
 /**
@@ -59,17 +57,17 @@
 
 namespace rocwmma
 {
-   
-   //! Cooperative Load Matrix - Loads the entire fragment with data from memory address cooperatively across waves.
-   //! Each cooperative wave is responsible in loading a portion of the final fragment. 
-   //! Note that the full fragment data is not cohesive for individual waves as they only load a piece of the data. 
-   //! This function may be paired with store_matrix_sync to move a single fragment collaboratively between memory locations.
-   //!
-   //! The full load is split into work items (splitCount). 
-   //! Work items are assigned in round robin fashion to waves in the range of [0, waveCount). 
-   //! The current wave index determines the order of the current wave in the collaboration pool.
-   //! Work items are consumed in order by waves [0, waveCount) until 
-   //! there are no more work items and the operation is completed.
+
+    //! Cooperative Load Matrix - Loads the entire fragment with data from memory address cooperatively across waves.
+    //! Each cooperative wave is responsible in loading a portion of the final fragment.
+    //! Note that the full fragment data is not cohesive for individual waves as they only load a piece of the data.
+    //! This function may be paired with store_matrix_sync to move a single fragment collaboratively between memory locations.
+    //!
+    //! The full load is split into work items (splitCount).
+    //! Work items are assigned in round robin fashion to waves in the range of [0, waveCount).
+    //! The current wave index determines the order of the current wave in the collaboration pool.
+    //! Work items are consumed in order by waves [0, waveCount) until
+    //! there are no more work items and the operation is completed.
     /*!
       \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
@@ -96,17 +94,17 @@ namespace rocwmma
                               uint32_t waveCount,
                               uint32_t splitCount);
 
-   //! Cooperative Load Matrix - Loads the entire fragment with data from memory address cooperatively across waves.
-   //! Each cooperative wave is responsible in loading a portion of the final fragment. 
-   //! Note that the full fragment data is not cohesive for individual waves as they only load a piece of the data.
-   //! This function may be paired with store_matrix_sync to move a single fragment collaboratively
-   //! between memory locations.
-   //!
-   //! The full load is split into work items (default = waveCount). 
-   //! Work items are assigned in round robin fashion to waves in the range of [0, waveCount).
-   //! The current wave index determines the order of the current wave in the collaboration pool.
-   //! Work items are consumed in order by waves [0, waveCount) until there are no more
-   //! work items and the operation is completed.
+    //! Cooperative Load Matrix - Loads the entire fragment with data from memory address cooperatively across waves.
+    //! Each cooperative wave is responsible in loading a portion of the final fragment.
+    //! Note that the full fragment data is not cohesive for individual waves as they only load a piece of the data.
+    //! This function may be paired with store_matrix_sync to move a single fragment collaboratively
+    //! between memory locations.
+    //!
+    //! The full load is split into work items (default = waveCount).
+    //! Work items are assigned in round robin fashion to waves in the range of [0, waveCount).
+    //! The current wave index determines the order of the current wave in the collaboration pool.
+    //! Work items are consumed in order by waves [0, waveCount) until there are no more
+    //! work items and the operation is completed.
     /*!
       \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
@@ -118,7 +116,7 @@ namespace rocwmma
       \tparam DataT data type
       \tparam DataLayout in-memory layout as col_major or row_major
     */
- template <typename MatrixT,
+    template <typename MatrixT,
               uint32_t BlockM,
               uint32_t BlockN,
               uint32_t BlockK,
@@ -131,19 +129,19 @@ namespace rocwmma
                               uint32_t waveIndex,
                               uint32_t waveCount);
 
-   //! Cooperative Load Matrix - Loads the entire fragment with data from memory address cooperatively across waves.
-   //! Each cooperative wave is responsible in loading a portion of the final fragment.
-   //! Note that the full fragment data is not cohesive for individual waves as they only load a piece of the data.
-   //! This function may be paired with store_matrix_sync to move a single fragment collaboratively
-   //!between memory locations.
-   //!
-   //! The full load is split into work items. 
-   //! This overload is conducive to GEMM workload where
-   //! matrix_a fragments collaboratively load common data with other waves in the same row. Likewise,
-   //! matrix_b fragments collaboratively load common data with other waves in the same column.
-   //! Workload is split evenly across all waves in collaborative dimension.
-   //! Split count = wave count = workgroupDim<1> (matrix_a) | workgroupDim<0> (matrix_b)
-   //! Wave index = waveCoord<1> (matrix_a) | waveCoord<0> (matrix_b)
+    //! Cooperative Load Matrix - Loads the entire fragment with data from memory address cooperatively across waves.
+    //! Each cooperative wave is responsible in loading a portion of the final fragment.
+    //! Note that the full fragment data is not cohesive for individual waves as they only load a piece of the data.
+    //! This function may be paired with store_matrix_sync to move a single fragment collaboratively
+    //!between memory locations.
+    //!
+    //! The full load is split into work items.
+    //! This overload is conducive to GEMM workload where
+    //! matrix_a fragments collaboratively load common data with other waves in the same row. Likewise,
+    //! matrix_b fragments collaboratively load common data with other waves in the same column.
+    //! Workload is split evenly across all waves in collaborative dimension.
+    //! Split count = wave count = workgroupDim<1> (matrix_a) | workgroupDim<0> (matrix_b)
+    //! Wave index = waveCoord<1> (matrix_a) | waveCoord<0> (matrix_b)
     /*!
       \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
@@ -164,18 +162,18 @@ namespace rocwmma
                               const DataT*                                                  data,
                               uint32_t                                                      ldm);
 
-   //! Cooperative Store Matrix - Stores the entire fragment to data address cooperatively across waves.
-   //! Each cooperative wave is responsible in storing a portion of the final fragment.
-   //! Note that the full fragment data is not required to be cohesive for individual waves as they 
-   //! only store a piece of the data. This function may be paired with load_matrix_sync to move a single fragment 
-   //! collaboratively between memory locations.
-   //! 
-   //! The full store is split into work items (splitCount). Work items are assigned
-   //! in round robin fashion to waves in the range of [0, waveCount). The current
-   //! wave index determines the order of the current wave in the collaboration pool.
-   //! Work items are consumed in order by waves [0, waveCount) until there are no more
-   //! work items and the operation is completed.
-     /*!
+    //! Cooperative Store Matrix - Stores the entire fragment to data address cooperatively across waves.
+    //! Each cooperative wave is responsible in storing a portion of the final fragment.
+    //! Note that the full fragment data is not required to be cohesive for individual waves as they
+    //! only store a piece of the data. This function may be paired with load_matrix_sync to move a single fragment
+    //! collaboratively between memory locations.
+    //!
+    //! The full store is split into work items (splitCount). Work items are assigned
+    //! in round robin fashion to waves in the range of [0, waveCount). The current
+    //! wave index determines the order of the current wave in the collaboration pool.
+    //! Work items are consumed in order by waves [0, waveCount) until there are no more
+    //! work items and the operation is completed.
+    /*!
       \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
       \param ldm Leading dimension size
@@ -187,7 +185,7 @@ namespace rocwmma
       \tparam DataT data type
       \tparam DataLayout in-memory layout as col_major or row_major
     */
-   template <typename MatrixT,
+    template <typename MatrixT,
               uint32_t BlockM,
               uint32_t BlockN,
               uint32_t BlockK,
@@ -201,16 +199,16 @@ namespace rocwmma
         uint32_t                                                            waveCount,
         uint32_t                                                            splitCount);
 
-   //! Cooperative Store Matrix - Stores the entire fragment to data address cooperatively across waves.
-   //! Each cooperative wave is responsible in storing a portion of the final fragment. Note that the full
-   //! fragment data is not required to be cohesive for individual waves as they only store a piece of the data.
-   //! This function may be paired with load_matrix_sync to move a single fragment collaboratively between memory locations.
-   //!
-   //! The full store is split into work items (default = waveCount). Work items are assigned
-   //! in round robin fashion to waves in the range of [0, waveCount). The current
-   //! wave index determines the order of the current wave in the collaboration pool.
-   //! Work items are consumed in order by waves [0, waveCount) until there are no more
-   //! work items and the operation is completed.
+    //! Cooperative Store Matrix - Stores the entire fragment to data address cooperatively across waves.
+    //! Each cooperative wave is responsible in storing a portion of the final fragment. Note that the full
+    //! fragment data is not required to be cohesive for individual waves as they only store a piece of the data.
+    //! This function may be paired with load_matrix_sync to move a single fragment collaboratively between memory locations.
+    //!
+    //! The full store is split into work items (default = waveCount). Work items are assigned
+    //! in round robin fashion to waves in the range of [0, waveCount). The current
+    //! wave index determines the order of the current wave in the collaboration pool.
+    //! Work items are consumed in order by waves [0, waveCount) until there are no more
+    //! work items and the operation is completed.
     /*!
       \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
@@ -234,19 +232,19 @@ namespace rocwmma
         uint32_t                                                            ldm,
         uint32_t                                                            waveIndex,
         uint32_t                                                            waveCount);
-   
-       //! Cooperative Store Matrix - Stores the entire fragment to data address cooperatively across waves.
-       //! Each cooperative wave is responsible in storing a portion of the final fragment.
-       //! Note that the full fragment data is not required to be cohesive for individual waves as they only store a piece of the data.
-       //! This function may be paired with load_matrix_sync to move a single fragment collaboratively between memory locations.
-       //!
-       //! The full store is split into work items. This overload is conducive to GEMM workload where
-       //! matrix_a fragments collaboratively use common data with other waves in the same row. Likewise,
-       //! matrix_b fragments collaboratively use common data with other waves in the same column.
-       //! Workload is split evenly across all waves in collaborative dimension.
-       //!
-       //! Split count = wave count = workgroupDim<1> (matrix_a) | workgroupDim<0> (matrix_b)
-       //! Wave index = waveCoord<1> (matrix_a) | waveCoord<0> (matrix_b)
+
+    //! Cooperative Store Matrix - Stores the entire fragment to data address cooperatively across waves.
+    //! Each cooperative wave is responsible in storing a portion of the final fragment.
+    //! Note that the full fragment data is not required to be cohesive for individual waves as they only store a piece of the data.
+    //! This function may be paired with load_matrix_sync to move a single fragment collaboratively between memory locations.
+    //!
+    //! The full store is split into work items. This overload is conducive to GEMM workload where
+    //! matrix_a fragments collaboratively use common data with other waves in the same row. Likewise,
+    //! matrix_b fragments collaboratively use common data with other waves in the same column.
+    //! Workload is split evenly across all waves in collaborative dimension.
+    //!
+    //! Split count = wave count = workgroupDim<1> (matrix_a) | workgroupDim<0> (matrix_b)
+    //! Wave index = waveCoord<1> (matrix_a) | waveCoord<0> (matrix_b)
     /*!
       \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory

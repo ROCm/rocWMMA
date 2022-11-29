@@ -27,15 +27,16 @@
 #define ROCWMMA_TYPES_EXT_HPP
 
 #if !defined(__HIPCC_RTC__)
-#include <hip/hip_bfloat16.h>
-#endif // !__HIPCC_RTC__
-
-#include <hip/hip_fp16.h>
-
 #include <cmath>
+#include <hip/hip_bfloat16.h>
 #include <limits>
 #include <ostream>
-#include <type_traits>
+#else
+#include "utils.hpp"
+#endif // !defined(__HIPCC_RTC__)
+
+// #include <hip/hip_bfloat16.h>
+// #include <hip/hip_fp16.h>
 
 #include "types.hpp"
 
@@ -119,6 +120,11 @@ namespace std
         return stream << __half2float(val);
     }
 #endif // !defined(__HIPCC_RTC__)
+
+#if defined(__HIPCC_RTC__)
+    using uint16_t = rocwmma::uint16_t;
+#endif
+
     ///////////////////////////////////////////////////////////
     ///////////  std::numeric_limits<float16_t>  //////////////
     ///////////////////////////////////////////////////////////
@@ -303,6 +309,7 @@ namespace std
 
 namespace rocwmma
 {
+#if !defined(__HIPCC_RTC__)
     ///////////////////////////////////////////////////////////
     ///////////  rocwmma::hfloat16_t host operators  //////////
     ///////////////////////////////////////////////////////////
@@ -366,6 +373,7 @@ namespace rocwmma
     {
         return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) / static_cast<float16_t>(y));
     }
+#endif // !defined(__HIPCC_RTC__)
 
     template <typename T, typename std::enable_if_t<std::is_integral<T>::value, int> = 0>
     constexpr auto maxExactInteger() -> decltype(std::numeric_limits<T>::max())
