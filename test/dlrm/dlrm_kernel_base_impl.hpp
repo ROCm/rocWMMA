@@ -27,13 +27,13 @@
 #ifndef DLRM_KERNEL_BASE_IMPL_HPP
 #define DLRM_KERNEL_BASE_IMPL_HPP
 
+#include <cmath>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <tuple>
-#include <cmath>
 
 #include <hip/hip_ext.h>
 #include <hip/hip_runtime.h>
@@ -77,15 +77,17 @@ namespace rocwmma
     template <uint32_t TileSize, typename DataT>
     dim3 DlrmKernelBase<TileSize, DataT>::gridDim() const
     {
+        auto& device = DeviceInfo::instance();
+
         if(passDirection == DlrmDirection_t::Forward)
         {
-            return dim3(ceilDiv(mMPadded, TileSize * mTBlockX / AMDGCN_WAVE_SIZE),
+            return dim3(ceilDiv(mMPadded, TileSize * mTBlockX / device->warpSize()),
                         ceilDiv(mM, TileSize),
                         mB);
         }
         else
         {
-            return dim3(ceilDiv(mMPadded, TileSize * mTBlockX / AMDGCN_WAVE_SIZE),
+            return dim3(ceilDiv(mMPadded, TileSize * mTBlockX / device->warpSize()),
                         ceilDiv(mK, TileSize),
                         mB);
         }
@@ -100,9 +102,34 @@ namespace rocwmma
     template <uint32_t TileSize, typename DataT>
     bool DlrmKernelBase<TileSize, DataT>::checkDevice() const
     {
-        auto deviceArch = DeviceInfo::instance()->getGcnArch();
-        return (deviceArch != DeviceInfo::UNSUPPORTED
-                && !(deviceArch == DeviceInfo::GFX908 && std::is_same<DataT, float64_t>::value));
+        auto& deviceInfo = DeviceInfo::instance();
+        auto  deviceArch = deviceInfo->getGcnArch();
+
+        // Arch
+        auto isGfx908 = deviceArch == DeviceInfo::GFX908;
+        auto isGfx11  = (deviceArch == DeviceInfo::GFX1100) || (deviceArch == DeviceInfo::GFX1101)
+                       || (deviceArch == DeviceInfo::GFX1102);
+
+        // Datatypes
+        auto isF64 = std::is_same<DataT, float64_t>::value;
+        auto isF16
+            = (std::is_same<DataT, float16_t>::value) || (std::is_same<DataT, hfloat16_t>::value);
+        auto isBF16 = (std::is_same<DataT, bfloat16_t>::value);
+        auto isI8   = (std::is_same<DataT, int8_t>::value);
+
+        // Block size
+        auto is16x16 = (TileSize == 16);
+
+        // No unsupported devices
+        bool unsupportedDeviceCheck = !(deviceArch == DeviceInfo::UNSUPPORTED_ARCH);
+
+        // gfx908 doesn't support f64
+        bool gfx908F64Check = !(isGfx908 && isF64);
+
+        // gfx11 only supports f16, i8 and bf16 inputs with block size 16
+        bool gfx11Check = !(isGfx11 && !isF16 && !isBF16 && !isI8 && !is16x16);
+
+        return unsupportedDeviceCheck && gfx908F64Check && gfx11Check;
     }
 
     template <uint32_t TileSize, typename DataT>
@@ -115,7 +142,7 @@ namespace rocwmma
     template <uint32_t TileSize, typename DataT>
     bool DlrmKernelBase<TileSize, DataT>::checkLds() const
     {
-        return ldsUsage() <= AMDGCN_LDS_MAX_SIZE_BYTES;
+        return ldsUsage() <= DeviceInfo::instance()->sharedMemSize();
     }
 
     template <uint32_t TileSize, typename DataT>
@@ -133,8 +160,8 @@ namespace rocwmma
         mRunFlag = true;
 
         mTotalGFlops = mMeasuredTFlopsPerSec = 0.0;
-        mElapsedTimeMs = 0.0;
-        mEfficiency = -1;
+        mElapsedTimeMs                       = 0.0;
+        mEfficiency                          = -1;
 
         passDirection = DlrmDirection_t::Forward;
 
@@ -227,7 +254,8 @@ namespace rocwmma
             // Initialize matrix data on device and transfer to host for validation
             if(passDirection == DlrmDirection_t::Forward)
             {
-                MatrixUtil<row_major>::fillLaunchKernel(dataInstance->deviceInput().get(), mM, mK, mB);
+                MatrixUtil<row_major>::fillLaunchKernel(
+                    dataInstance->deviceInput().get(), mM, mK, mB);
 #if defined(ROCWMMA_VALIDATION_TESTS)
                 dataInstance->copyDeviceToHostFwdInput();
 #endif // ROCWMMA_VALIDATION_TESTS
@@ -235,8 +263,10 @@ namespace rocwmma
             else
             {
                 uint gradSize = ((mM * (mM - 1)) / 2) + mK;
-                MatrixUtil<row_major>::fillLaunchKernel(dataInstance->deviceInput().get(), mM, mK, mB);
-                MatrixUtil<row_major>::fillLaunchKernel(dataInstance->deviceUpstreamGrad().get(), 1, gradSize, mB);
+                MatrixUtil<row_major>::fillLaunchKernel(
+                    dataInstance->deviceInput().get(), mM, mK, mB);
+                MatrixUtil<row_major>::fillLaunchKernel(
+                    dataInstance->deviceUpstreamGrad().get(), 1, gradSize, mB);
 #if defined(ROCWMMA_VALIDATION_TESTS)
                 dataInstance->copyDeviceToHostBwdInput();
 #endif // ROCWMMA_VALIDATION_TESTS
@@ -409,13 +439,17 @@ namespace rocwmma
             auto& dataInstance = DataStorage::instance();
             if(passDirection == DlrmDirection_t::Forward)
             {
-                uint batchSize    = ((mM * (mM - 1)) / 2) + mK;
+                uint batchSize = ((mM * (mM - 1)) / 2) + mK;
                 auto reference = dataInstance->template allocDevice<DataT>(batchSize * mB);
                 dataInstance->copyData(reference, dataInstance->hostOutputRef(), batchSize * mB);
-                
+
                 std::tie(mValidationResult, mMaxRelativeError)
-                    = compareEqualLaunchKernel<DataT, DataT>(
-                        dataInstance->deviceOutput().get(), reference.get(), 1, batchSize, mB, 10.0);
+                    = compareEqualLaunchKernel<DataT, DataT>(dataInstance->deviceOutput().get(),
+                                                             reference.get(),
+                                                             1,
+                                                             batchSize,
+                                                             mB,
+                                                             10.0);
 
                 EXPECT_TRUE(mValidationResult) << "Max relative error: " << mMaxRelativeError;
             }
@@ -432,7 +466,7 @@ namespace rocwmma
                 EXPECT_TRUE(mValidationResult) << "Max relative error: " << mMaxRelativeError;
 
                 double maxRelativeError = mMaxRelativeError;
-                
+
                 // Copy reference bottom mlp gradient to device
                 auto reference1 = dataInstance->template allocDevice<DataT>(mK * mB);
                 dataInstance->copyData(reference1, dataInstance->hostBottomMlpGradRef(), mK * mB);
@@ -443,7 +477,8 @@ namespace rocwmma
 
                 EXPECT_TRUE(mValidationResult) << "Max relative error: " << mMaxRelativeError;
 
-                mMaxRelativeError = (maxRelativeError > mMaxRelativeError) ? maxRelativeError : mMaxRelativeError;
+                mMaxRelativeError
+                    = (maxRelativeError > mMaxRelativeError) ? maxRelativeError : mMaxRelativeError;
             }
         }
 #endif

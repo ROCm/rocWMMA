@@ -146,7 +146,7 @@ namespace rocwmma
                         LayoutC,
                         LayoutD>::gridDim() const
     {
-        return dim3(ceilDiv(mM, BlockM * mTBlockX / rocwmma::AMDGCN_WAVE_SIZE),
+        return dim3(ceilDiv(mM, BlockM * mTBlockX / DeviceInfo::instance()->warpSize()),
                     ceilDiv(mN, BlockN * mTBlockY));
     }
 
@@ -198,9 +198,34 @@ namespace rocwmma
                         LayoutC,
                         LayoutD>::checkDevice() const
     {
-        auto deviceArch = DeviceInfo::instance()->getGcnArch();
-        return (deviceArch != DeviceInfo::UNSUPPORTED
-                && !(deviceArch == DeviceInfo::GFX908 && std::is_same<InputT, float64_t>::value));
+        auto& deviceInfo = DeviceInfo::instance();
+        auto  deviceArch = deviceInfo->getGcnArch();
+
+        // Arch
+        auto isGfx908 = deviceArch == DeviceInfo::GFX908;
+        auto isGfx11  = (deviceArch == DeviceInfo::GFX1100) || (deviceArch == DeviceInfo::GFX1101)
+                       || (deviceArch == DeviceInfo::GFX1102);
+
+        // Datatypes
+        auto isF64Input = std::is_same<InputT, float64_t>::value;
+        auto isF16Input
+            = (std::is_same<InputT, float16_t>::value) || (std::is_same<InputT, hfloat16_t>::value);
+        auto isBF16Input = (std::is_same<InputT, bfloat16_t>::value);
+        auto isI8Input   = (std::is_same<InputT, int8_t>::value);
+
+        // Block size
+        auto is16x16 = (BlockM == 16 && BlockN == 16);
+
+        // No unsupported devices
+        bool unsupportedDeviceCheck = !(deviceArch == DeviceInfo::UNSUPPORTED_ARCH);
+
+        // gfx908 doesn't support f64
+        bool gfx908F64Check = !(isGfx908 && isF64Input);
+
+        // gfx11 only supports f16, i8 and bf16 inputs with block size 16
+        bool gfx11Check = !(isGfx11 && !isF16Input && !isBF16Input && !isI8Input && !is16x16);
+
+        return unsupportedDeviceCheck && gfx908F64Check && gfx11Check;
     }
 
     template <uint32_t BlockM,
@@ -227,7 +252,8 @@ namespace rocwmma
         // gridDim() takes the upper bound of block coverage.
         // In case of uneven division, this might put us out of bounds.
         // Forfeit the run because there is no tail for cleanup of remainders.
-        auto tileSize = std::make_pair(BlockM * mTBlockX / AMDGCN_WAVE_SIZE, BlockN * mTBlockY);
+        auto tileSize = std::make_pair(BlockM * mTBlockX / DeviceInfo::instance()->warpSize(),
+                                       BlockN * mTBlockY);
         auto gridDims = gridDim();
         return (gridDims.x * std::get<0>(tileSize) == mM)
                && (gridDims.y * std::get<1>(tileSize) == mN) && (mK % BlockK == 0) && BlockK <= mK;
@@ -254,7 +280,7 @@ namespace rocwmma
                         LayoutC,
                         LayoutD>::checkLds() const
     {
-        return ldsUsage() <= rocwmma::AMDGCN_LDS_MAX_SIZE_BYTES;
+        return ldsUsage() <= DeviceInfo::instance()->sharedMemSize();
     }
 
     template <uint32_t BlockM,

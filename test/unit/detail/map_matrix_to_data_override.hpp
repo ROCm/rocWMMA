@@ -117,9 +117,9 @@ namespace rocwmma
             auto arrayOffset = std::is_same<Layout, row_major>::value ? rowMjrOffset : colMjrOffset;
 
             // Scale from workgroup grid to wave grid
-            auto waveGridDim
-                = std::make_pair(Base::gridDim().x * (Base::blockDim().x / AMDGCN_WAVE_SIZE),
-                                 Base::gridDim().y * Base::blockDim().y);
+            auto waveGridDim = std::make_pair(
+                Base::gridDim().x * (Base::blockDim().x / Base::DeviceInfo::instance()->warpSize()),
+                Base::gridDim().y * Base::blockDim().y);
 
 // Calculate the expected output from the inputs
 #pragma omp parallel for

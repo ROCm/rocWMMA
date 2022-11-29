@@ -141,9 +141,10 @@ namespace rocwmma
 
         } // namespace SwizzleCtrl
 
-        template <typename DataT, uint32_t SwizzleCtrl>
+        template <uint32_t SwizzleCtrl>
         struct amdgcn_swizzle
         {
+            template <typename DataT>
             __device__ static inline DataT exec(DataT input)
             {
                 return reinterpret_cast<int32_t&>(input) = __builtin_amdgcn_ds_swizzle(

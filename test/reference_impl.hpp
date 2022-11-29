@@ -26,6 +26,7 @@
 #ifndef ROCWMMA_REFERENCE_IMPL_HPP
 #define ROCWMMA_REFERENCE_IMPL_HPP
 
+#include "hip_device.hpp"
 #include "reference.hpp"
 
 namespace rocwmma
@@ -177,7 +178,6 @@ namespace rocwmma
     }
 
     template <uint32_t ElementIdx,
-              uint32_t WaveSize,
               uint32_t GroupSize,
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
@@ -187,28 +187,33 @@ namespace rocwmma
                               uint32_t        elementCount,
                               uint32_t        fillVal /* = 0u */)
     {
-        auto const loopCnt = elementCount / WaveSize;
+        auto waveSize = HipDevice::instance()->warpSize();
+        auto groupSize
+            = (GroupSize == CrossLaneOps::Properties::OP_GROUP_SIZE_WARP) ? waveSize : GroupSize;
+
+        auto const loopCnt = elementCount / waveSize;
 
         for(uint32_t i = 0u; i < loopCnt; ++i)
         {
             // setup the base ptr (each WaveSize elements)
-            auto const baseOffset = i * WaveSize;
+            auto const baseOffset = i * waveSize;
 
             // For each wave group
-            auto const groupCnt = WaveSize / GroupSize;
+            auto const groupCnt = waveSize / groupSize;
+
             for(uint32_t j = 0u; j < groupCnt; j++)
             {
-                auto const groupOffset = j * GroupSize;
+                auto const groupOffset = j * groupSize;
 
-                for(uint32_t k = 0u; k < GroupSize; k++)
+                for(uint32_t k = 0u; k < groupSize; k++)
                 {
                     auto const writeOffset = groupOffset + k;
                     auto const readOffset  = groupOffset + ElementIdx;
 
-                    if(((0x1 << (writeOffset % WaveSize / 16u)) & RowMask)
+                    if(((0x1 << (writeOffset % waveSize / 16u)) & RowMask)
                        && ((0x1 << (writeOffset % 16u / 4u)) & BankMask))
                     {
-                        if(ElementIdx >= GroupSize)
+                        if(ElementIdx >= groupSize)
                         {
                             dataOut[baseOffset + writeOffset] = BoundCtrl ? 0u : fillVal;
                         }
@@ -227,7 +232,6 @@ namespace rocwmma
     }
 
     template <uint32_t BlockIdx,
-              uint32_t WaveSize,
               uint32_t BlockSize,
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
@@ -237,25 +241,29 @@ namespace rocwmma
                                     uint32_t        elementCount,
                                     uint32_t        fillVal /* = 0u */)
     {
-        auto const loopCnt = elementCount / WaveSize;
+        auto waveSize = HipDevice::instance()->warpSize();
+        auto groupSize
+            = (BlockSize == CrossLaneOps::Properties::OP_GROUP_SIZE_WARP) ? waveSize : BlockSize;
+
+        auto const loopCnt = elementCount / waveSize;
 
         for(uint32_t i = 0u; i < loopCnt; ++i)
         {
             // setup the base ptr (each WaveSize elements)
-            auto const baseOffset = i * WaveSize;
+            auto const baseOffset = i * waveSize;
 
             // For each wave group
-            auto const groupCnt = WaveSize / BlockSize;
+            auto const groupCnt = waveSize / groupSize;
             for(uint32_t j = 0u; j < groupCnt; j++)
             {
-                auto const groupOffset = j * BlockSize;
+                auto const groupOffset = j * groupSize;
 
-                for(uint32_t k = 0u; k < BlockSize; k++)
+                for(uint32_t k = 0u; k < groupSize; k++)
                 {
                     auto const writeOffset = groupOffset + k;
-                    auto const readOffset  = BlockIdx * BlockSize + k;
+                    auto const readOffset  = BlockIdx * groupSize + k;
 
-                    if(((0x1 << (writeOffset % WaveSize / 16u)) & RowMask)
+                    if(((0x1 << (writeOffset % waveSize / 16u)) & RowMask)
                        && ((0x1 << (writeOffset % 16u / 4u)) & BankMask))
                     {
                         if(BlockIdx >= groupCnt)
@@ -280,7 +288,6 @@ namespace rocwmma
               uint32_t Select1,
               uint32_t Select2,
               uint32_t Select3,
-              uint32_t WaveSize,
               uint32_t GroupSize,
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
@@ -291,21 +298,25 @@ namespace rocwmma
                                    uint32_t        elementCount,
                                    uint32_t        fillVal /* = 0u */)
     {
-        auto const loopCnt = elementCount / WaveSize;
+        auto waveSize = HipDevice::instance()->warpSize();
+        auto groupSize
+            = (GroupSize == CrossLaneOps::Properties::OP_GROUP_SIZE_WARP) ? waveSize : GroupSize;
+
+        auto const loopCnt = elementCount / waveSize;
 
         for(uint32_t i = 0u; i < loopCnt; ++i)
         {
             // setup the base ptr (each WaveSize elements)
-            auto const baseOffset = i * WaveSize;
+            auto const baseOffset = i * waveSize;
 
             // For each wave group
-            auto const groupCnt = WaveSize / GroupSize;
+            auto const groupCnt = waveSize / groupSize;
 
             for(uint32_t j = 0u; j < groupCnt; j++)
             {
-                auto const groupOffset = j * GroupSize;
+                auto const groupOffset = j * groupSize;
 
-                for(uint32_t k = 0u; k < GroupSize; k++)
+                for(uint32_t k = 0u; k < groupSize; k++)
                 {
                     // For each 32b element, blend the bytes from Select values
                     auto const writeOffset = groupOffset + k;
@@ -336,7 +347,7 @@ namespace rocwmma
                     result |= (((byteMask << bitShift3) & bytes3) >> bitShift3 << 24u);
 
                     // Check the row / bank masking
-                    if(((0x1 << (writeOffset % WaveSize / 16u)) & RowMask)
+                    if(((0x1 << (writeOffset % waveSize / 16u)) & RowMask)
                        && ((0x1 << (writeOffset % 16u / 4u)) & BankMask))
                     {
                         dataOut[baseOffset + writeOffset] = result;
@@ -351,8 +362,62 @@ namespace rocwmma
         }
     }
 
-    template <uint32_t WaveSize,
-              uint32_t GroupSize,
+    template <uint32_t GroupSize,
+              uint32_t RowMask /* = 0xF */,
+              uint32_t BankMask /* = 0xF */,
+              bool     BoundCtrl /* = false */>
+    void cross_lane_wfall_bcast_CPU(uint32_t*       dataOut,
+                                    uint32_t const* dataIn,
+                                    uint32_t        elementCount,
+                                    uint32_t        fillVal /* = 0u */)
+    {
+        auto waveSize = HipDevice::instance()->warpSize();
+        auto groupSize
+            = (GroupSize == CrossLaneOps::Properties::OP_GROUP_SIZE_WARP) ? waveSize : GroupSize;
+
+        auto const loopCnt = elementCount / waveSize;
+
+        for(uint32_t i = 0u; i < loopCnt; ++i)
+        {
+            // setup the base ptr (each WaveSize elements)
+            auto const baseOffset = i * waveSize;
+
+            // For each wave group
+            auto const groupCnt = waveSize / groupSize;
+            for(uint32_t j = 0u; j < groupCnt; j++)
+            {
+                auto const groupOffset = j * groupSize;
+
+                // Read offset is last element of prev group
+                auto const readOffset = groupOffset - 1u;
+
+                for(uint32_t k = 0u; k < groupSize; k++)
+                {
+                    auto const writeOffset = groupOffset + k;
+
+                    if(((0x1 << (writeOffset % waveSize / 16u)) & RowMask)
+                       && ((0x1 << (writeOffset % 16u / 4u)) & BankMask))
+                    {
+                        // OOB, covers the case of first group is read-thru
+                        if(readOffset >= writeOffset)
+                        {
+                            dataOut[baseOffset + writeOffset] = dataIn[baseOffset + writeOffset];
+                        }
+                        else
+                        {
+                            dataOut[baseOffset + writeOffset] = dataIn[baseOffset + readOffset];
+                        }
+                    }
+                    else
+                    {
+                        dataOut[baseOffset + writeOffset] = fillVal;
+                    }
+                }
+            }
+        }
+    }
+
+    template <uint32_t GroupSize,
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
               bool     BoundCtrl /* = false */>
@@ -361,26 +426,30 @@ namespace rocwmma
                                 uint32_t        elementCount,
                                 uint32_t        fillVal /* = 0u */)
     {
-        auto const loopCnt = elementCount / WaveSize;
+        auto waveSize = HipDevice::instance()->warpSize();
+        auto groupSize
+            = (GroupSize == CrossLaneOps::Properties::OP_GROUP_SIZE_WARP) ? waveSize : GroupSize;
+
+        auto const loopCnt = elementCount / waveSize;
 
         for(uint32_t i = 0u; i < loopCnt; ++i)
         {
             // setup the base ptr (each WaveSize elements)
-            auto const baseOffset = i * WaveSize;
+            auto const baseOffset = i * waveSize;
 
             // For each wave group
-            auto const groupCnt = WaveSize / GroupSize;
+            auto const groupCnt = waveSize / groupSize;
             for(uint32_t j = 0u; j < groupCnt; j++)
             {
-                auto const groupOffset = j * GroupSize;
+                auto const groupOffset = j * groupSize;
 
-                for(uint32_t k = 0u; k < GroupSize; k++)
+                for(uint32_t k = 0u; k < groupSize; k++)
                 {
                     auto const writeOffset = groupOffset + k;
-                    auto const readOffset  = groupOffset + (GroupSize - k - 1u);
+                    auto const readOffset  = groupOffset + (groupSize - k - 1u);
 
                     // Check the row / bank masking
-                    if(((0x1 << (writeOffset % WaveSize / 16u)) & RowMask)
+                    if(((0x1 << (writeOffset % waveSize / 16u)) & RowMask)
                        && ((0x1 << (writeOffset % 16u / 4u)) & BankMask))
                     {
                         dataOut[baseOffset + writeOffset] = dataIn[baseOffset + readOffset];
@@ -397,7 +466,6 @@ namespace rocwmma
 
     template <uint32_t RotateDir,
               uint32_t RotateDist,
-              uint32_t WaveSize,
               uint32_t GroupSize,
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
@@ -407,28 +475,32 @@ namespace rocwmma
                                uint32_t        elementCount,
                                uint32_t        fillVal /* = 0u */)
     {
-        auto const loopCnt = elementCount / WaveSize;
+        auto waveSize = HipDevice::instance()->warpSize();
+        auto groupSize
+            = (GroupSize == CrossLaneOps::Properties::OP_GROUP_SIZE_WARP) ? waveSize : GroupSize;
+
+        auto const loopCnt = elementCount / waveSize;
 
         for(uint32_t i = 0u; i < loopCnt; ++i)
         {
             // setup the base ptr (each WaveSize elements)
-            auto const baseOffset = i * WaveSize;
+            auto const baseOffset = i * waveSize;
 
             // For each wave group
-            auto const groupCnt = WaveSize / GroupSize;
+            auto const groupCnt = waveSize / groupSize;
             for(uint32_t j = 0u; j < groupCnt; j++)
             {
-                auto const groupOffset = j * GroupSize;
+                auto const groupOffset = j * groupSize;
 
-                for(uint32_t k = 0u; k < GroupSize; k++)
+                for(uint32_t k = 0u; k < groupSize; k++)
                 {
                     auto const writeOffset = groupOffset + k;
                     auto const readOffset
                         = groupOffset
-                          + (k + (RotateDir ? (GroupSize - RotateDist) : RotateDist)) % GroupSize;
+                          + (k + (RotateDir ? (groupSize - RotateDist) : RotateDist)) % groupSize;
 
                     // Check the row / bank masking
-                    if(((0x1 << (writeOffset % WaveSize / 16u)) & RowMask)
+                    if(((0x1 << (writeOffset % waveSize / 16u)) & RowMask)
                        && ((0x1 << (writeOffset % 16u / 4u)) & BankMask))
                     {
                         dataOut[baseOffset + writeOffset] = dataIn[baseOffset + readOffset];
@@ -445,7 +517,6 @@ namespace rocwmma
 
     template <uint32_t ShiftDir,
               uint32_t ShiftDist,
-              uint32_t WaveSize,
               uint32_t GroupSize,
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
@@ -455,20 +526,24 @@ namespace rocwmma
                               uint32_t        elementCount,
                               uint32_t        fillVal /* = 0u */)
     {
-        auto const loopCnt = elementCount / WaveSize;
+        auto waveSize = HipDevice::instance()->warpSize();
+        auto groupSize
+            = (GroupSize == CrossLaneOps::Properties::OP_GROUP_SIZE_WARP) ? waveSize : GroupSize;
+
+        auto const loopCnt = elementCount / waveSize;
 
         for(uint32_t i = 0u; i < loopCnt; ++i)
         {
             // setup the base ptr (each WaveSize elements)
-            auto const baseOffset = i * WaveSize;
+            auto const baseOffset = i * waveSize;
 
             // For each wave group
-            auto const groupCnt = WaveSize / GroupSize;
+            auto const groupCnt = waveSize / groupSize;
             for(uint32_t j = 0u; j < groupCnt; j++)
             {
-                auto const groupOffset = j * GroupSize;
+                auto const groupOffset = j * groupSize;
 
-                for(uint32_t k = 0u; k < GroupSize; k++)
+                for(uint32_t k = 0u; k < groupSize; k++)
                 {
                     auto const writeOffset = groupOffset + k;
                     auto const shiftOffset = (ShiftDir == CrossLaneOps::Properties::OP_DIR_R)
@@ -477,11 +552,11 @@ namespace rocwmma
                     auto const readOffset  = groupOffset + shiftOffset;
 
                     // Check the row / bank masking
-                    if(((0x1 << (writeOffset % WaveSize / 16u)) & RowMask)
+                    if(((0x1 << (writeOffset % waveSize / 16u)) & RowMask)
                        && ((0x1 << (writeOffset % 16u / 4u)) & BankMask))
                     {
                         // OOB would be > groupsize, as uint32_t type
-                        if(shiftOffset >= GroupSize)
+                        if(shiftOffset >= groupSize)
                         {
                             dataOut[baseOffset + writeOffset] = BoundCtrl ? 0u : fillVal;
                         }
@@ -504,7 +579,6 @@ namespace rocwmma
               uint32_t Select1,
               uint32_t Select2,
               uint32_t Select3,
-              uint32_t WaveSize,
               uint32_t GroupSize,
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
@@ -514,20 +588,24 @@ namespace rocwmma
                                 uint32_t        elementCount,
                                 uint32_t        fillVal /* = 0u */)
     {
-        auto const loopCnt = elementCount / WaveSize;
+        auto waveSize = HipDevice::instance()->warpSize();
+        auto groupSize
+            = (GroupSize == CrossLaneOps::Properties::OP_GROUP_SIZE_WARP) ? waveSize : GroupSize;
+
+        auto const loopCnt = elementCount / waveSize;
 
         for(uint32_t i = 0u; i < loopCnt; ++i)
         {
             // setup the base ptr (each WaveSize elements)
-            auto const baseOffset = i * WaveSize;
+            auto const baseOffset = i * waveSize;
 
             // For each wave group
-            auto const groupCnt = WaveSize / GroupSize;
+            auto const groupCnt = waveSize / groupSize;
             for(uint32_t j = 0u; j < groupCnt; j++)
             {
-                auto const groupOffset = j * GroupSize;
+                auto const groupOffset = j * groupSize;
 
-                for(uint32_t k = 0u; k < GroupSize; k++)
+                for(uint32_t k = 0u; k < groupSize; k++)
                 {
                     auto const writeOffset = groupOffset + k;
 
@@ -552,7 +630,7 @@ namespace rocwmma
                     auto const readOffset = groupOffset + readIndex;
 
                     // Check the row / bank masking
-                    if(((0x1 << (writeOffset % WaveSize / 16u)) & RowMask)
+                    if(((0x1 << (writeOffset % waveSize / 16u)) & RowMask)
                        && ((0x1 << (writeOffset % 16u / 4u)) & BankMask))
                     {
                         dataOut[baseOffset + writeOffset] = dataIn[baseOffset + readOffset];
@@ -567,8 +645,7 @@ namespace rocwmma
         }
     }
 
-    template <uint32_t WaveSize,
-              uint32_t GroupSize,
+    template <uint32_t GroupSize,
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
               bool     BoundCtrl /* = false */>
@@ -577,26 +654,30 @@ namespace rocwmma
                              uint32_t        elementCount,
                              uint32_t        fillVal /* = 0u */)
     {
-        auto const loopCnt = elementCount / WaveSize;
+        auto waveSize = HipDevice::instance()->warpSize();
+        auto groupSize
+            = (GroupSize == CrossLaneOps::Properties::OP_GROUP_SIZE_WARP) ? waveSize : GroupSize;
+
+        auto const loopCnt = elementCount / waveSize;
 
         for(uint32_t i = 0u; i < loopCnt; ++i)
         {
             // setup the base ptr (each WaveSize elements)
-            auto const baseOffset = i * WaveSize;
+            auto const baseOffset = i * waveSize;
 
             // For each wave group
-            auto const groupCnt = WaveSize / GroupSize;
+            auto const groupCnt = waveSize / groupSize;
             for(uint32_t j = 0u; j < groupCnt; j++)
             {
-                auto const groupOffset = j * GroupSize;
+                auto const groupOffset = j * groupSize;
 
-                for(uint32_t k = 0u; k < GroupSize; k++)
+                for(uint32_t k = 0u; k < groupSize; k++)
                 {
                     auto const writeOffset = groupOffset + k;
-                    auto const readOffset  = groupOffset + k + (j % 2 ? -GroupSize : GroupSize);
+                    auto const readOffset  = groupOffset + k + (j % 2 ? -groupSize : groupSize);
 
                     // Check the row / bank masking
-                    if(((0x1 << (writeOffset % WaveSize / 16u)) & RowMask)
+                    if(((0x1 << (writeOffset % waveSize / 16u)) & RowMask)
                        && ((0x1 << (writeOffset % 16u / 4u)) & BankMask))
                     {
                         dataOut[baseOffset + writeOffset] = dataIn[baseOffset + readOffset];
@@ -645,7 +726,6 @@ namespace rocwmma
         {
         case rocwmma::CrossLaneOps::Properties::OP_ID_BCAST:
             cross_lane_bcast_CPU<CrossLaneOp::elementIdx(),
-                                 CrossLaneOp::waveSize(),
                                  CrossLaneOp::groupSize(),
                                  RowMask,
                                  BankMask,
@@ -653,7 +733,6 @@ namespace rocwmma
             break;
         case rocwmma::CrossLaneOps::Properties::OP_ID_BLOCK_BCAST:
             cross_lane_block_bcast_CPU<CrossLaneOp::elementIdx(),
-                                       CrossLaneOp::waveSize(),
                                        CrossLaneOp::groupSize(),
                                        RowMask,
                                        BankMask,
@@ -696,7 +775,6 @@ namespace rocwmma
                                       CrossLaneOp::select1(),
                                       CrossLaneOp::select2(),
                                       CrossLaneOp::select3(),
-                                      CrossLaneOp::waveSize(),
                                       CrossLaneOp::groupSize(),
                                       RowMask,
                                       BankMask,
@@ -708,16 +786,18 @@ namespace rocwmma
     }
 
     // Reverse, swap
-    template <typename DataT,
-              typename CrossLaneOp,
-              uint32_t RowMask   = 0xF,
-              uint32_t BankMask  = 0xF,
-              bool     BoundCtrl = false,
-              typename std::enable_if_t<
-                  (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_REVERSE)
-                      || (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_SWAP),
-                  void*>
-              = nullptr>
+    template <
+        typename DataT,
+        typename CrossLaneOp,
+        uint32_t RowMask   = 0xF,
+        uint32_t BankMask  = 0xF,
+        bool     BoundCtrl = false,
+        typename std::enable_if_t<
+            (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_REVERSE)
+                || (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_SWAP)
+                || (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_WFALL_BCAST),
+            void*>
+        = nullptr>
     void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
                                      DataT const* dataIn,
                                      uint32_t     elementCount,
@@ -738,18 +818,16 @@ namespace rocwmma
         {
             break;
         case rocwmma::CrossLaneOps::Properties::OP_ID_REVERSE:
-            cross_lane_reverse_CPU<CrossLaneOp::waveSize(),
-                                   CrossLaneOp::groupSize(),
-                                   RowMask,
-                                   BankMask,
-                                   BoundCtrl>(write32Out, read32In, elementCount, fillVal32);
+            cross_lane_reverse_CPU<CrossLaneOp::groupSize(), RowMask, BankMask, BoundCtrl>(
+                write32Out, read32In, elementCount, fillVal32);
             break;
         case rocwmma::CrossLaneOps::Properties::OP_ID_SWAP:
-            cross_lane_swap_CPU<CrossLaneOp::waveSize(),
-                                CrossLaneOp::groupSize(),
-                                RowMask,
-                                BankMask,
-                                BoundCtrl>(write32Out, read32In, elementCount, fillVal32);
+            cross_lane_swap_CPU<CrossLaneOp::groupSize(), RowMask, BankMask, BoundCtrl>(
+                write32Out, read32In, elementCount, fillVal32);
+            break;
+        case rocwmma::CrossLaneOps::Properties::OP_ID_WFALL_BCAST:
+            cross_lane_wfall_bcast_CPU<CrossLaneOp::groupSize(), RowMask, BankMask, BoundCtrl>(
+                write32Out, read32In, elementCount, fillVal32);
             break;
         default:;
         }
@@ -786,7 +864,6 @@ namespace rocwmma
         case rocwmma::CrossLaneOps::Properties::OP_ID_ROTATE:
             cross_lane_rotate_CPU<CrossLaneOp::opDir(),
                                   CrossLaneOp::opDist(),
-                                  CrossLaneOp::waveSize(),
                                   CrossLaneOp::groupSize(),
                                   RowMask,
                                   BankMask,
@@ -795,7 +872,6 @@ namespace rocwmma
         case rocwmma::CrossLaneOps::Properties::OP_ID_SHIFT:
             cross_lane_shift_CPU<CrossLaneOp::opDir(),
                                  CrossLaneOp::opDist(),
-                                 CrossLaneOp::waveSize(),
                                  CrossLaneOp::groupSize(),
                                  RowMask,
                                  BankMask,
@@ -838,7 +914,6 @@ namespace rocwmma
                                    CrossLaneOp::select1(),
                                    CrossLaneOp::select2(),
                                    CrossLaneOp::select3(),
-                                   CrossLaneOp::waveSize(),
                                    CrossLaneOp::groupSize(),
                                    RowMask,
                                    BankMask,
@@ -881,7 +956,6 @@ namespace rocwmma
                                    CrossLaneOp::select1(),
                                    CrossLaneOp::select0() + 2u,
                                    CrossLaneOp::select1() + 2u,
-                                   CrossLaneOp::waveSize(),
                                    CrossLaneOp::groupSize(),
                                    RowMask,
                                    BankMask,

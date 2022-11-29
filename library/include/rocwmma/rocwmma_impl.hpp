@@ -43,11 +43,7 @@
 #include "internal/io_traits.hpp"
 #include "internal/layout.hpp"
 #include "internal/mapping_util.hpp"
-#if defined(__gfx908__) || defined(__gfx90a__)
 #include "internal/mfma.hpp"
-#elif defined(__gfx1100__) || defined(__gfx1101__) || defined(__gfx1102__)
-#include "internal/wmma.hpp"
-#endif
 #include "internal/opaque_load.hpp"
 #include "internal/opaque_store.hpp"
 #include "internal/pack.hpp"
@@ -55,8 +51,10 @@
 #include "internal/swizzle.hpp"
 #include "internal/types.hpp"
 #include "internal/unpack.hpp"
+#include "internal/utils.hpp"
 #include "internal/vector.hpp"
 #include "internal/vector_iterator.hpp"
+#include "internal/wmma.hpp"
 
 namespace rocwmma
 {
@@ -319,14 +317,11 @@ namespace rocwmma
         // Sanity check
         // static_assert(detail::MfmaCheck<FragA, FragB>::value,
         //              "A and B fragment layouts must be orthogonal");
+        using MMA = typename std::conditional_t<ROCWMMA_ARCH_MI,
+                                                Mfma<InputT, ComputeT, BlockM, BlockN, BlockK>,
+                                                Wmma<InputT, ComputeT, BlockM, BlockN, BlockK>>;
 
-#if defined(__gfx908__) || defined(__gfx90a__)
-        using MFMA = Mfma<InputT, ComputeT, BlockM, BlockN, BlockK>;
-        (*d)       = MFMA::exec(*a, *b, *c);
-#elif defined(__gfx1100__) || defined(__gfx1101__) || defined(__gfx1102__)
-        using WMMA = detail::Wmma<InputT, ComputeT, BlockM, BlockN, BlockK>;
-        (*d)       = WMMA::exec(*a, *b, *c);
-#endif
+        (*d) = MMA::exec(*a, *b, *c);
     }
 
     __device__ void synchronize_workgroup()

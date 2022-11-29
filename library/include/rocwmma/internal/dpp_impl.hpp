@@ -61,6 +61,11 @@ namespace rocwmma
                 }
             };
 
+            // This 'nop' is to signify that the opctrl will have no effect.
+            // Used in architectures that don't support particular ops.
+            // Still respects masking and bound control flags.
+            using amdgcn_dpp_nop = amdgcn_dpp_shuffle_4<0u, 1u, 2u, 3u>;
+
             template <uint32_t ShiftDir, uint32_t ShiftDist>
             struct amdgcn_dpp_row_shift
             {
@@ -166,17 +171,17 @@ namespace rocwmma
             private:
                 enum Traits : uint32_t
                 {
-                    // Quad permute does nothing
-                    DPP_CTRL = amdgcn_dpp_shuffle_4<0u, 1u, 2u, 3u>::opCtrl(),
+                    DPP_CTRL = amdgcn_dpp_nop::opCtrl(),
                 };
 
             public:
-                __attribute__((deprecated(
-                    "amdgcn_dpp_row_bcast is not supported on MI-100"))) constexpr static uint32_t
-                    opCtrl()
+                // clang-format off
+                __attribute__((deprecated("amdgcn_dpp_row_bcast is not supported on MI-100")))
+                constexpr static uint32_t opCtrl()
                 {
                     return Traits::DPP_CTRL;
                 }
+                // clang-format on
             };
 
 #endif // !__gfx908__
@@ -271,17 +276,17 @@ namespace rocwmma
             private:
                 enum Traits : uint32_t
                 {
-                    // Quad permute does nothing
-                    DPP_CTRL = amdgcn_dpp_shuffle_4<0u, 1u, 2u, 3u>::opCtrl(),
+                    DPP_CTRL = amdgcn_dpp_nop::opCtrl(),
                 };
 
             public:
-                __attribute__((deprecated(
-                    "amdgcn_dpp_wave_shift1 is not supported on GFX10+"))) constexpr static uint32_t
-                    opCtrl()
+                // clang-format off
+                __attribute__((deprecated("amdgcn_dpp_wave_shift1 is not supported on GFX10+")))
+                constexpr static uint32_t opCtrl()
                 {
                     return Traits::DPP_CTRL;
                 }
+                // clang-format on
             };
 
             template <uint32_t RotateDir>
@@ -290,17 +295,17 @@ namespace rocwmma
             private:
                 enum Traits : uint32_t
                 {
-                    // Quad permute does nothing
-                    DPP_CTRL = amdgcn_dpp_shuffle_4<0u, 1u, 2u, 3u>::opCtrl(),
+                    DPP_CTRL = amdgcn_dpp_nop::opCtrl(),
                 };
 
             public:
-                __attribute__((deprecated("amdgcn_dpp_wave_rotate1 is not supported on "
-                                          "GFX10+"))) constexpr static uint32_t
-                    opCtrl()
+                // clang-format off
+                __attribute__((deprecated("amdgcn_dpp_wave_rotate1 is not supported on GFX10+")))
+                constexpr static uint32_t opCtrl()
                 {
                     return Traits::DPP_CTRL;
                 }
+                // clang-format on
             };
 
             struct amdgcn_dpp_row_bcast15
@@ -308,17 +313,17 @@ namespace rocwmma
             private:
                 enum Traits : uint32_t
                 {
-                    // Quad permute does nothing
-                    DPP_CTRL = amdgcn_dpp_shuffle_4<0u, 1u, 2u, 3u>::opCtrl(),
+                    DPP_CTRL = amdgcn_dpp_nop::opCtrl(),
                 };
 
             public:
-                __attribute__((deprecated(
-                    "amdgcn_dpp_row_bcast15 is not supported on GFX10+"))) constexpr static uint32_t
-                    opCtrl()
+                // clang-format off
+                __attribute__((deprecated("amdgcn_dpp_row_bcast15 is not supported on GFX10+")))
+                constexpr static uint32_t opCtrl()
                 {
                     return Traits::DPP_CTRL;
                 }
+                // clang-format on
             };
 
             struct amdgcn_dpp_row_bcast31
@@ -326,21 +331,22 @@ namespace rocwmma
             private:
                 enum Traits : uint32_t
                 {
-                    // Quad permute does nothing
-                    DPP_CTRL = amdgcn_dpp_shuffle_4<0u, 1u, 2u, 3u>::opCtrl(),
+                    DPP_CTRL = amdgcn_dpp_nop::opCtrl(),
                 };
 
             public:
-                __attribute__((deprecated(
-                    "amdgcn_dpp_row_bcast31 is not supported on MI-100"))) constexpr static uint32_t
-                    opCtrl()
+                // clang-format off
+                __attribute__((deprecated("amdgcn_dpp_row_bcast31 is not supported on MI-100")))
+                constexpr static uint32_t opCtrl()
                 {
                     return Traits::DPP_CTRL;
                 }
+                // clang-format on
             };
 
 #endif // !__gfx1100__ && !__gfx1101__ && !__gfx1102__
 
+            // Derivatives
             template <uint32_t RotateDir, uint32_t RotateDistance>
             struct amdgcn_dpp_bank_rotate
             {
@@ -393,13 +399,10 @@ namespace rocwmma
 
         } // namespace DppCtrl
 
-        template <typename DataT,
-                  uint32_t DppCtrl,
-                  uint32_t WriteRowMask,
-                  uint32_t WriteBankMask,
-                  bool     BoundCtrl>
+        template <uint32_t DppCtrl, uint32_t WriteRowMask, uint32_t WriteBankMask, bool BoundCtrl>
         struct amdgcn_mov_dpp
         {
+            template <typename DataT>
             __device__ static inline DataT exec(DataT input)
             {
                 reinterpret_cast<int32_t&>(input) = __builtin_amdgcn_update_dpp(
@@ -412,6 +415,7 @@ namespace rocwmma
                 return input;
             }
 
+            template <typename DataT>
             __device__ static inline DataT exec(DataT input, DataT prev)
             {
                 reinterpret_cast<int32_t&>(input) = __builtin_amdgcn_update_dpp(
