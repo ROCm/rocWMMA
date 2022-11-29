@@ -223,7 +223,7 @@ namespace rocwmma
         bool gfx908F64Check = !(isGfx908 && isF64Input);
 
         // gfx11 only supports f16, i8 and bf16 inputs with block size 16
-        bool gfx11Check = !(isGfx11 && !isF16Input && !isBF16Input && !isI8Input && !is16x16);
+        bool gfx11Check = !(isGfx11 && ((!isF16Input && !isBF16Input && !isI8Input) || !is16x16));
 
         return unsupportedDeviceCheck && gfx908F64Check && gfx11Check;
     }
