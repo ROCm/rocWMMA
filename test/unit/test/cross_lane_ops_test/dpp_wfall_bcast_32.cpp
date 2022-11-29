@@ -27,7 +27,7 @@
 #include <tuple>
 #include <type_traits>
 
-#include "detail/vector.hpp"
+#include "detail/cross_lane_ops.hpp"
 #include "kernel_generator.hpp"
 #include "test/unit_test.hpp"
 
@@ -41,34 +41,52 @@ namespace rocwmma
         // Types: Base IOC + double
         using Types = typename Base::TestTypes16;
 
-        // Vector Sizes.
-        // Test up to VecSize = 128. Anything bigger is impractical.
-        using VecSizes = std::tuple<I<1>, I<2>, I<4>, I<8>, I<16>, I<32>, I<64>>;
+        using DppOps = std::tuple<DppOps::BCast32x31>;
 
-        using KernelParams = typename CombineLists<VecSizes, Types>::Result;
+        // Test random assortment of banks and rows
+        using WriteRowMasks  = std::tuple<I<0xF>, I<0x5>, I<0xA>>;
+        using WriteBankMasks = std::tuple<I<0xF>, I<0x7>, I<0x3>>;
+        using BoundCtrls     = std::tuple<I<false>, I<true>>;
+
+        using KernelParams =
+            typename CombineLists<Types, DppOps, WriteRowMasks, WriteBankMasks, BoundCtrls>::Result;
 
         // Assemble the kernel generator
         // Kernel: VectorIterator
-        using GeneratorImpl   = VectorGenerator;
+        using GeneratorImpl   = DppOpsGenerator;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
         static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
                       "Kernels from this generator do not match testing interface");
 
+        // Must be TBlockY must be 1.
         static inline std::vector<ThreadBlockT> threadBlocks()
         {
-            auto warpSize = HipDevice::instance()->warpSize();
             // clang-format off
-            return { {warpSize, 1} };
+            return {
+                        {64, 1},
+                        {128, 1},
+                        {256, 1}
+                    };
             // clang-format on
         }
 
         static inline std::vector<ProblemSizeT> problemSizes()
         {
             // clang-format off
-            return { {1, 1} };
+            return {
+                        {64, 64},
+                        {128, 128},
+                        {256, 256}
+                    };
             // clang-format on
+        }
+
+        // 'prev' values
+        static inline std::vector<Param1T> param1s()
+        {
+            return {5.0};
         }
 
         static inline typename KernelGenerator::ResultT kernels()
@@ -80,18 +98,18 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class VectorIteratorTest : public rocwmma::UnitTest
+class DppWFallBCast32Test : public rocwmma::UnitTest
 {
 };
 
-TEST_P(VectorIteratorTest, RunKernel)
+TEST_P(DppWFallBCast32Test, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    KernelTests,
-    VectorIteratorTest,
+    CrossLaneOpTests,
+    DppWFallBCast32Test,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
                        ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),

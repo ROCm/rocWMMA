@@ -47,17 +47,18 @@ namespace rocwmma
 
         // clang-format off
 
-        constexpr uint32_t OP_IMPL  = CrossLaneOps::Properties::OP_IMPL_VPERM;
+        using CrossLaneOps::Properties;
+        using CrossLaneOps::Blend4;
 
+        constexpr uint32_t OP_IMPL  = Properties::OP_IMPL_VPERM;
 
         // For each 32b element, blend bytes from src0 and src1
         template<uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
-        using ByteBlend = CrossLaneOps::Blend4<Select0, Select1, Select2, Select3, OP_IMPL,
-                     detail::amdgcn_blend_byte<Select0, Select1, Select2, Select3>::opCtrl()>;
+        using ByteBlend = Blend4<Select0, Select1, Select2, Select3, OP_IMPL, detail::amdgcn_blend_byte<Select0, Select1, Select2, Select3>::opCtrl()>;
 
         // For each 32b element, blend short(16b) from src0 and src1
         template<uint32_t Select0, uint32_t Select1>
-        using WordBlend = CrossLaneOps::Blend4<Select0 * 2u, Select0 * 2u + 1u, Select1 * 2u, Select1 * 2u + 1, OP_IMPL,
+        using WordBlend = Blend4<Select0 * 2u, Select0 * 2u + 1u, Select1 * 2u, Select1 * 2u + 1, OP_IMPL,
                       detail::amdgcn_blend_byte<Select0 * 2u, Select0 * 2u + 1u, Select1 * 2u, Select1 * 2u + 1>::opCtrl()>;
 
         // Blend even bytes from src0 and odd bytes from src1

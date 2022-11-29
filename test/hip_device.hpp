@@ -43,12 +43,19 @@ namespace rocwmma
 
         enum hipGcnArch_t : uint32_t
         {
-            GFX908 = 0x908,
-            GFX90A = 0x90A,
+            GFX908  = 0x908,
+            GFX90A  = 0x90A,
             GFX1100 = 0x1100,
             GFX1101 = 0x1101,
             GFX1102 = 0x1102,
-            UNSUPPORTED,
+            UNSUPPORTED_ARCH,
+        };
+
+        enum hipWarpSize_t : uint32_t
+        {
+            Wave32 = 32,
+            Wave64 = 64,
+            UNSUPPORTED_WARP_SIZE,
         };
 
     protected:
@@ -60,6 +67,10 @@ namespace rocwmma
         hipDeviceArch_t getDeviceArch() const;
         hipGcnArch_t    getGcnArch() const;
 
+        int warpSize() const;
+
+        int sharedMemSize() const;
+
         template <typename InputT>
         double peakGFlopsPerSec() const;
 
@@ -68,6 +79,8 @@ namespace rocwmma
         hipDeviceProp_t mProps;
         hipDeviceArch_t mArch;
         hipGcnArch_t    mGcnArch;
+        int             mWarpSize;
+        int             mSharedMemSize;
     };
 
     template <typename InputT>

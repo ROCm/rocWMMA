@@ -48,7 +48,8 @@ namespace rocwmma
         uint32_t ldsUsage() const final
         {
             auto blockDims = this->blockDim();
-            return 2 * sizeof(DataT) * ((blockDims.x / AMDGCN_WAVE_SIZE) + blockDims.y)
+            return 2 * sizeof(DataT)
+                   * ((blockDims.x / Base::DeviceInfo::instance()->warpSize()) + blockDims.y)
                    * (TileSize * TileSize);
         }
         typename Base::KernelFwdFunc kernelFwdImpl() const final

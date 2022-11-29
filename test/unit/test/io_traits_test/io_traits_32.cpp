@@ -24,27 +24,25 @@
  *
  *******************************************************************************/
 
-#include "test/test_includes.hpp"
+#include <type_traits>
+
+#include "detail/io_traits.hpp"
+#include "kernel_generator.hpp"
+#include "test/unit_test.hpp"
 
 namespace rocwmma
 {
 
-    struct TestParams : public CommonTestParams
+    struct TestParams : public UnitTestParams
     {
-        using Base = CommonTestParams;
-
-        // Types: ALL + double
-        // Block Sizes: 16 x 16 x BlockK
-        // Layouts: NT
-        using Types      = std::tuple<std::tuple<float16_t, float32_t, float32_t>>;
-        using BlockSizes = std::tuple<std::tuple<I<16>, I<16>, I<16>>>;
-        using Layouts    = std::tuple<
-            std::tuple<col_major, row_major, row_major>>; //typename Base::TestLayoutsNT;
-        using BlocksXY     = std::tuple<std::tuple<I<2>, I<2>>>;
-        using KernelParams = typename CombineLists<Types, BlockSizes, Layouts, BlocksXY>::Result;
+        using Base         = UnitTestParams;
+        using Types        = typename Base::TestTypes16;
+        using BlockSizes   = typename Base::TestBlockSizes32;
+        using VectorSizes  = std::tuple<I<1>, I<2>, I<4>>;
+        using KernelParams = typename CombineLists<Types, BlockSizes, VectorSizes>::Result;
 
         // Assemble the kernel generator
-        using GeneratorImpl   = KernelGeneratorImpl;
+        using GeneratorImpl   = IOTraitsGenerator;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -58,33 +56,36 @@ namespace rocwmma
 
         static inline std::vector<ThreadBlockT> threadBlocks()
         {
-            auto warpSize = HipDevice::instance()->warpSize();
-            return {
-                //{warpSize, 1},
-                {warpSize * 2, 2},
-                //{warpSize, 4}, {warpSize * 2, 1}, {warpSize * 2, 2}, {warpSize * 4, 1}
-            };
+            // clang-format off
+            return { {64, 1} };
+            // clang-format on
         }
 
         static inline std::vector<ProblemSizeT> problemSizes()
         {
-            return {
-                //{64, 64, 1024},
-                //         {32, 64, 1024},
-                // {64, 32, 1024},
-                // {256, 256, 1024},
-                //{1024, 1024, 1024},
-                {64, 64, 64},
-                // {128, 128, 128},
-                //{2048, 2048, 2048},
-                //{8192, 8192, 8192}
-
-            };
+            // clang-format off
+            return { {1024, 1024} };
+            // clang-format on
         }
     };
 
 } // namespace rocwmma
 
-ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE_NO_WARMUP(Gemm_PGR0_LB0_MP0_MB_NC,
-                                               AdHocTest,
-                                               rocwmma::TestParams);
+// Test suite for unique parameterization
+class IOTraitsTest32 : public rocwmma::UnitTest
+{
+};
+
+TEST_P(IOTraitsTest32, RunKernel)
+{
+    this->RunKernel();
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    KernelTests,
+    IOTraitsTest32,
+    ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
+                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
+                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
+                       ::testing::ValuesIn(rocwmma::TestParams::param1s()),
+                       ::testing::ValuesIn(rocwmma::TestParams::param2s())));

@@ -43,68 +43,76 @@ namespace rocwmma
 
         // clang-format off
 
-        constexpr uint32_t OP_IMPL  = CrossLaneOps::Properties::OP_IMPL_SWIZZLE;
-        constexpr uint32_t OP_DIR_L = CrossLaneOps::Properties::OP_DIR_L;
-        constexpr uint32_t OP_DIR_R = CrossLaneOps::Properties::OP_DIR_R;
-        constexpr uint32_t OP_ID_FFT = CrossLaneOps::Properties::OP_ID_FFT;
+        using CrossLaneOps::Properties;
+        using CrossLaneOps::BCast;
+        using CrossLaneOps::Reverse;
+        using CrossLaneOps::RotateR;
+        using CrossLaneOps::RotateL;
+        using CrossLaneOps::Swap;
+
+        constexpr uint32_t OP_IMPL  = Properties::OP_IMPL_SWIZZLE;
+        constexpr uint32_t OP_DIR_L = Properties::OP_DIR_L;
+        constexpr uint32_t OP_DIR_R = Properties::OP_DIR_R;
+        constexpr uint32_t OP_ID_FFT = Properties::OP_ID_FFT;
 
         // BCast variants
         template <uint32_t ElementIdx>
-        using BCast32 = CrossLaneOps::BCast<ElementIdx, 32u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x00, ElementIdx, 0x00>::opCtrl()>;
+        using BCast32 = BCast<ElementIdx, Properties::OP_GROUP_SIZE_32, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x00, ElementIdx, 0x00>::opCtrl()>;
 
         template <uint32_t ElementIdx>
-        using BCast16 = CrossLaneOps::BCast<ElementIdx, 16u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x00, ElementIdx, 0x10>::opCtrl()>;
+        using BCast16 = BCast<ElementIdx, Properties::OP_GROUP_SIZE_16, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x00, ElementIdx, 0x10>::opCtrl()>;
 
         template <uint32_t ElementIdx>
-        using BCast8 = CrossLaneOps::BCast<ElementIdx, 8u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x00, ElementIdx, 0x18>::opCtrl()>;
+        using BCast8 = BCast<ElementIdx, Properties::OP_GROUP_SIZE_8, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x00, ElementIdx, 0x18>::opCtrl()>;
 
         template <uint32_t ElementIdx>
-        using BCast4 = CrossLaneOps::BCast<ElementIdx, 4u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x00, ElementIdx, 0x1C>::opCtrl()>;
+        using BCast4 = BCast<ElementIdx, Properties::OP_GROUP_SIZE_4, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x00, ElementIdx, 0x1C>::opCtrl()>;
 
         template <uint32_t ElementIdx>
-        using BCast2 = CrossLaneOps::BCast<ElementIdx, 2u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x00, ElementIdx, 0x1E>::opCtrl()>;
+        using BCast2 = BCast<ElementIdx, Properties::OP_GROUP_SIZE_2, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x00, ElementIdx, 0x1E>::opCtrl()>;
 
         // Reverse variants
-        using Reverse32 = CrossLaneOps::Reverse<32u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x1F, 0x00, 0x1F>::opCtrl()>;
+        using Reverse32 = Reverse<Properties::OP_GROUP_SIZE_32, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x1F, 0x00, 0x1F>::opCtrl()>;
 
-        using Reverse16 = CrossLaneOps::Reverse<16u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x0F, 0x00, 0x1F>::opCtrl()>;
+        using Reverse16 = Reverse<Properties::OP_GROUP_SIZE_16, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x0F, 0x00, 0x1F>::opCtrl()>;
 
-        using Reverse8 = CrossLaneOps::Reverse<8u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x07, 0x00, 0x1F>::opCtrl()>;
+        using Reverse8 = Reverse<Properties::OP_GROUP_SIZE_8, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x07, 0x00, 0x1F>::opCtrl()>;
 
-        using Reverse4 = CrossLaneOps::Reverse<4u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x03, 0x00, 0x1F>::opCtrl()>;
+        using Reverse4 = Reverse<Properties::OP_GROUP_SIZE_4, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x03, 0x00, 0x1F>::opCtrl()>;
 
-        using Reverse2 = CrossLaneOps::Reverse<2u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x01, 0x00, 0x1F>::opCtrl()>;
+        using Reverse2 = Reverse<Properties::OP_GROUP_SIZE_2, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x01, 0x00, 0x1F>::opCtrl()>;
 
         // RotateL variants
         template <uint32_t RotateDistance>
-        using RotateL32 = CrossLaneOps::RotateL<RotateDistance, 32u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_L, RotateDistance, 32u>::opCtrl()>;
+        using RotateL32 = RotateL<RotateDistance, Properties::OP_GROUP_SIZE_32, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_L, RotateDistance, 32u>::opCtrl()>;
 
         template <uint32_t RotateDistance>
-        using RotateL16 = CrossLaneOps::RotateL<RotateDistance, 16u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_L, RotateDistance, 16u>::opCtrl()>;
-        template <uint32_t RotateDistance>
-        using RotateL8 = CrossLaneOps::RotateL<RotateDistance, 8u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_L, RotateDistance, 8u>::opCtrl()>;
+        using RotateL16 = RotateL<RotateDistance, Properties::OP_GROUP_SIZE_16, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_L, RotateDistance, 16u>::opCtrl()>;
 
         template <uint32_t RotateDistance>
-        using RotateL4 = CrossLaneOps::RotateL<RotateDistance, 4u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_L, RotateDistance, 4u>::opCtrl()>;
+        using RotateL8 = RotateL<RotateDistance, Properties::OP_GROUP_SIZE_8, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_L, RotateDistance, 8u>::opCtrl()>;
 
         template <uint32_t RotateDistance>
-        using RotateL2 = CrossLaneOps::RotateL<RotateDistance, 2u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_L, RotateDistance, 2u>::opCtrl()>;
+        using RotateL4 = RotateL<RotateDistance, Properties::OP_GROUP_SIZE_4, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_L, RotateDistance, 4u>::opCtrl()>;
+
+        template <uint32_t RotateDistance>
+        using RotateL2 = RotateL<RotateDistance, Properties::OP_GROUP_SIZE_2, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_L, RotateDistance, 2u>::opCtrl()>;
 
         // RotateR variants
         template <uint32_t RotateDistance>
-        using RotateR32 = CrossLaneOps::RotateR<RotateDistance, 32u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_R, RotateDistance, 32u>::opCtrl()>;
+        using RotateR32 = RotateR<RotateDistance, Properties::OP_GROUP_SIZE_32, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_R, RotateDistance, 32u>::opCtrl()>;
 
         template <uint32_t RotateDistance>
-        using RotateR16 = CrossLaneOps::RotateR<RotateDistance, 16u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_R, RotateDistance, 16u>::opCtrl()>;
+        using RotateR16 = RotateR<RotateDistance, Properties::OP_GROUP_SIZE_16, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_R, RotateDistance, 16u>::opCtrl()>;
 
         template <uint32_t RotateDistance>
-        using RotateR8 = CrossLaneOps::RotateR<RotateDistance, 8u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_R, RotateDistance, 8u>::opCtrl()>;
+        using RotateR8 = RotateR<RotateDistance, Properties::OP_GROUP_SIZE_8, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_R, RotateDistance, 8u>::opCtrl()>;
 
         template <uint32_t RotateDistance>
-        using RotateR4 = CrossLaneOps::RotateR<RotateDistance, 4u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_R, RotateDistance, 4u>::opCtrl()>;
+        using RotateR4 = RotateR<RotateDistance, Properties::OP_GROUP_SIZE_4, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_R, RotateDistance, 4u>::opCtrl()>;
 
         template <uint32_t RotateDistance>
-        using RotateR2 = CrossLaneOps::RotateR<RotateDistance, 2u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_R, RotateDistance, 2u>::opCtrl()>;
+        using RotateR2 = RotateR<RotateDistance, Properties::OP_GROUP_SIZE_2, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_rotate<OP_DIR_R, RotateDistance, 2u>::opCtrl()>;
 
         // Shuffle variants
         template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
@@ -122,22 +130,21 @@ namespace rocwmma
                                                 detail::SwizzleCtrl::amdgcn_swizzle_shuffle_4<Select0, Select1, 2u + Select0, 2u + Select1>::opCtrl()>;
 
         // Swap variants
-        using Swap16 = CrossLaneOps::Swap<16u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x10, 0x00, 0x1F>::opCtrl()>;
+        using Swap16 = Swap<Properties::OP_GROUP_SIZE_16, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x10, 0x00, 0x1F>::opCtrl()>;
 
-        using Swap8 = CrossLaneOps::Swap<8u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x08, 0x00, 0x1F>::opCtrl()>;
+        using Swap8 = Swap<Properties::OP_GROUP_SIZE_8, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x08, 0x00, 0x1F>::opCtrl()>;
 
-        using Swap4 = CrossLaneOps::Swap<4u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x04, 0x00, 0x1F>::opCtrl()>;
+        using Swap4 = Swap<Properties::OP_GROUP_SIZE_4, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x04, 0x00, 0x1F>::opCtrl()>;
 
-        using Swap2 = CrossLaneOps::Swap<2u, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x02, 0x00, 0x1F>::opCtrl()>;
+        using Swap2 = Swap<Properties::OP_GROUP_SIZE_2, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_manual<0x02, 0x00, 0x1F>::opCtrl()>;
 
         /*! \class Fft
         *  \brief Supports FFT-like cross-bar transforms
         *
         * @tparam FftCtrl - 5-bit swizzle code (see instruction ISA for layouts)
         */
-        template <uint32_t FftCtrl>
-        using Fft = CrossLaneOps::
-            Fft<FftCtrl, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_fft<FftCtrl>::opCtrl()>;
+        template <uint32_t SubGroupSize, uint32_t FftCtrl>
+        using Fft = CrossLaneOps::Fft<SubGroupSize, FftCtrl, OP_IMPL, detail::SwizzleCtrl::amdgcn_swizzle_fft<FftCtrl>::opCtrl()>;
 
         // clang-format on
 
@@ -178,6 +185,8 @@ namespace rocwmma
     template <typename SwizzleOp>
     struct Swizzle
     {
+        using SwizzleFunc = detail::amdgcn_swizzle<SwizzleOp::opCtrl()>;
+
         // Sanity checks
         static_assert(SwizzleOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_SWIZZLE,
                       "SwizzleOp must use swizzle backend");
@@ -192,22 +201,18 @@ namespace rocwmma
         template <typename DataT>
         __device__ static void exec(DataT& v)
         {
-            using SwizzleFunc = detail::amdgcn_swizzle<DataT, SwizzleOp::opCtrl()>;
-            v                 = SwizzleFunc::exec(v);
+            v = SwizzleFunc::exec(v);
         }
 
         template <typename DataT>
         __device__ static DataT exec(DataT const& v)
         {
-            using SwizzleFunc = detail::amdgcn_swizzle<DataT, SwizzleOp::opCtrl()>;
             return SwizzleFunc::exec(v);
         }
 
         template <typename DataT, uint32_t VecSize>
         __device__ static void exec(VecT<DataT, VecSize>& v)
         {
-            using SwizzleFunc = detail::amdgcn_swizzle<DataT, SwizzleOp::opCtrl()>;
-
             auto it = makeVectorIterator(v).begin();
             static_assert(decltype(it)::range() == VecSize,
                           "VecSize inconsistent with iterator range");

@@ -31,7 +31,9 @@ namespace rocwmma
 {
     HipDevice::HipDevice()
         : mHandle(-1)
-        , mGcnArch(hipGcnArch_t::UNSUPPORTED)
+        , mGcnArch(hipGcnArch_t::UNSUPPORTED_ARCH)
+        , mWarpSize(hipWarpSize_t::UNSUPPORTED_WARP_SIZE)
+        , mSharedMemSize(0)
     {
         CHECK_HIP_ERROR(hipGetDevice(&mHandle));
         CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
@@ -60,6 +62,16 @@ namespace rocwmma
         {
             mGcnArch = hipGcnArch_t::GFX1102;
         }
+
+        switch(mProps.warpSize)
+        {
+        case hipWarpSize_t::Wave32:
+        case hipWarpSize_t::Wave64:
+            mWarpSize = mProps.warpSize;
+        default:;
+        }
+
+        mSharedMemSize = mProps.sharedMemPerBlock;
     }
 
     hipDevice_t HipDevice::getDeviceHandle() const
@@ -82,21 +94,36 @@ namespace rocwmma
         return mGcnArch;
     }
 
+    int HipDevice::warpSize() const
+    {
+        return mWarpSize;
+    }
+
+    int HipDevice::sharedMemSize() const
+    {
+        return mSharedMemSize;
+    }
+
     // Need to check the host device target support statically before hip modules attempt
     // to load any kernels. Not safe to proceed if the host device is unsupported.
     struct HipStaticDeviceGuard
     {
-        static bool testSupportedDevice() 
-        { 
-            if(HipDevice::instance()->getGcnArch() == HipDevice::UNSUPPORTED)
+        static bool testSupportedDevice()
+        {
+            auto& device = HipDevice::instance();
+
+            if((device->getGcnArch() == HipDevice::hipGcnArch_t::UNSUPPORTED_ARCH)
+               || (device->warpSize() == HipDevice::hipWarpSize_t::UNSUPPORTED_WARP_SIZE))
             {
-                std::cerr << "Cannot proceed: unsupported host device detected. Exiting." << std::endl;
+                std::cerr << "Cannot proceed: unsupported host device detected. Exiting."
+                          << std::endl;
                 exit(EXIT_FAILURE);
             }
             return true;
         }
         static bool sResult;
     };
+
     bool HipStaticDeviceGuard::sResult = HipStaticDeviceGuard::testSupportedDevice();
 
 } // namespace rocwmma

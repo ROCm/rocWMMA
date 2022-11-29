@@ -47,23 +47,26 @@ namespace rocwmma
 
         // clang-format off
 
-        constexpr uint32_t OP_IMPL  = CrossLaneOps::Properties::OP_IMPL_PERMUTE;
+        using CrossLaneOps::Properties;
+        using CrossLaneOps::BlockBCast;
+
+        constexpr uint32_t OP_IMPL  = Properties::OP_IMPL_PERMUTE;
         constexpr uint32_t OP_CTRL = 0x0; // Uses thread index calculation instead
 
         template<uint32_t BlockIdx>
-        struct BlockBCast32 : CrossLaneOps::BlockBCast<BlockIdx, 32u, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<AMDGCN_WAVE_SIZE, 32u, BlockIdx>{};
+        struct BlockBCast32 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_32, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_32, BlockIdx>{};
 
         template<uint32_t BlockIdx>
-        struct BlockBCast16 : CrossLaneOps::BlockBCast<BlockIdx, 16u, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<AMDGCN_WAVE_SIZE, 16u, BlockIdx>{};
+        struct BlockBCast16 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_16, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_16, BlockIdx>{};
 
         template<uint32_t BlockIdx>
-        struct BlockBCast8 : CrossLaneOps::BlockBCast<BlockIdx, 8u, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<AMDGCN_WAVE_SIZE, 8u, BlockIdx>{};
+        struct BlockBCast8 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_8, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_8, BlockIdx>{};
 
         template<uint32_t BlockIdx>
-        struct BlockBCast4 : CrossLaneOps::BlockBCast<BlockIdx, 4u, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<AMDGCN_WAVE_SIZE, 4u, BlockIdx>{};
+        struct BlockBCast4 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_4, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_4, BlockIdx>{};
 
         template<uint32_t BlockIdx>
-        struct BlockBCast2 : CrossLaneOps::BlockBCast<BlockIdx, 2u, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<AMDGCN_WAVE_SIZE, 2u, BlockIdx>{};
+        struct BlockBCast2 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_2, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_2, BlockIdx>{};
 
         // clang-format on
     }
