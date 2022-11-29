@@ -103,6 +103,18 @@ namespace rocwmma
         };
 
         template <>
+        struct amdgcn_wmma<hfloat16_t, float32_t, 16, 16>
+            : public amdgcn_wmma<float16_t, float32_t, 16, 16>
+        {
+        };
+
+        template <>
+        struct amdgcn_wmma<hfloat16_t, hfloat16_t, 16, 16>
+            : public amdgcn_wmma<float16_t, float16_t, 16, 16>
+        {
+        };
+
+        template <>
         struct amdgcn_wmma<bfloat16_t, float32_t, 16, 16>
         {
             // Packed register traits
