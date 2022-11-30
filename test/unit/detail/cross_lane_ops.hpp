@@ -105,8 +105,7 @@ namespace rocwmma
 
             bool dppWaterfallBCastCheck
                 = !(isGfx11 && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
-                    && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_WFALL_BCAST)
-                    && (CrossLaneOp::groupSize() == CrossLaneOps::Properties::OP_GROUP_SIZE_WARP));
+                    && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_WFALL_BCAST));
 
             return Base::checkDevice() && dppBCast16Check && dppWaveShiftCheck && dppWaveRotateCheck
                    && dppWaterfallBCastCheck;
