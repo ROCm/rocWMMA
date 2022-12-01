@@ -97,7 +97,11 @@ namespace rocwmma
             {
                 typename Traits::DRegsT result;
                 result.data = {__builtin_amdgcn_wmma_f16_16x16x16_f16_w32(
-                    regsA.data, regsB.data, regsC.data, 0)};
+                    regsA.data,
+                    regsB.data,
+                    regsC.data,
+                    0 // Result in lower 16 bits of accumulator
+                    )};
                 return result;
             }
         };
@@ -165,7 +169,11 @@ namespace rocwmma
             {
                 typename Traits::DRegsT result;
                 result.data = {__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32(
-                    regsA.data, regsB.data, regsC.data, 1)};
+                    regsA.data,
+                    regsB.data,
+                    regsC.data,
+                    0 // Result in lower 16 bits of accumulator
+                    )};
                 return result;
             }
         };
