@@ -34,6 +34,8 @@ namespace rocwmma
         , mGcnArch(hipGcnArch_t::UNSUPPORTED_ARCH)
         , mWarpSize(hipWarpSize_t::UNSUPPORTED_WARP_SIZE)
         , mSharedMemSize(0)
+        , mCuCount(0)
+        , mMaxFreqMhz(0)
     {
         CHECK_HIP_ERROR(hipGetDevice(&mHandle));
         CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
@@ -72,6 +74,8 @@ namespace rocwmma
         }
 
         mSharedMemSize = mProps.sharedMemPerBlock;
+        mCuCount       = mProps.multiProcessorCount;
+        mMaxFreqMhz    = static_cast<int>(static_cast<double>(mProps.clockRate) / 1000.0);
     }
 
     hipDevice_t HipDevice::getDeviceHandle() const
@@ -102,6 +106,16 @@ namespace rocwmma
     int HipDevice::sharedMemSize() const
     {
         return mSharedMemSize;
+    }
+
+    int HipDevice::cuCount() const
+    {
+        return mCuCount;
+    }
+
+    int HipDevice::maxFreqMhz() const
+    {
+        return mMaxFreqMhz;
     }
 
     // Need to check the host device target support statically before hip modules attempt

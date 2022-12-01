@@ -68,8 +68,9 @@ namespace rocwmma
         hipGcnArch_t    getGcnArch() const;
 
         int warpSize() const;
-
         int sharedMemSize() const;
+        int cuCount() const;
+        int maxFreqMhz() const;
 
         template <typename InputT>
         double peakGFlopsPerSec() const;
@@ -81,6 +82,8 @@ namespace rocwmma
         hipGcnArch_t    mGcnArch;
         int             mWarpSize;
         int             mSharedMemSize;
+        int             mCuCount;
+        int             mMaxFreqMhz;
     };
 
     template <typename InputT>
@@ -90,11 +93,11 @@ namespace rocwmma
         switch(mGcnArch)
         {
         case hipGcnArch_t::GFX908:
-            result = calculatePeakGFlopsPerSec<InputT, MI100>(1087);
+            result = calculatePeakGFlopsPerSec<InputT, MI100>(mMaxFreqMhz, mCuCount);
             break;
 
         case hipGcnArch_t::GFX90A:
-            result = calculatePeakGFlopsPerSec<InputT, MI200>(985);
+            result = calculatePeakGFlopsPerSec<InputT, MI200>(mMaxFreqMhz, mCuCount);
             break;
         default:;
         }
