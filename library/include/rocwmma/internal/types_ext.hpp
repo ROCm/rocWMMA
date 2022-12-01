@@ -373,7 +373,6 @@ namespace rocwmma
     {
         return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) / static_cast<float16_t>(y));
     }
-#endif // !defined(__HIPCC_RTC__)
 
     template <typename T, typename std::enable_if_t<std::is_integral<T>::value, int> = 0>
     constexpr auto maxExactInteger() -> decltype(std::numeric_limits<T>::max())
@@ -411,6 +410,7 @@ namespace rocwmma
         // b16 mantissa is 7 bits
         return ((int32_t)1 << 8);
     }
+#endif // !defined(__HIPCC_RTC__)
 
 } // namespace rocwmma
 
