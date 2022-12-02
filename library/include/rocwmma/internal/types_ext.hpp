@@ -27,15 +27,16 @@
 #define ROCWMMA_TYPES_EXT_HPP
 
 #if !defined(__HIPCC_RTC__)
-#include <hip/hip_bfloat16.h>
-#endif // !__HIPCC_RTC__
-
-#include <hip/hip_fp16.h>
-
 #include <cmath>
+#include <hip/hip_bfloat16.h>
 #include <limits>
 #include <ostream>
-#include <type_traits>
+#else
+#include "utils.hpp"
+#endif // !defined(__HIPCC_RTC__)
+
+// #include <hip/hip_bfloat16.h>
+// #include <hip/hip_fp16.h>
 
 #include "types.hpp"
 
@@ -119,6 +120,11 @@ namespace std
         return stream << __half2float(val);
     }
 #endif // !defined(__HIPCC_RTC__)
+
+#if defined(__HIPCC_RTC__)
+    using uint16_t = rocwmma::uint16_t;
+#endif
+
     ///////////////////////////////////////////////////////////
     ///////////  std::numeric_limits<float16_t>  //////////////
     ///////////////////////////////////////////////////////////
@@ -303,6 +309,7 @@ namespace std
 
 namespace rocwmma
 {
+#if !defined(__HIPCC_RTC__)
     ///////////////////////////////////////////////////////////
     ///////////  rocwmma::hfloat16_t host operators  //////////
     ///////////////////////////////////////////////////////////
@@ -403,6 +410,7 @@ namespace rocwmma
         // b16 mantissa is 7 bits
         return ((int32_t)1 << 8);
     }
+#endif // !defined(__HIPCC_RTC__)
 
 } // namespace rocwmma
 

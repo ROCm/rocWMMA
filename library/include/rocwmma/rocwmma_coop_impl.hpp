@@ -26,8 +26,6 @@
 #ifndef ROCWMMA_COOP_IMPL_HPP
 #define ROCWMMA_COOP_IMPL_HPP
 
-#include <type_traits>
-
 #include "internal/coop_load.hpp"
 #include "internal/coop_store.hpp"
 #include "rocwmma_coop.hpp"

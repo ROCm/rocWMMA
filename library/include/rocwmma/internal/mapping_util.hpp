@@ -26,8 +26,6 @@
 #ifndef ROCWMMA_MAPPING_UTIL_HPP
 #define ROCWMMA_MAPPING_UTIL_HPP
 
-#include <utility>
-
 #include "types.hpp"
 
 namespace rocwmma

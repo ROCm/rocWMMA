@@ -201,6 +201,7 @@ namespace rocwmma
         {
         };
 
+#if !defined(__HIPCC_RTC__)
 #if !ROCWMMA_ARCH_GFX908
 
         // NOTE: Successors to gfx908 have upgraded bf16 instructions
@@ -484,6 +485,7 @@ namespace rocwmma
         };
 
 #endif // !ROCWMMA_ARCH_GFX908
+#endif // !defined(__HIPCC_RTC__)
 
         template <>
         struct amdgcn_mfma<float32_t, float32_t, 16, 16>
