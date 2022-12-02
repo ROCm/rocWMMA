@@ -26,9 +26,6 @@
 #ifndef ROCWMMA_IMPL_HPP
 #define ROCWMMA_IMPL_HPP
 
-#include <type_traits>
-#include <utility>
-
 #include "rocwmma.hpp"
 
 #include "internal/accessors.hpp"

@@ -26,8 +26,6 @@
 #ifndef ROCWMMA_HPP
 #define ROCWMMA_HPP
 
-#include <type_traits>
-
 #include "internal/io_config.hpp"
 #include "internal/io_traits.hpp"
 #include "internal/types.hpp"

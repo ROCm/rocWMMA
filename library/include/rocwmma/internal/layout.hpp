@@ -26,8 +26,6 @@
 #ifndef ROCWMMA_LAYOUT_HPP
 #define ROCWMMA_LAYOUT_HPP
 
-#include <type_traits>
-
 #include "layout_impl.hpp"
 
 namespace rocwmma

@@ -27,10 +27,20 @@
 #define ROCWMMA_TYPES_HPP
 
 #if !defined(__HIPCC_RTC__)
+#include <array>
 #include <hip/hip_bfloat16.h>
+#include <hip/hip_fp16.h>
+#include <hip/hip_vector_types.h>
+#include <type_traits>
+#include <utility>
 #endif // !__HIPCC_RTC__
 
-#include <hip/hip_fp16.h>
+#if defined(__HIPCC_RTC__)
+#define __HOST_DEVICE__ __device__
+#else
+#define __HOST_DEVICE__ __host__ __device__
+#endif
+
 namespace rocwmma
 {
 
@@ -64,6 +74,7 @@ namespace rocwmma
     using int8_t    = signed char;
     using uint8_t   = unsigned char;
     using int16_t   = short;
+    using uint16_t  = unsigned short;
     using int32_t   = int;
     using uint32_t  = unsigned int;
     using index_t   = int32_t;
@@ -71,6 +82,11 @@ namespace rocwmma
 // Non-native types
 #if !defined(__HIPCC_RTC__)
     using bfloat16_t = hip_bfloat16;
+#else
+    typedef struct
+    {
+        uint16_t data;
+    } bfloat16_t;
 #endif // !__HIPCC_RTC__
     using hfloat16_t = __half;
 
@@ -115,13 +131,9 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-// Add in some extensions to basic type support.
-// Some of these are required for vector implementations.
-#include "types_ext.hpp"
-
 // Continue with vector type definitions
 #include "vector.hpp"
-#include <hip/hip_vector_types.h>
+
 namespace rocwmma
 {
 
@@ -195,6 +207,10 @@ namespace rocwmma
     using Coord2d      = non_native_vector_base<Coord2dDataT, 2>;
 
 } // namespace rocwmma
+
+// Add in some extensions to basic type support.
+// Some of these are required for vector implementations.
+#include "types_ext.hpp"
 
 #include "types_impl.hpp"
 

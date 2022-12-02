@@ -26,8 +26,9 @@
 #ifndef ROCWMMA_MAPPING_UTIL_IMPL_HPP
 #define ROCWMMA_MAPPING_UTIL_IMPL_HPP
 
+#if !defined(__HIPCC_RTC__)
 #include <hip/hip_runtime.h>
-#include <utility>
+#endif
 
 #include "constants.hpp"
 #include "mapping_util.hpp"
