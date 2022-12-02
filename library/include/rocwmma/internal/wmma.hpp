@@ -43,7 +43,15 @@ namespace rocwmma
               typename Enabler = void>
     struct Wmma : public detail::amdgcn_wmma<InputT, ComputeT, BlockM, BlockN>
     {
+        template <typename InputARegsT, typename InputBRegsT, typename InputCRegsT>
+        __device__ static inline auto
+            exec(InputARegsT const& regsA, InputBRegsT const& regsB, InputCRegsT const& regsC)
+        {
+            return regsC;
+        }
     };
+
+#if ROCWMMA_ARCH_NAVI
 
     // Unlock the WMMA for NAVI cards
     // Supported Input/Compute types:
@@ -63,24 +71,23 @@ namespace rocwmma
         BlockN,
         BlockK,
         typename std::enable_if<
-            ROCWMMA_ARCH_NAVI // NAVI only
-            && ((std::is_same<InputT, float16_t>::value && std::is_same<ComputeT, float16_t>::value)
-                || (std::is_same<InputT, float16_t>::value
-                    && std::is_same<ComputeT, float32_t>::value)
-                || (std::is_same<InputT, hfloat16_t>::value
-                    && std::is_same<ComputeT, hfloat16_t>::value)
-                || (std::is_same<InputT, hfloat16_t>::value
-                    && std::is_same<ComputeT, float32_t>::value)
-                || (std::is_same<InputT, bfloat16_t>::value
-                    && std::is_same<ComputeT, bfloat16_t>::value)
-                || (std::is_same<InputT, bfloat16_t>::value
-                    && std::is_same<ComputeT, float32_t>::value)
-                || (std::is_same<InputT, int8_t>::value && std::is_same<ComputeT, int32_t>::value))
+            ((std::is_same<InputT, float16_t>::value && std::is_same<ComputeT, float16_t>::value)
+             || (std::is_same<InputT, float16_t>::value && std::is_same<ComputeT, float32_t>::value)
+             || (std::is_same<InputT, hfloat16_t>::value
+                 && std::is_same<ComputeT, hfloat16_t>::value)
+             || (std::is_same<InputT, hfloat16_t>::value
+                 && std::is_same<ComputeT, float32_t>::value)
+             || (std::is_same<InputT, bfloat16_t>::value
+                 && std::is_same<ComputeT, bfloat16_t>::value)
+             || (std::is_same<InputT, bfloat16_t>::value
+                 && std::is_same<ComputeT, float32_t>::value)
+             || (std::is_same<InputT, int8_t>::value && std::is_same<ComputeT, int32_t>::value))
             && (BlockM == 16) && (BlockN == 16) && (BlockK >= 16) // 16 block size only
             >::type>
     {
         // Functional backend
-        using WMMA = detail::amdgcn_wmma<InputT, ComputeT, BlockM, BlockN>;
+        using WMMA         = detail::amdgcn_wmma<InputT, ComputeT, BlockM, BlockN>;
+        using AccumAdapter = detail::AccumAdapter<ComputeT, WMMA::Traits::AccumBits>;
 
         // Full-fragment IO traits
         using IOTraitsA   = IOTraits<BlockM, BlockK, InputT>;
@@ -118,7 +125,6 @@ namespace rocwmma
         __device__ static inline auto
             exec(InputARegsT const& regsA, InputBRegsT const& regsB, InputCRegsT const& regsC)
         {
-
             // Inputs from outside will come in as fully packed
             static_assert(VecTraits<InputARegsT>::size() == IOTraitsA::PackedSize,
                           "WMMA input size mismatch");
@@ -128,7 +134,7 @@ namespace rocwmma
                           "WMMA input size mismatch");
 
             // Unpack incoming C
-            auto accumulatorResult = Unpack<ComputeT, VecTraits<InputCRegsT>::size()>::exec(regsC);
+            auto accum = AccumAdapter::unpack(regsC);
 
             // Iterate over packed WMMA inputs
             auto const aIt = makeVectorIterator<VecTraitsA::size() / 2u>(regsA).begin();
@@ -157,16 +163,18 @@ namespace rocwmma
                 wmmaItB++;
                 (*wmmaItB) = Permute<PermuteOps::BlockBCast16<1>>::exec(*bIt, detail::laneId());
 
-                accumulatorResult = WMMA::exec(regsA_Wmma, regsB_Wmma, accumulatorResult);
+                accum = WMMA::exec(regsA_Wmma, regsB_Wmma, accum);
 
                 aIt++;
                 bIt++;
             }
 
-            return Pack<ComputeT, VecTraits<decltype(accumulatorResult)>::size()>::exec(
-                accumulatorResult);
+            return AccumAdapter::pack(accum);
         }
     };
+
+#endif // ROCWMMA_ARCH_NAVI
+
 } // namespace rocwmma
 
 #endif // ROCWMMA_WMMA_HPP

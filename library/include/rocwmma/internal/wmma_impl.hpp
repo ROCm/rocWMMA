@@ -43,8 +43,38 @@ namespace rocwmma
             }
         };
 
+        template <typename ComputeT, uint32_t AccumBits, typename Enabler = void>
+        struct AccumAdapter
+        {
+            template <typename IncomingT>
+            __device__ static inline auto unpack(IncomingT&& accumVec)
+            {
+                // No unpack needed
+                return accumVec;
+            }
+
+            template <typename IncomingT>
+            __device__ static inline auto pack(IncomingT&& accumVec)
+            {
+                // No pack needed
+                return accumVec;
+            }
+        };
+
 // WMMA instructions are specific to NAVI architecture
 #if ROCWMMA_ARCH_NAVI
+
+        struct WmmaCtrlFlags
+        {
+            enum : uint32_t
+            {
+                LOW  = 0,
+                HIGH = 1,
+
+                UNSIGNED = 0,
+                SIGNED   = 1
+            };
+        };
 
         template <>
         struct amdgcn_wmma<float16_t, float32_t, 16, 16>
@@ -54,7 +84,10 @@ namespace rocwmma
             {
                 enum : uint32_t
                 {
-                    KPerWmma = 16,
+                    KPerWmma  = 16,
+                    InputSign = WmmaCtrlFlags::SIGNED,
+                    AccumBits = WmmaCtrlFlags::LOW,
+                    AccumSign = WmmaCtrlFlags::SIGNED
                 };
                 using ARegsT = VRegF32x8;
                 using BRegsT = VRegF32x8;
@@ -82,7 +115,10 @@ namespace rocwmma
             {
                 enum : uint32_t
                 {
-                    KPerWmma = 16,
+                    KPerWmma  = 16,
+                    InputSign = WmmaCtrlFlags::SIGNED,
+                    AccumBits = WmmaCtrlFlags::LOW,
+                    AccumSign = WmmaCtrlFlags::SIGNED
                 };
                 using ARegsT = VRegF32x8;
                 using BRegsT = VRegF32x8;
@@ -97,11 +133,7 @@ namespace rocwmma
             {
                 typename Traits::DRegsT result;
                 result.data = {__builtin_amdgcn_wmma_f16_16x16x16_f16_w32(
-                    regsA.data,
-                    regsB.data,
-                    regsC.data,
-                    0 // Result in lower 16 bits of accumulator
-                    )};
+                    regsA.data, regsB.data, regsC.data, Traits::AccumBits)};
                 return result;
             }
         };
@@ -126,7 +158,10 @@ namespace rocwmma
             {
                 enum : uint32_t
                 {
-                    KPerWmma = 16,
+                    KPerWmma  = 16,
+                    InputSign = WmmaCtrlFlags::SIGNED,
+                    AccumBits = WmmaCtrlFlags::LOW,
+                    AccumSign = WmmaCtrlFlags::SIGNED
                 };
                 using ARegsT = VRegF32x8;
                 using BRegsT = VRegF32x8;
@@ -154,7 +189,10 @@ namespace rocwmma
             {
                 enum : uint32_t
                 {
-                    KPerWmma = 16,
+                    KPerWmma  = 16,
+                    InputSign = WmmaCtrlFlags::SIGNED,
+                    AccumBits = WmmaCtrlFlags::LOW,
+                    AccumSign = WmmaCtrlFlags::SIGNED
                 };
                 using ARegsT = VRegF32x8;
                 using BRegsT = VRegF32x8;
@@ -169,11 +207,7 @@ namespace rocwmma
             {
                 typename Traits::DRegsT result;
                 result.data = {__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32(
-                    regsA.data,
-                    regsB.data,
-                    regsC.data,
-                    0 // Result in lower 16 bits of accumulator
-                    )};
+                    regsA.data, regsB.data, regsC.data, Traits::AccumBits)};
                 return result;
             }
         };
@@ -186,7 +220,10 @@ namespace rocwmma
             {
                 enum : uint32_t
                 {
-                    KPerWmma = 16,
+                    KPerWmma  = 16,
+                    InputSign = WmmaCtrlFlags::SIGNED,
+                    AccumBits = WmmaCtrlFlags::LOW,
+                    AccumSign = WmmaCtrlFlags::SIGNED
                 };
                 using ARegsT = VRegI32x4;
                 using BRegsT = VRegI32x4;
@@ -200,9 +237,116 @@ namespace rocwmma
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32(
-                    1, regsA.data, 1, regsB.data, regsC.data, 1)};
+                result.data = {__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32(Traits::InputSign,
+                                                                          regsA.data,
+                                                                          Traits::InputSign,
+                                                                          regsB.data,
+                                                                          regsC.data,
+                                                                          Traits::AccumSign)};
                 return result;
+            }
+        };
+
+        template <typename ComputeT, uint32_t AccumBits>
+        struct AccumAdapter<ComputeT,
+                            AccumBits,
+                            typename std::enable_if_t<(PackTraits<ComputeT>::PackRatio > 1)>>
+        {
+            using PackTraits = PackTraits<ComputeT>;
+            using UnpackedT  = typename PackTraits::UnpackedT;
+            using PackedT    = typename PackTraits::PackedT;
+
+            template <typename IncomingT>
+            __device__ static inline auto unpack(IncomingT const& accumVec)
+            {
+                // Accum data is comes in packed. WMMA accumulator needs unpacked data.
+                using VecTraitsIn = VecTraits<IncomingT>;
+                using Unpacker    = Unpack<ComputeT, VecTraitsIn::size()>;
+
+                static_assert(std::is_same<PackedT, typename VecTraitsIn::DataT>::value,
+                              "Unexpected incoming packed type");
+
+                // WMMA accumulator operates on unpacked data in separate 32b elements.
+                // In the case of f16, what needs to happen is extend each unpacked element to 32b wide
+                // and shift the 16b data to the correct spot (determined by the WMMA backend).
+                // The nasty bit is that due of the extended 32b element size, the final accumulation vector
+                // is masqueraded as a 'packed' type, but with the same vector size as unpacked.
+                using AccumExtVecT =
+                    typename VecTraitsIn::template VecT<PackedT,
+                                                        Unpacker::Traits::UnpackedRegisterCount>;
+
+                // First step, unpack. This is not yet 32b wide.
+                auto unpacked = Unpacker::exec(accumVec);
+
+                // Next, create the destination 32b wide elements
+                auto accum = AccumExtVecT();
+
+                // Iterate over both vectors, one read, one write
+                auto const rIt = makeVectorIterator(unpacked).begin();
+                auto       wIt = makeVectorIterator(accum).begin();
+
+                static_assert(decltype(rIt)::range() == decltype(wIt)::range(),
+                              "Unexpected iterator range mismatch");
+
+                // Don't convert, however emplace element data in upper / lower halves of accum.
+#pragma unroll
+                for(uint32_t i = 0u; i < decltype(rIt)::range(); i++)
+                {
+                    union
+                    {
+                        PackedT   packed;
+                        UnpackedT unpacked[PackTraits::PackRatio];
+                    } a = {PackedT(0)};
+
+                    a.unpacked[AccumBits] = get<0>(*rIt);
+                    get<0>(*wIt)          = a.packed;
+
+                    wIt++;
+                    rIt++;
+                }
+
+                return accum;
+            }
+
+            template <typename IncomingT>
+            __device__ static inline auto pack(IncomingT const& accumVec)
+            {
+                // Accum data comes out as unpacked, but with extended 32b elements
+                using VecTraitsIn = VecTraits<IncomingT>;
+                using Packer      = Pack<ComputeT, VecTraitsIn::size()>;
+
+                static_assert(std::is_same<PackedT, typename VecTraitsIn::DataT>::value,
+                              "Unexpected incoming unpacked type");
+
+                // As before, WMMA accumulator operates on unpacked data in separate 32b elements.
+                // In the case of f16, what needs to happen is shrink each unpacked 32b element the original
+                // 16b size, preserving the 16b data from correct spot (determined by the WMMA backend).
+                auto accum = typename Packer::Traits::InputT();
+
+                auto const rIt = makeVectorIterator(accumVec).begin();
+                auto       wIt = makeVectorIterator(accum).begin();
+
+                static_assert(decltype(rIt)::range() == decltype(wIt)::range(),
+                              "Unexpected iterator range mismatch");
+
+                // Don't convert, however pick element data in upper / lower halves of accumVec.
+#pragma unroll
+                for(uint32_t i = 0u; i < decltype(rIt)::range(); i++)
+                {
+                    union
+                    {
+                        PackedT   packed;
+                        UnpackedT unpacked[PackTraits::PackRatio];
+                    } a = {PackedT(0)};
+
+                    a.packed     = get<0>(*rIt);
+                    get<0>(*wIt) = a.unpacked[AccumBits];
+
+                    wIt++;
+                    rIt++;
+                }
+
+                return Packer::exec(accum);
             }
         };
 
