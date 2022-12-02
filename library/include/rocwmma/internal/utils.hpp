@@ -187,6 +187,14 @@ namespace std
 } // namespace std
 #endif // !defined(__HIPCC_RTC__)
 
+/*******************************************************************************
+ *
+ * GNU GPL License version 3.1
+ *
+ * Copyright (C) 2007-2019 Free Software Foundation, Inc.
+ *
+ *******************************************************************************/
+
 ///////////////////////////////////////////////////////////
 /////////////  std replacements for hipRTC  ///////////////
 ///////////////////////////////////////////////////////////
@@ -340,8 +348,8 @@ namespace std
     {
     };
 
-    template <typename _Tp>
-    struct is_rvalue_reference<_Tp&&> : public true_type
+    template <typename T>
+    struct is_rvalue_reference<T&&> : public true_type
     {
     };
 
@@ -425,14 +433,14 @@ namespace std
     {
     };
 
-    template <typename _Tp>
-    struct is_void : public __is_void_helper<typename remove_cv<_Tp>::type>::type
+    template <typename T>
+    struct is_void : public __is_void_helper<typename remove_cv<T>::type>::type
     {
     };
 
     // is_reference
-    template <typename _Tp>
-    struct is_reference : public __or_<is_lvalue_reference<_Tp>, is_rvalue_reference<_Tp>>::type
+    template <typename T>
+    struct is_reference : public __or_<is_lvalue_reference<T>, is_rvalue_reference<T>>::type
     {
     };
 
@@ -443,14 +451,14 @@ namespace std
     };
 
     // is_object
-    template <typename _Tp>
-    struct is_object : public __not_<__or_<is_function<_Tp>, is_reference<_Tp>, is_void<_Tp>>>::type
+    template <typename T>
+    struct is_object : public __not_<__or_<is_function<T>, is_reference<T>, is_void<T>>>::type
     {
     };
 
     // __is_referenceable
-    template <typename _Tp>
-    struct __is_referenceable : public __or_<is_object<_Tp>, is_reference<_Tp>>::type
+    template <typename T>
+    struct __is_referenceable : public __or_<is_object<T>, is_reference<T>>::type
     {
     };
 
