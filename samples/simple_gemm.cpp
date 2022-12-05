@@ -87,7 +87,7 @@ __host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n)
 
 // Supports ROCWMMA_M/N square sizes of
 // : 16 x 16
-// : 32 x 32
+// : 32 x 32 ( only MI )
 const int ROCWMMA_M = 16;
 const int ROCWMMA_N = 16;
 

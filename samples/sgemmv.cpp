@@ -135,7 +135,7 @@ __host__ void
 
 // Supports ROCWMMA_M/N square sizes of
 // : 16 x 16
-// : 32 x 32
+// : 32 x 32 ( only MI )
 const int ROCWMMA_M = 16;
 const int ROCWMMA_N = 16;
 
@@ -144,7 +144,7 @@ const int ROCWMMA_N = 16;
 const int ROCWMMA_K = 16;
 
 // AMDGCN default wave size
-const int WAVE_SIZE = 64;
+const int WAVE_SIZE = rocwmma::AMDGCN_WAVE_SIZE;
 
 // Thread block
 // : T_BLOCK_X must be multiple of WAVE_SIZE.
