@@ -26,6 +26,7 @@
 #ifndef ROCWMMA_WMMA_HPP
 #define ROCWMMA_WMMA_HPP
 
+#include "permute.hpp"
 #include "vector.hpp"
 #include "vector_iterator.hpp"
 
@@ -42,7 +43,15 @@ namespace rocwmma
               typename Enabler = void>
     struct Wmma : public detail::amdgcn_wmma<InputT, ComputeT, BlockM, BlockN>
     {
+        template <typename InputARegsT, typename InputBRegsT, typename InputCRegsT>
+        __device__ static inline auto
+            exec(InputARegsT const& regsA, InputBRegsT const& regsB, InputCRegsT const& regsC)
+        {
+            return regsC;
+        }
     };
+
+#if ROCWMMA_ARCH_NAVI
 
     // Unlock the WMMA for NAVI cards
     // Supported Input/Compute types:
@@ -62,35 +71,28 @@ namespace rocwmma
         BlockN,
         BlockK,
         typename std::enable_if<
-            ROCWMMA_ARCH_NAVI // NAVI only
-            && ((std::is_same<InputT, float16_t>::value && std::is_same<ComputeT, float16_t>::value)
-                || (std::is_same<InputT, float16_t>::value
-                    && std::is_same<ComputeT, float32_t>::value)
-                || (std::is_same<InputT, hfloat16_t>::value
-                    && std::is_same<ComputeT, hfloat16_t>::value)
-                || (std::is_same<InputT, hfloat16_t>::value
-                    && std::is_same<ComputeT, float32_t>::value)
-                || (std::is_same<InputT, bfloat16_t>::value
-                    && std::is_same<ComputeT, bfloat16_t>::value)
-                || (std::is_same<InputT, bfloat16_t>::value
-                    && std::is_same<ComputeT, float32_t>::value)
-                || (std::is_same<InputT, int8_t>::value && std::is_same<ComputeT, int32_t>::value))
+            ((std::is_same<InputT, float16_t>::value && std::is_same<ComputeT, float16_t>::value)
+             || (std::is_same<InputT, float16_t>::value && std::is_same<ComputeT, float32_t>::value)
+             || (std::is_same<InputT, hfloat16_t>::value
+                 && std::is_same<ComputeT, hfloat16_t>::value)
+             || (std::is_same<InputT, hfloat16_t>::value
+                 && std::is_same<ComputeT, float32_t>::value)
+             || (std::is_same<InputT, bfloat16_t>::value
+                 && std::is_same<ComputeT, bfloat16_t>::value)
+             || (std::is_same<InputT, bfloat16_t>::value
+                 && std::is_same<ComputeT, float32_t>::value)
+             || (std::is_same<InputT, int8_t>::value && std::is_same<ComputeT, int32_t>::value))
             && (BlockM == 16) && (BlockN == 16) && (BlockK >= 16) // 16 block size only
             >::type>
     {
+        // Functional backend
+        using WMMA         = detail::amdgcn_wmma<InputT, ComputeT, BlockM, BlockN>;
+        using AccumAdapter = detail::AccumAdapter<ComputeT, WMMA::Traits::AccumBits>;
+
         // Full-fragment IO traits
         using IOTraitsA   = IOTraits<BlockM, BlockK, InputT>;
         using IOTraitsB   = IOTraits<BlockK, BlockN, InputT>;
         using IOTraitsAcc = IOTraits<BlockM, BlockN, ComputeT>;
-
-        // Functional
-        using WMMA = detail::amdgcn_wmma<InputT, ComputeT, BlockM, BlockN>;
-
-        // Per-WMMA iterative vector requirements
-        using VecTraitsA = VecTraits<typename WMMA::Traits::ARegsT>;
-        using VecTraitsB = VecTraits<typename WMMA::Traits::BRegsT>;
-        using VecTraitsC = VecTraits<typename WMMA::Traits::CRegsT>;
-        using VecTraitsD = VecTraits<typename WMMA::Traits::DRegsT>;
 
         struct Traits
         {
@@ -98,141 +100,81 @@ namespace rocwmma
             {
                 WmmaCount = BlockK / WMMA::Traits::KPerWmma,
                 MinK      = WMMA::Traits::KPerWmma,
-
-                // WMMA instructions need to duplicate inputs and therefore
-                // must double fragment size.
-                WmmaInputMultiplier = 2u
             };
-
-            // Create full-fragment vector sizes
-            using ARegsT = typename VecTraitsA::template VecT<typename VecTraitsA::DataT,
-                                                              WmmaCount * VecTraitsA::size()
-                                                                  / WmmaInputMultiplier>;
-            using BRegsT = typename VecTraitsB::template VecT<typename VecTraitsB::DataT,
-                                                              WmmaCount * VecTraitsB::size()
-                                                                  / WmmaInputMultiplier>;
-            using CRegsT = typename VecTraitsC::template VecT<>;
-            using DRegsT = typename VecTraitsD::template VecT<>;
-
-            // Create per-wmma fragment vector sizes
-            using ARegsTPWmma =
-                typename VecTraitsA::template VecT<typename VecTraitsA::DataT,
-                                                   VecTraitsA::size() / WmmaInputMultiplier>;
-            using BRegsTPWmma =
-                typename VecTraitsB::template VecT<typename VecTraitsB::DataT,
-                                                   VecTraitsB::size() / WmmaInputMultiplier>;
 
             // Sanity checks
             static_assert(BlockK >= MinK, "BlockK is not a minimum of MinK");
             static_assert(BlockK % MinK == 0, "BlockK is not a multiple of MinK");
-
-            // A / B  and C / D types must match
-            static_assert(
-                std::is_same<typename VecTraitsA::DataT, typename VecTraitsB::DataT>::value,
-                "A and B registers must be of same type");
-            static_assert(
-                std::is_same<typename VecTraitsC::DataT, typename VecTraitsD::DataT>::value,
-                "C and D registers must be of same type");
-
-            // Full fragment counts must match packed IO counts
-            // WMMA expects packed elements
-            static_assert(VecTraits<ARegsT>::size() == IOTraitsA::PackedSize,
-                          "Unexpected packed vector size for A");
-            static_assert(VecTraits<BRegsT>::size() == IOTraitsB::PackedSize,
-                          "Unexpected packed vector size for B");
-            static_assert(VecTraits<CRegsT>::size() == IOTraitsAcc::PackedSize,
-                          "Unexpected packed vector size for C");
-            static_assert(VecTraits<DRegsT>::size() == IOTraitsAcc::PackedSize,
-                          "Unexpected packed vector size for D");
         };
 
-        __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                           typename Traits::BRegsT const& regsB,
-                                           typename Traits::CRegsT const& regsC) ->
-            typename Traits::DRegsT
-        {
-            typename Traits::DRegsT result = regsC;
+        // Per-WMMA iterative vector requirements
+        using VecTraitsA = VecTraits<typename WMMA::Traits::ARegsT>;
+        using VecTraitsB = VecTraits<typename WMMA::Traits::BRegsT>;
+        using VecTraitsC = VecTraits<typename WMMA::Traits::CRegsT>;
+        using VecTraitsD = VecTraits<typename WMMA::Traits::DRegsT>;
 
-            // Iterate over WMMA input requirements
-            auto aIt = makeVectorIterator<VecTraitsA::size() / Traits::WmmaInputMultiplier>(regsA)
-                           .begin();
-            auto bIt = makeVectorIterator<VecTraitsB::size() / Traits::WmmaInputMultiplier>(regsB)
-                           .begin();
+        // amdgcn backend requires duplicated packed inputs A / B, and unpacked accumulator
+        static_assert(VecTraitsA::size() * Traits::WmmaCount == IOTraitsA::PackedSize * 2u,
+                      "WMMA backend input size mismatch");
+        static_assert(VecTraitsB::size() * Traits::WmmaCount == IOTraitsB::PackedSize * 2u,
+                      "WMMA backend input size mismatch");
+        static_assert(VecTraitsC::size() == IOTraitsAcc::UnpackedSize,
+                      "WMMA backend input size mismatch");
+
+        template <typename InputARegsT, typename InputBRegsT, typename InputCRegsT>
+        __device__ static inline auto
+            exec(InputARegsT const& regsA, InputBRegsT const& regsB, InputCRegsT const& regsC)
+        {
+            // Inputs from outside will come in as fully packed
+            static_assert(VecTraits<InputARegsT>::size() == IOTraitsA::PackedSize,
+                          "WMMA input size mismatch");
+            static_assert(VecTraits<InputBRegsT>::size() == IOTraitsB::PackedSize,
+                          "WMMA input size mismatch");
+            static_assert(VecTraits<InputCRegsT>::size() == IOTraitsAcc::PackedSize,
+                          "WMMA input size mismatch");
+
+            // Unpack incoming C
+            auto accum = AccumAdapter::unpack(regsC);
+
+            // Iterate over packed WMMA inputs
+            auto const aIt = makeVectorIterator<VecTraitsA::size() / 2u>(regsA).begin();
+            auto const bIt = makeVectorIterator<VecTraitsB::size() / 2u>(regsB).begin();
 
             // Accumulate over WMMA count
 #pragma unroll
-            for(unsigned i = 0; i < Traits::WmmaCount; i++)
+            for(uint32_t i = 0; i < Traits::WmmaCount; i++)
             {
-                //Duplicate the uppper/lower input for register A
-                typename Traits::ARegsTPWmma regsAUpper(*aIt);
-                typename Traits::ARegsTPWmma regsALower(*aIt);
+                // Create WMMA input registers
+                typename WMMA::Traits::ARegsT regsA_Wmma;
+                typename WMMA::Traits::BRegsT regsB_Wmma;
 
-                //Create and initialize Wmma input A register
-                typename WMMA::Traits::ARegsT regsA_Wmma(InputT(0));
+                // Make iterators to store the duplication result
+                auto wmmaItA = makeVectorIterator<VecTraitsA::size() / 2u>(regsA_Wmma).begin();
+                auto wmmaItB = makeVectorIterator<VecTraitsA::size() / 2u>(regsB_Wmma).begin();
 
-                //Iterators for upper half and lower half of wmma registers
-                auto upperSrcAIt = makeVectorIterator(regsAUpper).begin();
-                auto lowerSrcAIt = makeVectorIterator(regsALower).begin();
+                // Duplicate the upper/lower inputs
+                // Lower has even rows
+                // Upper has odd rows
+                (*wmmaItA) = Permute<PermuteOps::BlockBCast16<0>>::exec(*aIt, detail::laneId());
+                wmmaItA++;
+                (*wmmaItA) = Permute<PermuteOps::BlockBCast16<1>>::exec(*aIt, detail::laneId());
 
-                static_assert(upperSrcAIt.range() == lowerSrcAIt.range(),
-                              "Upper and Lower register size should be equal");
+                (*wmmaItB) = Permute<PermuteOps::BlockBCast16<0>>::exec(*bIt, detail::laneId());
+                wmmaItB++;
+                (*wmmaItB) = Permute<PermuteOps::BlockBCast16<1>>::exec(*bIt, detail::laneId());
 
-                for(int j = 0; j < upperSrcAIt.range(); j++)
-                {
-                    Permute<PermuteOps::BlockBCast16<0>>::exec(*lowerSrcAIt, detail::laneId());
-                    Permute<PermuteOps::BlockBCast16<1>>::exec(*upperSrcAIt, detail::laneId());
-                    upperSrcAIt++;
-                    lowerSrcAIt++;
-                }
-
-                // update the src and dst iterators after data operation
-                auto dstAIt = makeVectorIterator<VecTraitsA::size() / Traits::WmmaInputMultiplier>(
-                                  regsA_Wmma)
-                                  .begin();
-
-                (*dstAIt) = regsAUpper;
-                dstAIt++;
-                (*dstAIt) = regsALower;
-
-                //Duplicate the uppper/lower input for register B
-                typename Traits::BRegsTPWmma regsBUpper(*bIt);
-                typename Traits::BRegsTPWmma regsBLower(*bIt);
-
-                //Create and initialize Wmma input B register
-                typename WMMA::Traits::BRegsT regsB_Wmma(InputT(0));
-
-                //Iterators for upper half and lower half of wmma registers
-                auto upperSrcBIt = makeVectorIterator(regsBUpper).begin();
-                auto lowerSrcBIt = makeVectorIterator(regsBLower).begin();
-
-                static_assert(upperSrcBIt.range() == lowerSrcBIt.range(),
-                              "Upper and Lower register size should be equal");
-
-                for(int j = 0; j < upperSrcBIt.range(); j++)
-                {
-                    Permute<PermuteOps::BlockBCast16<0>>::exec(*lowerSrcBIt, detail::laneId());
-                    Permute<PermuteOps::BlockBCast16<1>>::exec(*upperSrcBIt, detail::laneId());
-                    upperSrcBIt++;
-                    lowerSrcBIt++;
-                }
-
-                auto dstBIt = makeVectorIterator<VecTraitsB::size() / Traits::WmmaInputMultiplier>(
-                                  regsB_Wmma)
-                                  .begin();
-
-                // update the src and dst iterators after data operation
-                (*dstBIt) = regsBUpper;
-                dstBIt++;
-                (*dstBIt) = regsBLower;
-
-                result = WMMA::exec(regsA_Wmma, regsB_Wmma, result);
+                accum = WMMA::exec(regsA_Wmma, regsB_Wmma, accum);
 
                 aIt++;
                 bIt++;
             }
-            return result;
+
+            return AccumAdapter::pack(accum);
         }
     };
+
+#endif // ROCWMMA_ARCH_NAVI
+
 } // namespace rocwmma
 
 #endif // ROCWMMA_WMMA_HPP

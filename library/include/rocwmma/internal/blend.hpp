@@ -143,6 +143,43 @@ namespace rocwmma
                 it1++;
             }
         }
+
+        template <typename DataT, uint32_t VecSize>
+        __host__ __device__ static void exec(VecT<DataT, VecSize>& src0)
+        {
+            auto it0 = makeVectorIterator(src0).begin();
+            static_assert(decltype(it0)::range() == VecSize,
+                          "VecSize inconsistent with iterator range");
+
+            // Loop through entire vector
+#pragma unroll
+            for(uint32_t i = 0; i < VecSize; ++i)
+            {
+                *it0 = BlendFunc::exec(*it0, *it0);
+                it0++;
+            }
+        }
+
+        template <typename DataT, uint32_t VecSize>
+        __host__ __device__ static auto exec(VecT<DataT, VecSize> const& src0)
+        {
+            VecT<DataT, VecSize> result;
+            auto const           itR = makeVectorIterator(src0).begin();
+            auto                 itW = makeVectorIterator(result).begin();
+            static_assert(decltype(itR)::range() == VecSize,
+                          "VecSize inconsistent with iterator range");
+
+            // Loop through entire vector
+#pragma unroll
+            for(uint32_t i = 0; i < VecSize; ++i)
+            {
+                *itW = BlendFunc::exec(*itR, *itR);
+                itR++;
+                itW++;
+            }
+
+            return result;
+        }
     };
 
 } // namespace rocwmma
