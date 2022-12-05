@@ -26,8 +26,8 @@ namespace rocwmma
 
         struct iterator
         {
-            RefVecT const& mRef;
-            uint32_t       mIdx;
+            RefVecT const&   mRef;
+            mutable uint32_t mIdx;
 
             struct Traits
             {
@@ -67,37 +67,37 @@ namespace rocwmma
                 return reinterpret_cast<ItVecT*>(&const_cast<RefVecT&>(mRef))[mIdx];
             }
 
-            __HOST_DEVICE__ inline iterator& operator++()
+            __HOST_DEVICE__ inline iterator const& operator++() const
             {
                 mIdx++;
                 return *this;
             }
-            __HOST_DEVICE__ inline iterator operator++(int)
+            __HOST_DEVICE__ inline iterator operator++(int) const
             {
                 auto retval = *this;
                 ++mIdx;
                 return retval;
             }
 
-            __HOST_DEVICE__ inline iterator& operator--()
+            __HOST_DEVICE__ inline iterator const& operator--() const
             {
                 mIdx--;
                 return *this;
             }
-            __HOST_DEVICE__ inline iterator operator--(int)
+            __HOST_DEVICE__ inline iterator operator--(int) const
             {
                 auto retval = *this;
                 --mIdx;
                 return retval;
             }
 
-            __HOST_DEVICE__ inline iterator& operator+=(int i)
+            __HOST_DEVICE__ inline iterator const& operator+=(int i) const
             {
                 mIdx += i;
                 return *this;
             }
 
-            __HOST_DEVICE__ inline iterator& operator-=(int i)
+            __HOST_DEVICE__ inline iterator const& operator-=(int i) const
             {
                 mIdx -= i;
                 return *this;

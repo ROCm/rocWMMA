@@ -109,6 +109,26 @@ namespace rocwmma
                 it++;
             }
         }
+
+        template <typename DataT, uint32_t VecSize>
+        __host__ __device__ static auto exec(VecT<DataT, VecSize> const& src, uint32_t laneId)
+        {
+            VecT<DataT, VecSize> result;
+            auto                 itW = makeVectorIterator(result).begin();
+            auto const           itR = makeVectorIterator(src).begin();
+            static_assert(decltype(itW)::range() == VecSize,
+                          "VecSize inconsistent with iterator range");
+
+            // Loop through entire vector
+#pragma unroll
+            for(uint32_t i = 0; i < VecSize; ++i)
+            {
+                *itW = PermuteFunc::exec(*itR, PermuteOp::threadCtrl(laneId));
+                itW++;
+                itR++;
+            }
+            return result;
+        }
     };
 
 } // namespace rocwmma
