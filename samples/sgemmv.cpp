@@ -34,6 +34,7 @@
 #include <rocwmma/rocwmma.hpp>
 
 #include "common.hpp"
+#include "hip_device.hpp"
 
 using rocwmma::float16_t;
 using rocwmma::float32_t;
@@ -144,7 +145,7 @@ const int ROCWMMA_N = 16;
 const int ROCWMMA_K = 16;
 
 // AMDGCN default wave size
-const int WAVE_SIZE = rocwmma::AMDGCN_WAVE_SIZE;
+const uint32_t WAVE_SIZE = rocwmma::getWarpSize();
 
 // Thread block
 // : T_BLOCK_X must be multiple of WAVE_SIZE.
@@ -202,7 +203,7 @@ __global__ void gemv_rocwmma_d(uint32_t         m,
 
     rocwmma::fill_fragment(fragAcc, 0.0f);
 
-    int majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / WAVE_SIZE;
+    int majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / rocwmma::AMDGCN_WAVE_SIZE;
 
     // Target C block
     int cRow = majorWarp * ROCWMMA_M;
