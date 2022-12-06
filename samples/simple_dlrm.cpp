@@ -141,11 +141,14 @@ __host__ void dlrmDotBwdCPU(float16_t* input,
 
 // Supports ROCWMMA fragment sizes (TILE_DIM) of
 // : 16 x 16
-// : 32 x 32
+// : 32 x 32 ( only MI )
 constexpr static const int TILE_DIM = 16;
 
+// AMDGCN default wave size
+const uint32_t WAVE_SIZE = getWarpSize();
+
 // Thread block
-// : T_BLOCK_X must be multiple of AMDGCN_WAVE_SIZE (64).
+// : T_BLOCK_X must be multiple of AMDGCN_WAVE_SIZE.
 // Note: Each wave will compute one TILE_DIM x TILE_DIM output block
 // Note: Workgroup will compute
 //  T_BLOCK_X / AMDGCN_WAVE_SIZE output blocks
@@ -492,7 +495,7 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
     {
         dlrmKernel = [d_input, d_output, d_accFwd, m, k, b]() {
             auto gridDim
-                = dim3(rocwmma::ceilDiv(m, TILE_DIM * T_BLOCK_X / rocwmma::AMDGCN_WAVE_SIZE),
+                = dim3(rocwmma::ceilDiv(m, TILE_DIM * T_BLOCK_X / WAVE_SIZE),
                        rocwmma::ceilDiv(m, TILE_DIM),
                        b);
             auto blockDim = dim3(T_BLOCK_X);
@@ -550,7 +553,7 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
             CHECK_HIP_ERROR(hipEventRecord(syncEvent));
             CHECK_HIP_ERROR(hipEventSynchronize(syncEvent));
 
-            gridDim = dim3(rocwmma::ceilDiv(m, TILE_DIM * T_BLOCK_X / rocwmma::AMDGCN_WAVE_SIZE),
+            gridDim = dim3(rocwmma::ceilDiv(m, TILE_DIM * T_BLOCK_X / WAVE_SIZE),
                            rocwmma::ceilDiv(k, TILE_DIM),
                            b);
 

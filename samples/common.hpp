@@ -44,6 +44,41 @@
     }
 #endif
 
+// HIP Host function to retrieve the warp size
+enum hipWarpSize_t : uint32_t
+{
+    Wave32 = 32,
+    Wave64 = 64,
+    UNSUPPORTED_WARP_SIZE,
+};
+
+uint32_t getWarpSize()
+{
+    hipDevice_t     mHandle;
+    hipDeviceProp_t mProps;
+    uint32_t mWarpSize = hipWarpSize_t::UNSUPPORTED_WARP_SIZE;
+
+    CHECK_HIP_ERROR(hipGetDevice(&mHandle));
+    CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
+
+    switch(mProps.warpSize)
+    {
+    case hipWarpSize_t::Wave32:
+    case hipWarpSize_t::Wave64:
+        mWarpSize = mProps.warpSize;
+    default:;
+    }
+
+    if( mWarpSize == hipWarpSize_t::UNSUPPORTED_WARP_SIZE)
+    {
+        std::cerr << "Cannot proceed: unsupported warp sizev detected. Exiting."
+                    << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    return mWarpSize;
+}
+
 template <uint x>
 struct Log2
 {

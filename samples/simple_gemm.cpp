@@ -87,7 +87,7 @@ __host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n)
 
 // Supports ROCWMMA_M/N square sizes of
 // : 16 x 16
-// : 32 x 32
+// : 32 x 32 ( only MI )
 const int ROCWMMA_M = 16;
 const int ROCWMMA_N = 16;
 
@@ -96,7 +96,7 @@ const int ROCWMMA_N = 16;
 const int ROCWMMA_K = 16;
 
 // AMDGCN default wave size
-const int WAVE_SIZE = rocwmma::AMDGCN_WAVE_SIZE;
+const uint32_t WAVE_SIZE = getWarpSize();
 
 // Thread block
 // : T_BLOCK_X must be multiple of WAVE_SIZE.
@@ -155,7 +155,7 @@ __global__ void gemm_rocwmma_d(uint32_t         m,
     rocwmma::fill_fragment(fragAcc, 0.0f);
 
     // Tile using a 2D grid
-    auto majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / WAVE_SIZE;
+    auto majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / rocwmma::AMDGCN_WAVE_SIZE;
     auto minorWarp = (blockIdx.y * blockDim.y + threadIdx.y);
 
     // Target C block
