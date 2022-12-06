@@ -135,7 +135,7 @@ __host__ void
 
 // Supports ROCWMMA_M/N square sizes of
 // : 16 x 16
-// : 32 x 32
+// : 32 x 32 ( only MI )
 const int ROCWMMA_M = 16;
 const int ROCWMMA_N = 16;
 
@@ -144,7 +144,7 @@ const int ROCWMMA_N = 16;
 const int ROCWMMA_K = 16;
 
 // AMDGCN default wave size
-const int WAVE_SIZE = 64;
+const uint32_t WAVE_SIZE = getWarpSize();
 
 // Thread block
 // : T_BLOCK_X must be multiple of WAVE_SIZE.
@@ -202,7 +202,7 @@ __global__ void gemv_rocwmma_d(uint32_t         m,
 
     rocwmma::fill_fragment(fragAcc, 0.0f);
 
-    int majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / WAVE_SIZE;
+    int majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / rocwmma::AMDGCN_WAVE_SIZE;
 
     // Target C block
     int cRow = majorWarp * ROCWMMA_M;
