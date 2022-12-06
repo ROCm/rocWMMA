@@ -35,7 +35,6 @@
 #include <rocwmma/rocwmma.hpp>
 
 #include "common.hpp"
-#include "hip_device.hpp"
 
 using rocwmma::float16_t;
 using rocwmma::float32_t;
@@ -146,7 +145,7 @@ __host__ void dlrmDotBwdCPU(float16_t* input,
 constexpr static const int TILE_DIM = 16;
 
 // AMDGCN default wave size
-const uint32_t WAVE_SIZE = rocwmma::getWarpSize();
+const uint32_t WAVE_SIZE = getWarpSize();
 
 // Thread block
 // : T_BLOCK_X must be multiple of AMDGCN_WAVE_SIZE.
