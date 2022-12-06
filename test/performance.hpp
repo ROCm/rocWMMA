@@ -236,27 +236,6 @@ namespace rocwmma
     {
     };
 
-    template <typename GfxArch>
-    struct HardwareTraits;
-
-    template <>
-    struct HardwareTraits<MI100>
-    {
-        enum : uint32_t
-        {
-            CuCount = 120,
-        };
-    };
-
-    template <>
-    struct HardwareTraits<MI200>
-    {
-        enum : uint32_t
-        {
-            CuCount = 110,
-        };
-    };
-
     inline double calculateGFlops(uint32_t m, uint32_t n, uint32_t k)
     {
         return 2.0 * static_cast<double>(m) * static_cast<double>(n) * static_cast<double>(k)
@@ -270,13 +249,11 @@ namespace rocwmma
 
     template <typename InputT,
               typename GfxArch,
-              template <typename, typename> class PerfTraits = rocwmma::MfmaPerfTraits,
-              template <typename> class HardwareTraits       = rocwmma::HardwareTraits>
-    inline double calculatePeakGFlopsPerSec(uint32_t freqMHz)
+              template <typename, typename> class PerfTraits = rocwmma::MfmaPerfTraits>
+    inline double calculatePeakGFlopsPerSec(uint32_t freqMHz, uint32_t cuCount)
     {
         return static_cast<double>(PerfTraits<GfxArch, InputT>::Multiplier)
-               * static_cast<double>(HardwareTraits<GfxArch>::CuCount)
-               * static_cast<double>(freqMHz) * 1.0e-3;
+               * static_cast<double>(cuCount) * static_cast<double>(freqMHz) * 1.0e-3;
     }
 
 } // namespace rocwmma
