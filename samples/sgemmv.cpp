@@ -34,7 +34,6 @@
 #include <rocwmma/rocwmma.hpp>
 
 #include "common.hpp"
-#include "hip_device.hpp"
 
 using rocwmma::float16_t;
 using rocwmma::float32_t;
@@ -145,7 +144,7 @@ const int ROCWMMA_N = 16;
 const int ROCWMMA_K = 16;
 
 // AMDGCN default wave size
-const uint32_t WAVE_SIZE = rocwmma::getWarpSize();
+const uint32_t WAVE_SIZE = getWarpSize();
 
 // Thread block
 // : T_BLOCK_X must be multiple of WAVE_SIZE.
