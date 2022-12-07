@@ -117,16 +117,16 @@ namespace rocwmma
 /// Sanity checks
 ///
 #if ROCWMMA_ARCH_NAVI
-    static_assert(ROCWMMA_WAVE32_MODE && !ROCWMMA_WAVE64_MODE,
+    static_assert((bool)(ROCWMMA_WAVE32_MODE) && !(bool)(ROCWMMA_WAVE64_MODE),
                   "rocWMMA supports only wave32 for navi arch");
-    static_assert(ROCWMMA_BLOCK_DIM_16_SUPPORTED && !ROCWMMA_BLOCK_DIM_32_SUPPORTED,
+    static_assert((bool)(ROCWMMA_BLOCK_DIM_16_SUPPORTED) && !(bool)(ROCWMMA_BLOCK_DIM_32_SUPPORTED),
                   "rocWMMA supports only block size of 16 for navi arch");
 #endif
 
 #if ROCWMMA_ARCH_MI
-    static_assert(!ROCWMMA_WAVE32_MODE && ROCWMMA_WAVE64_MODE,
+    static_assert(!(bool)(ROCWMMA_WAVE32_MODE) && (bool)(ROCWMMA_WAVE64_MODE),
                   "rocWMMA supports only wave64 for MI arch");
-    static_assert(ROCWMMA_BLOCK_DIM_16_SUPPORTED && ROCWMMA_BLOCK_DIM_32_SUPPORTED,
+    static_assert((bool)(ROCWMMA_BLOCK_DIM_16_SUPPORTED) && (bool)(ROCWMMA_BLOCK_DIM_32_SUPPORTED),
                   "rocWMMA requires block size of 16 and 32 for MI arch");
 #endif
 
