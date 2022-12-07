@@ -87,6 +87,152 @@ namespace rocwmma
                    && ((BlockN * BlocksY * Base::mTBlockY) <= Base::mN) && (BlockK <= Base::mK);
         }
 
+        bool checkQuirks() const final
+        {
+            bool testGuard = false;
+            switch(Base::DeviceInfo::instance()->warpSize())
+            {
+            case HipDevice::Wave32:
+            {
+                switch(Base::DeviceInfo::instance()->getGcnArch())
+                {
+                case HipDevice::GFX908:
+                    testGuard = gemm_PGR0_LB0_MP0_MB_NC_guard<BlockM,
+                                                              BlockN,
+                                                              BlockK,
+                                                              InputT,
+                                                              OutputT,
+                                                              ComputeT,
+                                                              BlocksX,
+                                                              BlocksY,
+                                                              HipDevice::Wave32,
+                                                              HipDevice::GFX908>::Enable;
+                    break;
+                case HipDevice::GFX90A:
+                    testGuard = gemm_PGR0_LB0_MP0_MB_NC_guard<BlockM,
+                                                              BlockN,
+                                                              BlockK,
+                                                              InputT,
+                                                              OutputT,
+                                                              ComputeT,
+                                                              BlocksX,
+                                                              BlocksY,
+                                                              HipDevice::Wave32,
+                                                              HipDevice::GFX90A>::Enable;
+                    break;
+                case HipDevice::GFX1100:
+                    testGuard = gemm_PGR0_LB0_MP0_MB_NC_guard<BlockM,
+                                                              BlockN,
+                                                              BlockK,
+                                                              InputT,
+                                                              OutputT,
+                                                              ComputeT,
+                                                              BlocksX,
+                                                              BlocksY,
+                                                              HipDevice::Wave32,
+                                                              HipDevice::GFX1100>::Enable;
+                    break;
+                case HipDevice::GFX1101:
+                    testGuard = gemm_PGR0_LB0_MP0_MB_NC_guard<BlockM,
+                                                              BlockN,
+                                                              BlockK,
+                                                              InputT,
+                                                              OutputT,
+                                                              ComputeT,
+                                                              BlocksX,
+                                                              BlocksY,
+                                                              HipDevice::Wave32,
+                                                              HipDevice::GFX1101>::Enable;
+                    break;
+                case HipDevice::GFX1102:
+                    testGuard = gemm_PGR0_LB0_MP0_MB_NC_guard<BlockM,
+                                                              BlockN,
+                                                              BlockK,
+                                                              InputT,
+                                                              OutputT,
+                                                              ComputeT,
+                                                              BlocksX,
+                                                              BlocksY,
+                                                              HipDevice::Wave32,
+                                                              HipDevice::GFX1102>::Enable;
+                    break;
+                default:;
+                }
+            }
+            break;
+            case HipDevice::Wave64:
+            {
+                switch(Base::DeviceInfo::instance()->getGcnArch())
+                {
+                case HipDevice::GFX908:
+                    testGuard = gemm_PGR0_LB0_MP0_MB_NC_guard<BlockM,
+                                                              BlockN,
+                                                              BlockK,
+                                                              InputT,
+                                                              OutputT,
+                                                              ComputeT,
+                                                              BlocksX,
+                                                              BlocksY,
+                                                              HipDevice::Wave64,
+                                                              HipDevice::GFX908>::Enable;
+                    break;
+                case HipDevice::GFX90A:
+                    testGuard = gemm_PGR0_LB0_MP0_MB_NC_guard<BlockM,
+                                                              BlockN,
+                                                              BlockK,
+                                                              InputT,
+                                                              OutputT,
+                                                              ComputeT,
+                                                              BlocksX,
+                                                              BlocksY,
+                                                              HipDevice::Wave64,
+                                                              HipDevice::GFX90A>::Enable;
+                    break;
+                case HipDevice::GFX1100:
+                    testGuard = gemm_PGR0_LB0_MP0_MB_NC_guard<BlockM,
+                                                              BlockN,
+                                                              BlockK,
+                                                              InputT,
+                                                              OutputT,
+                                                              ComputeT,
+                                                              BlocksX,
+                                                              BlocksY,
+                                                              HipDevice::Wave64,
+                                                              HipDevice::GFX1100>::Enable;
+                    break;
+                case HipDevice::GFX1101:
+                    testGuard = gemm_PGR0_LB0_MP0_MB_NC_guard<BlockM,
+                                                              BlockN,
+                                                              BlockK,
+                                                              InputT,
+                                                              OutputT,
+                                                              ComputeT,
+                                                              BlocksX,
+                                                              BlocksY,
+                                                              HipDevice::Wave64,
+                                                              HipDevice::GFX1101>::Enable;
+                    break;
+                case HipDevice::GFX1102:
+                    testGuard = gemm_PGR0_LB0_MP0_MB_NC_guard<BlockM,
+                                                              BlockN,
+                                                              BlockK,
+                                                              InputT,
+                                                              OutputT,
+                                                              ComputeT,
+                                                              BlocksX,
+                                                              BlocksY,
+                                                              HipDevice::Wave64,
+                                                              HipDevice::GFX1102>::Enable;
+                    break;
+                default:;
+                }
+            }
+            default:;
+            }
+
+            return Base::checkQuirks() && testGuard;
+        }
+
         typename Base::KernelFunc kernelImpl() const final
         {
             return typename Base::KernelFunc(gemm_PGR0_LB0_MP0_MB_NC<BlockM,
