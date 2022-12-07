@@ -130,7 +130,7 @@ namespace rocwmma
     *           Reg3    |  R3   |   R7  |
     */
 
-        static constexpr uint32_t registerFileWidth = AMDGCN_WAVE_SIZE;
+        static constexpr uint32_t registerFileWidth = Constants::AMDGCN_WAVE_SIZE;
 
         // Global read - individual block size
         using GlobalReadFragA = fragment<matrix_a, BlockM, BlockN, BlockK, DataT, LayoutA>;

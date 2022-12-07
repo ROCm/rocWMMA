@@ -339,7 +339,7 @@ namespace rocwmma
                           "LW frag widths do not match");
             static_assert(GetIOShape_t<LRFragA>::BlockWidth == GetIOShape_t<LRFragB>::BlockWidth,
                           "LR frag widths do not match");
-            static_assert(GetIOShape_t<LWFragA>::BlockWidth == AMDGCN_WAVE_SIZE,
+            static_assert(GetIOShape_t<LWFragA>::BlockWidth == Constants::AMDGCN_WAVE_SIZE,
                           "LW and LR frag widths do not match register element count");
 
             // This layout is only valid if global reads are MFMA friendly, due to register file transform.
@@ -352,7 +352,7 @@ namespace rocwmma
                           "GR B block must be MFMA size");
 
         private: // Coordinate projection helpers
-            constexpr static uint32_t LdsWidth = AMDGCN_WAVE_SIZE;
+            constexpr static uint32_t LdsWidth = Constants::AMDGCN_WAVE_SIZE;
 
             // Project coordinates into stacked register file space
             __device__ constexpr static inline auto projCoordA(Coord2d const& coordA);

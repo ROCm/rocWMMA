@@ -95,7 +95,7 @@ const int ROCWMMA_N = 16;
 // : multiples of 16.
 const int ROCWMMA_K = 16;
 
-// AMDGCN default wave size
+// Device warp size
 const uint32_t WAVE_SIZE = getWarpSize();
 
 // Thread block
@@ -155,7 +155,7 @@ __global__ void gemm_rocwmma_d(uint32_t         m,
     rocwmma::fill_fragment(fragAcc, 0.0f);
 
     // Tile using a 2D grid
-    auto majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / rocwmma::AMDGCN_WAVE_SIZE;
+    auto majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / rocwmma::Constants::AMDGCN_WAVE_SIZE;
     auto minorWarp = (blockIdx.y * blockDim.y + threadIdx.y);
 
     // Target C block
@@ -243,7 +243,7 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
 
     auto blockDim = dim3(T_BLOCK_X, T_BLOCK_Y);
     auto gridDim  = dim3(rocwmma::ceilDiv(m, ROCWMMA_M * T_BLOCK_X / WAVE_SIZE),
-                         rocwmma::ceilDiv(n, ROCWMMA_N * T_BLOCK_Y));
+                        rocwmma::ceilDiv(n, ROCWMMA_N * T_BLOCK_Y));
 
     std::cout << "Launching GEMM kernel..." << std::endl;
 
