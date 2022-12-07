@@ -52,14 +52,16 @@ namespace rocwmma
             ldminor    = std::is_same<Layout, row_major>::value ? BlockN : BlockM
         };
 
-        auto majCoord = (std::is_same<Layout, row_major>::value
-                             ? ((threadIdx.x + blockDim.x * blockIdx.x) / AMDGCN_WAVE_SIZE)
-                             : (threadIdx.y + blockDim.y * blockIdx.y))
-                        * ldmajor;
-        auto minCoord = (std::is_same<Layout, row_major>::value
-                             ? (threadIdx.y + blockDim.y * blockIdx.y)
-                             : ((threadIdx.x + blockDim.x * blockIdx.x) / AMDGCN_WAVE_SIZE))
-                        * ldminor;
+        auto majCoord
+            = (std::is_same<Layout, row_major>::value
+                   ? ((threadIdx.x + blockDim.x * blockIdx.x) / Constants::AMDGCN_WAVE_SIZE)
+                   : (threadIdx.y + blockDim.y * blockIdx.y))
+              * ldmajor;
+        auto minCoord
+            = (std::is_same<Layout, row_major>::value
+                   ? (threadIdx.y + blockDim.y * blockIdx.y)
+                   : ((threadIdx.x + blockDim.x * blockIdx.x) / Constants::AMDGCN_WAVE_SIZE))
+              * ldminor;
 
         for(int i = 0; i < ldminor; ++i)
         {

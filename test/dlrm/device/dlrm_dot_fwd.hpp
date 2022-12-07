@@ -116,13 +116,13 @@ namespace rocwmma
             // Copy lower triangular from acc to output
             auto fragColIdx   = threadIdx.x % TILE_DIM;
             auto globalColIdx = get<1>(matrixCoordC) + fragColIdx;
-            auto rowsPerStep  = AMDGCN_WAVE_SIZE / TILE_DIM;
+            auto rowsPerStep  = Constants::AMDGCN_WAVE_SIZE / TILE_DIM;
 
-            count = (TILE_DIM * TILE_DIM) >> Log2<AMDGCN_WAVE_SIZE>::value;
+            count = (TILE_DIM * TILE_DIM) >> Log2<Constants::AMDGCN_WAVE_SIZE>::value;
             for(int i = 0; i < count; i++)
             {
-                auto fragRowIdx
-                    = i * rowsPerStep + ((threadIdx.x & (AMDGCN_WAVE_SIZE - 1)) / TILE_DIM);
+                auto fragRowIdx = i * rowsPerStep
+                                  + ((threadIdx.x & (Constants::AMDGCN_WAVE_SIZE - 1)) / TILE_DIM);
                 auto globalRowIdx = get<0>(matrixCoordC) + fragRowIdx;
                 if(globalRowIdx > globalColIdx)
                 {
