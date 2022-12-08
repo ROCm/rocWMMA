@@ -36,7 +36,8 @@ function(add_rocwmma_sample TEST_TARGET TEST_SOURCE)
   target_include_directories(${TEST_TARGET} PRIVATE
                              ${CMAKE_CURRENT_SOURCE_DIR}
                              ${ROCWMMA_SAMPLES_INCLUDE_DIR})
-  target_compile_options(${TEST_TARGET} PRIVATE -g)
+  # target_compile_options(${TEST_TARGET} PRIVATE -ldl)
+  target_link_libraries(${TEST_TARGET} -ldl)
 
   # Add support to build the target's assembly files
   if(ROCWMMA_BUILD_ASSEMBLY)
