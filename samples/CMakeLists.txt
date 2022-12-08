@@ -36,6 +36,7 @@ function(add_rocwmma_sample TEST_TARGET TEST_SOURCE)
   target_include_directories(${TEST_TARGET} PRIVATE
                              ${CMAKE_CURRENT_SOURCE_DIR}
                              ${ROCWMMA_SAMPLES_INCLUDE_DIR})
+  target_compile_options(${TEST_TARGET} PRIVATE -g)
 
   # Add support to build the target's assembly files
   if(ROCWMMA_BUILD_ASSEMBLY)
@@ -64,3 +65,4 @@ endfunction()
 add_rocwmma_sample(simple_gemm ${CMAKE_CURRENT_SOURCE_DIR}/simple_gemm.cpp)
 add_rocwmma_sample(sgemmv ${CMAKE_CURRENT_SOURCE_DIR}/sgemmv.cpp)
 add_rocwmma_sample(simple_dlrm ${CMAKE_CURRENT_SOURCE_DIR}/simple_dlrm.cpp)
+add_rocwmma_sample(hipRTC_gemm ${CMAKE_CURRENT_SOURCE_DIR}/hipRTC_gemm.cpp)
