@@ -31,7 +31,6 @@
 #include <hip/hiprtc.h>
 
 #include <rocwmma/rocwmma.hpp>
-// #include "rocwmma.hpp"
 
 #include "common.hpp"
 // #include "hipRTC_gemm_kernel.hpp"
@@ -113,8 +112,16 @@ const int T_BLOCK_Y = 4;
 
 std::string source = R"(
 
-#include <rocwmma/rocwmma.hpp>
-// #include "rocwmma.hpp"
+#include "rocwmma.hpp"
+
+using rocwmma::float16_t;
+using rocwmma::float32_t;
+using rocwmma::float64_t;
+
+const int ROCWMMA_M = 16;
+const int ROCWMMA_N = 16;
+const int ROCWMMA_K = 16;
+const int WAVE_SIZE = rocwmma::AMDGCN_WAVE_SIZE;
 
 extern "C"
 
@@ -214,18 +221,13 @@ int main()
     float32_t alpha = 2.1f;
     float32_t beta  = 2.1f;
 
-    const char* name = "gemm_rocwmma_d";
-
     hiprtcProgram prog;
     HIPRTC_CALL(hiprtcCreateProgram(&prog, src, nullptr, 0, nullptr, nullptr));
     hiprtcResult result;
     hiprtcResult logResult;
-    const char*  opts[]
-        = {"-D__HIP_PLATFORM_AMD__",
-           "-I/WMMA/samples",
-           "-I../library/include/rocwmma"}; // Include direct path to rocWMMA installation
+    const char*  opts[] = {"-D__HIP_PLATFORM_AMD__", "-I../library/include/rocwmma"};
 
-    result = hiprtcCompileProgram(prog, 3, opts); // TODO: fix segfault here
+    result = hiprtcCompileProgram(prog, 2, opts); // TODO: fix segfault here
     if(result != HIPRTC_SUCCESS)
     {
         std::cout << "HipRTC compile failed." << std::endl;
@@ -253,7 +255,7 @@ int main()
     hipModule_t   module;
     hipFunction_t func;
     HIP_CALL(hipModuleLoadData(&module, code.data()));
-    HIP_CALL(hipModuleGetFunction(&func, module, name));
+    HIP_CALL(hipModuleGetFunction(&func, module, "gemm_rocwmma_d"));
 
     // Bounds check
     if((m < (ROCWMMA_M * T_BLOCK_X / WAVE_SIZE) || n < (ROCWMMA_N * T_BLOCK_Y) || k < ROCWMMA_K)

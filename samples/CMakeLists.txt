@@ -62,8 +62,15 @@ function(add_rocwmma_sample TEST_TARGET TEST_SOURCE)
   )
 endfunction()
 
+function(add_rocwmma_rtc_sample TEST_TARGET TEST_SOURCE)
+  add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${TEST_TARGET}"
+                     COMMAND hipcc ARGS -O3 --std=c++14 -o ${TEST_TARGET} -I${ROCWMMA_SAMPLES_INCLUDE_DIR} -I${CMAKE_CURRENT_SOURCE_DIR}/../library/include/rocwmma ${TEST_SOURCE} -ldl
+                     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+  add_custom_target(${TEST_TARGET} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${TEST_TARGET})
+endfunction()
+
 # Create sample targets
 add_rocwmma_sample(simple_gemm ${CMAKE_CURRENT_SOURCE_DIR}/simple_gemm.cpp)
 add_rocwmma_sample(sgemmv ${CMAKE_CURRENT_SOURCE_DIR}/sgemmv.cpp)
 add_rocwmma_sample(simple_dlrm ${CMAKE_CURRENT_SOURCE_DIR}/simple_dlrm.cpp)
-add_rocwmma_sample(hipRTC_gemm ${CMAKE_CURRENT_SOURCE_DIR}/hipRTC_gemm.cpp)
+add_rocwmma_rtc_sample(hipRTC_gemm ${CMAKE_CURRENT_SOURCE_DIR}/hipRTC_gemm.cpp)
