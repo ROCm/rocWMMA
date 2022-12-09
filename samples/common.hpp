@@ -91,7 +91,7 @@ struct Log2<1>
     static constexpr uint value = 0;
 };
 
-// Matrix data initialization
+// Batched matrix data initialization
 template <typename DataT>
 __host__ static inline void
     fill(DataT* mat, uint32_t m, uint32_t k, uint32_t b, uint32_t normalization = 1)
