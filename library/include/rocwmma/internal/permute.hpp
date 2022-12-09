@@ -83,19 +83,19 @@ namespace rocwmma
                       "PermuteOp is unsupported");
 
         template <typename DataT>
-        __host__ __device__ static DataT exec(DataT const& src, uint32_t laneId)
+        __HOST_DEVICE__ static DataT exec(DataT const& src, uint32_t laneId)
         {
             return PermuteFunc::exec(src, PermuteOp::threadCtrl(laneId));
         }
 
         template <typename DataT>
-        __host__ __device__ static void exec(DataT& src, uint32_t laneId)
+        __HOST_DEVICE__ static void exec(DataT& src, uint32_t laneId)
         {
             src = PermuteFunc::exec(src, PermuteOp::threadCtrl(laneId));
         }
 
         template <typename DataT, uint32_t VecSize>
-        __host__ __device__ static void exec(VecT<DataT, VecSize>& src, uint32_t laneId)
+        __HOST_DEVICE__ static void exec(VecT<DataT, VecSize>& src, uint32_t laneId)
         {
             auto it = makeVectorIterator(src).begin();
             static_assert(decltype(it)::range() == VecSize,
@@ -111,7 +111,7 @@ namespace rocwmma
         }
 
         template <typename DataT, uint32_t VecSize>
-        __host__ __device__ static auto exec(VecT<DataT, VecSize> const& src, uint32_t laneId)
+        __HOST_DEVICE__ static auto exec(VecT<DataT, VecSize> const& src, uint32_t laneId)
         {
             VecT<DataT, VecSize> result;
             auto                 itW = makeVectorIterator(result).begin();
