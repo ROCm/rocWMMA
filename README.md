@@ -400,7 +400,7 @@ WG - Cooperative load / store per macro tile
 
 **gemm_PGR1_LB2_MP0_MB_CP_BLK** implements a multi-block GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to implement a data prefetching pipeline and collaborates with other waves to improve performance. Implements single stage prefetch, double lds buffer, default MFMA prioritization, multiple blocks output and is block-tile collaborative in global read / local write.
 
-**gemm_PGR1_LB2_MP0_MB_CP_WV** implements a multi-block GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to implement a data prefetching pipeline and collaborates with other waves to improve performance. Implements single stage prefetch, double lds buffer, default MFMA prioritization, multiple blocks output and is wave-tile collaborative in global read / local write. 
+**gemm_PGR1_LB2_MP0_MB_CP_WV** implements a multi-block GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to implement a data prefetching pipeline and collaborates with other waves to improve performance. Implements single stage prefetch, double lds buffer, default MFMA prioritization, multiple blocks output and is wave-tile collaborative in global read / local write.
 
 **gemm_PGR1_LB2_MP0_MB_CP_WG** implements a multi-block GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to implement a data prefetching pipeline and collaborates with other waves to improve performance. Implements single stage prefetch, double lds buffer, default MFMA prioritization, multiple blocks output and is macro-tile collaborative in global read / local write.
 
@@ -478,11 +478,11 @@ These are stand-alone real-world use-cases of the rocWMMA API. They have minimal
 Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose. Calculates Y = alpha * (A) * X + beta * Y with mixed precision fp16 inputs and fp32 output. Includes simple CPU validation and benchmark.
 
  A = Matrix of size m * k (row-major)
- 
+
  X = Vector of size k * 1 (col-major)
- 
+
  Y = accumulator of size m * 1 (row-major)
-   
+
 Run sgemmv sample:
 ```
 <build_dir>/samples/sgemmv
@@ -504,4 +504,13 @@ Simple GEMM algorithm demonstration without LDS memory usage and no transpose. C
 Run simple_gemm sample:
 ```
 <build_dir>/samples/simple_gemm
+```
+
+**hipRTC GEMM**
+
+Simple GEMM algorithm demonstrating runtime compilation (hipRTC) compatibility. Calculates D = Alpha * A x B + Beta * C with mixed precision fp16 inputs and fp32 output. Includes simple CPU validation and benchmark.
+
+Run hipRTC_gemm sample:
+```
+<build_dir>/samples/hipRTC_gemm
 ```
