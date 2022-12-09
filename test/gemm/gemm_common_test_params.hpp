@@ -89,9 +89,7 @@ namespace rocwmma
 
         // Aggregate types <= 16 bit
         using TestTypesSmall =
-            typename Concat</*TODO: Re-enable when i8 is fixed TestTypesI8,*/ TestTypesBF16,
-                            TestTypesF16,
-                            TestTypesH16>::Result;
+            typename Concat<TestTypesI8, TestTypesBF16, TestTypesF16, TestTypesH16>::Result;
 
         // Aggregate types <= 32 bit
         using TestTypesMedium = typename Concat<TestTypesSmall, TestTypesF32>::Result;
