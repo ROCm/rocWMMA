@@ -62,7 +62,7 @@ endfunction()
 
 function(add_rocwmma_rtc_sample TEST_TARGET TEST_SOURCE)
   add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${TEST_TARGET}"
-                     COMMAND hipcc ARGS -O3 --std=c++14 -o ${TEST_TARGET} -I${ROCWMMA_SAMPLES_INCLUDE_DIR} -I${CMAKE_CURRENT_SOURCE_DIR}/../library/include/rocwmma ${TEST_SOURCE} -ldl
+                     COMMAND hipcc ARGS -O3 --std=c++14 -o ${TEST_TARGET} -I${ROCWMMA_SAMPLES_INCLUDE_DIR} -I${CMAKE_CURRENT_SOURCE_DIR}/../library/include/ ${TEST_SOURCE} -ldl
                      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   add_custom_target(${TEST_TARGET} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${TEST_TARGET})
 endfunction()

@@ -33,7 +33,6 @@
 #include <rocwmma/rocwmma.hpp>
 
 #include "common.hpp"
-// #include "hipRTC_gemm_kernel.hpp"
 
 using rocwmma::float16_t;
 using rocwmma::float32_t;
@@ -99,8 +98,8 @@ const int ROCWMMA_N = 16;
 // : multiples of 16.
 const int ROCWMMA_K = 16;
 
-// AMDGCN default wave size
-const int WAVE_SIZE = rocwmma::AMDGCN_WAVE_SIZE;
+// Device warp size
+const int WAVE_SIZE = getWarpSize();
 
 // Thread block
 // : T_BLOCK_X must be multiple of WAVE_SIZE.
@@ -112,18 +111,15 @@ const int T_BLOCK_Y = 4;
 
 std::string source = R"(
 
-#include "rocwmma.hpp"
+#include <rocwmma/rocwmma.hpp>
 
 using rocwmma::float16_t;
 using rocwmma::float32_t;
 using rocwmma::float64_t;
 
-const int ROCWMMA_M = 16;
-const int ROCWMMA_N = 16;
-const int ROCWMMA_K = 16;
-const int WAVE_SIZE = rocwmma::AMDGCN_WAVE_SIZE;
-
-extern "C"
+constexpr int ROCWMMA_M = 16;
+constexpr int ROCWMMA_N = 16;
+constexpr int ROCWMMA_K = 16;
 
 // The following device kernel is a naive implementation
 // of blocked GEMM. Each wave will compute one BLOCK_M x BLOCK_N
@@ -139,6 +135,7 @@ extern "C"
 //
 // Note: This is a simplified implementation to demonstrate API usage in
 // context of wave-level GEMM computation, and is not optimized.
+extern "C"
 __global__ void gemm_rocwmma_d(uint32_t         m,
                                uint32_t         n,
                                uint32_t         k,
@@ -174,7 +171,7 @@ __global__ void gemm_rocwmma_d(uint32_t         m,
     rocwmma::fill_fragment(fragAcc, 0.0f);
 
     // Tile using a 2D grid
-    auto majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / WAVE_SIZE;
+    auto majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / rocwmma::AMDGCN_WAVE_SIZE;
     auto minorWarp = (blockIdx.y * blockDim.y + threadIdx.y);
 
     // Target C block
@@ -225,9 +222,9 @@ int main()
     HIPRTC_CALL(hiprtcCreateProgram(&prog, src, nullptr, 0, nullptr, nullptr));
     hiprtcResult result;
     hiprtcResult logResult;
-    const char*  opts[] = {"-D__HIP_PLATFORM_AMD__", "-I../library/include/rocwmma"};
+    const char*  opts[] = {"-D__HIP_PLATFORM_AMD__", "-I../library/include"};
 
-    result = hiprtcCompileProgram(prog, 2, opts); // TODO: fix segfault here
+    result = hiprtcCompileProgram(prog, sizeof(opts) / sizeof(opts[0]), opts);
     if(result != HIPRTC_SUCCESS)
     {
         std::cout << "HipRTC compile failed." << std::endl;
