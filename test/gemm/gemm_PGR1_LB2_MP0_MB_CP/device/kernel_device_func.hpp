@@ -36,12 +36,82 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "gemm_config.hpp"
+#include "gemm_test_traits.hpp"
 #include <rocwmma/rocwmma.hpp>
 #include <rocwmma/rocwmma_coop.hpp>
 #pragma GCC diagnostic pop
 
 namespace rocwmma
 {
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename InputT,
+              typename OutputT,
+              typename ComputeT,
+              uint32_t BlocksX,
+              uint32_t BlocksY,
+              uint32_t TBlockX,
+              uint32_t TBlockY,
+              uint32_t WaveSize,
+              uint32_t ArchId>
+    struct gemm_PGR1_LB2_MP0_MB_CP_guard
+    {
+        using TestTraits = GemmTestTraits<BlockM,
+                                          BlockN,
+                                          BlockK,
+                                          InputT,
+                                          OutputT,
+                                          ComputeT,
+                                          BlocksX,
+                                          BlocksY,
+                                          WaveSize,
+                                          ArchId>;
+
+    private:
+        enum struct GlobalPredicates : bool
+        {
+            // ThreadblockX must be a multiple of the wave size
+            TBlockXMult   = (TBlockX % WaveSize == 0u),
+            MaxWaveCount4 = (TBlockX / WaveSize * TBlockY <= 4u),
+
+            Enable = (TBlockXMult && MaxWaveCount4)
+        };
+
+        enum struct Gfx9Predicates : bool
+        {
+            // Must skip int8 tests on gfx9 for now
+            IsInt8 = std::is_same<int8_t, InputT>::value,
+
+            Enable = ((bool)TestTraits::IsGfx9 && (bool)TestTraits::IsWave64 && !(bool)IsInt8)
+        };
+
+        enum struct Gfx11Predicates : bool
+        {
+            // AB inputs are duplicated, double buffered
+            // Acc tiles are unpacked.
+            // Tail requires A, B, C & D tiles + FMA
+            CostABTest
+            = ((4u * ((uint32_t)TestTraits::Cost::TileA + (uint32_t)TestTraits::Cost::TileB))
+               <= 112u),
+            CostAccTest   = ((2u * (uint32_t)TestTraits::Cost::TileC) <= 256u),
+            CostTailTest  = (((uint32_t)TestTraits::Cost::TileA + (uint32_t)TestTraits::Cost::TileB
+                             + 2u * (uint32_t)TestTraits::Cost::TileD)
+                            <= 112u),
+            BlockSizeTest = ((BlockM == 16u) && (BlockN == 16u)),
+
+            Enable = ((bool)TestTraits::IsGfx11 && (bool)TestTraits::IsWave32 && CostABTest
+                      && CostAccTest && CostTailTest && BlockSizeTest)
+        };
+
+    public:
+        constexpr static bool enable()
+        {
+            return ((bool)GlobalPredicates::Enable
+                    && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable));
+        }
+    };
+
     ///
     /// Device function GEMM kernel:
     ///
@@ -63,12 +133,23 @@ namespace rocwmma
               typename LayoutD,
               typename LayoutLds,
               typename GemmConfig,
-              uint32_t BlocksX                                                            = 1,
-              uint32_t BlocksY                                                            = 1,
-              uint32_t TBlockX                                                            = 0,
-              uint32_t TBlockY                                                            = 0,
-              typename std::enable_if_t<(!ROCWMMA_ARCH_HOST)
-                                        && (TBlockX % Constants::AMDGCN_WAVE_SIZE == 0)>* = nullptr>
+              uint32_t BlocksX                                   = 1,
+              uint32_t BlocksY                                   = 1,
+              uint32_t TBlockX                                   = 0,
+              uint32_t TBlockY                                   = 0,
+              typename std::enable_if_t<gemm_PGR1_LB2_MP0_MB_CP_guard<
+                  BlockM,
+                  BlockN,
+                  BlockK,
+                  InputT,
+                  OutputT,
+                  ComputeT,
+                  BlocksX,
+                  BlocksY,
+                  TBlockX,
+                  TBlockY,
+                  Constants::AMDGCN_WAVE_SIZE,
+                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
     __global__ void __launch_bounds__(256) gemm_PGR1_LB2_MP0_MB_CP(uint32_t       m,
                                                                    uint32_t       n,
                                                                    uint32_t       k,
@@ -270,12 +351,23 @@ namespace rocwmma
               typename LayoutD,
               typename LayoutLds,
               typename GemmConfig,
-              uint32_t BlocksX                                                            = 1,
-              uint32_t BlocksY                                                            = 1,
-              uint32_t TBlockX                                                            = 0,
-              uint32_t TBlockY                                                            = 0,
-              typename std::enable_if_t<(ROCWMMA_ARCH_HOST)
-                                        || (TBlockX % Constants::AMDGCN_WAVE_SIZE != 0)>* = nullptr>
+              uint32_t BlocksX                                   = 1,
+              uint32_t BlocksY                                   = 1,
+              uint32_t TBlockX                                   = 0,
+              uint32_t TBlockY                                   = 0,
+              typename std::enable_if_t<!gemm_PGR1_LB2_MP0_MB_CP_guard<
+                  BlockM,
+                  BlockN,
+                  BlockK,
+                  InputT,
+                  OutputT,
+                  ComputeT,
+                  BlocksX,
+                  BlocksY,
+                  TBlockX,
+                  TBlockY,
+                  Constants::AMDGCN_WAVE_SIZE,
+                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
     __global__ void __launch_bounds__(256) gemm_PGR1_LB2_MP0_MB_CP(uint32_t       m,
                                                                    uint32_t       n,
                                                                    uint32_t       k,
