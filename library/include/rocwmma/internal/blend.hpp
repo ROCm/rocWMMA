@@ -104,13 +104,13 @@ namespace rocwmma
                       "BlendOp is unsupported");
 
         template <typename DataT>
-        __host__ __device__ static inline DataT exec(DataT const& src0, DataT const& src1)
+        __HOST_DEVICE__ static inline DataT exec(DataT const& src0, DataT const& src1)
         {
             return BlendFunc::exec(src0, src1);
         }
 
         template <typename DataT, uint32_t VecSize>
-        __host__ __device__ static void exec(VecT<DataT, VecSize>& src0, DataT const& src1)
+        __HOST_DEVICE__ static void exec(VecT<DataT, VecSize>& src0, DataT const& src1)
         {
             auto it = makeVectorIterator(src0).begin();
             static_assert(decltype(it)::range() == VecSize,
@@ -126,8 +126,8 @@ namespace rocwmma
         }
 
         template <typename DataT, uint32_t VecSize>
-        __host__ __device__ static void exec(VecT<DataT, VecSize>&       src0,
-                                             VecT<DataT, VecSize> const& src1)
+        __HOST_DEVICE__ static void exec(VecT<DataT, VecSize>&       src0,
+                                         VecT<DataT, VecSize> const& src1)
         {
             auto it0 = makeVectorIterator(src0).begin();
             auto it1 = makeVectorIterator(src1).begin();
@@ -145,7 +145,7 @@ namespace rocwmma
         }
 
         template <typename DataT, uint32_t VecSize>
-        __host__ __device__ static void exec(VecT<DataT, VecSize>& src0)
+        __HOST_DEVICE__ static void exec(VecT<DataT, VecSize>& src0)
         {
             auto it0 = makeVectorIterator(src0).begin();
             static_assert(decltype(it0)::range() == VecSize,
@@ -161,7 +161,7 @@ namespace rocwmma
         }
 
         template <typename DataT, uint32_t VecSize>
-        __host__ __device__ static auto exec(VecT<DataT, VecSize> const& src0)
+        __HOST_DEVICE__ static auto exec(VecT<DataT, VecSize> const& src0)
         {
             VecT<DataT, VecSize> result;
             auto const           itR = makeVectorIterator(src0).begin();

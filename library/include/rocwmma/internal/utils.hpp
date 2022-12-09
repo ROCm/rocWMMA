@@ -38,19 +38,19 @@ namespace rocwmma
     /// Element-wise access of vectors in constexpr is forbidden.   ///
     ///////////////////////////////////////////////////////////////////
     template <uint32_t Idx, typename DataT, uint32_t VecSize>
-    __host__ __device__ constexpr inline DataT& get(HIP_vector_type<DataT, VecSize>& v)
+    __HOST_DEVICE__ constexpr inline DataT& get(HIP_vector_type<DataT, VecSize>& v)
     {
         return reinterpret_cast<DataT*>(&v.data)[Idx];
     }
 
     template <uint32_t Idx, typename DataT, uint32_t VecSize>
-    __host__ __device__ constexpr inline DataT get(HIP_vector_type<DataT, VecSize> const& v)
+    __HOST_DEVICE__ constexpr inline DataT get(HIP_vector_type<DataT, VecSize> const& v)
     {
         return v.data[Idx];
     }
 
     template <typename DataT>
-    __host__ __device__ constexpr inline auto swap(HIP_vector_type<DataT, 2> const& v)
+    __HOST_DEVICE__ constexpr inline auto swap(HIP_vector_type<DataT, 2> const& v)
     {
         return HIP_vector_type<DataT, 2>{get<1>(v), get<0>(v)};
     }
@@ -59,14 +59,13 @@ namespace rocwmma
     ///     non_native_vector_base<T, N> utility overrides          ///
     ///////////////////////////////////////////////////////////////////
     template <uint32_t Idx, typename DataT, uint32_t VecSize>
-    __host__ __device__ constexpr static inline DataT&
-        get(non_native_vector_base<DataT, VecSize>& v)
+    __HOST_DEVICE__ constexpr static inline DataT& get(non_native_vector_base<DataT, VecSize>& v)
     {
         return v[Idx];
     }
 
     template <uint32_t Idx, typename DataT, uint32_t VecSize>
-    __host__ __device__ constexpr static inline DataT
+    __HOST_DEVICE__ constexpr static inline DataT
         get(non_native_vector_base<DataT, VecSize> const& v)
     {
         return v[Idx];
@@ -74,7 +73,7 @@ namespace rocwmma
 
     // Unary swap only considered in 2d vectors.
     template <typename DataT>
-    __host__ __device__ constexpr static inline auto swap(non_native_vector_base<DataT, 2> const& v)
+    __HOST_DEVICE__ constexpr static inline auto swap(non_native_vector_base<DataT, 2> const& v)
     {
         return non_native_vector_base<DataT, 2>{get<1>(v), get<0>(v)};
     }
@@ -84,24 +83,24 @@ namespace rocwmma
     ///                                                             ///
     /// Note: Coord2d MUST be constexpr compatible                  ///
     ///////////////////////////////////////////////////////////////////
-    __host__ __device__ constexpr static inline auto make_coord2d(Coord2dDataT x, Coord2dDataT y)
+    __HOST_DEVICE__ constexpr static inline auto make_coord2d(Coord2dDataT x, Coord2dDataT y)
     {
         return Coord2d{x, y};
     }
 
-    __host__ __device__ constexpr static inline auto swap(Coord2d const& p)
+    __HOST_DEVICE__ constexpr static inline auto swap(Coord2d const& p)
     {
         return Coord2d{get<1>(p), get<0>(p)};
     }
 
-    __host__ __device__ constexpr static inline Coord2d operator*(Coord2d const& lhs,
-                                                                  Coord2d const& rhs)
+    __HOST_DEVICE__ constexpr static inline Coord2d operator*(Coord2d const& lhs,
+                                                              Coord2d const& rhs)
     {
         return make_coord2d(get<0>(lhs) * get<0>(rhs), get<1>(lhs) * get<1>(rhs));
     }
 
-    __host__ __device__ constexpr static inline Coord2d operator+(Coord2d const& lhs,
-                                                                  Coord2d const& rhs)
+    __HOST_DEVICE__ constexpr static inline Coord2d operator+(Coord2d const& lhs,
+                                                              Coord2d const& rhs)
     {
         return make_coord2d(get<0>(lhs) + get<0>(rhs), get<1>(lhs) + get<1>(rhs));
     }
@@ -137,15 +136,15 @@ namespace std
 {
     // Add, sub operators
     template <typename T>
-    __host__ __device__ constexpr static inline pair<T, T> operator+(pair<T, T> const& lhs,
-                                                                     pair<T, T> const& rhs)
+    __HOST_DEVICE__ constexpr static inline pair<T, T> operator+(pair<T, T> const& lhs,
+                                                                 pair<T, T> const& rhs)
     {
         return make_pair(get<0>(lhs) + get<0>(rhs), get<1>(lhs) + get<1>(rhs));
     }
 
     template <typename T>
-    __host__ __device__ constexpr static inline pair<T, T>& operator+=(pair<T, T>&       lhs,
-                                                                       pair<T, T> const& rhs)
+    __HOST_DEVICE__ constexpr static inline pair<T, T>& operator+=(pair<T, T>&       lhs,
+                                                                   pair<T, T> const& rhs)
     {
         get<0>(lhs) += get<0>(rhs);
         get<1>(lhs) += get<1>(rhs);
@@ -153,15 +152,15 @@ namespace std
     }
 
     template <typename T>
-    __host__ __device__ constexpr static inline pair<T, T> operator*(pair<T, T> const& lhs,
-                                                                     pair<T, T> const& rhs)
+    __HOST_DEVICE__ constexpr static inline pair<T, T> operator*(pair<T, T> const& lhs,
+                                                                 pair<T, T> const& rhs)
     {
         return make_pair(get<0>(lhs) * get<0>(rhs), get<1>(lhs) * get<1>(rhs));
     }
 
     template <typename T>
-    __host__ __device__ constexpr static inline pair<T, T>& operator*=(pair<T, T>&       lhs,
-                                                                       pair<T, T> const& rhs)
+    __HOST_DEVICE__ constexpr static inline pair<T, T>& operator*=(pair<T, T>&       lhs,
+                                                                   pair<T, T> const& rhs)
     {
         get<0>(lhs) *= get<0>(rhs);
         get<1>(lhs) *= get<1>(rhs);
@@ -169,15 +168,15 @@ namespace std
     }
 
     template <typename T>
-    __host__ __device__ constexpr static inline pair<T, T> operator-(pair<T, T> const& lhs,
-                                                                     pair<T, T> const& rhs)
+    __HOST_DEVICE__ constexpr static inline pair<T, T> operator-(pair<T, T> const& lhs,
+                                                                 pair<T, T> const& rhs)
     {
         return make_pair(get<0>(lhs) - get<0>(rhs), get<1>(lhs) - get<1>(rhs));
     }
 
     template <typename T>
-    __host__ __device__ constexpr static inline pair<T, T>& operator-=(pair<T, T>&       lhs,
-                                                                       pair<T, T> const& rhs)
+    __HOST_DEVICE__ constexpr static inline pair<T, T>& operator-=(pair<T, T>&       lhs,
+                                                                   pair<T, T> const& rhs)
     {
         get<0>(lhs) -= get<0>(rhs);
         get<1>(lhs) -= get<1>(rhs);
