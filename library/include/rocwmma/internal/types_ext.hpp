@@ -130,56 +130,54 @@ namespace std
     ///////////////////////////////////////////////////////////
 
     template <>
-    __host__ __device__ constexpr rocwmma::float16_t
-             numeric_limits<rocwmma::float16_t>::epsilon() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::float16_t
+        numeric_limits<rocwmma::float16_t>::epsilon() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x1400));
         return eps.f16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::float16_t
-             numeric_limits<rocwmma::float16_t>::infinity() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::float16_t
+        numeric_limits<rocwmma::float16_t>::infinity() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7C00));
         return eps.f16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::float16_t
-             numeric_limits<rocwmma::float16_t>::lowest() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::float16_t
+        numeric_limits<rocwmma::float16_t>::lowest() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0xFBFF));
         return eps.f16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::float16_t
-             numeric_limits<rocwmma::float16_t>::max() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::float16_t numeric_limits<rocwmma::float16_t>::max() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7BFF));
         return eps.f16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::float16_t
-             numeric_limits<rocwmma::float16_t>::min() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::float16_t numeric_limits<rocwmma::float16_t>::min() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x0400));
         return eps.f16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::float16_t
-             numeric_limits<rocwmma::float16_t>::quiet_NaN() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::float16_t
+        numeric_limits<rocwmma::float16_t>::quiet_NaN() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7FFF));
         return eps.f16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::float16_t
-             numeric_limits<rocwmma::float16_t>::signaling_NaN() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::float16_t
+        numeric_limits<rocwmma::float16_t>::signaling_NaN() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7DFF));
         return eps.f16;
@@ -190,56 +188,56 @@ namespace std
     ///////////////////////////////////////////////////////////
 
     template <>
-    __host__ __device__ constexpr rocwmma::hfloat16_t
-             numeric_limits<rocwmma::hfloat16_t>::epsilon() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::hfloat16_t
+        numeric_limits<rocwmma::hfloat16_t>::epsilon() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x1400));
         return eps.h16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::hfloat16_t
-             numeric_limits<rocwmma::hfloat16_t>::infinity() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::hfloat16_t
+        numeric_limits<rocwmma::hfloat16_t>::infinity() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7C00));
         return eps.h16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::hfloat16_t
-             numeric_limits<rocwmma::hfloat16_t>::lowest() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::hfloat16_t
+        numeric_limits<rocwmma::hfloat16_t>::lowest() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0xFBFF));
         return eps.h16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::hfloat16_t
-             numeric_limits<rocwmma::hfloat16_t>::max() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::hfloat16_t
+        numeric_limits<rocwmma::hfloat16_t>::max() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7BFF));
         return eps.h16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::hfloat16_t
-             numeric_limits<rocwmma::hfloat16_t>::min() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::hfloat16_t
+        numeric_limits<rocwmma::hfloat16_t>::min() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x0400));
         return eps.h16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::hfloat16_t
-             numeric_limits<rocwmma::hfloat16_t>::quiet_NaN() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::hfloat16_t
+        numeric_limits<rocwmma::hfloat16_t>::quiet_NaN() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7FFF));
         return eps.h16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::hfloat16_t
-             numeric_limits<rocwmma::hfloat16_t>::signaling_NaN() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::hfloat16_t
+        numeric_limits<rocwmma::hfloat16_t>::signaling_NaN() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7DFF));
         return eps.h16;
@@ -250,56 +248,56 @@ namespace std
     ///////////////////////////////////////////////////////////
 
     template <>
-    __host__ __device__ constexpr rocwmma::bfloat16_t
-             numeric_limits<rocwmma::bfloat16_t>::epsilon() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::bfloat16_t
+        numeric_limits<rocwmma::bfloat16_t>::epsilon() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x3C00));
         return eps.b16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::bfloat16_t
-             numeric_limits<rocwmma::bfloat16_t>::infinity() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::bfloat16_t
+        numeric_limits<rocwmma::bfloat16_t>::infinity() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7F80));
         return eps.b16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::bfloat16_t
-             numeric_limits<rocwmma::bfloat16_t>::lowest() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::bfloat16_t
+        numeric_limits<rocwmma::bfloat16_t>::lowest() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0xFF7F));
         return eps.b16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::bfloat16_t
-             numeric_limits<rocwmma::bfloat16_t>::max() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::bfloat16_t
+        numeric_limits<rocwmma::bfloat16_t>::max() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7F7F));
         return eps.b16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::bfloat16_t
-             numeric_limits<rocwmma::bfloat16_t>::min() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::bfloat16_t
+        numeric_limits<rocwmma::bfloat16_t>::min() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x007F));
         return eps.b16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::bfloat16_t
-             numeric_limits<rocwmma::bfloat16_t>::quiet_NaN() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::bfloat16_t
+        numeric_limits<rocwmma::bfloat16_t>::quiet_NaN() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7FC0));
         return eps.b16;
     }
 
     template <>
-    __host__ __device__ constexpr rocwmma::bfloat16_t
-             numeric_limits<rocwmma::bfloat16_t>::signaling_NaN() noexcept
+    __HOST_DEVICE__ constexpr rocwmma::bfloat16_t
+        numeric_limits<rocwmma::bfloat16_t>::signaling_NaN() noexcept
     {
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7FC0));
         return eps.b16;

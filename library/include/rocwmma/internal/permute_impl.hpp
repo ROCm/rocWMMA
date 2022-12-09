@@ -44,7 +44,7 @@ namespace rocwmma
 
         public:
             // Calculate the read element based on thread position.
-            __host__ __device__ static inline uint32_t threadCtrl(uint32_t threadId)
+            __HOST_DEVICE__ static inline uint32_t threadCtrl(uint32_t threadId)
             {
                 // Make sure that the threadId is within range
                 auto tIdx = threadId % BlockSize;
