@@ -49,6 +49,11 @@ namespace rocwmma
               typename InputT,
               typename OutputT,
               typename ComputeT,
+              typename LayoutA,
+              typename LayoutB,
+              typename LayoutC,
+              typename LayoutD,
+              typename LayoutLds,
               uint32_t BlocksX,
               uint32_t BlocksY,
               uint32_t TBlockX,
@@ -93,15 +98,17 @@ namespace rocwmma
             // Tail requires A, B, C & D tiles + FMA
             CostABTest
             = ((4u * ((uint32_t)TestTraits::Cost::TileA + (uint32_t)TestTraits::Cost::TileB))
-               <= 112u),
+               <= 256u),
             CostAccTest   = ((2u * (uint32_t)TestTraits::Cost::TileC) <= 256u),
             CostTailTest  = (((uint32_t)TestTraits::Cost::TileA + (uint32_t)TestTraits::Cost::TileB
                              + 2u * (uint32_t)TestTraits::Cost::TileD)
-                            <= 112u),
+                            <= 256u),
             BlockSizeTest = ((BlockM == 16u) && (BlockN == 16u)),
 
+            IsInt8 = std::is_same<int8_t, InputT>::value,
+
             Enable = ((bool)TestTraits::IsGfx11 && (bool)TestTraits::IsWave32 && CostABTest
-                      && CostAccTest && CostTailTest && BlockSizeTest)
+                      && CostAccTest && CostTailTest && BlockSizeTest && !IsInt8)
         };
 
     public:
@@ -144,6 +151,11 @@ namespace rocwmma
                   InputT,
                   OutputT,
                   ComputeT,
+                  LayoutA,
+                  LayoutB,
+                  LayoutC,
+                  LayoutD,
+                  LayoutLds,
                   BlocksX,
                   BlocksY,
                   TBlockX,
@@ -362,6 +374,11 @@ namespace rocwmma
                   InputT,
                   OutputT,
                   ComputeT,
+                  LayoutA,
+                  LayoutB,
+                  LayoutC,
+                  LayoutD,
+                  LayoutLds,
                   BlocksX,
                   BlocksY,
                   TBlockX,
