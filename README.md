@@ -11,8 +11,8 @@ Memory addresses are treated as 1D arrays and the rocWMMA API can opaquely handl
 rocWMMA is released as a header library, but also includes test and sample projects to validate and illustrate example usages of the C++ API. GEMM matrix multiplication is used as primary validation given the heavy precedent for the library, however the usage portfolio is growing significantly and demonstrates different ways rocWMMA may be consumed.
 
 ## Minimum GPU Requirements
-* AMD Instinct&trade; class GPU with matrix core support: Minimum MI-100
-* Note: Double precision FP64 datatype support minimum MI-200 +
+* AMD Instinct&trade; class GPU with matrix core support: Minimum gfx908
+* Note: Double precision FP64 datatype support minimum gfx90a +
 
 ## Minimum Software Requirements
 * ROCm stack minimum version 5.4
@@ -224,7 +224,7 @@ Larger thread block sizes are possible but are not officially supported.
             <td>16</td>
             <td>16</td>
             <td>[4, 256]</td>
-            <td rowspan=2>*= Supported on MI-200 +</td>
+            <td rowspan=2>*= Supported on gfx90a +</td>
         </tr>
     </tbody>
   </table>
@@ -300,7 +300,7 @@ Here are some of the examples for the configuration:
 |Configuration|Command|
 |---|---|
 |Basic|`CC=hipcc CXX=hipcc cmake -B<build_dir> .`|
-|Targeting MI100|`CC=hipcc CXX=hipcc cmake -B<build_dir> . -DAMDGPU_TARGETS=gfx908:xnack-` |
+|Targeting gfx908|`CC=hipcc CXX=hipcc cmake -B<build_dir> . -DAMDGPU_TARGETS=gfx908:xnack-` |
 |Debug build|`CC=hipcc CXX=hipcc cmake -B<build_dir> . -DCMAKE_BUILD_TYPE=Debug` |
 |Build without rocBLAS (default on)|`CC=hipcc CXX=hipcc cmake -B<build_dir> . -DROCWMMA_VALIDATE_WITH_ROCBLAS=OFF -DROCWMMA_BENCHMARK_WITH_ROCBLAS=OFF` |
 
@@ -309,7 +309,7 @@ After configuration, build with `cmake --build <build_dir> -- -j<nproc>`
 **Warning: Build time for all projects can take several minutes**
 
 ### Tips to reduce tests compile time:
-- Target a specific GPU (default = MI100, MI200+/-)
+- Target a specific GPU (e.g. gfx908:xnack-)
 - Use lots of threads (e.g. -j64)
 - Select ROCWMMA_BUILD_ASSEMBLY=OFF
 - Select ROCWMMA_BUILD_DOCS=OFF
@@ -400,7 +400,7 @@ WG - Cooperative load / store per macro tile
 
 **gemm_PGR1_LB2_MP0_MB_CP_BLK** implements a multi-block GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to implement a data prefetching pipeline and collaborates with other waves to improve performance. Implements single stage prefetch, double lds buffer, default MFMA prioritization, multiple blocks output and is block-tile collaborative in global read / local write.
 
-**gemm_PGR1_LB2_MP0_MB_CP_WV** implements a multi-block GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to implement a data prefetching pipeline and collaborates with other waves to improve performance. Implements single stage prefetch, double lds buffer, default MFMA prioritization, multiple blocks output and is wave-tile collaborative in global read / local write. 
+**gemm_PGR1_LB2_MP0_MB_CP_WV** implements a multi-block GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to implement a data prefetching pipeline and collaborates with other waves to improve performance. Implements single stage prefetch, double lds buffer, default MFMA prioritization, multiple blocks output and is wave-tile collaborative in global read / local write.
 
 **gemm_PGR1_LB2_MP0_MB_CP_WG** implements a multi-block GEMM where each wave is responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to implement a data prefetching pipeline and collaborates with other waves to improve performance. Implements single stage prefetch, double lds buffer, default MFMA prioritization, multiple blocks output and is macro-tile collaborative in global read / local write.
 
@@ -478,11 +478,11 @@ These are stand-alone real-world use-cases of the rocWMMA API. They have minimal
 Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose. Calculates Y = alpha * (A) * X + beta * Y with mixed precision fp16 inputs and fp32 output. Includes simple CPU validation and benchmark.
 
  A = Matrix of size m * k (row-major)
- 
+
  X = Vector of size k * 1 (col-major)
- 
+
  Y = accumulator of size m * 1 (row-major)
-   
+
 Run sgemmv sample:
 ```
 <build_dir>/samples/sgemmv
@@ -504,4 +504,17 @@ Simple GEMM algorithm demonstration without LDS memory usage and no transpose. C
 Run simple_gemm sample:
 ```
 <build_dir>/samples/simple_gemm
+```
+## hipRTC Support
+
+HIP's run-time compilation (hipRTC) environment allows on-the-fly compilation, loading and execution of device code on AMD GPUs. The rocWMMA library is compatible with hipRTC where it may be leveraged for run-time generated kernels*. A simple GEMM sample has been included to demonstrate compatibility. hipRTC API documentation may be found in the HIP Programming Guide for the latest release located here: https://docs.amd.com/
+*= rocwmma::bfloat16_t datatype not currently supported.
+
+**hipRTC GEMM sample**
+
+Simple GEMM algorithm demonstrating runtime compilation (hipRTC) compatibility. Calculates D = Alpha * A x B + Beta * C with mixed precision fp16 inputs and fp32 output. Includes code compilation, module loading and kernel launch with hipRTC API, with simple CPU validation and benchmarking.
+
+Run hipRTC_gemm sample:
+```
+<build_dir>/samples/hipRTC_gemm
 ```
