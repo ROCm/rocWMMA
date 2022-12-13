@@ -28,6 +28,7 @@
 #define ROCWMMA_TEST_HIP_DEVICE_HPP
 
 #include <hip/hip_runtime_api.h>
+#include <rocwmma/internal/constants.hpp>
 
 #include "performance.hpp"
 #include "singleton.hpp"
@@ -43,19 +44,19 @@ namespace rocwmma
 
         enum hipGcnArch_t : uint32_t
         {
-            GFX908  = 0x908,
-            GFX90A  = 0x90A,
-            GFX1100 = 0x1100,
-            GFX1101 = 0x1101,
-            GFX1102 = 0x1102,
-            UNSUPPORTED_ARCH,
+            GFX908           = Constants::AMDGCN_ARCH_ID_GFX908,
+            GFX90A           = Constants::AMDGCN_ARCH_ID_GFX90A,
+            GFX1100          = Constants::AMDGCN_ARCH_ID_GFX1100,
+            GFX1101          = Constants::AMDGCN_ARCH_ID_GFX1101,
+            GFX1102          = Constants::AMDGCN_ARCH_ID_GFX1102,
+            UNSUPPORTED_ARCH = Constants::AMDGCN_ARCH_ID_NONE,
         };
 
         enum hipWarpSize_t : uint32_t
         {
-            Wave32 = 32,
-            Wave64 = 64,
-            UNSUPPORTED_WARP_SIZE,
+            Wave32                = Constants::AMDGCN_WAVE_SIZE_32,
+            Wave64                = Constants::AMDGCN_WAVE_SIZE_64,
+            UNSUPPORTED_WARP_SIZE = Constants::AMDGCN_WAVE_SIZE_NONE,
         };
 
     protected:

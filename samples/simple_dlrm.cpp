@@ -144,7 +144,7 @@ __host__ void dlrmDotBwdCPU(float16_t* input,
 // : 32 x 32 ( only MI )
 constexpr static const int TILE_DIM = 16;
 
-// AMDGCN default wave size
+// Device warp size
 const uint32_t WAVE_SIZE = getWarpSize();
 
 // Thread block
@@ -256,13 +256,14 @@ __global__ void dlrmDotFwd(const float16_t* __restrict input,
         // Copy lower triangular from acc to output
         auto fragColIdx   = threadIdx.x % TILE_DIM;
         auto globalColIdx = get<1>(matrixCoordC) + fragColIdx;
-        auto rowsPerStep  = rocwmma::AMDGCN_WAVE_SIZE / TILE_DIM;
+        auto rowsPerStep  = rocwmma::Constants::AMDGCN_WAVE_SIZE / TILE_DIM;
 
-        count = (TILE_DIM * TILE_DIM) >> Log2<rocwmma::AMDGCN_WAVE_SIZE>::value;
+        count = (TILE_DIM * TILE_DIM) >> Log2<rocwmma::Constants::AMDGCN_WAVE_SIZE>::value;
         for(int i = 0; i < count; i++)
         {
             auto fragRowIdx
-                = i * rowsPerStep + ((threadIdx.x & (rocwmma::AMDGCN_WAVE_SIZE - 1)) / TILE_DIM);
+                = i * rowsPerStep
+                  + ((threadIdx.x & (rocwmma::Constants::AMDGCN_WAVE_SIZE - 1)) / TILE_DIM);
             auto globalRowIdx = get<0>(matrixCoordC) + fragRowIdx;
             if(globalRowIdx > globalColIdx)
             {
@@ -494,10 +495,9 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
     if(passDirection == DlrmDirection_t::Forward)
     {
         dlrmKernel = [d_input, d_output, d_accFwd, m, k, b]() {
-            auto gridDim
-                = dim3(rocwmma::ceilDiv(m, TILE_DIM * T_BLOCK_X / WAVE_SIZE),
-                       rocwmma::ceilDiv(m, TILE_DIM),
-                       b);
+            auto gridDim  = dim3(rocwmma::ceilDiv(m, TILE_DIM * T_BLOCK_X / WAVE_SIZE),
+                                rocwmma::ceilDiv(m, TILE_DIM),
+                                b);
             auto blockDim = dim3(T_BLOCK_X);
 
             uint inputBatchOffset  = m * k;

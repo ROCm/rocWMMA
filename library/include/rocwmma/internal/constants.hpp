@@ -30,22 +30,62 @@
 
 namespace rocwmma
 {
+    struct Constants
+    {
 
-#if ROCWMMA_WAVE64_MODE
-    static constexpr uint32_t AMDGCN_WAVE_SIZE = 64u;
-#elif ROCWMMA_WAVE32_MODE
-    static constexpr uint32_t AMDGCN_WAVE_SIZE = 32u;
-#else // Host default to 64 to avoid host compile time asserts.
-    static constexpr uint32_t AMDGCN_WAVE_SIZE = 64u;
+        ///
+        /// Architecture IDs
+        ///
+        static constexpr uint32_t AMDGCN_ARCH_ID_GFX908  = 0x908;
+        static constexpr uint32_t AMDGCN_ARCH_ID_GFX90A  = 0x90A;
+        static constexpr uint32_t AMDGCN_ARCH_ID_GFX1100 = 0x1100;
+        static constexpr uint32_t AMDGCN_ARCH_ID_GFX1101 = 0x1101;
+        static constexpr uint32_t AMDGCN_ARCH_ID_GFX1102 = 0x1102;
+        static constexpr uint32_t AMDGCN_ARCH_ID_NONE    = 0x0;
+
+        ///
+        /// Wave sizes
+        ///
+        static constexpr uint32_t AMDGCN_WAVE_SIZE_64   = 64u;
+        static constexpr uint32_t AMDGCN_WAVE_SIZE_32   = 32u;
+        static constexpr uint32_t AMDGCN_WAVE_SIZE_NONE = 0u;
+
+        ///
+        /// Architecture ID currently being compiled
+        ///
+#if ROCWMMA_ARCH_GFX908
+        static constexpr uint32_t AMDGCN_CURRENT_ARCH_ID = AMDGCN_ARCH_ID_GFX908;
+#elif ROCWMMA_ARCH_GFX90A
+        static constexpr uint32_t AMDGCN_CURRENT_ARCH_ID = AMDGCN_ARCH_ID_GFX90A;
+#elif ROCWMMA_ARCH_GFX1100
+        static constexpr uint32_t AMDGCN_CURRENT_ARCH_ID = AMDGCN_ARCH_ID_GFX1100;
+#elif ROCWMMA_ARCH_GFX1101
+        static constexpr uint32_t AMDGCN_CURRENT_ARCH_ID = AMDGCN_ARCH_ID_GFX1101;
+#elif ROCWMMA_ARCH_GFX1102
+        static constexpr uint32_t AMDGCN_CURRENT_ARCH_ID = AMDGCN_ARCH_ID_GFX1102;
+#else
+        static constexpr uint32_t AMDGCN_CURRENT_ARCH_ID = AMDGCN_ARCH_ID_NONE;
 #endif
 
-    static constexpr uint32_t AMDGCN_REGISTER_ELEMENT_SIZE_BYTES = 4u;
-    static constexpr uint32_t AMDGCN_REGISTER_SIZE_BYTES
-        = AMDGCN_REGISTER_ELEMENT_SIZE_BYTES * AMDGCN_WAVE_SIZE;
+        ///
+        /// Constants for architecture currently being compiled
+        ///
+#if ROCWMMA_WAVE64_MODE
+        static constexpr uint32_t AMDGCN_WAVE_SIZE = AMDGCN_WAVE_SIZE_64;
+#elif ROCWMMA_WAVE32_MODE
+        static constexpr uint32_t AMDGCN_WAVE_SIZE       = AMDGCN_WAVE_SIZE_32;
+#else // Host default to 64 to avoid host compile time asserts.
+        static constexpr uint32_t AMDGCN_WAVE_SIZE       = AMDGCN_WAVE_SIZE_64;
+#endif
 
-    static constexpr uint32_t AMDGCN_LDS_MAX_SIZE_BYTES    = 65536u;
-    static constexpr uint32_t AMDGCN_CACHE_LINE_SIZE_BYTES = 64u;
-    static constexpr uint32_t AMDGCN_DWORD_SIZE_BYTES      = 4u;
+        static constexpr uint32_t AMDGCN_REGISTER_ELEMENT_SIZE_BYTES = 4u;
+        static constexpr uint32_t AMDGCN_REGISTER_SIZE_BYTES
+            = AMDGCN_REGISTER_ELEMENT_SIZE_BYTES * AMDGCN_WAVE_SIZE;
+
+        static constexpr uint32_t AMDGCN_LDS_MAX_SIZE_BYTES    = 65536u;
+        static constexpr uint32_t AMDGCN_CACHE_LINE_SIZE_BYTES = 64u;
+        static constexpr uint32_t AMDGCN_DWORD_SIZE_BYTES      = 4u;
+    };
 
 } // namespace rocwmma
 

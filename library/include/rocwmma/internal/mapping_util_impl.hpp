@@ -46,14 +46,14 @@ namespace rocwmma
         __device__ inline uint32_t laneId()
         {
             // threadIdx.x % AMDGCN_WAVE_SIZE;
-            return threadIdx.x & (AMDGCN_WAVE_SIZE - 1);
+            return threadIdx.x & (Constants::AMDGCN_WAVE_SIZE - 1u);
         }
 
         __device__ constexpr inline Coord2d waveCount(Coord2d const& threadCount)
         {
             // waveCount.x = threadCount.x / AMDGCN_WAVE_SIZE
             // waveCount.y = threadCount.y
-            return make_coord2d(get<0>(threadCount) >> Log2<AMDGCN_WAVE_SIZE>::value,
+            return make_coord2d(get<0>(threadCount) >> Log2<Constants::AMDGCN_WAVE_SIZE>::value,
                                 get<1>(threadCount));
         }
 
@@ -61,7 +61,7 @@ namespace rocwmma
         {
             // threadCount.x = waveCount.x * AMDGCN_WAVE_SIZE
             // threadCount.y = waveCount.y
-            return make_coord2d(get<0>(waveCount) << Log2<AMDGCN_WAVE_SIZE>::value,
+            return make_coord2d(get<0>(waveCount) << Log2<Constants::AMDGCN_WAVE_SIZE>::value,
                                 get<1>(waveCount));
         }
 

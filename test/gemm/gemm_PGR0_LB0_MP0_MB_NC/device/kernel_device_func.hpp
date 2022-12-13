@@ -35,11 +35,66 @@
 // for fp64 on all other targets which succeed MI-100.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "gemm_test_traits.hpp"
 #include <rocwmma/rocwmma.hpp>
 #pragma GCC diagnostic pop
 
 namespace rocwmma
 {
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename InputT,
+              typename OutputT,
+              typename ComputeT,
+              uint32_t BlocksX,
+              uint32_t BlocksY,
+              uint32_t WaveSize,
+              uint32_t ArchId>
+    struct gemm_PGR0_LB0_MP0_MB_NC_guard
+    {
+        using TestTraits = GemmTestTraits<BlockM,
+                                          BlockN,
+                                          BlockK,
+                                          InputT,
+                                          OutputT,
+                                          ComputeT,
+                                          BlocksX,
+                                          BlocksY,
+                                          WaveSize,
+                                          ArchId>;
+
+    private:
+        enum struct Gfx9Predicates : bool
+        {
+            // Must skip int8 tests on gfx9 for now
+            IsInt8 = std::is_same<int8_t, InputT>::value,
+
+            Enable = ((bool)TestTraits::IsGfx9 && (bool)TestTraits::IsWave64 && !(bool)IsInt8)
+        };
+
+        enum struct Gfx11Predicates : bool
+        {
+            // AB inputs are duplicated, single buffered
+            // C tiles are unpacked.
+            CostABTest
+            = ((2u * ((uint32_t)TestTraits::Cost::TileA + (uint32_t)TestTraits::Cost::TileB))
+               <= 256u),
+            CostCTest     = ((2u * (uint32_t)TestTraits::Cost::TileC) <= 256u),
+            CostDTest     = ((uint32_t)TestTraits::Cost::TileD <= 256u),
+            BlockSizeTest = ((BlockM == 16u) && (BlockN == 16u)),
+
+            Enable = ((bool)TestTraits::IsGfx11 && (bool)TestTraits::IsWave32 && CostABTest
+                      && CostCTest && CostDTest && BlockSizeTest)
+        };
+
+    public:
+        constexpr static bool enable()
+        {
+            return ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable);
+        }
+    };
+
     ///
     /// This class of kernel is an extension of the naive kernel whereas
     /// each wave is responsible for calculating a macro tile area of
@@ -62,8 +117,19 @@ namespace rocwmma
               typename LayoutB,
               typename LayoutC,
               typename LayoutD,
-              uint32_t BlocksX = 1,
-              uint32_t BlocksY = 1>
+              uint32_t BlocksX                                   = 1,
+              uint32_t BlocksY                                   = 1,
+              typename std::enable_if_t<gemm_PGR0_LB0_MP0_MB_NC_guard<
+                  BlockM,
+                  BlockN,
+                  BlockK,
+                  InputT,
+                  OutputT,
+                  ComputeT,
+                  BlocksX,
+                  BlocksY,
+                  Constants::AMDGCN_WAVE_SIZE,
+                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
     __global__ void __launch_bounds__(256) gemm_PGR0_LB0_MP0_MB_NC(uint32_t       m,
                                                                    uint32_t       n,
                                                                    uint32_t       k,
@@ -78,6 +144,7 @@ namespace rocwmma
                                                                    ComputeT       alpha,
                                                                    ComputeT       beta)
     {
+
         // Setup global mapping
         using MappingA = MappingUtil<BlockM, BlockK, InputT, LayoutA>;
         using MappingB = MappingUtil<BlockK, BlockN, InputT, LayoutB>;
@@ -223,6 +290,45 @@ namespace rocwmma
                 store_matrix_sync(addrD, fragC, ldd);
             }
         }
+    }
+
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename InputT,
+              typename OutputT,
+              typename ComputeT,
+              typename LayoutA,
+              typename LayoutB,
+              typename LayoutC,
+              typename LayoutD,
+              uint32_t BlocksX                                   = 1,
+              uint32_t BlocksY                                   = 1,
+              typename std::enable_if_t<!gemm_PGR0_LB0_MP0_MB_NC_guard<
+                  BlockM,
+                  BlockN,
+                  BlockK,
+                  InputT,
+                  OutputT,
+                  ComputeT,
+                  BlocksX,
+                  BlocksY,
+                  Constants::AMDGCN_WAVE_SIZE,
+                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
+    __global__ void __launch_bounds__(256) gemm_PGR0_LB0_MP0_MB_NC(uint32_t       m,
+                                                                   uint32_t       n,
+                                                                   uint32_t       k,
+                                                                   InputT const*  a,
+                                                                   InputT const*  b,
+                                                                   OutputT const* c,
+                                                                   OutputT*       d,
+                                                                   uint32_t       lda,
+                                                                   uint32_t       ldb,
+                                                                   uint32_t       ldc,
+                                                                   uint32_t       ldd,
+                                                                   ComputeT       alpha,
+                                                                   ComputeT       beta)
+    {
     }
 
 } // namespace rocwmma
