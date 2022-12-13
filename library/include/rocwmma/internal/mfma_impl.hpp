@@ -653,13 +653,12 @@ namespace rocwmma
             // This implementation is needed to satisfy the MmaSyncTest interface,
             // and WILL not function as intended.
             // MI-100 lacks support for fp64 MFMA instructions.
-            __attribute__((deprecated("fp64 mfma not supported on MI-100")))
-            __device__ static inline auto
-                exec(typename Traits::ARegsT const& regsA,
-                     typename Traits::BRegsT const& regsB,
-                     typename Traits::CRegsT const& regsC)
+            ROCWMMA_UNSUPPORTED_IMPL("fp64 mfma not supported on gfx908")
+            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
+                                               typename Traits::BRegsT const& regsB,
+                                               typename Traits::CRegsT const& regsC)
 
-                    -> typename Traits::DRegsT const&
+                -> typename Traits::DRegsT const&
             {
                 return regsC;
             }

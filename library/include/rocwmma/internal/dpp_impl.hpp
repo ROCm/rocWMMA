@@ -176,7 +176,7 @@ namespace rocwmma
 
             public:
                 // clang-format off
-                __attribute__((deprecated("amdgcn_dpp_row_bcast is not supported on MI-100")))
+                ROCWMMA_UNSUPPORTED_IMPL("amdgcn_dpp_row_bcast is not supported on gfx908")
                 constexpr static uint32_t opCtrl()
                 {
                     return Traits::DPP_CTRL;
@@ -281,7 +281,7 @@ namespace rocwmma
 
             public:
                 // clang-format off
-                __attribute__((deprecated("amdgcn_dpp_wave_shift1 is not supported on GFX10+")))
+                ROCWMMA_UNSUPPORTED_IMPL("amdgcn_dpp_wave_shift1 is not supported on gfx10+")
                 constexpr static uint32_t opCtrl()
                 {
                     return Traits::DPP_CTRL;
@@ -300,7 +300,7 @@ namespace rocwmma
 
             public:
                 // clang-format off
-                __attribute__((deprecated("amdgcn_dpp_wave_rotate1 is not supported on GFX10+")))
+                ROCWMMA_UNSUPPORTED_IMPL("amdgcn_dpp_wave_rotate1 is not supported on gfx10+")
                 constexpr static uint32_t opCtrl()
                 {
                     return Traits::DPP_CTRL;
@@ -318,7 +318,7 @@ namespace rocwmma
 
             public:
                 // clang-format off
-                __attribute__((deprecated("amdgcn_dpp_row_bcast15 is not supported on GFX10+")))
+                ROCWMMA_UNSUPPORTED_IMPL("amdgcn_dpp_row_bcast15 is not supported on gfx10+")
                 constexpr static uint32_t opCtrl()
                 {
                     return Traits::DPP_CTRL;
@@ -336,7 +336,7 @@ namespace rocwmma
 
             public:
                 // clang-format off
-                __attribute__((deprecated("amdgcn_dpp_row_bcast31 is not supported on MI-100")))
+                ROCWMMA_UNSUPPORTED_IMPL("amdgcn_dpp_row_bcast31 is not supported on gfx10+")
                 constexpr static uint32_t opCtrl()
                 {
                     return Traits::DPP_CTRL;
