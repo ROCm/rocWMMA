@@ -66,9 +66,15 @@ namespace rocwmma
         enum struct Gfx9Predicates : bool
         {
             // Must skip int8 tests on gfx9 for now
+            CostABTest
+            = (((uint32_t)TestTraits::Cost::TileA + (uint32_t)TestTraits::Cost::TileB)
+               <= 256u),
+            CostCTest     = ((uint32_t)TestTraits::Cost::TileC <= 256u),
+            CostDTest     = ((uint32_t)TestTraits::Cost::TileD <= 256u),
+
             IsInt8 = std::is_same<int8_t, InputT>::value,
 
-            Enable = ((bool)TestTraits::IsGfx9 && (bool)TestTraits::IsWave64 && !(bool)IsInt8)
+            Enable = ((bool)TestTraits::IsGfx9 && (bool)TestTraits::IsWave64 && !(bool)IsInt8 && CostABTest && CostCTest && CostDTest)
         };
 
         enum struct Gfx11Predicates : bool
