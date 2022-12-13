@@ -27,13 +27,14 @@
 #ifndef ROCWMMA_DEVICE_MAP_WAVE_TO_MATRIX_HPP
 #define ROCWMMA_DEVICE_MAP_WAVE_TO_MATRIX_HPP
 
+#include "unit_test_traits.hpp"
 #include <rocwmma/internal/mapping_util.hpp>
 #include <rocwmma/rocwmma.hpp>
 
 namespace rocwmma
 {
 
-    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
     __global__ void MapWaveToMatrix(uint32_t     m,
                                     uint32_t     n,
                                     DataT const* in,
@@ -42,17 +43,17 @@ namespace rocwmma
                                     DataT        param1,
                                     DataT        param2)
     {
-        using Mapping     = MappingUtil<BlockM, BlockN, DataT, Layout>;
+        using Mapping     = MappingUtil<BlockM, BlockN, DataT, DataLayout>;
         auto aCoord       = Mapping::waveCoord();
         auto aCoord_wg    = Mapping::WaveSpace::workgroupCoord();
         auto aCoord_wgdim = Mapping::WaveSpace::workgroupDim();
 
         enum : uint32_t
         {
-            MajorIndex = std::is_same<Layout, row_major>::value ? 0 : 1,
-            MinorIndex = std::is_same<Layout, row_major>::value ? 1 : 0,
-            ldmajor    = std::is_same<Layout, row_major>::value ? BlockM : BlockN,
-            ldminor    = std::is_same<Layout, row_major>::value ? BlockN : BlockM
+            MajorIndex = std::is_same<DataLayout, row_major>::value ? 0 : 1,
+            MinorIndex = std::is_same<DataLayout, row_major>::value ? 1 : 0,
+            ldmajor    = std::is_same<DataLayout, row_major>::value ? BlockM : BlockN,
+            ldminor    = std::is_same<DataLayout, row_major>::value ? BlockN : BlockM
         };
 
         auto majCoord

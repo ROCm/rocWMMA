@@ -27,6 +27,7 @@
 #ifndef ROCWMMA_DEVICE_ROWNT_LAYOUT_HPP
 #define ROCWMMA_DEVICE_ROWNT_LAYOUT_HPP
 
+#include "unit_test_traits.hpp"
 #include <rocwmma/internal/io_traits.hpp>
 #include <rocwmma/internal/layout.hpp>
 #include <rocwmma/internal/mapping_util.hpp>
@@ -34,7 +35,17 @@
 namespace rocwmma
 {
 
-    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename LayoutP>
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename DataLayout,
+              typename std::enable_if_t<
+                  FragSize_guard<BlockM,
+                                 BlockN,
+                                 DataT,
+                                 DataLayout,
+                                 Constants::AMDGCN_WAVE_SIZE,
+                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
     __global__ void RowNTLayout(uint32_t     m,
                                 uint32_t     n,
                                 DataT const* in,
@@ -54,13 +65,13 @@ namespace rocwmma
             MaxVectorWidth = std::is_same<DataT, float64_t>::value
                                  ? 1
                                  : detail::VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth,
-            VectorWidth    = std::is_same<LayoutP, col_major>::value ? MaxVectorWidth : 1,
+            VectorWidth    = std::is_same<DataLayout, col_major>::value ? MaxVectorWidth : 1,
         };
 
         using IOTraits = IOTraits<BlockDim, KDim, DataT, VectorWidth>;
         using LayoutT
-            = MatrixLayout::RowNT<BlockDim, KDim, DataT, LayoutP, VectorWidth, MaxVectorWidth>;
-        using Mapping = MappingUtil<BlockHeight, BlockWidth, DataT, LayoutP>;
+            = MatrixLayout::RowNT<BlockDim, KDim, DataT, DataLayout, VectorWidth, MaxVectorWidth>;
+        using Mapping = MappingUtil<BlockHeight, BlockWidth, DataT, DataLayout>;
 
         auto baseOffset  = LayoutT::baseOffset();
         auto iocount     = IOTraits::IOCount;
@@ -68,8 +79,8 @@ namespace rocwmma
 
         enum : uint32_t
         {
-            MajorIndex = std::is_same<LayoutP, row_major>::value ? 0 : 1,
-            MinorIndex = std::is_same<LayoutP, row_major>::value ? 1 : 0
+            MajorIndex = std::is_same<DataLayout, row_major>::value ? 0 : 1,
+            MinorIndex = std::is_same<DataLayout, row_major>::value ? 1 : 0
         };
 
         for(uint32_t i = 0; i < iocount; ++i)
@@ -82,6 +93,27 @@ namespace rocwmma
             }
             baseOffset += LayoutT::incrementalOffset(i);
         }
+    }
+
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename DataLayout,
+              typename std::enable_if_t<
+                  !FragSize_guard<BlockM,
+                                  BlockN,
+                                  DataT,
+                                  DataLayout,
+                                  Constants::AMDGCN_WAVE_SIZE,
+                                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
+    __global__ void RowNTLayout(uint32_t     m,
+                                uint32_t     n,
+                                DataT const* in,
+                                DataT*       out,
+                                uint32_t     ld,
+                                DataT        param1,
+                                DataT        param2)
+    {
     }
 
 } // namespace rocwmma
