@@ -27,12 +27,22 @@
 #ifndef ROCWMMA_DEVICE_MAP_BLOCK_TO_MATRIX_OVERRIDE_HPP
 #define ROCWMMA_DEVICE_MAP_BLOCK_TO_MATRIX_OVERRIDE_HPP
 
+#include "unit_test_traits.hpp"
 #include <rocwmma/rocwmma.hpp>
 
 namespace rocwmma
 {
-
-    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename DataLayout,
+              typename std::enable_if_t<
+                  FragSize_guard<BlockM,
+                                 BlockN,
+                                 DataT,
+                                 DataLayout,
+                                 Constants::AMDGCN_WAVE_SIZE,
+                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
     __global__ void MapBlockToMatrixOverrideM(uint32_t     m,
                                               uint32_t     n,
                                               DataT const* in,
@@ -41,7 +51,7 @@ namespace rocwmma
                                               DataT        param1,
                                               DataT        param2)
     {
-        using Frag = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>;
+        using Frag    = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>;
         using Mapping = typename Frag::IOConfig::MappingUtil;
 
         // Override read M coord
@@ -54,7 +64,38 @@ namespace rocwmma
         store_matrix_sync(Mapping::dataCoord(out, writeCoord, ld), f, ld);
     }
 
-    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename DataLayout,
+              typename std::enable_if_t<
+                  !FragSize_guard<BlockM,
+                                  BlockN,
+                                  DataT,
+                                  DataLayout,
+                                  Constants::AMDGCN_WAVE_SIZE,
+                                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
+    __global__ void MapBlockToMatrixOverrideM(uint32_t     m,
+                                              uint32_t     n,
+                                              DataT const* in,
+                                              DataT*       out,
+                                              uint32_t     ld,
+                                              DataT        param1,
+                                              DataT        param2)
+    {
+    }
+
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename DataLayout,
+              typename std::enable_if_t<
+                  FragSize_guard<BlockM,
+                                 BlockN,
+                                 DataT,
+                                 DataLayout,
+                                 Constants::AMDGCN_WAVE_SIZE,
+                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
     __global__ void MapBlockToMatrixOverrideN(uint32_t     m,
                                               uint32_t     n,
                                               DataT const* in,
@@ -63,7 +104,7 @@ namespace rocwmma
                                               DataT        param1,
                                               DataT        param2)
     {
-        using Frag = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>;
+        using Frag    = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>;
         using Mapping = typename Frag::IOConfig::MappingUtil;
 
         // Override read N coord
@@ -76,6 +117,26 @@ namespace rocwmma
         store_matrix_sync(Mapping::dataCoord(out, writeCoord, ld), f, ld);
     }
 
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename DataLayout,
+              typename std::enable_if_t<
+                  !FragSize_guard<BlockM,
+                                  BlockN,
+                                  DataT,
+                                  DataLayout,
+                                  Constants::AMDGCN_WAVE_SIZE,
+                                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
+    __global__ void MapBlockToMatrixOverrideN(uint32_t     m,
+                                              uint32_t     n,
+                                              DataT const* in,
+                                              DataT*       out,
+                                              uint32_t     ld,
+                                              DataT        param1,
+                                              DataT        param2)
+    {
+    }
 } // namespace rocwmma
 
 #endif // ROCWMMA_DEVICE_MAP_BLOCK_TO_MATRIX_OVERRIDE_HPP

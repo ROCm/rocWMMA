@@ -31,10 +31,22 @@
 #include <rocwmma/rocwmma.hpp>
 #include <rocwmma/rocwmma_coop.hpp>
 
+#include "unit_test_traits.hpp"
+
 namespace rocwmma
 {
 
-    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename DataLayout,
+              typename std::enable_if_t<
+                  FragSize_guard<BlockM,
+                                 BlockN,
+                                 DataT,
+                                 DataLayout,
+                                 Constants::AMDGCN_WAVE_SIZE,
+                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
     __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncA(uint32_t     m,
                                                                     uint32_t     n,
                                                                     DataT const* in,
@@ -48,9 +60,9 @@ namespace rocwmma
         // BlockM -> BlockM
         // <Dummy> -> BlockN
         // BlockN -> BlockK
-        auto frag = fragment<matrix_a, BlockM, 1, BlockN, DataT, Layout>();
+        auto frag = fragment<matrix_a, BlockM, 1, BlockN, DataT, DataLayout>();
 
-        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, DataLayout>;
 
         auto workgroupDim      = Mapping::workgroupDim();
         auto waveCoord         = Mapping::waveCoord();
@@ -100,7 +112,38 @@ namespace rocwmma
         }
     }
 
-    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename DataLayout,
+              typename std::enable_if_t<
+                  !FragSize_guard<BlockM,
+                                  BlockN,
+                                  DataT,
+                                  DataLayout,
+                                  Constants::AMDGCN_WAVE_SIZE,
+                                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
+    __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncA(uint32_t     m,
+                                                                    uint32_t     n,
+                                                                    DataT const* in,
+                                                                    DataT*       out,
+                                                                    uint32_t     ld,
+                                                                    DataT        param1,
+                                                                    DataT        param2)
+    {
+    }
+
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename DataLayout,
+              typename std::enable_if_t<
+                  FragSize_guard<BlockM,
+                                 BlockN,
+                                 DataT,
+                                 DataLayout,
+                                 Constants::AMDGCN_WAVE_SIZE,
+                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
     __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncB(uint32_t     m,
                                                                     uint32_t     n,
                                                                     DataT const* in,
@@ -114,9 +157,9 @@ namespace rocwmma
         // <Dummy> -> BlockM
         // BlockN -> BlockN
         // BlockM -> BlockK
-        auto frag = fragment<matrix_b, 1, BlockN, BlockM, DataT, Layout>();
+        auto frag = fragment<matrix_b, 1, BlockN, BlockM, DataT, DataLayout>();
 
-        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, DataLayout>;
 
         auto workgroupDim      = Mapping::workgroupDim();
         auto waveCoord         = Mapping::waveCoord();
@@ -166,7 +209,38 @@ namespace rocwmma
         }
     }
 
-    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename DataLayout,
+              typename std::enable_if_t<
+                  !FragSize_guard<BlockM,
+                                  BlockN,
+                                  DataT,
+                                  DataLayout,
+                                  Constants::AMDGCN_WAVE_SIZE,
+                                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
+    __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncB(uint32_t     m,
+                                                                    uint32_t     n,
+                                                                    DataT const* in,
+                                                                    DataT*       out,
+                                                                    uint32_t     ld,
+                                                                    DataT        param1,
+                                                                    DataT        param2)
+    {
+    }
+
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename DataLayout,
+              typename std::enable_if_t<
+                  FragSize_guard<BlockM,
+                                 BlockN,
+                                 DataT,
+                                 DataLayout,
+                                 Constants::AMDGCN_WAVE_SIZE,
+                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
     __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncAcc(uint32_t     m,
                                                                       uint32_t     n,
                                                                       DataT const* in,
@@ -180,9 +254,9 @@ namespace rocwmma
         // BlockM -> BlockM
         // BlockN -> BlockN
         // <Dummy> -> BlockK
-        auto frag = fragment<accumulator, BlockM, BlockN, 1, DataT, Layout>();
+        auto frag = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>();
 
-        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, DataLayout>;
 
         auto workgroupDim      = Mapping::workgroupDim();
         auto waveCoord         = Mapping::waveCoord();
@@ -229,6 +303,27 @@ namespace rocwmma
                 }
             }
         }
+    }
+
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename DataLayout,
+              typename std::enable_if_t<
+                  !FragSize_guard<BlockM,
+                                  BlockN,
+                                  DataT,
+                                  DataLayout,
+                                  Constants::AMDGCN_WAVE_SIZE,
+                                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
+    __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncAcc(uint32_t     m,
+                                                                      uint32_t     n,
+                                                                      DataT const* in,
+                                                                      DataT*       out,
+                                                                      uint32_t     ld,
+                                                                      DataT        param1,
+                                                                      DataT        param2)
+    {
     }
 
 } // namespace rocwmma

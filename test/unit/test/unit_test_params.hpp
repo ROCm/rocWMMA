@@ -175,10 +175,6 @@ namespace rocwmma
                  {3072, 3072},
                  {3584, 3584},
                  {4096, 4096},
-                 {5120, 5120},
-                 {6144, 6144},
-                 {7168, 7168},
-                 {8192, 8192}
 #endif // ROCWMMA_EXTENDED_TESTS
         };
             // clang-format on

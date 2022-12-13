@@ -27,13 +27,13 @@
 #ifndef ROCWMMA_DEVICE_MAP_THREAD_TO_MATRIX_HPP
 #define ROCWMMA_DEVICE_MAP_THREAD_TO_MATRIX_HPP
 
+#include "unit_test_traits.hpp"
 #include <rocwmma/internal/mapping_util.hpp>
 #include <rocwmma/rocwmma.hpp>
 
 namespace rocwmma
 {
-
-    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
+    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
     __global__ void MapThreadToMatrix(uint32_t     m,
                                       uint32_t     n,
                                       DataT const* in,
@@ -42,23 +42,23 @@ namespace rocwmma
                                       DataT        param1,
                                       DataT        param2)
     {
-        using Mapping = MappingUtil<BlockM, BlockN, DataT, Layout>;
+        using Mapping = MappingUtil<BlockM, BlockN, DataT, DataLayout>;
 
         enum : uint32_t
         {
-            MajorIndex = std::is_same<Layout, row_major>::value ? 0 : 1,
-            MinorIndex = std::is_same<Layout, row_major>::value ? 1 : 0,
-            ldmajor    = std::is_same<Layout, row_major>::value ? BlockM : BlockN,
-            ldminor    = std::is_same<Layout, row_major>::value ? BlockN : BlockM
+            MajorIndex = std::is_same<DataLayout, row_major>::value ? 0 : 1,
+            MinorIndex = std::is_same<DataLayout, row_major>::value ? 1 : 0,
+            ldmajor    = std::is_same<DataLayout, row_major>::value ? BlockM : BlockN,
+            ldminor    = std::is_same<DataLayout, row_major>::value ? BlockN : BlockM
         };
 
         auto majCoord
-            = (std::is_same<Layout, row_major>::value
+            = (std::is_same<DataLayout, row_major>::value
                    ? ((threadIdx.x + blockDim.x * blockIdx.x) / Constants::AMDGCN_WAVE_SIZE)
                    : (threadIdx.y + blockDim.y * blockIdx.y))
               * ldmajor;
         auto minCoord
-            = (std::is_same<Layout, row_major>::value
+            = (std::is_same<DataLayout, row_major>::value
                    ? (threadIdx.y + blockDim.y * blockIdx.y)
                    : ((threadIdx.x + blockDim.x * blockIdx.x) / Constants::AMDGCN_WAVE_SIZE))
               * ldminor;

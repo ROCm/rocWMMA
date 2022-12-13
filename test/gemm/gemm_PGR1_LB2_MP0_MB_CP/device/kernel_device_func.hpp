@@ -85,14 +85,29 @@ namespace rocwmma
 
         enum struct Gfx9Predicates : bool
         {
+            CostABTest
+            = ((2u * ((uint32_t)TestTraits::Cost::TileA + (uint32_t)TestTraits::Cost::TileB))
+               <= 256u),
+            CostAccTest  = ((uint32_t)TestTraits::Cost::TileC <= 256u),
+            CostTailTest = (((uint32_t)TestTraits::Cost::TileA + (uint32_t)TestTraits::Cost::TileB
+                             + 2u * (uint32_t)TestTraits::Cost::TileD)
+                            <= 256u),
+
             // Must skip int8 tests on gfx9 for now
             IsInt8 = std::is_same<int8_t, InputT>::value,
 
-            Enable = ((bool)TestTraits::IsGfx9 && (bool)TestTraits::IsWave64 && !(bool)IsInt8)
+            Enable = ((bool)TestTraits::IsGfx9 && (bool)TestTraits::IsWave64 && !(bool)IsInt8
+                      && CostABTest && CostAccTest && CostTailTest)
         };
 
         enum struct Gfx11Predicates : bool
         {
+            IsFp16
+            = std::is_same<InputT, float16_t>::value || std::is_same<InputT, hfloat16_t>::value,
+            IsBf16    = std::is_same<InputT, hip_bfloat16>::value,
+            IsInt8    = std::is_same<InputT, int8_t>::value,
+            TypesTest = (IsFp16 || IsBf16) && !IsInt8,
+
             // AB inputs are duplicated, double buffered
             // Acc tiles are unpacked.
             // Tail requires A, B, C & D tiles + FMA
@@ -105,10 +120,8 @@ namespace rocwmma
                             <= 256u),
             BlockSizeTest = ((BlockM == 16u) && (BlockN == 16u)),
 
-            IsInt8 = std::is_same<int8_t, InputT>::value,
-
-            Enable = ((bool)TestTraits::IsGfx11 && (bool)TestTraits::IsWave32 && CostABTest
-                      && CostAccTest && CostTailTest && BlockSizeTest && !IsInt8)
+            Enable = ((bool)TestTraits::IsGfx11 && (bool)TestTraits::IsWave32 && TypesTest
+                      && CostABTest && CostAccTest && CostTailTest && BlockSizeTest)
         };
 
     public:

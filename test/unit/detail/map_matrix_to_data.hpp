@@ -54,9 +54,11 @@ namespace rocwmma
 
             // Initialize matrix data on host
             MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
-            MatrixUtil<Layout>::fill(
-                dataInstance->hostOut().get(), Base::mM, Base::mN, std::numeric_limits<DataT>::signaling_NaN());
-            
+            MatrixUtil<Layout>::fill(dataInstance->hostOut().get(),
+                                     Base::mM,
+                                     Base::mN,
+                                     std::numeric_limits<DataT>::signaling_NaN());
+
             // Copy init data to device
             dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), sizeD);
             dataInstance->copyData(dataInstance->deviceOut(), dataInstance->hostOut(), sizeD);
