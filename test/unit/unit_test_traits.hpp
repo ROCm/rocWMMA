@@ -99,7 +99,7 @@ namespace rocwmma
         {
             // Cost for a full tile, unpacked data
             CostTest = ((uint32_t)TestTraits::Cost::UnpackedTile <= 256u),
-            Enable   = ((bool)TestTraits::IsGfx9 && (bool)TestTraits::IsWave64)
+            Enable   = ((bool)TestTraits::IsGfx9 && (bool)TestTraits::IsWave64 && CostTest)
         };
 
         enum struct Gfx11Predicates : bool
