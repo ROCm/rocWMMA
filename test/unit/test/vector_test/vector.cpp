@@ -42,7 +42,7 @@ namespace rocwmma
         using Types = typename Base::TestTypes16;
 
         // Vector Sizes.
-        // Test up to VecSize = 128. Anything bigger is impractical.
+        // Test up to VecSize = 64. Anything bigger is impractical.
         using VecSizes = std::tuple<I<1>, I<2>, I<4>, I<8>, I<16>, I<32>, I<64>>;
 
         using KernelParams = typename CombineLists<VecSizes, Types>::Result;
@@ -80,18 +80,18 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class VectorIteratorTest : public rocwmma::UnitTest
+class VectorTest : public rocwmma::UnitTest
 {
 };
 
-TEST_P(VectorIteratorTest, RunKernel)
+TEST_P(VectorTest, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(
     KernelTests,
-    VectorIteratorTest,
+    VectorTest,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
                        ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
