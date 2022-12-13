@@ -47,13 +47,13 @@ namespace rocwmma
                                  DataLayout,
                                  Constants::AMDGCN_WAVE_SIZE,
                                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
-    __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncA(uint32_t     m,
-                                                                    uint32_t     n,
-                                                                    DataT const* in,
-                                                                    DataT*       out,
-                                                                    uint32_t     ld,
-                                                                    DataT        param1,
-                                                                    DataT        param2)
+    __global__ void LoadStoreMatrixCoopSyncA(uint32_t     m,
+                                             uint32_t     n,
+                                             DataT const* in,
+                                             DataT*       out,
+                                             uint32_t     ld,
+                                             DataT        param1,
+                                             DataT        param2)
     {
         // Mapping:
         // Incoming -> Matrix A (ColNT)
@@ -123,13 +123,13 @@ namespace rocwmma
                                   DataLayout,
                                   Constants::AMDGCN_WAVE_SIZE,
                                   Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
-    __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncA(uint32_t     m,
-                                                                    uint32_t     n,
-                                                                    DataT const* in,
-                                                                    DataT*       out,
-                                                                    uint32_t     ld,
-                                                                    DataT        param1,
-                                                                    DataT        param2)
+    __global__ void LoadStoreMatrixCoopSyncA(uint32_t     m,
+                                             uint32_t     n,
+                                             DataT const* in,
+                                             DataT*       out,
+                                             uint32_t     ld,
+                                             DataT        param1,
+                                             DataT        param2)
     {
     }
 
@@ -144,13 +144,13 @@ namespace rocwmma
                                  DataLayout,
                                  Constants::AMDGCN_WAVE_SIZE,
                                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
-    __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncB(uint32_t     m,
-                                                                    uint32_t     n,
-                                                                    DataT const* in,
-                                                                    DataT*       out,
-                                                                    uint32_t     ld,
-                                                                    DataT        param1,
-                                                                    DataT        param2)
+    __global__ void LoadStoreMatrixCoopSyncB(uint32_t     m,
+                                             uint32_t     n,
+                                             DataT const* in,
+                                             DataT*       out,
+                                             uint32_t     ld,
+                                             DataT        param1,
+                                             DataT        param2)
     {
         // Mapping:
         // Incoming -> Matrix B (RowNT)
@@ -220,13 +220,13 @@ namespace rocwmma
                                   DataLayout,
                                   Constants::AMDGCN_WAVE_SIZE,
                                   Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
-    __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncB(uint32_t     m,
-                                                                    uint32_t     n,
-                                                                    DataT const* in,
-                                                                    DataT*       out,
-                                                                    uint32_t     ld,
-                                                                    DataT        param1,
-                                                                    DataT        param2)
+    __global__ void LoadStoreMatrixCoopSyncB(uint32_t     m,
+                                             uint32_t     n,
+                                             DataT const* in,
+                                             DataT*       out,
+                                             uint32_t     ld,
+                                             DataT        param1,
+                                             DataT        param2)
     {
     }
 
@@ -241,13 +241,13 @@ namespace rocwmma
                                  DataLayout,
                                  Constants::AMDGCN_WAVE_SIZE,
                                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
-    __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncAcc(uint32_t     m,
-                                                                      uint32_t     n,
-                                                                      DataT const* in,
-                                                                      DataT*       out,
-                                                                      uint32_t     ld,
-                                                                      DataT        param1,
-                                                                      DataT        param2)
+    __global__ void LoadStoreMatrixCoopSyncAcc(uint32_t     m,
+                                               uint32_t     n,
+                                               DataT const* in,
+                                               DataT*       out,
+                                               uint32_t     ld,
+                                               DataT        param1,
+                                               DataT        param2)
     {
         // Mapping:
         // Incoming -> Matrix C (Row4T)
@@ -316,13 +316,13 @@ namespace rocwmma
                                   DataLayout,
                                   Constants::AMDGCN_WAVE_SIZE,
                                   Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
-    __global__ void __launch_bounds__(256) LoadStoreMatrixCoopSyncAcc(uint32_t     m,
-                                                                      uint32_t     n,
-                                                                      DataT const* in,
-                                                                      DataT*       out,
-                                                                      uint32_t     ld,
-                                                                      DataT        param1,
-                                                                      DataT        param2)
+    __global__ void LoadStoreMatrixCoopSyncAcc(uint32_t     m,
+                                               uint32_t     n,
+                                               DataT const* in,
+                                               DataT*       out,
+                                               uint32_t     ld,
+                                               DataT        param1,
+                                               DataT        param2)
     {
     }
 
