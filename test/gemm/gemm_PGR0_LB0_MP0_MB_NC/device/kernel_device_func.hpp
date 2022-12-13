@@ -68,30 +68,37 @@ namespace rocwmma
         enum struct Gfx9Predicates : bool
         {
             CostABTest
-            = (((uint32_t)TestTraits::Cost::TileA + (uint32_t)TestTraits::Cost::TileB)
-               <= 256u),
-            CostCTest     = ((uint32_t)TestTraits::Cost::TileC <= 256u),
-            CostDTest     = ((uint32_t)TestTraits::Cost::TileD <= 256u),
+            = (((uint32_t)TestTraits::Cost::TileA + (uint32_t)TestTraits::Cost::TileB) <= 256u),
+            CostCTest = ((uint32_t)TestTraits::Cost::TileC <= 256u),
+            CostDTest = ((uint32_t)TestTraits::Cost::TileD <= 256u),
 
             // Must skip int8 tests on gfx9 for now
             IsInt8 = std::is_same<int8_t, InputT>::value,
 
-            Enable = ((bool)TestTraits::IsGfx9 && (bool)TestTraits::IsWave64 && !(bool)IsInt8 && CostABTest && CostCTest && CostDTest)
+            Enable = ((bool)TestTraits::IsGfx9 && (bool)TestTraits::IsWave64 && !(bool)IsInt8
+                      && CostABTest && CostCTest && CostDTest)
         };
 
         enum struct Gfx11Predicates : bool
         {
+            IsFp16
+            = std::is_same<InputT, float16_t>::value || std::is_same<InputT, hfloat16_t>::value,
+            IsBf16    = std::is_same<InputT, hip_bfloat16>::value,
+            IsInt8    = std::is_same<InputT, int8_t>::value,
+            TypesTest = IsFp16 || IsBf16 || IsInt8,
+
             // AB inputs are duplicated, single buffered
             // C tiles are unpacked.
             CostABTest
             = ((2u * ((uint32_t)TestTraits::Cost::TileA + (uint32_t)TestTraits::Cost::TileB))
                <= 256u),
-            CostCTest     = ((2u * (uint32_t)TestTraits::Cost::TileC) <= 256u),
-            CostDTest     = ((uint32_t)TestTraits::Cost::TileD <= 256u),
+            CostCTest = ((2u * (uint32_t)TestTraits::Cost::TileC) <= 256u),
+            CostDTest = ((uint32_t)TestTraits::Cost::TileD <= 256u),
+
             BlockSizeTest = ((BlockM == 16u) && (BlockN == 16u)),
 
-            Enable = ((bool)TestTraits::IsGfx11 && (bool)TestTraits::IsWave32 && CostABTest
-                      && CostCTest && CostDTest && BlockSizeTest)
+            Enable = ((bool)TestTraits::IsGfx11 && (bool)TestTraits::IsWave32 && TypesTest
+                      && CostABTest && CostCTest && CostDTest && BlockSizeTest)
         };
 
     public:
