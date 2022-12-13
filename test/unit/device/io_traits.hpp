@@ -83,10 +83,10 @@ namespace rocwmma
         // Physical hardware perspective
         err |= (IOTraits::UnpackedVRegCount
                 != (IOTraits::UnpackedSize
-                    * std::max(1u, (uint32_t)sizeof(DataT) / AMDGCN_DWORD_SIZE_BYTES)));
+                    * std::max(1u, (uint32_t)sizeof(DataT) / Constants::AMDGCN_DWORD_SIZE_BYTES)));
         err |= (IOTraits::PackedVRegCount
                 != (IOTraits::PackedSize
-                    * std::max(1u, (uint32_t)sizeof(DataT) / AMDGCN_DWORD_SIZE_BYTES)));
+                    * std::max(1u, (uint32_t)sizeof(DataT) / Constants::AMDGCN_DWORD_SIZE_BYTES)));
 
         // Reduce error count
         atomicAdd(&result, (int32_t)err);

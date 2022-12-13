@@ -161,7 +161,7 @@ namespace rocwmma
         {
         private:
             using FragT = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
-            constexpr static const uint32_t registerFileWidth = AMDGCN_WAVE_SIZE;
+            constexpr static const uint32_t registerFileWidth = Constants::AMDGCN_WAVE_SIZE;
 
         public:
             using Type = fragment<matrix_b, 1, registerFileWidth, FragT::size(), DataT, DataLayout>;

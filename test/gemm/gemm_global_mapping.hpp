@@ -397,7 +397,7 @@ namespace rocwmma
         {
 
             // Must provide valid TBlockX/Y params at compile time.
-            static_assert((TBlockX > 0) && (TBlockX % AMDGCN_WAVE_SIZE == 0),
+            static_assert((TBlockX > 0) && (TBlockX % Constants::AMDGCN_WAVE_SIZE == 0),
                           "Invalid TBlockX dimension");
             static_assert(TBlockY > 0, "Invalid TBlockY dimension");
 
@@ -430,7 +430,7 @@ namespace rocwmma
             // Global reads for A/B are single fragment of macro tile size
             // Global R/W for C/D are MFMA sized fragments
             using GRFragA = fragment<matrix_a,
-                                     TBlockX / AMDGCN_WAVE_SIZE * BlocksX * BlockM,
+                                     TBlockX / Constants::AMDGCN_WAVE_SIZE * BlocksX * BlockM,
                                      BlockN,
                                      BlockK,
                                      InputT,

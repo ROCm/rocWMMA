@@ -202,7 +202,7 @@ __global__ void gemv_rocwmma_d(uint32_t         m,
 
     rocwmma::fill_fragment(fragAcc, 0.0f);
 
-    int majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / rocwmma::AMDGCN_WAVE_SIZE;
+    int majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / rocwmma::Constants::AMDGCN_WAVE_SIZE;
 
     // Target C block
     int cRow = majorWarp * ROCWMMA_M;
@@ -275,7 +275,7 @@ __host__ void gemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float b
 
     auto blockDim = dim3(T_BLOCK_X, T_BLOCK_Y);
     auto gridDim  = dim3(rocwmma::ceilDiv(m, ROCWMMA_M * T_BLOCK_X / WAVE_SIZE),
-                         rocwmma::ceilDiv(n, ROCWMMA_N * T_BLOCK_Y));
+                        rocwmma::ceilDiv(n, ROCWMMA_N * T_BLOCK_Y));
 
     std::cout << "Launching gemv kernel..." << std::endl;
     hipEvent_t startEvent, stopEvent;

@@ -166,16 +166,17 @@ namespace rocwmma
         template <uint32_t BlockDim,
                   uint32_t BlockK,
                   typename DataT,
-                  uint32_t TestWidth = std::is_same<DataT, float64_t>::value
-                                           ? 8u * AMDGCN_DWORD_SIZE_BYTES / (uint32_t)sizeof(DataT)
-                                           : // TODO: fp64 compiler bug
-                                           4u * AMDGCN_DWORD_SIZE_BYTES / (uint32_t)sizeof(DataT)>
+                  uint32_t TestWidth
+                  = std::is_same<DataT, float64_t>::value
+                        ? 8u * Constants::AMDGCN_DWORD_SIZE_BYTES / (uint32_t)sizeof(DataT)
+                        : // TODO: fp64 compiler bug
+                        4u * Constants::AMDGCN_DWORD_SIZE_BYTES / (uint32_t)sizeof(DataT)>
         struct VecWidthTraits
         {
             enum : uint32_t
             {
                 ElementCount  = BlockDim * BlockK,
-                ElementsPerIO = TestWidth * AMDGCN_WAVE_SIZE,
+                ElementsPerIO = TestWidth * Constants::AMDGCN_WAVE_SIZE,
                 MaxVectorWidth
                 = (TestWidth <= BlockDim) && (TestWidth <= BlockK)
                           && (ElementsPerIO <= ElementCount) && (ElementCount % ElementsPerIO == 0)
@@ -190,7 +191,7 @@ namespace rocwmma
             enum : uint32_t
             {
                 ElementCount   = BlockDim * BlockK,
-                ElementsPerIO  = AMDGCN_WAVE_SIZE,
+                ElementsPerIO  = Constants::AMDGCN_WAVE_SIZE,
                 MaxVectorWidth = 1
             };
         };
@@ -210,7 +211,7 @@ namespace rocwmma
         enum : uint32_t
         {
             // Number of threads to perform I/O operation
-            ThreadsPerIO = AMDGCN_WAVE_SIZE,
+            ThreadsPerIO = Constants::AMDGCN_WAVE_SIZE,
 
             // Total number of elements in a single I/O operation
             ElementsPerIO = ThreadsPerIO * VectorWidth,
@@ -232,7 +233,7 @@ namespace rocwmma
             = ceilDiv((uint32_t)UnpackedSize, (uint32_t)detail::PackTraits<DataT>::PackRatio),
 
             // Physical number of hardware vregs used to store packed data
-            PackedVRegCount   = ElementCount * sizeof(DataT) / AMDGCN_REGISTER_SIZE_BYTES,
+            PackedVRegCount = ElementCount * sizeof(DataT) / Constants::AMDGCN_REGISTER_SIZE_BYTES,
             UnpackedVRegCount = PackedVRegCount * detail::PackTraits<DataT>::PackRatio
         };
 
