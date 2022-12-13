@@ -28,6 +28,7 @@
 #define ROCWMMA_DETAIL_COLNT_LAYOUT_HPP
 
 #include "device/colnt_layout.hpp"
+#include "helper_macros.hpp"
 #include "unit_kernel_base.hpp"
 
 namespace rocwmma
@@ -39,6 +40,9 @@ namespace rocwmma
     {
     private:
         using Base = UnitKernelBase<BlockM, BlockN, DataT, Layout>;
+
+        template <uint32_t WaveSize, uint32_t ArchId>
+        using TestGuard = FragSize_guard<BlockM, BlockN, DataT, Layout, WaveSize, ArchId>;
 
     public:
         ColNTLayoutKernel()        = default;
@@ -54,8 +58,10 @@ namespace rocwmma
 
             // Initialize data on host
             MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
-            MatrixUtil<Layout>::fill(
-                dataInstance->hostOut().get(), Base::mM, Base::mN, std::numeric_limits<DataT>::signaling_NaN());
+            MatrixUtil<Layout>::fill(dataInstance->hostOut().get(),
+                                     Base::mM,
+                                     Base::mN,
+                                     std::numeric_limits<DataT>::signaling_NaN());
 
             // Copy init data to device
             dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), sizeD);
@@ -66,7 +72,7 @@ namespace rocwmma
         {
             auto& dataInstance = Base::DataStorage::instance();
 
-            const int64_t sizeD        = Base::mM * Base::mN;
+            const int64_t sizeD = Base::mM * Base::mN;
 
             // Cache current kernel result from device
             dataInstance->copyData(dataInstance->hostOut(), dataInstance->deviceOut(), sizeD);
@@ -79,6 +85,43 @@ namespace rocwmma
                                                              Base::mM,
                                                              Base::mN,
                                                              errorTolerance);
+        }
+
+        bool checkQuirks() const final
+        {
+            auto waveSize   = Base::DeviceInfo::instance()->warpSize();
+            auto deviceArch = Base::DeviceInfo::instance()->getGcnArch();
+
+            // The test guard for this class requires 2 values at runtime.
+            auto dispatchGuard = [waveSize, deviceArch]() {
+                bool dispatchResult = false;
+
+#define CASE_IMPL_ASSIGN2(WAVE_SIZE, ARCH_ID) \
+    dispatchResult = TestGuard<WAVE_SIZE, ARCH_ID>::enable();
+
+#define SWITCH_BODY_WAVE_SIZE(ARCH_ID) \
+    ROCWMMA_SWITCH_BODY2_ARG2(         \
+        waveSize, CASE_IMPL_ASSIGN2, HipDevice::Wave32, HipDevice::Wave64, ARCH_ID)
+
+#define DISPATCH_GUARD_BODY                          \
+    ROCWMMA_SWITCH_BODY5_ARG1(deviceArch,            \
+                              SWITCH_BODY_WAVE_SIZE, \
+                              HipDevice::GFX908,     \
+                              HipDevice::GFX90A,     \
+                              HipDevice::GFX1100,    \
+                              HipDevice::GFX1101,    \
+                              HipDevice::GFX1102)
+
+                DISPATCH_GUARD_BODY
+
+#undef CASE_IMPL_ASSIGN2
+#undef SWITCH_BODY_WAVE_SIZE
+#undef DISPATCH_GUARD_BODY
+
+                return dispatchResult;
+            };
+
+            return Base::checkQuirks() && dispatchGuard();
         }
 
         typename Base::KernelFunc kernelImpl() const final
