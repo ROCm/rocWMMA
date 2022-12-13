@@ -69,8 +69,7 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_4x8.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_8x1.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_8x2.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_8x4.cpp
-                                # TODO: MI-100 Compile restriction
+                                #${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_8x4.cpp
                                 #${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_8x8.cpp
 
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nt_1x2.cpp
@@ -112,7 +111,7 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_4x8.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_8x1.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_8x2.cpp
-                                ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_8x4.cpp
+                                #${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_8x4.cpp
                                 #${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_8x8.cpp
 
                                 ${CMAKE_CURRENT_SOURCE_DIR}/32x32_nn_1x2.cpp
