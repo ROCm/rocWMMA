@@ -38,6 +38,8 @@
 #include "gemm_global_mapping.hpp"
 #include "gemm_local_mapping.hpp"
 
+#define __ROCWMMA_GEMM_LAUNCH_BOUNDS__ __launch_bounds__(Constants::AMDGCN_WAVE_SIZE * 4u)
+
 namespace rocwmma
 {
     namespace CooperativeGemm
