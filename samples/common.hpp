@@ -44,6 +44,20 @@
     }
 #endif
 
+#ifndef CHECK_HIPRTC_ERROR
+#define CHECK_HIPRTC_ERROR(status)                   \
+    if(status != HIPRTC_SUCCESS)                     \
+    {                                                \
+        fprintf(stderr,                              \
+                "hipRTC error: '%s'(%d) at %s:%d\n", \
+                hiprtcGetErrorString(status),        \
+                status,                              \
+                __FILE__,                            \
+                __LINE__);                           \
+        exit(EXIT_FAILURE);                          \
+    }
+#endif
+
 // HIP Host function to retrieve the warp size
 enum hipWarpSize_t : uint32_t
 {
@@ -56,7 +70,7 @@ uint32_t getWarpSize()
 {
     hipDevice_t     mHandle;
     hipDeviceProp_t mProps;
-    uint32_t mWarpSize = hipWarpSize_t::UNSUPPORTED_WARP_SIZE;
+    uint32_t        mWarpSize = hipWarpSize_t::UNSUPPORTED_WARP_SIZE;
 
     CHECK_HIP_ERROR(hipGetDevice(&mHandle));
     CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
@@ -69,10 +83,9 @@ uint32_t getWarpSize()
     default:;
     }
 
-    if( mWarpSize == hipWarpSize_t::UNSUPPORTED_WARP_SIZE)
+    if(mWarpSize == hipWarpSize_t::UNSUPPORTED_WARP_SIZE)
     {
-        std::cerr << "Cannot proceed: unsupported warp sizev detected. Exiting."
-                    << std::endl;
+        std::cerr << "Cannot proceed: unsupported warp sizev detected. Exiting." << std::endl;
         exit(EXIT_FAILURE);
     }
 
