@@ -196,15 +196,15 @@ namespace std
     class numeric_limits
     {
     public:
-        static constexpr T min() noexcept;
-        static constexpr T lowest() noexcept;
-        static constexpr T max() noexcept;
-        static constexpr T epsilon() noexcept;
-        static constexpr T round_error() noexcept;
-        static constexpr T infinity() noexcept;
-        static constexpr T quiet_NaN() noexcept;
-        static constexpr T signaling_NaN() noexcept;
-        static constexpr T denorm_min() noexcept;
+        __HOST_DEVICE__ static constexpr T min() noexcept;
+        __HOST_DEVICE__ static constexpr T lowest() noexcept;
+        __HOST_DEVICE__ static constexpr T max() noexcept;
+        __HOST_DEVICE__ static constexpr T epsilon() noexcept;
+        __HOST_DEVICE__ static constexpr T round_error() noexcept;
+        __HOST_DEVICE__ static constexpr T infinity() noexcept;
+        __HOST_DEVICE__ static constexpr T quiet_NaN() noexcept;
+        __HOST_DEVICE__ static constexpr T signaling_NaN() noexcept;
+        __HOST_DEVICE__ static constexpr T denorm_min() noexcept;
     };
 
     template <bool B, class T = void>
@@ -478,14 +478,10 @@ namespace std
     };
 
     template <typename T, std::size_t _Size>
-    struct is_array<T[_Size]> : public true_type
-    {
-    };
+    struct is_array<T[_Size]> : public true_type{};
 
     template <typename T>
-    struct is_array<T[]> : public true_type
-    {
-    };
+    struct is_array<T[]> : public true_type{};
 
     // decay selectors
     template <typename _Up,

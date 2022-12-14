@@ -38,9 +38,6 @@ using rocwmma::float16_t;
 using rocwmma::float32_t;
 using rocwmma::float64_t;
 
-#define HIPRTC_CALL(call) assert(call == HIPRTC_SUCCESS);
-#define HIP_CALL(call) assert(call == hipSuccess);
-
 // Host GEMM validation
 __host__ void gemm_cpu_h(uint32_t         m,
                          uint32_t         n,
@@ -171,7 +168,7 @@ __global__ void gemm_rocwmma_d(uint32_t         m,
     rocwmma::fill_fragment(fragAcc, 0.0f);
 
     // Tile using a 2D grid
-    auto majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / rocwmma::AMDGCN_WAVE_SIZE;
+    auto majorWarp = (blockIdx.x * blockDim.x + threadIdx.x) / rocwmma::Constants::AMDGCN_WAVE_SIZE;
     auto minorWarp = (blockIdx.y * blockDim.y + threadIdx.y);
 
     // Target C block
@@ -219,7 +216,7 @@ int main()
     float32_t beta  = 2.1f;
 
     hiprtcProgram prog;
-    HIPRTC_CALL(hiprtcCreateProgram(&prog, src, nullptr, 0, nullptr, nullptr));
+    CHECK_HIPRTC_ERROR(hiprtcCreateProgram(&prog, src, nullptr, 0, nullptr, nullptr));
     hiprtcResult result;
     hiprtcResult logResult;
     const char*  opts[] = {"-D__HIP_PLATFORM_AMD__", "-I../library/include"};
@@ -232,27 +229,27 @@ int main()
         std::string s_error = hiprtcGetErrorString(result);
         std::cout << s_error << std::endl;
         std::size_t log_size;
-        hiprtcGetProgramLogSize(prog, &log_size);
+        CHECK_HIPRTC_ERROR(hiprtcGetProgramLogSize(prog, &log_size));
         std::cout << "Log Size: " << log_size << std::endl;
         std::string log;
 
         log.reserve(log_size);
-        hiprtcGetProgramLog(prog, &log[0]);
+        CHECK_HIPRTC_ERROR(hiprtcGetProgramLog(prog, &log[0]));
 
         std::cout << log.c_str() << std::endl;
         exit(EXIT_FAILURE);
     }
 
     std::size_t code_size;
-    HIPRTC_CALL(hiprtcGetCodeSize(prog, &code_size));
+    CHECK_HIPRTC_ERROR(hiprtcGetCodeSize(prog, &code_size));
     std::vector<char> code(code_size);
 
-    HIPRTC_CALL(hiprtcGetCode(prog, code.data()));
+    CHECK_HIPRTC_ERROR(hiprtcGetCode(prog, code.data()));
 
     hipModule_t   module;
     hipFunction_t func;
-    HIP_CALL(hipModuleLoadData(&module, code.data()));
-    HIP_CALL(hipModuleGetFunction(&func, module, "gemm_rocwmma_d"));
+    CHECK_HIP_ERROR(hipModuleLoadData(&module, code.data()));
+    CHECK_HIP_ERROR(hipModuleGetFunction(&func, module, "gemm_rocwmma_d"));
 
     // Bounds check
     if((m < (ROCWMMA_M * T_BLOCK_X / WAVE_SIZE) || n < (ROCWMMA_N * T_BLOCK_Y) || k < ROCWMMA_K)
@@ -337,17 +334,17 @@ int main()
 
     CHECK_HIP_ERROR(hipEventRecord(startEvent));
 
-    HIP_CALL(hipModuleLaunchKernel(func,
-                                   gridDim.x,
-                                   gridDim.y,
-                                   gridDim.z,
-                                   blockDim.x,
-                                   blockDim.y,
-                                   blockDim.z,
-                                   0,
-                                   nullptr,
-                                   nullptr,
-                                   (void**)&config));
+    CHECK_HIP_ERROR(hipModuleLaunchKernel(func,
+                                          gridDim.x,
+                                          gridDim.y,
+                                          gridDim.z,
+                                          blockDim.x,
+                                          blockDim.y,
+                                          blockDim.z,
+                                          0,
+                                          nullptr,
+                                          nullptr,
+                                          (void**)&config));
 
     CHECK_HIP_ERROR(hipEventRecord(stopEvent));
 
@@ -404,8 +401,8 @@ int main()
 
     std::cout << "Finished!" << std::endl;
 
-    HIP_CALL(hipModuleUnload(module));
-    HIPRTC_CALL(hiprtcDestroyProgram(&prog));
+    CHECK_HIP_ERROR(hipModuleUnload(module));
+    CHECK_HIPRTC_ERROR(hiprtcDestroyProgram(&prog));
 
     return 0;
 }
