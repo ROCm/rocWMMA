@@ -50,28 +50,32 @@ namespace rocwmma
 
     __device__ inline float64_t maxDouble(float64_t a, float64_t b)
     {
-        if (std::isinf(a) || std::isinf(b))
+        if(std::isinf(a) || std::isinf(b))
         {
             return std::numeric_limits<float64_t>::infinity();
         }
         // Check for NaN
-        else if (std::isnan(a) || std::isnan(b))
+        else if(std::isnan(a) || std::isnan(b))
         {
             return std::numeric_limits<float64_t>::signaling_NaN();
         }
         return a > b ? a : b;
     }
 
-    __global__ static void maxReduceKernel(float64_t* relativeError, uint32_t elements, uint32_t offset, uint32_t maxIdx)
+    __global__ static void maxReduceKernel(float64_t* relativeError,
+                                           uint32_t   elements,
+                                           uint32_t   offset,
+                                           uint32_t   maxIdx)
     {
         float64_t* localRelativeError = relativeError + (offset * elements * blockIdx.x);
 
-        for (int i = elements >> 1; i > 0; i = i >> 1)
+        for(int i = elements >> 1; i > 0; i = i >> 1)
         {
-            if (threadIdx.x < i && offset * (elements * blockIdx.x + threadIdx.x + i) < maxIdx)
+            if(threadIdx.x < i && offset * (elements * blockIdx.x + threadIdx.x + i) < maxIdx)
             {
-                localRelativeError[offset * threadIdx.x] = 
-                    maxDouble(localRelativeError[offset * threadIdx.x], localRelativeError[offset * (threadIdx.x + i)]);   
+                localRelativeError[offset * threadIdx.x]
+                    = maxDouble(localRelativeError[offset * threadIdx.x],
+                                localRelativeError[offset * (threadIdx.x + i)]);
             }
             synchronize_workgroup();
         }
@@ -80,24 +84,24 @@ namespace rocwmma
     // Comparitive kernel for batched matrix outputs as used in gemm tests
     // Compares all values of two M x N matrices
     template <typename TypeA, typename TypeB, typename LayoutA, typename LayoutB>
-    __global__ void compareEqualKernel(TypeA*   matrixA,
-                                       TypeB*   matrixB,
-                                       float64_t*  relativeError,
-                                       uint32_t m,
-                                       uint32_t n,
-                                       uint32_t lda,
-                                       uint32_t ldb)
+    __global__ void compareEqualKernel(TypeA*     matrixA,
+                                       TypeB*     matrixB,
+                                       float64_t* relativeError,
+                                       uint32_t   m,
+                                       uint32_t   n,
+                                       uint32_t   lda,
+                                       uint32_t   ldb)
     {
         uint32_t errorIdx = blockIdx.x * blockDim.x + threadIdx.x;
-        uint32_t colIdx = errorIdx % n;
-        uint32_t rowIdx = errorIdx / n;
+        uint32_t colIdx   = errorIdx % n;
+        uint32_t rowIdx   = errorIdx / n;
 
-        uint32_t indexA = std::is_same<LayoutA, row_major>::value ? 
-            rowMjr(rowIdx, colIdx, lda) : colMjr(rowIdx, colIdx, lda);
-        uint32_t indexB = std::is_same<LayoutB, row_major>::value ? 
-            rowMjr(rowIdx, colIdx, ldb) : colMjr(rowIdx, colIdx, ldb);
+        uint32_t indexA = std::is_same<LayoutA, row_major>::value ? rowMjr(rowIdx, colIdx, lda)
+                                                                  : colMjr(rowIdx, colIdx, lda);
+        uint32_t indexB = std::is_same<LayoutB, row_major>::value ? rowMjr(rowIdx, colIdx, ldb)
+                                                                  : colMjr(rowIdx, colIdx, ldb);
 
-        if (rowIdx < m && colIdx < n)
+        if(rowIdx < m && colIdx < n)
         {
             TypeA valA = matrixA[indexA];
             TypeB valB = matrixB[indexB];
@@ -108,10 +112,12 @@ namespace rocwmma
             if(std::isinf(numerator) || std::isinf(divisor))
             {
                 relativeError[errorIdx] = std::numeric_limits<float64_t>::infinity();
-            } else if (std::isnan(numerator) || std::isnan(divisor))
+            }
+            else if(std::isnan(numerator) || std::isnan(divisor))
             {
                 relativeError[errorIdx] = std::numeric_limits<float64_t>::signaling_NaN();
-            } else
+            }
+            else
             {
                 relativeError[errorIdx] = numerator / divisor;
             }
@@ -121,20 +127,20 @@ namespace rocwmma
     // Comparitive kernel for batched matrix outputs as used in DLRM tests
     // Compares all values of two M x N matrices over B batches
     template <typename TypeA, typename TypeB>
-    __global__ void compareEqualKernel(TypeA*   matrixA,
-                                       TypeB*   matrixB,
-                                       float64_t*  relativeError,
-                                       uint32_t m,
-                                       uint32_t n,
-                                       uint32_t b)
+    __global__ void compareEqualKernel(TypeA*     matrixA,
+                                       TypeB*     matrixB,
+                                       float64_t* relativeError,
+                                       uint32_t   m,
+                                       uint32_t   n,
+                                       uint32_t   b)
     {
-        uint32_t errorIdx = blockIdx.x * blockDim.x + threadIdx.x;        
-        uint32_t colIdx = errorIdx % n;
-        uint32_t rowIdx = errorIdx / n;
-        uint32_t matrixIdx = rowMjr(rowIdx, colIdx, n);
+        uint32_t errorIdx    = blockIdx.x * blockDim.x + threadIdx.x;
+        uint32_t colIdx      = errorIdx % n;
+        uint32_t rowIdx      = errorIdx / n;
+        uint32_t matrixIdx   = rowMjr(rowIdx, colIdx, n);
         uint32_t batchOffset = blockIdx.z * m * n;
 
-        if (rowIdx < m && colIdx < n && blockIdx.z < b)
+        if(rowIdx < m && colIdx < n && blockIdx.z < b)
         {
             TypeA valA = matrixA[batchOffset + matrixIdx];
             TypeB valB = matrixB[batchOffset + matrixIdx];
@@ -142,13 +148,16 @@ namespace rocwmma
             // Determine relative error for each element of matrix A/B
             auto numerator = fabs(toDouble(valA) - toDouble(valB));
             auto divisor   = fabs(toDouble(valA)) + fabs(toDouble(valB)) + 1.0;
-            if (std::isinf(numerator) || std::isinf(divisor))
+            if(std::isinf(numerator) || std::isinf(divisor))
             {
                 relativeError[batchOffset + errorIdx] = std::numeric_limits<float64_t>::infinity();
-            } else if (std::isnan(numerator) || std::isnan(divisor))
+            }
+            else if(std::isnan(numerator) || std::isnan(divisor))
             {
-                relativeError[batchOffset + errorIdx] = std::numeric_limits<float64_t>::signaling_NaN();
-            } else
+                relativeError[batchOffset + errorIdx]
+                    = std::numeric_limits<float64_t>::signaling_NaN();
+            }
+            else
             {
                 relativeError[batchOffset + errorIdx] = numerator / divisor;
             }
@@ -163,13 +172,14 @@ namespace rocwmma
         uint32_t colIdx = (blockIdx.x * blockDim.x + threadIdx.x) % n;
 
         auto ld    = std::is_same<Layout, row_major>::value ? n : m;
-        auto index = std::is_same<Layout, row_major>::value ? 
-            rowMjr(rowIdx, colIdx, ld) : colMjr(rowIdx, colIdx, ld);
+        auto index = std::is_same<Layout, row_major>::value ? rowMjr(rowIdx, colIdx, ld)
+                                                            : colMjr(rowIdx, colIdx, ld);
 
-        if (rowIdx < m && colIdx < n)
+        if(rowIdx < m && colIdx < n)
         {
             auto value = (rowIdx * n + colIdx) % 3;
-            mat[index] = (value % 3) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
+            mat[index] = ((value % 3) && std::is_signed<DataT>::value) ? -static_cast<DataT>(value)
+                                                                       : static_cast<DataT>(value);
         }
     }
 
@@ -177,19 +187,20 @@ namespace rocwmma
     template <typename DataT, typename Layout>
     __global__ void fillKernel(DataT* mat, uint32_t m, uint32_t k, uint32_t b)
     {
-        uint32_t rowIdx = (blockIdx.x * blockDim.x + threadIdx.x) / k;
-        uint32_t colIdx = (blockIdx.x * blockDim.x + threadIdx.x) % k;
+        uint32_t rowIdx      = (blockIdx.x * blockDim.x + threadIdx.x) / k;
+        uint32_t colIdx      = (blockIdx.x * blockDim.x + threadIdx.x) % k;
         uint32_t batchOffset = m * k * blockIdx.z;
 
         auto ld    = std::is_same<Layout, row_major>::value ? k : m;
-        auto index = std::is_same<Layout, row_major>::value ? 
-            rowMjr(rowIdx, colIdx, ld) : colMjr(rowIdx, colIdx, ld);
+        auto index = std::is_same<Layout, row_major>::value ? rowMjr(rowIdx, colIdx, ld)
+                                                            : colMjr(rowIdx, colIdx, ld);
         index += batchOffset;
 
-        if (rowIdx < m && colIdx < k)
+        if(rowIdx < m && colIdx < k)
         {
             auto value = (rowIdx * k + colIdx) % 5;
-            mat[index] = (value % 3) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
+            mat[index] = ((value % 3) && std::is_signed<DataT>::value) ? -static_cast<DataT>(value)
+                                                                       : static_cast<DataT>(value);
         }
     }
 
@@ -197,16 +208,16 @@ namespace rocwmma
     template <typename DataT, typename Layout>
     __global__ void fillKernel(DataT* mat, uint32_t m, uint32_t k, uint32_t b, DataT value)
     {
-        uint32_t rowIdx = (blockIdx.x * blockDim.x + threadIdx.x) / k;
-        uint32_t colIdx = (blockIdx.x * blockDim.x + threadIdx.x) % k;
+        uint32_t rowIdx      = (blockIdx.x * blockDim.x + threadIdx.x) / k;
+        uint32_t colIdx      = (blockIdx.x * blockDim.x + threadIdx.x) % k;
         uint32_t batchOffset = m * k * blockIdx.z;
 
         auto ld    = std::is_same<Layout, row_major>::value ? k : m;
-        auto index = std::is_same<Layout, row_major>::value ? 
-            rowMjr(rowIdx, colIdx, ld) : colMjr(rowIdx, colIdx, ld);
+        auto index = std::is_same<Layout, row_major>::value ? rowMjr(rowIdx, colIdx, ld)
+                                                            : colMjr(rowIdx, colIdx, ld);
         index += batchOffset;
 
-        if (rowIdx < m && colIdx < k)
+        if(rowIdx < m && colIdx < k)
         {
             mat[index] = value;
         }
@@ -220,10 +231,10 @@ namespace rocwmma
         uint32_t colIdx = (blockIdx.x * blockDim.x + threadIdx.x) % n;
 
         auto ld    = std::is_same<Layout, row_major>::value ? n : m;
-        auto index = std::is_same<Layout, row_major>::value ? 
-            rowMjr(rowIdx, colIdx, ld) : colMjr(rowIdx, colIdx, ld);
+        auto index = std::is_same<Layout, row_major>::value ? rowMjr(rowIdx, colIdx, ld)
+                                                            : colMjr(rowIdx, colIdx, ld);
 
-        if (rowIdx < m && colIdx < n)
+        if(rowIdx < m && colIdx < n)
         {
             mat[index] = value;
         }
