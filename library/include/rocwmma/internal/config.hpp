@@ -113,6 +113,12 @@ namespace rocwmma
 #define ROCWMMA_BLOCK_DIM_32_SUPPORTED 0
 #endif
 
+#if defined(NDEBUG)
+#define ROCWMMA_UNSUPPORTED_IMPL(MSG)
+#else
+#define ROCWMMA_UNSUPPORTED_IMPL(MSG) __attribute__((deprecated(MSG)))
+#endif
+
 ///
 /// Sanity checks
 ///
