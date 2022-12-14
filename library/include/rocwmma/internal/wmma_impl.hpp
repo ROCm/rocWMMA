@@ -68,9 +68,13 @@ namespace rocwmma
         {
             enum : uint32_t
             {
+                // Output register selection of WMMA.
+                // Low = bits [15:0]
+                // High = bits[31:16]
                 LOW  = 0,
                 HIGH = 1,
 
+                // Signage indicator of inputs / accum
                 UNSIGNED = 0,
                 SIGNED   = 1
             };
@@ -247,6 +251,9 @@ namespace rocwmma
             }
         };
 
+        // Accumulator data needs some special treatment for data types < 4 Byte, due to unpacked layout AND
+        // variable element placement within 32b element containers.
+        // This adapter supplies the correct accumulator layout for small data types.
         template <typename ComputeT, uint32_t AccumBits>
         struct AccumAdapter<ComputeT,
                             AccumBits,

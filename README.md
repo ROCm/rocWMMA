@@ -1,18 +1,23 @@
 # rocWMMA
 
-AMD's C++ library for accelerating mixed precision matrix multiplication and accumulation (MFMA) operations leveraging specialized GPU matrix cores. rocWMMA provides a C++ API to facilitate breaking down matrix multiply-accumulate problems into fragments and using them in block-wise operations that are distributed in parallel across GPU wavefronts. The API is a header library of GPU device code meaning that matrix core acceleration may be compiled directly into your kernel device code. This can benefit from compiler optimization in the generation of kernel assembly, and does not incur additional overhead costs of linking to external runtime libraries or having to launch separate kernels.
+AMD's C++ library for accelerating mixed-precision matrix multiply-accumulate (MMA) operations leveraging AMD GPU hardware. rocWMMA provides a C++ API to facilitate breaking down matrix multiply-accumulate problems into fragments and distributes block-wise MMA operations in parallel across GPU wavefronts. The API consists of a header library such that MMA acceleration may be compiled directly into GPU kernel device code. This can benefit from compiler optimization in the generation of kernel assembly, and does not incur additional overhead costs of linking to external runtime libraries or having to launch separate kernels.
 
-Conceptually, the rocWMMA API is designed from a 'wave' perspective, such that block-wise API calls are processed by GPU threads coordinated together as a group, or a 'wave'. Importantly, individual threads may access only a portion of a fragment, and there is no guaranteed order or locality of this data. Thread access to fragment data is analogous to vector register access of individual threads. Fragments and block-wise operations therefore can be thought of in a 'wave' perspective.
+Conceptually the rocWMMA API is designed from a 'wave' perspective, such that block-wise API calls are processed by GPU threads coordinated together as a group, or a 'wave'. Importantly, individual threads may only access a portion of a fragment, and there is no guaranteed layout or locality of this data. Thread access to fragment data is analogous to vector register access of individual threads. Fragments and block-wise operations therefore can be thought of in a 'wave' perspective as grouped data buffers and operations.
 
-Thread blocks that contain multiple waves have the added benefit of sharing resources and cooperating. For rocWMMA, this is especially useful for moving data. The header library contains a separate rocWMMA Coop API which facilitates the cooperation of multiple waves in loading and storing fragment data. Keeping this in mind, the order and locality of fragment data in a wave is not guaranteed, and can be thought of in a 'distributed wave' perspective.
+Thread blocks that contain multiple waves have the added benefit of resource sharing and cooperation. For rocWMMA, this is especially useful for moving data that may be shared across multiple waves. The rocWMMA Coop API facilitates cooperation of multiple waves in loading and storing opaque fragments of data. The order and locality of fragment data contribution per wave is not guaranteed, and can be thought of in a 'distributed wave' perspective. Typically waves cooperate in moving data from global memory to shared memory (LDS) and load their own full fragment copies from LDS.
 
-Memory addresses are treated as 1D arrays and the rocWMMA API can opaquely handle both global and shared memory address locations. The library code also includes utilities for mapping 2D grid / matrix coordinates to 1D array coordinates, and supports either row major or column major data layouts. Block-wise dimensions (BlockM,N,K) familiar to block-wise GEMM matrix product algorithms are supported directly by availability of matrix core instructions for the target architecture. Likewise, mixed precision datatypes for input, output and accumulation fragments can be varied as listed below in currently supported configurations.
+Memory addresses are treated as 1D arrays and the rocWMMA API can opaquely handle moving data between both global and shared memory address locations. The library code includes utilities for mapping 2D grid / matrix coordinates to 1D array coordinates, and supports either row major or column major data layouts. Block-wise dimensions (BlockM,N,K) familiar to block-wise GEMM matrix product algorithms are supported directly by availability of matrix instructions for the target architecture. Likewise, mixed precision datatypes for input, output and accumulation fragments can be varied as listed below in currently supported configurations.
 
-rocWMMA is released as a header library, but also includes test and sample projects to validate and illustrate example usages of the C++ API. GEMM matrix multiplication is used as primary validation given the heavy precedent for the library, however the usage portfolio is growing significantly and demonstrates different ways rocWMMA may be consumed.
+rocWMMA is released as a header library and also includes test and sample projects to validate and illustrate example usages of the C++ API. GEMM matrix multiplication is used as primary validation given the heavy precedent for the library, however the usage portfolio is growing significantly to demonstrate different ways rocWMMA may be consumed.
 
-## Minimum GPU Requirements
-* AMD Instinct&trade; class GPU with matrix core support: Minimum gfx908
-* Note: Double precision FP64 datatype support minimum gfx90a +
+## GPU Support
+* AMD CDNA class GPU featuring matrix core support: gfx908, gfx90a as 'gfx9'
+
+`Note: Double precision FP64 datatype support requires gfx90a`
+
+OR
+
+* AMD RDNA3 class GPU featuring AI acceleration support: gfx1100, gfx1101, gfx1102 as 'gfx11'
 
 ## Minimum Software Requirements
 * ROCm stack minimum version 5.4
@@ -26,27 +31,36 @@ Optional:
 * doxygen (for building documentation)
 
 ## Currently supported configurations (ongoing)
+- Wave Size: Wave32 (gfx11), Wave64 (gfx9)
 
 - Matrix Layout <LayoutA, LayoutB, Layout C, LayoutD> (N = col major, T = row major)
+```
+<N, N, N, N>, <N, N, T, T>
 
-    <N, N, N, N>, <N, N, T, T>
+<N, T, N, N>, <N, T, T, T>
 
-    <N, T, N, N>, <N, T, T, T>
+<T, N, N, N>, <T, N, T, T>
 
-    <T, N, N, N>, <T, N, T, T>
+<T, T, N, N>, <T, T, T, T>
 
-    <T, T, N, N>, <T, T, T, T>
+```
 
-- Thread Block Sizes <TBlockX, TBlockY> =
-**Note: TBlockX must be a multiple of WaveSize **
+- Thread Block Sizes <TBlockX, TBlockY>
+
+`Note: TBlockX must be a multiple of WaveSize`
+
 Currently for GEMM, rocWMMA focuses on thread blocks of up to 4 waves for optimal resource usage / occupancy.
 Larger thread block sizes are possible but are not officially supported.
 
-    <64, 1>, <64, 2>, <64, 4>
+```
+WS = Wave Size
 
-    <128, 1>, <128, 2>
+<WS, 1>, <WS, 2>, <WS, 4>
 
-    <256, 1>
+<WS * 2, 1>, <WS * 2, 2>
+
+<WS * 4, 1>
+```
 
 - Data Types <Ti / To / Tc> = <Input type / Output Type / Compute Type>
 
@@ -55,6 +69,8 @@ Larger thread block sizes are possible but are not officially supported.
     Output Type = Matrix C/D
 
     Compute Type = math / accumulation type
+
+`Note: gfx11 only supports BlockM/N = 16`
 
 <table>
     <thead>
@@ -124,7 +140,7 @@ Larger thread block sizes are possible but are not officially supported.
             <td>16</td>
             <td>16</td>
             <td>[16, 256]</td>
-            <td rowspan=2>*= FMA is natively f32, downcasted to fp16</td>
+            <td rowspan=2>*= CDNA native f32 accumulation downcasted to fp16</td>
         </tr>
         <tr>
             <td>32</td>
@@ -162,7 +178,7 @@ Larger thread block sizes are possible but are not officially supported.
             <td>16</td>
             <td>16</td>
             <td>[16, 256]</td>
-            <td rowspan=2>*= FMA is natively f32, downcasted to __half</td>
+            <td rowspan=2>*= CDNA native f32 accumulation downcasted to __half</td>
         </tr>
         <tr>
             <td>32</td>
@@ -200,7 +216,7 @@ Larger thread block sizes are possible but are not officially supported.
             <td>16</td>
             <td>16</td>
             <td>[8, 256]</td>
-            <td rowspan=2>*= FMA is natively f32, downcasted to bf16</td>
+            <td rowspan=2>*= CDNA native f32 accumulation downcasted to bf16</td>
         </tr>
         <tr>
             <td>32</td>
@@ -208,11 +224,11 @@ Larger thread block sizes are possible but are not officially supported.
             <td>[4, 128]</td>
         </tr>
         <tr>
-            <td rowspan=2>f32 / f32 / f32</td>
+            <td rowspan=2>f32 / f32 / f32*</td>
             <td>16</td>
             <td>16</td>
             <td>[4, 256]</td>
-            <td rowspan=2></td>
+            <td rowspan=2>*= Supported only on gfx9</td>
         </tr>
         <tr>
             <td>32</td>
@@ -224,7 +240,7 @@ Larger thread block sizes are possible but are not officially supported.
             <td>16</td>
             <td>16</td>
             <td>[4, 256]</td>
-            <td rowspan=2>*= Supported on gfx90a +</td>
+            <td rowspan=2>*= Supported only on gfx90a +</td>
         </tr>
     </tbody>
   </table>
@@ -243,10 +259,10 @@ Loads data from memory according to Matrix Layout.
 Fragments are stored in packed registers in optimal load / store patterns. In-register elements have no guaranteed order, which have been optimized for loading / storing efficiency.
 
 ### mma_sync
-MFMA accumulation is performed with fragment data. Fragment A elements are multiplied with Fragment B elements and added to the accumulator fragment.
+Matrix multiply-accumulate operation is performed on fragment data. The outer product of Fragment A elements with Fragment B elements is added to the accumulator fragment.
 
 ### synchronize_workgroup
-Performs synchronization across multiple wavefronts in a workgroup. It also ensures the synchronization of shared/global memory accesses across wavefronts.
+Flow control for synchronization across multiple wavefronts in a workgroup. It also ensures the synchronization of shared/global memory accesses across wavefronts.
 
 ## Cooperative API Functions
 
@@ -275,7 +291,7 @@ git push origin <new_branch>
 4. Await CI and approval feedback.
 5. Once approved, merge!
 
-**Please don't forget to install the githooks** as there are triggers for clang formatting in commits.
+`Note: Please don't forget to install the githooks as there are triggers for clang formatting in commits.`
 
 
 ## Build with CMake
@@ -406,25 +422,9 @@ WG - Cooperative load / store per macro tile
 
 **Ad Hoc Test** is an executable that focuses on a specific set of kernel parameters. This is used as a quick mock-up of situational investigation of a particular GEMM kernel.
 
-#### Naming migration path
-To ensure equivalent validation and performance tracking, kernel names from previous releases are migrated as follows:
-```
-Mma Sync Test <=> gemm_PGR0_LB0_MP0_SB_NC
-Mma Sync Multi Test <=> gemm_PGR0_LB0_MP0_MB_NC
-Mma Sync Multi Lds Test <=> gemm_PGR1_LB2_MP0_MB_CP_WV
-```
-
-New kernels implemented for this release:
-```
-gemm_PGR1_LB2_MP0_MB_CP_BLK
-gemm_PGR1_LB2_MP0_MB_CP_WG
-```
-
 Validation tests are post-fixed with "-validate"
 
 Benchmark tests are post-fixed with "-bench"
-
-Barrier tests have been removed from the GEMM test suite.
 
 Run validation tests:
 ```
@@ -508,7 +508,8 @@ Run simple_gemm sample:
 ## hipRTC Support
 
 HIP's run-time compilation (hipRTC) environment allows on-the-fly compilation, loading and execution of device code on AMD GPUs. The rocWMMA library is compatible with hipRTC where it may be leveraged for run-time generated kernels*. A simple GEMM sample has been included to demonstrate compatibility. hipRTC API documentation may be found in the HIP Programming Guide for the latest release located here: https://docs.amd.com/
-*= rocwmma::bfloat16_t datatype not currently supported.
+
+`*= rocwmma::bfloat16_t datatype not currently supported in hipRTC.`
 
 **hipRTC GEMM sample**
 

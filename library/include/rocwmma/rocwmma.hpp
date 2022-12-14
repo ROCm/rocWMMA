@@ -34,10 +34,10 @@
  * \mainpage
  *
  * ROCWMMA is a C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications
- * leveraging AMD's GPU hardware matrix cores through HIP.
+ * leveraging AMD's GPU hardware through HIP.
  * Specifically, the library enhances the portability of CUDA WMMA code to
  * AMD's heterogeneous platform and provides an interface to use underlying
- * hardware matrix multiplication (MFMA) units.
+ * hardware matrix multiplication.
  * The ROCWMMA API exposes memory and MMA (Matrix Multiply Accumulate) functions
  * that operate on blocks, or 'fragments' of data appropriately sized for
  * warp (thread block) execution.
@@ -45,36 +45,46 @@
  * make compile-time optimizations based on available meta-data.
  * This library is an ongoing Work-In-Progress (WIP).
  *
+ * **Supported Hardware**
+ * - CDNA architecture: gfx908, gfx90a (gfx9)
+ * - RDNA3 architecture: gfx1100, gfx1101, gfx1102 (gfx11)
  *
- * **Supported Datatypes**
+ * **Supported Wave Sizes**
+ * - Wave 32 (gfx11 only)
+ * - Wave 64 (gfx9 only)
+ *
+ * **Supported Datatypes (gfx9)**
  *  - Native Data Types
  *      - float = f32
- *      - double = f64
+ *      - double = f64 (*only on gfx90a)
  *      - _Float16 = f16
  *      - int8
- *      - uint8
- *      - int16
- *      - int32
- *      - uint32
  *
+ *  - Non-Native Data Types
+ *      - h16 = __half
+ *      - bf16 = bfloat16
+ *
+ * **Supported Datatypes (gfx11)**
+ *  - Native Data Types
+ *      - _Float16 = f16
+ *      - int8
  *
  *  - Non-Native Data Types
  *      - h16 = __half
  *      - bf16 = bfloat16
  *
  * **Supported Thread Block Sizes**
+ * Total wave count of 4
+ * TBlockX    | TBlockY   |
+ * :---------:|:---------:|
+ * WaveSize   |   1       |
+ * WaveSize   |   2       |
+ * WaveSize   |   4       |
+ * WaveSize*2 |   1       |
+ * WaveSize*2 |   2       |
+ * WaveSize*4 |   1       |
  *
- * TBlockX  | TBlockY   |
- * :-------:|:---------:|
- * 64       |   1       |
- * 64       |   2       |
- * 64       |   4       |
- * 64       |   8       |
- * 128      |   1       |
- * 128      |   2       |
- * 256      |   1       |
- *
- * @note TBlockX must be a multiple of 64
+ * @note TBlockX must be a multiple of WaveSize
  *
  *
  * **Supported Matrix Layouts**
@@ -92,11 +102,10 @@
  *     T    |      N    |      T    |     T      |
  *     T    |      T    |      T    |     T      |
  *
- *
- *
  * **Data Types <Ti / To / Tc> = <InputType / OutputType / ComputeType >**
  * \n
- * **MFMA Block Size = <BlockM, BlockN, BlockK>**
+ * **MMA Block Size = <BlockM, BlockN, BlockK>**
+ * @note gfx11 only supports BlockM/N = 16
  * \n
  * Ti / To / Tc         |   BlockM    |   BlockN    |   BlockK
  * :-------------------:|:-----------:|:-----------:|:-----------:|
@@ -128,13 +137,6 @@
  *
  *
  * \n
- *
- * **LDS Support/Requirements(Only applicable to ROCWMMA v0.3 and below)**
- *
- * Required LDS space is calculated by
- *  - LDSBytes = max(BlockM * blockDim.y, BlockN * blockDim.x / 64) * BlockK * sizeof(InputT)
- *
- *
  * \n
  * **Fragment:**
  *
@@ -150,7 +152,7 @@
  * (Matrix A = M x K, fragA = BlockM x BlockK)
  * Matrix B layout loads / stores matrix rows in the K direction
  * (Matrix B = K x N, fragB = BlockK x BlockN)
- * Matrix C layout loads / stores matrix rows in vector width of 4
+ * Matrix C layout loads / stores matrix rows in the M direction
  * (Matrix C = M x N, fragAcc = BlockM x BlockN)
  *
  * @note Fragments are stored in packed registers, however elements have no guaranteed order.
@@ -158,8 +160,11 @@
  * \n
  * **mma_sync**
  *
- * MFMA accumulation is performed with fragment data. Fragment A cols are multiplied
- * with Fragment B rows and added to the accumulator fragment.
+ * MMA is performed with fragment data. The outer product of Fragment A cols
+ * with Fragment B rows are added back into the accumulator fragment.
+ *
+ * **synchronize_workgroup**
+ * Synchronization point for all wavefronts in a workgroup.
  */
 
 namespace rocwmma
