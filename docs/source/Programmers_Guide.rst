@@ -32,6 +32,8 @@ Internal include files for:
 - Input / output configuration, shapes and traits
 - Layout
 - Mapping Utility
+- Cross-lane operation utility
+- Vector blend utility
 - Packing and unpacking
 - Conversion and broadcasting
 - Load and store
@@ -43,6 +45,10 @@ Internal include files for:
 
 The `samples` directory
 ^^^^^^^^^^^^^^^^^^^^^^^
+samples/hipRTC_gemm.cpp
+''''''''''''''''''
+
+sample code for calling Simple GEMM algorithm demonstration without LDS memory usage and no transpose, from within the hipRTC environment.
 
 samples/sgemmv.cpp
 ''''''''''''''''''
