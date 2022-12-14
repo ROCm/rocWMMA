@@ -69,19 +69,24 @@ packages as described above. If desired, the following instructions can be used 
 
 System Requirements
 ^^^^^^^^^^^^^^^^^^^
-As a general rule, 5GB of system memory is required for a full rocWMMA build. This value can be lower if rocWMMA is built without tests. This value may also increase in the future as more functions are added to rocWMMA.
+As a general rule, 8GB of system memory is required for a full rocWMMA build. This value can be lower if rocWMMA is built without tests. This value may also increase in the future as more functions are added to rocWMMA.
 
 
-Minimum GPU Requirements
-^^^^^^^^^^^^^^^^^^^^^^^^
-* AMD Instinct™ class GPU with matrix core support: Minimum MI-100
-* Note: Double precision FP64 datatype support minimum MI-200 +
+GPU Support
+^^^^^^^^^^^
+AMD CDNA class GPU featuring matrix core support: gfx908, gfx90a as 'gfx9'
+
+`Note: Double precision FP64 datatype support requires gfx90a`
+
+OR
+
+AMD RDNA3 class GPU featuring AI acceleration support: gfx1100, gfx1101, gfx1102 as 'gfx11'
 
 
 Download rocWMMA
 ^^^^^^^^^^^^^^^^
 
-The rocWMMA source code is available at the `rocWMMA github page <https://github.com/ROCmSoftwarePlatform/rocWMMA>`_. rocWMMA has a minimum ROCm support version 4.3.
+The rocWMMA source code is available at the `rocWMMA github page <https://github.com/ROCmSoftwarePlatform/rocWMMA>`_. rocWMMA has a minimum ROCm support version 5.4.
 Check the ROCm Version on your system. For Ubuntu use
 
 ::
@@ -122,35 +127,35 @@ Below are the project options available to build rocWMMA library with/without cl
 .. tabularcolumns::
    |C|C|C|
 
-+------------------------------+-------------------------------------+-----------------------------------------------+
-|Option                        |Description                          |Default Value                                  |
-+==============================+=====================================+===============================================+
-|AMDGPU_TARGETS                |Build code for specific GPU target(s)|	gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+    |
-+------------------------------+-------------------------------------+-----------------------------------------------+
-|ROCWMMA_BUILD_TESTS           |Build Tests                          |ON                                             |
-+------------------------------+-------------------------------------+-----------------------------------------------+
-|ROCWMMA_BUILD_SAMPLES         |Build Samples                        |ON                                             |
-+------------------------------+-------------------------------------+-----------------------------------------------+
-|ROCWMMA_BUILD_ASSEMBLY        |Generate assembly files              |OFF                                            |
-+------------------------------+-------------------------------------+-----------------------------------------------+
-|ROCWMMA_BUILD_VALIDATION_TESTS|Build validation tests               |ON (requires ROCWMMA_BUILD_TESTS=ON)           |
-+------------------------------+-------------------------------------+-----------------------------------------------+
-|ROCWMMA_BUILD_BENCHMARK_TESTS |Build benchmark tests                |OFF (requires ROCWMMA_BUILD_TESTS=ON)          |
-+------------------------------+-------------------------------------+-----------------------------------------------+
-|ROCWMMA_BUILD_EXTENDED_TESTS  |Build extended testing coverage      |OFF (requires ROCWMMA_BUILD_TESTS=ON)          |
-+------------------------------+-------------------------------------+-----------------------------------------------+
-|WMMA_VALIDATE_WITH_ROCBLAS    |Use rocBLAS for validation tests     |ON (requires ROCWMMA_BUILD_VALIDATION_TESTS=ON)|
-+------------------------------+-------------------------------------+-----------------------------------------------+
-|WMMA_BENCHMARK_WITH_ROCBLAS   |Include rocBLAS benchmarking data    |OFF (requires ROCWMMA_BUILD_BENCHMARK_TESTS=ON)|
-+------------------------------+-------------------------------------+-----------------------------------------------+
++------------------------------+-------------------------------------+----------------------------------------------------------------------+
+|Option                        |Description                          |Default Value                                                         |
++==============================+=====================================+======================================================================+
+|AMDGPU_TARGETS                |Build code for specific GPU target(s)|gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx1100;gfx1101;gfx1102     |
++------------------------------+-------------------------------------+----------------------------------------------------------------------+
+|ROCWMMA_BUILD_TESTS           |Build Tests                          |ON                                                                    |
++------------------------------+-------------------------------------+----------------------------------------------------------------------+
+|ROCWMMA_BUILD_SAMPLES         |Build Samples                        |ON                                                                    |
++------------------------------+-------------------------------------+----------------------------------------------------------------------+
+|ROCWMMA_BUILD_ASSEMBLY        |Generate assembly files              |OFF                                                                   |
++------------------------------+-------------------------------------+----------------------------------------------------------------------+
+|ROCWMMA_BUILD_VALIDATION_TESTS|Build validation tests               |ON (requires ROCWMMA_BUILD_TESTS=ON)                                  |
++------------------------------+-------------------------------------+----------------------------------------------------------------------+
+|ROCWMMA_BUILD_BENCHMARK_TESTS |Build benchmark tests                |OFF (requires ROCWMMA_BUILD_TESTS=ON)                                 |
++------------------------------+-------------------------------------+----------------------------------------------------------------------+
+|ROCWMMA_BUILD_EXTENDED_TESTS  |Build extended testing coverage      |OFF (requires ROCWMMA_BUILD_TESTS=ON)                                 |
++------------------------------+-------------------------------------+----------------------------------------------------------------------+
+|WMMA_VALIDATE_WITH_ROCBLAS    |Use rocBLAS for validation tests     |ON (requires ROCWMMA_BUILD_VALIDATION_TESTS=ON)                       |
++------------------------------+-------------------------------------+----------------------------------------------------------------------+
+|WMMA_BENCHMARK_WITH_ROCBLAS   |Include rocBLAS benchmarking data    |OFF (requires ROCWMMA_BUILD_BENCHMARK_TESTS=ON)                       |
++------------------------------+-------------------------------------+----------------------------------------------------------------------+
 
 
 Build only library
 ^^^^^^^^^^^^^^^^^^
 
-CMake has a minimum version requirement 3.5.
+ROCm-cmake has a minimum version requirement 0.8.0 for ROCm 5.3.
 
-Minimum ROCm version support is 4.3.
+Minimum ROCm version support is 5.4.
 
 By default, the project is configured as Release mode.
 
@@ -168,7 +173,7 @@ Here are some other example project configurations:
 +===================================+====================================================================================================================+
 |            Basic                  |                                CC=hipcc CXX=hipcc cmake -B<build_dir> .                                            |
 +-----------------------------------+--------------------------------------------------------------------------------------------------------------------+
-|        Targeting MI100            |                   CC=hipcc CXX=hipcc cmake -B<build_dir> . -DAMDGPU_TARGETS=gfx908:xnack-                          |
+|        Targeting gfx908           |                   CC=hipcc CXX=hipcc cmake -B<build_dir> . -DAMDGPU_TARGETS=gfx908:xnack-                          |
 +-----------------------------------+--------------------------------------------------------------------------------------------------------------------+
 |          Debug build              |                    CC=hipcc CXX=hipcc cmake -B<build_dir> . -DCMAKE_BUILD_TYPE=Debug                               |
 +-----------------------------------+--------------------------------------------------------------------------------------------------------------------+
@@ -217,7 +222,7 @@ GEMM tests cover block-wise Generalized Matrix Multiplication (GEMM) implemented
 Unit tests cover various aspects of rocWMMA API and internal functionality.
 
 rocWMMA can build both validation and benchmark tests. The library uses CPU or rocBLAS methods for validation (where available) and benchmark comparisons based on the provided project option.
-By default, the project is linked against rocBLAS for validating results. 
+By default, the project is linked against rocBLAS for validating results.
 Minimum ROCBLAS library version requirement is 2.39.0 for ROCm 4.3.0
 
 To build library and tests, run the following command :
@@ -235,7 +240,7 @@ executable name                        description
 ====================================== ===========================================================================================================
 dlrm/dlrm_dot_test-*                   a DLRM implementation using rocWMMA API
 dlrm/dlrm_dot_lds_test-*               a DLRM implementation using rocWMMA API with LDS shared memory
-gemm/mma_sync_test-*                   a simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API 
+gemm/mma_sync_test-*                   a simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API
 gemm/mma_sync_multi_test-*             a modified GEMM operation, each wave targets a sub-grid of output blocks using rocWMMA API
 gemm/mma_sync_multi_ad_hoc_test-*      an adhoc version of mma_sync_multi_test-*
 gemm/mma_sync_multi_lds_test-*         a modified GEMM operation, each wave targets a sub-grid of output blocks using LDS memory and rocWMMA API and wave-level collaboration
@@ -243,13 +248,17 @@ gemm/mma_sync_multi_lds_ad_hoc_test-*  an adhoc version of mma_sync_multi_lds_te
 gemm/mma_sync_coop_wg_test-*           a modified GEMM operation, each wave targets a sub-grid of output blocks using LDS memory and rocWMMA API and workgroup-level collaboration
 gemm/mma_sync_coop_wg_ad_hoc_test-*    an adhoc version of mma_sync_coop_wg_test-*
 gemm/barrier_test-*                    a simple GEMM operation with wave synchronization
+unit/contamination_test                tests against contamination of pristine data for loads and stores
+unit/cross_lane_ops_test               tests cross-lane vector operations
 unit/fill_fragment_test                tests fill_fragment API function
+unit/io_shape_test                     tests input/output shape meta data
+unit/io_traits_test                    tests input/output logistical meta data
+unit/layout_test                       tests accuracy of internal matrix layout patterns
 unit/load_store_matrix_sync_test       tests load_matrix_sync and store_matrix_sync API functions
 unit/load_store_matrix_coop_sync_test  tests load_matrix_coop_sync and store_matrix_coop_sync API functions
-unit/contamination_test                tests against contamination of pristine data for loads and stores
-unit/layout_test                       tests accuracy of internal matrix layout patterns
-unit/mapping_util_test                 tests mapping utilities used in rocWMMA implementations
-unit/vector_iterator_test              tests internal vector storage implementation
+unit/map_util_test                     tests mapping utilities used in rocWMMA implementations
+unit/vector_iterator_test              tests internal vector storage iteration implementation
+unit/vector_test                       tests internal vector storage implementation
 ====================================== ===========================================================================================================
 
 *= validate: executables that compare outputs for correctness against reference sources such as CPU or rocBLAS calculations.

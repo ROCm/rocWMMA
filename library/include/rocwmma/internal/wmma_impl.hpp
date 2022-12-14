@@ -61,7 +61,7 @@ namespace rocwmma
             }
         };
 
-// WMMA instructions are specific to NAVI architecture
+// WMMA instructions are specific to gfx11 architecture
 #if ROCWMMA_ARCH_NAVI
 
         struct WmmaCtrlFlags

@@ -299,7 +299,7 @@ git push origin <new_branch>
 ### Project options
 |Option|Description|Default Value|
 |---|---|---|
-|AMDGPU_TARGETS|Build code for specific GPU target(s)|gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+|
+|AMDGPU_TARGETS|Build code for specific GPU target(s)|gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx1100;gfx1101;gfx1102|
 |ROCWMMA_BUILD_TESTS|Build Tests|ON|
 |ROCWMMA_BUILD_SAMPLES|Build Samples|ON|
 |ROCWMMA_BUILD_DOCS|Build doxygen documentation from code|OFF|
@@ -349,11 +349,46 @@ ctest --output-on-failure
 ```
 Otherwise, individual tests can be run as below.
 
+### Contamination Test
+Unit tests for loading and storing API to verify data boundaries are not crossed and pristine data remains untouched.
+Run validation:
+```
+<build_dir>/test/unit/contamination_test
+```
+
+### Cross-Lane Ops Test
+Unit tests for vector cross-lane operations.
+Run validation:
+```
+<build_dir>/test/unit/cross_lane_ops_test
+```
+
 ### Fill Fragment Test
 Tests the rocwmma::fill_fragment API function for all supported configurations. Tests broadcasting of a desired value to all elements in the fragment.
 Run validation:
 ```
 <build_dir>/test/unit/fill_fragment_test
+```
+
+### I/O Shape Test
+Unit test for I/O shape meta-data generation on host machine
+Run validation:
+```
+<build_dir>/test/unit/io_shape_test
+```
+
+### I/O Traits Test
+Unit test for I/O traits meta-data generation on host machine
+Run validation:
+```
+<build_dir>/test/unit/io_traits_test
+```
+
+### Layout Test
+Unit tests for the internal collect / scatter matrix element to register mapping transforms.
+Run validation:
+```
+<build_dir>/test/unit/layout_test
 ```
 
 ### Load / Store Matrix Sync Test
@@ -364,25 +399,11 @@ Run validation:
 <build_dir>/test/unit/load_store_matrix_coop_sync_test
 ```
 
-### Contamination Test
-Unit tests for loading and storing API to verify data boundaries are not crossed and pristine data remains untouched.
-Run validation:
-```
-<build_dir>/test/unit/contamination_test
-```
-
-### Layout Test
-Unit tests for the internal collect / scatter matrix element to register mapping transforms.
-Run validation:
-```
-<build_dir>/test/unit/layout_test
-```
-
-### Mapping Util Test
+### Map Util Test
 Unit tests for the utility class used to calculate transforms and offsets between grid, matrix and data coordinate systems.
 Run validation:
 ```
-<build_dir>/test/unit/mapping_util_test
+<build_dir>/test/unit/map_util_test
 ```
 
 ### Vector Iterator Test
@@ -390,6 +411,13 @@ Unit tests for internal vector iteration and navigation during access and storag
 Run validation:
 ```
 <build_dir>/test/unit/vector_iterator_test
+```
+
+### Vector Test
+Unit tests for internal vector storage.
+Run validation:
+```
+<build_dir>/test/unit/vector_test
 ```
 
 ### GEMM tests

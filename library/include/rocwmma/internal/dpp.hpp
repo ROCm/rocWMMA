@@ -202,7 +202,7 @@ namespace rocwmma
      *
      * Swap (Subgroups[2])
      *
-     * WaveSize* = architecture wave size (wave64 for MI* and wave32 for Navi3x)
+     * WaveSize* = architecture wave size (wave64 for gfx9 and wave32 for gfx11)
      *
      * The dpp backend does not support Fft. It also has limited group size support for
      * functionalities.
