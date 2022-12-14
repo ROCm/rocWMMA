@@ -33,6 +33,14 @@ namespace rocwmma
 
     namespace CrossLaneOps
     {
+        /**
+         * \defgroup Cross-Lane Operations
+         *
+         * @brief Defines generalized cross-lane operation meta-data and properties.
+         * Meta-data is used to provide information and ultimately steer controls
+         * implementing the functional backends such as dpp, swizzle or permute.
+         */
+
         enum Properties : uint32_t
         {
             // 32b Element Operation IDs
