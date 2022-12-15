@@ -124,16 +124,16 @@ namespace rocwmma
 ///
 #if ROCWMMA_ARCH_NAVI
     static_assert((bool)(ROCWMMA_WAVE32_MODE) && !(bool)(ROCWMMA_WAVE64_MODE),
-                  "rocWMMA supports only wave32 for navi arch");
+                  "rocWMMA supports only wave32 for gfx11 arch");
     static_assert((bool)(ROCWMMA_BLOCK_DIM_16_SUPPORTED) && !(bool)(ROCWMMA_BLOCK_DIM_32_SUPPORTED),
-                  "rocWMMA supports only block size of 16 for navi arch");
+                  "rocWMMA supports only block size of 16 for gfx11 arch");
 #endif
 
 #if ROCWMMA_ARCH_MI
     static_assert(!(bool)(ROCWMMA_WAVE32_MODE) && (bool)(ROCWMMA_WAVE64_MODE),
-                  "rocWMMA supports only wave64 for MI arch");
+                  "rocWMMA supports only wave64 for gfx9 arch");
     static_assert((bool)(ROCWMMA_BLOCK_DIM_16_SUPPORTED) && (bool)(ROCWMMA_BLOCK_DIM_32_SUPPORTED),
-                  "rocWMMA requires block size of 16 and 32 for MI arch");
+                  "rocWMMA requires block size of 16 and 32 for gfx9 arch");
 #endif
 
 } // namespace rocwmma

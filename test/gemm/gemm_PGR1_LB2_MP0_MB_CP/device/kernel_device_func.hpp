@@ -27,12 +27,9 @@
 #ifndef ROCWMMA_GEMM_TEST_DEVICE_FUNC
 #define ROCWMMA_GEMM_TEST_DEVICE_FUNC
 
-// The testing interface instantiates fp64 typed tests for all
-// target devices. MI-100 mfma needs to be instantiated at compile time,
-// but it doesn't do anything except provide a deprecation warning (e.g. not supported).
-// A run-time check will abort the MI-100 fp64 tests anyway.
-// Silence this warning for MmaSyncTests, as test coverage is needed
-// for fp64 on all other targets which succeed MI-100.
+// Silence warnings for calls on unsupported architectures.
+// Unsupported architectures will generate no-ops and test
+// will be avoided at runtime anyway.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "gemm_config.hpp"
