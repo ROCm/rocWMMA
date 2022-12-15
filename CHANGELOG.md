@@ -1,5 +1,33 @@
 # Change Log for rocWMMA
 Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://rocwmma.readthedocs.io/en/latest/).
+## rocWMMA 1.0 for ROCm 5.5.0
+### Added
+- Added support for wave32 on gfx11+
+- Added infrastructure changes to support hipRTC
+- Added performance tracking system
+
+### Changed
+- Modified the assignment of hardware information
+- Modified the data access for unsigned datatypes
+- Added library config to support multiple architectures
+
+## rocWMMA 0.9 for ROCm 5.4.0
+### Added
+- Added gemm driver APIs for flow control builtins
+- Added benchmark logging systems
+- Restructured tests to follow naming convention. Added macros for test generation
+
+### Changed
+- Changed CMake to accomodate the modified test infrastructure
+- Fine tuned the multi-block kernels with and without lds
+- Adjusted Maximum Vector Width to dWordx4 Width
+- Updated Efficiencies to display as whole number percentages
+- Updated throughput from GFlops/s to TFlops/s
+- Reset the ad-hoc tests to use smaller sizes
+- Modified the output validation to use CPU-based implementation against rocWMMA
+- Modified the extended vector test to return error codes for memory allocation failures
+
+
 ## rocWMMA 0.8 for ROCm 5.3.0
 ### Added
 - Added runtime checks to disable tests on non-target GPUS
