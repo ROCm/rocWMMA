@@ -53,7 +53,7 @@ namespace rocwmma
 
 #if ROCWMMA_ARCH_NAVI
 
-    // Unlock the WMMA for NAVI cards
+    // Unlock the WMMA builtins for gfx11 cards
     // Supported Input/Compute types:
     // float16_t / float16_t
     // float16_t / float32_t
@@ -153,12 +153,14 @@ namespace rocwmma
                 auto wmmaItB = makeVectorIterator<VecTraitsA::size() / 2u>(regsB_Wmma).begin();
 
                 // Duplicate the upper/lower inputs
-                // Lower has even rows
-                // Upper has odd rows
+                // Lower has even cols of A in K direction (BlockBCast16<0>)
+                // Upper has odd cols of A in K direction (BlockBCast16<1>)
                 (*wmmaItA) = Permute<PermuteOps::BlockBCast16<0>>::exec(*aIt, detail::laneId());
                 wmmaItA++;
                 (*wmmaItA) = Permute<PermuteOps::BlockBCast16<1>>::exec(*aIt, detail::laneId());
 
+                // Lower has even rows of B in K direction (BlockBCast16<0>)
+                // Upper has odd rows of B in K direction (BlockBCast16<1>)
                 (*wmmaItB) = Permute<PermuteOps::BlockBCast16<0>>::exec(*bIt, detail::laneId());
                 wmmaItB++;
                 (*wmmaItB) = Permute<PermuteOps::BlockBCast16<1>>::exec(*bIt, detail::laneId());
