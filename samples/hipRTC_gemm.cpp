@@ -24,7 +24,9 @@
  *
  *******************************************************************************/
 
+#include <cstdlib>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include <hip/hip_runtime.h>
@@ -208,6 +210,13 @@ char const* src = source.c_str();
 
 int main()
 {
+    /// Determine the rocm path to use for build
+    // 1. Environment variable
+    // 2. Default path
+    std::string rocm_path
+        = (std::getenv("ROCM_PATH") == nullptr) ? "/opt/rocm" : std::getenv("ROCM_PATH");
+    std::string rocWMMAIncludePath = std::string("-I") + rocm_path + std::string("/include");
+
     // gemm parameters
     uint32_t  m     = 256;
     uint32_t  n     = 256;
@@ -219,7 +228,7 @@ int main()
     CHECK_HIPRTC_ERROR(hiprtcCreateProgram(&prog, src, nullptr, 0, nullptr, nullptr));
     hiprtcResult result;
     hiprtcResult logResult;
-    const char*  opts[] = {"-D__HIP_PLATFORM_AMD__", "-I../library/include"};
+    const char*  opts[] = {"-D__HIP_PLATFORM_AMD__", rocWMMAIncludePath.c_str()};
 
     result = hiprtcCompileProgram(prog, sizeof(opts) / sizeof(opts[0]), opts);
     if(result != HIPRTC_SUCCESS)
