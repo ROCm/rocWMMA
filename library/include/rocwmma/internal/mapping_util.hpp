@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -46,25 +46,25 @@ namespace rocwmma
             using WorkgroupDimT   = Coord2d;
 
             // Current lane normalized to [0, 63].
-            __device__ static inline uint32_t localLaneId();
+            ROCWMMA_DEVICE static inline uint32_t localLaneId();
 
             // Local wave coordinate relative to current workgroup.
-            __device__ constexpr static inline WaveCoordT localWaveCoord();
+            ROCWMMA_DEVICE constexpr static inline WaveCoordT localWaveCoord();
 
             // Global wave grid coordinate relative to all workgroups.
-            __device__ static inline WaveCoordT globalWaveCoord();
+            ROCWMMA_DEVICE static inline WaveCoordT globalWaveCoord();
 
             // Global workgroup Id
-            __device__ constexpr static inline WorkgroupCoordT workgroupCoord();
+            ROCWMMA_DEVICE constexpr static inline WorkgroupCoordT workgroupCoord();
 
             // Size of workgroup, normalized to wave count.
             template <bool IsConst                        = (TBlockX > 0u && TBlockY > 0u),
                       typename std::enable_if_t<IsConst>* = nullptr>
-            __device__ constexpr static inline WorkgroupDimT workgroupDim();
+            ROCWMMA_DEVICE constexpr static inline WorkgroupDimT workgroupDim();
 
             template <bool IsConst                         = (TBlockX > 0u && TBlockY > 0u),
                       typename std::enable_if_t<!IsConst>* = nullptr>
-            __device__ static inline WorkgroupDimT workgroupDim();
+            ROCWMMA_DEVICE static inline WorkgroupDimT workgroupDim();
         };
 
         /*
@@ -77,7 +77,7 @@ namespace rocwmma
             using BlockCoordT  = Coord2d;
 
             // Global matrix coordinate space (row, col) transform for a given block grid coordinate.
-            __device__ static inline MatrixCoordT fromBlockCoord(BlockCoordT const& blockCoord);
+            ROCWMMA_DEVICE static inline MatrixCoordT fromBlockCoord(BlockCoordT const& blockCoord);
         };
 
         /*
@@ -96,11 +96,11 @@ namespace rocwmma
             };
 
             // Determine the leading dimension of a matrix.
-            __device__ constexpr static inline auto leadingDim(MatrixSizeT const& matrixSize);
+            ROCWMMA_DEVICE constexpr static inline auto leadingDim(MatrixSizeT const& matrixSize);
 
             // Global data coordinate space (1d element) transform for a matrix coordinate.
-            __device__ constexpr static inline auto fromMatrixCoord(MatrixCoordT const& matrixCoord,
-                                                                    uint32_t            leadingDim);
+            ROCWMMA_DEVICE constexpr static inline auto
+                fromMatrixCoord(MatrixCoordT const& matrixCoord, uint32_t leadingDim);
         };
 
         template <>
@@ -153,51 +153,52 @@ workgroup.
         /// Current wave perspective
 
         // Current lane of current wave
-        __device__ static inline uint32_t laneId();
+        ROCWMMA_DEVICE static inline uint32_t laneId();
 
         // Local wave coordinate relative to workgroup
-        __device__ static inline WaveCoordT waveCoord();
+        ROCWMMA_DEVICE static inline WaveCoordT waveCoord();
 
         // Global block (grid) coordinate of current wave
-        __device__ static inline BlockCoordT blockCoord();
+        ROCWMMA_DEVICE static inline BlockCoordT blockCoord();
 
         // Matrix coordinate of current wave
-        __device__ static inline MatrixCoordT matrixCoord();
+        ROCWMMA_DEVICE static inline MatrixCoordT matrixCoord();
 
         // Data address of current wave
-        __device__ static inline DataT const* dataCoord(DataT const* baseAddr, uint32_t ldm);
-        __device__ static inline DataT*       dataCoord(DataT* baseAddr, uint32_t ldm);
+        ROCWMMA_DEVICE static inline DataT const* dataCoord(DataT const* baseAddr, uint32_t ldm);
+        ROCWMMA_DEVICE static inline DataT*       dataCoord(DataT* baseAddr, uint32_t ldm);
 
         /// Current workgroup perspective
 
-        __device__ static inline WorkgroupDimT workgroupDim();
+        ROCWMMA_DEVICE static inline WorkgroupDimT workgroupDim();
 
         /// Coordinate override helpers
 
         // Current global wave coordinate with row override
-        __device__ static inline BlockCoordT blockCoordM(uint32_t m);
+        ROCWMMA_DEVICE static inline BlockCoordT blockCoordM(uint32_t m);
 
         // Current global wave coordinate with col override
-        __device__ static inline BlockCoordT blockCoordN(uint32_t n);
+        ROCWMMA_DEVICE static inline BlockCoordT blockCoordN(uint32_t n);
 
         // Matrix coordinate of current wave with row override
-        __device__ static inline MatrixCoordT matrixCoordM(uint32_t m);
+        ROCWMMA_DEVICE static inline MatrixCoordT matrixCoordM(uint32_t m);
 
         // Matrix coordinate of current wave with col override
-        __device__ static inline MatrixCoordT matrixCoordN(uint32_t n);
+        ROCWMMA_DEVICE static inline MatrixCoordT matrixCoordN(uint32_t n);
 
         /// Conversion helpers
 
         // Convert from any block coord to matrix coord
-        __device__ static inline MatrixCoordT matrixCoord(BlockCoordT const& blockCoord);
+        ROCWMMA_DEVICE static inline MatrixCoordT matrixCoord(BlockCoordT const& blockCoord);
 
         // Convert from any matrix coord to data offset
-        __device__ static inline uint32_t dataOffset(MatrixCoordT const& matrixCoord, uint32_t ldm);
+        ROCWMMA_DEVICE static inline uint32_t dataOffset(MatrixCoordT const& matrixCoord,
+                                                         uint32_t            ldm);
 
         // Convert from any matrix coord to data address
-        __device__ static inline DataT const*
+        ROCWMMA_DEVICE static inline DataT const*
             dataCoord(DataT const* baseAddr, MatrixCoordT const& matrixCoord, uint32_t ldm);
-        __device__ static inline DataT*
+        ROCWMMA_DEVICE static inline DataT*
             dataCoord(DataT* baseAddr, MatrixCoordT const& matrixCoord, uint32_t ldm);
     };
 

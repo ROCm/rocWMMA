@@ -56,7 +56,7 @@ namespace rocwmma
         struct amdgcn_ds_bpermute
         {
             template <typename InputT>
-            __device__ static inline InputT exec(InputT input, uint32_t laneId)
+            ROCWMMA_DEVICE static inline InputT exec(InputT input, uint32_t laneId)
             {
                 // NOTE: final address is laneId * 4
                 reinterpret_cast<uint32_t&>(input) = __builtin_amdgcn_ds_bpermute(
@@ -69,7 +69,7 @@ namespace rocwmma
         struct amdgcn_ds_permute
         {
             template <typename InputT>
-            __device__ static inline InputT exec(InputT input, uint32_t laneId)
+            ROCWMMA_DEVICE static inline InputT exec(InputT input, uint32_t laneId)
             {
                 // NOTE: final address is laneId * 4
                 reinterpret_cast<uint32_t&>(input) = __builtin_amdgcn_ds_permute(

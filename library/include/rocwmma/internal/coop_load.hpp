@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -61,12 +61,12 @@ namespace rocwmma
 
         using LoadVecTraits = VecTraits<typename Traits::LoadT>;
 
-        __device__ static inline void exec(typename Traits::OutputT& data,
-                                           DataT const*              dataPtr,
-                                           uint32_t                  ldm,
-                                           uint32_t                  waveIndex,
-                                           uint32_t                  waveCount,
-                                           uint32_t                  splitCount)
+        ROCWMMA_DEVICE static inline void exec(typename Traits::OutputT& data,
+                                               DataT const*              dataPtr,
+                                               uint32_t                  ldm,
+                                               uint32_t                  waveIndex,
+                                               uint32_t                  waveCount,
+                                               uint32_t                  splitCount)
         {
             // Ensure that splitCount doesn't exceed our maximum
             splitCount = std::min(splitCount, (uint32_t)Traits::MaxSplit);
@@ -112,10 +112,10 @@ namespace rocwmma
         }
 
         template <uint32_t WaveCount, uint32_t SplitCount>
-        __device__ static inline void exec(typename Traits::OutputT& data,
-                                           DataT const*              dataPtr,
-                                           uint32_t                  ldm,
-                                           uint32_t                  waveIndex)
+        ROCWMMA_DEVICE static inline void exec(typename Traits::OutputT& data,
+                                               DataT const*              dataPtr,
+                                               uint32_t                  ldm,
+                                               uint32_t                  waveIndex)
         {
             // Ensure that splitCount doesn't exceed our maximum
             constexpr auto splitCount = std::min(SplitCount, (uint32_t)Traits::MaxSplit);

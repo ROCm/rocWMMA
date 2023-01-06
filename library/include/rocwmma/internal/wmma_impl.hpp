@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +37,7 @@ namespace rocwmma
         struct amdgcn_wmma
         {
             template <typename RegsA, typename RegsB, typename RegsC>
-            __device__ static inline auto exec(RegsA&& regsA, RegsB&& regsB, RegsC& regsC)
+            ROCWMMA_DEVICE static inline auto exec(RegsA&& regsA, RegsB&& regsB, RegsC& regsC)
             {
                 return regsC;
             }
@@ -47,14 +47,14 @@ namespace rocwmma
         struct AccumAdapter
         {
             template <typename IncomingT>
-            __device__ static inline auto unpack(IncomingT&& accumVec)
+            ROCWMMA_DEVICE static inline auto unpack(IncomingT&& accumVec)
             {
                 // No unpack needed
                 return accumVec;
             }
 
             template <typename IncomingT>
-            __device__ static inline auto pack(IncomingT&& accumVec)
+            ROCWMMA_DEVICE static inline auto pack(IncomingT&& accumVec)
             {
                 // No pack needed
                 return accumVec;
@@ -99,9 +99,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x8;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
@@ -130,9 +130,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x8;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
@@ -173,9 +173,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x8;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
@@ -204,9 +204,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x8;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
@@ -235,9 +235,9 @@ namespace rocwmma
                 using DRegsT = AccRegI32x8;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
@@ -264,7 +264,7 @@ namespace rocwmma
             using PackedT    = typename PackTraits::PackedT;
 
             template <typename IncomingT>
-            __device__ static inline auto unpack(IncomingT const& accumVec)
+            ROCWMMA_DEVICE static inline auto unpack(IncomingT const& accumVec)
             {
                 // Accum data is comes in packed. WMMA accumulator needs unpacked data.
                 using VecTraitsIn = VecTraits<IncomingT>;
@@ -316,7 +316,7 @@ namespace rocwmma
             }
 
             template <typename IncomingT>
-            __device__ static inline auto pack(IncomingT const& accumVec)
+            ROCWMMA_DEVICE static inline auto pack(IncomingT const& accumVec)
             {
                 // Accum data comes out as unpacked, but with extended 32b elements
                 using VecTraitsIn = VecTraits<IncomingT>;

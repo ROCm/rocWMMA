@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,7 +44,7 @@ namespace rocwmma
     struct Wmma : public detail::amdgcn_wmma<InputT, ComputeT, BlockM, BlockN>
     {
         template <typename InputARegsT, typename InputBRegsT, typename InputCRegsT>
-        __device__ static inline auto
+        ROCWMMA_DEVICE static inline auto
             exec(InputARegsT const& regsA, InputBRegsT const& regsB, InputCRegsT const& regsC)
         {
             return regsC;
@@ -122,7 +122,7 @@ namespace rocwmma
                       "WMMA backend input size mismatch");
 
         template <typename InputARegsT, typename InputBRegsT, typename InputCRegsT>
-        __device__ static inline auto
+        ROCWMMA_DEVICE static inline auto
             exec(InputARegsT const& regsA, InputBRegsT const& regsB, InputCRegsT const& regsC)
         {
             // Inputs from outside will come in as fully packed

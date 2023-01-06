@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -46,7 +46,7 @@ namespace rocwmma
 
             using LoadT = VecT<DataT, VectorWidth>;
 
-            __device__ static inline void
+            ROCWMMA_DEVICE static inline void
                 exec(LoadT& data, DataT const* dataPtr, index_t offset = 0)
             {
                 data = *reinterpret_cast<LoadT const*>(&(dataPtr[offset]));
@@ -75,7 +75,7 @@ namespace rocwmma
 
         using LoadVecTraits = VecTraits<typename Traits::LoadT>;
 
-        __device__ static void
+        ROCWMMA_DEVICE static void
             exec(typename Traits::OutputT& data, DataT const* dataPtr, uint32_t ldm)
         {
             // Arrange wave threads to starting matrix layout offsets.

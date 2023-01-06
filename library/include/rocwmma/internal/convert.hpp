@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,7 +38,7 @@ namespace rocwmma
         struct amdgcn_convert
         {
             template <uint32_t NumRegs>
-            __device__ static inline auto exec(VecT<InputT, NumRegs> const& regsIn)
+            ROCWMMA_DEVICE static inline auto exec(VecT<InputT, NumRegs> const& regsIn)
                 -> VecT<OutputT, NumRegs>
             {
                 VecT<OutputT, NumRegs> result;
@@ -56,7 +56,7 @@ namespace rocwmma
         struct amdgcn_convert<T, T>
         {
             template <typename IncomingT>
-            __device__ static inline auto exec(IncomingT&& regsIn) -> IncomingT&&
+            ROCWMMA_DEVICE static inline auto exec(IncomingT&& regsIn) -> IncomingT&&
             {
                 return std::forward<IncomingT>(regsIn);
             }
@@ -66,7 +66,7 @@ namespace rocwmma
         struct amdgcn_convert<hfloat16_t, float32_t>
         {
             template <uint32_t NumRegs>
-            __device__ static inline auto exec(VecT<hfloat16_t, NumRegs> const& regsIn)
+            ROCWMMA_DEVICE static inline auto exec(VecT<hfloat16_t, NumRegs> const& regsIn)
                 -> VecT<float32_t, NumRegs>
             {
                 VecT<float32_t, NumRegs> result;
@@ -84,7 +84,7 @@ namespace rocwmma
         struct amdgcn_convert<float32_t, hfloat16_t>
         {
             template <uint32_t NumRegs>
-            __device__ static inline auto exec(VecT<float32_t, NumRegs> const& regsIn)
+            ROCWMMA_DEVICE static inline auto exec(VecT<float32_t, NumRegs> const& regsIn)
                 -> VecT<hfloat16_t, NumRegs>
             {
                 VecT<hfloat16_t, NumRegs> result;
