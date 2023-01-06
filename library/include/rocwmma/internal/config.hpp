@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -135,6 +135,19 @@ namespace rocwmma
     static_assert((bool)(ROCWMMA_BLOCK_DIM_16_SUPPORTED) && (bool)(ROCWMMA_BLOCK_DIM_32_SUPPORTED),
                   "rocWMMA requires block size of 16 and 32 for gfx9 arch");
 #endif
+
+///
+/// Host and Device symbols
+///
+#define ROCWMMA_DEVICE __device__
+
+#if !defined(__HIPCC_RTC__)
+#define ROCWMMA_HOST __host__
+#else
+#define ROCWMMA_HOST
+#endif
+
+#define ROCWMMA_HOST_DEVICE ROCWMMA_HOST ROCWMMA_DEVICE
 
 } // namespace rocwmma
 

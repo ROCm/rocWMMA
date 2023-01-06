@@ -35,11 +35,7 @@
 #include <utility>
 #endif // !__HIPCC_RTC__
 
-#if defined(__HIPCC_RTC__)
-#define ROCWMMA_HOST_DEVICE __device__
-#else
-#define ROCWMMA_HOST_DEVICE __host__ __device__
-#endif
+#include <rocwmma/internal/config.hpp>
 
 namespace rocwmma
 {
