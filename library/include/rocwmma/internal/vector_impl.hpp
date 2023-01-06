@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2022 Advanced Micro Devices, Inc.
+ * Copyright 2022-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,7 +38,7 @@ namespace rocwmma
             struct Add
             {
                 template <typename TT>
-                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs, TT rhs)
                 {
                     return lhs + rhs;
                 }
@@ -46,7 +46,7 @@ namespace rocwmma
             struct Sub
             {
                 template <typename TT>
-                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs, TT rhs)
                 {
                     return lhs - rhs;
                 }
@@ -54,7 +54,7 @@ namespace rocwmma
             struct Mult
             {
                 template <typename TT>
-                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs, TT rhs)
                 {
                     return lhs * rhs;
                 }
@@ -62,7 +62,7 @@ namespace rocwmma
             struct Div
             {
                 template <typename TT>
-                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs, TT rhs)
                 {
                     return lhs / rhs;
                 }
@@ -71,7 +71,7 @@ namespace rocwmma
             {
                 template <typename TT,
                           typename std::enable_if<std::is_integral<TT>{}>::type* = nullptr>
-                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs, TT rhs)
                 {
                     return lhs % rhs;
                 }
@@ -80,7 +80,7 @@ namespace rocwmma
             {
                 template <typename TT,
                           typename std::enable_if<std::is_signed<TT>{}>::type* = nullptr>
-                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs)
                 {
                     return -lhs;
                 }
@@ -94,7 +94,7 @@ namespace rocwmma
             {
                 template <typename TT,
                           typename std::enable_if<std::is_integral<TT>{}>::type* = nullptr>
-                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs, TT rhs)
                 {
                     return lhs & rhs;
                 }
@@ -104,7 +104,7 @@ namespace rocwmma
             {
                 template <typename TT,
                           typename std::enable_if<std::is_integral<TT>{}>::type* = nullptr>
-                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs, TT rhs)
                 {
                     return lhs | rhs;
                 }
@@ -114,7 +114,7 @@ namespace rocwmma
             {
                 template <typename TT,
                           typename std::enable_if<std::is_integral<TT>{}>::type* = nullptr>
-                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs)
                 {
                     return ~lhs;
                 }
@@ -124,7 +124,7 @@ namespace rocwmma
             {
                 template <typename TT,
                           typename std::enable_if<std::is_integral<TT>{}>::type* = nullptr>
-                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs, TT rhs)
                 {
                     return lhs ^ rhs;
                 }
@@ -134,7 +134,7 @@ namespace rocwmma
             {
                 template <typename TT,
                           typename std::enable_if<std::is_integral<TT>{}>::type* = nullptr>
-                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs, TT rhs)
                 {
                     return lhs >> rhs;
                 }
@@ -144,7 +144,7 @@ namespace rocwmma
             {
                 template <typename TT,
                           typename std::enable_if<std::is_integral<TT>{}>::type* = nullptr>
-                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs, TT rhs)
                 {
                     return lhs >> rhs;
                 }
@@ -158,7 +158,7 @@ namespace rocwmma
             {
                 template <typename TT,
                           typename std::enable_if<std::is_convertible<TT, bool>{}>::type* = nullptr>
-                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs, TT rhs)
                 {
                     return lhs && rhs;
                 }
@@ -168,7 +168,7 @@ namespace rocwmma
             {
                 template <typename TT,
                           typename std::enable_if<std::is_convertible<TT, bool>{}>::type* = nullptr>
-                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs, TT rhs)
                 {
                     return lhs || rhs;
                 }
@@ -178,7 +178,7 @@ namespace rocwmma
             {
                 template <typename TT,
                           typename std::enable_if<std::is_convertible<TT, bool>{}>::type* = nullptr>
-                __HOST_DEVICE__ constexpr static inline auto exec(TT lhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs)
                 {
                     return !lhs;
                 }
@@ -191,7 +191,7 @@ namespace rocwmma
             struct Eq
             {
                 template <typename TT>
-                __HOST_DEVICE__ constexpr static inline uint32_t exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline uint32_t exec(TT lhs, TT rhs)
                 {
                     return lhs == rhs;
                 }
@@ -200,7 +200,7 @@ namespace rocwmma
             struct Neq
             {
                 template <typename TT>
-                __HOST_DEVICE__ constexpr static inline uint32_t exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline uint32_t exec(TT lhs, TT rhs)
                 {
                     return lhs != rhs;
                 }
@@ -209,7 +209,7 @@ namespace rocwmma
             struct Gte
             {
                 template <typename TT>
-                __HOST_DEVICE__ constexpr static inline uint32_t exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline uint32_t exec(TT lhs, TT rhs)
                 {
                     return lhs >= rhs;
                 }
@@ -218,7 +218,7 @@ namespace rocwmma
             struct Lte
             {
                 template <typename TT>
-                __HOST_DEVICE__ constexpr static inline uint32_t exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline uint32_t exec(TT lhs, TT rhs)
                 {
                     return lhs <= rhs;
                 }
@@ -227,7 +227,7 @@ namespace rocwmma
             struct Gt
             {
                 template <typename TT>
-                __HOST_DEVICE__ constexpr static inline uint32_t exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline uint32_t exec(TT lhs, TT rhs)
                 {
                     return lhs > rhs;
                 }
@@ -236,7 +236,7 @@ namespace rocwmma
             struct Lt
             {
                 template <typename TT>
-                __HOST_DEVICE__ constexpr static inline uint32_t exec(TT lhs, TT rhs)
+                ROCWMMA_HOST_DEVICE constexpr static inline uint32_t exec(TT lhs, TT rhs)
                 {
                     return lhs < rhs;
                 }
@@ -328,7 +328,7 @@ namespace rocwmma
 
         // Use with operations that have 2 operands
         template <class BinOp, typename VecT, uint32_t... indices>
-        __HOST_DEVICE__ constexpr static inline VecT
+        ROCWMMA_HOST_DEVICE constexpr static inline VecT
             binOp(VecT const& lhs, VecT const& rhs, SeqT<indices...>) noexcept
         {
             // Construct a new vector via fold expression over all indices
@@ -337,15 +337,15 @@ namespace rocwmma
 
         // Use with operations that have 1 operands
         template <class UnOp, typename VecT, uint32_t... indices>
-        __HOST_DEVICE__ constexpr static inline VecT unOp(VecT const& lhs,
-                                                          SeqT<indices...>) noexcept
+        ROCWMMA_HOST_DEVICE constexpr static inline VecT unOp(VecT const& lhs,
+                                                              SeqT<indices...>) noexcept
         {
             return VecT{(UnOp::exec(lhs.d[indices]))...};
         }
 
         // Use with relational operations that have 2 operands
         template <class BoolOp, typename VecT, uint32_t... indices>
-        __HOST_DEVICE__ constexpr static inline typename VecT::BoolVecT
+        ROCWMMA_HOST_DEVICE constexpr static inline typename VecT::BoolVecT
             boolOp(VecT const& lhs, VecT const& rhs, SeqT<indices...>) noexcept
         {
             return typename VecT::BoolVecT{(BoolOp::exec(lhs.d[indices], rhs.d[indices]))...};
@@ -353,7 +353,7 @@ namespace rocwmma
 
         // Used to broadcast a single value to the entire vector.
         template <typename VecT, typename T, uint32_t... indices>
-        __HOST_DEVICE__ constexpr static inline VecT bCast(T val, SeqT<indices...>) noexcept
+        ROCWMMA_HOST_DEVICE constexpr static inline VecT bCast(T val, SeqT<indices...>) noexcept
         {
             // Indices value ignored, but broadcast for all
             return VecT{((void)indices, val)...};
@@ -368,7 +368,8 @@ namespace rocwmma
     // list construction, and NOT bCast initialization.
     template <typename T, unsigned int Rank>
     template <typename U, typename std::enable_if<(std::is_same<U, T>{}) && (Rank > 1)>::type*>
-    __HOST_DEVICE__ constexpr non_native_vector_base<T, Rank>::non_native_vector_base(T x_) noexcept
+    ROCWMMA_HOST_DEVICE constexpr non_native_vector_base<T, Rank>::non_native_vector_base(
+        T x_) noexcept
         : non_native_vector_base(detail::template bCast<VecT>(x_, detail::Seq<Rank>{}))
     {
     }
@@ -381,103 +382,105 @@ namespace rocwmma
                                       && (std::is_same<U, Ts>{} && ...)
 #endif
                                       >::type*>
-    __HOST_DEVICE__ constexpr non_native_vector_base<T, Rank>::non_native_vector_base(
+    ROCWMMA_HOST_DEVICE constexpr non_native_vector_base<T, Rank>::non_native_vector_base(
         Ts... args) noexcept
         : d{args...}
     {
     }
 
     template <typename T, unsigned int Rank>
-    __HOST_DEVICE__ constexpr inline T&
+    ROCWMMA_HOST_DEVICE constexpr inline T&
         non_native_vector_base<T, Rank>::operator[](unsigned int idx) noexcept
     {
         return d[idx];
     }
 
     template <typename T, unsigned int Rank>
-    __HOST_DEVICE__ constexpr inline T
+    ROCWMMA_HOST_DEVICE constexpr inline T
         non_native_vector_base<T, Rank>::operator[](unsigned int idx) const noexcept
     {
         return d[idx];
     }
 
     template <typename T, unsigned int Rank>
-    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator+=(const VecT& x_) noexcept
-        -> VecT&
+    ROCWMMA_HOST_DEVICE inline auto
+        non_native_vector_base<T, Rank>::operator+=(const VecT& x_) noexcept -> VecT&
     {
         return (*this = detail::binOp<detail::ArithmeticOp::Add>(*this, x_, detail::Seq<Rank>{}));
     }
 
     template <typename T, unsigned int Rank>
-    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator-=(const VecT& x_) noexcept
-        -> VecT&
+    ROCWMMA_HOST_DEVICE inline auto
+        non_native_vector_base<T, Rank>::operator-=(const VecT& x_) noexcept -> VecT&
     {
         return (*this = detail::binOp<detail::ArithmeticOp::Sub>(*this, x_, detail::Seq<Rank>{}));
     }
 
     template <typename T, unsigned int Rank>
-    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator*=(const VecT& x_) noexcept
-        -> VecT&
+    ROCWMMA_HOST_DEVICE inline auto
+        non_native_vector_base<T, Rank>::operator*=(const VecT& x_) noexcept -> VecT&
     {
         return (*this = detail::binOp<detail::ArithmeticOp::Mult>(*this, x_, detail::Seq<Rank>{}));
     }
 
     template <typename T, unsigned int Rank>
-    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator/=(const VecT& x_) noexcept
-        -> VecT&
+    ROCWMMA_HOST_DEVICE inline auto
+        non_native_vector_base<T, Rank>::operator/=(const VecT& x_) noexcept -> VecT&
     {
         return (*this = detail::binOp<detail::ArithmeticOp::Div>(*this, x_, detail::Seq<Rank>{}));
     }
 
     template <typename T, unsigned int Rank>
     template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
-    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator%=(const VecT& x_) noexcept
-        -> VecT&
+    ROCWMMA_HOST_DEVICE inline auto
+        non_native_vector_base<T, Rank>::operator%=(const VecT& x_) noexcept -> VecT&
     {
         return (*this = detail::binOp<detail::ArithmeticOp::Mod>(*this, x_, detail::Seq<Rank>{}));
     }
 
     template <typename T, unsigned int Rank>
     template <typename U, typename std::enable_if<std::is_signed<U>{}>::type*>
-    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator-() const noexcept -> VecT
+    ROCWMMA_HOST_DEVICE inline auto non_native_vector_base<T, Rank>::operator-() const noexcept
+        -> VecT
     {
         return detail::unOp<detail::ArithmeticOp::Minus>(*this, detail::Seq<Rank>{});
     }
 
     template <typename T, unsigned int Rank>
     template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
-    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator&=(const VecT& x_) noexcept
-        -> VecT&
+    ROCWMMA_HOST_DEVICE inline auto
+        non_native_vector_base<T, Rank>::operator&=(const VecT& x_) noexcept -> VecT&
     {
         return (*this = detail::binOp<detail::BitwiseOp::And>(*this, x_, detail::Seq<Rank>{}));
     }
 
     template <typename T, unsigned int Rank>
     template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
-    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator|=(const VecT& x_) noexcept
-        -> VecT&
+    ROCWMMA_HOST_DEVICE inline auto
+        non_native_vector_base<T, Rank>::operator|=(const VecT& x_) noexcept -> VecT&
     {
         return (*this = detail::binOp<detail::BitwiseOp::Or>(*this, x_, detail::Seq<Rank>{}));
     }
 
     template <typename T, unsigned int Rank>
     template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
-    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator~() const noexcept -> VecT
+    ROCWMMA_HOST_DEVICE inline auto non_native_vector_base<T, Rank>::operator~() const noexcept
+        -> VecT
     {
         return detail::unOp<detail::BitwiseOp::Not>(*this, detail::Seq<Rank>{});
     }
 
     template <typename T, unsigned int Rank>
     template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
-    __HOST_DEVICE__ inline auto non_native_vector_base<T, Rank>::operator^=(const VecT& x_) noexcept
-        -> VecT&
+    ROCWMMA_HOST_DEVICE inline auto
+        non_native_vector_base<T, Rank>::operator^=(const VecT& x_) noexcept -> VecT&
     {
         return (*this = detail::binOp<detail::BitwiseOp::Xor>(*this, x_, detail::Seq<Rank>{}));
     }
 
     template <typename T, unsigned int Rank>
     template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
-    __HOST_DEVICE__ inline auto
+    ROCWMMA_HOST_DEVICE inline auto
         non_native_vector_base<T, Rank>::operator>>=(const VecT& x_) noexcept -> VecT&
     {
         return (*this = detail::binOp<detail::BitwiseOp::ShiftR>(*this, x_, detail::Seq<Rank>{}));
@@ -485,49 +488,49 @@ namespace rocwmma
 
     template <typename T, unsigned int Rank>
     template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
-    __HOST_DEVICE__ inline auto
+    ROCWMMA_HOST_DEVICE inline auto
         non_native_vector_base<T, Rank>::operator<<=(const VecT& x_) noexcept -> VecT&
     {
         return (*this = detail::binOp<detail::BitwiseOp::ShiftL>(*this, x_, detail::Seq<Rank>{}));
     }
 
     template <typename T, unsigned int Rank>
-    __HOST_DEVICE__ inline auto
+    ROCWMMA_HOST_DEVICE inline auto
         non_native_vector_base<T, Rank>::operator==(const VecT& x_) const noexcept -> BoolVecT
     {
         return detail::boolOp<detail::RelationalOp::Eq>(*this, x_, detail::Seq<Rank>{});
     }
 
     template <typename T, unsigned int Rank>
-    __HOST_DEVICE__ inline auto
+    ROCWMMA_HOST_DEVICE inline auto
         non_native_vector_base<T, Rank>::operator!=(const VecT& x_) const noexcept -> BoolVecT
     {
         return detail::boolOp<detail::RelationalOp::Neq>(*this, x_, detail::Seq<Rank>{});
     }
 
     template <typename T, unsigned int Rank>
-    __HOST_DEVICE__ inline auto
+    ROCWMMA_HOST_DEVICE inline auto
         non_native_vector_base<T, Rank>::operator>=(const VecT& x_) const noexcept -> BoolVecT
     {
         return detail::boolOp<detail::RelationalOp::Gte>(*this, x_, detail::Seq<Rank>{});
     }
 
     template <typename T, unsigned int Rank>
-    __HOST_DEVICE__ inline auto
+    ROCWMMA_HOST_DEVICE inline auto
         non_native_vector_base<T, Rank>::operator<=(const VecT& x_) const noexcept -> BoolVecT
     {
         return detail::boolOp<detail::RelationalOp::Lte>(*this, x_, detail::Seq<Rank>{});
     }
 
     template <typename T, unsigned int Rank>
-    __HOST_DEVICE__ inline auto
+    ROCWMMA_HOST_DEVICE inline auto
         non_native_vector_base<T, Rank>::operator>(const VecT& x_) const noexcept -> BoolVecT
     {
         return detail::boolOp<detail::RelationalOp::Gt>(*this, x_, detail::Seq<Rank>{});
     }
 
     template <typename T, unsigned int Rank>
-    __HOST_DEVICE__ inline auto
+    ROCWMMA_HOST_DEVICE inline auto
         non_native_vector_base<T, Rank>::operator<(const VecT& x_) const noexcept -> BoolVecT
     {
         return detail::boolOp<detail::RelationalOp::Lt>(*this, x_, detail::Seq<Rank>{});
@@ -666,12 +669,12 @@ namespace rocwmma
                                                                                                \
         using value_type = TYPE;                                                               \
                                                                                                \
-        __HOST_DEVICE__                                                                        \
+        ROCWMMA_HOST_DEVICE                                                                    \
         HIP_vector_base() = default;                                                           \
         template <typename... ArgsT,                                                           \
                   typename U                                                 = TYPE,           \
                   typename std::enable_if<(sizeof...(ArgsT) == RANK)>::type* = nullptr>        \
-        __HOST_DEVICE__ constexpr HIP_vector_base(ArgsT... args) noexcept                      \
+        ROCWMMA_HOST_DEVICE constexpr HIP_vector_base(ArgsT... args) noexcept                  \
             : data{args...}                                                                    \
         {                                                                                      \
         }                                                                                      \
@@ -679,22 +682,22 @@ namespace rocwmma
         template <                                                                             \
             typename U                                                              = TYPE,    \
             typename std::enable_if<(std::is_same<U, TYPE>{}) && (RANK > 1)>::type* = nullptr> \
-        __HOST_DEVICE__ constexpr explicit HIP_vector_base(TYPE val) noexcept                  \
+        ROCWMMA_HOST_DEVICE constexpr explicit HIP_vector_base(TYPE val) noexcept              \
             : HIP_vector_base(rocwmma::detail::template bCast<HIP_vector_base>(                \
                 val, rocwmma::detail::Seq<RANK>{}))                                            \
         {                                                                                      \
         }                                                                                      \
                                                                                                \
-        __HOST_DEVICE__                                                                        \
+        ROCWMMA_HOST_DEVICE                                                                    \
         constexpr HIP_vector_base(const HIP_vector_base&) = default;                           \
                                                                                                \
-        __HOST_DEVICE__                                                                        \
+        ROCWMMA_HOST_DEVICE                                                                    \
         constexpr HIP_vector_base(HIP_vector_base&&) = default;                                \
                                                                                                \
-        __HOST_DEVICE__                                                                        \
+        ROCWMMA_HOST_DEVICE                                                                    \
         ~HIP_vector_base() = default;                                                          \
                                                                                                \
-        __HOST_DEVICE__                                                                        \
+        ROCWMMA_HOST_DEVICE                                                                    \
         HIP_vector_base& operator=(const HIP_vector_base& x_) noexcept = default;              \
     };
 
@@ -727,21 +730,21 @@ namespace rocwmma
 // Quirk: explicit specialization for ++ / -- operators in HIP_vector_type<bfloat16_t, N>.
 // Why? bfloat16_t doesn't have automatic conversion from integers so we must override the default implementation;
 // Override such that in(de)crement operators use 1.f instead of 1(int)
-#define ROCWMMA_SPECIALIZE_BFLOAT16_VECTOR_OPERATORS(RANK)                \
-    template <>                                                           \
-    __HOST_DEVICE__ inline HIP_vector_type<rocwmma::bfloat16_t, RANK>&    \
-        HIP_vector_type<rocwmma::bfloat16_t, RANK>::operator++() noexcept \
-    {                                                                     \
-        return *this += HIP_vector_type<rocwmma::bfloat16_t, RANK>{       \
-                   static_cast<rocwmma::bfloat16_t>(1.0f)};               \
-    }                                                                     \
-                                                                          \
-    template <>                                                           \
-    __HOST_DEVICE__ inline HIP_vector_type<rocwmma::bfloat16_t, RANK>&    \
-        HIP_vector_type<rocwmma::bfloat16_t, RANK>::operator--() noexcept \
-    {                                                                     \
-        return *this -= HIP_vector_type<rocwmma::bfloat16_t, RANK>{       \
-                   static_cast<rocwmma::bfloat16_t>(1.0f)};               \
+#define ROCWMMA_SPECIALIZE_BFLOAT16_VECTOR_OPERATORS(RANK)                 \
+    template <>                                                            \
+    ROCWMMA_HOST_DEVICE inline HIP_vector_type<rocwmma::bfloat16_t, RANK>& \
+        HIP_vector_type<rocwmma::bfloat16_t, RANK>::operator++() noexcept  \
+    {                                                                      \
+        return *this += HIP_vector_type<rocwmma::bfloat16_t, RANK>{        \
+                   static_cast<rocwmma::bfloat16_t>(1.0f)};                \
+    }                                                                      \
+                                                                           \
+    template <>                                                            \
+    ROCWMMA_HOST_DEVICE inline HIP_vector_type<rocwmma::bfloat16_t, RANK>& \
+        HIP_vector_type<rocwmma::bfloat16_t, RANK>::operator--() noexcept  \
+    {                                                                      \
+        return *this -= HIP_vector_type<rocwmma::bfloat16_t, RANK>{        \
+                   static_cast<rocwmma::bfloat16_t>(1.0f)};                \
     }
 
 // Roll the quirk into the registration macro

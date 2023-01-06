@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,9 +36,9 @@
 #endif // !__HIPCC_RTC__
 
 #if defined(__HIPCC_RTC__)
-#define __HOST_DEVICE__ __device__
+#define ROCWMMA_HOST_DEVICE __device__
 #else
-#define __HOST_DEVICE__ __host__ __device__
+#define ROCWMMA_HOST_DEVICE __host__ __device__
 #endif
 
 namespace rocwmma

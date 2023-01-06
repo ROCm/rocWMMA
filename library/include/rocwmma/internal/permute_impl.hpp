@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,7 +44,7 @@ namespace rocwmma
 
         public:
             // Calculate the read element based on thread position.
-            __HOST_DEVICE__ static inline uint32_t threadCtrl(uint32_t threadId)
+            ROCWMMA_HOST_DEVICE static inline uint32_t threadCtrl(uint32_t threadId)
             {
                 // Make sure that the threadId is within range
                 auto tIdx = threadId % BlockSize;
