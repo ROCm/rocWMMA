@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -95,7 +95,7 @@ namespace rocwmma
     protected: // No public instantiation except make_unique.
                // No copy
         DlrmResource();
-        DlrmResource(DlrmResource const&) = delete;
+        DlrmResource(DlrmResource const&)            = delete;
         DlrmResource& operator=(DlrmResource const&) = delete;
 
         // Helpers
