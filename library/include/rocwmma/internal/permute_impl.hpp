@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,7 +44,7 @@ namespace rocwmma
 
         public:
             // Calculate the read element based on thread position.
-            __HOST_DEVICE__ static inline uint32_t threadCtrl(uint32_t threadId)
+            ROCWMMA_HOST_DEVICE static inline uint32_t threadCtrl(uint32_t threadId)
             {
                 // Make sure that the threadId is within range
                 auto tIdx = threadId % BlockSize;
@@ -56,7 +56,7 @@ namespace rocwmma
         struct amdgcn_ds_bpermute
         {
             template <typename InputT>
-            __device__ static inline InputT exec(InputT input, uint32_t laneId)
+            ROCWMMA_DEVICE static inline InputT exec(InputT input, uint32_t laneId)
             {
                 // NOTE: final address is laneId * 4
                 reinterpret_cast<uint32_t&>(input) = __builtin_amdgcn_ds_bpermute(
@@ -69,7 +69,7 @@ namespace rocwmma
         struct amdgcn_ds_permute
         {
             template <typename InputT>
-            __device__ static inline InputT exec(InputT input, uint32_t laneId)
+            ROCWMMA_DEVICE static inline InputT exec(InputT input, uint32_t laneId)
             {
                 // NOTE: final address is laneId * 4
                 reinterpret_cast<uint32_t&>(input) = __builtin_amdgcn_ds_permute(

@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -145,7 +145,7 @@ namespace rocwmma
         struct amdgcn_swizzle
         {
             template <typename DataT>
-            __device__ static inline DataT exec(DataT input)
+            ROCWMMA_DEVICE static inline DataT exec(DataT input)
             {
                 return reinterpret_cast<int32_t&>(input) = __builtin_amdgcn_ds_swizzle(
                            reinterpret_cast<int32_t const&>(input), SwizzleCtrl);

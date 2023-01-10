@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -83,19 +83,19 @@ namespace rocwmma
                       "PermuteOp is unsupported");
 
         template <typename DataT>
-        __HOST_DEVICE__ static DataT exec(DataT const& src, uint32_t laneId)
+        ROCWMMA_HOST_DEVICE static DataT exec(DataT const& src, uint32_t laneId)
         {
             return PermuteFunc::exec(src, PermuteOp::threadCtrl(laneId));
         }
 
         template <typename DataT>
-        __HOST_DEVICE__ static void exec(DataT& src, uint32_t laneId)
+        ROCWMMA_HOST_DEVICE static void exec(DataT& src, uint32_t laneId)
         {
             src = PermuteFunc::exec(src, PermuteOp::threadCtrl(laneId));
         }
 
         template <typename DataT, uint32_t VecSize>
-        __HOST_DEVICE__ static void exec(VecT<DataT, VecSize>& src, uint32_t laneId)
+        ROCWMMA_HOST_DEVICE static void exec(VecT<DataT, VecSize>& src, uint32_t laneId)
         {
             auto it = makeVectorIterator(src).begin();
             static_assert(decltype(it)::range() == VecSize,
@@ -111,7 +111,7 @@ namespace rocwmma
         }
 
         template <typename DataT, uint32_t VecSize>
-        __HOST_DEVICE__ static auto exec(VecT<DataT, VecSize> const& src, uint32_t laneId)
+        ROCWMMA_HOST_DEVICE static auto exec(VecT<DataT, VecSize> const& src, uint32_t laneId)
         {
             VecT<DataT, VecSize> result;
             auto                 itW = makeVectorIterator(result).begin();

@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -260,34 +260,34 @@ namespace rocwmma
 
         // Self as prev.
         template <typename DataT>
-        __device__ static DataT exec(DataT const& val)
+        ROCWMMA_DEVICE static DataT exec(DataT const& val)
         {
             return DppFunc::exec(val);
         }
 
         template <typename DataT>
-        __device__ static void exec(DataT& val)
+        ROCWMMA_DEVICE static void exec(DataT& val)
         {
             val = DppFunc::exec(val);
         }
 
         // Self as prev.
         template <typename DataT>
-        __device__ static void exec(DataT& val, DataT prev)
+        ROCWMMA_DEVICE static void exec(DataT& val, DataT prev)
         {
             val = DppFunc::exec(val, prev);
         }
 
         // Self as prev.
         template <typename DataT>
-        __device__ static DataT exec(DataT const& val, DataT prev)
+        ROCWMMA_DEVICE static DataT exec(DataT const& val, DataT prev)
         {
             return DppFunc::exec(val, prev);
         }
 
         // Self as prev.
         template <typename DataT, uint32_t VecSize>
-        __device__ static void exec(VecT<DataT, VecSize>& v)
+        ROCWMMA_DEVICE static void exec(VecT<DataT, VecSize>& v)
         {
             auto it = makeVectorIterator(v).begin();
 
@@ -305,7 +305,7 @@ namespace rocwmma
 
         // Scalar as prev
         template <typename DataT, uint32_t VecSize>
-        __device__ static void exec(VecT<DataT, VecSize>& v, DataT prev)
+        ROCWMMA_DEVICE static void exec(VecT<DataT, VecSize>& v, DataT prev)
         {
             auto it = makeVectorIterator(v).begin();
             static_assert(decltype(it)::range() == VecSize,
@@ -322,7 +322,7 @@ namespace rocwmma
 
         // Vector as prev
         template <typename DataT, uint32_t VecSize>
-        __device__ static void exec(VecT<DataT, VecSize>& v, VecT<DataT, VecSize> const& prev)
+        ROCWMMA_DEVICE static void exec(VecT<DataT, VecSize>& v, VecT<DataT, VecSize> const& prev)
         {
             auto       it  = makeVectorIterator(v).begin();
             const auto itp = makeVectorIterator(prev).begin();

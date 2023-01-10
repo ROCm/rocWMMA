@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,19 +38,19 @@ namespace rocwmma
     /// Element-wise access of vectors in constexpr is forbidden.   ///
     ///////////////////////////////////////////////////////////////////
     template <uint32_t Idx, typename DataT, uint32_t VecSize>
-    __HOST_DEVICE__ constexpr inline DataT& get(HIP_vector_type<DataT, VecSize>& v)
+    ROCWMMA_HOST_DEVICE constexpr inline DataT& get(HIP_vector_type<DataT, VecSize>& v)
     {
         return reinterpret_cast<DataT*>(&v.data)[Idx];
     }
 
     template <uint32_t Idx, typename DataT, uint32_t VecSize>
-    __HOST_DEVICE__ constexpr inline DataT get(HIP_vector_type<DataT, VecSize> const& v)
+    ROCWMMA_HOST_DEVICE constexpr inline DataT get(HIP_vector_type<DataT, VecSize> const& v)
     {
         return v.data[Idx];
     }
 
     template <typename DataT>
-    __HOST_DEVICE__ constexpr inline auto swap(HIP_vector_type<DataT, 2> const& v)
+    ROCWMMA_HOST_DEVICE constexpr inline auto swap(HIP_vector_type<DataT, 2> const& v)
     {
         return HIP_vector_type<DataT, 2>{get<1>(v), get<0>(v)};
     }
@@ -59,13 +59,14 @@ namespace rocwmma
     ///     non_native_vector_base<T, N> utility overrides          ///
     ///////////////////////////////////////////////////////////////////
     template <uint32_t Idx, typename DataT, uint32_t VecSize>
-    __HOST_DEVICE__ constexpr static inline DataT& get(non_native_vector_base<DataT, VecSize>& v)
+    ROCWMMA_HOST_DEVICE constexpr static inline DataT&
+        get(non_native_vector_base<DataT, VecSize>& v)
     {
         return v[Idx];
     }
 
     template <uint32_t Idx, typename DataT, uint32_t VecSize>
-    __HOST_DEVICE__ constexpr static inline DataT
+    ROCWMMA_HOST_DEVICE constexpr static inline DataT
         get(non_native_vector_base<DataT, VecSize> const& v)
     {
         return v[Idx];
@@ -73,7 +74,7 @@ namespace rocwmma
 
     // Unary swap only considered in 2d vectors.
     template <typename DataT>
-    __HOST_DEVICE__ constexpr static inline auto swap(non_native_vector_base<DataT, 2> const& v)
+    ROCWMMA_HOST_DEVICE constexpr static inline auto swap(non_native_vector_base<DataT, 2> const& v)
     {
         return non_native_vector_base<DataT, 2>{get<1>(v), get<0>(v)};
     }
@@ -83,24 +84,24 @@ namespace rocwmma
     ///                                                             ///
     /// Note: Coord2d MUST be constexpr compatible                  ///
     ///////////////////////////////////////////////////////////////////
-    __HOST_DEVICE__ constexpr static inline auto make_coord2d(Coord2dDataT x, Coord2dDataT y)
+    ROCWMMA_HOST_DEVICE constexpr static inline auto make_coord2d(Coord2dDataT x, Coord2dDataT y)
     {
         return Coord2d{x, y};
     }
 
-    __HOST_DEVICE__ constexpr static inline auto swap(Coord2d const& p)
+    ROCWMMA_HOST_DEVICE constexpr static inline auto swap(Coord2d const& p)
     {
         return Coord2d{get<1>(p), get<0>(p)};
     }
 
-    __HOST_DEVICE__ constexpr static inline Coord2d operator*(Coord2d const& lhs,
-                                                              Coord2d const& rhs)
+    ROCWMMA_HOST_DEVICE constexpr static inline Coord2d operator*(Coord2d const& lhs,
+                                                                  Coord2d const& rhs)
     {
         return make_coord2d(get<0>(lhs) * get<0>(rhs), get<1>(lhs) * get<1>(rhs));
     }
 
-    __HOST_DEVICE__ constexpr static inline Coord2d operator+(Coord2d const& lhs,
-                                                              Coord2d const& rhs)
+    ROCWMMA_HOST_DEVICE constexpr static inline Coord2d operator+(Coord2d const& lhs,
+                                                                  Coord2d const& rhs)
     {
         return make_coord2d(get<0>(lhs) + get<0>(rhs), get<1>(lhs) + get<1>(rhs));
     }
@@ -136,15 +137,15 @@ namespace std
 {
     // Add, sub operators
     template <typename T>
-    __HOST_DEVICE__ constexpr static inline pair<T, T> operator+(pair<T, T> const& lhs,
-                                                                 pair<T, T> const& rhs)
+    ROCWMMA_HOST_DEVICE constexpr static inline pair<T, T> operator+(pair<T, T> const& lhs,
+                                                                     pair<T, T> const& rhs)
     {
         return make_pair(get<0>(lhs) + get<0>(rhs), get<1>(lhs) + get<1>(rhs));
     }
 
     template <typename T>
-    __HOST_DEVICE__ constexpr static inline pair<T, T>& operator+=(pair<T, T>&       lhs,
-                                                                   pair<T, T> const& rhs)
+    ROCWMMA_HOST_DEVICE constexpr static inline pair<T, T>& operator+=(pair<T, T>&       lhs,
+                                                                       pair<T, T> const& rhs)
     {
         get<0>(lhs) += get<0>(rhs);
         get<1>(lhs) += get<1>(rhs);
@@ -152,15 +153,15 @@ namespace std
     }
 
     template <typename T>
-    __HOST_DEVICE__ constexpr static inline pair<T, T> operator*(pair<T, T> const& lhs,
-                                                                 pair<T, T> const& rhs)
+    ROCWMMA_HOST_DEVICE constexpr static inline pair<T, T> operator*(pair<T, T> const& lhs,
+                                                                     pair<T, T> const& rhs)
     {
         return make_pair(get<0>(lhs) * get<0>(rhs), get<1>(lhs) * get<1>(rhs));
     }
 
     template <typename T>
-    __HOST_DEVICE__ constexpr static inline pair<T, T>& operator*=(pair<T, T>&       lhs,
-                                                                   pair<T, T> const& rhs)
+    ROCWMMA_HOST_DEVICE constexpr static inline pair<T, T>& operator*=(pair<T, T>&       lhs,
+                                                                       pair<T, T> const& rhs)
     {
         get<0>(lhs) *= get<0>(rhs);
         get<1>(lhs) *= get<1>(rhs);
@@ -168,15 +169,15 @@ namespace std
     }
 
     template <typename T>
-    __HOST_DEVICE__ constexpr static inline pair<T, T> operator-(pair<T, T> const& lhs,
-                                                                 pair<T, T> const& rhs)
+    ROCWMMA_HOST_DEVICE constexpr static inline pair<T, T> operator-(pair<T, T> const& lhs,
+                                                                     pair<T, T> const& rhs)
     {
         return make_pair(get<0>(lhs) - get<0>(rhs), get<1>(lhs) - get<1>(rhs));
     }
 
     template <typename T>
-    __HOST_DEVICE__ constexpr static inline pair<T, T>& operator-=(pair<T, T>&       lhs,
-                                                                   pair<T, T> const& rhs)
+    ROCWMMA_HOST_DEVICE constexpr static inline pair<T, T>& operator-=(pair<T, T>&       lhs,
+                                                                       pair<T, T> const& rhs)
     {
         get<0>(lhs) -= get<0>(rhs);
         get<1>(lhs) -= get<1>(rhs);
@@ -196,15 +197,15 @@ namespace std
     class numeric_limits
     {
     public:
-        __HOST_DEVICE__ static constexpr T min() noexcept;
-        __HOST_DEVICE__ static constexpr T lowest() noexcept;
-        __HOST_DEVICE__ static constexpr T max() noexcept;
-        __HOST_DEVICE__ static constexpr T epsilon() noexcept;
-        __HOST_DEVICE__ static constexpr T round_error() noexcept;
-        __HOST_DEVICE__ static constexpr T infinity() noexcept;
-        __HOST_DEVICE__ static constexpr T quiet_NaN() noexcept;
-        __HOST_DEVICE__ static constexpr T signaling_NaN() noexcept;
-        __HOST_DEVICE__ static constexpr T denorm_min() noexcept;
+        ROCWMMA_HOST_DEVICE static constexpr T min() noexcept;
+        ROCWMMA_HOST_DEVICE static constexpr T lowest() noexcept;
+        ROCWMMA_HOST_DEVICE static constexpr T max() noexcept;
+        ROCWMMA_HOST_DEVICE static constexpr T epsilon() noexcept;
+        ROCWMMA_HOST_DEVICE static constexpr T round_error() noexcept;
+        ROCWMMA_HOST_DEVICE static constexpr T infinity() noexcept;
+        ROCWMMA_HOST_DEVICE static constexpr T quiet_NaN() noexcept;
+        ROCWMMA_HOST_DEVICE static constexpr T signaling_NaN() noexcept;
+        ROCWMMA_HOST_DEVICE static constexpr T denorm_min() noexcept;
     };
 
     template <bool B, class T = void>
@@ -231,13 +232,13 @@ namespace std
     using conditional_t = typename conditional<B, T, F>::type;
 
     template <typename T>
-    __HOST_DEVICE__ const T& max(const T& a, const T& b)
+    ROCWMMA_HOST_DEVICE const T& max(const T& a, const T& b)
     {
         return (a < b) ? b : a;
     }
 
     template <typename T>
-    __HOST_DEVICE__ const T& min(const T& a, const T& b)
+    ROCWMMA_HOST_DEVICE const T& min(const T& a, const T& b)
     {
         return (b < a) ? a : b;
     }
@@ -478,10 +479,14 @@ namespace std
     };
 
     template <typename T, std::size_t _Size>
-    struct is_array<T[_Size]> : public true_type{};
+    struct is_array<T[_Size]> : public true_type
+    {
+    };
 
     template <typename T>
-    struct is_array<T[]> : public true_type{};
+    struct is_array<T[]> : public true_type
+    {
+    };
 
     // decay selectors
     template <typename _Up,

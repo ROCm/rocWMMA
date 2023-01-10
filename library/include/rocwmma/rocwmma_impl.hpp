@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -73,7 +73,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename LayoutT>
-    __device__
+    ROCWMMA_DEVICE
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::fragment(const fragment& other)
         : mStorage(other.mStorage)
     {
@@ -85,7 +85,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename LayoutT>
-    __device__ fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>&
+    ROCWMMA_DEVICE fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>&
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator=(
             const fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>& other)
     {
@@ -99,7 +99,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename LayoutT>
-    __device__ inline DataT&
+    ROCWMMA_DEVICE inline DataT&
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator[](uint32_t index)
     {
         return mAccess.data[index];
@@ -111,7 +111,8 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename LayoutT>
-    __device__ inline auto fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator*() ->
+    ROCWMMA_DEVICE inline auto
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator*() ->
         typename Traits::StorageT&
     {
         return mStorage;
@@ -123,7 +124,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename LayoutT>
-    __device__ inline DataT const&
+    ROCWMMA_DEVICE inline DataT const&
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator[](uint32_t index) const
     {
         return mAccess.data[index];
@@ -135,7 +136,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename LayoutT>
-    __device__ inline auto
+    ROCWMMA_DEVICE inline auto
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator*() const ->
         typename Traits::StorageT const&
     {
@@ -148,7 +149,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename LayoutT>
-    __device__ constexpr inline uint32_t
+    ROCWMMA_DEVICE constexpr inline uint32_t
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::blockDim()
     {
         return IOConfig::BlockDim;
@@ -160,7 +161,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename LayoutT>
-    __device__ constexpr inline uint32_t
+    ROCWMMA_DEVICE constexpr inline uint32_t
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::kDim()
     {
         return IOConfig::KDim;
@@ -172,7 +173,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename LayoutT>
-    __device__ constexpr inline uint32_t
+    ROCWMMA_DEVICE constexpr inline uint32_t
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::size()
     {
         return num_elements;
@@ -184,7 +185,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    __device__ void
+    ROCWMMA_DEVICE void
         fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                       DataT                                                         value)
     {
@@ -205,7 +206,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    __device__ void
+    ROCWMMA_DEVICE void
         load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                          const DataT*                                                  data,
                          uint32_t                                                      ldm)
@@ -227,10 +228,10 @@ namespace rocwmma
     }
 
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
-    __device__ void load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT>& frag,
-                                     const DataT*                                      data,
-                                     uint32_t                                          ldm,
-                                     layout_t                                          layout)
+    ROCWMMA_DEVICE void load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT>& frag,
+                                         const DataT*                                      data,
+                                         uint32_t                                          ldm,
+                                         layout_t                                          layout)
     {
         using FragRowMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, row_major>;
         using FragColMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, col_major>;
@@ -252,7 +253,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    __device__ void
+    ROCWMMA_DEVICE void
         store_matrix_sync(DataT*                                                              data,
                           fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
                           uint32_t                                                            ldm)
@@ -274,10 +275,11 @@ namespace rocwmma
     }
 
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
-    __device__ void store_matrix_sync(DataT*                                                  data,
-                                      fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag,
-                                      uint32_t                                                ldm,
-                                      layout_t layout)
+    ROCWMMA_DEVICE void
+        store_matrix_sync(DataT*                                                  data,
+                          fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag,
+                          uint32_t                                                ldm,
+                          layout_t                                                layout)
     {
         using FragRowMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, row_major>;
         using FragColMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, col_major>;
@@ -302,7 +304,7 @@ namespace rocwmma
               typename LayoutB,
               typename LayoutC,
               typename LayoutD>
-    __device__ void
+    ROCWMMA_DEVICE void
         mma_sync(fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutD>&       d,
                  fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA> const&      a,
                  fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB> const&      b,
@@ -321,7 +323,7 @@ namespace rocwmma
         (*d) = MMA::exec(*a, *b, *c);
     }
 
-    __device__ void synchronize_workgroup()
+    ROCWMMA_DEVICE void synchronize_workgroup()
     {
         Barrier::exec();
     }

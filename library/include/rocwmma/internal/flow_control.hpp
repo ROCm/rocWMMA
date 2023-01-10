@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@
  *******************************************************************************/
 #ifndef ROCWMMA_FLOW_CONTROL_HPP
 #define ROCWMMA_FLOW_CONTROL_HPP
- 
+
 namespace rocwmma
 {
 
@@ -34,7 +34,7 @@ namespace rocwmma
         // Perform synchronization across fragments(wavefronts) in a workgroup
         struct amdgcn_barrier
         {
-            __device__ static inline auto exec()
+            ROCWMMA_DEVICE static inline auto exec()
             {
                 return __builtin_amdgcn_s_barrier();
             }
@@ -44,7 +44,7 @@ namespace rocwmma
         template <int32_t mask = 0>
         struct amdgcn_sched_barrier
         {
-            __device__ static inline auto exec()
+            ROCWMMA_DEVICE static inline auto exec()
             {
                 return __builtin_amdgcn_sched_barrier(mask);
             }
@@ -59,7 +59,7 @@ namespace rocwmma
                 priority16 = priority
             };
 
-            __device__ static inline auto exec()
+            ROCWMMA_DEVICE static inline auto exec()
             {
                 static_assert(priority16 >= 0 && priority16 <= 3, "Priority must be from 0 to 3");
 
@@ -77,7 +77,7 @@ namespace rocwmma
                 cnt       = vmcnt16 | lgkmcnt16
             };
 
-            __device__ static inline auto exec()
+            ROCWMMA_DEVICE static inline auto exec()
             {
                 static_assert(vmcnt >= 0 && vmcnt < 64,
                               "Vector memory operations allocated a maximum of 6 bits");

@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +41,7 @@ namespace rocwmma
         struct amdgcn_mfma
         {
             template <typename RegsA, typename RegsB, typename RegsC>
-            __device__ static inline auto exec(RegsA&& regsA, RegsB&& regsB, RegsC& regsC)
+            ROCWMMA_DEVICE static inline auto exec(RegsA&& regsA, RegsB&& regsB, RegsC& regsC)
             {
                 return regsC;
             }
@@ -66,9 +66,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x4;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
@@ -94,9 +94,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x2;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<float16_t, float32_t, 16, 16>;
@@ -130,9 +130,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x16;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
@@ -158,9 +158,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x8;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<float16_t, float32_t, 32, 32>;
@@ -221,9 +221,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x4;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
@@ -249,9 +249,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x2;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<bfloat16_t, float32_t, 16, 16>;
@@ -284,9 +284,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x16;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
@@ -312,9 +312,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x8;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<bfloat16_t, float32_t, 32, 32>;
@@ -350,9 +350,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x4;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 // Built-in expects unpacked vector of short.
@@ -390,9 +390,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x2;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<bfloat16_t, float32_t, 16, 16>;
@@ -425,9 +425,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x16;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 // Built-in expects unpacked vector of short.
@@ -465,9 +465,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x8;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<bfloat16_t, float32_t, 32, 32>;
@@ -503,9 +503,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x4;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
@@ -532,9 +532,9 @@ namespace rocwmma
                 using DRegsT = AccRegF32x16;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
@@ -560,9 +560,9 @@ namespace rocwmma
                 using DRegsT = AccRegI32x4;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
@@ -588,9 +588,9 @@ namespace rocwmma
                 using DRegsT = AccRegI32x16;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
@@ -619,9 +619,9 @@ namespace rocwmma
                 using DRegsT = AccRegF64x4;
             };
 
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC) ->
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
@@ -654,9 +654,9 @@ namespace rocwmma
             // and WILL not function as intended.
             // gfx908 lacks support for fp64 MFMA instructions.
             ROCWMMA_UNSUPPORTED_IMPL("fp64 mfma not supported on gfx908")
-            __device__ static inline auto exec(typename Traits::ARegsT const& regsA,
-                                               typename Traits::BRegsT const& regsB,
-                                               typename Traits::CRegsT const& regsC)
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC)
 
                 -> typename Traits::DRegsT const&
             {
