@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +40,7 @@ namespace rocwmma
             using BroadcastT = VecT<DataT, VectorSize>;
         };
 
-        __device__ static inline void exec(typename Traits::BroadcastT& vec, DataT val)
+        ROCWMMA_DEVICE static inline void exec(typename Traits::BroadcastT& vec, DataT val)
         {
             vec = typename Traits::BroadcastT{(DataT)val};
         }

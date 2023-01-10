@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -199,19 +199,19 @@ namespace rocwmma
                       "SwizzleOp is unsupported");
 
         template <typename DataT>
-        __device__ static void exec(DataT& v)
+        ROCWMMA_DEVICE static void exec(DataT& v)
         {
             v = SwizzleFunc::exec(v);
         }
 
         template <typename DataT>
-        __device__ static DataT exec(DataT const& v)
+        ROCWMMA_DEVICE static DataT exec(DataT const& v)
         {
             return SwizzleFunc::exec(v);
         }
 
         template <typename DataT, uint32_t VecSize>
-        __device__ static void exec(VecT<DataT, VecSize>& v)
+        ROCWMMA_DEVICE static void exec(VecT<DataT, VecSize>& v)
         {
             auto it = makeVectorIterator(v).begin();
             static_assert(decltype(it)::range() == VecSize,

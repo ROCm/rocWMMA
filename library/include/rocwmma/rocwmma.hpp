@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -232,20 +232,20 @@ namespace rocwmma
 
         using IOConfig = io_config<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
 
-        __device__           fragment() = default;
-        __device__           fragment(const fragment& other);
-        __device__ fragment& operator=(const fragment& other);
+        ROCWMMA_DEVICE           fragment() = default;
+        ROCWMMA_DEVICE           fragment(const fragment& other);
+        ROCWMMA_DEVICE fragment& operator=(const fragment& other);
 
         // Accessors
-        __device__ inline DataT&                           operator[](uint32_t index);
-        __device__ inline DataT const&                     operator[](uint32_t index) const;
-        __device__ inline typename Traits::StorageT&       operator*();
-        __device__ inline typename Traits::StorageT const& operator*() const;
+        ROCWMMA_DEVICE inline DataT&                           operator[](uint32_t index);
+        ROCWMMA_DEVICE inline DataT const&                     operator[](uint32_t index) const;
+        ROCWMMA_DEVICE inline typename Traits::StorageT&       operator*();
+        ROCWMMA_DEVICE inline typename Traits::StorageT const& operator*() const;
 
         // Traits
-        __device__ constexpr static inline uint32_t blockDim();
-        __device__ constexpr static inline uint32_t kDim();
-        __device__ constexpr static inline uint32_t size();
+        ROCWMMA_DEVICE constexpr static inline uint32_t blockDim();
+        ROCWMMA_DEVICE constexpr static inline uint32_t kDim();
+        ROCWMMA_DEVICE constexpr static inline uint32_t size();
 
         // Compatibility with nvcuda::wmma
         union
@@ -275,7 +275,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    __device__ void
+    ROCWMMA_DEVICE void
         fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                       DataT                                                         value);
 
@@ -295,7 +295,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    __device__ void
+    ROCWMMA_DEVICE void
         load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                          const DataT*                                                  data,
                          uint32_t                                                      ldm);
@@ -312,10 +312,10 @@ namespace rocwmma
       \tparam DataLayout in-memory layout as col_major or row_major
     */
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
-    __device__ void load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT>& frag,
-                                     const DataT*                                      data,
-                                     uint32_t                                          ldm,
-                                     layout_t                                          layout);
+    ROCWMMA_DEVICE void load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT>& frag,
+                                         const DataT*                                      data,
+                                         uint32_t                                          ldm,
+                                         layout_t                                          layout);
 
     //! Stores the entire fragment to the data pointer according to its matrix and data layouts. Data pointer may point to either local or global memory.
     /*!
@@ -333,7 +333,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    __device__ void
+    ROCWMMA_DEVICE void
         store_matrix_sync(DataT*                                                              data,
                           fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
                           uint32_t                                                            ldm);
@@ -350,10 +350,11 @@ namespace rocwmma
       \tparam DataLayout in-memory layout as col_major or row_major
     */
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
-    __device__ void store_matrix_sync(DataT*                                                  data,
-                                      fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag,
-                                      uint32_t                                                ldm,
-                                      layout_t layout);
+    ROCWMMA_DEVICE void
+        store_matrix_sync(DataT*                                                  data,
+                          fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag,
+                          uint32_t                                                ldm,
+                          layout_t                                                layout);
 
     //! Performs the Multiply-Accumulate operation on the fragments A, B, C and D(D = A * B + C)
     /*!
@@ -377,14 +378,14 @@ namespace rocwmma
               typename LayoutB,
               typename LayoutC,
               typename LayoutD>
-    __device__ void
+    ROCWMMA_DEVICE void
         mma_sync(fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutD>&       d,
                  fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA> const&      a,
                  fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB> const&      b,
                  fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutC> const& c);
 
     //! Synchronization point for all wavefronts in a workgroup.
-    __device__ void synchronize_workgroup();
+    ROCWMMA_DEVICE void synchronize_workgroup();
 
 } // namespace rocwmma
 

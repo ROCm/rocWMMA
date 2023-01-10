@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -104,13 +104,13 @@ namespace rocwmma
                       "BlendOp is unsupported");
 
         template <typename DataT>
-        __HOST_DEVICE__ static inline DataT exec(DataT const& src0, DataT const& src1)
+        ROCWMMA_HOST_DEVICE static inline DataT exec(DataT const& src0, DataT const& src1)
         {
             return BlendFunc::exec(src0, src1);
         }
 
         template <typename DataT, uint32_t VecSize>
-        __HOST_DEVICE__ static void exec(VecT<DataT, VecSize>& src0, DataT const& src1)
+        ROCWMMA_HOST_DEVICE static void exec(VecT<DataT, VecSize>& src0, DataT const& src1)
         {
             auto it = makeVectorIterator(src0).begin();
             static_assert(decltype(it)::range() == VecSize,
@@ -126,8 +126,8 @@ namespace rocwmma
         }
 
         template <typename DataT, uint32_t VecSize>
-        __HOST_DEVICE__ static void exec(VecT<DataT, VecSize>&       src0,
-                                         VecT<DataT, VecSize> const& src1)
+        ROCWMMA_HOST_DEVICE static void exec(VecT<DataT, VecSize>&       src0,
+                                             VecT<DataT, VecSize> const& src1)
         {
             auto it0 = makeVectorIterator(src0).begin();
             auto it1 = makeVectorIterator(src1).begin();
@@ -145,7 +145,7 @@ namespace rocwmma
         }
 
         template <typename DataT, uint32_t VecSize>
-        __HOST_DEVICE__ static void exec(VecT<DataT, VecSize>& src0)
+        ROCWMMA_HOST_DEVICE static void exec(VecT<DataT, VecSize>& src0)
         {
             auto it0 = makeVectorIterator(src0).begin();
             static_assert(decltype(it0)::range() == VecSize,
@@ -161,7 +161,7 @@ namespace rocwmma
         }
 
         template <typename DataT, uint32_t VecSize>
-        __HOST_DEVICE__ static auto exec(VecT<DataT, VecSize> const& src0)
+        ROCWMMA_HOST_DEVICE static auto exec(VecT<DataT, VecSize> const& src0)
         {
             VecT<DataT, VecSize> result;
             auto const           itR = makeVectorIterator(src0).begin();

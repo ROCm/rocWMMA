@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,7 +38,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    __device__ void
+    ROCWMMA_DEVICE void
         load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                               const DataT*                                                  data,
                               uint32_t                                                      ldm,
@@ -72,7 +72,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    __device__ void
+    ROCWMMA_DEVICE void
         load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                               const DataT*                                                  data,
                               uint32_t                                                      ldm,
@@ -108,7 +108,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    __device__ inline void
+    ROCWMMA_DEVICE inline void
         load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                               const DataT*                                                  data,
                               uint32_t                                                      ldm,
@@ -124,7 +124,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    __device__ void
+    ROCWMMA_DEVICE void
         load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                               const DataT*                                                  data,
                               uint32_t                                                      ldm)
@@ -151,7 +151,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    __device__ void store_matrix_coop_sync(
+    ROCWMMA_DEVICE void store_matrix_coop_sync(
         DataT*                                                              data,
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
         uint32_t                                                            ldm,
@@ -186,7 +186,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    __device__ void store_matrix_coop_sync(
+    ROCWMMA_DEVICE void store_matrix_coop_sync(
         DataT*                                                              data,
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
         uint32_t                                                            ldm,
@@ -223,7 +223,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    __device__ void store_matrix_coop_sync(
+    ROCWMMA_DEVICE void store_matrix_coop_sync(
         DataT*                                                              data,
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
         uint32_t                                                            ldm,
@@ -239,7 +239,7 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayout>
-    __device__ void store_matrix_coop_sync(
+    ROCWMMA_DEVICE void store_matrix_coop_sync(
         DataT*                                                              data,
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
         uint32_t                                                            ldm)

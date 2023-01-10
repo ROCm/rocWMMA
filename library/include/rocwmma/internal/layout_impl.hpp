@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -533,7 +533,7 @@ namespace rocwmma
                     using MatrixCoordT = Coord2d;
                 };
 
-                __device__ static inline typename Traits::MatrixCoordT baseOffset()
+                ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT baseOffset()
                 {
                     // TODO: Use constexpr if on C++17
                     if(Traits::LargeDim)
@@ -547,7 +547,7 @@ namespace rocwmma
                                                 % Traits::MaxKPerIO);
                     }
                 }
-                __device__ static inline typename Traits::MatrixCoordT
+                ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
                     incrementalOffset(uint32_t iteration)
                 {
                     // TODO: Use constexpr if on C++ 17
@@ -601,7 +601,7 @@ namespace rocwmma
                         return make_coord2d(0u, IncYMinorStep + (majorStepMask & IncYMajorStep));
                     }
                 }
-                __device__ static inline typename Traits::MatrixCoordT
+                ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
                     cumulativeOffset(uint32_t iteration)
                 {
                     // TODO: Use constexpr if on C++17
@@ -736,7 +736,7 @@ namespace rocwmma
                     using MatrixCoordT = Coord2d;
                 };
 
-                __device__ static inline typename Traits::MatrixCoordT baseOffset()
+                ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT baseOffset()
                 {
                     // TODO: Use constexpr if when C++ 17
                     if(Traits::LargeDim)
@@ -753,7 +753,7 @@ namespace rocwmma
                 }
 
                 // Incremental iteration offset
-                __device__ static inline typename Traits::MatrixCoordT
+                ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
                     incrementalOffset(uint32_t iteration)
                 {
                     // TODO: Use constexpr if when C++ 17
@@ -806,7 +806,7 @@ namespace rocwmma
                 }
 
                 // Cumulative iteration offset
-                __device__ static inline typename Traits::MatrixCoordT
+                ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
                     cumulativeOffset(uint32_t iteration)
                 {
                     // TODO: Use constexpr if when C++ 17
@@ -855,16 +855,16 @@ namespace rocwmma
                 };
 
                 // Matrix coord offsets
-                __device__ static inline typename Traits::MatrixCoordT baseOffset()
+                ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT baseOffset()
                 {
                     return swap(Traits::OrthoLayout::baseOffset());
                 }
-                __device__ static inline typename Traits::MatrixCoordT
+                ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
                     incrementalOffset(uint32_t iteration)
                 {
                     return swap(Traits::OrthoLayout::incrementalOffset(iteration));
                 }
-                __device__ static inline typename Traits::MatrixCoordT
+                ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
                     cumulativeOffset(uint32_t iteration)
                 {
                     return swap(Traits::OrthoLayout::cumulativeOffset(iteration));
@@ -888,16 +888,16 @@ namespace rocwmma
                 };
 
                 // Matrix coord offsets
-                __device__ static inline typename Traits::MatrixCoordT baseOffset()
+                ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT baseOffset()
                 {
                     return swap(Traits::OrthoLayout::baseOffset());
                 }
-                __device__ static inline typename Traits::MatrixCoordT
+                ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
                     incrementalOffset(uint32_t iteration)
                 {
                     return swap(Traits::OrthoLayout::incrementalOffset(iteration));
                 }
-                __device__ static inline typename Traits::MatrixCoordT
+                ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
                     cumulativeOffset(uint32_t iteration)
                 {
                     return swap(Traits::OrthoLayout::cumulativeOffset(iteration));

@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2022 Advanced Micro Devices, Inc.
+ * Copyright 2022-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -123,27 +123,27 @@ namespace rocwmma
         using VecT     = non_native_vector_base<T, Rank>;
 
         /// Ctor, dtor, assignment
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         non_native_vector_base() = default;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         constexpr non_native_vector_base(const VecT&) = default;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         constexpr non_native_vector_base(VecT&&) = default;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         ~non_native_vector_base() = default;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         inline VecT& operator=(const VecT&) = default;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         inline VecT& operator=(VecT&&) = default;
 
         template <typename U                                                           = T,
                   typename std::enable_if<(std::is_same<U, T>{}) && (Rank > 1)>::type* = nullptr>
-        __HOST_DEVICE__ explicit constexpr non_native_vector_base(T x_) noexcept;
+        ROCWMMA_HOST_DEVICE explicit constexpr non_native_vector_base(T x_) noexcept;
 
         template <typename... Ts,
                   typename U = T,
@@ -152,66 +152,66 @@ namespace rocwmma
                                           && (std::is_same<U, Ts>{} && ...)
 #endif
                                           >::type* = nullptr>
-        __HOST_DEVICE__ constexpr non_native_vector_base(Ts... args) noexcept;
+        ROCWMMA_HOST_DEVICE constexpr non_native_vector_base(Ts... args) noexcept;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         constexpr inline T& operator[](unsigned int idx) noexcept;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         constexpr inline T operator[](unsigned int idx) const noexcept;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         inline VecT& operator+=(const VecT& x_) noexcept;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         inline VecT& operator-=(const VecT& x_) noexcept;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         inline VecT& operator*=(const VecT& x_) noexcept;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         inline VecT& operator/=(const VecT& x_) noexcept;
 
         template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
-        __HOST_DEVICE__ inline VecT& operator%=(const VecT& x_) noexcept;
+        ROCWMMA_HOST_DEVICE inline VecT& operator%=(const VecT& x_) noexcept;
 
         template <typename U = T, typename std::enable_if<std::is_signed<U>{}>::type* = nullptr>
-        __HOST_DEVICE__ inline VecT operator-() const noexcept;
+        ROCWMMA_HOST_DEVICE inline VecT operator-() const noexcept;
 
         template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
-        __HOST_DEVICE__ inline VecT& operator&=(const VecT& x_) noexcept;
+        ROCWMMA_HOST_DEVICE inline VecT& operator&=(const VecT& x_) noexcept;
 
         template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
-        __HOST_DEVICE__ inline VecT& operator|=(const VecT& x_) noexcept;
+        ROCWMMA_HOST_DEVICE inline VecT& operator|=(const VecT& x_) noexcept;
 
         template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
-        __HOST_DEVICE__ inline VecT operator~() const noexcept;
+        ROCWMMA_HOST_DEVICE inline VecT operator~() const noexcept;
 
         template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
-        __HOST_DEVICE__ inline VecT& operator^=(const VecT& x_) noexcept;
+        ROCWMMA_HOST_DEVICE inline VecT& operator^=(const VecT& x_) noexcept;
 
         template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
-        __HOST_DEVICE__ inline VecT& operator>>=(const VecT& x_) noexcept;
+        ROCWMMA_HOST_DEVICE inline VecT& operator>>=(const VecT& x_) noexcept;
 
         template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
-        __HOST_DEVICE__ inline VecT& operator<<=(const VecT& x_) noexcept;
+        ROCWMMA_HOST_DEVICE inline VecT& operator<<=(const VecT& x_) noexcept;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         inline BoolVecT operator==(const VecT& x_) const noexcept;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         inline BoolVecT operator!=(const VecT& x_) const noexcept;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         inline BoolVecT operator>=(const VecT& x_) const noexcept;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         inline BoolVecT operator<=(const VecT& x_) const noexcept;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         inline BoolVecT operator>(const VecT& x_) const noexcept;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         inline BoolVecT operator<(const VecT& x_) const noexcept;
 
         /// Storage

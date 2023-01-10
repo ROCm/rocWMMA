@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -75,7 +75,7 @@ namespace rocwmma
         struct amdgcn_perm
         {
             template <typename DataT>
-            __device__ static inline DataT exec(DataT src0, DataT src1)
+            ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1)
             {
                 // NOTE: src0 and src1 are flipped here due to spec's select
                 // concatenation of i[3:0] = src1 and i[7:4] = src0 .

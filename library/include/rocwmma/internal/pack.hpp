@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -54,7 +54,7 @@ namespace rocwmma
         // Pass-thru for no compression
         // SFINAE on the return type
         template <typename IncomingT>
-        __device__ static inline auto exec(IncomingT&& input) -> typename std::enable_if<
+        ROCWMMA_DEVICE static inline auto exec(IncomingT&& input) -> typename std::enable_if<
             std::is_same<typename std::decay<IncomingT>::type, typename Traits::InputT>::value
                 && (Traits::PackRatio == 1),
             decltype(std::forward<IncomingT>(input))>::type
@@ -66,7 +66,7 @@ namespace rocwmma
 
         // Actual compression needed
         template <typename IncomingT>
-        __device__ static inline auto exec(IncomingT&& input) -> typename std::enable_if<
+        ROCWMMA_DEVICE static inline auto exec(IncomingT&& input) -> typename std::enable_if<
             std::is_same<typename std::decay<IncomingT>::type, typename Traits::InputT>::value
                 && (Traits::PackRatio > 1),
             typename Traits::OutputT&>::type

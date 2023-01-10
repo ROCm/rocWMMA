@@ -45,126 +45,126 @@ namespace rocwmma
             static_assert(sizeof(RefVecT) == sizeof(ItVecT) * Traits::Range,
                           "Cannot alias subvector");
 
-            __HOST_DEVICE__ constexpr iterator() noexcept = delete;
+            ROCWMMA_HOST_DEVICE constexpr iterator() noexcept = delete;
 
-            __HOST_DEVICE__ constexpr iterator(RefVecT const& ref, uint32_t idx = 0) noexcept
+            ROCWMMA_HOST_DEVICE constexpr iterator(RefVecT const& ref, uint32_t idx = 0) noexcept
                 : mRef(ref)
                 , mIdx(idx)
             {
             }
 
-            __HOST_DEVICE__ ~iterator() = default;
+            ROCWMMA_HOST_DEVICE ~iterator() = default;
 
-            __HOST_DEVICE__ inline ItVecT const& operator*() const
+            ROCWMMA_HOST_DEVICE inline ItVecT const& operator*() const
             {
                 // Cast as array of sub-vectors
                 return reinterpret_cast<ItVecT const*>(&mRef)[mIdx];
             }
 
-            __HOST_DEVICE__ inline ItVecT& operator*()
+            ROCWMMA_HOST_DEVICE inline ItVecT& operator*()
             {
                 // Cast as array of sub-vectors
                 return reinterpret_cast<ItVecT*>(&const_cast<RefVecT&>(mRef))[mIdx];
             }
 
-            __HOST_DEVICE__ inline iterator const& operator++() const
+            ROCWMMA_HOST_DEVICE inline iterator const& operator++() const
             {
                 mIdx++;
                 return *this;
             }
-            __HOST_DEVICE__ inline iterator operator++(int) const
+            ROCWMMA_HOST_DEVICE inline iterator operator++(int) const
             {
                 auto retval = *this;
                 ++mIdx;
                 return retval;
             }
 
-            __HOST_DEVICE__ inline iterator const& operator--() const
+            ROCWMMA_HOST_DEVICE inline iterator const& operator--() const
             {
                 mIdx--;
                 return *this;
             }
-            __HOST_DEVICE__ inline iterator operator--(int) const
+            ROCWMMA_HOST_DEVICE inline iterator operator--(int) const
             {
                 auto retval = *this;
                 --mIdx;
                 return retval;
             }
 
-            __HOST_DEVICE__ inline iterator const& operator+=(int i) const
+            ROCWMMA_HOST_DEVICE inline iterator const& operator+=(int i) const
             {
                 mIdx += i;
                 return *this;
             }
 
-            __HOST_DEVICE__ inline iterator const& operator-=(int i) const
+            ROCWMMA_HOST_DEVICE inline iterator const& operator-=(int i) const
             {
                 mIdx -= i;
                 return *this;
             }
 
-            __HOST_DEVICE__ inline iterator operator+(int i) const
+            ROCWMMA_HOST_DEVICE inline iterator operator+(int i) const
             {
                 auto retval = *this;
                 return retval += i;
             }
 
-            __HOST_DEVICE__ inline iterator operator-(int i) const
+            ROCWMMA_HOST_DEVICE inline iterator operator-(int i) const
             {
                 auto retval = *this;
                 return retval -= i;
             }
 
-            __HOST_DEVICE__ inline bool operator==(iterator const& other) const
+            ROCWMMA_HOST_DEVICE inline bool operator==(iterator const& other) const
             {
                 return (&mRef == &other.mRef) && (mIdx == other.mIdx);
             }
-            __HOST_DEVICE__ inline bool operator!=(iterator const& other) const
+            ROCWMMA_HOST_DEVICE inline bool operator!=(iterator const& other) const
             {
                 return !(*this == other);
             }
 
             //__device__ inline Iterator<SubVecSize, IsConst> next() const;
             // __device__ inline Iterator<SubVecSize, IsConst> prev() const;
-            __HOST_DEVICE__ inline uint32_t index() const
+            ROCWMMA_HOST_DEVICE inline uint32_t index() const
             {
                 return mIdx;
             }
-            __HOST_DEVICE__ inline bool valid() const
+            ROCWMMA_HOST_DEVICE inline bool valid() const
             {
                 return (mIdx >= 0) && (mIdx < Traits::Range);
             }
             // __device__ bool                                 valid() const;
 
-            __HOST_DEVICE__ constexpr static inline int32_t range()
+            ROCWMMA_HOST_DEVICE constexpr static inline int32_t range()
             {
                 return Traits::Range;
             }
             // __device__ constexpr static inline bool    isConst();
         };
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         constexpr VectorIterator(RefVecT const& refVec) noexcept
             : mRef(refVec)
         {
         }
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         ~VectorIterator() = default;
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         inline iterator it(uint32_t startIdx = 0)
         {
             return iterator(mRef, startIdx);
         }
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         inline iterator begin()
         {
             return iterator(mRef, 0u);
         }
 
-        __HOST_DEVICE__
+        ROCWMMA_HOST_DEVICE
         inline iterator end()
         {
             return iterator(mRef, Rank / SubVecSize);
