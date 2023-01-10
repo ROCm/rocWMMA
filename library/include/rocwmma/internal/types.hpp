@@ -35,7 +35,7 @@
 #include <utility>
 #endif // !__HIPCC_RTC__
 
-#include <rocwmma/internal/config.hpp>
+#include "config.hpp"
 
 namespace rocwmma
 {
