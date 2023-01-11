@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,8 +42,8 @@ namespace rocwmma
         HipResource() = default;
 
     private: // No Copy
-        HipResource(HipResource&&)      = delete;
-        HipResource(const HipResource&) = delete;
+        HipResource(HipResource&&)                 = delete;
+        HipResource(const HipResource&)            = delete;
         HipResource& operator=(const HipResource&) = delete;
 
     public:

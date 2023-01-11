@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -705,8 +705,7 @@ namespace rocwmma
         typename std::enable_if_t<
             (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_BCAST)
                 || (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_BLOCK_BCAST),
-            void*>
-        = nullptr>
+            void*> = nullptr>
     void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
                                      DataT const* dataIn,
                                      uint32_t     elementCount,
@@ -745,13 +744,12 @@ namespace rocwmma
     // Blend
     template <typename DataT,
               typename CrossLaneOp,
-              uint32_t RowMask   = 0xF,
-              uint32_t BankMask  = 0xF,
-              bool     BoundCtrl = false,
+              uint32_t RowMask                 = 0xF,
+              uint32_t BankMask                = 0xF,
+              bool     BoundCtrl               = false,
               typename std::enable_if_t<(CrossLaneOp::opId()
                                          == rocwmma::CrossLaneOps::Properties::OP_ID_BLEND),
-                                        void*>
-              = nullptr>
+                                        void*> = nullptr>
     void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
                                      DataT const* dataIn,
                                      uint32_t     elementCount,
@@ -796,8 +794,7 @@ namespace rocwmma
             (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_REVERSE)
                 || (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_SWAP)
                 || (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_WFALL_BCAST),
-            void*>
-        = nullptr>
+            void*> = nullptr>
     void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
                                      DataT const* dataIn,
                                      uint32_t     elementCount,
@@ -842,8 +839,7 @@ namespace rocwmma
               typename std::enable_if_t<
                   (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_SHIFT)
                       || (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_ROTATE),
-                  void*>
-              = nullptr>
+                  void*> = nullptr>
     void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
                                      DataT const* dataIn,
                                      uint32_t     elementCount,
@@ -884,14 +880,13 @@ namespace rocwmma
     // Shuffle 4
     template <typename DataT,
               typename CrossLaneOp,
-              uint32_t RowMask   = 0xF,
-              uint32_t BankMask  = 0xF,
-              bool     BoundCtrl = false,
+              uint32_t RowMask                 = 0xF,
+              uint32_t BankMask                = 0xF,
+              bool     BoundCtrl               = false,
               typename std::enable_if_t<(CrossLaneOp::opId()
                                          == rocwmma::CrossLaneOps::Properties::OP_ID_SHUFFLE)
                                             && (CrossLaneOp::groupSize() == 4u),
-                                        void*>
-              = nullptr>
+                                        void*> = nullptr>
     void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
                                      DataT const* dataIn,
                                      uint32_t     elementCount,
@@ -926,14 +921,13 @@ namespace rocwmma
     // Shuffle 2
     template <typename DataT,
               typename CrossLaneOp,
-              uint32_t RowMask   = 0xF,
-              uint32_t BankMask  = 0xF,
-              bool     BoundCtrl = false,
+              uint32_t RowMask                 = 0xF,
+              uint32_t BankMask                = 0xF,
+              bool     BoundCtrl               = false,
               typename std::enable_if_t<(CrossLaneOp::opId()
                                          == rocwmma::CrossLaneOps::Properties::OP_ID_SHUFFLE)
                                             && (CrossLaneOp::groupSize() == 2u),
-                                        void*>
-              = nullptr>
+                                        void*> = nullptr>
     void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
                                      DataT const* dataIn,
                                      uint32_t     elementCount,

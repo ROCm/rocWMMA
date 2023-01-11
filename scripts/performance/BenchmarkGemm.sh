@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright (c) 2022 Advanced Micro Devices, Inc.
+# Copyright 2022-2023 Advanced Micro Devices, Inc.
 
 set -eux
 
@@ -10,11 +10,11 @@ output_dir=rocwmma-benchmarks
 build_dir=../../build/test/gemm/
 
 if [ -d "$build_dir" ]; then
-  # setup output directory for benchmarks 
+  # setup output directory for benchmarks
   mkdir -p "$output_dir"
 
   gemm_bench=("gemm_PGR0_LB0_MP0_SB_NC" "gemm_PGR0_LB0_MP0_MB_NC" "gemm_PGR1_LB2_MP0_MB_CP_BLK" "gemm_PGR1_LB2_MP0_MB_CP_WG" "gemm_PGR1_LB2_MP0_MB_CP_WV")
-  
+
   # run benchmarks
   for f in ${gemm_bench[@]}; do
     if [[ -e $build_dir/$f-bench && ! -L $build_dir/$f-bench ]]; then

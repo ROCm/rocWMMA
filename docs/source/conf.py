@@ -53,7 +53,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'rocWMMA'
-copyright = u'2021-2022, Advanced Micro Devices'
+copyright = u'2021-2023, Advanced Micro Devices'
 author = u'Advanced Micro Devices'
 
 # The version info for the project you're documenting, acts as replacement for

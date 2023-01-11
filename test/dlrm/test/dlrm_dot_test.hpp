@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -57,7 +57,7 @@ namespace rocwmma
 
             // Cleanup previously used resources if data types change
             static KernelI* sLastKernelRun = nullptr;
-            if (sLastKernelRun && sLastKernelRun->getResource() != kernel->getResource())
+            if(sLastKernelRun && sLastKernelRun->getResource() != kernel->getResource())
             {
                 sLastKernelRun->getResource()->reset();
             }
