@@ -2,7 +2,7 @@
  #
  # MIT License
  #
- # Copyright 2021-2022 Advanced Micro Devices, Inc.
+ # Copyright 2021-2023 Advanced Micro Devices, Inc.
  #
  # Permission is hereby granted, free of charge, to any person obtaining a copy
  # of this software and associated documentation files (the "Software"), to deal
@@ -192,7 +192,7 @@ set(VectorIteratorTestSources ${UnitCommonSources}
 set(VectorTestSources ${UnitCommonSources}
                       ${CMAKE_CURRENT_SOURCE_DIR}/test/vector_test/vector.cpp
                        )
-                       
+
 set(IoTraitsTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/io_traits_test/io_traits_16.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/io_traits_test/io_traits_32.cpp
