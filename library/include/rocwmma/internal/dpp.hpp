@@ -63,6 +63,7 @@ namespace rocwmma
         using CrossLaneOps::ShiftR;
         using CrossLaneOps::ShiftL;
         using CrossLaneOps::Swap;
+        using CrossLaneOps::Move;
 
         // These definitions are for DPP support, so we specify this backend here.
         // Operation directions can also be propagated to the ctrl
@@ -95,6 +96,8 @@ namespace rocwmma
 
         using BCast32x31 = WFallBCast<Properties::OP_GROUP_SIZE_32, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_bcast31::opCtrl()>;
 
+        // Move variants
+        using MaskMove = Move<OP_IMPL, detail::DppCtrl::amdgcn_dpp_mov::opCtrl()>;
 
         // Reversal variants
         using Reverse16 = Reverse<Properties::OP_GROUP_SIZE_16, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_reverse::opCtrl()>;
@@ -255,7 +258,8 @@ namespace rocwmma
                           || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_REVERSE)
                           || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_SWAP)
                           || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_BCAST)
-                          || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_WFALL_BCAST),
+                          || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_WFALL_BCAST)
+                          || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_MOVE),
                       "DppOp is unsupported");
 
         // Self as prev.

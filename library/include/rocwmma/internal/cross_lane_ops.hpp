@@ -54,6 +54,7 @@ namespace rocwmma
             OP_ID_BLOCK_BCAST = 0x07, // broadcast block
             OP_ID_WFALL_BCAST = 0x08, // broadcast last element to next block
             OP_ID_BLEND       = 0x09, // byte-wise element blending
+            OP_ID_MOVE        = 0x0a, // move, or copy
 
             // Sub group size
             OP_GROUP_SIZE_2    = 0x02, // Op affects sub-groups of 2
@@ -372,6 +373,17 @@ namespace rocwmma
         template <uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
         struct WFallBCast
             : public OpBase<Properties::OP_ID_WFALL_BCAST, SubGroupSize, OpImpl, OpCtrl>
+        {
+        };
+
+        /*! \class Move
+        *  \brief Performs a copy of each element.
+        *
+        * @tparam SubGroupSize - size of the broadcast blocks.
+        */
+        template <uint32_t OpImpl, uint32_t OpCtrl>
+        struct Move
+            : public OpBase<Properties::OP_ID_MOVE, Properties::OP_GROUP_SIZE_WARP, OpImpl, OpCtrl>
         {
         };
 
