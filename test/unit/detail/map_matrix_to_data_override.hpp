@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -85,14 +85,12 @@ namespace rocwmma
             dataInstance->resizeStorage(probsize);
 
             // Initialize matrix data on host
-            MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
-            MatrixUtil<Layout>::fill(dataInstance->hostOut().get(),
-                                     Base::mM,
-                                     Base::mN,
-                                     std::numeric_limits<DataT>::signaling_NaN());
-
-            dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), sizeD);
-            dataInstance->copyData(dataInstance->deviceOut(), dataInstance->hostOut(), sizeD);
+            MatrixUtil<Layout>::fillLaunchKernel(
+                dataInstance->deviceIn().get(), Base::mM, Base::mN);
+            MatrixUtil<Layout>::fillLaunchKernel(dataInstance->deviceOut().get(),
+                                                 Base::mM,
+                                                 Base::mN,
+                                                 std::numeric_limits<DataT>::signaling_NaN());
         }
 
         void validateResultsImpl() final
@@ -101,8 +99,8 @@ namespace rocwmma
 
             const int64_t sizeD = Base::mM * Base::mN;
 
-            // Allocate and cache host memory for device result
-            dataInstance->copyData(dataInstance->hostOut(), dataInstance->deviceOut(), sizeD);
+            // Allocate and cache device-initialized input data
+            dataInstance->copyData(dataInstance->hostIn(), dataInstance->deviceIn(), sizeD);
 
             // Allocate host memory for reference calcs
             auto& hostInput  = dataInstance->hostIn();
@@ -155,13 +153,17 @@ namespace rocwmma
                 }
             }
 
+            auto reference = dataInstance->template allocDevice<DataT>(sizeD);
+            dataInstance->copyData(reference, hostResult, sizeD);
+
             double errorTolerance = 1.0;
             std::tie(Base::mValidationResult, Base::mMaxRelativeError)
-                = compareEqual<DataT, DataT, Layout, Layout>(dataInstance->hostOut().get(),
-                                                             hostResult.get(),
-                                                             Base::mM,
-                                                             Base::mN,
-                                                             errorTolerance);
+                = compareEqualLaunchKernel<DataT, DataT, Layout, Layout>(
+                    dataInstance->deviceOut().get(),
+                    reference.get(),
+                    Base::mM,
+                    Base::mN,
+                    errorTolerance);
         }
 
         bool checkQuirks() const final
