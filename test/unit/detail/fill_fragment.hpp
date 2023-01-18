@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -62,12 +62,12 @@ namespace rocwmma
             dataInstance->resizeStorage(probsize);
 
             // Initialize matrix data on host
-            MatrixUtil<Layout>::fill(
-                dataInstance->hostIn().get(), Base::mM, Base::mN, Base::mParam1);
-            MatrixUtil<Layout>::fill(dataInstance->hostOut().get(),
-                                     Base::mM,
-                                     Base::mN,
-                                     std::numeric_limits<DataT>::signaling_NaN());
+            MatrixUtil<Layout>::fillLaunchKernel(
+                dataInstance->deviceIn().get(), Base::mM, Base::mN, Base::mParam1);
+            MatrixUtil<Layout>::fillLaunchKernel(dataInstance->deviceOut().get(),
+                                                 Base::mM,
+                                                 Base::mN,
+                                                 std::numeric_limits<DataT>::signaling_NaN());
         }
 
         void validateResultsImpl() final
@@ -76,17 +76,15 @@ namespace rocwmma
 
             const int64_t sizeD = Base::mM * Base::mN;
 
-            // Cache current kernel result from device
-            dataInstance->copyData(dataInstance->hostOut(), dataInstance->deviceOut(), sizeD);
-
             double errorTolerance = 10.0;
 
             std::tie(Base::mValidationResult, Base::mMaxRelativeError)
-                = compareEqual<DataT, DataT, Layout, Layout>(dataInstance->hostOut().get(),
-                                                             dataInstance->hostIn().get(),
-                                                             Base::mM,
-                                                             Base::mN,
-                                                             errorTolerance);
+                = compareEqualLaunchKernel<DataT, DataT, Layout, Layout>(
+                    dataInstance->deviceIn().get(),
+                    dataInstance->deviceOut().get(),
+                    Base::mM,
+                    Base::mN,
+                    errorTolerance);
         }
 
         bool checkQuirks() const final
