@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -157,46 +157,40 @@ namespace rocwmma
             dataInstance->resizeStorage(probsize);
 
             // Init host
-            MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
+            MatrixUtil<Layout>::fillLaunchKernel(
+                dataInstance->deviceIn().get(), Base::mM, Base::mN);
             // for(int i=0; i < Base::mM * Base::mN; i++)
             // {
             //     dataInstance->hostIn().get()[i] = i;
             // }
-            MatrixUtil<Layout>::fill(dataInstance->hostOut().get(),
-                                     Base::mM,
-                                     Base::mN,
-                                     std::numeric_limits<DataT>::signaling_NaN());
-
-            // Init device
-            dataInstance->copyData(
-                dataInstance->deviceIn(), dataInstance->hostIn(), Base::mM * Base::mN);
-            dataInstance->copyData(
-                dataInstance->deviceOut(), dataInstance->hostOut(), Base::mM * Base::mN);
+            MatrixUtil<Layout>::fillLaunchKernel(dataInstance->deviceOut().get(),
+                                                 Base::mM,
+                                                 Base::mN,
+                                                 std::numeric_limits<DataT>::signaling_NaN());
         }
 
         void validateResultsImpl() final
         {
             auto& dataInstance = Base::DataStorage::instance();
 
+            const int64_t sizeD = Base::mM * Base::mN;
+
+            // Copy back the GPU-initialized input
+            dataInstance->copyData(dataInstance->hostIn(), dataInstance->deviceIn(), sizeD);
+
             // Perform the host validation
             // Host reference result in hostOut
             cross_lane_ref_dispatch_CPU<DataT, CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>(
-                dataInstance->hostOut().get(),
-                dataInstance->hostIn().get(),
-                Base::mM * Base::mN,
-                Base::mParam1);
+                dataInstance->hostOut().get(), dataInstance->hostIn().get(), sizeD, Base::mParam1);
 
-            // Copy back the GPU version.
-            // GPU result in hostIn
-            dataInstance->copyData(
-                dataInstance->hostIn(), dataInstance->deviceOut(), Base::mM * Base::mN);
+            // Copy host reference output to GPU
+            auto reference = dataInstance->template allocDevice<DataT>(sizeD);
+            dataInstance->copyData(reference, dataInstance->hostIn(), sizeD);
 
-            // Compare on the host
+            // Compare on the GPU
             std::tie(Base::mValidationResult, Base::mMaxRelativeError)
-                = compareEqual<DataT, DataT, Layout, Layout>(dataInstance->hostOut().get(),
-                                                             dataInstance->hostIn().get(),
-                                                             Base::mM,
-                                                             Base::mN);
+                = compareEqualLaunchKernel<DataT, DataT, Layout, Layout>(
+                    reference.get(), dataInstance->deviceOut().get(), Base::mM, Base::mN);
 
             // for(int i=0; i < Base::mM * Base::mN; i++)
             // {
