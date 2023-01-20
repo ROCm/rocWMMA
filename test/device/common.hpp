@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2022 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -160,6 +160,40 @@ namespace rocwmma
             else
             {
                 relativeError[batchOffset + errorIdx] = numerator / divisor;
+            }
+        }
+    }
+
+    // fill kernel for M x N matrix with padding
+    template <typename DataT, typename Layout>
+    __global__ void fillWithPaddingKernel(
+        DataT* mat, uint32_t m, uint32_t n, uint32_t padM, uint32_t padN, DataT padValue)
+    {
+        const auto limitM = m + 2 * padM;
+        const auto limitN = n + 2 * padN;
+
+        uint32_t rowIdx = (blockIdx.x * blockDim.x + threadIdx.x) / limitN;
+        uint32_t colIdx = (blockIdx.x * blockDim.x + threadIdx.x) % limitN;
+
+        auto ld    = std::is_same<Layout, row_major>::value ? limitN : limitM;
+        auto index = std::is_same<Layout, row_major>::value ? rowMjr(rowIdx, colIdx, ld)
+                                                            : colMjr(rowIdx, colIdx, ld);
+
+        if(rowIdx < limitM && colIdx < limitN)
+        {
+            // fill padding
+            if(rowIdx < padM || rowIdx >= (limitM - padM) || colIdx < padN
+               || colIdx >= (limitN - padN))
+            {
+                mat[index] = padValue;
+            }
+            // fill interior
+            else
+            {
+                auto value = ((rowIdx - padM) * n + (colIdx - padN)) % 5;
+                mat[index] = ((value % 5) && std::is_signed<DataT>::value)
+                                 ? -static_cast<DataT>(value)
+                                 : static_cast<DataT>(value);
             }
         }
     }
