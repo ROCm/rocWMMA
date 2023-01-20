@@ -185,7 +185,7 @@ namespace rocwmma
 
             // Copy host reference output to GPU
             auto reference = dataInstance->template allocDevice<DataT>(sizeD);
-            dataInstance->copyData(reference, dataInstance->hostIn(), sizeD);
+            dataInstance->copyData(reference, dataInstance->hostOut(), sizeD);
 
             // Compare on the GPU
             std::tie(Base::mValidationResult, Base::mMaxRelativeError)
