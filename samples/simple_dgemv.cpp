@@ -270,6 +270,8 @@ int main()
 
     if(isSupportedDevice())
         dgemv_test(m, n, k, 2.1, 2.1);
+    else
+        std::cout << "f64 dgemv not supported on this device" << std::endl;
 
     return 0;
 }
