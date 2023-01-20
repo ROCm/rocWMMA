@@ -104,6 +104,23 @@ struct Log2<1>
     static constexpr uint value = 0;
 };
 
+// Matrix data initialization
+template <typename DataT>
+__host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n)
+{
+    auto ld = n;
+    for(int i = 0; i < m; ++i)
+    {
+        for(int j = 0; j < n; ++j)
+        {
+            // Ascending order for each neighboring element.
+            // Alternate sign for even / odd
+            auto value      = (i * ld + j) % 17;
+            mat[i * ld + j] = (value % 2) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
+        }
+    }
+}
+
 // Batched matrix data initialization
 template <typename DataT>
 __host__ static inline void
@@ -143,6 +160,7 @@ __host__ void compareEqual(T const* a, T const* b, uint32_t size, double toleran
             max_relative_error = relative_error;
         }
     }
+
     auto eps = std::numeric_limits<T>::epsilon();
     if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
     {
