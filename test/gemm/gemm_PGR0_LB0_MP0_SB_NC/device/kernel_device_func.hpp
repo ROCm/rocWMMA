@@ -68,9 +68,7 @@ namespace rocwmma
             CostCTest = ((uint32_t)TestTraits::Cost::TileC <= 256u),
             CostDTest = ((uint32_t)TestTraits::Cost::TileD <= 256u),
 
-            IsInt8 = std::is_same<int8_t, InputT>::value,
-
-            Enable = ((bool)TestTraits::IsGfx9 && (bool)TestTraits::IsWave64 && !(bool)IsInt8
+            Enable = ((bool)TestTraits::IsGfx9 && (bool)TestTraits::IsWave64
                       && CostABTest && CostCTest && CostDTest)
         };
 
