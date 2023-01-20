@@ -268,6 +268,8 @@ int main()
     const uint32_t k = 256;
     const uint32_t n = T_BLOCK_Y * ROCWMMA_N;
 
-    dgemv_test(m, n, k, 2.1, 2.1);
+    if(isSupportedDevice())
+        dgemv_test(m, n, k, 2.1, 2.1);
+
     return 0;
 }
