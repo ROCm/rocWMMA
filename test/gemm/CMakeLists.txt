@@ -26,7 +26,7 @@
 
 include( CMakeDependentOption )
 
-cmake_dependent_option( ROCWMMA_VALIDATE_WITH_ROCBLAS "Use rocBLAS for validation" OFF "ROCWMMA_BUILD_VALIDATION_TESTS" OFF )
+cmake_dependent_option( ROCWMMA_VALIDATE_WITH_ROCBLAS "Use rocBLAS for validation" ON "ROCWMMA_BUILD_VALIDATION_TESTS" OFF )
 cmake_dependent_option( ROCWMMA_BENCHMARK_WITH_ROCBLAS "Include rocBLAS benchmark performance comparisons" OFF "ROCWMMA_BUILD_BENCHMARK_TESTS" OFF )
 
 set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
