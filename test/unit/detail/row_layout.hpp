@@ -63,9 +63,6 @@ namespace rocwmma
                                                  Base::mM,
                                                  Base::mN,
                                                  std::numeric_limits<DataT>::signaling_NaN());
-
-            // dataInstance->copyData(dataInstance->deviceIn(), dataInstance->hostIn(), sizeD);
-            // dataInstance->copyData(dataInstance->deviceOut(), dataInstance->hostOut(), sizeD);
         }
 
         void validateResultsImpl()
@@ -73,9 +70,6 @@ namespace rocwmma
             auto& dataInstance = Base::DataStorage::instance();
 
             const int64_t sizeD = Base::mM * Base::mN;
-
-            // Cache current kernel result from device
-            // dataInstance->copyData(dataInstance->hostOut(), dataInstance->deviceOut(), sizeD);
 
             double errorTolerance = 10.0;
 
