@@ -70,23 +70,6 @@ __host__ void gemm_cpu_h(uint32_t         m,
     }
 }
 
-// Matrix data initialization
-template <typename DataT>
-__host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n)
-{
-    auto ld = n;
-    for(int i = 0; i < m; ++i)
-    {
-        for(int j = 0; j < n; ++j)
-        {
-            // Ascending order for each neighboring element.
-            // Alternate sign for even / odd
-            auto value      = (i * n + j) % 13;
-            mat[i * ld + j] = (value % 3) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
-        }
-    }
-}
-
 // Supports ROCWMMA_M/N square sizes of
 // : 16 x 16
 // : 32 x 32

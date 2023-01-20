@@ -39,15 +39,15 @@ using rocwmma::float16_t;
 using rocwmma::float32_t;
 using rocwmma::float64_t;
 
-// Host gemv validation
-__host__ void gemv_cpu_h(uint32_t         m,
-                         uint32_t         n,
-                         uint32_t         k,
-                         float16_t const* a,
-                         float16_t const* b,
-                         float32_t*       c,
-                         float32_t        alpha,
-                         float32_t        beta)
+// Host sgemv validation
+__host__ void sgemv_cpu_h(uint32_t         m,
+                          uint32_t         n,
+                          uint32_t         k,
+                          float16_t const* a,
+                          float16_t const* b,
+                          float32_t*       c,
+                          float32_t        alpha,
+                          float32_t        beta)
 {
     uint32_t lda = m;
 
@@ -60,77 +60,6 @@ __host__ void gemv_cpu_h(uint32_t         m,
         }
         c[i] = alpha * accum + beta * c[i];
     }
-}
-
-// Matrix data print
-template <typename DataT>
-__host__ static inline void print(DataT* mat, uint32_t m, uint32_t n)
-{
-    auto ld = n;
-    for(int i = 0; i < m; ++i)
-    {
-        for(int j = 0; j < n; ++j)
-        {
-            std::cout << static_cast<DataT>(mat[i * ld + j]) << " ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
-}
-
-// Matrix data initialization
-template <typename DataT>
-__host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n)
-{
-    uint32_t ld = n;
-    for(int i = 0; i < m; ++i)
-    {
-        for(int j = 0; j < n; ++j)
-        {
-            // Ascending order for each neighboring element.
-            // Alternate sign for even / odd
-            auto value      = (i * ld + j) % 17;
-            mat[i * ld + j] = (value % 2) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
-        }
-    }
-}
-
-// Element-wise comparison
-__host__ void
-    compareEqual(float32_t const* a, float32_t const* b, int m, int n, double tolerance = 10.0)
-{
-    bool retval;
-    int  lda = n;
-    int  ldb = lda;
-
-    double max_relative_error = 0.0;
-
-    for(int i = 0; i < m; ++i)
-    {
-        for(int j = 0; j < n; ++j)
-        {
-            auto valA           = a[i * lda + j];
-            auto valB           = b[i * ldb + j];
-            auto relative_error = fabs(valA - valB) / (fabs(valA) + fabs(valB) + 1.0);
-
-            if(relative_error > max_relative_error || relative_error != relative_error)
-            {
-                max_relative_error = relative_error;
-            }
-        }
-    }
-
-    auto eps = std::numeric_limits<float32_t>::epsilon();
-    if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
-    {
-        std::cout << "FAILED\n";
-    }
-    else
-    {
-        std::cout << "PASSED\n";
-    }
-
-    std::cout << "Max relative error: " << max_relative_error << std::endl;
 }
 
 // Supports ROCWMMA_M/N square sizes of
@@ -155,8 +84,8 @@ const int T_BLOCK_X = 16 * WAVE_SIZE;
 const int T_BLOCK_Y = 1;
 
 // The following device kernel is a naive implementation
-// of blocked GEMV. Each wave will compute one BLOCK_M x BLOCK_N
-// output block of the m x k x 1 GEMV, generalized as:
+// of blocked SGEMV. Each wave will compute one BLOCK_M x BLOCK_N
+// output block of the m x k x 1 SGEMV, generalized as:
 // y = alpha * (A) * x + beta * y
 //
 // In this simplified example, we assume:
@@ -167,20 +96,20 @@ const int T_BLOCK_Y = 1;
 // : No LDS required
 //
 // Note: This is a simplified implementation to demonstrate API usage in
-// context of wave-level GEMV computation, and is not optimized.
-__global__ void gemv_rocwmma_d(uint32_t         m,
-                               uint32_t         n,
-                               uint32_t         k,
-                               float16_t const* a,
-                               float16_t const* b,
-                               float32_t*       c,
-                               float32_t*       d,
-                               uint32_t         lda,
-                               uint32_t         ldb,
-                               uint32_t         ldc,
-                               uint32_t         ldd,
-                               float32_t        alpha,
-                               float32_t        beta)
+// context of wave-level SGEMV computation, and is not optimized.
+__global__ void sgemv_rocwmma_d(uint32_t         m,
+                                uint32_t         n,
+                                uint32_t         k,
+                                float16_t const* a,
+                                float16_t const* b,
+                                float32_t*       c,
+                                float32_t*       d,
+                                uint32_t         lda,
+                                uint32_t         ldb,
+                                uint32_t         ldc,
+                                uint32_t         ldd,
+                                float32_t        alpha,
+                                float32_t        beta)
 {
     // Create frags
     auto fragA = rocwmma::fragment<rocwmma::matrix_a,
@@ -232,7 +161,7 @@ __global__ void gemv_rocwmma_d(uint32_t         m,
     }
 }
 
-__host__ void gemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float beta)
+__host__ void sgemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float beta)
 {
     // Bounds check
     if(m % ROCWMMA_M || n % ROCWMMA_N || k % ROCWMMA_K)
@@ -277,12 +206,12 @@ __host__ void gemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float b
     auto gridDim  = dim3(rocwmma::ceilDiv(m, ROCWMMA_M * T_BLOCK_X / WAVE_SIZE),
                         rocwmma::ceilDiv(n, ROCWMMA_N * T_BLOCK_Y));
 
-    std::cout << "Launching gemv kernel..." << std::endl;
+    std::cout << "Launching sgemv kernel..." << std::endl;
     hipEvent_t startEvent, stopEvent;
     CHECK_HIP_ERROR(hipEventCreate(&startEvent));
     CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
 
-    hipExtLaunchKernelGGL(gemv_rocwmma_d,
+    hipExtLaunchKernelGGL(sgemv_rocwmma_d,
                           gridDim,
                           blockDim,
                           0, // sharedMemBytes
@@ -318,14 +247,14 @@ __host__ void gemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float b
 
     std::cout << "Validating result with reference..." << std::endl;
     // Bring kernel result back to host
-    std::vector<float32_t> matrixC_device(m * 1, std::numeric_limits<float32_t>::signaling_NaN());
+    std::vector<float32_t> matrixC_device(m, std::numeric_limits<float32_t>::signaling_NaN());
     CHECK_HIP_ERROR(hipMemcpy(matrixC_device.data(), d_c, bytesC, hipMemcpyDeviceToHost));
 
     // Setup and run reference computation
     std::vector<float32_t> matrixC_host(matrixC);
-    gemv_cpu_h(m, n, k, matrixA.data(), matrixB.data(), matrixC_host.data(), alpha, beta);
+    sgemv_cpu_h(m, n, k, matrixA.data(), matrixB.data(), matrixC_host.data(), alpha, beta);
 
-    compareEqual(matrixC_host.data(), matrixC_device.data(), m, 1u);
+    compareEqual<float32_t>(matrixC_host.data(), matrixC_device.data(), m);
 
     // Release device memory
     CHECK_HIP_ERROR(hipFree(d_a));
@@ -341,6 +270,6 @@ int main()
     const uint32_t k = 256;
     const uint32_t n = T_BLOCK_Y * ROCWMMA_N;
 
-    gemv_test(m, n, k, 2.1f, 2.1f);
+    sgemv_test(m, n, k, 2.1f, 2.1f);
     return 0;
 }
