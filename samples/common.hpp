@@ -58,6 +58,20 @@
     }
 #endif
 
+// HIP Host function to find if the device supports f64
+bool isSupportedDevice()
+{
+    hipDevice_t     mHandle;
+    hipDeviceProp_t mProps;
+
+    CHECK_HIP_ERROR(hipGetDevice(&mHandle));
+    CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
+
+    std::string deviceName(mProps.gcnArchName);
+
+    return (deviceName.find("gfx90a") != std::string::npos);
+}
+
 // HIP Host function to retrieve the warp size
 enum hipWarpSize_t : uint32_t
 {
@@ -116,7 +130,9 @@ __host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n)
             // Ascending order for each neighboring element.
             // Alternate sign for even / odd
             auto value      = (i * ld + j) % 17;
-            mat[i * ld + j] = (value % 2) ? -static_cast<DataT>(value) : static_cast<DataT>(value);
+            mat[i * ld + j] = ((value % 2) && std::is_signed<DataT>::value)
+                                  ? -static_cast<DataT>(value)
+                                  : static_cast<DataT>(value);
         }
     }
 }
