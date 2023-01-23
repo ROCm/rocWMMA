@@ -121,7 +121,7 @@ namespace rocwmma
         }
 
         template <typename DataT>
-        __host__ static inline void fill_with_padding(
+        __host__ static inline void fillWithPadding(
             DataT* mat, uint32_t m, uint32_t n, uint32_t padM, uint32_t padN, DataT padValue)
         {
             auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
@@ -156,15 +156,37 @@ namespace rocwmma
         }
 
         template <typename DataT>
-        __host__ static inline void fill_with_padding(std::vector<DataT>& mat,
-                                                      uint32_t            m,
-                                                      uint32_t            n,
-                                                      uint32_t            padM,
-                                                      uint32_t            padN,
-                                                      DataT               padValue)
+        __host__ static inline void fillWithPadding(std::vector<DataT>& mat,
+                                                    uint32_t            m,
+                                                    uint32_t            n,
+                                                    uint32_t            padM,
+                                                    uint32_t            padN,
+                                                    DataT               padValue)
         {
             assert(mat.size() == n * m);
-            fill_with_padding(mat.data(), m, n, padM, padN, padValue);
+            fillWithPadding(mat.data(), m, n, padM, padN, padValue);
+        }
+
+        template <typename DataT>
+        __host__ static inline void fillWithPaddingLaunchKernel(
+            DataT* d_mat, uint32_t m, uint32_t n, uint32_t padM, uint32_t padN, DataT padValue)
+        {
+            const auto limitM = m + 2 * padM;
+            const auto limitN = n + 2 * padN;
+
+            auto blockDim = dim3(1024, 1, 1);
+            auto gridDim  = dim3(ceilDiv(limitM * limitN, blockDim.x), 1, 1);
+            hipLaunchKernelGGL((fillWithPaddingKernel<DataT, Layout>),
+                               gridDim,
+                               blockDim,
+                               0,
+                               0,
+                               d_mat,
+                               m,
+                               n,
+                               padM,
+                               padN,
+                               padValue);
         }
 
         template <typename DataT>

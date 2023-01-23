@@ -67,18 +67,15 @@ namespace rocwmma
             // Padded size >= MxN
             dataInstance->resizeStorage(paddedProbSize);
 
-            // Initialize input data on host (not padded)
-            MatrixUtil<Layout>::fill(dataInstance->hostIn().get(), Base::mM, Base::mN);
-            dataInstance->copyData(
-                dataInstance->deviceIn(), dataInstance->hostIn(), paddedElements);
+            // Initialize input data on device (not padded)
+            MatrixUtil<Layout>::fillLaunchKernel(
+                dataInstance->deviceIn().get(), Base::mM, Base::mN);
 
-            // Initialize output data on host (padded size, all with marker elements)
-            MatrixUtil<Layout>::fill(dataInstance->hostOut().get(),
-                                     get<0>(paddedProbSize),
-                                     get<1>(paddedProbSize),
-                                     std::numeric_limits<DataT>::max());
-            dataInstance->copyData(
-                dataInstance->deviceOut(), dataInstance->hostOut(), paddedElements);
+            // Initialize output data on device (padded size, all with marker elements)
+            MatrixUtil<Layout>::fillLaunchKernel(dataInstance->deviceOut().get(),
+                                                 get<0>(paddedProbSize),
+                                                 get<1>(paddedProbSize),
+                                                 std::numeric_limits<DataT>::max());
         }
 
         void validateResultsImpl() final
