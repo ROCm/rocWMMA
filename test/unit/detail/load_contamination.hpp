@@ -66,28 +66,20 @@ namespace rocwmma
             // Padded size >= MxN
             dataInstance->resizeStorage(paddedProbSize);
 
-            // Initialize input data on host.
+            // Initialize input data on device.
             // Initialize padding with contamination values
-            MatrixUtil<Layout>::fill_with_padding(dataInstance->hostIn().get(),
-                                                  Base::mM,
-                                                  Base::mN,
-                                                  Base::mParam1,
-                                                  Base::mParam2,
-                                                  std::numeric_limits<DataT>::max());
-
-            // Padded MxN goes in for read, MxN result comes out
-            dataInstance->copyData(dataInstance->deviceIn(),
-                                   dataInstance->hostIn(),
-                                   std::get<0>(paddedProbSize) * std::get<1>(paddedProbSize));
+            MatrixUtil<Layout>::fillWithPaddingLaunchKernel(dataInstance->deviceIn().get(),
+                                                            Base::mM,
+                                                            Base::mN,
+                                                            Base::mParam1,
+                                                            Base::mParam2,
+                                                            std::numeric_limits<DataT>::max());
 
             // Initialize device output data with NaN
-            MatrixUtil<Layout>::fill(dataInstance->hostOut().get(),
-                                     Base::mM,
-                                     Base::mN,
-                                     std::numeric_limits<DataT>::signaling_NaN());
-
-            dataInstance->copyData(
-                dataInstance->deviceOut(), dataInstance->hostOut(), Base::mM * Base::mN);
+            MatrixUtil<Layout>::fillLaunchKernel(dataInstance->deviceOut().get(),
+                                                 Base::mM,
+                                                 Base::mN,
+                                                 std::numeric_limits<DataT>::signaling_NaN());
         }
 
         void validateResultsImpl() final
