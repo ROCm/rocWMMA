@@ -374,14 +374,11 @@ namespace rocwmma
     {
     }
 
+    // TODO: should add type compatibility check.
+    // Default template depth is currently not deep enough to
+    // support vector sizes of 512
     template <typename T, unsigned int Rank>
-    template <typename... Ts,
-              typename U,
-              typename std::enable_if<(sizeof...(Ts) == Rank)
-#if(__cplusplus >= 201703L)
-                                      && (std::is_same<U, Ts>{} && ...)
-#endif
-                                      >::type*>
+    template <typename... Ts, typename U, typename std::enable_if<(sizeof...(Ts) == Rank)>::type*>
     ROCWMMA_HOST_DEVICE constexpr non_native_vector_base<T, Rank>::non_native_vector_base(
         Ts... args) noexcept
         : d{args...}
