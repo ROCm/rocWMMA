@@ -17,7 +17,6 @@ Acronym  Expansion
 ======== =========
 **GEMM**    **GE**\ neral **M**\ atrix **M**\ ultiply
 **WMMA**    **W**\ avefront **M**\ ixed precision **M**\ ultiply **A**\ ccumulate
-**ROCm**    **R**\ adeon **O**\ pen **C**\ ompute platfor\ **m**
 **HIP**     **H**\ eterogeneous-Compute **I**\ nterface for **P**\ ortability
 ======== =========
 
