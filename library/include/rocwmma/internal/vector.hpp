@@ -146,12 +146,8 @@ namespace rocwmma
         ROCWMMA_HOST_DEVICE explicit constexpr non_native_vector_base(T x_) noexcept;
 
         template <typename... Ts,
-                  typename U = T,
-                  typename std::enable_if<(sizeof...(Ts) == Rank)
-#if(__cplusplus >= 201703L)
-                                          && (std::is_same<U, Ts>{} && ...)
-#endif
-                                          >::type* = nullptr>
+                  typename U                                              = T,
+                  typename std::enable_if<(sizeof...(Ts) == Rank)>::type* = nullptr>
         ROCWMMA_HOST_DEVICE constexpr non_native_vector_base(Ts... args) noexcept;
 
         ROCWMMA_HOST_DEVICE
