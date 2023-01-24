@@ -22,7 +22,7 @@ OR
 ## Minimum Software Requirements
 * ROCm stack minimum version 5.4
 * ROCm-cmake minimum version 0.8.0 for ROCm 5.3
-* C++ 14
+* C++ 17
 * CMake >=3.6
 * OpenMP
 
