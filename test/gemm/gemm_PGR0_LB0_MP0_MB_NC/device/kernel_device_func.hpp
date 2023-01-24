@@ -169,8 +169,7 @@ namespace rocwmma
 
         // Target starting C / D block on 2D grid, offset by blocks per wave
         auto matrixCoordC = MappingC::matrixCoord();
-        get<0>(matrixCoordC) *= BlocksX;
-        get<1>(matrixCoordC) *= BlocksY;
+        matrixCoordC *= make_coord2d(BlocksX, BlocksY);
 
         if(get<0>(matrixCoordC) + BlocksX * BlockM > m
            || get<1>(matrixCoordC) + BlocksY * BlockN > n)
@@ -195,8 +194,8 @@ namespace rocwmma
             for(int j = 0; j < BlocksY; j++)
             {
                 // Initialize sub matrix coordinates
-                get<0>(subMatrixCoordsC[i][j]) = get<0>(matrixCoordC) + i * BlockM;
-                get<1>(subMatrixCoordsC[i][j]) = get<1>(matrixCoordC) + j * BlockN;
+                subMatrixCoordsC[i][j]
+                    = matrixCoordC + (make_coord2d(i, j) * make_coord2d(BlockM, BlockN));
 
                 // Initialize accumulators
                 fill_fragment(fragsAccum[i][j], static_cast<ComputeT>(0));
