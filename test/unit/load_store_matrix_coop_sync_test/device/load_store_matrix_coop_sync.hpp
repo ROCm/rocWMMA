@@ -86,7 +86,6 @@ namespace rocwmma
         auto sharingIndex = std::min((uint32_t)param2, shareElement(workgroupDim) - 1);
         if(shareElement(waveCoord) == sharingIndex)
         {
-
             // Get the slice of work
             auto workIndex = coopElement(waveCoord);
             auto workCount = coopElement(workgroupDim);
@@ -101,9 +100,8 @@ namespace rocwmma
                 for(int j = 0; j < get<1>(workgroupDim); j++)
                 {
                     // Map, load and store.
-                    auto blockCoord
-                        = make_coord2d(get<0>(startBlockCoord) + i, get<1>(startBlockCoord) + j);
-                    auto* read  = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
+                    auto  blockCoord = startBlockCoord + make_coord2d(i, j);
+                    auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
                     auto* write = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
                     load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
                     store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
@@ -183,7 +181,6 @@ namespace rocwmma
         auto sharingIndex = std::min((uint32_t)param2, shareElement(workgroupDim) - 1);
         if(shareElement(waveCoord) == sharingIndex)
         {
-
             // Get the slice of work
             auto workIndex = coopElement(waveCoord);
             auto workCount = coopElement(workgroupDim);
@@ -198,9 +195,8 @@ namespace rocwmma
                 for(int j = 0; j < get<1>(workgroupDim); j++)
                 {
                     // Map, load and store.
-                    auto blockCoord
-                        = make_coord2d(get<0>(startBlockCoord) + i, get<1>(startBlockCoord) + j);
-                    auto* read  = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
+                    auto  blockCoord = startBlockCoord + make_coord2d(i, j);
+                    auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
                     auto* write = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
                     load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
                     store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
@@ -294,9 +290,8 @@ namespace rocwmma
                 for(int j = 0; j < get<1>(workgroupDim); j++)
                 {
                     // Map, load and store.
-                    auto blockCoord
-                        = make_coord2d(get<0>(startBlockCoord) + i, get<1>(startBlockCoord) + j);
-                    auto* read  = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
+                    auto  blockCoord = startBlockCoord + make_coord2d(i, j);
+                    auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
                     auto* write = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
                     load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
                     store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
