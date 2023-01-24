@@ -169,8 +169,7 @@ namespace rocwmma
 
         // Target starting C / D block on 2D grid, offset by blocks per wave
         auto matrixCoordC = MappingC::matrixCoord();
-        get<0>(matrixCoordC) *= BlocksX;
-        get<1>(matrixCoordC) *= BlocksY;
+        matrixCoordC *= make_coord2d(BlocksX, BlocksY);
 
         if(get<0>(matrixCoordC) + BlocksX * BlockM > m
            || get<1>(matrixCoordC) + BlocksY * BlockN > n)
