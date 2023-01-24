@@ -268,7 +268,7 @@ int main()
     const uint32_t k = 256;
     const uint32_t n = T_BLOCK_Y * ROCWMMA_N;
 
-    if(isSupportedDevice())
+    if(isF64Supported())
         dgemv_test(m, n, k, 2.1, 2.1);
     else
         std::cout << "f64 dgemv not supported on this device" << std::endl;
