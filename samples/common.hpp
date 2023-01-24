@@ -59,7 +59,7 @@
 #endif
 
 // HIP Host function to find if the device supports f64
-bool isSupportedDevice()
+bool isF64Supported()
 {
     hipDevice_t     mHandle;
     hipDeviceProp_t mProps;
