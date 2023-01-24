@@ -62,6 +62,7 @@ endfunction()
 
 # Create sample targets
 add_rocwmma_sample(simple_gemm ${CMAKE_CURRENT_SOURCE_DIR}/simple_gemm.cpp)
-add_rocwmma_sample(sgemmv ${CMAKE_CURRENT_SOURCE_DIR}/sgemmv.cpp)
+add_rocwmma_sample(simple_sgemv ${CMAKE_CURRENT_SOURCE_DIR}/simple_sgemv.cpp)
+add_rocwmma_sample(simple_dgemv ${CMAKE_CURRENT_SOURCE_DIR}/simple_dgemv.cpp)
 add_rocwmma_sample(simple_dlrm ${CMAKE_CURRENT_SOURCE_DIR}/simple_dlrm.cpp)
 add_rocwmma_sample(hipRTC_gemm ${CMAKE_CURRENT_SOURCE_DIR}/hipRTC_gemm.cpp)
