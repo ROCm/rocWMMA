@@ -1,6 +1,21 @@
 # Change Log for rocWMMA
+
 Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://rocwmma.readthedocs.io/en/latest/).
+
+## rocWMMA 1.0 for ROCm 5.5.0
+
+### Added
+- Added support for wave32 on gfx11+
+- Added infrastructure changes to support hipRTC
+- Added performance tracking system
+
+### Changed
+- Modified the assignment of hardware information
+- Modified the data access for unsigned datatypes
+- Added library config to support multiple architectures
+
 ## rocWMMA 0.9 for ROCm 5.4.0
+
 ### Added
 - Added gemm driver APIs for flow control builtins
 - Added benchmark logging systems
@@ -16,8 +31,8 @@ Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://
 - Modified the output validation to use CPU-based implementation against rocWMMA
 - Modified the extended vector test to return error codes for memory allocation failures
 
-
 ## rocWMMA 0.8 for ROCm 5.3.0
+
 ### Added
 - Added runtime checks to disable tests on non-target GPUS
 - Added workgroup aware gemm kernels
@@ -32,8 +47,8 @@ Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://
 - Updated gemv sample
 - Updated gemm sample
 
-
 ## rocWMMA 0.7 for ROCm 5.2.0
+
 ### Added
 - Added unit tests for DLRM kernels
 - Added GEMM sample
@@ -49,6 +64,7 @@ Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://
 - Added CI testing for rocWMMA
 
 ### Changed
+
 - Renamed wmma to rocwmma in cmake, header files and documentation
 - Renamed library files
 - Modified Layout.h to use different matrix offset calculations (base offset, incremental offset and cumulative offset)
@@ -58,9 +74,10 @@ Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://
 - Moved all the wmma definitions, API headers to rocwmma namespace
 - Modified wmma fill unit tests to validate all matrix types (A, B, Accumulator)
 
-
 ## (Unreleased) rocWMMA 0.6
+
 ### Added
+
 - Added unit tests for MappingUtil.h
 - Added unit tests for Layout.h
 - Added unit tests for non-native vector class in Types.h
@@ -74,13 +91,16 @@ Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://
 - Added unit tests for multi-block wmma kernels
 
 ### Changed
+
 - Modified GLlops calculation to accommodate multiple devices
 - Removed half types packing quirk with col major output
 - Moved HIP resource management to HipResource class
 - Fixed NaN errors during output comparison
 
 ## (Unreleased) rocWMMA 0.5
+
 ### Added
+
 - Added templatization for the class amdgcn_convert
 - Added wmma load, store and fill support for integral datatypes and float64
 - Added mfma support for i8
@@ -88,18 +108,22 @@ Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://
 - Added code to identify the card type and its support during runtime
 
 ### Changed
+
 - Refactored and simplified IOBroadcast.h
 - Modified the fragment interface compatible with NVIDIA's definition
 - Modified cmake to create a lean build of rocWMMA library
 
 ## (Unreleased) rocWMMA 0.4
+
 ### Added
+
 - Fixed compiler issues with new versions of ROCm
 - Added CMake support for the library and unit tests
 - Integrated unit test with GTest and OpenMP
 - Added host overload operators for hfloat16_t
--
+
 ### Changed
+
 - Fixed relative error calculation for non-integral data comparison
 - Fixed assembly generation of cooperative load and store code
 - Sped up compilation time by moving thread block sizes to function arguments rather than template parameters
@@ -109,10 +133,13 @@ Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://
 - Deprecated buffer load/store and local load/store
 
 ## (Unreleased) rocWMMA 0.3
+
 ### Added
+
 - Added support for bfloat16 compute type
 
 ### Changed
+
 - Renamed __half to hfloat_16 for consistency
 - Modified Convert.h to support native to bfloat16 conversion and vice versa
 - Modified IOBroadCast.h to incorporate bfloat16 data packing
@@ -122,13 +149,16 @@ Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://
 - Modified the wmma load, store and mma unit tests to validate bfloat16
 
 ## (Unreleased) rocWMMA 0.2
+
 ### Added
+
 - Added support for fp16 compute type
 - Fixed data comparison operators for fp16 datatypes
 - Added direct MFMA support for non-native __half datatype
 - Adjusted the vector storage to accommodate the non-native types
 
 ### Changed
+
 - Modified Convert.h to support native to __half conversion and vice versa
 - Modified IOBroadCast.h to incorporate __half data packing
 - Modified IOTraits.h to add __half packing traits
@@ -137,7 +167,9 @@ Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://
 - Modified the wmma load, store and mma unit tests to validate __half
 
 ## (Unreleased) rocWMMA 0.1
+
 ### Added
+
 - Defined a wmma namespace with the matrix types, memory and layouts supported
 - Defined a fragment datatype to control the data transfer between HIP and MFMA.
 - Implemented the rocWMMA functions : load_matrix_sync, load_matrix_coop_sync, store_matrix_sync, fill_fragment and mma_sync
