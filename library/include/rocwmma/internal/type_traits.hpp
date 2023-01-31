@@ -28,7 +28,63 @@
 #define ROCWMMA_TYPE_TRAITS_HPP
 
 #include "types.hpp"
-#include "types_ext.hpp"
+
+/**
+ * \ingroup rocwmma
+ * \defgroup DataTypes
+ *
+ * @brief Definition and metadata on supported data types of matrices.
+ *
+ * Native Data Types:
+ * float64_t = f64 = double
+ * float = f32
+ * _Float16 = f16
+ * int8
+ * uint8
+ * int16
+ * int32
+ * uint32
+ *
+ *
+ * Non-Native Data Types:
+ * h16 = __half
+ * bf16 = bfloat16
+ *
+ */
+namespace rocwmma
+{
+    namespace detail
+    {
+        struct Fp16Bits
+        {
+            union
+            {
+                uint16_t      i16;
+                float16_t     f16;
+                hfloat16_t    h16;
+                bfloat16_t    b16;
+                unsigned char c16[16];
+            };
+            constexpr Fp16Bits(uint16_t initVal)
+                : i16(initVal)
+            {
+            }
+            constexpr Fp16Bits(float16_t initVal)
+                : f16(initVal)
+            {
+            }
+            constexpr Fp16Bits(hfloat16_t initVal)
+                : h16(initVal)
+            {
+            }
+            constexpr Fp16Bits(bfloat16_t initVal)
+                : b16(initVal)
+            {
+            }
+        };
+
+    } // namespace detail
+} // namespace rocwmma
 
 ///////////////////////////////////////////////////////////
 /////////////  std replacements for hipRTC  ///////////////
