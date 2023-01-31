@@ -158,6 +158,37 @@ __host__ static inline void
     }
 }
 
+// Host GEMM validation
+template <typename InputT, typename OutputT, typename ComputeT>
+__host__ void gemm_cpu_h(uint32_t       m,
+                         uint32_t       n,
+                         uint32_t       k,
+                         InputT const*  a,
+                         InputT const*  b,
+                         OutputT const* c,
+                         OutputT*       d,
+                         uint32_t       lda,
+                         uint32_t       ldb,
+                         uint32_t       ldc,
+                         uint32_t       ldd,
+                         ComputeT       alpha,
+                         ComputeT       beta)
+{
+    for(int i = 0; i < m; ++i)
+    {
+        for(int j = 0; j < n; ++j)
+        {
+            ComputeT accum = 0.0f;
+            for(int h = 0; h < k; ++h)
+            {
+                accum += static_cast<ComputeT>(a[i * lda + h])
+                         * static_cast<ComputeT>(b[j * ldb + h]);
+            }
+            d[i * ldd + j] = alpha * accum + beta * c[i * ldc + j];
+        }
+    }
+}
+
 // Element-wise comparison
 template <typename T>
 __host__ void compareEqual(T const* a, T const* b, uint32_t size, double tolerance = 10.0)
