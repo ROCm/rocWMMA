@@ -38,36 +38,6 @@ using rocwmma::float16_t;
 using rocwmma::float32_t;
 using rocwmma::float64_t;
 
-// Host GEMM validation
-__host__ void gemm_cpu_h(uint32_t         m,
-                         uint32_t         n,
-                         uint32_t         k,
-                         float16_t const* a,
-                         float16_t const* b,
-                         float32_t const* c,
-                         float32_t*       d,
-                         uint32_t         lda,
-                         uint32_t         ldb,
-                         uint32_t         ldc,
-                         uint32_t         ldd,
-                         float32_t        alpha,
-                         float32_t        beta)
-{
-    for(int i = 0; i < m; ++i)
-    {
-        for(int j = 0; j < n; ++j)
-        {
-            float32_t accum = 0.0f;
-            for(int h = 0; h < k; ++h)
-            {
-                accum += static_cast<float32_t>(a[i * lda + h])
-                         * static_cast<float32_t>(b[j * ldb + h]);
-            }
-            d[i * ldd + j] = alpha * accum + beta * c[i * ldc + j];
-        }
-    }
-}
-
 // Supports ROCWMMA_M/N square sizes of
 // : 16 x 16
 // : 32 x 32 ( only MI )
@@ -103,19 +73,19 @@ const int T_BLOCK_Y = 4;
 //
 // Note: This is a simplified implementation to demonstrate API usage in
 // context of wave-level GEMM computation, and is not optimized.
-__global__ void gemm_rocwmma_d(uint32_t         m,
-                               uint32_t         n,
-                               uint32_t         k,
-                               float16_t const* a,
-                               float16_t const* b,
-                               float32_t const* c,
-                               float32_t*       d,
-                               uint32_t         lda,
-                               uint32_t         ldb,
-                               uint32_t         ldc,
-                               uint32_t         ldd,
-                               float32_t        alpha,
-                               float32_t        beta)
+__global__ void sgemm_rocwmma_d(uint32_t         m,
+                                uint32_t         n,
+                                uint32_t         k,
+                                float16_t const* a,
+                                float16_t const* b,
+                                float16_t const* c,
+                                float16_t*       d,
+                                uint32_t         lda,
+                                uint32_t         ldb,
+                                uint32_t         ldc,
+                                uint32_t         ldd,
+                                float32_t        alpha,
+                                float32_t        beta)
 {
     // Create frags
     auto fragA = rocwmma::fragment<rocwmma::matrix_a,
@@ -131,7 +101,7 @@ __global__ void gemm_rocwmma_d(uint32_t         m,
                                    float16_t,
                                    rocwmma::col_major>();
     auto fragC
-        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
+        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t>();
     auto fragAcc
         = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
 
@@ -193,9 +163,9 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
     // Initialize input matrices
     std::vector<float16_t> matrixA(m * k);
     std::vector<float16_t> matrixB(k * n);
-    std::vector<float32_t> matrixC(m * n);
+    std::vector<float16_t> matrixC(m * n);
     // Fill outputs with NaN to catch contamination
-    std::vector<float32_t> matrixD(m * n, std::numeric_limits<float32_t>::signaling_NaN());
+    std::vector<float16_t> matrixD(m * n, std::numeric_limits<float16_t>::signaling_NaN());
 
     fill(matrixA.data(), m, k);
     fill(matrixB.data(), k, n);
@@ -206,13 +176,13 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
     // Allocate and copy device memory
     float16_t* d_a;
     float16_t* d_b;
-    float32_t* d_c;
-    float32_t* d_d;
+    float16_t* d_c;
+    float16_t* d_d;
 
     const size_t bytesA = matrixA.size() * sizeof(float16_t);
     const size_t bytesB = matrixB.size() * sizeof(float16_t);
-    const size_t bytesC = matrixC.size() * sizeof(float32_t);
-    const size_t bytesD = matrixD.size() * sizeof(float32_t);
+    const size_t bytesC = matrixC.size() * sizeof(float16_t);
+    const size_t bytesD = matrixD.size() * sizeof(float16_t);
 
     CHECK_HIP_ERROR(hipMalloc(&d_a, bytesA));
     CHECK_HIP_ERROR(hipMalloc(&d_b, bytesB));
@@ -234,7 +204,7 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
     CHECK_HIP_ERROR(hipEventCreate(&startEvent));
     CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
 
-    hipExtLaunchKernelGGL(gemm_rocwmma_d,
+    hipExtLaunchKernelGGL(sgemm_rocwmma_d,
                           gridDim,
                           blockDim,
                           0, // sharedMemBytes
@@ -284,22 +254,22 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
     CHECK_HIP_ERROR(hipMemcpy(matrixD.data(), d_d, bytesD, hipMemcpyDeviceToHost));
 
     // Setup and run reference computation
-    std::vector<float32_t> matrixD_ref(m * n, std::numeric_limits<float32_t>::signaling_NaN());
-    gemm_cpu_h(m,
-               n,
-               k,
-               matrixA.data(),
-               matrixB.data(),
-               matrixC.data(),
-               matrixD_ref.data(),
-               lda,
-               ldb,
-               ldc,
-               ldd,
-               alpha,
-               beta);
+    std::vector<float16_t> matrixD_ref(m * n, std::numeric_limits<float16_t>::signaling_NaN());
+    gemm_cpu_h<float16_t, float16_t, float32_t>(m,
+                                                n,
+                                                k,
+                                                matrixA.data(),
+                                                matrixB.data(),
+                                                matrixC.data(),
+                                                matrixD_ref.data(),
+                                                lda,
+                                                ldb,
+                                                ldc,
+                                                ldd,
+                                                alpha,
+                                                beta);
 
-    compareEqual<float32_t>(matrixD.data(), matrixD_ref.data(), m * n);
+    compareEqual<float16_t>(matrixD.data(), matrixD_ref.data(), m * n);
 
     // Release device memory
     CHECK_HIP_ERROR(hipFree(d_a));
