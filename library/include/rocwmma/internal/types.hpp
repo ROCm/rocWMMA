@@ -206,6 +206,7 @@ namespace rocwmma
 
 // Add in some extensions to basic type support.
 // Some of these are required for vector implementations.
+#include "type_traits.hpp"
 #include "types_ext.hpp"
 
 #include "types_impl.hpp"
