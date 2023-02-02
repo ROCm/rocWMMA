@@ -337,6 +337,18 @@ After configuration, build with `cmake --build <build_dir> -- -j<nproc>`
 cd <build_dir>
 make <target_name> -j64
 ```
+Where `<target_name>` is one of the following:
+
+|`<target_name>`|Description|
+|---|---|
+|rocwmma_unit_tests|Build all rocWMMA unit tests|
+|rocwmma_gemm_tests_validate|Build all GEMM validation tests|
+|rocwmma_gemm_tests_bench|Build all GEMM benchmark tests|
+|rocwmma_dlrm_tests_validate|Build all DLRM validation tests|
+|rocwmma_dlrm_tests_bench|Build all DLRM benchmark tests|
+|rocwmma_samples|Build all rocWMMA samples|
+|Individual target name (contamination_test, simple_sgemm, etc...)|Build individual rocWMMA test/sample|
+
 - Manually reduce test(s) and/or test case coverage
 
 ## Running Unit Tests

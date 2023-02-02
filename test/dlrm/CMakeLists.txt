@@ -26,6 +26,16 @@
 
  set(ROCWMMA_TEST_DLRM_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
+# Custom target to build all rocWMMA gemm-validation tests
+if(ROCWMMA_BUILD_VALIDATION_TESTS)
+  add_custom_target(rocwmma_dlrm_tests_validate)
+endif()
+
+# Custom target to build all rocWMMA gemm-benchmark tests
+if(ROCWMMA_BUILD_BENCHMARK_TESTS)
+  add_custom_target(rocwmma_dlrm_tests_bench)
+endif()
+
  function(add_dlrm_validation_test TEST_TARGET TEST_SOURCE)
    list(APPEND TEST_SOURCE ${ARGN})
 
@@ -34,6 +44,9 @@
 
    # Add dlrm include directory
    target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_DLRM_INCLUDE_DIR})
+
+   # Add dependency to custom target
+   add_dependencies(rocwmma_dlrm_tests_validate ${TEST_TARGET})
  endfunction()
 
  # Include rocBLAS performance benchmark
@@ -45,6 +58,9 @@
 
    # Add dlrm include directory
    target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_DLRM_INCLUDE_DIR})
+
+   # Add dependency to custom target
+   add_dependencies(rocwmma_dlrm_tests_bench ${TEST_TARGET})
  endfunction()
 
  set(DlrmCommonSources ${ROCWMMA_COMMON_TEST_SOURCES}

@@ -42,7 +42,7 @@ set(ROCWMMA_GEMM_TEST_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 # Custom target to build all rocWMMA gemm-validation tests
 if(ROCWMMA_BUILD_VALIDATION_TESTS)
-  add_custom_target(rocwmma_gemm_tests_validation)
+  add_custom_target(rocwmma_gemm_tests_validate)
 endif()
 
 # Custom target to build all rocWMMA gemm-benchmark tests
@@ -65,7 +65,7 @@ function(add_gemm_validation_test TEST_TARGET TEST_SOURCE)
   set_target_properties(${TEST_TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ROCWMMA_GEMM_TEST_OUTPUT_DIR})
 
   # Add dependency to custom target
-  add_dependencies(rocwmma_gemm_tests_validation ${TEST_TARGET})
+  add_dependencies(rocwmma_gemm_tests_validate ${TEST_TARGET})
 
   # Link to rocBLAS
   if(ROCWMMA_VALIDATE_WITH_ROCBLAS)
