@@ -31,6 +31,23 @@ set(ROCWMMA_TEST_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${ROCWMMA_TEST_INCLUDE
 set(UnitCommonSources ${ROCWMMA_COMMON_TEST_SOURCES}
                       ${CMAKE_CURRENT_SOURCE_DIR}/unit_kernel_base.cpp)
 
+# Custom target to build all rocWMMA unit tests
+add_custom_target(rocwmma_unit_tests)
+
+# Unit tests that are linked to custom target
+function(add_rocwmma_unit_test TEST_TARGET TEST_SOURCE)
+  list(APPEND TEST_SOURCE ${ARGN})
+
+	# Create target
+  add_rocwmma_test(${TEST_TARGET} ${TEST_SOURCE})
+
+	# Add unit include directory
+	target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_INCLUDE_DIRS})
+
+	# Add dependency to custom target
+  add_dependencies(rocwmma_unit_tests ${TEST_TARGET})
+endfunction()
+
 # Add unit tests
 add_subdirectory(contamination_test)
 add_subdirectory(layout_test)

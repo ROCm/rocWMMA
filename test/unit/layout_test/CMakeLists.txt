@@ -50,4 +50,4 @@ set(LayoutTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/rownt_layout_256.cpp
                        )
 
-add_rocwmma_test(layout_test ${LayoutTestSources})
+add_rocwmma_unit_test(layout_test ${LayoutTestSources})

@@ -45,4 +45,4 @@ set(LoadStoreMatrixSyncTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/load_store_matrix_sync_b_256.cpp
                     )
 
-add_rocwmma_test(load_store_matrix_sync_test ${LoadStoreMatrixSyncTestSources})
+add_rocwmma_unit_test(load_store_matrix_sync_test ${LoadStoreMatrixSyncTestSources})

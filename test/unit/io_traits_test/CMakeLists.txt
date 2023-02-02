@@ -35,4 +35,4 @@ set(IoTraitsTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/io_traits_256.cpp
                        )
 
-add_rocwmma_test(io_traits_test ${IoTraitsTestSources})
+add_rocwmma_unit_test(io_traits_test ${IoTraitsTestSources})

@@ -70,4 +70,4 @@ set(MapUtilTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_wave_to_matrix_256.cpp
                        )
 
-add_rocwmma_test(map_util_test ${MapUtilTestSources})
+add_rocwmma_unit_test(map_util_test ${MapUtilTestSources})
