@@ -8,11 +8,13 @@ Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://
 - Added support for wave32 on gfx11+
 - Added infrastructure changes to support hipRTC
 - Added performance tracking system
+- Added library config to support multiple architectures
+- Added vector cross-lane operations support
 
 ### Changed
 - Modified the assignment of hardware information
 - Modified the data access for unsigned datatypes
-- Added library config to support multiple architectures
+- Refactored vector backend to be compatible with HIP_vector_type
 
 ## rocWMMA 0.9 for ROCm 5.4.0
 
