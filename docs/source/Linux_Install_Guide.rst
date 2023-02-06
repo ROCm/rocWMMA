@@ -144,9 +144,9 @@ Below are the project options available to build rocWMMA library with/without cl
 +------------------------------+-------------------------------------+----------------------------------------------------------------------+
 |ROCWMMA_BUILD_EXTENDED_TESTS  |Build extended testing coverage      |OFF (requires ROCWMMA_BUILD_TESTS=ON)                                 |
 +------------------------------+-------------------------------------+----------------------------------------------------------------------+
-|WMMA_VALIDATE_WITH_ROCBLAS    |Use rocBLAS for validation tests     |ON (requires ROCWMMA_BUILD_VALIDATION_TESTS=ON)                       |
+|ROCWMMA_VALIDATE_WITH_ROCBLAS |Use rocBLAS for validation tests     |ON (requires ROCWMMA_BUILD_VALIDATION_TESTS=ON)                       |
 +------------------------------+-------------------------------------+----------------------------------------------------------------------+
-|WMMA_BENCHMARK_WITH_ROCBLAS   |Include rocBLAS benchmarking data    |OFF (requires ROCWMMA_BUILD_BENCHMARK_TESTS=ON)                       |
+|ROCWMMA_BENCHMARK_WITH_ROCBLAS|Include rocBLAS benchmarking data    |OFF (requires ROCWMMA_BUILD_BENCHMARK_TESTS=ON)                       |
 +------------------------------+-------------------------------------+----------------------------------------------------------------------+
 
 
