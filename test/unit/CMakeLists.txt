@@ -38,13 +38,13 @@ add_custom_target(rocwmma_unit_tests)
 function(add_rocwmma_unit_test TEST_TARGET TEST_SOURCE)
   list(APPEND TEST_SOURCE ${ARGN})
 
-	# Create target
+  # Create target
   add_rocwmma_test(${TEST_TARGET} ${TEST_SOURCE})
 
-	# Add unit include directory
-	target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_INCLUDE_DIRS})
+  # Add unit include directory
+  target_include_directories(${TEST_TARGET} PRIVATE ${ROCWMMA_TEST_INCLUDE_DIRS})
 
-	# Add dependency to custom target
+  # Add dependency to custom target
   add_dependencies(rocwmma_unit_tests ${TEST_TARGET})
 endfunction()
 
