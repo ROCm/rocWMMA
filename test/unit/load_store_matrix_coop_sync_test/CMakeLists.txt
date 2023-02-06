@@ -46,4 +46,4 @@ set(LoadStoreMatrixCoopSyncTestSources ${UnitCommonSources}
                     ${CMAKE_CURRENT_SOURCE_DIR}/test/load_store_matrix_coop_sync_b_256.cpp
                  )
 
-add_rocwmma_test(load_store_matrix_coop_sync_test ${LoadStoreMatrixCoopSyncTestSources})
+add_rocwmma_unit_test(load_store_matrix_coop_sync_test ${LoadStoreMatrixCoopSyncTestSources})

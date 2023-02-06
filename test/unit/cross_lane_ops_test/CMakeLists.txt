@@ -111,5 +111,5 @@ set(CrossLaneOpsTestSources ${UnitCommonSources}
 
 )
 
-add_rocwmma_test(cross_lane_ops_test ${CrossLaneOpsTestSources})
+add_rocwmma_unit_test(cross_lane_ops_test ${CrossLaneOpsTestSources})
 

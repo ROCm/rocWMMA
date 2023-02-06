@@ -31,4 +31,4 @@ set(VectorTestSources ${UnitCommonSources}
                       ${CMAKE_CURRENT_SOURCE_DIR}/test/vector.cpp
                        )
 
-add_rocwmma_test(vector_test ${VectorTestSources})
+add_rocwmma_unit_test(vector_test ${VectorTestSources})

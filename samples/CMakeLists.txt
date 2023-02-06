@@ -26,6 +26,9 @@
 
 set(ROCWMMA_SAMPLES_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
+# Custom target to build all rocWMMA samples
+add_custom_target(rocwmma_samples)
+
 # Regular gtests that don't require any special
 # designation for validation or benchmarking
 function(add_rocwmma_sample TEST_TARGET TEST_SOURCE)
@@ -36,6 +39,7 @@ function(add_rocwmma_sample TEST_TARGET TEST_SOURCE)
   target_include_directories(${TEST_TARGET} PRIVATE
                              ${CMAKE_CURRENT_SOURCE_DIR}
                              ${ROCWMMA_SAMPLES_INCLUDE_DIR})
+  add_dependencies(rocwmma_samples ${TEST_TARGET})
 
   # Add support to build the target's assembly files
   if(ROCWMMA_BUILD_ASSEMBLY)

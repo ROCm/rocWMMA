@@ -46,4 +46,4 @@ set(FillFragmentTestSources ${UnitCommonSources}
                        )
 
 
-add_rocwmma_test(fill_fragment_test ${FillFragmentTestSources})
+add_rocwmma_unit_test(fill_fragment_test ${FillFragmentTestSources})

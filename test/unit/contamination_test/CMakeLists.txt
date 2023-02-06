@@ -61,4 +61,4 @@ set(ContaminationTestSources ${UnitCommonSources}
                      )
 
 
-add_rocwmma_test(contamination_test ${ContaminationTestSources})
+add_rocwmma_unit_test(contamination_test ${ContaminationTestSources})

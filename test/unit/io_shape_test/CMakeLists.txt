@@ -35,4 +35,4 @@ set(IoShapeTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/io_shape_256.cpp
                        )
 
-add_rocwmma_test(io_shape_test ${IoShapeTestSources})
+add_rocwmma_unit_test(io_shape_test ${IoShapeTestSources})
