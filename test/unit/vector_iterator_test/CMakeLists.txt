@@ -31,4 +31,4 @@ set(VectorIteratorTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/vector_iterator.cpp
                        )
 
-add_rocwmma_test(vector_iterator_test ${VectorIteratorTestSources})
+add_rocwmma_unit_test(vector_iterator_test ${VectorIteratorTestSources})
