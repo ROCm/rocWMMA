@@ -50,8 +50,6 @@ namespace rocwmma
         using CrossLaneOps::Properties;
         using CrossLaneOps::BlockBCast;
         using CrossLaneOps::OpBase;
-        using CrossLaneOps::RotateL;
-        using CrossLaneOps::RotateR;
 
         constexpr uint32_t OP_IMPL_PERM  = Properties::OP_IMPL_PERMUTE;
         constexpr uint32_t OP_IMPL_BPERM  = Properties::OP_IMPL_BPERMUTE;
@@ -74,32 +72,10 @@ namespace rocwmma
 
 
         template<uint32_t VW, uint32_t ElementShift>
-        struct Gather32 : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_32, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_interleave<Properties::OP_GROUP_SIZE_32, VW, ElementShift>{};
-
-        template<uint32_t VW, uint32_t ElementShift>
-        struct Scatter32 : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_32, OP_IMPL_PERM, OP_CTRL>, detail::amdgcn_interleave<Properties::OP_GROUP_SIZE_32, VW, ElementShift>{};
-
-        template<uint32_t VW, uint32_t ElementShift>
         struct Gather16 : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_16, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_interleave<Properties::OP_GROUP_SIZE_16, VW, ElementShift>{};
 
         template<uint32_t VW, uint32_t ElementShift>
         struct Scatter16 : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_16, OP_IMPL_PERM, OP_CTRL>, detail::amdgcn_interleave<Properties::OP_GROUP_SIZE_16, VW, ElementShift>{};
-
-
-        template<uint32_t Distance>
-        struct RotateWaveL : RotateL<Distance, Properties::OP_GROUP_SIZE_WARP, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_rotate<Properties::OP_GROUP_SIZE_WARP, Distance>{};
-        template<uint32_t Distance>
-        struct RotateWaveR : RotateR<Distance, Properties::OP_GROUP_SIZE_WARP, OP_IMPL_PERM, OP_CTRL>, detail::amdgcn_rotate<Properties::OP_GROUP_SIZE_WARP, Distance>{};
-
-
-        template<uint32_t BlockSize>
-        struct DupLoBlockWave : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_WARP, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_duplicate_blocks<Properties::OP_GROUP_SIZE_WARP, BlockSize, 2u, 0u>{};
-
-        template<uint32_t BlockSize>
-        struct DupHiBlockWave : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_WARP, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_duplicate_blocks<Properties::OP_GROUP_SIZE_WARP, BlockSize, 2u, Properties::OP_GROUP_SIZE_WARP / BlockSize / 2u>{};
-
-        template<uint32_t GroupSize, uint32_t BlockSize, uint32_t DupCount, uint32_t Shift>
-        struct DupTest : OpBase<Properties::OP_ID_SHUFFLE, GroupSize, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_duplicate_blocks<GroupSize, BlockSize, DupCount, Shift>{};
 
         // clang-format on
     }

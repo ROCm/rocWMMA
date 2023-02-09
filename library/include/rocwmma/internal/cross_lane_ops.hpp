@@ -67,19 +67,18 @@ namespace rocwmma
             OP_GROUP_SIZE_16   = 0x10, // Op affects sub-groups of 16
             OP_GROUP_SIZE_32   = 0x20, // Op affects sub-groups of 32
             OP_GROUP_SIZE_64   = 0x40, // Op affects sub-groups of 64
-            OP_GROUP_SIZE_WARP = Constants::AMDGCN_WAVE_SIZE, // Op affects entire warp
+            OP_GROUP_SIZE_WARP = 0x4F, // Op affects entire warp
+
+            // Identifiers of backend implementation
+            OP_IMPL_DPP      = 0x30,
+            OP_IMPL_SWIZZLE  = 0x31,
+            OP_IMPL_PERMUTE  = 0x32,
+            OP_IMPL_BPERMUTE = 0x33,
+            OP_IMPL_VPERM    = 0x34,
 
             // Directional properties
             OP_DIR_L = 0x00, // = left  (towards LSB)
             OP_DIR_R = 0x01, // = right (towards MSB)
-
-            // Identifiers of backend implementation
-            OP_IMPL_DPP      = 0x30, // DPP
-            OP_IMPL_SWIZZLE  = 0x31, // Swizzle
-            OP_IMPL_PERMUTE  = 0x32, // Permute
-            OP_IMPL_BPERMUTE = 0x33, // Permute
-            OP_IMPL_VPERM    = 0x34, // Blend
-            OP_IMPL_VBLEND   = 0x35, // Blend
         };
 
         /*! \class OpBase
