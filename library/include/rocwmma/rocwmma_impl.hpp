@@ -46,6 +46,7 @@
 #include "internal/pack.hpp"
 #include "internal/permute.hpp"
 #include "internal/swizzle.hpp"
+#include "internal/transforms.hpp"
 #include "internal/types.hpp"
 #include "internal/unpack.hpp"
 #include "internal/utils.hpp"
