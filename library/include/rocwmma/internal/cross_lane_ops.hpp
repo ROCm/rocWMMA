@@ -66,14 +66,15 @@ namespace rocwmma
             OP_GROUP_SIZE_WARP = 0x4F, // Op affects entire warp
 
             // Identifiers of backend implementation
-            OP_IMPL_DPP     = 0x30,
-            OP_IMPL_SWIZZLE = 0x31,
-            OP_IMPL_PERMUTE = 0x32,
-            OP_IMPL_VPERM   = 0x33,
+            OP_IMPL_DPP      = 0x30,
+            OP_IMPL_SWIZZLE  = 0x31,
+            OP_IMPL_PERMUTE  = 0x32,
+            OP_IMPL_BPERMUTE = 0x33,
+            OP_IMPL_VPERM    = 0x34,
 
             // Directional properties
             OP_DIR_L = 0x00, // = left  (towards LSB)
-            OP_DIR_R = 0x01 // = right (towards MSB)
+            OP_DIR_R = 0x01, // = right (towards MSB)
         };
 
         /*! \class OpBase

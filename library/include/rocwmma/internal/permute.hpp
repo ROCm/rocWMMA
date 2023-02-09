@@ -49,24 +49,33 @@ namespace rocwmma
 
         using CrossLaneOps::Properties;
         using CrossLaneOps::BlockBCast;
+        using CrossLaneOps::OpBase;
 
-        constexpr uint32_t OP_IMPL  = Properties::OP_IMPL_PERMUTE;
+        constexpr uint32_t OP_IMPL_PERM  = Properties::OP_IMPL_PERMUTE;
+        constexpr uint32_t OP_IMPL_BPERM  = Properties::OP_IMPL_BPERMUTE;
         constexpr uint32_t OP_CTRL = 0x0; // Uses thread index calculation instead
 
         template<uint32_t BlockIdx>
-        struct BlockBCast32 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_32, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_32, BlockIdx>{};
+        struct BlockBCast32 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_32, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_32, BlockIdx>{};
 
         template<uint32_t BlockIdx>
-        struct BlockBCast16 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_16, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_16, BlockIdx>{};
+        struct BlockBCast16 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_16, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_16, BlockIdx>{};
 
         template<uint32_t BlockIdx>
-        struct BlockBCast8 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_8, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_8, BlockIdx>{};
+        struct BlockBCast8 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_8, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_8, BlockIdx>{};
 
         template<uint32_t BlockIdx>
-        struct BlockBCast4 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_4, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_4, BlockIdx>{};
+        struct BlockBCast4 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_4, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_4, BlockIdx>{};
 
         template<uint32_t BlockIdx>
-        struct BlockBCast2 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_2, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_2, BlockIdx>{};
+        struct BlockBCast2 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_2, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_2, BlockIdx>{};
+
+
+        template<uint32_t VW, uint32_t ElementShift>
+        struct Gather16 : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_16, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_interleave<Properties::OP_GROUP_SIZE_16, VW, ElementShift>{};
+
+        template<uint32_t VW, uint32_t ElementShift>
+        struct Scatter16 : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_16, OP_IMPL_PERM, OP_CTRL>, detail::amdgcn_interleave<Properties::OP_GROUP_SIZE_16, VW, ElementShift>{};
 
         // clang-format on
     }
@@ -74,12 +83,18 @@ namespace rocwmma
     template <typename PermuteOp>
     struct Permute
     {
-        using PermuteFunc = detail::amdgcn_ds_bpermute;
+        using PermuteFunc =
+            typename std::conditional_t<PermuteOp::opImpl()
+                                            == CrossLaneOps::Properties::OP_IMPL_PERMUTE,
+                                        detail::amdgcn_ds_permute,
+                                        detail::amdgcn_ds_bpermute>;
 
         // Sanity checks
-        static_assert(PermuteOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_PERMUTE,
-                      "PermuteOp must use permute backend");
-        static_assert(PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_BLOCK_BCAST,
+        static_assert((PermuteOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_PERMUTE)
+                          || (PermuteOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_BPERMUTE),
+                      "PermuteOp must use permute or permute backend");
+        static_assert((PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_BLOCK_BCAST)
+                          || (PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_SHUFFLE),
                       "PermuteOp is unsupported");
 
         template <typename DataT>

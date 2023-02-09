@@ -52,6 +52,35 @@ namespace rocwmma
             }
         };
 
+        template <uint32_t BlockSize, uint32_t VW, uint32_t ElementShift>
+        struct amdgcn_interleave
+        {
+        private:
+            enum Traits : uint32_t
+            {
+                MASK_0 = LsbMask<Log2<BlockSize>::value>::value,
+                MASK_1 = LsbMask<Log2<BlockSize>::value - Log2<VW>::value>::value,
+                MASK_2 = ~MASK_0
+            };
+
+        public:
+            // Calculate the read element based on thread position.
+            ROCWMMA_HOST_DEVICE static inline uint32_t threadCtrl(uint32_t threadId)
+            {
+                // For reference in readibility:
+                // const uint32_t offset0 = (threadId * BlockSize / VW + ElementShift) % BlockSize;
+                // const uint32_t offset1 = threadId / VW % (BlockSize/VW);
+                // const uint32_t offset2 = (threadId / BlockSize) * BlockSize;
+
+                const uint32_t offset0
+                    = (threadId << (Log2<BlockSize>::value - Log2<VW>::value) + ElementShift)
+                      & Traits::MASK_0;
+                const uint32_t offset1 = (threadId >> Log2<VW>::value) & Traits::MASK_1;
+                const uint32_t offset2 = threadId & Traits::MASK_2;
+                return offset0 + offset1 + offset2;
+            }
+        };
+
         // bpermute: for the current thread, read from laneId
         struct amdgcn_ds_bpermute
         {
