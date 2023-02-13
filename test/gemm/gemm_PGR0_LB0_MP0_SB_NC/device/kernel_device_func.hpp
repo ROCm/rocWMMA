@@ -32,75 +32,12 @@
 // will be avoided at runtime anyway.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "gemm_test_traits.hpp"
+#include "kernel_predicates.hpp"
 #include <rocwmma/rocwmma.hpp>
 #pragma GCC diagnostic pop
 
 namespace rocwmma
 {
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename InputT,
-              typename OutputT,
-              typename ComputeT,
-              uint32_t WaveSize,
-              uint32_t ArchId>
-    struct gemm_PGR0_LB0_MP0_SB_NC_guard
-    {
-        using TestTraits = GemmTestTraits<BlockM,
-                                          BlockN,
-                                          BlockK,
-                                          InputT,
-                                          OutputT,
-                                          ComputeT,
-                                          1u,
-                                          1u,
-                                          WaveSize,
-                                          ArchId>;
-
-    private:
-        enum struct Gfx9Predicates : bool
-        {
-            // Must skip int8 tests on gfx9 for now
-            CostABTest
-            = (((uint32_t)TestTraits::Cost::TileA + (uint32_t)TestTraits::Cost::TileB) <= 256u),
-            CostCTest = ((uint32_t)TestTraits::Cost::TileC <= 256u),
-            CostDTest = ((uint32_t)TestTraits::Cost::TileD <= 256u),
-
-            IsInt8 = std::is_same<int8_t, InputT>::value,
-
-            Enable = ((bool)TestTraits::IsGfx9 && (bool)TestTraits::IsWave64 && !(bool)IsInt8
-                      && CostABTest && CostCTest && CostDTest)
-        };
-
-        enum struct Gfx11Predicates : bool
-        {
-            IsFp16
-            = std::is_same<InputT, float16_t>::value || std::is_same<InputT, hfloat16_t>::value,
-            IsBf16    = std::is_same<InputT, hip_bfloat16>::value,
-            IsInt8    = std::is_same<InputT, int8_t>::value,
-            TypesTest = IsFp16 || IsBf16 || IsInt8,
-
-            // AB inputs are duplicated, single buffered
-            // C tiles are unpacked.
-            CostABTest
-            = ((2u * ((uint32_t)TestTraits::Cost::TileA + (uint32_t)TestTraits::Cost::TileB))
-               <= 256u),
-            CostCTest     = ((2u * (uint32_t)TestTraits::Cost::TileC) <= 256u),
-            CostDTest     = ((uint32_t)TestTraits::Cost::TileD <= 256u),
-            BlockSizeTest = ((BlockM == 16u) && (BlockN == 16u)),
-
-            Enable = ((bool)TestTraits::IsGfx11 && (bool)TestTraits::IsWave32 && TypesTest
-                      && CostABTest && CostCTest && CostDTest && BlockSizeTest)
-        };
-
-    public:
-        constexpr static bool enable()
-        {
-            return ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable);
-        }
-    };
     ///
     /// This class of kernel is a naive kernel whereas
     /// each wave is responsible for calculating a macro tile area of
