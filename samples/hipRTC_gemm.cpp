@@ -211,8 +211,7 @@ int main()
     CHECK_HIPRTC_ERROR(hiprtcCreateProgram(&prog, src, nullptr, 0, nullptr, nullptr));
     hiprtcResult result;
     hiprtcResult logResult;
-    const char*  opts[]
-        = {"-D__HIP_PLATFORM_AMD__", "-D__HIP_CLANG_ONLY__", rocWMMAIncludePath.c_str()};
+    const char*  opts[] = {"-D__HIP_PLATFORM_AMD__", rocWMMAIncludePath.c_str()};
 
     result = hiprtcCompileProgram(prog, sizeof(opts) / sizeof(opts[0]), opts);
     if(result != HIPRTC_SUCCESS)
