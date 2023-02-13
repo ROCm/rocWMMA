@@ -556,7 +556,6 @@ namespace rocwmma
 /// Definition of accessor aliases ///
 //////////////////////////////////////
 
-#if __HIP_CLANG_ONLY__
 #define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK1(TYPE) \
     struct                                          \
     {                                               \
@@ -595,37 +594,6 @@ namespace rocwmma
 #define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK128(TYPE)
 #define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK256(TYPE)
 #define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK512(TYPE)
-
-#else
-
-#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK1(TYPE) \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 0> x;
-
-#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK2(TYPE)    \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 0> x; \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 1> y;
-
-#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK3(TYPE)    \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 0> x; \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 1> y; \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 2> z;
-
-#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK4(TYPE)    \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 0> x; \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 1> y; \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 2> z; \
-    hip_impl::Scalar_accessor<TYPE, Native_vec_, 3> w;
-
-// Untenable individual accessor maintenance for larger vectors: skip them
-#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK8(TYPE)
-#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK16(TYPE)
-#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK32(TYPE)
-#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK64(TYPE)
-#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK128(TYPE)
-#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK256(TYPE)
-#define ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK512(TYPE)
-
-#endif
 
 /////////////////////////////////////////////////////////////////////////////////
 /// Definition of storage implementation (vector extension vs built-in array) ///
