@@ -28,6 +28,7 @@
 #define ROCWMMA_LOGGING_HPP
 
 #include "rocwmma_ostream.hpp"
+#include "rocwmma/rocwmma-version.hpp"
 #include "singleton.hpp"
 #include <stdlib.h>
 
@@ -75,6 +76,10 @@ namespace rocwmma
 
             for(auto i = 0; i < argc - 1; i++)
             {
+                if(args[i] == "-v" || args[i] == "--version")
+                {
+                    std::cout << "rocWMMA Version: " << rocwmma_get_version() << std::endl;
+                }
                 if(args[i] == "-os" || args[i] == "--output_stream")
                 {
                     if(i + 2 >= argc)
