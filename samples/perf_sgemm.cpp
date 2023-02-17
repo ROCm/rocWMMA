@@ -269,11 +269,11 @@ __device__ static inline void globalWriteD(float32_t* gAddrD,
                                            MfmaFragD const (&fragsD)[BLOCKS_X][BLOCKS_Y],
                                            uint32_t ldd)
 {
-    auto readOffset = make_coord2d(ROCWMMA_M, 0u);
-    auto blockStepX = get<1>(readOffset) * ldd + get<0>(readOffset);
+    auto writeOffset = make_coord2d(ROCWMMA_M, 0u);
+    auto blockStepX = get<1>(writeOffset) * ldd + get<0>(writeOffset);
 
-    readOffset = make_coord2d(0u, ROCWMMA_N);
-    auto blockStepY = get<1>(readOffset) * ldd + get<0>(readOffset);
+    writeOffset = make_coord2d(0u, ROCWMMA_N);
+    auto blockStepY = get<1>(writeOffset) * ldd + get<0>(writeOffset);
 
 #pragma unroll
     for(int i = 0; i < BLOCKS_X; i++)
