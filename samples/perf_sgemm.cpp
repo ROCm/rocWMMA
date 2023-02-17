@@ -199,8 +199,8 @@ __device__ static inline void localReadA(MfmaFragA (&fragsA)[BLOCKS_X],
                                          float32_t const* ldsAddrA,
                                          uint32_t LdsWidth)
 {
-    auto ldsBlockOffsetA = make_coord2d(ROCWMMA_M, 0u);
-    auto blockStep = get<0>(ldsBlockOffsetA) * LdsWidth + get<1>(ldsBlockOffsetA);
+    auto readOffset = make_coord2d(ROCWMMA_M, 0u);
+    auto blockStep = get<0>(readOffset) * LdsWidth + get<1>(readOffset);
 
     using LRFragA = fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t, row_major>;
 #pragma unroll
@@ -221,8 +221,8 @@ __device__ static inline void localReadB(MfmaFragB (&fragsB)[BLOCKS_Y],
                                          float32_t const* ldsAddrB,
                                          uint32_t LdsWidth)
 {
-    auto ldsBlockOffsetB = make_coord2d(0u, ROCWMMA_N);
-    auto blockStep = get<0>(ldsBlockOffsetB) * LdsWidth + get<1>(ldsBlockOffsetB);
+    auto readOffset = make_coord2d(0u, ROCWMMA_N);
+    auto blockStep = get<0>(readOffset) * LdsWidth + get<1>(readOffset);
 
     using LRFragB = fragment<matrix_a, ROCWMMA_N, ROCWMMA_M, ROCWMMA_K, float32_t, row_major>;
 #pragma unroll
@@ -242,11 +242,11 @@ __device__ static inline void globalReadC(MfmaFragC (&fragC)[BLOCKS_X][BLOCKS_Y]
                                           float32_t const* gAddrC,
                                           uint32_t ldc)
 {
-    auto blockWriteOffsetA = make_coord2d(ROCWMMA_M, 0u);
-    auto blockStepX = get<1>(blockWriteOffsetA) * ldc + get<0>(blockWriteOffsetA);
+    auto readOffset = make_coord2d(ROCWMMA_M, 0u);
+    auto blockStepX = get<1>(readOffset) * ldc + get<0>(readOffset);
 
-    auto blockWriteOffsetB = make_coord2d(0u, ROCWMMA_N);
-    auto blockStepY = get<1>(blockWriteOffsetB) * ldc + get<0>(blockWriteOffsetB);
+    readOffset = make_coord2d(0u, ROCWMMA_N);
+    auto blockStepY = get<1>(readOffset) * ldc + get<0>(readOffset);
 
 #pragma unroll
     for(int i = 0; i < BLOCKS_X; i++)
@@ -269,11 +269,11 @@ __device__ static inline void globalWriteD(float32_t* gAddrD,
                                            MfmaFragD const (&fragsD)[BLOCKS_X][BLOCKS_Y],
                                            uint32_t ldd)
 {
-    auto blockWriteOffsetA = make_coord2d(ROCWMMA_M, 0u);
-    auto blockStepX = get<1>(blockWriteOffsetA) * ldd + get<0>(blockWriteOffsetA);
+    auto readOffset = make_coord2d(ROCWMMA_M, 0u);
+    auto blockStepX = get<1>(readOffset) * ldd + get<0>(readOffset);
 
-    auto blockWriteOffsetB = make_coord2d(0u, ROCWMMA_N);
-    auto blockStepY = get<1>(blockWriteOffsetB) * ldd + get<0>(blockWriteOffsetB);
+    readOffset = make_coord2d(0u, ROCWMMA_N);
+    auto blockStepY = get<1>(readOffset) * ldd + get<0>(readOffset);
 
 #pragma unroll
     for(int i = 0; i < BLOCKS_X; i++)
