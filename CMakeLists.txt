@@ -71,7 +71,13 @@ include(ROCMInstallTargets)
 include(ROCMCheckTargetIds)
 include(ROCMClients)
 
-rocm_setup_version(VERSION "0.7")
+# Versioning via rocm-cmake
+set ( VERSION_STRING "1.0.0" )
+rocm_setup_version( VERSION ${VERSION_STRING} )
+
+# configure a header file to pass the CMake version settings to the source
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/library/include/rocwmma/internal/rocwmma-version.hpp.in"
+               "${CMAKE_CURRENT_SOURCE_DIR}/library/include/rocwmma/rocwmma-version.hpp" )
 
 rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
   TARGETS "gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx1100;gfx1101;gfx1102" )
