@@ -431,6 +431,22 @@ namespace rocwmma
     }
 
     template <typename T, unsigned int Rank>
+    ROCWMMA_HOST_DEVICE inline auto
+        non_native_vector_base<T, Rank>::operator+(const VecT& x_) noexcept -> VecT
+    {
+        auto ret = VecT{*this};
+        return (ret += x_);
+    }
+
+    template <typename T, unsigned int Rank>
+    ROCWMMA_HOST_DEVICE inline auto
+        non_native_vector_base<T, Rank>::operator-(const VecT& x_) noexcept -> VecT
+    {
+        auto ret = VecT{*this};
+        return (ret -= x_);
+    }
+
+    template <typename T, unsigned int Rank>
     template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
     ROCWMMA_HOST_DEVICE inline auto
         non_native_vector_base<T, Rank>::operator%=(const VecT& x_) noexcept -> VecT&
