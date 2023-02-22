@@ -91,8 +91,7 @@ namespace rocwmma
             auto workCount = coopElement(workgroupDim);
 
             // Start at the first block in WG coverage
-            auto startBlockCoord = make_coord2d(get<0>(currentBlockCoord) - get<0>(waveCoord),
-                                                get<1>(currentBlockCoord) - get<1>(waveCoord));
+            auto startBlockCoord = currentBlockCoord - waveCoord;
 
             // Do cooperative loads for all blocks covered by WG
             for(int i = 0; i < get<0>(workgroupDim); i++)
@@ -186,8 +185,7 @@ namespace rocwmma
             auto workCount = coopElement(workgroupDim);
 
             // Start at the first block in WG coverage
-            auto startBlockCoord = make_coord2d(get<0>(currentBlockCoord) - get<0>(waveCoord),
-                                                get<1>(currentBlockCoord) - get<1>(waveCoord));
+            auto startBlockCoord = currentBlockCoord - waveCoord;
 
             // Do cooperative loads for all blocks covered by WG
             for(int i = 0; i < get<0>(workgroupDim); i++)
@@ -281,8 +279,7 @@ namespace rocwmma
             auto workCount = coopElement(workgroupDim);
 
             // Start at the first block in WG coverage
-            auto startBlockCoord = make_coord2d(get<0>(currentBlockCoord) - get<0>(waveCoord),
-                                                get<1>(currentBlockCoord) - get<1>(waveCoord));
+            auto startBlockCoord = currentBlockCoord - waveCoord;
 
             // Do cooperative loads for all blocks covered by WG
             for(int i = 0; i < get<0>(workgroupDim); i++)

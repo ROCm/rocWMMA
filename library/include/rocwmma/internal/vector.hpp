@@ -168,6 +168,12 @@ namespace rocwmma
         ROCWMMA_HOST_DEVICE
         inline VecT& operator/=(const VecT& x_) noexcept;
 
+        ROCWMMA_HOST_DEVICE
+        inline VecT operator+(const VecT& x_) noexcept;
+
+        ROCWMMA_HOST_DEVICE
+        inline VecT operator-(const VecT& x_) noexcept;
+
         template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT& operator%=(const VecT& x_) noexcept;
 
