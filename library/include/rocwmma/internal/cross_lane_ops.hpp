@@ -43,38 +43,43 @@ namespace rocwmma
 
         enum Properties : uint32_t
         {
-            // 32b Element Operation IDs
+            // 32b Element Operation IDs on single src
             OP_ID_ROTATE      = 0x00, // position rotation
             OP_ID_SHIFT       = 0x01, // position shift
             OP_ID_SHUFFLE     = 0x02, // position shuffle
             OP_ID_REVERSE     = 0x03, // position mirror
             OP_ID_SWAP        = 0x04, // neighbour swap
             OP_ID_BCAST       = 0x05, // broadcast element
-            OP_ID_FFT         = 0x06, // fft shuffle
+            OP_ID_FFT         = 0x06, // fft-based shuffle
             OP_ID_BLOCK_BCAST = 0x07, // broadcast block
             OP_ID_WFALL_BCAST = 0x08, // broadcast last element to next block
-            OP_ID_BLEND       = 0x09, // byte-wise element blending
-            OP_ID_MOVE        = 0x0a, // move, or copy
+            OP_ID_MOVE        = 0x09, // move, or copy
+
+            // Blending operations between two sources
+            OP_ID_BLEND_BYTE = 0x0A, // byte-wise blend
+            OP_ID_BLEND      = 0x0B, // element-wise blend
 
             // Sub group size
+            OP_GROUP_SIZE_1    = 0x01, // Op affects sub-groups of 1
             OP_GROUP_SIZE_2    = 0x02, // Op affects sub-groups of 2
             OP_GROUP_SIZE_4    = 0x04, // Op affects sub-groups of 4
             OP_GROUP_SIZE_8    = 0x08, // Op affects sub-groups of 8
             OP_GROUP_SIZE_16   = 0x10, // Op affects sub-groups of 16
             OP_GROUP_SIZE_32   = 0x20, // Op affects sub-groups of 32
             OP_GROUP_SIZE_64   = 0x40, // Op affects sub-groups of 64
-            OP_GROUP_SIZE_WARP = 0x4F, // Op affects entire warp
-
-            // Identifiers of backend implementation
-            OP_IMPL_DPP      = 0x30,
-            OP_IMPL_SWIZZLE  = 0x31,
-            OP_IMPL_PERMUTE  = 0x32,
-            OP_IMPL_BPERMUTE = 0x33,
-            OP_IMPL_VPERM    = 0x34,
+            OP_GROUP_SIZE_WARP = Constants::AMDGCN_WAVE_SIZE, // Op affects entire warp
 
             // Directional properties
             OP_DIR_L = 0x00, // = left  (towards LSB)
             OP_DIR_R = 0x01, // = right (towards MSB)
+
+            // Identifiers of backend implementation
+            OP_IMPL_DPP      = 0x30, // DPP
+            OP_IMPL_SWIZZLE  = 0x31, // Swizzle
+            OP_IMPL_PERMUTE  = 0x32, // Permute
+            OP_IMPL_BPERMUTE = 0x33, // Permute
+            OP_IMPL_VPERM    = 0x34, // Blend
+            OP_IMPL_VBLEND   = 0x35, // Blend
         };
 
         /*! \class OpBase
@@ -309,8 +314,8 @@ namespace rocwmma
             }
         };
 
-        /*! \class Blend
-        *  \brief Perform byte-wise blending between all elements.
+        /*! \class BlendByte
+        *  \brief Perform byte-wise blending between two sources.
         */
         template <uint32_t Select0,
                   uint32_t Select1,
@@ -318,8 +323,10 @@ namespace rocwmma
                   uint32_t Select3,
                   uint32_t OpImpl,
                   uint32_t OpCtrl>
-        struct Blend4
-            : public OpBase<Properties::OP_ID_BLEND, Properties::OP_GROUP_SIZE_WARP, OpImpl, OpCtrl>
+        struct BlendByte : public OpBase<Properties::OP_ID_BLEND_BYTE,
+                                         Properties::OP_GROUP_SIZE_1,
+                                         OpImpl,
+                                         OpCtrl>
         {
             enum : uint32_t
             {
@@ -345,6 +352,14 @@ namespace rocwmma
             {
                 return SELECT_3;
             }
+        };
+
+        /*! \class Blend
+        *  \brief Perform element-wise blending between two sources.
+        */
+        template <uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
+        struct Blend : public OpBase<Properties::OP_ID_BLEND, SubGroupSize, OpImpl, OpCtrl>
+        {
         };
 
         /*! \class BlockBCast
