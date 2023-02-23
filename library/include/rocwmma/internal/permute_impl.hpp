@@ -73,11 +73,63 @@ namespace rocwmma
                 // const uint32_t offset2 = (threadId / BlockSize) * BlockSize;
 
                 const uint32_t offset0
-                    = (threadId << (Log2<BlockSize>::value - Log2<VW>::value) + ElementShift)
+                    = ((threadId << (Log2<BlockSize>::value - Log2<VW>::value)) + ElementShift)
                       & Traits::MASK_0;
                 const uint32_t offset1 = (threadId >> Log2<VW>::value) & Traits::MASK_1;
                 const uint32_t offset2 = threadId & Traits::MASK_2;
                 return offset0 + offset1 + offset2;
+            }
+        };
+
+        template <uint32_t GroupSize, uint32_t Distance>
+        struct amdgcn_rotate
+        {
+        private:
+            enum Traits : uint32_t
+            {
+                MASK_0 = LsbMask<Log2<GroupSize>::value>::value,
+                MASK_1 = ~MASK_0
+            };
+
+        public:
+            // Calculate the read element based on thread position.
+            ROCWMMA_HOST_DEVICE static inline uint32_t threadCtrl(uint32_t threadId)
+            {
+                // For reference in readibility:
+                // const uint32_t offset0 = (threadId + Distance) % GroupSize
+                // const uint32_t offset1 = (threadId / GroupSize) * GroupSize
+                const uint32_t offset0 = (threadId + Distance) & Traits::MASK_0;
+                const uint32_t offset1 = threadId & Traits::MASK_1;
+                return offset0 + offset1;
+            }
+        };
+
+        template <uint32_t GroupSize, uint32_t BlockSize, uint32_t DupCount, uint32_t Offset>
+        struct amdgcn_duplicate_blocks
+        {
+        private:
+            enum Traits : uint32_t
+            {
+                MASK_0 = LsbMask<Log2<BlockSize>::value>::value,
+                MASK_1 = LsbMask<Log2<GroupSize>::value - Log2<DupCount>::value>::value,
+                MASK_2 = ~LsbMask<Log2<GroupSize>::value>::value,
+            };
+
+        public:
+            // Calculate the read element based on thread position.
+            ROCWMMA_HOST_DEVICE static inline uint32_t threadCtrl(uint32_t threadId)
+            {
+                // For reference in readibility:
+                // const uint32_t offset0 = (threadId % BlockSize)
+                // const uint32_t offset1 = ((threadId / DupCount / BlockSize ) * BlockSize) % (GroupSize / DupCount)
+                // const uinti32_t offset2 = (threadId / GroupSize) * GroupSize
+                // constexpr uint32_t offset3 = Offset * BlockSize
+                const uint32_t offset0 = (threadId & Traits::MASK_0);
+                const uint32_t offset1
+                    = (threadId >> Log2<DupCount>::value) & ~(~Traits::MASK_0 ^ Traits::MASK_1);
+                const uint32_t     offset2 = (threadId & Traits::MASK_2);
+                constexpr uint32_t offset3 = Offset << Log2<BlockSize>::value;
+                return offset0 + offset1 + offset2 + offset3;
             }
         };
 
