@@ -28,13 +28,13 @@
  * \brief rocwmma-version.hpp provides the configured version and settings
  */
 
-#ifndef ROCWMMA_API_VERSION_HPP
-#define ROCWMMA_API_VERSION_HPP
+#ifndef ROCWMMA_VERSION_API_HPP
+#define ROCWMMA_VERSION_API_HPP
 
 // clang-format off
-#define ROCWMMA_VERSION_MAJOR       @rocwmma_VERSION_MAJOR@
-#define ROCWMMA_VERSION_MINOR       @rocwmma_VERSION_MINOR@
-#define ROCWMMA_VERSION_PATCH       @rocwmma_VERSION_PATCH@
+#define ROCWMMA_VERSION_MAJOR       1
+#define ROCWMMA_VERSION_MINOR       0
+#define ROCWMMA_VERSION_PATCH       0
 // clang-format on
 
 inline std::string rocwmma_get_version()
@@ -43,4 +43,4 @@ inline std::string rocwmma_get_version()
            + std::to_string(ROCWMMA_VERSION_PATCH);
 }
 
-#endif // ROCWMMA_API_VERSION_HPP
+#endif // ROCWMMA_VERSION_API_HPP

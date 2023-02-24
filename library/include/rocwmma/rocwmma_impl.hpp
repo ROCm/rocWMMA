@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_IMPL_HPP
-#define ROCWMMA_IMPL_HPP
+#ifndef ROCWMMA_API_IMPL_HPP
+#define ROCWMMA_API_IMPL_HPP
 
 #include "rocwmma.hpp"
 
@@ -331,4 +331,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_IMPL_HPP
+#endif // ROCWMMA_API_IMPL_HPP
