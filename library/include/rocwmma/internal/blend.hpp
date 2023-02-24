@@ -105,7 +105,7 @@ namespace rocwmma
     {
     private:
         template <typename... ArgT>
-        static inline auto blendHelper(ArgT&&... args)
+        ROCWMMA_DEVICE static inline auto blendHelper(ArgT&&... args)
         {
             // amdgcn_perm takes compile time BlendOp::opCtrl argument
             if constexpr(BlendOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_VPERM)
@@ -154,8 +154,8 @@ namespace rocwmma
         ROCWMMA_DEVICE static void exec(VecT<DataT, VecSize>&       src0,
                                         VecT<DataT, VecSize> const& src1)
         {
-            auto it0 = makeVectorIterator(src0).begin();
-            auto it1 = makeVectorIterator(src1).begin();
+            auto       it0 = makeVectorIterator(src0).begin();
+            auto const it1 = makeVectorIterator(src1).begin();
             static_assert(decltype(it0)::range() == VecSize,
                           "VecSize inconsistent with iterator range");
 
@@ -167,43 +167,6 @@ namespace rocwmma
                 it0++;
                 it1++;
             }
-        }
-
-        template <typename DataT, uint32_t VecSize>
-        ROCWMMA_DEVICE static void exec(VecT<DataT, VecSize>& src0)
-        {
-            auto it0 = makeVectorIterator(src0).begin();
-            static_assert(decltype(it0)::range() == VecSize,
-                          "VecSize inconsistent with iterator range");
-
-            // Loop through entire vector
-#pragma unroll
-            for(uint32_t i = 0; i < VecSize; ++i)
-            {
-                *it0 = blendHelper(*it0, *it0);
-                it0++;
-            }
-        }
-
-        template <typename DataT, uint32_t VecSize>
-        ROCWMMA_DEVICE static auto exec(VecT<DataT, VecSize> const& src0)
-        {
-            VecT<DataT, VecSize> result;
-            auto const           itR = makeVectorIterator(src0).begin();
-            auto                 itW = makeVectorIterator(result).begin();
-            static_assert(decltype(itR)::range() == VecSize,
-                          "VecSize inconsistent with iterator range");
-
-            // Loop through entire vector
-#pragma unroll
-            for(uint32_t i = 0; i < VecSize; ++i)
-            {
-                *itW = blendHelper(*itR, *itR);
-                itR++;
-                itW++;
-            }
-
-            return result;
         }
     };
 

@@ -122,19 +122,14 @@ namespace rocwmma
                       "PermuteOp is unsupported");
 
         template <typename DataT>
-        ROCWMMA_DEVICE static DataT exec(DataT const& src, uint32_t laneId)
+        ROCWMMA_DEVICE static inline auto exec(DataT const& src)
         {
-            return PermuteFunc::exec(src, PermuteOp::threadCtrl(laneId));
-        }
-
-        template <typename DataT>
-        ROCWMMA_DEVICE static void exec(DataT& src, uint32_t laneId)
-        {
-            src = PermuteFunc::exec(src, PermuteOp::threadCtrl(laneId));
+            return PermuteFunc::exec(src,
+                                     PermuteOp::threadCtrl(detail::WaveSpace<>::localLaneId()));
         }
 
         template <typename DataT, uint32_t VecSize>
-        ROCWMMA_DEVICE static void exec(VecT<DataT, VecSize>& src, uint32_t laneId)
+        ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize>& src)
         {
             auto it = makeVectorIterator(src).begin();
             static_assert(decltype(it)::range() == VecSize,
@@ -144,29 +139,10 @@ namespace rocwmma
 #pragma unroll
             for(uint32_t i = 0; i < VecSize; ++i)
             {
-                *it = PermuteFunc::exec(*it, PermuteOp::threadCtrl(laneId));
+                *it = PermuteFunc::exec(*it,
+                                        PermuteOp::threadCtrl(detail::WaveSpace<>::localLaneId()));
                 it++;
             }
-        }
-
-        template <typename DataT, uint32_t VecSize>
-        ROCWMMA_DEVICE static auto exec(VecT<DataT, VecSize> const& src, uint32_t laneId)
-        {
-            VecT<DataT, VecSize> result;
-            auto                 itW = makeVectorIterator(result).begin();
-            auto const           itR = makeVectorIterator(src).begin();
-            static_assert(decltype(itW)::range() == VecSize,
-                          "VecSize inconsistent with iterator range");
-
-            // Loop through entire vector
-#pragma unroll
-            for(uint32_t i = 0; i < VecSize; ++i)
-            {
-                *itW = PermuteFunc::exec(*itR, PermuteOp::threadCtrl(laneId));
-                itW++;
-                itR++;
-            }
-            return result;
         }
     };
 

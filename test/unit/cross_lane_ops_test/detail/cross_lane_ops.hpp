@@ -180,8 +180,35 @@ namespace rocwmma
 
             // Perform the host validation
             // Host reference result in hostOut
-            cross_lane_ref_dispatch_CPU<DataT, CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>(
-                dataInstance->hostOut().get(), dataInstance->hostIn().get(), sizeD, Base::mParam1);
+
+            // Determine how many inputs are needed.
+            // Currently CPU references for blend backends need 2 input sources.
+            if constexpr((CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_VPERM)
+                         || (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_VBLEND))
+            {
+                // 2 inputs. Using initial output as first input
+                cross_lane_ref_dispatch_CPU<DataT,
+                                            CrossLaneOp,
+                                            WriteRowMask,
+                                            WriteBankMask,
+                                            BoundCtrl>(dataInstance->hostOut().get(),
+                                                       dataInstance->hostOut().get(),
+                                                       dataInstance->hostIn().get(),
+                                                       sizeD,
+                                                       Base::mParam1);
+            }
+            else
+            {
+                // 1 input
+                cross_lane_ref_dispatch_CPU<DataT,
+                                            CrossLaneOp,
+                                            WriteRowMask,
+                                            WriteBankMask,
+                                            BoundCtrl>(dataInstance->hostOut().get(),
+                                                       dataInstance->hostIn().get(),
+                                                       sizeD,
+                                                       Base::mParam1);
+            }
 
             // Copy host reference output to GPU
             auto reference = dataInstance->template allocDevice<DataT>(sizeD);

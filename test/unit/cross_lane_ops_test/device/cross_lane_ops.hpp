@@ -88,9 +88,8 @@ namespace rocwmma
         uint32_t const* read32In   = reinterpret_cast<uint32_t const*>(in);
 
         // Get offset into 1D array where all threads are neighbours.
-        auto dataOffset = blockIdx.x * blockDim.x + threadIdx.x;
-        write32Out[dataOffset]
-            = rocwmma::Permute<CrossLaneOp>::exec(read32In[dataOffset], threadIdx.x);
+        auto dataOffset        = blockIdx.x * blockDim.x + threadIdx.x;
+        write32Out[dataOffset] = rocwmma::Permute<CrossLaneOp>::exec(read32In[dataOffset]);
     }
 
     template <typename DataT, typename CrossLaneOp>
