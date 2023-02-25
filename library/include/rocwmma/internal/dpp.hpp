@@ -32,149 +32,6 @@
 
 namespace rocwmma
 {
-
-    namespace DppOps
-    {
-        /**
-         * \ingroup Cross-Lane Operations
-         * \defgroup Dpp Ops
-         *
-         * @brief Cross-lane operations implemented with the amdgcn_mov_dpp backend.
-         * @note In this context:
-         * 'row' means sub-group size of 16 elements. Wave64 has 4 rows, Wave32 has 2 rows per register.
-         * 'bank' means sub-group size of 4 elements. There are 4 banks per row.
-         *
-         * DPP (Data Parallel Primitives) backend can implement specific variations of the cross-lane operations
-         * so we can fully specialize those here.
-         *
-         * Here we build out the cross-lane properties specific to DPP, such as the backend (OP_IMPL) and the
-         * control code drivers for the backend function call (OP_CTRL). Control code generators are implemented
-         * in the DppCtrl namespace.
-         */
-
-        // clang-format off
-
-        using CrossLaneOps::Properties;
-        using CrossLaneOps::BCast;
-        using CrossLaneOps::WFallBCast;
-        using CrossLaneOps::Reverse;
-        using CrossLaneOps::RotateR;
-        using CrossLaneOps::RotateL;
-        using CrossLaneOps::ShiftR;
-        using CrossLaneOps::ShiftL;
-        using CrossLaneOps::Swap;
-        using CrossLaneOps::Move;
-
-        // These definitions are for DPP support, so we specify this backend here.
-        // Operation directions can also be propagated to the ctrl
-        constexpr uint32_t OP_IMPL  = Properties::OP_IMPL_DPP;
-        constexpr uint32_t OP_DIR_L = Properties::OP_DIR_L;
-        constexpr uint32_t OP_DIR_R = Properties::OP_DIR_R;
-
-        // BCast variants
-        template <uint32_t ElementIdx>
-        using BCast16 = BCast<ElementIdx, Properties::OP_GROUP_SIZE_16, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_bcast<ElementIdx>::opCtrl()>;
-
-        template <uint32_t ElementIdx>
-        using BCast4 = BCast<ElementIdx, Properties::OP_GROUP_SIZE_4, OP_IMPL, detail::DppCtrl::amdgcn_dpp_shuffle_4<ElementIdx,
-                                                                                                                    ElementIdx,
-                                                                                                                    ElementIdx,
-                                                                                                                    ElementIdx>::opCtrl()>;
-
-        template <uint32_t ElementIdx>
-        using BCast2 = BCast<ElementIdx, Properties::OP_GROUP_SIZE_2, OP_IMPL, detail::DppCtrl::amdgcn_dpp_shuffle_4<ElementIdx,
-                                                                                                                    ElementIdx,
-                                                                                                                    ElementIdx + Properties::OP_GROUP_SIZE_2,
-                                                                                                                    ElementIdx + Properties::OP_GROUP_SIZE_2>::opCtrl()>;
-
-        // Special BCast variants:
-        // BCast<M>x<N>, where:
-        // <M> = subgroup size
-        // <N> = element idx
-        // NOTE: These functions only broadcast the <N>th element of the current subgroup to the NEXT subgroup
-        using BCast16x15 = WFallBCast<Properties::OP_GROUP_SIZE_16, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_bcast15::opCtrl()>;
-
-        using BCast32x31 = WFallBCast<Properties::OP_GROUP_SIZE_32, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_bcast31::opCtrl()>;
-
-        // Move variants
-        using MaskMove = Move<OP_IMPL, detail::DppCtrl::amdgcn_dpp_mov::opCtrl()>;
-
-        // Reversal variants
-        using Reverse16 = Reverse<Properties::OP_GROUP_SIZE_16, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_reverse::opCtrl()>;
-
-        using Reverse8 = Reverse<Properties::OP_GROUP_SIZE_8, OP_IMPL, detail::DppCtrl::amdgcn_dpp_half_row_reverse::opCtrl()>;
-
-        using Reverse4 = Reverse<Properties::OP_GROUP_SIZE_4, OP_IMPL, detail::DppCtrl::amdgcn_dpp_shuffle_4<0x3, 0x2, 0x1, 0x0>::opCtrl()>;
-
-        using Reverse2 = Reverse<Properties::OP_GROUP_SIZE_2, OP_IMPL, detail::DppCtrl::amdgcn_dpp_shuffle_4<0x1, 0x0, 0x3, 0x2>::opCtrl()>;
-
-
-        /// Rotation variants
-
-        // Rotate the entire wave by 1
-        using RotateWaveR1 = RotateR<1u, Properties::OP_GROUP_SIZE_WARP, OP_IMPL, detail::DppCtrl::amdgcn_dpp_wave_rotate1<OP_DIR_R>::opCtrl()>;
-
-        using RotateWaveL1 = RotateL<1u, Properties::OP_GROUP_SIZE_WARP, OP_IMPL, detail::DppCtrl::amdgcn_dpp_wave_rotate1<OP_DIR_L>::opCtrl()>;
-
-        // Rotate in element groups
-        template <uint32_t RotateDistance>
-        using RotateR16 = RotateR<RotateDistance, Properties::OP_GROUP_SIZE_16, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_rotate_r<RotateDistance>::opCtrl()>;
-
-        template <uint32_t RotateDistance>
-        using RotateL4 = RotateL<RotateDistance, Properties::OP_GROUP_SIZE_4, OP_IMPL, detail::DppCtrl::amdgcn_dpp_bank_rotate<OP_DIR_L, RotateDistance>::opCtrl()>;
-
-        template <uint32_t RotateDistance>
-        using RotateR4 = RotateR<RotateDistance, Properties::OP_GROUP_SIZE_4, OP_IMPL, detail::DppCtrl::amdgcn_dpp_bank_rotate<OP_DIR_R, RotateDistance>::opCtrl()>;
-
-        template <uint32_t RotateDistance>
-        using RotateL2 = RotateL<RotateDistance, Properties::OP_GROUP_SIZE_2, OP_IMPL, detail::DppCtrl::amdgcn_dpp_half_bank_rotate<OP_DIR_L, RotateDistance>::opCtrl()>;
-
-        template <uint32_t RotateDistance>
-        using RotateR2 = RotateR<RotateDistance, Properties::OP_GROUP_SIZE_2, OP_IMPL, detail::DppCtrl::amdgcn_dpp_half_bank_rotate<OP_DIR_R, RotateDistance>::opCtrl()>;
-
-        /// Shift variants
-
-        // Rotate the entire wave by 1
-        using ShiftWaveL1 = ShiftL<1u, Properties::OP_GROUP_SIZE_WARP, OP_IMPL, detail::DppCtrl::amdgcn_dpp_wave_shift1<OP_DIR_L>::opCtrl()>;
-
-        using ShiftWaveR1 = ShiftR<1u, Properties::OP_GROUP_SIZE_WARP, OP_IMPL, detail::DppCtrl::amdgcn_dpp_wave_shift1<OP_DIR_R>::opCtrl()>;
-
-        // Rotate in element groups
-        template <uint32_t ShiftDistance>
-        using ShiftL16 = ShiftL<ShiftDistance, Properties::OP_GROUP_SIZE_16, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_shift<OP_DIR_L, ShiftDistance>::opCtrl()>;
-
-        template <uint32_t ShiftDistance>
-        using ShiftR16 = ShiftR<ShiftDistance, Properties::OP_GROUP_SIZE_16, OP_IMPL, detail::DppCtrl::amdgcn_dpp_row_shift<OP_DIR_R, ShiftDistance>::opCtrl()>;
-
-
-        // Shuffle variants
-        template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
-        using Shuffle4 = CrossLaneOps::Shuffle4<Select0,
-                                Select1,
-                                Select2,
-                                Select3,
-                                OP_IMPL,
-                                detail::DppCtrl::amdgcn_dpp_shuffle_4<Select0,
-                                                                        Select1,
-                                                                        Select2,
-                                                                        Select3>::opCtrl()>;
-
-        template <uint32_t Select0, uint32_t Select1>
-        using Shuffle2 = CrossLaneOps::Shuffle2<Select0,
-                                Select1,
-                                OP_IMPL,
-                                detail::DppCtrl::amdgcn_dpp_shuffle_4<Select0,
-                                                                        Select1,
-                                                                        Select0 + Properties::OP_GROUP_SIZE_2,
-                                                                        Select1 + Properties::OP_GROUP_SIZE_2>::opCtrl()>;
-
-        // Swap variants
-        using Swap2 = Swap<Properties::OP_GROUP_SIZE_2, OP_IMPL, detail::DppCtrl::amdgcn_dpp_shuffle_4<0x02, 0x03, 0x00, 0x01>::opCtrl()>;
-
-        // clang-format on
-
-    } // namespace DppOps
-
     /**
      * \ingroup Dpp Ops
      * \defgroup Dpp Front-End
@@ -246,9 +103,6 @@ namespace rocwmma
               bool     BoundCtrl     = false>
     struct Dpp
     {
-        using DppFunc
-            = detail::amdgcn_mov_dpp<DppOp::opCtrl(), WriteRowMask, WriteBankMask, BoundCtrl>;
-
         // Sanity checks
         static_assert(DppOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP,
                       "DppOp must use dpp backend");
@@ -265,13 +119,13 @@ namespace rocwmma
         template <typename DataT>
         ROCWMMA_DEVICE static inline DataT exec(DataT const& src, DataT const& prev)
         {
-            return DppFunc::exec(src, prev);
+            return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(src, prev);
         }
 
         template <typename DataT>
         ROCWMMA_DEVICE static inline DataT exec(DataT const& src)
         {
-            return DppFunc::exec(src, src);
+            return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(src, src);
         }
 
         template <typename DataT, uint32_t VecSize>
@@ -285,7 +139,7 @@ namespace rocwmma
 #pragma unroll
             for(uint32_t i = 0; i < VecSize; ++i)
             {
-                *it = DppFunc::exec(*it);
+                *it = exec(*it);
                 it++;
             }
         }
@@ -302,7 +156,7 @@ namespace rocwmma
 #pragma unroll
             for(uint32_t i = 0; i < VecSize; ++i)
             {
-                *it = DppFunc::exec(*it, prev);
+                *it = exec(*it, prev);
                 it++;
             }
         }
@@ -322,7 +176,7 @@ namespace rocwmma
 #pragma unroll
             for(uint32_t i = 0; i < VecSize; ++i)
             {
-                *it = DppFunc::exec(*it, *itp);
+                *it = exec(*it, *itp);
                 it++;
                 itp++;
             }

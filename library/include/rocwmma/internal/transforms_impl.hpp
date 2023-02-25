@@ -97,226 +97,430 @@ namespace rocwmma
     __device__ void aos_soa_16x32_vw8_b32_opt(VecT<DataT, 8>& v)
     {
         // Step 1 : Shift and mix groups of 2
-        {
-            // For this step, easier to reinterpret as uint32_t.
-            // Shift + mix groups of 2
-            auto& vv = reinterpret_cast<VecT<uint32_t, 8>&>(v);
+        // {
+        // For this step, easier to reinterpret as uint32_t.
+        // Shift + mix groups of 2
+        //     auto& vv = reinterpret_cast<VecT<uint32_t, 8>&>(v);
 
-            using DppRotateR16_2_0xF_0xF  = Dpp<DppOps::RotateR16<2>, 0xF, 0xF>;
-            using DppRotateR16_14_0xF_0xF = Dpp<DppOps::RotateR16<14>, 0xF, 0xF>;
+        //     using DppRotateR16_2_0xF_0xF  = Dpp<DppOps::RotateR16<2>, 0xF, 0xF>;
+        //     using DppRotateR16_14_0xF_0xF = Dpp<DppOps::RotateR16<14>, 0xF, 0xF>;
 
-            auto v0 = DppRotateR16_14_0xF_0xF::exec(get<0>(vv));
-            auto v1 = DppRotateR16_2_0xF_0xF::exec(get<1>(vv));
-            auto v2 = DppRotateR16_14_0xF_0xF::exec(get<2>(vv));
-            auto v3 = DppRotateR16_2_0xF_0xF::exec(get<3>(vv));
-            auto v4 = DppRotateR16_14_0xF_0xF::exec(get<4>(vv));
-            auto v5 = DppRotateR16_2_0xF_0xF::exec(get<5>(vv));
-            auto v6 = DppRotateR16_14_0xF_0xF::exec(get<6>(vv));
-            auto v7 = DppRotateR16_2_0xF_0xF::exec(get<7>(vv));
+        //     auto v0 = DppRotateR16_14_0xF_0xF::exec(get<0>(vv));
+        //     auto v1 = DppRotateR16_2_0xF_0xF::exec(get<1>(vv));
+        //     auto v2 = DppRotateR16_14_0xF_0xF::exec(get<2>(vv));
+        //     auto v3 = DppRotateR16_2_0xF_0xF::exec(get<3>(vv));
+        //     auto v4 = DppRotateR16_14_0xF_0xF::exec(get<4>(vv));
+        //     auto v5 = DppRotateR16_2_0xF_0xF::exec(get<5>(vv));
+        //     auto v6 = DppRotateR16_14_0xF_0xF::exec(get<6>(vv));
+        //     auto v7 = DppRotateR16_2_0xF_0xF::exec(get<7>(vv));
 
-            uint32_t mask = ((threadIdx.x >> 1) & 0x1) * LsbMask<32>::value;
-            get<0>(vv)    = (v1 & mask) | (get<0>(vv) & ~mask);
-            get<1>(vv)    = (get<1>(vv) & mask) | (v0 & ~mask);
-            get<2>(vv)    = (v3 & mask) | (get<2>(vv) & ~mask);
-            get<3>(vv)    = (get<3>(vv) & mask) | (v2 & ~mask);
-            get<4>(vv)    = (v5 & mask) | (get<4>(vv) & ~mask);
-            get<5>(vv)    = (get<5>(vv) & mask) | (v4 & ~mask);
-            get<6>(vv)    = (v7 & mask) | (get<6>(vv) & ~mask);
-            get<7>(vv)    = (get<7>(vv) & mask) | (v6 & ~mask);
-        }
+        //     uint32_t mask = ((threadIdx.x >> 1) & 0x1) * LsbMask<32>::value;
+        //     get<0>(vv)    = (v1 & mask) | (get<0>(vv) & ~mask);
+        //     get<1>(vv)    = (get<1>(vv) & mask) | (v0 & ~mask);
+        //     get<2>(vv)    = (v3 & mask) | (get<2>(vv) & ~mask);
+        //     get<3>(vv)    = (get<3>(vv) & mask) | (v2 & ~mask);
+        //     get<4>(vv)    = (v5 & mask) | (get<4>(vv) & ~mask);
+        //     get<5>(vv)    = (get<5>(vv) & mask) | (v4 & ~mask);
+        //     get<6>(vv)    = (v7 & mask) | (get<6>(vv) & ~mask);
+        //     get<7>(vv)    = (get<7>(vv) & mask) | (v6 & ~mask);
+        // }
 
-        // Step 2: Shift and mix groups of 4
-        {
-            using DppRotateR16_4_0xF_0xA  = Dpp<DppOps::RotateR16<4>, 0xF, 0xA>;
-            using DppRotateR16_12_0xF_0x5 = Dpp<DppOps::RotateR16<12>, 0xF, 0x5>;
+        // // Step 2: Shift and mix groups of 4
+        // {
+        //     using DppRotateR16_4_0xF_0xA  = Dpp<DppOps::RotateR16<4>, 0xF, 0xA>;
+        //     using DppRotateR16_12_0xF_0x5 = Dpp<DppOps::RotateR16<12>, 0xF, 0x5>;
 
-            auto v0 = get<0>(v);
-            auto v1 = get<1>(v);
-            auto v2 = get<2>(v);
-            auto v3 = get<3>(v);
-            auto v4 = get<4>(v);
-            auto v5 = get<5>(v);
-            auto v6 = get<6>(v);
-            auto v7 = get<7>(v);
+        //     auto v0 = get<0>(v);
+        //     auto v1 = get<1>(v);
+        //     auto v2 = get<2>(v);
+        //     auto v3 = get<3>(v);
+        //     auto v4 = get<4>(v);
+        //     auto v5 = get<5>(v);
+        //     auto v6 = get<6>(v);
+        //     auto v7 = get<7>(v);
 
-            get<0>(v) = DppRotateR16_4_0xF_0xA::exec(v2, v0);
-            get<1>(v) = DppRotateR16_12_0xF_0x5::exec(v0, v2);
-            get<2>(v) = DppRotateR16_4_0xF_0xA::exec(v3, v1);
-            get<3>(v) = DppRotateR16_12_0xF_0x5::exec(v1, v3);
-            get<4>(v) = DppRotateR16_4_0xF_0xA::exec(v6, v4);
-            get<5>(v) = DppRotateR16_12_0xF_0x5::exec(v4, v6);
-            get<6>(v) = DppRotateR16_4_0xF_0xA::exec(v7, v5);
-            get<7>(v) = DppRotateR16_12_0xF_0x5::exec(v5, v7);
-        }
+        //     get<0>(v) = DppRotateR16_4_0xF_0xA::exec(v2, v0);
+        //     get<1>(v) = DppRotateR16_12_0xF_0x5::exec(v0, v2);
+        //     get<2>(v) = DppRotateR16_4_0xF_0xA::exec(v3, v1);
+        //     get<3>(v) = DppRotateR16_12_0xF_0x5::exec(v1, v3);
+        //     get<4>(v) = DppRotateR16_4_0xF_0xA::exec(v6, v4);
+        //     get<5>(v) = DppRotateR16_12_0xF_0x5::exec(v4, v6);
+        //     get<6>(v) = DppRotateR16_4_0xF_0xA::exec(v7, v5);
+        //     get<7>(v) = DppRotateR16_12_0xF_0x5::exec(v5, v7);
+        // }
 
-        // Step 3: Shift and mix groups of 8
-        {
-            using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
-            using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
+        // // Step 3: Shift and mix groups of 8
+        // {
+        //     using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
+        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
 
-            auto v0 = get<0>(v);
-            auto v1 = get<1>(v);
-            auto v2 = get<2>(v);
-            auto v3 = get<3>(v);
-            auto v4 = get<4>(v);
-            auto v5 = get<5>(v);
-            auto v6 = get<6>(v);
-            auto v7 = get<7>(v);
+        //     auto v0 = get<0>(v);
+        //     auto v1 = get<1>(v);
+        //     auto v2 = get<2>(v);
+        //     auto v3 = get<3>(v);
+        //     auto v4 = get<4>(v);
+        //     auto v5 = get<5>(v);
+        //     auto v6 = get<6>(v);
+        //     auto v7 = get<7>(v);
 
-            get<0>(v) = DppRotateR16_8_0xF_0xC::exec(v4, v0);
-            get<1>(v) = DppRotateR16_8_0xF_0xC::exec(v6, v2);
-            get<2>(v) = DppRotateR16_8_0xF_0xC::exec(v5, v1);
-            get<3>(v) = DppRotateR16_8_0xF_0xC::exec(v7, v3);
-            get<4>(v) = DppRotateR16_8_0xF_0x3::exec(v0, v4);
-            get<5>(v) = DppRotateR16_8_0xF_0x3::exec(v2, v6);
-            get<6>(v) = DppRotateR16_8_0xF_0x3::exec(v1, v5);
-            get<7>(v) = DppRotateR16_8_0xF_0x3::exec(v3, v7);
-        }
+        //     get<0>(v) = DppRotateR16_8_0xF_0xC::exec(v4, v0);
+        //     get<1>(v) = DppRotateR16_8_0xF_0xC::exec(v6, v2);
+        //     get<2>(v) = DppRotateR16_8_0xF_0xC::exec(v5, v1);
+        //     get<3>(v) = DppRotateR16_8_0xF_0xC::exec(v7, v3);
+        //     get<4>(v) = DppRotateR16_8_0xF_0x3::exec(v0, v4);
+        //     get<5>(v) = DppRotateR16_8_0xF_0x3::exec(v2, v6);
+        //     get<6>(v) = DppRotateR16_8_0xF_0x3::exec(v1, v5);
+        //     get<7>(v) = DppRotateR16_8_0xF_0x3::exec(v3, v7);
+        // }
 
-        // Step 4 : Swizzle
-        {
-            using Gather16_8_0 = Permute<PermuteOps::Gather16<8, 0>>;
+        // // Step 4 : Swizzle
+        // {
+        //     using Gather16_8_0 = Permute<PermuteOps::Gather16<8, 0>>;
 
-            constexpr uint32_t waveSize = 64u;
-            Gather16_8_0::exec(v, threadIdx.x % waveSize);
-        }
+        //     constexpr uint32_t waveSize = 64u;
+        //     Gather16_8_0::exec(v, threadIdx.x % waveSize);
+        // }
     }
 
     template <typename DataT>
     __device__ void aos_soa_16x16_vw4_b32_opt(VecT<DataT, 4>& v)
     {
         // Step 1
-        {
+        // {
 
-            using DppRotateR16_4_0xF_0xA  = Dpp<DppOps::RotateR16<4>, 0xF, 0xA>;
-            using DppRotateR16_12_0xF_0x5 = Dpp<DppOps::RotateR16<12>, 0xF, 0x5>;
+        //     using DppRotateR16_4_0xF_0xA  = Dpp<DppOps::RotateR16<4>, 0xF, 0xA>;
+        //     using DppRotateR16_12_0xF_0x5 = Dpp<DppOps::RotateR16<12>, 0xF, 0x5>;
 
-            auto const v0 = get<0>(v);
-            auto const v1 = get<1>(v);
-            auto const v2 = get<2>(v);
-            auto const v3 = get<3>(v);
+        //     auto const v0 = get<0>(v);
+        //     auto const v1 = get<1>(v);
+        //     auto const v2 = get<2>(v);
+        //     auto const v3 = get<3>(v);
 
-            get<0>(v) = DppRotateR16_4_0xF_0xA::exec(v1, v0);
-            get<1>(v) = DppRotateR16_12_0xF_0x5::exec(v0, v1);
-            get<2>(v) = DppRotateR16_4_0xF_0xA::exec(v3, v2);
-            get<3>(v) = DppRotateR16_12_0xF_0x5::exec(v2, v3);
-        }
+        //     get<0>(v) = DppRotateR16_4_0xF_0xA::exec(v1, v0);
+        //     get<1>(v) = DppRotateR16_12_0xF_0x5::exec(v0, v1);
+        //     get<2>(v) = DppRotateR16_4_0xF_0xA::exec(v3, v2);
+        //     get<3>(v) = DppRotateR16_12_0xF_0x5::exec(v2, v3);
+        // }
 
-        // Step 2
-        {
-            using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
-            using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
+        // // Step 2
+        // {
+        //     using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
+        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
 
-            auto const v0 = get<0>(v);
-            auto const v1 = get<1>(v);
-            auto const v2 = get<2>(v);
-            auto const v3 = get<3>(v);
+        //     auto const v0 = get<0>(v);
+        //     auto const v1 = get<1>(v);
+        //     auto const v2 = get<2>(v);
+        //     auto const v3 = get<3>(v);
 
-            get<0>(v) = DppRotateR16_8_0xF_0xC::exec(v2, v0);
-            get<1>(v) = DppRotateR16_8_0xF_0xC::exec(v3, v1);
-            get<2>(v) = DppRotateR16_8_0xF_0x3::exec(v0, v2);
-            get<3>(v) = DppRotateR16_8_0xF_0x3::exec(v1, v3);
-        }
+        //     get<0>(v) = DppRotateR16_8_0xF_0xC::exec(v2, v0);
+        //     get<1>(v) = DppRotateR16_8_0xF_0xC::exec(v3, v1);
+        //     get<2>(v) = DppRotateR16_8_0xF_0x3::exec(v0, v2);
+        //     get<3>(v) = DppRotateR16_8_0xF_0x3::exec(v1, v3);
+        // }
 
-        // Step 3
-        {
-            using Gather16_4_0 = Permute<PermuteOps::Gather16<4, 0>>;
+        // // Step 3
+        // {
+        //     using Gather16_4_0 = Permute<PermuteOps::Gather16<4, 0>>;
 
-            constexpr uint32_t waveSize = 64u;
-            Gather16_4_0::exec(v, threadIdx.x % waveSize);
-        }
+        //     constexpr uint32_t waveSize = 64u;
+        //     Gather16_4_0::exec(v, threadIdx.x % waveSize);
+        // }
     }
 
     template <typename DataT>
     __device__ void aos_soa_16x8_vw2_b32_opt(VecT<DataT, 2>& v)
     {
         // Step 1
-        {
-            using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
-            using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
+        // {
+        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
+        //     using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
 
-            auto const v0 = get<0>(v);
-            auto const v1 = get<1>(v);
+        //     auto const v0 = get<0>(v);
+        //     auto const v1 = get<1>(v);
 
-            get<0>(v) = DppRotateR16_8_0xF_0xC::exec(v1, v0);
-            get<1>(v) = DppRotateR16_8_0xF_0x3::exec(v0, v1);
-        }
+        //     get<0>(v) = DppRotateR16_8_0xF_0xC::exec(v1, v0);
+        //     get<1>(v) = DppRotateR16_8_0xF_0x3::exec(v0, v1);
+        // }
 
-        // Step 2
-        {
-            using Gather16_2_0 = Permute<PermuteOps::Gather16<2, 0>>;
+        // // Step 2
+        // {
+        //     using Gather16_2_0 = Permute<PermuteOps::Gather16<2, 0>>;
 
-            constexpr uint32_t waveSize = 64u;
-            Gather16_2_0::exec(v, threadIdx.x % waveSize);
-        }
+        //     constexpr uint32_t waveSize = 64u;
+        //     Gather16_2_0::exec(v, threadIdx.x % waveSize);
+        // }
+    }
+
+    template <typename DataT>
+    __device__ void aos_soa_32x4_vw2_b32_opt(VecT<DataT, 2>& v)
+    {
+        // Step 1
+        // {
+        //     using SwzRotateR32_16 = Swizzle<SwizzleOps::RotateR32<16>>;
+        //     SwzRotateR32_16::exec(get<0>(v));
+        // }
+
+        // // Step 2
+        // {
+        //     using DppMMove_0x5_0xF = Dpp<DppOps::MaskMove, 0x5, 0xF>;
+        //     using DppMMove_0xA_0xF = Dpp<DppOps::MaskMove, 0xA, 0xF>;
+
+        //     auto const v0 = get<0>(v);
+        //     auto const v1 = get<1>(v);
+
+        //     get<0>(v) = DppMMove_0x5_0xF::exec(v1, v0);
+        //     get<1>(v) = DppMMove_0xA_0xF::exec(v1, v0);
+        // }
+
+        // // Step 3
+        // {
+        //     using Gather32_2_16 = Permute<PermuteOps::Gather32<2, 16>>;
+        //     using Gather32_2_0 = Permute<PermuteOps::Gather32<2, 0>>;
+
+        //     constexpr uint32_t waveSize = 64u;
+        //     Gather32_2_16::exec(get<0>(v), threadIdx.x % waveSize);
+        //     Gather32_2_0::exec(get<1>(v), threadIdx.x % waveSize);
+        // }
+    }
+
+    template <typename DataT>
+    __device__ void test_me(VecT<DataT, 2>& v)
+    {
+        // // Step 1
+        // {
+        //     using DupLo = Permute<PermuteOps::DupLoBlockWave<1>>;
+        //     using DupHi = Permute<PermuteOps::DupHiBlockWave<1>>;
+        //     using Zip1 = Blend<BlendOps::Zip1>;
+        //     auto v0_lo = DupLo::exec((const DataT)get<0>(v), threadIdx.x % 64);
+        //     auto v0_hi = DupHi::exec((const DataT)get<0>(v), threadIdx.x % 64);
+        //     auto v1_lo = DupLo::exec((const DataT)get<1>(v), threadIdx.x % 64);
+        //     auto v1_hi = DupHi::exec((const DataT)get<1>(v), threadIdx.x % 64);
+
+        //     get<0>(v) = Zip1::exec(v0_lo, v1_lo);
+        //     get<1>(v) = Zip1::exec(v0_hi, v1_hi);
+
+        // }
+    }
+
+    template <typename DataT>
+    __device__ void aos_soa_32x8_vw4_b32_opt(VecT<DataT, 4>& v)
+    {
+        // {
+        //     using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
+        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
+
+        //     auto const v0 = get<0>(v);
+        //     auto const v1 = get<1>(v);
+        //     auto const v2 = get<2>(v);
+        //     auto const v3 = get<3>(v);
+
+        //     get<0>(v) = DppRotateR16_8_0xF_0xC::exec(v1, v0);
+        //     get<1>(v) = DppRotateR16_8_0xF_0x3::exec(v0, v1);
+        //     get<2>(v) = DppRotateR16_8_0xF_0xC::exec(v3, v2);
+        //     get<3>(v) = DppRotateR16_8_0xF_0x3::exec(v2, v3);
+        // }
+
+        // // Step 1
+        // {
+        //     using SwzRotateR32_16 = Swizzle<SwizzleOps::RotateR32<16>>;
+        //     SwzRotateR32_16::exec(get<2>(v));
+        //     SwzRotateR32_16::exec(get<3>(v));
+        // }
+
+        // // Step 2
+        // {
+        //     using DppMMove_0x5_0xF = Dpp<DppOps::MaskMove, 0x5, 0xF>;
+
+        //     auto const v0 = get<0>(v);
+        //     auto const v1 = get<1>(v);
+        //     auto const v2 = get<2>(v);
+        //     auto const v3 = get<3>(v);
+
+        //     get<0>(v) = DppMMove_0x5_0xF::exec(v0, v2);
+        //     get<1>(v) = DppMMove_0x5_0xF::exec(v1, v3);
+        //     get<2>(v) = DppMMove_0x5_0xF::exec(v2, v0);
+        //     get<3>(v) = DppMMove_0x5_0xF::exec(v3, v1);
+        // }
+
+        // // Step 3
+        // {
+        //     using Gather32_4_16 = Permute<PermuteOps::Gather32<4, 16>>;
+        //     using Gather32_4_0 = Permute<PermuteOps::Gather32<4, 0>>;
+
+        //     constexpr uint32_t waveSize = 64u;
+        //     Gather32_4_0::exec(get<0>(v), threadIdx.x % waveSize);
+        //     Gather32_4_0::exec(get<1>(v), threadIdx.x % waveSize);
+        //     Gather32_4_16::exec(get<2>(v), threadIdx.x % waveSize);
+        //     Gather32_4_16::exec(get<3>(v), threadIdx.x % waveSize);
+        // }
+    }
+
+    template <typename DataT>
+    __device__ void aos_soa_32x16_vw8_b32_opt(VecT<DataT, 8>& v)
+    {
+        // // Step 1 : Shift and mix groups of 4
+        // {
+        //     using DppRotateR16_4_0xF_0xA  = Dpp<DppOps::RotateR16<4>, 0xF, 0xA>;
+        //     using DppRotateR16_12_0xF_0x5 = Dpp<DppOps::RotateR16<12>, 0xF, 0x5>;
+
+        //     auto v0 = get<0>(v);
+        //     auto v1 = get<1>(v);
+        //     auto v2 = get<2>(v);
+        //     auto v3 = get<3>(v);
+        //     auto v4 = get<4>(v);
+        //     auto v5 = get<5>(v);
+        //     auto v6 = get<6>(v);
+        //     auto v7 = get<7>(v);
+
+        //     get<0>(v) = DppRotateR16_4_0xF_0xA::exec(v1, v0);
+        //     get<1>(v) = DppRotateR16_12_0xF_0x5::exec(v0, v1);
+        //     get<2>(v) = DppRotateR16_4_0xF_0xA::exec(v3, v2);
+        //     get<3>(v) = DppRotateR16_12_0xF_0x5::exec(v2, v3);
+        //     get<4>(v) = DppRotateR16_4_0xF_0xA::exec(v5, v4);
+        //     get<5>(v) = DppRotateR16_12_0xF_0x5::exec(v4, v5);
+        //     get<6>(v) = DppRotateR16_4_0xF_0xA::exec(v7, v6);
+        //     get<7>(v) = DppRotateR16_12_0xF_0x5::exec(v6, v7);
+        // }
+
+        // // Step 2: Shift and mix groups of 8
+        // {
+        //     using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
+        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
+
+        //     auto v0 = get<0>(v);
+        //     auto v1 = get<1>(v);
+        //     auto v2 = get<2>(v);
+        //     auto v3 = get<3>(v);
+        //     auto v4 = get<4>(v);
+        //     auto v5 = get<5>(v);
+        //     auto v6 = get<6>(v);
+        //     auto v7 = get<7>(v);
+
+        //     get<0>(v) = DppRotateR16_8_0xF_0xC::exec(v2, v0);
+        //     get<1>(v) = DppRotateR16_8_0xF_0xC::exec(v3, v1);
+        //     get<2>(v) = DppRotateR16_8_0xF_0x3::exec(v0, v2);
+        //     get<3>(v) = DppRotateR16_8_0xF_0x3::exec(v1, v3);
+        //     get<4>(v) = DppRotateR16_8_0xF_0xC::exec(v6, v4);
+        //     get<5>(v) = DppRotateR16_8_0xF_0xC::exec(v7, v5);
+        //     get<6>(v) = DppRotateR16_8_0xF_0x3::exec(v4, v6);
+        //     get<7>(v) = DppRotateR16_8_0xF_0x3::exec(v5, v7);
+        // }
+
+        // // Step 3: Rotate latter half of the registers
+        // {
+        //     using SwzRotateR32_16 = Swizzle<SwizzleOps::RotateR32<16>>;
+        //     SwzRotateR32_16::exec(get<4>(v));
+        //     SwzRotateR32_16::exec(get<5>(v));
+        //     SwzRotateR32_16::exec(get<6>(v));
+        //     SwzRotateR32_16::exec(get<7>(v));
+        // }
+
+        // // Step 4:
+        // {
+        //     using DppMMove_0x5_0xF = Dpp<DppOps::MaskMove, 0x5, 0xF>;
+
+        //     auto v0 = get<0>(v);
+        //     auto v1 = get<1>(v);
+        //     auto v2 = get<2>(v);
+        //     auto v3 = get<3>(v);
+        //     auto v4 = get<4>(v);
+        //     auto v5 = get<5>(v);
+        //     auto v6 = get<6>(v);
+        //     auto v7 = get<7>(v);
+
+        //     get<0>(v) = DppMMove_0x5_0xF::exec(v0, v4);
+        //     get<1>(v) = DppMMove_0x5_0xF::exec(v1, v5);
+        //     get<2>(v) = DppMMove_0x5_0xF::exec(v2, v6);
+        //     get<3>(v) = DppMMove_0x5_0xF::exec(v3, v7);
+        //     get<4>(v) = DppMMove_0x5_0xF::exec(v4, v0);
+        //     get<5>(v) = DppMMove_0x5_0xF::exec(v5, v1);
+        //     get<6>(v) = DppMMove_0x5_0xF::exec(v6, v2);
+        //     get<7>(v) = DppMMove_0x5_0xF::exec(v7, v3);
+        // }
+
+        // // Step 5: Permute
+        // {
+        //     using Gather32_8_0 = Permute<PermuteOps::Gather32<8, 0>>;
+        //     using Gather32_8_16 = Permute<PermuteOps::Gather32<8, 16>>;
+
+        //     constexpr uint32_t waveSize = 64u;
+        //     Gather32_8_0::exec(get<0>(v), threadIdx.x % waveSize);
+        //     Gather32_8_0::exec(get<1>(v), threadIdx.x % waveSize);
+        //     Gather32_8_0::exec(get<2>(v), threadIdx.x % waveSize);
+        //     Gather32_8_0::exec(get<3>(v), threadIdx.x % waveSize);
+        //     Gather32_8_16::exec(get<4>(v), threadIdx.x % waveSize);
+        //     Gather32_8_16::exec(get<5>(v), threadIdx.x % waveSize);
+        //     Gather32_8_16::exec(get<6>(v), threadIdx.x % waveSize);
+        //     Gather32_8_16::exec(get<7>(v), threadIdx.x % waveSize);
+        // }
     }
 
     template <typename DataT>
     __device__ void soa_aos_16x16_vw4_b32_opt(VecT<DataT, 4>& v)
     {
-        // Step 1
-        {
-            using Scatter16_4_0 = Permute<PermuteOps::Scatter16<4, 0>>;
+        // // Step 1
+        // {
+        //     using Scatter16_4_0 = Permute<PermuteOps::Scatter16<4, 0>>;
 
-            constexpr uint32_t waveSize = 64u;
-            Scatter16_4_0::exec(v, threadIdx.x % waveSize);
-        }
+        //     constexpr uint32_t waveSize = 64u;
+        //     Scatter16_4_0::exec(v, threadIdx.x % waveSize);
+        // }
 
-        // Step 2
-        {
-            using DppRotateR16_4_0xF_0xA  = Dpp<DppOps::RotateR16<4>, 0xF, 0xA>;
-            using DppRotateR16_12_0xF_0x5 = Dpp<DppOps::RotateR16<12>, 0xF, 0x5>;
+        // // Step 2
+        // {
+        //     using DppRotateR16_4_0xF_0xA  = Dpp<DppOps::RotateR16<4>, 0xF, 0xA>;
+        //     using DppRotateR16_12_0xF_0x5 = Dpp<DppOps::RotateR16<12>, 0xF, 0x5>;
 
-            auto const v0 = get<0>(v);
-            auto const v1 = get<1>(v);
-            auto const v2 = get<2>(v);
-            auto const v3 = get<3>(v);
+        //     auto const v0 = get<0>(v);
+        //     auto const v1 = get<1>(v);
+        //     auto const v2 = get<2>(v);
+        //     auto const v3 = get<3>(v);
 
-            get<0>(v) = DppRotateR16_4_0xF_0xA::exec(v1, v0);
-            get<1>(v) = DppRotateR16_12_0xF_0x5::exec(v0, v1);
-            get<2>(v) = DppRotateR16_4_0xF_0xA::exec(v3, v2);
-            get<3>(v) = DppRotateR16_12_0xF_0x5::exec(v2, v3);
-        }
+        //     get<0>(v) = DppRotateR16_4_0xF_0xA::exec(v1, v0);
+        //     get<1>(v) = DppRotateR16_12_0xF_0x5::exec(v0, v1);
+        //     get<2>(v) = DppRotateR16_4_0xF_0xA::exec(v3, v2);
+        //     get<3>(v) = DppRotateR16_12_0xF_0x5::exec(v2, v3);
+        // }
 
-        // Step 3
-        {
-            using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
-            using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
+        // // Step 3
+        // {
+        //     using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
+        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
 
-            auto const v0 = get<0>(v);
-            auto const v1 = get<1>(v);
-            auto const v2 = get<2>(v);
-            auto const v3 = get<3>(v);
+        //     auto const v0 = get<0>(v);
+        //     auto const v1 = get<1>(v);
+        //     auto const v2 = get<2>(v);
+        //     auto const v3 = get<3>(v);
 
-            get<0>(v) = DppRotateR16_8_0xF_0xC::exec(v2, v0);
-            get<1>(v) = DppRotateR16_8_0xF_0xC::exec(v3, v1);
-            get<2>(v) = DppRotateR16_8_0xF_0x3::exec(v0, v2);
-            get<3>(v) = DppRotateR16_8_0xF_0x3::exec(v1, v3);
-        }
+        //     get<0>(v) = DppRotateR16_8_0xF_0xC::exec(v2, v0);
+        //     get<1>(v) = DppRotateR16_8_0xF_0xC::exec(v3, v1);
+        //     get<2>(v) = DppRotateR16_8_0xF_0x3::exec(v0, v2);
+        //     get<3>(v) = DppRotateR16_8_0xF_0x3::exec(v1, v3);
+        // }
     }
 
     template <typename DataT>
     __device__ void soa_aos_16x8_vw2_b32_opt(VecT<DataT, 2>& v)
     {
-        // Step 1
-        {
-            using Scatter16_2_0 = Permute<PermuteOps::Scatter16<2, 0>>;
+        // // Step 1
+        // {
+        //     using Scatter16_2_0 = Permute<PermuteOps::Scatter16<2, 0>>;
 
-            constexpr uint32_t waveSize = 64u;
-            Scatter16_2_0::exec(v, threadIdx.x % waveSize);
-        }
+        //     constexpr uint32_t waveSize = 64u;
+        //     Scatter16_2_0::exec(v, threadIdx.x % waveSize);
+        // }
 
-        // Step 2
-        {
-            using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
-            using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
+        // // Step 2
+        // {
+        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
+        //     using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
 
-            auto const v0 = get<0>(v);
-            auto const v1 = get<1>(v);
+        //     auto const v0 = get<0>(v);
+        //     auto const v1 = get<1>(v);
 
-            get<0>(v) = DppRotateR16_8_0xF_0xC::exec(v1, v0);
-            get<1>(v) = DppRotateR16_8_0xF_0x3::exec(v0, v1);
-        }
+        //     get<0>(v) = DppRotateR16_8_0xF_0xC::exec(v1, v0);
+        //     get<1>(v) = DppRotateR16_8_0xF_0x3::exec(v0, v1);
+        // }
     }
 
 } // namespace rocwmma
