@@ -147,8 +147,9 @@ namespace rocwmma
             template <typename DataT>
             ROCWMMA_DEVICE static inline DataT exec(DataT input)
             {
-                return reinterpret_cast<int32_t&>(input) = __builtin_amdgcn_ds_swizzle(
-                           reinterpret_cast<int32_t const&>(input), SwizzleCtrl);
+                reinterpret_cast<int32_t&>(input) = __builtin_amdgcn_ds_swizzle(
+                    reinterpret_cast<int32_t const&>(input), SwizzleCtrl);
+                return input;
             }
         };
 

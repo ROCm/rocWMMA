@@ -61,10 +61,13 @@ namespace rocwmma
                 }
             };
 
-            // This 'nop' is to signify that the opctrl will have no effect.
-            // Used in architectures that don't support particular ops.
+            // Straight dpp move
+            using amdgcn_dpp_mov = amdgcn_dpp_shuffle_4<0u, 1u, 2u, 3u>;
+
+            // This 'nop' is to signify that the opctrl will be a basic move
+            // which is supported on all archs.
             // Still respects masking and bound control flags.
-            using amdgcn_dpp_nop = amdgcn_dpp_shuffle_4<0u, 1u, 2u, 3u>;
+            using amdgcn_dpp_nop = amdgcn_dpp_mov;
 
             template <uint32_t ShiftDir, uint32_t ShiftDist>
             struct amdgcn_dpp_row_shift

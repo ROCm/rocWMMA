@@ -70,6 +70,30 @@ namespace rocwmma
         };
 
         template <>
+        struct PackTraits<int16_t>
+        {
+            enum : uint32_t
+            {
+                PackRatio = 2
+            };
+
+            using UnpackedT = int16_t;
+            using PackedT   = int32_t;
+        };
+
+        template <>
+        struct PackTraits<uint16_t>
+        {
+            enum : uint32_t
+            {
+                PackRatio = 2
+            };
+
+            using UnpackedT = uint16_t;
+            using PackedT   = uint32_t;
+        };
+
+        template <>
         struct PackTraits<uint32_t>
         {
             enum : uint32_t

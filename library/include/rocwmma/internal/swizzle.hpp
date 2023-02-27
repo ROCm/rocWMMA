@@ -199,21 +199,16 @@ namespace rocwmma
                       "SwizzleOp is unsupported");
 
         template <typename DataT>
-        ROCWMMA_DEVICE static void exec(DataT& v)
+        ROCWMMA_DEVICE static auto exec(DataT const& src)
         {
-            v = SwizzleFunc::exec(v);
-        }
-
-        template <typename DataT>
-        ROCWMMA_DEVICE static DataT exec(DataT const& v)
-        {
-            return SwizzleFunc::exec(v);
+            return SwizzleFunc::exec(src);
         }
 
         template <typename DataT, uint32_t VecSize>
-        ROCWMMA_DEVICE static void exec(VecT<DataT, VecSize>& v)
+        ROCWMMA_DEVICE static void exec(VecT<DataT, VecSize>& src)
         {
-            auto it = makeVectorIterator(v).begin();
+            auto it = makeVectorIterator(src).begin();
+
             static_assert(decltype(it)::range() == VecSize,
                           "VecSize inconsistent with iterator range");
 

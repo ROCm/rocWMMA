@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_IMPL_HPP
-#define ROCWMMA_IMPL_HPP
+#ifndef ROCWMMA_API_IMPL_HPP
+#define ROCWMMA_API_IMPL_HPP
 
 #include "rocwmma.hpp"
 
@@ -46,6 +46,7 @@
 #include "internal/pack.hpp"
 #include "internal/permute.hpp"
 #include "internal/swizzle.hpp"
+#include "internal/transforms.hpp"
 #include "internal/types.hpp"
 #include "internal/unpack.hpp"
 #include "internal/utils.hpp"
@@ -330,4 +331,4 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_IMPL_HPP
+#endif // ROCWMMA_API_IMPL_HPP

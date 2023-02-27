@@ -63,8 +63,34 @@ namespace rocwmma
             }
         };
 
+        template <uint32_t GroupSize>
+        struct amdgcn_blend_zip_b32
+        {
+        private:
+            enum Traits : uint32_t
+            {
+                MASK_BASE = LsbMask<32>::value
+            };
+
+        public:
+            constexpr static uint32_t maskCtrl()
+            {
+                // Just like a zipper, alternate mask between src0 (0x000000000)
+                // and src1 (0xFFFFFFFF) based on threadIdx.x.
+                // GroupSize of N means that N elements are used from src0, followed
+                // by N elements from src1, and so on.
+                return ((threadIdx.x >> Log2<GroupSize>::value) & 0x1) * MASK_BASE;
+            }
+        };
+
         /*! \class amdgcn_perm
-        *  \brief Implements the blending backend, not to be mislead by the function name.
+        *  \brief Implements the element blending backend.
+        * This backend provides sub-b32 permutation between two sources. Blending in this
+        * context means that ordered pairs of 32b elements (src0, src1) may be permuted to
+        * generate a 32b element result for every lane.
+        *
+        * E.g. Byte-wise permutation of ordered source elements:
+        * Result[31:0] = Src0[7:0],Src0[7:0],Src1[15:8],Src1[23:16]
         *
         * @tparam BlendCtrl is the control code for byte blending between src0 and src1
         * @arg src0 is the 'lower' reference
@@ -87,6 +113,29 @@ namespace rocwmma
                                             reinterpret_cast<uint32_t&>(src0),
                                             BlendCtrl);
                 return src0;
+            }
+        };
+
+        /*! \class amdgcn_blend
+        *  \brief Implements the bitwise blend backend between 32b elements of two src vectors.
+        * Blend means bit-wise ordered combination of two source vector elements, in a mutally exclusive
+        * fashion, as in either / or, without permutation.
+        *
+        * E.g. res = src0 <= mask = 0x00000000
+        *      res = src1 <= mask = 0xFFFFFFFF
+        *      res = select_bits(src0, src1) <= mask 0's take bits of src0 and mask1's take bits of src1
+        *
+        * @arg src0 is the 'lower' source
+        * @arg src1 is the 'upper' source
+        * @arg mask is a 32b mask. Lo bits (0) select from src0, hi bits (1) select
+        * from src1.
+        */
+        struct amdgcn_blend
+        {
+            template <typename DataT>
+            ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1, uint32_t mask)
+            {
+                return (src1 & mask) | (src0 & ~mask);
             }
         };
 

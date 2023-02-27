@@ -89,6 +89,8 @@ namespace rocwmma
             using MatrixCoordT = Coord2d;
             using MatrixSizeT  = Coord2d;
 
+            using Orientation = DataOrientation;
+
             enum : uint32_t
             {
                 MajorIndex = std::is_same<DataOrientation, row_major>::value ? 0 : 1,

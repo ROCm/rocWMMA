@@ -692,25 +692,107 @@ namespace rocwmma
         }
     }
 
-    // Using op dir and op dist
-    // TODO: When using C++ 17, switch to constexpr if to remove enable_if
-
-    // Using BCast
-    template <
-        typename DataT,
-        typename CrossLaneOp,
-        uint32_t RowMask   = 0xF,
-        uint32_t BankMask  = 0xF,
-        bool     BoundCtrl = false,
-        typename std::enable_if_t<
-            (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_BCAST)
-                || (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_BLOCK_BCAST),
-            void*> = nullptr>
+    // Dispatcher for CPU references with single input sources.
+    // Select reference using cross lane op meta data.
+    template <typename DataT,
+              typename CrossLaneOp,
+              uint32_t RowMask   = 0xF,
+              uint32_t BankMask  = 0xF,
+              bool     BoundCtrl = false>
     void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
                                      DataT const* dataIn,
                                      uint32_t     elementCount,
                                      DataT        fillVal = DataT(0))
     {
+        // Interface to device kernel
+        using RefFunc = void (*)(uint32_t*, // dataOut
+                                 uint32_t const*, // dataIn
+                                 uint32_t, // elementCount
+                                 uint32_t); // fillVal
+
+        RefFunc dispatcher = nullptr;
+
+        // Select reference function
+        if constexpr(CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_BCAST)
+        {
+            dispatcher = cross_lane_bcast_CPU<CrossLaneOp::elementIdx(),
+                                              CrossLaneOp::groupSize(),
+                                              RowMask,
+                                              BankMask,
+                                              BoundCtrl>;
+        }
+        else if constexpr(CrossLaneOp::opId()
+                          == rocwmma::CrossLaneOps::Properties::OP_ID_BLOCK_BCAST)
+        {
+            dispatcher = cross_lane_block_bcast_CPU<CrossLaneOp::elementIdx(),
+                                                    CrossLaneOp::groupSize(),
+                                                    RowMask,
+                                                    BankMask,
+                                                    BoundCtrl>;
+        }
+        else if constexpr(CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_REVERSE)
+        {
+            dispatcher
+                = cross_lane_reverse_CPU<CrossLaneOp::groupSize(), RowMask, BankMask, BoundCtrl>;
+        }
+        else if constexpr(CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_SWAP)
+        {
+            dispatcher
+                = cross_lane_swap_CPU<CrossLaneOp::groupSize(), RowMask, BankMask, BoundCtrl>;
+        }
+        else if constexpr(CrossLaneOp::opId()
+                          == rocwmma::CrossLaneOps::Properties::OP_ID_WFALL_BCAST)
+        {
+            dispatcher = cross_lane_wfall_bcast_CPU<CrossLaneOp::groupSize(),
+                                                    RowMask,
+                                                    BankMask,
+                                                    BoundCtrl>;
+        }
+        else if constexpr(CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_ROTATE)
+        {
+            dispatcher = cross_lane_rotate_CPU<CrossLaneOp::opDir(),
+                                               CrossLaneOp::opDist(),
+                                               CrossLaneOp::groupSize(),
+                                               RowMask,
+                                               BankMask,
+                                               BoundCtrl>;
+        }
+        else if constexpr(CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_SHIFT)
+        {
+            dispatcher = cross_lane_shift_CPU<CrossLaneOp::opDir(),
+                                              CrossLaneOp::opDist(),
+                                              CrossLaneOp::groupSize(),
+                                              RowMask,
+                                              BankMask,
+                                              BoundCtrl>;
+        }
+        else if constexpr((CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_SHUFFLE))
+        {
+            if constexpr(CrossLaneOp::groupSize() == 4u)
+            {
+                dispatcher = cross_lane_shuffle_CPU<CrossLaneOp::select0(),
+                                                    CrossLaneOp::select1(),
+                                                    CrossLaneOp::select2(),
+                                                    CrossLaneOp::select3(),
+                                                    CrossLaneOp::groupSize(),
+                                                    RowMask,
+                                                    BankMask,
+                                                    BoundCtrl>;
+            }
+            else if constexpr(CrossLaneOp::groupSize() == 2u)
+            {
+                dispatcher = cross_lane_shuffle_CPU<CrossLaneOp::select0(),
+                                                    CrossLaneOp::select1(),
+                                                    CrossLaneOp::select0() + 2u,
+                                                    CrossLaneOp::select1() + 2u,
+                                                    CrossLaneOp::groupSize(),
+                                                    RowMask,
+                                                    BankMask,
+                                                    BoundCtrl>;
+            }
+        }
+
+        // Determine function params
         // Must scale in 32b chunks
         uint32_t*       write32Out = reinterpret_cast<uint32_t*>(dataOut);
         uint32_t const* read32In   = reinterpret_cast<uint32_t const*>(dataIn);
@@ -721,180 +803,56 @@ namespace rocwmma
 
         // From here forth is in 32b land...
 
-        switch(CrossLaneOp::opId())
+        // Finally, run the reference function
+        if(dispatcher != nullptr)
         {
-        case rocwmma::CrossLaneOps::Properties::OP_ID_BCAST:
-            cross_lane_bcast_CPU<CrossLaneOp::elementIdx(),
-                                 CrossLaneOp::groupSize(),
-                                 RowMask,
-                                 BankMask,
-                                 BoundCtrl>(write32Out, read32In, elementCount, fillVal32);
-            break;
-        case rocwmma::CrossLaneOps::Properties::OP_ID_BLOCK_BCAST:
-            cross_lane_block_bcast_CPU<CrossLaneOp::elementIdx(),
-                                       CrossLaneOp::groupSize(),
-                                       RowMask,
-                                       BankMask,
-                                       BoundCtrl>(write32Out, read32In, elementCount, fillVal32);
-            break;
-        default:;
+            dispatcher(write32Out, read32In, elementCount, fillVal32);
         }
     }
 
-    // Blend
-    template <typename DataT,
-              typename CrossLaneOp,
-              uint32_t RowMask                 = 0xF,
-              uint32_t BankMask                = 0xF,
-              bool     BoundCtrl               = false,
-              typename std::enable_if_t<(CrossLaneOp::opId()
-                                         == rocwmma::CrossLaneOps::Properties::OP_ID_BLEND),
-                                        void*> = nullptr>
-    void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
-                                     DataT const* dataIn,
-                                     uint32_t     elementCount,
-                                     DataT        fillVal = DataT(0.0f))
-    {
-        // Must scale in 32b chunks
-        uint32_t*       write32Out = reinterpret_cast<uint32_t*>(dataOut);
-        uint32_t const* src032In   = reinterpret_cast<uint32_t const*>(dataOut);
-        uint32_t const* src132In   = reinterpret_cast<uint32_t const*>(dataIn);
-        uint32_t        fillVal32  = static_cast<uint32_t>(fillVal);
-        elementCount               = static_cast<uint32_t>(
-            roundf(static_cast<float32_t>(sizeof(DataT)) / static_cast<float32_t>(sizeof(uint32_t))
-                   * static_cast<float32_t>(elementCount)));
-
-        // From here forth is in 32b land...
-
-        switch(CrossLaneOp::opId())
-        {
-        case rocwmma::CrossLaneOps::Properties::OP_ID_BLEND:
-            cross_lane_byte_blend_CPU<CrossLaneOp::select0(),
-                                      CrossLaneOp::select1(),
-                                      CrossLaneOp::select2(),
-                                      CrossLaneOp::select3(),
-                                      CrossLaneOp::groupSize(),
-                                      RowMask,
-                                      BankMask,
-                                      BoundCtrl>(
-                write32Out, src032In, src132In, elementCount, fillVal32);
-            break;
-        default:;
-        }
-    }
-
-    // Reverse, swap
-    template <
-        typename DataT,
-        typename CrossLaneOp,
-        uint32_t RowMask   = 0xF,
-        uint32_t BankMask  = 0xF,
-        bool     BoundCtrl = false,
-        typename std::enable_if_t<
-            (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_REVERSE)
-                || (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_SWAP)
-                || (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_WFALL_BCAST),
-            void*> = nullptr>
-    void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
-                                     DataT const* dataIn,
-                                     uint32_t     elementCount,
-                                     DataT        fillVal = DataT(0.0f))
-    {
-
-        // Must scale in 32b chunks
-        uint32_t*       write32Out = reinterpret_cast<uint32_t*>(dataOut);
-        uint32_t const* read32In   = reinterpret_cast<uint32_t const*>(dataIn);
-        uint32_t        fillVal32  = static_cast<uint32_t>(fillVal);
-        elementCount               = static_cast<uint32_t>(
-            roundf(static_cast<float32_t>(sizeof(DataT)) / static_cast<float32_t>(sizeof(uint32_t))
-                   * static_cast<float32_t>(elementCount)));
-
-        // From here forth is in uint32_t land...
-
-        switch(CrossLaneOp::opId())
-        {
-            break;
-        case rocwmma::CrossLaneOps::Properties::OP_ID_REVERSE:
-            cross_lane_reverse_CPU<CrossLaneOp::groupSize(), RowMask, BankMask, BoundCtrl>(
-                write32Out, read32In, elementCount, fillVal32);
-            break;
-        case rocwmma::CrossLaneOps::Properties::OP_ID_SWAP:
-            cross_lane_swap_CPU<CrossLaneOp::groupSize(), RowMask, BankMask, BoundCtrl>(
-                write32Out, read32In, elementCount, fillVal32);
-            break;
-        case rocwmma::CrossLaneOps::Properties::OP_ID_WFALL_BCAST:
-            cross_lane_wfall_bcast_CPU<CrossLaneOp::groupSize(), RowMask, BankMask, BoundCtrl>(
-                write32Out, read32In, elementCount, fillVal32);
-            break;
-        default:;
-        }
-    }
-
-    // Shift, rotate
+    // Dispatcher for CPU references with dual input sources.
+    // Select reference using cross lane op meta data.
     template <typename DataT,
               typename CrossLaneOp,
               uint32_t RowMask   = 0xF,
               uint32_t BankMask  = 0xF,
-              bool     BoundCtrl = false,
-              typename std::enable_if_t<
-                  (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_SHIFT)
-                      || (CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_ROTATE),
-                  void*> = nullptr>
+              bool     BoundCtrl = false>
     void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
-                                     DataT const* dataIn,
+                                     DataT const* dataIn0,
+                                     DataT const* dataIn1,
                                      uint32_t     elementCount,
-                                     DataT        fillVal = DataT(0.0f))
+                                     DataT        fillVal = DataT(0))
     {
-        // Must scale in 32b chunks
-        uint32_t*       write32Out = reinterpret_cast<uint32_t*>(dataOut);
-        uint32_t const* read32In   = reinterpret_cast<uint32_t const*>(dataIn);
-        uint32_t        fillVal32  = static_cast<uint32_t>(fillVal);
-        elementCount               = static_cast<uint32_t>(
-            roundf(static_cast<float32_t>(sizeof(DataT)) / static_cast<float32_t>(sizeof(uint32_t))
-                   * static_cast<float32_t>(elementCount)));
+        // Interface to cpu reference kernel
+        using RefFunc = void (*)(uint32_t*, // dataOut
+                                 uint32_t const*, // dataIn0
+                                 uint32_t const*, // dataIn1
+                                 uint32_t, // elementCount
+                                 uint32_t); // fillVal
 
-        // From here forth is in 32b land...
+        RefFunc dispatcher = nullptr;
 
-        switch(CrossLaneOp::opId())
+        // Select reference function
+        if constexpr(CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_BLEND_BYTE)
         {
-        case rocwmma::CrossLaneOps::Properties::OP_ID_ROTATE:
-            cross_lane_rotate_CPU<CrossLaneOp::opDir(),
-                                  CrossLaneOp::opDist(),
-                                  CrossLaneOp::groupSize(),
-                                  RowMask,
-                                  BankMask,
-                                  BoundCtrl>(write32Out, read32In, elementCount, fillVal32);
-            break;
-        case rocwmma::CrossLaneOps::Properties::OP_ID_SHIFT:
-            cross_lane_shift_CPU<CrossLaneOp::opDir(),
-                                 CrossLaneOp::opDist(),
-                                 CrossLaneOp::groupSize(),
-                                 RowMask,
-                                 BankMask,
-                                 BoundCtrl>(write32Out, read32In, elementCount, fillVal32);
-            break;
-        default:;
+            if constexpr(CrossLaneOp::groupSize() == 1u)
+            {
+                dispatcher = cross_lane_byte_blend_CPU<CrossLaneOp::select0(),
+                                                       CrossLaneOp::select1(),
+                                                       CrossLaneOp::select2(),
+                                                       CrossLaneOp::select3(),
+                                                       CrossLaneOp::groupSize(),
+                                                       RowMask,
+                                                       BankMask,
+                                                       BoundCtrl>;
+            }
         }
-    }
 
-    // Shuffle 4
-    template <typename DataT,
-              typename CrossLaneOp,
-              uint32_t RowMask                 = 0xF,
-              uint32_t BankMask                = 0xF,
-              bool     BoundCtrl               = false,
-              typename std::enable_if_t<(CrossLaneOp::opId()
-                                         == rocwmma::CrossLaneOps::Properties::OP_ID_SHUFFLE)
-                                            && (CrossLaneOp::groupSize() == 4u),
-                                        void*> = nullptr>
-    void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
-                                     DataT const* dataIn,
-                                     uint32_t     elementCount,
-                                     DataT        fillVal = DataT(0.0f))
-    {
+        // Determine function params
         // Must scale in 32b chunks
         uint32_t*       write32Out = reinterpret_cast<uint32_t*>(dataOut);
-        uint32_t const* read32In   = reinterpret_cast<uint32_t const*>(dataIn);
+        uint32_t const* src032In   = reinterpret_cast<uint32_t const*>(dataIn0);
+        uint32_t const* src132In   = reinterpret_cast<uint32_t const*>(dataIn1);
         uint32_t        fillVal32  = static_cast<uint32_t>(fillVal);
         elementCount               = static_cast<uint32_t>(
             roundf(static_cast<float32_t>(sizeof(DataT)) / static_cast<float32_t>(sizeof(uint32_t))
@@ -902,60 +860,10 @@ namespace rocwmma
 
         // From here forth is in 32b land...
 
-        switch(CrossLaneOp::opId())
+        // Finally, run the reference function
+        if(dispatcher != nullptr)
         {
-        case rocwmma::CrossLaneOps::Properties::OP_ID_SHUFFLE:
-            cross_lane_shuffle_CPU<CrossLaneOp::select0(),
-                                   CrossLaneOp::select1(),
-                                   CrossLaneOp::select2(),
-                                   CrossLaneOp::select3(),
-                                   CrossLaneOp::groupSize(),
-                                   RowMask,
-                                   BankMask,
-                                   BoundCtrl>(write32Out, read32In, elementCount, fillVal32);
-            break;
-        default:;
-        }
-    }
-
-    // Shuffle 2
-    template <typename DataT,
-              typename CrossLaneOp,
-              uint32_t RowMask                 = 0xF,
-              uint32_t BankMask                = 0xF,
-              bool     BoundCtrl               = false,
-              typename std::enable_if_t<(CrossLaneOp::opId()
-                                         == rocwmma::CrossLaneOps::Properties::OP_ID_SHUFFLE)
-                                            && (CrossLaneOp::groupSize() == 2u),
-                                        void*> = nullptr>
-    void cross_lane_ref_dispatch_CPU(DataT*       dataOut,
-                                     DataT const* dataIn,
-                                     uint32_t     elementCount,
-                                     DataT        fillVal = DataT(0.0f))
-    {
-        // Must scale in 32b chunks
-        uint32_t*       write32Out = reinterpret_cast<uint32_t*>(dataOut);
-        uint32_t const* read32In   = reinterpret_cast<uint32_t const*>(dataIn);
-        uint32_t        fillVal32  = static_cast<uint32_t>(fillVal);
-        elementCount               = static_cast<uint32_t>(
-            roundf(static_cast<float32_t>(sizeof(DataT)) / static_cast<float32_t>(sizeof(uint32_t))
-                   * static_cast<float32_t>(elementCount)));
-
-        // From here forth is in 32b land...
-
-        switch(CrossLaneOp::opId())
-        {
-        case rocwmma::CrossLaneOps::Properties::OP_ID_SHUFFLE:
-            cross_lane_shuffle_CPU<CrossLaneOp::select0(),
-                                   CrossLaneOp::select1(),
-                                   CrossLaneOp::select0() + 2u,
-                                   CrossLaneOp::select1() + 2u,
-                                   CrossLaneOp::groupSize(),
-                                   RowMask,
-                                   BankMask,
-                                   BoundCtrl>(write32Out, read32In, elementCount, fillVal32);
-            break;
-        default:;
+            dispatcher(write32Out, src032In, src132In, elementCount, fillVal32);
         }
     }
 
