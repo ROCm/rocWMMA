@@ -683,10 +683,10 @@ namespace rocwmma
 
             template <uint32_t Select0, uint32_t Select1>
             struct Shuffle2 : public Shuffle<Properties::OP_GROUP_SIZE_2,
-                                             Ctrl::Shuffle4<Select0 * 2u,
-                                                            Select0 * 2u + 1u,
-                                                            Select1 * 2u,
-                                                            Select1 * 2u + 1u>>
+                                             Ctrl::Shuffle4<Select0,
+                                                            Select1,
+                                                            Select0 + Properties::OP_GROUP_SIZE_2,
+                                                            Select1 + Properties::OP_GROUP_SIZE_2>>
             {
                 enum : uint32_t
                 {
