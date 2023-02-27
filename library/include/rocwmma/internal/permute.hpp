@@ -28,42 +28,88 @@
 
 #include "cross_lane_ops.hpp"
 #include "permute_impl.hpp"
+#include "vector.hpp"
 
 namespace rocwmma
 {
-    template <typename PermuteOp>
-    struct Permute
+    namespace Permute
     {
-        // Sanity checks
-        static_assert((PermuteOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_PERMUTE)
-                          || (PermuteOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_BPERMUTE),
-                      "PermuteOp must use permute or permute backend");
-        static_assert((PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_BLOCK_BCAST)
-                          || (PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_SHUFFLE),
-                      "PermuteOp is unsupported");
 
-        template <typename DataT>
-        ROCWMMA_DEVICE static inline auto exec(DataT const& src)
+        template <typename PermuteOp>
+        struct Driver
         {
-            return PermuteOp::exec(src, detail::WaveSpace<>::localLaneId());
-        }
+            // Sanity checks
+            static_assert((PermuteOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_PERMUTE)
+                              || (PermuteOp::opImpl()
+                                  == CrossLaneOps::Properties::OP_IMPL_BPERMUTE),
+                          "PermuteOp must use permute or permute backend");
+            static_assert((PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_BLOCK_BCAST)
+                              || (PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_SHUFFLE),
+                          "PermuteOp is unsupported");
 
-        template <typename DataT, uint32_t VecSize>
-        ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize>& src)
-        {
-            auto it = makeVectorIterator(src).begin();
-            static_assert(decltype(it)::range() == VecSize,
-                          "VecSize inconsistent with iterator range");
-
-            // Loop through entire vector
-#pragma unroll
-            for(uint32_t i = 0; i < VecSize; ++i)
+            template <typename DataT>
+            ROCWMMA_DEVICE static inline auto exec(DataT const& src)
             {
-                *it = exec(*it);
-                it++;
+                return PermuteOp::exec(src, detail::WaveSpace<>::localLaneId());
             }
-        }
-    };
+
+            template <typename DataT, uint32_t VecSize>
+            ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize>& src)
+            {
+                auto it = makeVectorIterator(src).begin();
+                static_assert(decltype(it)::range() == VecSize,
+                              "VecSize inconsistent with iterator range");
+
+                // Loop through entire vector
+#pragma unroll
+                for(uint32_t i = 0; i < VecSize; ++i)
+                {
+                    *it = exec(*it);
+                    it++;
+                }
+            }
+        };
+
+        template <uint32_t BlockIdx>
+        using BlockBCast32 = Driver<PermuteImpl::Ops::BlockBCast32<BlockIdx>>;
+
+        template <uint32_t BlockIdx>
+        using BlockBCast16 = Driver<PermuteImpl::Ops::BlockBCast16<BlockIdx>>;
+
+        template <uint32_t BlockIdx>
+        using BlockBCast8 = Driver<PermuteImpl::Ops::BlockBCast8<BlockIdx>>;
+
+        template <uint32_t BlockIdx>
+        using BlockBCast4 = Driver<PermuteImpl::Ops::BlockBCast4<BlockIdx>>;
+
+        template <uint32_t BlockIdx>
+        using BlockBCast2 = Driver<PermuteImpl::Ops::BlockBCast2<BlockIdx>>;
+
+        template <uint32_t VW, uint32_t ElementShift>
+        using GatherWave = Driver<PermuteImpl::Ops::GatherWave<VW, ElementShift>>;
+
+        template <uint32_t VW, uint32_t ElementShift>
+        using Gather32 = Driver<PermuteImpl::Ops::Gather32<VW, ElementShift>>;
+
+        template <uint32_t VW, uint32_t ElementShift>
+        using Gather16 = Driver<PermuteImpl::Ops::Gather16<VW, ElementShift>>;
+
+        template <uint32_t VW, uint32_t ElementShift>
+        using ScatterWave = Driver<PermuteImpl::Ops::ScatterWave<VW, ElementShift>>;
+
+        template <uint32_t VW, uint32_t ElementShift>
+        using Scatter32 = Driver<PermuteImpl::Ops::Scatter32<VW, ElementShift>>;
+
+        template <uint32_t VW, uint32_t ElementShift>
+        using Scatter16 = Driver<PermuteImpl::Ops::Scatter16<VW, ElementShift>>;
+
+        template <uint32_t RotateDistance>
+        using RotateWaveL = Driver<PermuteImpl::Ops::RotateWaveL<RotateDistance>>;
+
+        template <uint32_t RotateDistance>
+        using RotateWaveR = Driver<PermuteImpl::Ops::RotateWaveR<RotateDistance>>;
+
+    } // namespace Permute
 
 } // namespace rocwmma
 

@@ -33,6 +33,25 @@ namespace rocwmma
 
     namespace BlendImpl
     {
+        // Implementation meta-data
+        using CrossLaneOps::OpBase;
+        using CrossLaneOps::Properties;
+
+        // Dpp backend
+        using Properties::OP_IMPL_VBLEND;
+        using Properties::OP_IMPL_VPERM;
+
+        // Functional
+        using Properties::OP_ID_BLEND;
+        using Properties::OP_ID_PERM_BYTE;
+
+        // Groups
+        using Properties::OP_GROUP_SIZE_1;
+        using Properties::OP_GROUP_SIZE_16;
+        using Properties::OP_GROUP_SIZE_2;
+        using Properties::OP_GROUP_SIZE_4;
+        using Properties::OP_GROUP_SIZE_8;
+
         namespace Backend
         {
             /*! \class amdgcn_perm
@@ -151,9 +170,6 @@ namespace rocwmma
 
         namespace Ops
         {
-            using CrossLaneOps::OpBase;
-            using CrossLaneOps::Properties;
-
             /*! \class PermByte
             *  \brief Perform byte-wise permute between two sources.
             * Uses the VPerm backend, therefore must have visible opCtrl() function.
@@ -163,9 +179,7 @@ namespace rocwmma
             */
             template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
             struct PermByte
-                : public OpBase<Properties::OP_ID_PERM_BYTE,
-                                Properties::OP_GROUP_SIZE_1,
-                                Properties::OP_IMPL_VPERM>,
+                : public OpBase<OP_ID_PERM_BYTE, OP_GROUP_SIZE_1, OP_IMPL_VPERM>,
                   Backend::amdgcn_perm<Ctrl::PermByte<Select0, Select1, Select2, Select3>>
             {
                 enum : uint32_t
@@ -214,20 +228,19 @@ namespace rocwmma
             * Inherits exec() function of the backend with an interface for two input sources.
             */
             template <uint32_t SubGroupSize>
-            struct Zip
-                : public OpBase<Properties::OP_ID_BLEND, SubGroupSize, Properties::OP_IMPL_VBLEND>,
-                  Backend::amdgcn_blend<Ctrl::BlendElements<SubGroupSize>>
+            struct Zip : public OpBase<OP_ID_BLEND, SubGroupSize, OP_IMPL_VBLEND>,
+                         Backend::amdgcn_blend<Ctrl::BlendElements<SubGroupSize>>
             {
             };
 
             // Blend even bytes from src0 and odd bytes from src1
             using ZipByte = PermByte<0u, 5u, 2u, 7u>;
             using ZipWord = PermWord<0u, 3u>;
-            using Zip1    = Zip<Properties::OP_GROUP_SIZE_1>;
-            using Zip2    = Zip<Properties::OP_GROUP_SIZE_2>;
-            using Zip4    = Zip<Properties::OP_GROUP_SIZE_4>;
-            using Zip8    = Zip<Properties::OP_GROUP_SIZE_8>;
-            using Zip16   = Zip<Properties::OP_GROUP_SIZE_16>;
+            using Zip1    = Zip<OP_GROUP_SIZE_1>;
+            using Zip2    = Zip<OP_GROUP_SIZE_2>;
+            using Zip4    = Zip<OP_GROUP_SIZE_4>;
+            using Zip8    = Zip<OP_GROUP_SIZE_8>;
+            using Zip16   = Zip<OP_GROUP_SIZE_16>;
 
             // Blend sub-dword elements in regular ordered patterns
             using UnpackByteLo   = PermByte<0u, 4u, 1u, 5u>;

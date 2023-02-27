@@ -33,6 +33,31 @@ namespace rocwmma
 
     namespace PermuteImpl
     {
+        // Implementation meta-data
+        using CrossLaneOps::OpBase;
+        using CrossLaneOps::Properties;
+
+        // Dpp backend
+        using Properties::OP_IMPL_BPERMUTE;
+        using Properties::OP_IMPL_PERMUTE;
+
+        // Functional
+        using Properties::OP_ID_BLOCK_BCAST;
+        using Properties::OP_ID_GATHER;
+        using Properties::OP_ID_ROTATE;
+        using Properties::OP_ID_SCATTER;
+
+        // Groups
+        using Properties::OP_GROUP_SIZE_16;
+        using Properties::OP_GROUP_SIZE_2;
+        using Properties::OP_GROUP_SIZE_32;
+        using Properties::OP_GROUP_SIZE_4;
+        using Properties::OP_GROUP_SIZE_8;
+        using Properties::OP_GROUP_SIZE_WARP;
+
+        // Detail
+        using Properties::OP_DIR_L;
+        using Properties::OP_DIR_R;
 
         namespace Backend
         {
@@ -173,19 +198,15 @@ namespace rocwmma
         } // namespace Ctrl
         namespace OpsBase
         {
-
-            using CrossLaneOps::OpBase;
-            using CrossLaneOps::Properties;
+            template <uint32_t OpId, uint32_t SubGroupSize>
+            using PermuteOp = OpBase<OpId, SubGroupSize, OP_IMPL_PERMUTE>;
 
             template <uint32_t OpId, uint32_t SubGroupSize>
-            using PermuteOp = OpBase<OpId, SubGroupSize, Properties::OP_IMPL_PERMUTE>;
-
-            template <uint32_t OpId, uint32_t SubGroupSize>
-            using BPermuteOp = OpBase<OpId, SubGroupSize, Properties::OP_IMPL_BPERMUTE>;
+            using BPermuteOp = OpBase<OpId, SubGroupSize, OP_IMPL_BPERMUTE>;
 
             template <uint32_t BlockIdx, uint32_t BlockSize>
             struct BlockBCast
-                : public BPermuteOp<Properties::OP_ID_BLOCK_BCAST, BlockSize>,
+                : public BPermuteOp<OP_ID_BLOCK_BCAST, BlockSize>,
                   public Backend::amdgcn_ds_bpermute<Ctrl::BPermuteBlockBCast<BlockIdx, BlockSize>>
             {
                 enum : uint32_t
@@ -201,14 +222,14 @@ namespace rocwmma
 
             template <uint32_t SubGroupSize, uint32_t VW, uint32_t Shift>
             struct Gather
-                : public BPermuteOp<Properties::OP_ID_GATHER, SubGroupSize>,
+                : public BPermuteOp<OP_ID_GATHER, SubGroupSize>,
                   public Backend::amdgcn_ds_bpermute<Ctrl::Interleave<SubGroupSize, VW, Shift>>
             {
             };
 
             template <uint32_t SubGroupSize, uint32_t VW, uint32_t Shift>
             struct Scatter
-                : public PermuteOp<Properties::OP_ID_SCATTER, SubGroupSize>,
+                : public PermuteOp<OP_ID_SCATTER, SubGroupSize>,
                   public Backend::amdgcn_ds_permute<Ctrl::Interleave<SubGroupSize, VW, Shift>>
             {
             };
@@ -221,12 +242,12 @@ namespace rocwmma
             */
             template <uint32_t RotateDist, uint32_t SubGroupSize>
             struct RotateL
-                : public BPermuteOp<Properties::OP_ID_ROTATE, SubGroupSize>,
+                : public BPermuteOp<OP_ID_ROTATE, SubGroupSize>,
                   public Backend::amdgcn_ds_bpermute<Ctrl::Rotate<SubGroupSize, RotateDist>>
             {
                 enum : uint32_t
                 {
-                    OP_DIR  = Properties::OP_DIR_L,
+                    OP_DIR  = OP_DIR_L,
                     OP_DIST = RotateDist
                 };
 
@@ -242,12 +263,12 @@ namespace rocwmma
 
             template <uint32_t RotateDist, uint32_t SubGroupSize>
             struct RotateR
-                : public PermuteOp<Properties::OP_ID_ROTATE, SubGroupSize>,
+                : public PermuteOp<OP_ID_ROTATE, SubGroupSize>,
                   public Backend::amdgcn_ds_permute<Ctrl::Rotate<SubGroupSize, RotateDist>>
             {
                 enum : uint32_t
                 {
-                    OP_DIR  = Properties::OP_DIR_R,
+                    OP_DIR  = OP_DIR_R,
                     OP_DIST = RotateDist
                 };
 
@@ -277,13 +298,6 @@ namespace rocwmma
              */
 
             // clang-format off
-            using CrossLaneOps::Properties;
-            using Properties::OP_GROUP_SIZE_2;
-            using Properties::OP_GROUP_SIZE_4;
-            using Properties::OP_GROUP_SIZE_8;
-            using Properties::OP_GROUP_SIZE_16;
-            using Properties::OP_GROUP_SIZE_32;
-            using Properties::OP_GROUP_SIZE_WARP;
 
             template<uint32_t BlockIdx>
             using BlockBCast32 = OpsBase::BlockBCast<BlockIdx, OP_GROUP_SIZE_32>;

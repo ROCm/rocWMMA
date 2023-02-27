@@ -33,6 +33,33 @@ namespace rocwmma
 {
     namespace SwizzleImpl
     {
+        // Implementation meta-data
+        using CrossLaneOps::OpBase;
+        using CrossLaneOps::Properties;
+
+        // Dpp backend
+        using Properties::OP_IMPL_SWIZZLE;
+
+        // Functional
+        using Properties::OP_ID_BCAST;
+        using Properties::OP_ID_FFT;
+        using Properties::OP_ID_REVERSE;
+        using Properties::OP_ID_ROTATE;
+        using Properties::OP_ID_SHUFFLE;
+        using Properties::OP_ID_SWAP;
+
+        // Groups
+        using Properties::OP_GROUP_SIZE_16;
+        using Properties::OP_GROUP_SIZE_2;
+        using Properties::OP_GROUP_SIZE_32;
+        using Properties::OP_GROUP_SIZE_4;
+        using Properties::OP_GROUP_SIZE_8;
+        using Properties::OP_GROUP_SIZE_WARP;
+
+        // Detail
+        using Properties::OP_DIR_L;
+        using Properties::OP_DIR_R;
+
         namespace Backend
         {
             template <class SwizzleCtrl>
@@ -163,13 +190,10 @@ namespace rocwmma
 
         } // namespace Ctrl
 
-        using CrossLaneOps::OpBase;
-        using CrossLaneOps::Properties;
-
         namespace OpsBase
         {
             template <uint32_t OpId, uint32_t SubGroupSize>
-            using SwzOp = OpBase<OpId, SubGroupSize, Properties::OP_IMPL_SWIZZLE>;
+            using SwzOp = OpBase<OpId, SubGroupSize, OP_IMPL_SWIZZLE>;
 
             /*! \class BCast
             *  \brief Performs localized broadcast of one element in each sub-group to the entire sub-group.
@@ -177,7 +201,7 @@ namespace rocwmma
             * @tparam ElementIdx - element index to broadcast to rest of the sub-group
             */
             template <uint32_t ElementIdx, uint32_t SubGroupSize>
-            struct BCast : public SwzOp<Properties::OP_ID_BCAST, SubGroupSize>,
+            struct BCast : public SwzOp<OP_ID_BCAST, SubGroupSize>,
                            public Backend::amdgcn_swizzle<Ctrl::BCast<ElementIdx, SubGroupSize>>
             {
                 enum : uint32_t
@@ -195,7 +219,7 @@ namespace rocwmma
             *  \brief Supports FFT-like cross-bar transforms
             */
             template <uint32_t SubGroupSize, uint32_t FftCtrl>
-            struct Fft : public SwzOp<Properties::OP_ID_FFT, SubGroupSize>,
+            struct Fft : public SwzOp<OP_ID_FFT, SubGroupSize>,
                          public Backend::amdgcn_swizzle<Ctrl::Fft<FftCtrl>>
             {
                 enum : uint32_t
@@ -213,7 +237,7 @@ namespace rocwmma
             *  \brief Perform reversal of elements in sub-groups of <SubGroupSize> threads.
             */
             template <uint32_t SubGroupSize>
-            struct Reverse : public SwzOp<Properties::OP_ID_REVERSE, SubGroupSize>,
+            struct Reverse : public SwzOp<OP_ID_REVERSE, SubGroupSize>,
                              public Backend::amdgcn_swizzle<Ctrl::Reverse<SubGroupSize>>
             {
             };
@@ -226,7 +250,7 @@ namespace rocwmma
             */
             template <uint32_t RotateDir, uint32_t RotateDist, uint32_t SubGroupSize>
             struct Rotate
-                : public SwzOp<Properties::OP_ID_ROTATE, SubGroupSize>,
+                : public SwzOp<OP_ID_ROTATE, SubGroupSize>,
                   public Backend::amdgcn_swizzle<Ctrl::Rotate<RotateDir, RotateDist, SubGroupSize>>
             {
                 enum : uint32_t
@@ -246,16 +270,16 @@ namespace rocwmma
             };
 
             template <uint32_t RotateDistance, uint32_t SubGroupSize>
-            using RotateR = Rotate<Properties::OP_DIR_R, RotateDistance, SubGroupSize>;
+            using RotateR = Rotate<OP_DIR_R, RotateDistance, SubGroupSize>;
 
             template <uint32_t RotateDistance, uint32_t SubGroupSize>
-            using RotateL = Rotate<Properties::OP_DIR_L, RotateDistance, SubGroupSize>;
+            using RotateL = Rotate<OP_DIR_L, RotateDistance, SubGroupSize>;
 
             /*! \class Shuffle
             *  \brief Perform localized shuffling within sub-groups of <SubGroupSize> threads.
             */
             template <uint32_t SubGroupSize, class ShuffleCtrl>
-            struct Shuffle : public SwzOp<Properties::OP_ID_SHUFFLE, SubGroupSize>,
+            struct Shuffle : public SwzOp<OP_ID_SHUFFLE, SubGroupSize>,
                              public Backend::amdgcn_swizzle<ShuffleCtrl>
             {
             };
@@ -271,7 +295,7 @@ namespace rocwmma
             * @tparam Select3 - index of element to shuffle to index 3
             */
             template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
-            struct Shuffle4 : public Shuffle<Properties::OP_GROUP_SIZE_4,
+            struct Shuffle4 : public Shuffle<OP_GROUP_SIZE_4,
                                              Ctrl::Shuffle4<Select0, Select1, Select2, Select3>>
             {
                 enum : uint32_t
@@ -301,11 +325,11 @@ namespace rocwmma
             };
 
             template <uint32_t Select0, uint32_t Select1>
-            struct Shuffle2 : public Shuffle<Properties::OP_GROUP_SIZE_2,
-                                             Ctrl::Shuffle4<Select0 * 2u,
-                                                            Select0 * 2u + 1u,
-                                                            Select1 * 2u,
-                                                            Select1 * 2u + 1u>>
+            struct Shuffle2 : public Shuffle<OP_GROUP_SIZE_2,
+                                             Ctrl::Shuffle4<Select0,
+                                                            Select1,
+                                                            Select0 + OP_GROUP_SIZE_2,
+                                                            Select1 + OP_GROUP_SIZE_2>>
             {
                 enum : uint32_t
                 {
@@ -327,7 +351,7 @@ namespace rocwmma
             *  \brief Perform swap of neigbouring sub-groups of <SubGroupSize> threads.
             */
             template <uint32_t SubGroupSize>
-            struct Swap : public SwzOp<Properties::OP_ID_SWAP, SubGroupSize>,
+            struct Swap : public SwzOp<OP_ID_SWAP, SubGroupSize>,
                           public Backend::amdgcn_swizzle<Ctrl::Swap<SubGroupSize>>
             {
             };
@@ -345,14 +369,6 @@ namespace rocwmma
              */
 
             // clang-format off
-
-            using CrossLaneOps::Properties;
-            using Properties::OP_GROUP_SIZE_2;
-            using Properties::OP_GROUP_SIZE_4;
-            using Properties::OP_GROUP_SIZE_8;
-            using Properties::OP_GROUP_SIZE_16;
-            using Properties::OP_GROUP_SIZE_32;
-            using Properties::OP_GROUP_SIZE_WARP;
 
             // BCast variants
             template <uint32_t ElementIdx>

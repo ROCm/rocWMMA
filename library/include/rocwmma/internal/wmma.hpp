@@ -155,15 +155,15 @@ namespace rocwmma
                 // Duplicate the upper/lower inputs
                 // Lower has even cols of A in K direction (BlockBCast16<0>)
                 // Upper has odd cols of A in K direction (BlockBCast16<1>)
-                (*wmmaItA) = Permute<PermuteOps::BlockBCast16<0>>::exec(*aIt, detail::laneId());
+                (*wmmaItA) = Permute::BlockBCast16<0>::exec(*aIt, detail::laneId());
                 wmmaItA++;
-                (*wmmaItA) = Permute<PermuteOps::BlockBCast16<1>>::exec(*aIt, detail::laneId());
+                (*wmmaItA) = Permute::BlockBCast16<1>::exec(*aIt, detail::laneId());
 
                 // Lower has even rows of B in K direction (BlockBCast16<0>)
                 // Upper has odd rows of B in K direction (BlockBCast16<1>)
-                (*wmmaItB) = Permute<PermuteOps::BlockBCast16<0>>::exec(*bIt, detail::laneId());
+                (*wmmaItB) = Permute::BlockBCast16<0>::exec(*bIt, detail::laneId());
                 wmmaItB++;
-                (*wmmaItB) = Permute<PermuteOps::BlockBCast16<1>>::exec(*bIt, detail::laneId());
+                (*wmmaItB) = Permute::BlockBCast16<1>::exec(*bIt, detail::laneId());
 
                 accum = WMMA::exec(regsA_Wmma, regsB_Wmma, accum);
 

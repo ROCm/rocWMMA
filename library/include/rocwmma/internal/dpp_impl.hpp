@@ -33,8 +33,34 @@ namespace rocwmma
 
     namespace DppImpl
     {
+        // Implementation meta-data
         using CrossLaneOps::OpBase;
         using CrossLaneOps::Properties;
+
+        // Dpp backend
+        using Properties::OP_IMPL_DPP;
+
+        // Functional
+        using Properties::OP_ID_BCAST;
+        using Properties::OP_ID_MOVE;
+        using Properties::OP_ID_REVERSE;
+        using Properties::OP_ID_ROTATE;
+        using Properties::OP_ID_SHIFT;
+        using Properties::OP_ID_SHUFFLE;
+        using Properties::OP_ID_SWAP;
+        using Properties::OP_ID_WFALL_BCAST;
+
+        // Groups
+        using Properties::OP_GROUP_SIZE_16;
+        using Properties::OP_GROUP_SIZE_2;
+        using Properties::OP_GROUP_SIZE_32;
+        using Properties::OP_GROUP_SIZE_4;
+        using Properties::OP_GROUP_SIZE_8;
+        using Properties::OP_GROUP_SIZE_WARP;
+
+        // Detail
+        using Properties::OP_DIR_L;
+        using Properties::OP_DIR_R;
 
         namespace Backend
         {
@@ -165,9 +191,9 @@ namespace rocwmma
             };
 
             template <uint32_t ShiftDist>
-            using RowShiftR = RowShift<Properties::OP_DIR_R, ShiftDist>;
+            using RowShiftR = RowShift<OP_DIR_R, ShiftDist>;
             template <uint32_t ShiftDist>
-            using RowShiftL = RowShift<Properties::OP_DIR_L, ShiftDist>;
+            using RowShiftL = RowShift<OP_DIR_L, ShiftDist>;
 
             template <uint32_t RotateDist>
             struct RowRotateR
@@ -426,10 +452,10 @@ namespace rocwmma
 
 #endif // !__gfx1100__ && !__gfx1101__ && !__gfx1102__
 
-            using WaveRotateR1 = WaveRotate1<Properties::OP_DIR_R>;
-            using WaveRotateL1 = WaveRotate1<Properties::OP_DIR_L>;
-            using WaveShiftR1  = WaveShift1<Properties::OP_DIR_R>;
-            using WaveShiftL1  = WaveShift1<Properties::OP_DIR_L>;
+            using WaveRotateR1 = WaveRotate1<OP_DIR_R>;
+            using WaveRotateL1 = WaveRotate1<OP_DIR_L>;
+            using WaveShiftR1  = WaveShift1<OP_DIR_R>;
+            using WaveShiftL1  = WaveShift1<OP_DIR_L>;
 
             // Derivatives
             template <uint32_t RotateDir, uint32_t RotateDistance>
@@ -439,8 +465,7 @@ namespace rocwmma
                 enum Traits : uint32_t
                 {
                     ROTATE_DISTANCE
-                    = (RotateDir == CrossLaneOps::Properties::OP_DIR_L ? RotateDistance
-                                                                       : 4u - RotateDistance),
+                    = (RotateDir == OP_DIR_L ? RotateDistance : 4u - RotateDistance),
                     SELECT_0 = (0u + ROTATE_DISTANCE) % 4u,
                     SELECT_1 = (1u + ROTATE_DISTANCE) % 4u,
                     SELECT_2 = (2u + ROTATE_DISTANCE) % 4u,
@@ -457,9 +482,9 @@ namespace rocwmma
             };
 
             template <uint32_t RotateDistance>
-            using BankRotateR = BankRotate<Properties::OP_DIR_R, RotateDistance>;
+            using BankRotateR = BankRotate<OP_DIR_R, RotateDistance>;
             template <uint32_t RotateDistance>
-            using BankRotateL = BankRotate<Properties::OP_DIR_L, RotateDistance>;
+            using BankRotateL = BankRotate<OP_DIR_L, RotateDistance>;
 
             template <uint32_t RotateDir, uint32_t RotateDistance>
             struct HalfBankRotate
@@ -468,8 +493,7 @@ namespace rocwmma
                 enum Traits : uint32_t
                 {
                     ROTATE_DISTANCE
-                    = (RotateDir == CrossLaneOps::Properties::OP_DIR_L ? RotateDistance
-                                                                       : 2u - RotateDistance),
+                    = (RotateDir == OP_DIR_L ? RotateDistance : 2u - RotateDistance),
                     SELECT_0 = (0u + ROTATE_DISTANCE) % 2u,
                     SELECT_1 = (1u + ROTATE_DISTANCE) % 2u,
                     SELECT_2 = 2u + SELECT_0,
@@ -486,9 +510,9 @@ namespace rocwmma
             };
 
             template <uint32_t RotateDistance>
-            using HalfBankRotateR = HalfBankRotate<Properties::OP_DIR_R, RotateDistance>;
+            using HalfBankRotateR = HalfBankRotate<OP_DIR_R, RotateDistance>;
             template <uint32_t RotateDistance>
-            using HalfBankRotateL = HalfBankRotate<Properties::OP_DIR_L, RotateDistance>;
+            using HalfBankRotateL = HalfBankRotate<OP_DIR_L, RotateDistance>;
 
         } // namespace Ctrl
 
@@ -512,15 +536,16 @@ namespace rocwmma
              */
 
             template <uint32_t OpId, uint32_t SubGroupSize>
-            using DppOp = OpBase<OpId, SubGroupSize, Properties::OP_IMPL_DPP>;
+            using DppOp = OpBase<OpId, SubGroupSize, OP_IMPL_DPP>;
 
             /*! \class BCast
             *  \brief Performs localized broadcast of one element in each sub-group to the entire sub-group.
             *
             * @tparam ElementIdx - element index to broadcast to rest of the sub-group
             */
+
             template <uint32_t ElementIdx, uint32_t SubGroupSize, class BCastCtrl>
-            struct BCast : public DppOp<Properties::OP_ID_BCAST, SubGroupSize>,
+            struct BCast : public DppOp<OP_ID_BCAST, SubGroupSize>,
                            public Backend::amdgcn_mov_dpp<BCastCtrl>
             {
                 enum : uint32_t
@@ -540,7 +565,7 @@ namespace rocwmma
             * @tparam SubGroupSize - size of the broadcast blocks.
             */
             template <uint32_t SubGroupSize, class BCastCtrl>
-            struct WFallBCast : public DppOp<Properties::OP_ID_WFALL_BCAST, SubGroupSize>,
+            struct WFallBCast : public DppOp<OP_ID_WFALL_BCAST, SubGroupSize>,
                                 public Backend::amdgcn_mov_dpp<BCastCtrl>
             {
             };
@@ -550,7 +575,7 @@ namespace rocwmma
             *
             * @tparam SubGroupSize - size of the broadcast blocks.
             */
-            struct Move : public DppOp<Properties::OP_ID_MOVE, Properties::OP_GROUP_SIZE_WARP>,
+            struct Move : public DppOp<OP_ID_MOVE, OP_GROUP_SIZE_WARP>,
                           public Backend::amdgcn_mov_dpp<Ctrl::Move>
             {
             };
@@ -558,8 +583,9 @@ namespace rocwmma
             /*! \class Reverse
             *  \brief Perform reversal of elements in sub-groups of <SubGroupSize> threads.
             */
+
             template <uint32_t SubGroupSize, class ReverseCtrl>
-            struct Reverse : public DppOp<Properties::OP_ID_REVERSE, SubGroupSize>,
+            struct Reverse : public DppOp<OP_ID_REVERSE, SubGroupSize>,
                              public Backend::amdgcn_mov_dpp<ReverseCtrl>
             {
             };
@@ -574,7 +600,7 @@ namespace rocwmma
                       uint32_t RotateDist,
                       uint32_t SubGroupSize,
                       class RotateCtrl>
-            struct Rotate : public DppOp<Properties::OP_ID_ROTATE, SubGroupSize>,
+            struct Rotate : public DppOp<OP_ID_ROTATE, SubGroupSize>,
                             public Backend::amdgcn_mov_dpp<RotateCtrl>
             {
                 enum : uint32_t
@@ -594,20 +620,20 @@ namespace rocwmma
             };
 
             template <uint32_t RotateDistance, uint32_t SubGroupSize, class RotateCtrl>
-            using RotateR = Rotate<Properties::OP_DIR_R, RotateDistance, SubGroupSize, RotateCtrl>;
+            using RotateR = Rotate<OP_DIR_R, RotateDistance, SubGroupSize, RotateCtrl>;
 
             template <uint32_t RotateDistance, uint32_t SubGroupSize, class RotateCtrl>
-            using RotateL = Rotate<Properties::OP_DIR_L, RotateDistance, SubGroupSize, RotateCtrl>;
+            using RotateL = Rotate<OP_DIR_L, RotateDistance, SubGroupSize, RotateCtrl>;
 
             /*! \class Shift
             *  \brief Perform element-wise shift in direction <ShiftDir> in sub-groups of <SubGroupSize> threads.
             *
-            * @tparam ShiftDir rotation direction: see Properties
+            * @tparam ShiftDir shift direction: see Properties
             * @tparam ShiftDistance element positions to move in specified direction. Positions do not wrap around
             * the sub group size.
             */
             template <uint32_t ShiftDir, uint32_t ShiftDist, uint32_t SubGroupSize, class ShiftCtrl>
-            struct Shift : public DppOp<Properties::OP_ID_SHIFT, SubGroupSize>,
+            struct Shift : public DppOp<OP_ID_SHIFT, SubGroupSize>,
                            public Backend::amdgcn_mov_dpp<ShiftCtrl>
             {
                 enum : uint32_t
@@ -627,16 +653,16 @@ namespace rocwmma
             };
 
             template <uint32_t ShiftDistance, uint32_t SubGroupSize, class ShiftCtrl>
-            using ShiftR = Shift<Properties::OP_DIR_R, ShiftDistance, SubGroupSize, ShiftCtrl>;
+            using ShiftR = Shift<OP_DIR_R, ShiftDistance, SubGroupSize, ShiftCtrl>;
 
             template <uint32_t ShiftDistance, uint32_t SubGroupSize, class ShiftCtrl>
-            using ShiftL = Shift<Properties::OP_DIR_L, ShiftDistance, SubGroupSize, ShiftCtrl>;
+            using ShiftL = Shift<OP_DIR_L, ShiftDistance, SubGroupSize, ShiftCtrl>;
 
             /*! \class Shuffle
             *  \brief Perform localized shuffling within sub-groups of <SubGroupSize> threads.
             */
             template <uint32_t SubGroupSize, class ShuffleCtrl>
-            struct Shuffle : public DppOp<Properties::OP_ID_SHUFFLE, SubGroupSize>,
+            struct Shuffle : public DppOp<OP_ID_SHUFFLE, SubGroupSize>,
                              public Backend::amdgcn_mov_dpp<ShuffleCtrl>
             {
             };
@@ -652,7 +678,7 @@ namespace rocwmma
             * @tparam Select3 - index of element to shuffle to index 3
             */
             template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
-            struct Shuffle4 : public Shuffle<Properties::OP_GROUP_SIZE_4,
+            struct Shuffle4 : public Shuffle<OP_GROUP_SIZE_4,
                                              Ctrl::Shuffle4<Select0, Select1, Select2, Select3>>
             {
                 enum : uint32_t
@@ -682,11 +708,11 @@ namespace rocwmma
             };
 
             template <uint32_t Select0, uint32_t Select1>
-            struct Shuffle2 : public Shuffle<Properties::OP_GROUP_SIZE_2,
+            struct Shuffle2 : public Shuffle<OP_GROUP_SIZE_2,
                                              Ctrl::Shuffle4<Select0,
                                                             Select1,
-                                                            Select0 + Properties::OP_GROUP_SIZE_2,
-                                                            Select1 + Properties::OP_GROUP_SIZE_2>>
+                                                            Select0 + OP_GROUP_SIZE_2,
+                                                            Select1 + OP_GROUP_SIZE_2>>
             {
                 enum : uint32_t
                 {
@@ -708,7 +734,7 @@ namespace rocwmma
             *  \brief Perform swap of neigbouring sub-groups of <SubGroupSize> threads.
             */
             template <uint32_t SubGroupSize, class SwapCtrl>
-            struct Swap : public DppOp<Properties::OP_ID_SWAP, SubGroupSize>,
+            struct Swap : public DppOp<OP_ID_SWAP, SubGroupSize>,
                           public Backend::amdgcn_mov_dpp<SwapCtrl>
             {
             };
@@ -717,13 +743,6 @@ namespace rocwmma
 
         namespace Ops
         {
-            using Properties::OP_GROUP_SIZE_16;
-            using Properties::OP_GROUP_SIZE_2;
-            using Properties::OP_GROUP_SIZE_32;
-            using Properties::OP_GROUP_SIZE_4;
-            using Properties::OP_GROUP_SIZE_8;
-            using Properties::OP_GROUP_SIZE_WARP;
-
             // clang-format off
 
             /// BCast variants

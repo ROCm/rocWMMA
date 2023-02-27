@@ -102,8 +102,8 @@ namespace rocwmma
         // Shift + mix groups of 2
         //     auto& vv = reinterpret_cast<VecT<uint32_t, 8>&>(v);
 
-        //     using DppRotateR16_2_0xF_0xF  = Dpp<DppOps::RotateR16<2>, 0xF, 0xF>;
-        //     using DppRotateR16_14_0xF_0xF = Dpp<DppOps::RotateR16<14>, 0xF, 0xF>;
+        //     using DppRotateR16_2_0xF_0xF  = Dpp<DppImpl::Ops::RotateR16<2>, 0xF, 0xF>;
+        //     using DppRotateR16_14_0xF_0xF = Dpp<DppImpl::Ops::RotateR16<14>, 0xF, 0xF>;
 
         //     auto v0 = DppRotateR16_14_0xF_0xF::exec(get<0>(vv));
         //     auto v1 = DppRotateR16_2_0xF_0xF::exec(get<1>(vv));
@@ -127,8 +127,8 @@ namespace rocwmma
 
         // // Step 2: Shift and mix groups of 4
         // {
-        //     using DppRotateR16_4_0xF_0xA  = Dpp<DppOps::RotateR16<4>, 0xF, 0xA>;
-        //     using DppRotateR16_12_0xF_0x5 = Dpp<DppOps::RotateR16<12>, 0xF, 0x5>;
+        //     using DppRotateR16_4_0xF_0xA  = Dpp<DppImpl::Ops::RotateR16<4>, 0xF, 0xA>;
+        //     using DppRotateR16_12_0xF_0x5 = Dpp<DppImpl::Ops::RotateR16<12>, 0xF, 0x5>;
 
         //     auto v0 = get<0>(v);
         //     auto v1 = get<1>(v);
@@ -151,8 +151,8 @@ namespace rocwmma
 
         // // Step 3: Shift and mix groups of 8
         // {
-        //     using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
-        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
+        //     using DppRotateR16_8_0xF_0xC = Dpp<DppImpl::Ops::RotateR16<8>, 0xF, 0xC>;
+        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppImpl::Ops::RotateR16<8>, 0xF, 0x3>;
 
         //     auto v0 = get<0>(v);
         //     auto v1 = get<1>(v);
@@ -175,7 +175,7 @@ namespace rocwmma
 
         // // Step 4 : Swizzle
         // {
-        //     using Gather16_8_0 = Permute<PermuteOps::Gather16<8, 0>>;
+        //     using Gather16_8_0 = Permute<PermuteImpl::Ops::Gather16<8, 0>>;
 
         //     constexpr uint32_t waveSize = 64u;
         //     Gather16_8_0::exec(v, threadIdx.x % waveSize);
@@ -188,8 +188,8 @@ namespace rocwmma
         // Step 1
         // {
 
-        //     using DppRotateR16_4_0xF_0xA  = Dpp<DppOps::RotateR16<4>, 0xF, 0xA>;
-        //     using DppRotateR16_12_0xF_0x5 = Dpp<DppOps::RotateR16<12>, 0xF, 0x5>;
+        //     using DppRotateR16_4_0xF_0xA  = Dpp<DppImpl::Ops::RotateR16<4>, 0xF, 0xA>;
+        //     using DppRotateR16_12_0xF_0x5 = Dpp<DppImpl::Ops::RotateR16<12>, 0xF, 0x5>;
 
         //     auto const v0 = get<0>(v);
         //     auto const v1 = get<1>(v);
@@ -204,8 +204,8 @@ namespace rocwmma
 
         // // Step 2
         // {
-        //     using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
-        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
+        //     using DppRotateR16_8_0xF_0xC = Dpp<DppImpl::Ops::RotateR16<8>, 0xF, 0xC>;
+        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppImpl::Ops::RotateR16<8>, 0xF, 0x3>;
 
         //     auto const v0 = get<0>(v);
         //     auto const v1 = get<1>(v);
@@ -220,7 +220,7 @@ namespace rocwmma
 
         // // Step 3
         // {
-        //     using Gather16_4_0 = Permute<PermuteOps::Gather16<4, 0>>;
+        //     using Gather16_4_0 = Permute<PermuteImpl::Ops::Gather16<4, 0>>;
 
         //     constexpr uint32_t waveSize = 64u;
         //     Gather16_4_0::exec(v, threadIdx.x % waveSize);
@@ -232,8 +232,8 @@ namespace rocwmma
     {
         // Step 1
         // {
-        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
-        //     using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
+        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppImpl::Ops::RotateR16<8>, 0xF, 0x3>;
+        //     using DppRotateR16_8_0xF_0xC = Dpp<DppImpl::Ops::RotateR16<8>, 0xF, 0xC>;
 
         //     auto const v0 = get<0>(v);
         //     auto const v1 = get<1>(v);
@@ -244,7 +244,7 @@ namespace rocwmma
 
         // // Step 2
         // {
-        //     using Gather16_2_0 = Permute<PermuteOps::Gather16<2, 0>>;
+        //     using Gather16_2_0 = Permute<PermuteImpl::Ops::Gather16<2, 0>>;
 
         //     constexpr uint32_t waveSize = 64u;
         //     Gather16_2_0::exec(v, threadIdx.x % waveSize);
@@ -256,14 +256,14 @@ namespace rocwmma
     {
         // Step 1
         // {
-        //     using SwzRotateR32_16 = Swizzle<SwizzleOps::RotateR32<16>>;
+        //     using SwzRotateR32_16 = Swizzle<SwizzleImpl::Ops::RotateR32<16>>;
         //     SwzRotateR32_16::exec(get<0>(v));
         // }
 
         // // Step 2
         // {
-        //     using DppMMove_0x5_0xF = Dpp<DppOps::MaskMove, 0x5, 0xF>;
-        //     using DppMMove_0xA_0xF = Dpp<DppOps::MaskMove, 0xA, 0xF>;
+        //     using DppMMove_0x5_0xF = Dpp<DppImpl::Ops::MaskMove, 0x5, 0xF>;
+        //     using DppMMove_0xA_0xF = Dpp<DppImpl::Ops::MaskMove, 0xA, 0xF>;
 
         //     auto const v0 = get<0>(v);
         //     auto const v1 = get<1>(v);
@@ -274,8 +274,8 @@ namespace rocwmma
 
         // // Step 3
         // {
-        //     using Gather32_2_16 = Permute<PermuteOps::Gather32<2, 16>>;
-        //     using Gather32_2_0 = Permute<PermuteOps::Gather32<2, 0>>;
+        //     using Gather32_2_16 = Permute<PermuteImpl::Ops::Gather32<2, 16>>;
+        //     using Gather32_2_0 = Permute<PermuteImpl::Ops::Gather32<2, 0>>;
 
         //     constexpr uint32_t waveSize = 64u;
         //     Gather32_2_16::exec(get<0>(v), threadIdx.x % waveSize);
@@ -288,9 +288,9 @@ namespace rocwmma
     {
         // // Step 1
         // {
-        //     using DupLo = Permute<PermuteOps::DupLoBlockWave<1>>;
-        //     using DupHi = Permute<PermuteOps::DupHiBlockWave<1>>;
-        //     using Zip1 = Blend<BlendOps::Zip1>;
+        //     using DupLo = Permute<PermuteImpl::Ops::DupLoBlockWave<1>>;
+        //     using DupHi = Permute<PermuteImpl::Ops::DupHiBlockWave<1>>;
+        //     using Zip1 = Blend<BlendImpl::Ops::Zip1>;
         //     auto v0_lo = DupLo::exec((const DataT)get<0>(v), threadIdx.x % 64);
         //     auto v0_hi = DupHi::exec((const DataT)get<0>(v), threadIdx.x % 64);
         //     auto v1_lo = DupLo::exec((const DataT)get<1>(v), threadIdx.x % 64);
@@ -306,8 +306,8 @@ namespace rocwmma
     __device__ void aos_soa_32x8_vw4_b32_opt(VecT<DataT, 4>& v)
     {
         // {
-        //     using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
-        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
+        //     using DppRotateR16_8_0xF_0xC = Dpp<DppImpl::Ops::RotateR16<8>, 0xF, 0xC>;
+        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppImpl::Ops::RotateR16<8>, 0xF, 0x3>;
 
         //     auto const v0 = get<0>(v);
         //     auto const v1 = get<1>(v);
@@ -322,14 +322,14 @@ namespace rocwmma
 
         // // Step 1
         // {
-        //     using SwzRotateR32_16 = Swizzle<SwizzleOps::RotateR32<16>>;
+        //     using SwzRotateR32_16 = Swizzle<SwizzleImpl::Ops::RotateR32<16>>;
         //     SwzRotateR32_16::exec(get<2>(v));
         //     SwzRotateR32_16::exec(get<3>(v));
         // }
 
         // // Step 2
         // {
-        //     using DppMMove_0x5_0xF = Dpp<DppOps::MaskMove, 0x5, 0xF>;
+        //     using DppMMove_0x5_0xF = Dpp<DppImpl::Ops::MaskMove, 0x5, 0xF>;
 
         //     auto const v0 = get<0>(v);
         //     auto const v1 = get<1>(v);
@@ -344,8 +344,8 @@ namespace rocwmma
 
         // // Step 3
         // {
-        //     using Gather32_4_16 = Permute<PermuteOps::Gather32<4, 16>>;
-        //     using Gather32_4_0 = Permute<PermuteOps::Gather32<4, 0>>;
+        //     using Gather32_4_16 = Permute<PermuteImpl::Ops::Gather32<4, 16>>;
+        //     using Gather32_4_0 = Permute<PermuteImpl::Ops::Gather32<4, 0>>;
 
         //     constexpr uint32_t waveSize = 64u;
         //     Gather32_4_0::exec(get<0>(v), threadIdx.x % waveSize);
@@ -360,8 +360,8 @@ namespace rocwmma
     {
         // // Step 1 : Shift and mix groups of 4
         // {
-        //     using DppRotateR16_4_0xF_0xA  = Dpp<DppOps::RotateR16<4>, 0xF, 0xA>;
-        //     using DppRotateR16_12_0xF_0x5 = Dpp<DppOps::RotateR16<12>, 0xF, 0x5>;
+        //     using DppRotateR16_4_0xF_0xA  = Dpp<DppImpl::Ops::RotateR16<4>, 0xF, 0xA>;
+        //     using DppRotateR16_12_0xF_0x5 = Dpp<DppImpl::Ops::RotateR16<12>, 0xF, 0x5>;
 
         //     auto v0 = get<0>(v);
         //     auto v1 = get<1>(v);
@@ -384,8 +384,8 @@ namespace rocwmma
 
         // // Step 2: Shift and mix groups of 8
         // {
-        //     using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
-        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
+        //     using DppRotateR16_8_0xF_0xC = Dpp<DppImpl::Ops::RotateR16<8>, 0xF, 0xC>;
+        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppImpl::Ops::RotateR16<8>, 0xF, 0x3>;
 
         //     auto v0 = get<0>(v);
         //     auto v1 = get<1>(v);
@@ -408,7 +408,7 @@ namespace rocwmma
 
         // // Step 3: Rotate latter half of the registers
         // {
-        //     using SwzRotateR32_16 = Swizzle<SwizzleOps::RotateR32<16>>;
+        //     using SwzRotateR32_16 = Swizzle<SwizzleImpl::Ops::RotateR32<16>>;
         //     SwzRotateR32_16::exec(get<4>(v));
         //     SwzRotateR32_16::exec(get<5>(v));
         //     SwzRotateR32_16::exec(get<6>(v));
@@ -417,7 +417,7 @@ namespace rocwmma
 
         // // Step 4:
         // {
-        //     using DppMMove_0x5_0xF = Dpp<DppOps::MaskMove, 0x5, 0xF>;
+        //     using DppMMove_0x5_0xF = Dpp<DppImpl::Ops::MaskMove, 0x5, 0xF>;
 
         //     auto v0 = get<0>(v);
         //     auto v1 = get<1>(v);
@@ -440,8 +440,8 @@ namespace rocwmma
 
         // // Step 5: Permute
         // {
-        //     using Gather32_8_0 = Permute<PermuteOps::Gather32<8, 0>>;
-        //     using Gather32_8_16 = Permute<PermuteOps::Gather32<8, 16>>;
+        //     using Gather32_8_0 = Permute<PermuteImpl::Ops::Gather32<8, 0>>;
+        //     using Gather32_8_16 = Permute<PermuteImpl::Ops::Gather32<8, 16>>;
 
         //     constexpr uint32_t waveSize = 64u;
         //     Gather32_8_0::exec(get<0>(v), threadIdx.x % waveSize);
@@ -460,7 +460,7 @@ namespace rocwmma
     {
         // // Step 1
         // {
-        //     using Scatter16_4_0 = Permute<PermuteOps::Scatter16<4, 0>>;
+        //     using Scatter16_4_0 = Permute<PermuteImpl::Ops::Scatter16<4, 0>>;
 
         //     constexpr uint32_t waveSize = 64u;
         //     Scatter16_4_0::exec(v, threadIdx.x % waveSize);
@@ -468,8 +468,8 @@ namespace rocwmma
 
         // // Step 2
         // {
-        //     using DppRotateR16_4_0xF_0xA  = Dpp<DppOps::RotateR16<4>, 0xF, 0xA>;
-        //     using DppRotateR16_12_0xF_0x5 = Dpp<DppOps::RotateR16<12>, 0xF, 0x5>;
+        //     using DppRotateR16_4_0xF_0xA  = Dpp<DppImpl::Ops::RotateR16<4>, 0xF, 0xA>;
+        //     using DppRotateR16_12_0xF_0x5 = Dpp<DppImpl::Ops::RotateR16<12>, 0xF, 0x5>;
 
         //     auto const v0 = get<0>(v);
         //     auto const v1 = get<1>(v);
@@ -484,8 +484,8 @@ namespace rocwmma
 
         // // Step 3
         // {
-        //     using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
-        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
+        //     using DppRotateR16_8_0xF_0xC = Dpp<DppImpl::Ops::RotateR16<8>, 0xF, 0xC>;
+        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppImpl::Ops::RotateR16<8>, 0xF, 0x3>;
 
         //     auto const v0 = get<0>(v);
         //     auto const v1 = get<1>(v);
@@ -504,7 +504,7 @@ namespace rocwmma
     {
         // // Step 1
         // {
-        //     using Scatter16_2_0 = Permute<PermuteOps::Scatter16<2, 0>>;
+        //     using Scatter16_2_0 = Permute<PermuteImpl::Ops::Scatter16<2, 0>>;
 
         //     constexpr uint32_t waveSize = 64u;
         //     Scatter16_2_0::exec(v, threadIdx.x % waveSize);
@@ -512,8 +512,8 @@ namespace rocwmma
 
         // // Step 2
         // {
-        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppOps::RotateR16<8>, 0xF, 0x3>;
-        //     using DppRotateR16_8_0xF_0xC = Dpp<DppOps::RotateR16<8>, 0xF, 0xC>;
+        //     using DppRotateR16_8_0xF_0x3 = Dpp<DppImpl::Ops::RotateR16<8>, 0xF, 0x3>;
+        //     using DppRotateR16_8_0xF_0xC = Dpp<DppImpl::Ops::RotateR16<8>, 0xF, 0xC>;
 
         //     auto const v0 = get<0>(v);
         //     auto const v1 = get<1>(v);
