@@ -41,7 +41,7 @@ namespace rocwmma
         // Types: Base IOC + double
         using Types = typename Base::TestTypes16;
 
-        using BlendOps = std::tuple<BlendOps::UnpackByteHi, BlendOps::UnpackByteHiR>;
+        using BlendOps = std::tuple<BlendImpl::Ops::UnpackByteHi>;
 
         using KernelParams = typename CombineLists<Types, BlendOps>::Result;
 
