@@ -49,24 +49,57 @@ namespace rocwmma
 
         using CrossLaneOps::Properties;
         using CrossLaneOps::BlockBCast;
+        using CrossLaneOps::OpBase;
+        using CrossLaneOps::RotateL;
+        using CrossLaneOps::RotateR;
 
-        constexpr uint32_t OP_IMPL  = Properties::OP_IMPL_PERMUTE;
+        constexpr uint32_t OP_IMPL_PERM  = Properties::OP_IMPL_PERMUTE;
+        constexpr uint32_t OP_IMPL_BPERM  = Properties::OP_IMPL_BPERMUTE;
         constexpr uint32_t OP_CTRL = 0x0; // Uses thread index calculation instead
 
         template<uint32_t BlockIdx>
-        struct BlockBCast32 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_32, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_32, BlockIdx>{};
+        struct BlockBCast32 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_32, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_32, BlockIdx>{};
 
         template<uint32_t BlockIdx>
-        struct BlockBCast16 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_16, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_16, BlockIdx>{};
+        struct BlockBCast16 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_16, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_16, BlockIdx>{};
 
         template<uint32_t BlockIdx>
-        struct BlockBCast8 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_8, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_8, BlockIdx>{};
+        struct BlockBCast8 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_8, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_8, BlockIdx>{};
 
         template<uint32_t BlockIdx>
-        struct BlockBCast4 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_4, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_4, BlockIdx>{};
+        struct BlockBCast4 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_4, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_4, BlockIdx>{};
 
         template<uint32_t BlockIdx>
-        struct BlockBCast2 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_2, OP_IMPL, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_2, BlockIdx>{};
+        struct BlockBCast2 : BlockBCast<BlockIdx, Properties::OP_GROUP_SIZE_2, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_bpermute_block_bcast<Properties::OP_GROUP_SIZE_2, BlockIdx>{};
+
+
+        template<uint32_t VW, uint32_t ElementShift>
+        struct Gather32 : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_32, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_interleave<Properties::OP_GROUP_SIZE_32, VW, ElementShift>{};
+
+        template<uint32_t VW, uint32_t ElementShift>
+        struct Scatter32 : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_32, OP_IMPL_PERM, OP_CTRL>, detail::amdgcn_interleave<Properties::OP_GROUP_SIZE_32, VW, ElementShift>{};
+
+        template<uint32_t VW, uint32_t ElementShift>
+        struct Gather16 : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_16, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_interleave<Properties::OP_GROUP_SIZE_16, VW, ElementShift>{};
+
+        template<uint32_t VW, uint32_t ElementShift>
+        struct Scatter16 : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_16, OP_IMPL_PERM, OP_CTRL>, detail::amdgcn_interleave<Properties::OP_GROUP_SIZE_16, VW, ElementShift>{};
+
+
+        template<uint32_t Distance>
+        struct RotateWaveL : RotateL<Distance, Properties::OP_GROUP_SIZE_WARP, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_rotate<Properties::OP_GROUP_SIZE_WARP, Distance>{};
+        template<uint32_t Distance>
+        struct RotateWaveR : RotateR<Distance, Properties::OP_GROUP_SIZE_WARP, OP_IMPL_PERM, OP_CTRL>, detail::amdgcn_rotate<Properties::OP_GROUP_SIZE_WARP, Distance>{};
+
+
+        template<uint32_t BlockSize>
+        struct DupLoBlockWave : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_WARP, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_duplicate_blocks<Properties::OP_GROUP_SIZE_WARP, BlockSize, 2u, 0u>{};
+
+        template<uint32_t BlockSize>
+        struct DupHiBlockWave : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_WARP, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_duplicate_blocks<Properties::OP_GROUP_SIZE_WARP, BlockSize, 2u, Properties::OP_GROUP_SIZE_WARP / BlockSize / 2u>{};
+
+        template<uint32_t GroupSize, uint32_t BlockSize, uint32_t DupCount, uint32_t Shift>
+        struct DupTest : OpBase<Properties::OP_ID_SHUFFLE, GroupSize, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_duplicate_blocks<GroupSize, BlockSize, DupCount, Shift>{};
 
         // clang-format on
     }
@@ -74,28 +107,29 @@ namespace rocwmma
     template <typename PermuteOp>
     struct Permute
     {
-        using PermuteFunc = detail::amdgcn_ds_bpermute;
+        using PermuteFunc =
+            typename std::conditional_t<PermuteOp::opImpl()
+                                            == CrossLaneOps::Properties::OP_IMPL_PERMUTE,
+                                        detail::amdgcn_ds_permute,
+                                        detail::amdgcn_ds_bpermute>;
 
         // Sanity checks
-        static_assert(PermuteOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_PERMUTE,
-                      "PermuteOp must use permute backend");
-        static_assert(PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_BLOCK_BCAST,
+        static_assert((PermuteOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_PERMUTE)
+                          || (PermuteOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_BPERMUTE),
+                      "PermuteOp must use permute or permute backend");
+        static_assert((PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_BLOCK_BCAST)
+                          || (PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_SHUFFLE),
                       "PermuteOp is unsupported");
 
         template <typename DataT>
-        ROCWMMA_DEVICE static DataT exec(DataT const& src, uint32_t laneId)
+        ROCWMMA_DEVICE static inline auto exec(DataT const& src)
         {
-            return PermuteFunc::exec(src, PermuteOp::threadCtrl(laneId));
-        }
-
-        template <typename DataT>
-        ROCWMMA_DEVICE static void exec(DataT& src, uint32_t laneId)
-        {
-            src = PermuteFunc::exec(src, PermuteOp::threadCtrl(laneId));
+            return PermuteFunc::exec(src,
+                                     PermuteOp::threadCtrl(detail::WaveSpace<>::localLaneId()));
         }
 
         template <typename DataT, uint32_t VecSize>
-        ROCWMMA_DEVICE static void exec(VecT<DataT, VecSize>& src, uint32_t laneId)
+        ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize>& src)
         {
             auto it = makeVectorIterator(src).begin();
             static_assert(decltype(it)::range() == VecSize,
@@ -105,29 +139,10 @@ namespace rocwmma
 #pragma unroll
             for(uint32_t i = 0; i < VecSize; ++i)
             {
-                *it = PermuteFunc::exec(*it, PermuteOp::threadCtrl(laneId));
+                *it = PermuteFunc::exec(*it,
+                                        PermuteOp::threadCtrl(detail::WaveSpace<>::localLaneId()));
                 it++;
             }
-        }
-
-        template <typename DataT, uint32_t VecSize>
-        ROCWMMA_DEVICE static auto exec(VecT<DataT, VecSize> const& src, uint32_t laneId)
-        {
-            VecT<DataT, VecSize> result;
-            auto                 itW = makeVectorIterator(result).begin();
-            auto const           itR = makeVectorIterator(src).begin();
-            static_assert(decltype(itW)::range() == VecSize,
-                          "VecSize inconsistent with iterator range");
-
-            // Loop through entire vector
-#pragma unroll
-            for(uint32_t i = 0; i < VecSize; ++i)
-            {
-                *itW = PermuteFunc::exec(*itR, PermuteOp::threadCtrl(laneId));
-                itW++;
-                itR++;
-            }
-            return result;
         }
     };
 

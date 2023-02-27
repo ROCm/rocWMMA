@@ -23,24 +23,31 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+#ifndef ROCWMMA_TRANSFORMS_HPP
+#define ROCWMMA_TRANSFORMS_HPP
 
-/*!\file
- * \brief rocwmma-version.hpp provides the configured version and settings
- */
+#include "vector.hpp"
 
-#ifndef ROCWMMA_API_VERSION_HPP
-#define ROCWMMA_API_VERSION_HPP
-
-// clang-format off
-#define ROCWMMA_VERSION_MAJOR       @rocwmma_VERSION_MAJOR@
-#define ROCWMMA_VERSION_MINOR       @rocwmma_VERSION_MINOR@
-#define ROCWMMA_VERSION_PATCH       @rocwmma_VERSION_PATCH@
-// clang-format on
-
-inline std::string rocwmma_get_version()
+namespace rocwmma
 {
-    return std::to_string(ROCWMMA_VERSION_MAJOR) + "." + std::to_string(ROCWMMA_VERSION_MINOR) + "."
-           + std::to_string(ROCWMMA_VERSION_PATCH);
-}
+    // AOS -> SOA
+    // Transform FROM mem friendly layout TO MFMA friendly layout
+    template <typename DataT>
+    __device__ void aos_soa_16x32_vw8_b32_opt(VecT<DataT, 8>& v);
+    template <typename DataT>
+    __device__ void aos_soa_16x16_vw4_b32_opt(VecT<DataT, 4>& v);
+    template <typename DataT>
+    __device__ void aos_soa_16x8_vw2_b32_opt(VecT<DataT, 2>& v);
 
-#endif // ROCWMMA_API_VERSION_HPP
+    // SOA -> AOS
+    // Transform FROM MFMA friendly layout to mem friendly layout
+    template <typename DataT>
+    __device__ void soa_aos_16x16_vw4_b32_opt(VecT<DataT, 4>& v);
+    template <typename DataT>
+    __device__ void soa_aos_16x8_vw2_b32_opt(VecT<DataT, 2>& v);
+
+} // namespace rocwmma
+
+#include "transforms_impl.hpp"
+
+#endif // ROCWMMA_TRANSFORMS_HPP

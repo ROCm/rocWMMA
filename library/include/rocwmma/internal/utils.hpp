@@ -301,6 +301,18 @@ namespace rocwmma
     }
 
     template <>
+    constexpr const char* dataTypeToString<int16_t>()
+    {
+        return "i16";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<uint16_t>()
+    {
+        return "u16";
+    }
+
+    template <>
     constexpr const char* dataTypeToString<int32_t>()
     {
         return "i32";
