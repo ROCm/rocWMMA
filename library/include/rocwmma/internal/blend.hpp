@@ -26,9 +26,11 @@
 #ifndef ROCWMMA_BLEND_HPP
 #define ROCWMMA_BLEND_HPP
 
-#include "blend_impl.hpp"
+// clang-format off
 #include "cross_lane_ops.hpp"
+#include "blend_impl.hpp"
 #include "vector.hpp"
+// clang-format on
 
 namespace rocwmma
 {
