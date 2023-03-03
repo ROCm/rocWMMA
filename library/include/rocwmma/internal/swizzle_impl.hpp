@@ -31,15 +31,55 @@
 
 namespace rocwmma
 {
-
-    //
-    namespace detail
+    namespace SwizzleImpl
     {
-        // Ctrl generators
-        namespace SwizzleCtrl
+        // Implementation meta-data
+        using CrossLaneOps::OpBase;
+        using CrossLaneOps::Properties;
+
+        // Dpp backend
+        using Properties::OP_IMPL_SWIZZLE;
+
+        // Functional
+        using Properties::OP_ID_BCAST;
+        using Properties::OP_ID_FFT;
+        using Properties::OP_ID_REVERSE;
+        using Properties::OP_ID_ROTATE;
+        using Properties::OP_ID_SHUFFLE;
+        using Properties::OP_ID_SWAP;
+
+        // Groups
+        using Properties::OP_GROUP_SIZE_16;
+        using Properties::OP_GROUP_SIZE_2;
+        using Properties::OP_GROUP_SIZE_32;
+        using Properties::OP_GROUP_SIZE_4;
+        using Properties::OP_GROUP_SIZE_8;
+        using Properties::OP_GROUP_SIZE_WARP;
+
+        // Detail
+        using Properties::OP_DIR_L;
+        using Properties::OP_DIR_R;
+
+        namespace Backend
+        {
+            template <class SwizzleCtrl>
+            struct amdgcn_swizzle
+            {
+                template <typename DataT>
+                ROCWMMA_DEVICE static inline DataT exec(DataT input)
+                {
+                    reinterpret_cast<int32_t&>(input) = __builtin_amdgcn_ds_swizzle(
+                        reinterpret_cast<int32_t const&>(input), SwizzleCtrl::opCtrl());
+                    return input;
+                }
+            };
+
+        } // namespace Backend
+
+        namespace Ctrl
         {
             template <uint32_t FftCtrl>
-            struct amdgcn_swizzle_fft
+            struct Fft
             {
             private:
                 enum Traits : uint32_t
@@ -60,7 +100,7 @@ namespace rocwmma
             };
 
             template <uint32_t RotationDir, uint32_t RotationDist, uint32_t GroupSize>
-            struct amdgcn_swizzle_rotate
+            struct Rotate
             {
             private:
                 enum Traits : uint32_t
@@ -89,7 +129,7 @@ namespace rocwmma
             };
 
             template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
-            struct amdgcn_swizzle_shuffle_4
+            struct Shuffle4
             {
             private:
                 enum Traits : uint32_t
@@ -114,7 +154,7 @@ namespace rocwmma
             };
 
             template <uint32_t XorMask, uint32_t OrMask, uint32_t AndMask>
-            struct amdgcn_swizzle_manual
+            struct Manual
             {
             private:
                 enum Traits : uint32_t
@@ -139,21 +179,284 @@ namespace rocwmma
                 }
             };
 
-        } // namespace SwizzleCtrl
+            template <uint32_t ElementIdx, uint32_t SubGroupSize>
+            using BCast = Manual<0x0, ElementIdx, 0x20 - SubGroupSize>;
 
-        template <uint32_t SwizzleCtrl>
-        struct amdgcn_swizzle
+            template <uint32_t SubGroupSize>
+            using Reverse = Manual<SubGroupSize - 0x1, 0x00, 0x1F>;
+
+            template <uint32_t SubGroupSize>
+            using Swap = Manual<SubGroupSize, 0x00, 0x1F>;
+
+        } // namespace Ctrl
+
+        namespace OpsBase
         {
-            template <typename DataT>
-            ROCWMMA_DEVICE static inline DataT exec(DataT input)
-            {
-                reinterpret_cast<int32_t&>(input) = __builtin_amdgcn_ds_swizzle(
-                    reinterpret_cast<int32_t const&>(input), SwizzleCtrl);
-                return input;
-            }
-        };
+            template <uint32_t OpId, uint32_t SubGroupSize>
+            using SwzOp = OpBase<OpId, SubGroupSize, OP_IMPL_SWIZZLE>;
 
-    } // namespace detail
+            /*! \class BCast
+            *  \brief Performs localized broadcast of one element in each sub-group to the entire sub-group.
+            *
+            * @tparam ElementIdx - element index to broadcast to rest of the sub-group
+            */
+            template <uint32_t ElementIdx, uint32_t SubGroupSize>
+            struct BCast : public SwzOp<OP_ID_BCAST, SubGroupSize>,
+                           public Backend::amdgcn_swizzle<Ctrl::BCast<ElementIdx, SubGroupSize>>
+            {
+                enum : uint32_t
+                {
+                    ELEMENT_IDX = ElementIdx,
+                };
+
+                constexpr static uint32_t elementIdx()
+                {
+                    return ELEMENT_IDX;
+                }
+            };
+
+            /*! \class Fft
+            *  \brief Supports FFT-like cross-bar transforms
+            */
+            template <uint32_t SubGroupSize, uint32_t FftCtrl>
+            struct Fft : public SwzOp<OP_ID_FFT, SubGroupSize>,
+                         public Backend::amdgcn_swizzle<Ctrl::Fft<FftCtrl>>
+            {
+                enum : uint32_t
+                {
+                    FFT_CTRL = FftCtrl
+                };
+
+                constexpr static uint32_t fftCtrl()
+                {
+                    return FFT_CTRL;
+                }
+            };
+
+            /*! \class Reverse
+            *  \brief Perform reversal of elements in sub-groups of <SubGroupSize> threads.
+            */
+            template <uint32_t SubGroupSize>
+            struct Reverse : public SwzOp<OP_ID_REVERSE, SubGroupSize>,
+                             public Backend::amdgcn_swizzle<Ctrl::Reverse<SubGroupSize>>
+            {
+            };
+
+            /*! \class Rotate
+            *  \brief Perform element-wise rotation in direction <RotateDir> in sub-groups of <SubGroupSize> threads.
+            *
+            * @tparam RotateDir rotation direction: see Properties
+            * @tparam RotateDistance element positions to move in specified direction. Positions wrapped by sub group size.
+            */
+            template <uint32_t RotateDir, uint32_t RotateDist, uint32_t SubGroupSize>
+            struct Rotate
+                : public SwzOp<OP_ID_ROTATE, SubGroupSize>,
+                  public Backend::amdgcn_swizzle<Ctrl::Rotate<RotateDir, RotateDist, SubGroupSize>>
+            {
+                enum : uint32_t
+                {
+                    OP_DIR  = RotateDir,
+                    OP_DIST = RotateDist
+                };
+
+                constexpr static uint32_t opDir()
+                {
+                    return OP_DIR;
+                }
+                constexpr static uint32_t opDist()
+                {
+                    return OP_DIST;
+                }
+            };
+
+            template <uint32_t RotateDistance, uint32_t SubGroupSize>
+            using RotateR = Rotate<OP_DIR_R, RotateDistance, SubGroupSize>;
+
+            template <uint32_t RotateDistance, uint32_t SubGroupSize>
+            using RotateL = Rotate<OP_DIR_L, RotateDistance, SubGroupSize>;
+
+            /*! \class Shuffle
+            *  \brief Perform localized shuffling within sub-groups of <SubGroupSize> threads.
+            */
+            template <uint32_t SubGroupSize, class ShuffleCtrl>
+            struct Shuffle : public SwzOp<OP_ID_SHUFFLE, SubGroupSize>,
+                             public Backend::amdgcn_swizzle<ShuffleCtrl>
+            {
+            };
+
+            // Common Shuffle variants
+            /*! \class Shuffle<N>
+            *  \brief Perform localized shuffling within all sub-groups of <N> threads.
+            * <N> = group size.
+            *
+            * @tparam Select0 - index of element to shuffle to index 0
+            * @tparam Select1 - index of element to shuffle to index 1
+            * @tparam Select2 - index of element to shuffle to index 2
+            * @tparam Select3 - index of element to shuffle to index 3
+            */
+            template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
+            struct Shuffle4 : public Shuffle<OP_GROUP_SIZE_4,
+                                             Ctrl::Shuffle4<Select0, Select1, Select2, Select3>>
+            {
+                enum : uint32_t
+                {
+                    SELECT_0 = Select0,
+                    SELECT_1 = Select1,
+                    SELECT_2 = Select2,
+                    SELECT_3 = Select3,
+                };
+
+                constexpr static uint32_t select0()
+                {
+                    return SELECT_0;
+                }
+                constexpr static uint32_t select1()
+                {
+                    return SELECT_1;
+                }
+                constexpr static uint32_t select2()
+                {
+                    return SELECT_2;
+                }
+                constexpr static uint32_t select3()
+                {
+                    return SELECT_3;
+                }
+            };
+
+            template <uint32_t Select0, uint32_t Select1>
+            struct Shuffle2 : public Shuffle<OP_GROUP_SIZE_2,
+                                             Ctrl::Shuffle4<Select0,
+                                                            Select1,
+                                                            Select0 + OP_GROUP_SIZE_2,
+                                                            Select1 + OP_GROUP_SIZE_2>>
+            {
+                enum : uint32_t
+                {
+                    SELECT_0 = Select0,
+                    SELECT_1 = Select1,
+                };
+
+                constexpr static uint32_t select0()
+                {
+                    return SELECT_0;
+                }
+                constexpr static uint32_t select1()
+                {
+                    return SELECT_1;
+                }
+            };
+
+            /*! \class Swap
+            *  \brief Perform swap of neigbouring sub-groups of <SubGroupSize> threads.
+            */
+            template <uint32_t SubGroupSize>
+            struct Swap : public SwzOp<OP_ID_SWAP, SubGroupSize>,
+                          public Backend::amdgcn_swizzle<Ctrl::Swap<SubGroupSize>>
+            {
+            };
+
+        } // namespace OpsBase
+
+        namespace Ops
+        {
+
+            /**
+             * \ingroup Cross-Lane Operations
+             * \defgroup Swizzle Ops
+             *
+             * @brief Cross-lane operations implemented with the amdgcn_ds_swizzle backend.
+             */
+
+            // clang-format off
+
+            // BCast variants
+            template <uint32_t ElementIdx>
+            using BCast32 = OpsBase::BCast<ElementIdx, OP_GROUP_SIZE_32>;
+
+            template <uint32_t ElementIdx>
+            using BCast16 = OpsBase::BCast<ElementIdx, OP_GROUP_SIZE_16>;
+
+            template <uint32_t ElementIdx>
+            using BCast8 = OpsBase::BCast<ElementIdx, OP_GROUP_SIZE_8>;
+
+            template <uint32_t ElementIdx>
+            using BCast4 = OpsBase::BCast<ElementIdx, OP_GROUP_SIZE_4>;
+
+            template <uint32_t ElementIdx>
+            using BCast2 = OpsBase::BCast<ElementIdx, OP_GROUP_SIZE_2>;
+
+            // Reverse variants
+            using Reverse32 = OpsBase::Reverse<OP_GROUP_SIZE_32>;
+
+            using Reverse16 = OpsBase::Reverse<OP_GROUP_SIZE_16>;
+
+            using Reverse8 = OpsBase::Reverse<OP_GROUP_SIZE_8>;
+
+            using Reverse4 = OpsBase::Reverse<OP_GROUP_SIZE_4>;
+
+            using Reverse2 = OpsBase::Reverse<OP_GROUP_SIZE_2>;
+
+            // RotateL variants
+            template <uint32_t RotateDistance>
+            using RotateL32 = OpsBase::RotateL<RotateDistance, OP_GROUP_SIZE_32>;
+
+            template <uint32_t RotateDistance>
+            using RotateL16 = OpsBase::RotateL<RotateDistance, OP_GROUP_SIZE_16>;
+
+            template <uint32_t RotateDistance>
+            using RotateL8 = OpsBase::RotateL<RotateDistance, OP_GROUP_SIZE_8>;
+
+            template <uint32_t RotateDistance>
+            using RotateL4 = OpsBase::RotateL<RotateDistance, OP_GROUP_SIZE_4>;
+
+            template <uint32_t RotateDistance>
+            using RotateL2 = OpsBase::RotateL<RotateDistance, OP_GROUP_SIZE_2>;
+
+            // RotateR variants
+            template <uint32_t RotateDistance>
+            using RotateR32 = OpsBase::RotateR<RotateDistance, OP_GROUP_SIZE_32>;
+
+            template <uint32_t RotateDistance>
+            using RotateR16 = OpsBase::RotateR<RotateDistance, OP_GROUP_SIZE_16>;
+
+            template <uint32_t RotateDistance>
+            using RotateR8 = OpsBase::RotateR<RotateDistance, OP_GROUP_SIZE_8>;
+
+            template <uint32_t RotateDistance>
+            using RotateR4 = OpsBase::RotateR<RotateDistance, OP_GROUP_SIZE_4>;
+
+            template <uint32_t RotateDistance>
+            using RotateR2 = OpsBase::RotateR<RotateDistance, OP_GROUP_SIZE_2>;
+
+            // Shuffle variants
+            template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
+            using Shuffle4 = OpsBase::Shuffle4<Select0, Select1, Select2, Select3>;
+
+            template <uint32_t Select0, uint32_t Select1>
+            using Shuffle2 = OpsBase::Shuffle2<Select0, Select1>;
+
+            // Swap variants
+            using Swap16 = OpsBase::Swap<OP_GROUP_SIZE_16>;
+
+            using Swap8 = OpsBase::Swap<OP_GROUP_SIZE_8>;
+
+            using Swap4 = OpsBase::Swap<OP_GROUP_SIZE_4>;
+
+            using Swap2 = OpsBase::Swap<OP_GROUP_SIZE_2>;
+
+            /*! \class Fft
+            *  \brief Supports FFT-like cross-bar transforms
+            *
+            * @tparam FftCtrl - 5-bit swizzle code (see instruction ISA for layouts)
+            */
+            template <uint32_t SubGroupSize, uint32_t FftCtrl>
+            using Fft = OpsBase::Fft<SubGroupSize, FftCtrl>;
+
+            // clang-format on
+        } // namespace Ops
+
+    } // namespace SwizzleImpl
 
 } // namespace rocwmma
 

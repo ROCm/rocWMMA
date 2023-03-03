@@ -41,7 +41,7 @@ namespace rocwmma
         // Types: Base IOC + double
         using Types = typename Base::TestTypes16;
 
-        using DppOps = std::tuple<DppOps::RotateR2<0>, DppOps::RotateR2<1>>;
+        using DppOps = std::tuple<DppImpl::Ops::RotateR2<0>, DppImpl::Ops::RotateR2<1>>;
 
         // Test random assortment of banks and rows
         using WriteRowMasks  = std::tuple<I<0xF>, I<0x5>, I<0xA>>;
