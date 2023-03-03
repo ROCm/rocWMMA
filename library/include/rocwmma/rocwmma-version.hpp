@@ -23,32 +23,24 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_TRANSFORMS_API_HPP
-#define ROCWMMA_TRANSFORMS_API_HPP
 
-#include "rocwmma.hpp"
-#include "rocwmma_transforms_impl.hpp"
+/*!\file
+ * \brief rocwmma-version.hpp provides the configured version and settings
+ */
 
-namespace rocwmma
+#ifndef ROCWMMA_API_VERSION_HPP
+#define ROCWMMA_API_VERSION_HPP
+
+// clang-format off
+#define ROCWMMA_VERSION_MAJOR       1
+#define ROCWMMA_VERSION_MINOR       0
+#define ROCWMMA_VERSION_PATCH       0
+// clang-format on
+
+inline std::string rocwmma_get_version()
 {
-    // Implicit transpose of fragment
-    template <typename FragT>
-    using ApplyTranspose_t = typename detail::template ApplyTranspose<FragT>::Type;
+    return std::to_string(ROCWMMA_VERSION_MAJOR) + "." + std::to_string(ROCWMMA_VERSION_MINOR) + "."
+           + std::to_string(ROCWMMA_VERSION_PATCH);
+}
 
-    // Implicit layout change of fragment
-    template <typename FragT, typename NewDataLayoutT>
-    using ApplyDataLayout_t =
-        typename detail::template ApplyDataLayout<FragT, NewDataLayoutT>::Type;
-
-    template <typename FragT>
-    using ApplyRegisterFile_t = typename detail::template ApplyRegisterFile<FragT>::Type;
-
-    template <typename FragT>
-    ROCWMMA_DEVICE static inline decltype(auto) applyTranspose(FragT&& frag);
-
-    template <typename DataLayoutT, typename FragT>
-    ROCWMMA_DEVICE static inline decltype(auto) applyDataLayout(FragT&& frag);
-
-} // namespace rocwmma
-
-#endif // ROCWMMA_TRANSFORMS_API_HPP
+#endif // ROCWMMA_API_VERSION_HPP
