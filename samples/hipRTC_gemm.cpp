@@ -36,39 +36,11 @@
 
 #include "common.hpp"
 
+using rocwmma::col_major;
 using rocwmma::float16_t;
 using rocwmma::float32_t;
 using rocwmma::float64_t;
-
-// Host GEMM validation
-__host__ void gemm_cpu_h(uint32_t         m,
-                         uint32_t         n,
-                         uint32_t         k,
-                         float16_t const* a,
-                         float16_t const* b,
-                         float32_t const* c,
-                         float32_t*       d,
-                         uint32_t         lda,
-                         uint32_t         ldb,
-                         uint32_t         ldc,
-                         uint32_t         ldd,
-                         float32_t        alpha,
-                         float32_t        beta)
-{
-    for(int i = 0; i < m; ++i)
-    {
-        for(int j = 0; j < n; ++j)
-        {
-            float32_t accum = 0.0f;
-            for(int h = 0; h < k; ++h)
-            {
-                accum += static_cast<float32_t>(a[i * lda + h])
-                         * static_cast<float32_t>(b[j * ldb + h]);
-            }
-            d[i * ldd + j] = alpha * accum + beta * c[i * ldc + j];
-        }
-    }
-}
+using rocwmma::row_major;
 
 // Supports ROCWMMA_M/N square sizes of
 // : 16 x 16
@@ -265,9 +237,9 @@ int main()
     // Fill outputs with NaN to catch contamination
     std::vector<float32_t> matrixD(m * n, std::numeric_limits<float32_t>::signaling_NaN());
 
-    fill(matrixA.data(), m, k);
-    fill(matrixB.data(), k, n);
-    fill(matrixC.data(), m, n);
+    fillRand(matrixA.data(), m, k);
+    fillRand(matrixB.data(), k, n);
+    fillRand(matrixC.data(), m, n);
 
     std::cout << "Initializing device data..." << std::endl;
 
@@ -347,8 +319,8 @@ int main()
     CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
 
     // GEMM flops converge to 2*mnk
-    auto gFlops       = 2.0 * static_cast<double>(m * n * k) * 1.0e-9;
-    auto tFlopsPerSec = gFlops / static_cast<double>(elapsedTimeMs);
+    auto gFlops       = calculateGFlops(m, n, k);
+    auto tFlopsPerSec = calculateTFlopsPerSec(m, n, k, static_cast<double>(elapsedTimeMs));
 
     // Echo performance
     std::cout << "BlkM, BlkN, BlkK, "
@@ -369,21 +341,32 @@ int main()
 
     // Setup and run reference computation
     std::vector<float32_t> matrixD_ref(m * n, std::numeric_limits<float32_t>::signaling_NaN());
-    gemm_cpu_h(m,
-               n,
-               k,
-               matrixA.data(),
-               matrixB.data(),
-               matrixC.data(),
-               matrixD_ref.data(),
-               lda,
-               ldb,
-               ldc,
-               ldd,
-               alpha,
-               beta);
+    gemm_cpu_h<float16_t, float32_t, float32_t, row_major, col_major, row_major>(m,
+                                                                                 n,
+                                                                                 k,
+                                                                                 matrixA.data(),
+                                                                                 matrixB.data(),
+                                                                                 matrixC.data(),
+                                                                                 matrixD_ref.data(),
+                                                                                 lda,
+                                                                                 ldb,
+                                                                                 ldc,
+                                                                                 ldd,
+                                                                                 alpha,
+                                                                                 beta);
 
-    compareEqual<float32_t>(matrixD.data(), matrixD_ref.data(), m * n);
+    auto res = compareEqual<float32_t>(matrixD.data(), matrixD_ref.data(), m * n);
+
+    if(std::get<0>(res) == false)
+    {
+        std::cout << "FAILED!\n";
+    }
+    else
+    {
+        std::cout << "PASSED!\n";
+    }
+
+    std::cout << "Max relative error: " << std::get<1>(res) << std::endl;
 
     // Release device memory
     CHECK_HIP_ERROR(hipFree(d_a));

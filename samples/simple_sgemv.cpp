@@ -35,9 +35,14 @@
 
 #include "common.hpp"
 
+using rocwmma::accumulator;
+using rocwmma::col_major;
 using rocwmma::float16_t;
 using rocwmma::float32_t;
 using rocwmma::float64_t;
+using rocwmma::matrix_a;
+using rocwmma::matrix_b;
+using rocwmma::row_major;
 
 // Host sgemv validation
 __host__ void sgemv_cpu_h(uint32_t         m,
@@ -112,22 +117,12 @@ __global__ void sgemv_rocwmma_d(uint32_t         m,
                                 float32_t        beta)
 {
     // Create frags
-    auto fragA = rocwmma::fragment<rocwmma::matrix_a,
-                                   ROCWMMA_M,
-                                   ROCWMMA_N,
-                                   ROCWMMA_K,
-                                   float16_t,
-                                   rocwmma::row_major>();
-    auto fragB = rocwmma::fragment<rocwmma::matrix_b,
-                                   ROCWMMA_M,
-                                   ROCWMMA_N,
-                                   ROCWMMA_K,
-                                   float16_t,
-                                   rocwmma::col_major>();
-    auto fragC
-        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
-    auto fragAcc
-        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
+    auto fragA
+        = rocwmma::fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t, row_major>();
+    auto fragB
+        = rocwmma::fragment<matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t, col_major>();
+    auto fragC   = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
+    auto fragAcc = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
 
     rocwmma::fill_fragment(fragAcc, 0.0f);
 
@@ -181,8 +176,8 @@ __host__ void sgemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float 
     std::vector<float16_t> matrixB(k * 1); // vector
     std::vector<float32_t> matrixC(m * 1, 1.0); //accum
 
-    fill(matrixA.data(), m, k);
-    fill(matrixB.data(), k, 1);
+    fillRand(matrixA.data(), m, k);
+    fillRand(matrixB.data(), k, 1);
 
     std::cout << "Initializing device data..." << std::endl;
     // Allocate and copy device memory
@@ -254,7 +249,18 @@ __host__ void sgemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float 
     std::vector<float32_t> matrixC_host(matrixC);
     sgemv_cpu_h(m, n, k, matrixA.data(), matrixB.data(), matrixC_host.data(), alpha, beta);
 
-    compareEqual<float32_t>(matrixC_host.data(), matrixC_device.data(), m);
+    auto res = compareEqual<float32_t>(matrixC_host.data(), matrixC_device.data(), m);
+
+    if(std::get<0>(res) == false)
+    {
+        std::cout << "FAILED!\n";
+    }
+    else
+    {
+        std::cout << "PASSED!\n";
+    }
+
+    std::cout << "Max relative error: " << std::get<1>(res) << std::endl;
 
     // Release device memory
     CHECK_HIP_ERROR(hipFree(d_a));

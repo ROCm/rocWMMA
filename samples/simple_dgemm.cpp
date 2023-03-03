@@ -34,9 +34,14 @@
 
 #include "common.hpp"
 
+using rocwmma::accumulator;
+using rocwmma::col_major;
 using rocwmma::float16_t;
 using rocwmma::float32_t;
 using rocwmma::float64_t;
+using rocwmma::matrix_a;
+using rocwmma::matrix_b;
+using rocwmma::row_major;
 
 // Supports ROCWMMA_M/N square sizes of
 // : 16 x 16
@@ -88,22 +93,12 @@ __global__ void sgemm_rocwmma_d(uint32_t         m,
                                 float64_t        beta)
 {
     // Create frags
-    auto fragA = rocwmma::fragment<rocwmma::matrix_a,
-                                   ROCWMMA_M,
-                                   ROCWMMA_N,
-                                   ROCWMMA_K,
-                                   float64_t,
-                                   rocwmma::row_major>();
-    auto fragB = rocwmma::fragment<rocwmma::matrix_b,
-                                   ROCWMMA_M,
-                                   ROCWMMA_N,
-                                   ROCWMMA_K,
-                                   float64_t,
-                                   rocwmma::col_major>();
-    auto fragC
-        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t>();
-    auto fragAcc
-        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t>();
+    auto fragA
+        = rocwmma::fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t, row_major>();
+    auto fragB
+        = rocwmma::fragment<matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t, col_major>();
+    auto fragC   = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t>();
+    auto fragAcc = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t>();
 
     rocwmma::fill_fragment(fragAcc, static_cast<float64_t>(0.0));
 
@@ -167,9 +162,9 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha, flo
     // Fill outputs with NaN to catch contamination
     std::vector<float64_t> matrixD(m * n, std::numeric_limits<float64_t>::signaling_NaN());
 
-    fill(matrixA.data(), m, k);
-    fill(matrixB.data(), k, n);
-    fill(matrixC.data(), m, n);
+    fillRand(matrixA.data(), m, k);
+    fillRand(matrixB.data(), k, n);
+    fillRand(matrixC.data(), m, n);
 
     std::cout << "Initializing device data..." << std::endl;
 
@@ -233,8 +228,8 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha, flo
     CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
 
     // GEMM flops converge to 2*mnk
-    auto gFlops       = 2.0 * static_cast<double>(m * n * k) * 1.0e-9;
-    auto tFlopsPerSec = gFlops / static_cast<double>(elapsedTimeMs);
+    auto gFlops       = calculateGFlops(m, n, k);
+    auto tFlopsPerSec = calculateTFlopsPerSec(m, n, k, static_cast<double>(elapsedTimeMs));
 
     // Echo performance
     std::cout << "BlkM, BlkN, BlkK, "
@@ -255,21 +250,32 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha, flo
 
     // Setup and run reference computation
     std::vector<float64_t> matrixD_ref(m * n, std::numeric_limits<float64_t>::signaling_NaN());
-    gemm_cpu_h<float64_t, float64_t, float64_t>(m,
-                                                n,
-                                                k,
-                                                matrixA.data(),
-                                                matrixB.data(),
-                                                matrixC.data(),
-                                                matrixD_ref.data(),
-                                                lda,
-                                                ldb,
-                                                ldc,
-                                                ldd,
-                                                alpha,
-                                                beta);
+    gemm_cpu_h<float64_t, float64_t, float64_t, row_major, col_major, row_major>(m,
+                                                                                 n,
+                                                                                 k,
+                                                                                 matrixA.data(),
+                                                                                 matrixB.data(),
+                                                                                 matrixC.data(),
+                                                                                 matrixD_ref.data(),
+                                                                                 lda,
+                                                                                 ldb,
+                                                                                 ldc,
+                                                                                 ldd,
+                                                                                 alpha,
+                                                                                 beta);
 
-    compareEqual<float64_t>(matrixD.data(), matrixD_ref.data(), m * n);
+    auto res = compareEqual<float64_t>(matrixD.data(), matrixD_ref.data(), m * n);
+
+    if(std::get<0>(res) == false)
+    {
+        std::cout << "FAILED!\n";
+    }
+    else
+    {
+        std::cout << "PASSED!\n";
+    }
+
+    std::cout << "Max relative error: " << std::get<1>(res) << std::endl;
 
     // Release device memory
     CHECK_HIP_ERROR(hipFree(d_a));
@@ -283,13 +289,13 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha, flo
 int main()
 {
     // Test for f64 device support
-    if(isF64Supported())
+    if(!isF64Supported())
     {
-        gemm_test(256, 256, 256, 2.1, 2.1);
+        std::cout << "f64 dgemm not supported on this device" << std::endl;
     }
     else
     {
-        std::cout << "f64 dgemm not supported on this device" << std::endl;
+        gemm_test(256, 256, 256, 2.1, 2.1);
     }
 
     return 0;
