@@ -41,7 +41,7 @@ namespace rocwmma
         // Types: Base IOC + double
         using Types = typename Base::TestTypes16;
 
-        using PermuteOps = std::tuple<PermuteOps::BlockBCast32<0>>;
+        using PermuteOps = std::tuple<PermuteImpl::Ops::BlockBCast32<0>>;
 
         using KernelParams = typename CombineLists<Types, PermuteOps>::Result;
 

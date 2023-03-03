@@ -833,7 +833,7 @@ namespace rocwmma
         RefFunc dispatcher = nullptr;
 
         // Select reference function
-        if constexpr(CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_BLEND_BYTE)
+        if constexpr(CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_PERM_BYTE)
         {
             if constexpr(CrossLaneOp::groupSize() == 1u)
             {

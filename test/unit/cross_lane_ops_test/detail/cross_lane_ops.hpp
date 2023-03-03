@@ -116,7 +116,6 @@ namespace rocwmma
             return stream << "DataT,"
                           << "Op_Id, "
                           << "Op_Impl, "
-                          << "Op_Ctrl, "
                           << "Wave_Size, "
                           << "Group_Size, "
                           << "WriteRowMask, "
@@ -129,7 +128,6 @@ namespace rocwmma
             std::ios_base::fmtflags f(stream.flags()); // save flags state
             stream << dataTypeToString<DataT>() << ", " << CrossLaneOp::opId() << ", "
                    << CrossLaneOp::opImpl() << ", ";
-            stream << std::showbase << std::hex << CrossLaneOp::opCtrl() << ", ";
             stream.flags(f);
             stream << "w" << Base::DeviceInfo::instance()->warpSize() << ", "
                    << CrossLaneOp::groupSize() << ", ";

@@ -54,12 +54,14 @@ namespace rocwmma
             OP_ID_BLOCK_BCAST = 0x07, // broadcast block
             OP_ID_WFALL_BCAST = 0x08, // broadcast last element to next block
             OP_ID_MOVE        = 0x09, // move, or copy
+            OP_ID_GATHER      = 0x0A, // Interleave elements bwd
+            OP_ID_SCATTER     = 0x0B, // Interleave elements fwd
 
             // Blending operations between two sources
-            OP_ID_BLEND_BYTE = 0x0A, // byte-wise blend
-            OP_ID_BLEND      = 0x0B, // element-wise blend
+            OP_ID_PERM_BYTE = 0x40, // byte-wise permute
+            OP_ID_BLEND     = 0x41, // element-wise blend
 
-            // Sub group size
+            // Sub group size (elements)
             OP_GROUP_SIZE_1    = 0x01, // Op affects sub-groups of 1
             OP_GROUP_SIZE_2    = 0x02, // Op affects sub-groups of 2
             OP_GROUP_SIZE_4    = 0x04, // Op affects sub-groups of 4
@@ -86,19 +88,16 @@ namespace rocwmma
         *  \brief Container for meta-properties common to many cross-lane operations.
         *
         * @tparam OpId classification of the operation: see Properties
-        * @tparam ThreadCount number of active threads per wave (wave32 or wave64)
         * @tparam SubGroupSize most operations repeat for groups of threads in the entire register
         * @tparam OpImpl backend implementation of the op: see Properties
-        * @tparam OpCtrl backend-specific control code to invoke the operation.
         */
-        template <uint32_t OpId, uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
+        template <uint32_t OpId, uint32_t SubGroupSize, uint32_t OpImpl>
         struct OpBase
         {
             enum : uint32_t
             {
                 OP_ID      = OpId,
                 OP_IMPL    = OpImpl,
-                OP_CTRL    = OpCtrl,
                 GROUP_SIZE = SubGroupSize,
             };
 
@@ -109,10 +108,6 @@ namespace rocwmma
             constexpr static uint32_t opImpl()
             {
                 return OP_IMPL;
-            }
-            constexpr static uint32_t opCtrl()
-            {
-                return OP_CTRL;
             }
             constexpr static uint32_t groupSize()
             {
@@ -126,12 +121,8 @@ namespace rocwmma
         * @tparam RotateDir rotation direction: see Properties
         * @tparam RotateDistance element positions to move in specified direction. Positions wrapped by sub group size.
         */
-        template <uint32_t RotateDir,
-                  uint32_t RotateDist,
-                  uint32_t SubGroupSize,
-                  uint32_t OpImpl,
-                  uint32_t OpCtrl>
-        struct Rotate : public OpBase<Properties::OP_ID_ROTATE, SubGroupSize, OpImpl, OpCtrl>
+        template <uint32_t RotateDir, uint32_t RotateDist, uint32_t SubGroupSize, uint32_t OpImpl>
+        struct Rotate : public OpBase<Properties::OP_ID_ROTATE, SubGroupSize, OpImpl>
         {
             enum : uint32_t
             {
@@ -149,11 +140,11 @@ namespace rocwmma
             }
         };
 
-        template <uint32_t RotateDistance, uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
-        using RotateR = Rotate<Properties::OP_DIR_R, RotateDistance, SubGroupSize, OpImpl, OpCtrl>;
+        template <uint32_t RotateDistance, uint32_t SubGroupSize, uint32_t OpImpl>
+        using RotateR = Rotate<Properties::OP_DIR_R, RotateDistance, SubGroupSize, OpImpl>;
 
-        template <uint32_t RotateDistance, uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
-        using RotateL = Rotate<Properties::OP_DIR_L, RotateDistance, SubGroupSize, OpImpl, OpCtrl>;
+        template <uint32_t RotateDistance, uint32_t SubGroupSize, uint32_t OpImpl>
+        using RotateL = Rotate<Properties::OP_DIR_L, RotateDistance, SubGroupSize, OpImpl>;
 
         /*! \class Shift
         *  \brief Perform element-wise shift in direction <ShiftDir> in sub-groups of <SubGroupSize> threads.
@@ -162,12 +153,8 @@ namespace rocwmma
         * @tparam ShiftDistance element positions to move in specified direction. Positions do not wrap around
         * the sub group size.
         */
-        template <uint32_t ShiftDir,
-                  uint32_t ShiftDist,
-                  uint32_t SubGroupSize,
-                  uint32_t OpImpl,
-                  uint32_t OpCtrl>
-        struct Shift : public OpBase<Properties::OP_ID_SHIFT, SubGroupSize, OpImpl, OpCtrl>
+        template <uint32_t ShiftDir, uint32_t ShiftDist, uint32_t SubGroupSize, uint32_t OpImpl>
+        struct Shift : public OpBase<Properties::OP_ID_SHIFT, SubGroupSize, OpImpl>
         {
             enum : uint32_t
             {
@@ -185,19 +172,19 @@ namespace rocwmma
             }
         };
 
-        template <uint32_t ShiftDistance, uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
-        using ShiftR = Shift<Properties::OP_DIR_R, ShiftDistance, SubGroupSize, OpImpl, OpCtrl>;
+        template <uint32_t ShiftDistance, uint32_t SubGroupSize, uint32_t OpImpl>
+        using ShiftR = Shift<Properties::OP_DIR_R, ShiftDistance, SubGroupSize, OpImpl>;
 
-        template <uint32_t ShiftDistance, uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
-        using ShiftL = Shift<Properties::OP_DIR_L, ShiftDistance, SubGroupSize, OpImpl, OpCtrl>;
+        template <uint32_t ShiftDistance, uint32_t SubGroupSize, uint32_t OpImpl>
+        using ShiftL = Shift<Properties::OP_DIR_L, ShiftDistance, SubGroupSize, OpImpl>;
 
         /*! \class BCast
         *  \brief Performs localized broadcast of one element in each sub-group to the entire sub-group.
         *
         * @tparam ElementIdx - element index to broadcast to rest of the sub-group
         */
-        template <uint32_t ElementIdx, uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
-        struct BCast : public OpBase<Properties::OP_ID_BCAST, SubGroupSize, OpImpl, OpCtrl>
+        template <uint32_t ElementIdx, uint32_t SubGroupSize, uint32_t OpImpl>
+        struct BCast : public OpBase<Properties::OP_ID_BCAST, SubGroupSize, OpImpl>
         {
             enum : uint32_t
             {
@@ -213,24 +200,24 @@ namespace rocwmma
         /*! \class Reverse
         *  \brief Perform reversal of elements in sub-groups of <SubGroupSize> threads.
         */
-        template <uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
-        struct Reverse : public OpBase<Properties::OP_ID_REVERSE, SubGroupSize, OpImpl, OpCtrl>
+        template <uint32_t SubGroupSize, uint32_t OpImpl>
+        struct Reverse : public OpBase<Properties::OP_ID_REVERSE, SubGroupSize, OpImpl>
         {
         };
 
         /*! \class Swap
         *  \brief Perform swap of neigbouring sub-groups of <SubGroupSize> threads.
         */
-        template <uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
-        struct Swap : public OpBase<Properties::OP_ID_SWAP, SubGroupSize, OpImpl, OpCtrl>
+        template <uint32_t SubGroupSize, uint32_t OpImpl>
+        struct Swap : public OpBase<Properties::OP_ID_SWAP, SubGroupSize, OpImpl>
         {
         };
 
         /*! \class Shuffle
         *  \brief Perform localized shuffling within sub-groups of <SubGroupSize> threads.
         */
-        template <uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
-        struct Shuffle : public OpBase<Properties::OP_ID_SHUFFLE, SubGroupSize, OpImpl, OpCtrl>
+        template <uint32_t SubGroupSize, uint32_t OpImpl>
+        struct Shuffle : public OpBase<Properties::OP_ID_SHUFFLE, SubGroupSize, OpImpl>
         {
         };
 
@@ -248,9 +235,8 @@ namespace rocwmma
                   uint32_t Select1,
                   uint32_t Select2,
                   uint32_t Select3,
-                  uint32_t OpImpl,
-                  uint32_t OpCtrl>
-        struct Shuffle4 : public Shuffle<Properties::OP_GROUP_SIZE_4, OpImpl, OpCtrl>
+                  uint32_t OpImpl>
+        struct Shuffle4 : public Shuffle<Properties::OP_GROUP_SIZE_4, OpImpl>
         {
             enum : uint32_t
             {
@@ -278,8 +264,8 @@ namespace rocwmma
             }
         };
 
-        template <uint32_t Select0, uint32_t Select1, uint32_t OpImpl, uint32_t OpCtrl>
-        struct Shuffle2 : public Shuffle<2u, OpImpl, OpCtrl>
+        template <uint32_t Select0, uint32_t Select1, uint32_t OpImpl>
+        struct Shuffle2 : public Shuffle<2u, OpImpl>
         {
             enum : uint32_t
             {
@@ -295,71 +281,6 @@ namespace rocwmma
             {
                 return SELECT_1;
             }
-        };
-
-        /*! \class Fft
-        *  \brief Supports FFT-like cross-bar transforms
-        */
-        template <uint32_t SubGroupSize, uint32_t FftCtrl, uint32_t OpImpl, uint32_t OpCtrl>
-        struct Fft : public OpBase<Properties::OP_ID_FFT, SubGroupSize, OpImpl, OpCtrl>
-        {
-            enum : uint32_t
-            {
-                FFT_CTRL = FftCtrl
-            };
-
-            constexpr static uint32_t fftCtrl()
-            {
-                return FFT_CTRL;
-            }
-        };
-
-        /*! \class BlendByte
-        *  \brief Perform byte-wise blending between two sources.
-        */
-        template <uint32_t Select0,
-                  uint32_t Select1,
-                  uint32_t Select2,
-                  uint32_t Select3,
-                  uint32_t OpImpl,
-                  uint32_t OpCtrl>
-        struct BlendByte : public OpBase<Properties::OP_ID_BLEND_BYTE,
-                                         Properties::OP_GROUP_SIZE_1,
-                                         OpImpl,
-                                         OpCtrl>
-        {
-            enum : uint32_t
-            {
-                SELECT_0 = Select0,
-                SELECT_1 = Select1,
-                SELECT_2 = Select2,
-                SELECT_3 = Select3,
-            };
-
-            constexpr static uint32_t select0()
-            {
-                return SELECT_0;
-            }
-            constexpr static uint32_t select1()
-            {
-                return SELECT_1;
-            }
-            constexpr static uint32_t select2()
-            {
-                return SELECT_2;
-            }
-            constexpr static uint32_t select3()
-            {
-                return SELECT_3;
-            }
-        };
-
-        /*! \class Blend
-        *  \brief Perform element-wise blending between two sources.
-        */
-        template <uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
-        struct Blend : public OpBase<Properties::OP_ID_BLEND, SubGroupSize, OpImpl, OpCtrl>
-        {
         };
 
         /*! \class BlockBCast
@@ -367,8 +288,8 @@ namespace rocwmma
         *
         * @tparam BlockIdx - block index to broadcast to rest of the other blocks.
         */
-        template <uint32_t BlockIdx, uint32_t BlockSize, uint32_t OpImpl, uint32_t OpCtrl>
-        struct BlockBCast : public OpBase<Properties::OP_ID_BLOCK_BCAST, BlockSize, OpImpl, OpCtrl>
+        template <uint32_t BlockIdx, uint32_t BlockSize, uint32_t OpImpl>
+        struct BlockBCast : public OpBase<Properties::OP_ID_BLOCK_BCAST, BlockSize, OpImpl>
         {
             enum : uint32_t
             {
@@ -379,28 +300,6 @@ namespace rocwmma
             {
                 return BlockIdx;
             }
-        };
-
-        /*! \class WFallBCast
-        *  \brief Performs broadcast of the last sub-group element to the next sub-group.
-        *
-        * @tparam SubGroupSize - size of the broadcast blocks.
-        */
-        template <uint32_t SubGroupSize, uint32_t OpImpl, uint32_t OpCtrl>
-        struct WFallBCast
-            : public OpBase<Properties::OP_ID_WFALL_BCAST, SubGroupSize, OpImpl, OpCtrl>
-        {
-        };
-
-        /*! \class Move
-        *  \brief Performs a copy of each element.
-        *
-        * @tparam SubGroupSize - size of the broadcast blocks.
-        */
-        template <uint32_t OpImpl, uint32_t OpCtrl>
-        struct Move
-            : public OpBase<Properties::OP_ID_MOVE, Properties::OP_GROUP_SIZE_WARP, OpImpl, OpCtrl>
-        {
         };
 
     } // namespace CrossLaneOps

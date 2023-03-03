@@ -41,10 +41,10 @@ namespace rocwmma
         // Types: Base IOC + double
         using Types = typename Base::TestTypes16;
 
-        using SwizzleOps = std::tuple<SwizzleOps::BCast4<0>,
-                                      SwizzleOps::BCast4<1>,
-                                      SwizzleOps::BCast4<2>,
-                                      SwizzleOps::BCast4<3>>;
+        using SwizzleOps = std::tuple<SwizzleImpl::Ops::BCast4<0>,
+                                      SwizzleImpl::Ops::BCast4<1>,
+                                      SwizzleImpl::Ops::BCast4<2>,
+                                      SwizzleImpl::Ops::BCast4<3>>;
 
         using KernelParams = typename CombineLists<Types, SwizzleOps>::Result;
 

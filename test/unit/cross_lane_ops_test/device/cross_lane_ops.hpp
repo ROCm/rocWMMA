@@ -52,7 +52,7 @@ namespace rocwmma
         // Get offset into 1D array where all threads are neighbours.
         auto dataOffset = blockIdx.x * blockDim.x + threadIdx.x;
         write32Out[dataOffset]
-            = rocwmma::Dpp<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
+            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
                 read32In[dataOffset], prev);
     }
 
@@ -71,7 +71,7 @@ namespace rocwmma
 
         // Get offset into 1D array where all threads are neighbours.
         auto dataOffset        = blockIdx.x * blockDim.x + threadIdx.x;
-        write32Out[dataOffset] = rocwmma::Swizzle<CrossLaneOp>::exec(read32In[dataOffset]);
+        write32Out[dataOffset] = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(read32In[dataOffset]);
     }
 
     template <typename DataT, typename CrossLaneOp>
@@ -89,7 +89,7 @@ namespace rocwmma
 
         // Get offset into 1D array where all threads are neighbours.
         auto dataOffset        = blockIdx.x * blockDim.x + threadIdx.x;
-        write32Out[dataOffset] = rocwmma::Permute<CrossLaneOp>::exec(read32In[dataOffset]);
+        write32Out[dataOffset] = rocwmma::Permute::Driver<CrossLaneOp>::exec(read32In[dataOffset]);
     }
 
     template <typename DataT, typename CrossLaneOp>
@@ -107,9 +107,9 @@ namespace rocwmma
         uint32_t const* read32In   = reinterpret_cast<uint32_t const*>(in);
 
         // Get offset into 1D array where all threads are neighbours.
-        auto dataOffset = blockIdx.x * blockDim.x + threadIdx.x;
-        write32Out[dataOffset]
-            = rocwmma::Blend<CrossLaneOp>::exec(write32Out[dataOffset], read32In[dataOffset]);
+        auto dataOffset        = blockIdx.x * blockDim.x + threadIdx.x;
+        write32Out[dataOffset] = rocwmma::Blend::Driver<CrossLaneOp>::exec(write32Out[dataOffset],
+                                                                           read32In[dataOffset]);
     }
 
 } // namespace rocwmma

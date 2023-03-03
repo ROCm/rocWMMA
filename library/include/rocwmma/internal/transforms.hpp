@@ -39,6 +39,9 @@ namespace rocwmma
     template <typename DataT>
     __device__ void aos_soa_16x8_vw2_b32_opt(VecT<DataT, 2>& v);
 
+    template <typename DataT>
+    __device__ void aos_soa_32x4_vw2_b32_opt(VecT<DataT, 2>& v);
+
     // SOA -> AOS
     // Transform FROM MFMA friendly layout to mem friendly layout
     template <typename DataT>
