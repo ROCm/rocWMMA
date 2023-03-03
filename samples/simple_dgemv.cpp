@@ -35,7 +35,12 @@
 
 #include "common.hpp"
 
+using rocwmma::accumulator;
+using rocwmma::col_major;
 using rocwmma::float64_t;
+using rocwmma::matrix_a;
+using rocwmma::matrix_b;
+using rocwmma::row_major;
 
 // Host dgemv validation
 __host__ void dgemv_cpu_h(uint32_t         m,
@@ -110,22 +115,12 @@ __global__ void dgemv_rocwmma_d(uint32_t         m,
                                 float64_t        beta)
 {
     // Create frags
-    auto fragA = rocwmma::fragment<rocwmma::matrix_a,
-                                   ROCWMMA_M,
-                                   ROCWMMA_N,
-                                   ROCWMMA_K,
-                                   float64_t,
-                                   rocwmma::row_major>();
-    auto fragB = rocwmma::fragment<rocwmma::matrix_b,
-                                   ROCWMMA_M,
-                                   ROCWMMA_N,
-                                   ROCWMMA_K,
-                                   float64_t,
-                                   rocwmma::col_major>();
-    auto fragC
-        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t>();
-    auto fragAcc
-        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t>();
+    auto fragA
+        = rocwmma::fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t, row_major>();
+    auto fragB
+        = rocwmma::fragment<matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t, col_major>();
+    auto fragC   = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t>();
+    auto fragAcc = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t>();
 
     rocwmma::fill_fragment(fragAcc, 0.0);
 
@@ -179,8 +174,8 @@ __host__ void dgemv_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha, fl
     std::vector<float64_t> matrixB(k * 1); // vector
     std::vector<float64_t> matrixC(m * 1, 1.0); //accum
 
-    fill(matrixA.data(), m, k);
-    fill(matrixB.data(), k, 1);
+    fillRand(matrixA.data(), m, k);
+    fillRand(matrixB.data(), k, 1);
 
     std::cout << "Initializing device data..." << std::endl;
     // Allocate and copy device memory
@@ -252,7 +247,18 @@ __host__ void dgemv_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha, fl
     std::vector<float64_t> matrixC_host(matrixC);
     dgemv_cpu_h(m, n, k, matrixA.data(), matrixB.data(), matrixC_host.data(), alpha, beta);
 
-    compareEqual<float64_t>(matrixC_host.data(), matrixC_device.data(), m);
+    auto res = compareEqual<float64_t>(matrixC_host.data(), matrixC_device.data(), m);
+
+    if(std::get<0>(res) == false)
+    {
+        std::cout << "FAILED!\n";
+    }
+    else
+    {
+        std::cout << "PASSED!\n";
+    }
+
+    std::cout << "Max relative error: " << std::get<1>(res) << std::endl;
 
     // Release device memory
     CHECK_HIP_ERROR(hipFree(d_a));
@@ -268,10 +274,14 @@ int main()
     const uint32_t k = 256;
     const uint32_t n = T_BLOCK_Y * ROCWMMA_N;
 
-    if(isF64Supported())
-        dgemv_test(m, n, k, 2.1, 2.1);
-    else
+    if(!isF64Supported())
+    {
         std::cout << "f64 dgemv not supported on this device" << std::endl;
+    }
+    else
+    {
+        dgemv_test(m, n, k, 2.1, 2.1);
+    }
 
     return 0;
 }
