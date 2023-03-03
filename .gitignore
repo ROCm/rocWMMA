@@ -4,6 +4,10 @@
 *.o
 *.obj
 
+# Generated version file
+rocwmma_version.hpp
+rocwmma-version.hpp
+
 # Precompiled Headers
 *.gch
 *.pch

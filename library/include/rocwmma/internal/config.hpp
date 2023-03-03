@@ -149,6 +149,8 @@ namespace rocwmma
 
 #define ROCWMMA_HOST_DEVICE ROCWMMA_HOST ROCWMMA_DEVICE
 
+#define ROCWMMA_KERNEL __global__
+
 } // namespace rocwmma
 
 #endif // ROCWMMA_CONFIG_HPP

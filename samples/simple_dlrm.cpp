@@ -36,11 +36,17 @@
 
 #include "common.hpp"
 
+using rocwmma::accumulator;
+using rocwmma::col_major;
 using rocwmma::float16_t;
 using rocwmma::float32_t;
 using rocwmma::float64_t;
+using rocwmma::matrix_a;
+using rocwmma::matrix_b;
+using rocwmma::row_major;
 
 using rocwmma::get;
+using rocwmma::Log2;
 using rocwmma::make_coord2d;
 
 // Training pass direction
@@ -181,16 +187,14 @@ __global__ void dlrmDotFwd(const float16_t* __restrict input,
                            uint   outputBatchOffset,
                            uint   accBatchOffset)
 {
-    using MappingA   = rocwmma::MappingUtil<TILE_DIM, TILE_DIM, float16_t, rocwmma::row_major>;
-    using MappingB   = rocwmma::MappingUtil<TILE_DIM, TILE_DIM, float16_t, rocwmma::col_major>;
-    using MappingC   = rocwmma::MappingUtil<TILE_DIM, TILE_DIM, float16_t, rocwmma::row_major>;
-    using MappingAcc = rocwmma::MappingUtil<TILE_DIM, TILE_DIM, float, rocwmma::row_major>;
+    using MappingA   = rocwmma::MappingUtil<TILE_DIM, TILE_DIM, float16_t, row_major>;
+    using MappingB   = rocwmma::MappingUtil<TILE_DIM, TILE_DIM, float16_t, col_major>;
+    using MappingC   = rocwmma::MappingUtil<TILE_DIM, TILE_DIM, float16_t, row_major>;
+    using MappingAcc = rocwmma::MappingUtil<TILE_DIM, TILE_DIM, float, row_major>;
 
-    using FragA = rocwmma::
-        fragment<rocwmma::matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, rocwmma::row_major>;
-    using FragB = rocwmma::
-        fragment<rocwmma::matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, rocwmma::col_major>;
-    using FragAcc = rocwmma::fragment<rocwmma::accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float>;
+    using FragA   = rocwmma::fragment<matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, row_major>;
+    using FragB   = rocwmma::fragment<matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, col_major>;
+    using FragAcc = rocwmma::fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float>;
 
     // Copy bottom MLP to output
     // Threads with a global index < k are responsible for copying MLP data
@@ -350,14 +354,12 @@ __global__ void dlrmDotBwd(const float16_t* __restrict input,
                            uint upstreamBatchOffset,
                            uint accBatchOffset)
 {
-    using TileMapping = rocwmma::MappingUtil<TILE_DIM, TILE_DIM, float16_t, rocwmma::row_major>;
+    using TileMapping = rocwmma::MappingUtil<TILE_DIM, TILE_DIM, float16_t, row_major>;
 
-    using FragA = rocwmma::
-        fragment<rocwmma::matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, rocwmma::row_major>;
-    using FragB = rocwmma::
-        fragment<rocwmma::matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, rocwmma::row_major>;
-    using FragC = rocwmma::fragment<rocwmma::accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float16_t>;
-    using FragAcc = rocwmma::fragment<rocwmma::accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float>;
+    using FragA   = rocwmma::fragment<matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, row_major>;
+    using FragB   = rocwmma::fragment<matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, float16_t, row_major>;
+    using FragC   = rocwmma::fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float16_t>;
+    using FragAcc = rocwmma::fragment<accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float>;
 
     // Copy bottom MLP grad
     // Threads with a global index < k are responsible for copying MLP data
@@ -620,7 +622,18 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
 
         dlrmDotFwdCPU(h_input.data(), outputRef.data(), m, k, b);
 
-        compareEqual<float16_t>(h_output.data(), outputRef.data(), h_output.size(), 1.0);
+        auto res = compareEqual<float16_t>(h_output.data(), outputRef.data(), h_output.size(), 1.0);
+
+        if(std::get<0>(res) == false)
+        {
+            std::cout << "FAILED!\n";
+        }
+        else
+        {
+            std::cout << "PASSED!\n";
+        }
+
+        std::cout << "Max relative error: " << std::get<1>(res) << std::endl;
     }
     else
     {
@@ -640,9 +653,31 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
                       k,
                       b);
 
-        compareEqual<float16_t>(h_grad.data(), gradRef.data(), h_grad.size(), 1.0);
-        compareEqual<float16_t>(
+        auto res = compareEqual<float16_t>(h_grad.data(), gradRef.data(), h_grad.size(), 1.0);
+        if(std::get<0>(res) == false)
+        {
+            std::cout << "FAILED!\n";
+        }
+        else
+        {
+            std::cout << "PASSED!\n";
+        }
+
+        std::cout << "Max relative error: " << std::get<1>(res) << std::endl;
+
+        res = compareEqual<float16_t>(
             h_bottomMlpGrad.data(), bottomMlpGradRef.data(), h_bottomMlpGrad.size(), 1.0);
+
+        if(std::get<0>(res) == false)
+        {
+            std::cout << "FAILED!\n";
+        }
+        else
+        {
+            std::cout << "PASSED!\n";
+        }
+
+        std::cout << "Max relative error: " << std::get<1>(res) << std::endl;
     }
 }
 

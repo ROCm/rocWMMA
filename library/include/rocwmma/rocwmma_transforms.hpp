@@ -43,6 +43,12 @@ namespace rocwmma
     template <typename FragT>
     using ApplyRegisterFile_t = typename detail::template ApplyRegisterFile<FragT>::Type;
 
+    template <typename FragT>
+    ROCWMMA_DEVICE static inline decltype(auto) applyTranspose(FragT&& frag);
+
+    template <typename DataLayoutT, typename FragT>
+    ROCWMMA_DEVICE static inline decltype(auto) applyDataLayout(FragT&& frag);
+
 } // namespace rocwmma
 
 #endif // ROCWMMA_TRANSFORMS_API_HPP

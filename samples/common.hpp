@@ -28,6 +28,7 @@
 #define ROCWMMA_SAMPLES_COMMON_HPP
 
 #include <iostream>
+#include <mutex>
 
 // Helper macro for HIP errors
 #ifndef CHECK_HIP_ERROR
@@ -72,6 +73,18 @@ bool isF64Supported()
     return (deviceName.find("gfx90a") != std::string::npos);
 }
 
+inline double calculateGFlops(uint32_t m, uint32_t n, uint32_t k)
+{
+    return 2.0 * static_cast<double>(m) * static_cast<double>(n) * static_cast<double>(k) * 1.0e-9;
+}
+
+inline double calculateTFlopsPerSec(
+    uint32_t m, uint32_t n, uint32_t k, double elapsedTimeMs, uint32_t repeats = 1u)
+{
+    // elapsedTimeMs is over all iterations
+    return calculateGFlops(m, n, k) / elapsedTimeMs * static_cast<double>(repeats);
+}
+
 // HIP Host function to retrieve the warp size
 enum hipWarpSize_t : uint32_t
 {
@@ -106,37 +119,6 @@ uint32_t getWarpSize()
     return mWarpSize;
 }
 
-template <uint x>
-struct Log2
-{
-    static constexpr uint value = 1 + Log2<x / 2>::value;
-};
-
-template <>
-struct Log2<1>
-{
-    static constexpr uint value = 0;
-};
-
-// Matrix data initialization
-template <typename DataT>
-__host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n)
-{
-    auto ld = n;
-    for(int i = 0; i < m; ++i)
-    {
-        for(int j = 0; j < n; ++j)
-        {
-            // Ascending order for each neighboring element.
-            // Alternate sign for even / odd
-            auto value      = (i * ld + j) % 17;
-            mat[i * ld + j] = ((value % 2) && std::is_signed<DataT>::value)
-                                  ? -static_cast<DataT>(value)
-                                  : static_cast<DataT>(value);
-        }
-    }
-}
-
 // Batched matrix data initialization
 template <typename DataT>
 __host__ static inline void
@@ -158,8 +140,39 @@ __host__ static inline void
     }
 }
 
+// Host matrix data random initialization
+template <typename DataT>
+__host__ static inline void fillRand(DataT* mat, uint32_t m, uint32_t n)
+{
+    auto randInit = []() {
+        srand(time(0));
+        return 0u;
+    };
+    static auto init = randInit();
+#pragma omp parallel for
+    for(int i = 0; i < m; ++i)
+    {
+        auto rando = rand() % 5u;
+        for(int j = 0; j < n; j++)
+        {
+            // Assign random integer values within 0-64, alternating
+            // sign if the value is a multiple of 3
+            auto value     = (rando + j) % 5u;
+            mat[i * n + j] = ((value % 3u == 0u) && std::is_signed<DataT>::value)
+                                 ? -static_cast<DataT>(value)
+                                 : static_cast<DataT>(value);
+        }
+    }
+}
+
 // Host GEMM validation
-template <typename InputT, typename OutputT, typename ComputeT>
+template <typename InputT,
+          typename OutputT,
+          typename ComputeT,
+          typename LayoutA,
+          typename LayoutB,
+          typename LayoutC,
+          typename LayoutD = LayoutC>
 __host__ void gemm_cpu_h(uint32_t       m,
                          uint32_t       n,
                          uint32_t       k,
@@ -174,51 +187,104 @@ __host__ void gemm_cpu_h(uint32_t       m,
                          ComputeT       alpha,
                          ComputeT       beta)
 {
+    auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
+    auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
+
+    auto aIndex = std::is_same<LayoutA, rocwmma::row_major>::value ? rowMjr : colMjr;
+    auto bIndex = std::is_same<LayoutB, rocwmma::row_major>::value ? rowMjr : colMjr;
+    auto cIndex = std::is_same<LayoutC, rocwmma::row_major>::value ? rowMjr : colMjr;
+    auto dIndex = std::is_same<LayoutD, rocwmma::row_major>::value ? rowMjr : colMjr;
+
+#pragma omp parallel for
     for(int i = 0; i < m; ++i)
     {
+#pragma omp parallel for
         for(int j = 0; j < n; ++j)
         {
-            ComputeT accum = 0.0f;
+            ComputeT accum = static_cast<ComputeT>(0);
             for(int h = 0; h < k; ++h)
             {
-                accum += static_cast<ComputeT>(a[i * lda + h])
-                         * static_cast<ComputeT>(b[j * ldb + h]);
+                accum += static_cast<ComputeT>(a[aIndex(i, h, lda)])
+                         * static_cast<ComputeT>(b[bIndex(h, j, ldb)]);
             }
-            d[i * ldd + j] = alpha * accum + beta * c[i * ldc + j];
+            d[dIndex(i, j, ldd)] = static_cast<OutputT>(
+                alpha * accum + beta * static_cast<ComputeT>(c[cIndex(i, j, ldc)]));
         }
     }
 }
 
 // Element-wise comparison
-template <typename T>
-__host__ void compareEqual(T const* a, T const* b, uint32_t size, double tolerance = 10.0)
+template <typename DataT>
+__host__ std::pair<bool, double>
+         compareEqual(DataT const* a, DataT const* b, uint32_t size, double tolerance = 10.0)
 {
-    bool   retval;
+    bool   retval             = true;
     double max_relative_error = 0.0;
 
-    for(int i = 0; i < size; i++)
-    {
-        auto valA           = a[i];
-        auto valB           = b[i];
-        auto relative_error = fabs(valA - valB) / (fabs(valA) + fabs(valB) + 1.0);
+    // Some types don't have direct conversion to double.
+    // Convert to float first then to double.
+    auto toDouble = [](DataT const& val) { return static_cast<double>(static_cast<float>(val)); };
 
-        if(relative_error > max_relative_error || relative_error != relative_error)
+    bool       isInf = false;
+    bool       isNaN = false;
+    std::mutex writeMutex;
+
+#pragma omp parallel for
+    for(int i = 0; i < size; ++i)
+    {
+        auto valA = a[i];
+        auto valB = b[i];
+
+        auto numerator = fabs(toDouble(valA) - toDouble(valB));
+        auto divisor   = fabs(toDouble(valA)) + fabs(toDouble(valB)) + 1.0;
+
+        if(std::isinf(numerator) || std::isinf(divisor))
         {
-            max_relative_error = relative_error;
+#pragma omp atomic
+            isInf |= true;
+        }
+        else
+        {
+            auto relative_error = numerator / divisor;
+            if(std::isnan(relative_error))
+            {
+#pragma omp atomic
+                isNaN |= true;
+            }
+            else if(relative_error > max_relative_error)
+            {
+                const std::lock_guard<std::mutex> guard(writeMutex);
+                // Double check in case of stall
+                if(relative_error > max_relative_error)
+                {
+                    max_relative_error = relative_error;
+                }
+            }
+        }
+
+        if(isInf || isNaN)
+        {
+            i = size;
         }
     }
 
-    auto eps = std::numeric_limits<T>::epsilon();
-    if(max_relative_error != max_relative_error || max_relative_error > eps * tolerance)
+    auto eps = toDouble(std::numeric_limits<DataT>::epsilon());
+    if(isInf)
     {
-        std::cout << "FAILED\n";
+        retval             = false;
+        max_relative_error = std::numeric_limits<DataT>::infinity();
     }
-    else
+    else if(isNaN)
     {
-        std::cout << "PASSED\n";
+        retval             = false;
+        max_relative_error = std::numeric_limits<DataT>::signaling_NaN();
+    }
+    else if(max_relative_error > (eps * tolerance))
+    {
+        retval = false;
     }
 
-    std::cout << "Max relative error: " << max_relative_error << std::endl;
+    return std::make_pair(retval, max_relative_error);
 }
 
 #endif // ROCWMMA_SAMPLES_COMMON_HPP
