@@ -259,7 +259,7 @@ namespace rocwmma
 
     // fill kernel for M x N matrix for a specific value
     template <typename DataT, typename Layout>
-    __global__ void fillKernel(DataT* mat, uint32_t m, uint32_t n, DataT value)
+    __global__ void fillValKernel(DataT* mat, uint32_t m, uint32_t n, DataT value)
     {
         uint32_t rowIdx = (blockIdx.x * blockDim.x + threadIdx.x) / n;
         uint32_t colIdx = (blockIdx.x * blockDim.x + threadIdx.x) % n;
