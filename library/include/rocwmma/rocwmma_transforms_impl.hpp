@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_TRANSFORMS_IMPL_HPP
-#define ROCWMMA_TRANSFORMS_IMPL_HPP
+#ifndef ROCWMMA_TRANSFORMS_API_IMPL_HPP
+#define ROCWMMA_TRANSFORMS_API_IMPL_HPP
 
 namespace rocwmma
 {
@@ -78,6 +78,11 @@ namespace rocwmma
 
         public:
             using Type = FragT;
+
+            ROCWMMA_DEVICE static inline Type const& exec(Frag const& frag)
+            {
+                return reinterpret_cast<Type const&>(frag);
+            }
         };
 
         template <uint32_t BlockM,
@@ -105,6 +110,11 @@ namespace rocwmma
 
         public:
             using Type = FragT;
+
+            ROCWMMA_DEVICE static inline Type const& exec(Frag const& frag)
+            {
+                return reinterpret_cast<Type const&>(frag);
+            }
         };
 
         ///
@@ -124,6 +134,10 @@ namespace rocwmma
                                DataLayout>
         {
             using Type = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
+            ROCWMMA_DEVICE constexpr static inline Type const& exec(Type const& frag)
+            {
+                return frag;
+            }
         };
 
         template <typename MatrixT,
@@ -147,6 +161,11 @@ namespace rocwmma
 
         public:
             using Type = FragT;
+
+            ROCWMMA_DEVICE constexpr static inline Type const& exec(Frag const& frag)
+            {
+                return reinterpret_cast<Type const&>(frag);
+            }
         };
 
         template <typename FragT>
@@ -169,6 +188,22 @@ namespace rocwmma
 
     } // namespace detail
 
+    /// These wrappers must perfect-forward and perfect-return because the return types and
+    // arguments above could be references or copy types.
+    template <typename FragT>
+    ROCWMMA_DEVICE static inline decltype(auto) applyTranspose(FragT&& frag)
+    {
+        return detail::template ApplyTranspose<std::decay_t<FragT>>::exec(
+            std::forward<FragT>(frag));
+    }
+
+    template <typename DataLayoutT, typename FragT>
+    ROCWMMA_DEVICE static inline decltype(auto) applyDataLayout(FragT&& frag)
+    {
+        return detail::template ApplyDataLayout<std::decay_t<FragT>, DataLayoutT>::exec(
+            std::forward<FragT>(frag));
+    }
+
 } // namespace rocwmma
 
-#endif // ROCWMMA_TRANSFORMS_IMPL_HPP
+#endif // ROCWMMA_TRANSFORMS_API_IMPL_HPP

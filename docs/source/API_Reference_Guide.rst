@@ -3,13 +3,13 @@ Introduction
 ************
 
 rocWMMA is AMD's C++ library for accelerating mixed precision matrix multiply-accumulate operations
-leveraging specialized GPU matrix cores on AMD's latest discrete GPUs. 
+leveraging specialized GPU matrix cores on AMD's latest discrete GPUs.
 
-A C++ API is provided to facilitate decomposition of matrix multiply-accumulate problems into 
-discretized block fragments and to parallelize block-wise operations across multiple GPU wavefronts. 
+A C++ API is provided to facilitate decomposition of matrix multiply-accumulate problems into
+discretized block fragments and to parallelize block-wise operations across multiple GPU wavefronts.
 
-The API is implemented in GPU device code: it empowers user device kernel code with direct use of GPU matrix cores. 
-Moreover, this code can benefit from inline compiler optimization passes and does not incur additional 
+The API is implemented in GPU device code: it empowers user device kernel code with direct use of GPU matrix cores.
+Moreover, this code can benefit from inline compiler optimization passes and does not incur additional
 overhead of external runtime calls or extra kernel launches.
 
 ======== =========
@@ -17,11 +17,10 @@ Acronym  Expansion
 ======== =========
 **GEMM**    **GE**\ neral **M**\ atrix **M**\ ultiply
 **WMMA**    **W**\ avefront **M**\ ixed precision **M**\ ultiply **A**\ ccumulate
-**ROCm**    **R**\ adeon **O**\ pen **C**\ ompute platfor\ **m**
 **HIP**     **H**\ eterogeneous-Compute **I**\ nterface for **P**\ ortability
 ======== =========
 
-rocWMMA is written in C++14 and may be applied directly in device kernel code. Library code is templated
+rocWMMA is written in C++ and may be applied directly in device kernel code. Library code is templated
 for modularity and uses available meta-data to provide opportunities for compile-time inferences and optimizations.
 
 The rocWMMA API exposes block-wise data load / store and matrix multiply-accumulate functions appropriately sized
@@ -103,7 +102,7 @@ Below is a simple example code for calling rocWMMA functions load_matrix_sync, s
    //
    // Launchable device kernel function:
    //
-   __global__ void gemm_wmma_d(uint32_t         m,     // matrix free dim m 
+   __global__ void gemm_wmma_d(uint32_t         m,     // matrix free dim m
                                uint32_t         n,     // matrix free dim n
                                uint32_t         k,     // matrix fixed dim k
                                float16_t const* a,     // device data ptr for matrix A

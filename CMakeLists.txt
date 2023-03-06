@@ -2,7 +2,7 @@
  #
  # MIT License
  #
- # Copyright 2021 Advanced Micro Devices, Inc.
+ # Copyright 2021-2023 Advanced Micro Devices, Inc.
  #
  # Permission is hereby granted, free of charge, to any person obtaining a copy
  # of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +37,7 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "" FORCE )
 
 ### Project ROCWMMA
 project( rocwmma LANGUAGES CXX )
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -71,7 +71,13 @@ include(ROCMInstallTargets)
 include(ROCMCheckTargetIds)
 include(ROCMClients)
 
-rocm_setup_version(VERSION "0.7")
+# Versioning via rocm-cmake
+set ( VERSION_STRING "1.0.0" )
+rocm_setup_version( VERSION ${VERSION_STRING} )
+
+# configure a header file to pass the CMake version settings to the source
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/library/include/rocwmma/internal/rocwmma-version.hpp.in"
+               "${CMAKE_CURRENT_SOURCE_DIR}/library/include/rocwmma/rocwmma-version.hpp" )
 
 rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
   TARGETS "gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx1100;gfx1101;gfx1102" )

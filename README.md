@@ -22,7 +22,7 @@ OR
 ## Minimum Software Requirements
 * ROCm stack minimum version 5.4
 * ROCm-cmake minimum version 0.8.0 for ROCm 5.3
-* C++ 14
+* C++ 17
 * CMake >=3.6
 * OpenMP
 
@@ -307,7 +307,7 @@ git push origin <new_branch>
 |ROCWMMA_BUILD_VALIDATION_TESTS|Build validation tests |ON (requires ROCWMMA_BUILD_TESTS=ON)|
 |ROCWMMA_BUILD_BENCHMARK_TESTS|Build benchmark tests |OFF (requires ROCWMMA_BUILD_TESTS=ON)|
 |ROCWMMA_BUILD_EXTENDED_TESTS|Build extended testing coverage |OFF (requires ROCWMMA_BUILD_TESTS=ON)|
-|ROCWMMA_VALIDATE_WITH_ROCBLAS|Use rocBLAS for validation tests|OFF (requires ROCWMMA_BUILD_VALIDATION_TESTS=ON)|
+|ROCWMMA_VALIDATE_WITH_ROCBLAS|Use rocBLAS for validation tests|ON (requires ROCWMMA_BUILD_VALIDATION_TESTS=ON)|
 |ROCWMMA_BENCHMARK_WITH_ROCBLAS|Include rocBLAS benchmarking data|OFF (requires ROCWMMA_BUILD_BENCHMARK_TESTS=ON)|
 
 ### Example configurations
@@ -337,6 +337,18 @@ After configuration, build with `cmake --build <build_dir> -- -j<nproc>`
 cd <build_dir>
 make <target_name> -j64
 ```
+Where `<target_name>` is one of the following:
+
+|`<target_name>`|Description|
+|---|---|
+|rocwmma_unit_tests|Build all rocWMMA unit tests|
+|rocwmma_gemm_tests_validate|Build all GEMM validation tests|
+|rocwmma_gemm_tests_bench|Build all GEMM benchmark tests|
+|rocwmma_dlrm_tests_validate|Build all DLRM validation tests|
+|rocwmma_dlrm_tests_bench|Build all DLRM benchmark tests|
+|rocwmma_samples|Build all rocWMMA samples|
+|Individual target name (contamination_test, simple_sgemm, etc...)|Build individual rocWMMA test/sample|
+
 - Manually reduce test(s) and/or test case coverage
 
 ## Running Unit Tests

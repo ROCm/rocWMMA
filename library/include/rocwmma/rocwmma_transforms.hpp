@@ -23,8 +23,8 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_TRANSFORMS_HPP
-#define ROCWMMA_TRANSFORMS_HPP
+#ifndef ROCWMMA_TRANSFORMS_API_HPP
+#define ROCWMMA_TRANSFORMS_API_HPP
 
 #include "rocwmma.hpp"
 #include "rocwmma_transforms_impl.hpp"
@@ -43,6 +43,12 @@ namespace rocwmma
     template <typename FragT>
     using ApplyRegisterFile_t = typename detail::template ApplyRegisterFile<FragT>::Type;
 
+    template <typename FragT>
+    ROCWMMA_DEVICE static inline decltype(auto) applyTranspose(FragT&& frag);
+
+    template <typename DataLayoutT, typename FragT>
+    ROCWMMA_DEVICE static inline decltype(auto) applyDataLayout(FragT&& frag);
+
 } // namespace rocwmma
 
-#endif // ROCWMMA_TRANSFORMS_HPP
+#endif // ROCWMMA_TRANSFORMS_API_HPP

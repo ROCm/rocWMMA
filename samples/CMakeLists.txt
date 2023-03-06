@@ -26,6 +26,9 @@
 
 set(ROCWMMA_SAMPLES_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
+# Custom target to build all rocWMMA samples
+add_custom_target(rocwmma_samples)
+
 # Regular gtests that don't require any special
 # designation for validation or benchmarking
 function(add_rocwmma_sample TEST_TARGET TEST_SOURCE)
@@ -36,6 +39,7 @@ function(add_rocwmma_sample TEST_TARGET TEST_SOURCE)
   target_include_directories(${TEST_TARGET} PRIVATE
                              ${CMAKE_CURRENT_SOURCE_DIR}
                              ${ROCWMMA_SAMPLES_INCLUDE_DIR})
+  add_dependencies(rocwmma_samples ${TEST_TARGET})
 
   # Add support to build the target's assembly files
   if(ROCWMMA_BUILD_ASSEMBLY)
@@ -61,7 +65,13 @@ function(add_rocwmma_sample TEST_TARGET TEST_SOURCE)
 endfunction()
 
 # Create sample targets
-add_rocwmma_sample(simple_gemm ${CMAKE_CURRENT_SOURCE_DIR}/simple_gemm.cpp)
-add_rocwmma_sample(sgemmv ${CMAKE_CURRENT_SOURCE_DIR}/sgemmv.cpp)
+add_rocwmma_sample(simple_sgemm ${CMAKE_CURRENT_SOURCE_DIR}/simple_sgemm.cpp)
+add_rocwmma_sample(perf_sgemm ${CMAKE_CURRENT_SOURCE_DIR}/perf_sgemm.cpp)
+add_rocwmma_sample(simple_hgemm ${CMAKE_CURRENT_SOURCE_DIR}/simple_hgemm.cpp)
+add_rocwmma_sample(perf_hgemm ${CMAKE_CURRENT_SOURCE_DIR}/perf_hgemm.cpp)
+add_rocwmma_sample(simple_dgemm ${CMAKE_CURRENT_SOURCE_DIR}/simple_dgemm.cpp)
+add_rocwmma_sample(perf_dgemm ${CMAKE_CURRENT_SOURCE_DIR}/perf_dgemm.cpp)
+add_rocwmma_sample(simple_sgemv ${CMAKE_CURRENT_SOURCE_DIR}/simple_sgemv.cpp)
+add_rocwmma_sample(simple_dgemv ${CMAKE_CURRENT_SOURCE_DIR}/simple_dgemv.cpp)
 add_rocwmma_sample(simple_dlrm ${CMAKE_CURRENT_SOURCE_DIR}/simple_dlrm.cpp)
 add_rocwmma_sample(hipRTC_gemm ${CMAKE_CURRENT_SOURCE_DIR}/hipRTC_gemm.cpp)

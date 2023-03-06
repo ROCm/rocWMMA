@@ -26,7 +26,7 @@
 
 include( CMakeDependentOption )
 
-cmake_dependent_option( ROCWMMA_VALIDATE_WITH_ROCBLAS "Use rocBLAS for validation" OFF "ROCWMMA_BUILD_VALIDATION_TESTS" OFF )
+cmake_dependent_option( ROCWMMA_VALIDATE_WITH_ROCBLAS "Use rocBLAS for validation" ON "ROCWMMA_BUILD_VALIDATION_TESTS" OFF )
 cmake_dependent_option( ROCWMMA_BENCHMARK_WITH_ROCBLAS "Include rocBLAS benchmark performance comparisons" OFF "ROCWMMA_BUILD_BENCHMARK_TESTS" OFF )
 
 set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
@@ -39,6 +39,16 @@ endif()
 
 set(ROCWMMA_TEST_GEMM_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${ROCWMMA_TEST_GEMM_INCLUDE_DIRS})
 set(ROCWMMA_GEMM_TEST_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+# Custom target to build all rocWMMA gemm-validation tests
+if(ROCWMMA_BUILD_VALIDATION_TESTS)
+  add_custom_target(rocwmma_gemm_tests_validate)
+endif()
+
+# Custom target to build all rocWMMA gemm-benchmark tests
+if(ROCWMMA_BUILD_BENCHMARK_TESTS)
+  add_custom_target(rocwmma_gemm_tests_bench)
+endif()
 
 ### GEMM tests that have rocBLAS support
 # Use rocBLAS for validation
@@ -53,6 +63,9 @@ function(add_gemm_validation_test TEST_TARGET TEST_SOURCE)
 
   # Put binary outputs in the same directory
   set_target_properties(${TEST_TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ROCWMMA_GEMM_TEST_OUTPUT_DIR})
+
+  # Add dependency to custom target
+  add_dependencies(rocwmma_gemm_tests_validate ${TEST_TARGET})
 
   # Link to rocBLAS
   if(ROCWMMA_VALIDATE_WITH_ROCBLAS)
@@ -73,6 +86,9 @@ function(add_gemm_benchmark_test TEST_TARGET TEST_SOURCE)
 
   # Put binary outputs in the same directory
   set_target_properties(${TEST_TARGET} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ROCWMMA_GEMM_TEST_OUTPUT_DIR})
+
+  # Add dependency to custom target
+  add_dependencies(rocwmma_gemm_tests_bench ${TEST_TARGET})
 
   # Link to rocBLAS
   if(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
