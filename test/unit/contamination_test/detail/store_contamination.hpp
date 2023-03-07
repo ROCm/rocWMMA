@@ -72,10 +72,10 @@ namespace rocwmma
                 dataInstance->deviceIn().get(), Base::mM, Base::mN);
 
             // Initialize output data on device (padded size, all with marker elements)
-            MatrixUtil<Layout>::fillLaunchKernel(dataInstance->deviceOut().get(),
-                                                 get<0>(paddedProbSize),
-                                                 get<1>(paddedProbSize),
-                                                 std::numeric_limits<DataT>::max());
+            MatrixUtil<Layout>::fillValLaunchKernel(dataInstance->deviceOut().get(),
+                                                    get<0>(paddedProbSize),
+                                                    get<1>(paddedProbSize),
+                                                    std::numeric_limits<DataT>::max());
         }
 
         void validateResultsImpl() final
