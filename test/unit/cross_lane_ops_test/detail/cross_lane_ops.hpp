@@ -161,10 +161,10 @@ namespace rocwmma
             // {
             //     dataInstance->hostIn().get()[i] = i;
             // }
-            MatrixUtil<Layout>::fillLaunchKernel(dataInstance->deviceOut().get(),
-                                                 Base::mM,
-                                                 Base::mN,
-                                                 std::numeric_limits<DataT>::signaling_NaN());
+            MatrixUtil<Layout>::fillValLaunchKernel(dataInstance->deviceOut().get(),
+                                                    Base::mM,
+                                                    Base::mN,
+                                                    std::numeric_limits<DataT>::signaling_NaN());
         }
 
         void validateResultsImpl() final

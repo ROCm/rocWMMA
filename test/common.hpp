@@ -222,7 +222,7 @@ namespace rocwmma
         }
 
         template <typename DataT>
-        __host__ static inline void fill(DataT* mat, uint32_t m, uint32_t n, DataT value)
+        __host__ static inline void fillVal(DataT* mat, uint32_t m, uint32_t n, DataT value)
         {
 #pragma omp parallel for
             for(int i = 0; i < m * n; ++i) // row
@@ -233,10 +233,10 @@ namespace rocwmma
 
         template <typename DataT>
         __host__ static inline void
-            fill(std::vector<DataT>& mat, uint32_t m, uint32_t n, DataT value)
+            fillVal(std::vector<DataT>& mat, uint32_t m, uint32_t n, DataT value)
         {
             assert(mat.size() == n * m);
-            fill(mat.data(), m, n, value);
+            fillVal(mat.data(), m, n, value);
         }
 
         // fill kernel wrapper for M x N matrix
@@ -262,12 +262,12 @@ namespace rocwmma
         // fill kernel wrapper for M x N matrix for a specific value
         template <typename DataT>
         __host__ static inline void
-            fillLaunchKernel(DataT* d_mat, uint32_t m, uint32_t n, DataT value)
+            fillValLaunchKernel(DataT* d_mat, uint32_t m, uint32_t n, DataT value)
         {
             auto blockDim = dim3(1024, 1, 1);
             auto gridDim  = dim3(ceilDiv(m * n, blockDim.x), 1, 1);
             hipLaunchKernelGGL(
-                (fillKernel<DataT, Layout>), gridDim, blockDim, 0, 0, d_mat, m, n, value);
+                (fillValKernel<DataT, Layout>), gridDim, blockDim, 0, 0, d_mat, m, n, value);
         }
     };
 
