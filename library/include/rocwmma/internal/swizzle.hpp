@@ -80,27 +80,31 @@ namespace rocwmma
                               || (SwizzleOp::opId() == CrossLaneOps::Properties::OP_ID_FFT),
                           "SwizzleOp is unsupported");
 
-            template <typename DataT>
-            ROCWMMA_DEVICE static auto exec(DataT const& src)
+            template <typename SrcT>
+            ROCWMMA_DEVICE static inline auto exec(SrcT&& src)
             {
-                return SwizzleOp::exec(src);
+                return SwizzleOp::exec(std::forward<SrcT>(src));
             }
 
             template <typename DataT, uint32_t VecSize>
-            ROCWMMA_DEVICE static void exec(VecT<DataT, VecSize>& src)
+            ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src)
             {
-                auto it = makeVectorIterator(src).begin();
+                VecT<DataT, VecSize> result;
+                auto const           itR = makeVectorIterator(src).begin();
+                auto                 itW = makeVectorIterator(result).begin();
 
-                static_assert(decltype(it)::range() == VecSize,
+                static_assert(decltype(itR)::range() == VecSize,
+                              "VecSize inconsistent with iterator range");
+                static_assert(decltype(itW)::range() == VecSize,
                               "VecSize inconsistent with iterator range");
 
-                // Loop through entire vector
 #pragma unroll
-                for(uint32_t i = 0; i < VecSize; ++i)
+                for(uint32_t i = 0; i < VecSize; ++i, itR++, itW++)
                 {
-                    *it = exec(*it);
-                    it++;
+                    get<0>(*itW) = exec(get<0>(*itR));
                 }
+
+                return result;
             }
         };
 

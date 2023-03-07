@@ -101,27 +101,11 @@ namespace rocwmma
                           uint32_t WriteBankMask,
                           bool     BoundCtrl,
                           typename DataT>
-                ROCWMMA_DEVICE static inline DataT exec(DataT src0)
-                {
-                    reinterpret_cast<int32_t&>(src0) = __builtin_amdgcn_update_dpp(
-                        reinterpret_cast<int32_t const&>(src0), // use self as fill
-                        reinterpret_cast<int32_t const&>(src0),
-                        DppCtrl::opCtrl(), // DPP control code
-                        WriteRowMask, // Mask for affected rows
-                        WriteBankMask, // Mask for affected banks
-                        BoundCtrl); // Fill in 0 on invalid indices
-                    return src0;
-                }
-
-                template <uint32_t WriteRowMask,
-                          uint32_t WriteBankMask,
-                          bool     BoundCtrl,
-                          typename DataT>
                 ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1)
                 {
                     reinterpret_cast<int32_t&>(src0) = __builtin_amdgcn_update_dpp(
-                        reinterpret_cast<int32_t const&>(src1), // fill value
-                        reinterpret_cast<int32_t const&>(src0),
+                        reinterpret_cast<int32_t const&>(src1), // fill value 'prev'
+                        reinterpret_cast<int32_t const&>(src0), // Src value
                         DppCtrl::opCtrl(), // DPP control code
                         WriteRowMask, // Mask for affected rows
                         WriteBankMask, // Mask for affected banks
