@@ -59,10 +59,10 @@ namespace rocwmma
             // Initialize data on host
             MatrixUtil<Layout>::fillLaunchKernel(
                 dataInstance->deviceIn().get(), Base::mM, Base::mN);
-            MatrixUtil<Layout>::fillLaunchKernel(dataInstance->deviceOut().get(),
-                                                 Base::mM,
-                                                 Base::mN,
-                                                 std::numeric_limits<DataT>::signaling_NaN());
+            MatrixUtil<Layout>::fillValLaunchKernel(dataInstance->deviceOut().get(),
+                                                    Base::mM,
+                                                    Base::mN,
+                                                    std::numeric_limits<DataT>::signaling_NaN());
         }
 
         void validateResultsImpl() final

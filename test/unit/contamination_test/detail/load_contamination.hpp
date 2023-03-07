@@ -76,10 +76,10 @@ namespace rocwmma
                                                             std::numeric_limits<DataT>::max());
 
             // Initialize device output data with NaN
-            MatrixUtil<Layout>::fillLaunchKernel(dataInstance->deviceOut().get(),
-                                                 Base::mM,
-                                                 Base::mN,
-                                                 std::numeric_limits<DataT>::signaling_NaN());
+            MatrixUtil<Layout>::fillValLaunchKernel(dataInstance->deviceOut().get(),
+                                                    Base::mM,
+                                                    Base::mN,
+                                                    std::numeric_limits<DataT>::signaling_NaN());
         }
 
         void validateResultsImpl() final
