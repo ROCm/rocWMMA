@@ -62,7 +62,7 @@ namespace rocwmma
             dataInstance->resizeStorage(probsize);
 
             // Initialize matrix data on host
-            MatrixUtil<Layout>::fillLaunchKernel(
+            MatrixUtil<Layout>::fillValLaunchKernel(
                 dataInstance->deviceIn().get(), Base::mM, Base::mN, Base::mParam1);
             MatrixUtil<Layout>::fillValLaunchKernel(dataInstance->deviceOut().get(),
                                                     Base::mM,
