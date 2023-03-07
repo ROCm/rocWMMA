@@ -118,70 +118,89 @@ namespace rocwmma
                               || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_MOVE),
                           "DppOp is unsupported");
 
-            template <typename DataT>
-            ROCWMMA_DEVICE static inline DataT exec(DataT const& src, DataT const& prev)
+            template <typename Src0, typename Src1>
+            ROCWMMA_DEVICE static inline auto exec(Src0&& src0, Src1&& src1)
             {
-                return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(src, prev);
+                return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(
+                    std::forward<Src0>(src0), std::forward<Src1>(src1));
             }
 
-            template <typename DataT>
-            ROCWMMA_DEVICE static inline DataT exec(DataT const& src)
+            template <typename Src0>
+            ROCWMMA_DEVICE static inline auto exec(Src0&& src0)
             {
-                return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(src, src);
+                return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(
+                    std::forward<Src0>(src0), std::forward<Src0>(src0));
             }
 
+            // Self as prev
             template <typename DataT, uint32_t VecSize>
-            ROCWMMA_DEVICE static inline void exec(VecT<DataT, VecSize>& src)
+            ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src)
             {
-                auto it = makeVectorIterator(src).begin();
-                static_assert(decltype(it)::range() == VecSize,
+                VecT<DataT, VecSize> result;
+                auto const           itR = makeVectorIterator(src).begin();
+                auto                 itW = makeVectorIterator(result).begin();
+
+                static_assert(decltype(itR)::range() == VecSize,
+                              "VecSize inconsistent with iterator range");
+                static_assert(decltype(itW)::range() == VecSize,
                               "VecSize inconsistent with iterator range");
 
-                // Loop through entire vector
 #pragma unroll
-                for(uint32_t i = 0; i < VecSize; ++i)
+                for(uint32_t i = 0; i < VecSize; ++i, itR++, itW++)
                 {
-                    *it = exec(*it);
-                    it++;
+                    get<0>(*itW) = exec(get<0>(*itR));
                 }
+
+                return result;
             }
 
             // Scalar as prev
             template <typename DataT, uint32_t VecSize>
-            ROCWMMA_DEVICE static inline void exec(VecT<DataT, VecSize>& src, DataT const& prev)
+            ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src0,
+                                                   DataT const&                src1)
             {
-                auto it = makeVectorIterator(src).begin();
-                static_assert(decltype(it)::range() == VecSize,
+                VecT<DataT, VecSize> result;
+                auto const           itR = makeVectorIterator(src0).begin();
+                auto                 itW = makeVectorIterator(result).begin();
+
+                static_assert(decltype(itR)::range() == VecSize,
+                              "VecSize inconsistent with iterator range");
+                static_assert(decltype(itW)::range() == VecSize,
                               "VecSize inconsistent with iterator range");
 
-                // Loop through entire vector
 #pragma unroll
-                for(uint32_t i = 0; i < VecSize; ++i)
+                for(uint32_t i = 0; i < VecSize; ++i, itR++, itW++)
                 {
-                    *it = exec(*it, prev);
-                    it++;
+                    get<0>(*itW) = exec(get<0>(*itR), src1);
                 }
+
+                return result;
             }
 
             // Vector as prev
             template <typename DataT, uint32_t VecSize>
-            ROCWMMA_DEVICE static inline void exec(VecT<DataT, VecSize>&       src,
-                                                   VecT<DataT, VecSize> const& prev)
+            ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src0,
+                                                   VecT<DataT, VecSize> const& src1)
             {
-                auto       it  = makeVectorIterator(src).begin();
-                const auto itp = makeVectorIterator(prev).begin();
+                VecT<DataT, VecSize> result;
+                auto const           itR0 = makeVectorIterator(src0).begin();
+                auto const           itR1 = makeVectorIterator(src1).begin();
+                auto                 itW  = makeVectorIterator(result).begin();
 
-                static_assert(decltype(it)::range() == VecSize,
+                static_assert(decltype(itR0)::range() == VecSize,
+                              "VecSize inconsistent with iterator range");
+                static_assert(decltype(itR1)::range() == VecSize,
+                              "VecSize inconsistent with iterator range");
+                static_assert(decltype(itW)::range() == VecSize,
                               "VecSize inconsistent with iterator range");
 
-                // Loop through entire vector
 #pragma unroll
-                for(uint32_t i = 0; i < VecSize; ++i)
+                for(uint32_t i = 0; i < VecSize; ++i, itR0++, itR1++, itW++)
                 {
-                    *it = exec(*it, *itp);
-                    it++;
-                    itp++;
+                    get<0>(*itW) = exec(get<0>(*itR0), get<0>(*itR1));
                 }
+
+                return result;
             }
         };
 
