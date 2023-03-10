@@ -30,7 +30,9 @@
 
 #include "dpp.hpp"
 #include "io_traits.hpp"
+#include "pack.hpp"
 #include "permute.hpp"
+#include "unpack.hpp"
 #include "utils.hpp"
 
 namespace rocwmma
@@ -159,42 +161,60 @@ namespace rocwmma
     ROCWMMA_DEVICE static inline auto unpackLo2(VecT<DataT, VecSize> const& v)
     {
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        return Blend::Zip2::exec(extractEven(v), Dpp::RotateR16<2>::exec(extractOdd(v)));
+        using Packer   = Pack<DataT, VecSize / 2u>;
+        using Unpacker = Unpack<DataT, VecSize / 4u>;
+        return Unpacker::exec(Blend::Zip2::exec(
+            Packer::exec(extractEven(v)), Dpp::RotateR16<2>::exec(Packer::exec(extractOdd(v)))));
     }
 
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline auto unpackLo4(VecT<DataT, VecSize> const& v)
     {
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        return Dpp::template RotateR16<4, 0xF, 0xA>::exec(extractOdd(v), extractEven(v));
+        using Packer   = Pack<DataT, VecSize / 2u>;
+        using Unpacker = Unpack<DataT, VecSize / 4u>;
+        return Unpacker::exec(Dpp::template RotateR16<4, 0xF, 0xA>::exec(
+            Packer::exec(extractOdd(v)), Packer::exec(extractEven(v))));
     }
 
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline auto unpackLo8(VecT<DataT, VecSize> const& v)
     {
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        return Dpp::template RotateR16<8, 0xF, 0xC>::exec(extractOdd(v), extractEven(v));
+        using Packer   = Pack<DataT, VecSize / 2u>;
+        using Unpacker = Unpack<DataT, VecSize / 4u>;
+        return Unpacker::exec(Dpp::template RotateR16<8, 0xF, 0xC>::exec(
+            Packer::exec(extractOdd(v)), Packer::exec(extractEven(v))));
     }
 
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline auto unpackHi2(VecT<DataT, VecSize> const& v)
     {
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        return Blend::Zip2::exec(Dpp::RotateR16<14>::exec(extractEven(v)), extractOdd(v));
+        using Packer   = Pack<DataT, VecSize / 2u>;
+        using Unpacker = Unpack<DataT, VecSize / 4u>;
+        return Unpacker::exec(Blend::Zip2::exec(
+            Dpp::RotateR16<14>::exec(Packer::exec(extractEven(v))), Packer::exec(extractOdd(v))));
     }
 
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline auto unpackHi4(VecT<DataT, VecSize> const& v)
     {
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        return Dpp::template RotateR16<12, 0xF, 0x5>::exec(extractEven(v), extractOdd(v));
+        using Packer   = Pack<DataT, VecSize / 2u>;
+        using Unpacker = Unpack<DataT, VecSize / 4u>;
+        return Unpacker::exec(Dpp::template RotateR16<12, 0xF, 0x5>::exec(
+            Packer::exec(extractEven(v)), Packer::exec(extractOdd(v))));
     }
 
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline auto unpackHi8(VecT<DataT, VecSize> const& v)
     {
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        return Dpp::template RotateR16<8, 0xF, 0x3>::exec(extractEven(v), extractOdd(v));
+        using Packer   = Pack<DataT, VecSize / 2u>;
+        using Unpacker = Unpack<DataT, VecSize / 4u>;
+        return Unpacker::exec(Dpp::template RotateR16<8, 0xF, 0x3>::exec(
+            Packer::exec(extractEven(v)), Packer::exec(extractOdd(v))));
     }
 
     template <typename DataT>
@@ -209,8 +229,11 @@ namespace rocwmma
         // Step 3 : Unpack groups of 8
         result = concat(unpackLo8(result), unpackHi8(result));
 
+        using Packer   = Pack<DataT, 8>;
+        using Unpacker = Unpack<DataT, 4>;
+
         // Step 4 : Swizzle
-        return Permute::Gather16<8, 0>::exec(result);
+        return Unpacker::exec(Permute::Gather16<8, 0>::exec(Packer::exec(result)));
     }
 
     template <typename DataT>
