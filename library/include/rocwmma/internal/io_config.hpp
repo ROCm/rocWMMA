@@ -85,8 +85,8 @@ namespace rocwmma
     {
         using IOShape     = IOShape<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>;
         using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT, IOShape::VectorWidth>;
-        using Packer      = Pack<DataT, IOTraits::UnpackedSize>;
-        using Unpacker    = Unpack<DataT, IOTraits::PackedSize>;
+        using Packer      = Pack<DataT>;
+        using Unpacker    = Unpack<DataT>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
 
         using MappingUtil
@@ -133,8 +133,8 @@ namespace rocwmma
     {
         using IOShape     = IOShape<accumulator, BlockM, BlockN, BlockK, DataT, void>;
         using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT>;
-        using Packer      = Pack<DataT, IOTraits::UnpackedSize>;
-        using Unpacker    = Unpack<DataT, IOTraits::PackedSize>;
+        using Packer      = Pack<DataT>;
+        using Unpacker    = Unpack<DataT>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
     };
 

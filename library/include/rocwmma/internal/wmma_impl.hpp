@@ -268,7 +268,7 @@ namespace rocwmma
             {
                 // Accum data is comes in packed. WMMA accumulator needs unpacked data.
                 using VecTraitsIn = VecTraits<IncomingT>;
-                using Unpacker    = Unpack<ComputeT, VecTraitsIn::size()>;
+                using Unpacker    = Unpack<ComputeT>;
 
                 static_assert(std::is_same<PackedT, typename VecTraitsIn::DataT>::value,
                               "Unexpected incoming packed type");
@@ -278,9 +278,8 @@ namespace rocwmma
                 // and shift the 16b data to the correct spot (determined by the WMMA backend).
                 // The nasty bit is that due of the extended 32b element size, the final accumulation vector
                 // is masqueraded as a 'packed' type, but with the same vector size as unpacked.
-                using AccumExtVecT =
-                    typename VecTraitsIn::template VecT<PackedT,
-                                                        Unpacker::Traits::UnpackedRegisterCount>;
+                using AccumExtVecT = typename VecTraitsIn::
+                    template VecT<PackedT, VecTraitsIn::size() * PackTraits::PackRatio>;
 
                 // First step, unpack. This is not yet 32b wide.
                 auto unpacked = Unpacker::exec(accumVec);
@@ -320,7 +319,7 @@ namespace rocwmma
             {
                 // Accum data comes out as unpacked, but with extended 32b elements
                 using VecTraitsIn = VecTraits<IncomingT>;
-                using Packer      = Pack<ComputeT, VecTraitsIn::size()>;
+                using Packer      = Pack<ComputeT>;
 
                 static_assert(std::is_same<PackedT, typename VecTraitsIn::DataT>::value,
                               "Unexpected incoming unpacked type");
