@@ -41,12 +41,11 @@ namespace rocwmma
 
         using ExtractedT = typename PackTraits::PackedT;
         using EmplacedT  = typename PackTraits::UnpackedT;
-        using PackRatio  = typename PackTraits::PackRatio;
 
         using FootSpace = union
         {
             ExtractedT extracted;
-            EmplacedT  emplaced[PackRatio];
+            EmplacedT  emplaced[PackTraits::PackRatio];
         };
 
         template <uint32_t VecSize, uint32_t SelectIdx = 0u>
