@@ -100,8 +100,8 @@ namespace rocwmma
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<float16_t, float32_t, 16, 16>;
-                using UnpackC           = Unpack<float16_t, 2>;
-                using PackD             = Pack<float16_t, 4>;
+                using UnpackC           = Unpack<float16_t>;
+                using PackD             = Pack<float16_t>;
                 using Convert_fp16_fp32 = Convert<float16_t, float32_t>;
                 using Convert_fp32_fp16 = Convert<float32_t, float16_t>;
 
@@ -164,8 +164,8 @@ namespace rocwmma
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<float16_t, float32_t, 32, 32>;
-                using UnpackC           = Unpack<float16_t, 8>;
-                using PackD             = Pack<float16_t, 16>;
+                using UnpackC           = Unpack<float16_t>;
+                using PackD             = Pack<float16_t>;
                 using Convert_fp16_fp32 = Convert<float16_t, float32_t>;
                 using Convert_fp32_fp16 = Convert<float32_t, float16_t>;
 
@@ -255,8 +255,8 @@ namespace rocwmma
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<bfloat16_t, float32_t, 16, 16>;
-                using UnpackC           = Unpack<bfloat16_t, 2>;
-                using PackD             = Pack<bfloat16_t, 4>;
+                using UnpackC           = Unpack<bfloat16_t>;
+                using PackD             = Pack<bfloat16_t>;
                 using Convert_bf16_fp32 = Convert<bfloat16_t, float32_t>;
                 using Convert_fp32_bf16 = Convert<float32_t, bfloat16_t>;
 
@@ -318,8 +318,8 @@ namespace rocwmma
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<bfloat16_t, float32_t, 32, 32>;
-                using UnpackC           = Unpack<bfloat16_t, 8>;
-                using PackD             = Pack<bfloat16_t, 16>;
+                using UnpackC           = Unpack<bfloat16_t>;
+                using PackD             = Pack<bfloat16_t>;
                 using Convert_bf16_fp32 = Convert<bfloat16_t, float32_t>;
                 using Convert_fp32_bf16 = Convert<float32_t, bfloat16_t>;
 
@@ -396,8 +396,8 @@ namespace rocwmma
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<bfloat16_t, float32_t, 16, 16>;
-                using UnpackC           = Unpack<bfloat16_t, 2>;
-                using PackD             = Pack<bfloat16_t, 4>;
+                using UnpackC           = Unpack<bfloat16_t>;
+                using PackD             = Pack<bfloat16_t>;
                 using Convert_bf16_fp32 = Convert<bfloat16_t, float32_t>;
                 using Convert_fp32_bf16 = Convert<float32_t, bfloat16_t>;
 
@@ -471,8 +471,8 @@ namespace rocwmma
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<bfloat16_t, float32_t, 32, 32>;
-                using UnpackC           = Unpack<bfloat16_t, 8>;
-                using PackD             = Pack<bfloat16_t, 16>;
+                using UnpackC           = Unpack<bfloat16_t>;
+                using PackD             = Pack<bfloat16_t>;
                 using Convert_bf16_fp32 = Convert<bfloat16_t, float32_t>;
                 using Convert_fp32_bf16 = Convert<float32_t, bfloat16_t>;
 

@@ -38,16 +38,29 @@ namespace rocwmma
         template <typename PermuteOp>
         struct Driver
         {
+        private:
+            template <typename DataT, uint32_t VecSize, uint32_t... Idx>
+            ROCWMMA_DEVICE static inline auto forEach(VecT<DataT, VecSize> const& src,
+                                                      detail::SeqT<Idx...>)
+            {
+                static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
+                return VecT<DataT, VecSize>{exec(get<Idx>(src))...};
+            }
+
+        public:
             // Sanity checks
             static_assert((PermuteOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_PERMUTE)
                               || (PermuteOp::opImpl()
                                   == CrossLaneOps::Properties::OP_IMPL_BPERMUTE),
                           "PermuteOp must use permute or permute backend");
             static_assert((PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_BLOCK_BCAST)
-                              || (PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_SHUFFLE),
+                              || (PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_SHUFFLE)
+                              || (PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_GATHER)
+                              || (PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_SCATTER),
                           "PermuteOp is unsupported");
 
-            template <typename SrcT>
+            template <typename SrcT,
+                      std::enable_if_t<sizeof(SrcT) == sizeof(uint32_t), uint32_t> = 0u>
             ROCWMMA_DEVICE static inline auto exec(SrcT&& src)
             {
                 return PermuteOp::exec(std::forward<SrcT>(src), detail::WaveSpace<>::localLaneId());
@@ -56,22 +69,7 @@ namespace rocwmma
             template <typename DataT, uint32_t VecSize>
             ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src)
             {
-                VecT<DataT, VecSize> result;
-                auto                 itW = makeVectorIterator(result).begin();
-                auto const           itR = makeVectorIterator(src).begin();
-
-                static_assert(decltype(itR)::range() == VecSize,
-                              "VecSize inconsistent with iterator range");
-                static_assert(decltype(itW)::range() == VecSize,
-                              "VecSize inconsistent with iterator range");
-
-#pragma unroll
-                for(uint32_t i = 0; i < VecSize; ++i, itR++, itW++)
-                {
-                    get<0>(*itW) = exec(get<0>(*itR));
-                }
-
-                return result;
+                return forEach(src, detail::Seq<VecSize>{});
             }
         };
 
