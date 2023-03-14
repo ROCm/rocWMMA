@@ -73,6 +73,8 @@ namespace rocwmma
                 template <typename DataT>
                 ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1)
                 {
+                    static_assert(sizeof(DataT) == sizeof(uint32_t), "Inputs must be 32 bit");
+
                     // NOTE: src0 and src1 are flipped here due to spec's select
                     // concatenation of i[3:0] = src1 and i[7:4] = src0 .
                     // amdgcn_blend_byte does the inverse of this to make
@@ -105,8 +107,12 @@ namespace rocwmma
                 template <typename DataT>
                 ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1)
                 {
+                    static_assert(sizeof(DataT) == sizeof(uint32_t), "Inputs must be 32 bit");
                     uint32_t const mask = MaskCtrl::maskCtrl();
-                    return (src1 & mask) | (src0 & ~mask);
+                    reinterpret_cast<uint32_t&>(src0)
+                        = (reinterpret_cast<uint32_t&>(src1) & mask)
+                          | (reinterpret_cast<uint32_t&>(src0) & ~mask);
+                    return src0;
                 }
             };
 

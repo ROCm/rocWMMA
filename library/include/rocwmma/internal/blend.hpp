@@ -40,6 +40,23 @@ namespace rocwmma
         template <typename BlendOp>
         struct Driver
         {
+        private:
+            template <typename DataT, uint32_t VecSize, uint32_t... Idx>
+            ROCWMMA_DEVICE static inline auto
+                forEach(VecT<DataT, VecSize> const& src0, DataT const& src1, detail::SeqT<Idx...>)
+            {
+                static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
+                return VecT<DataT, VecSize>{exec(get<Idx>(src0), src1)...};
+            }
+
+            template <typename DataT, uint32_t VecSize, uint32_t... Idx>
+            ROCWMMA_DEVICE static inline auto forEach(VecT<DataT, VecSize> const& src0,
+                                                      VecT<DataT, VecSize> const& src1,
+                                                      detail::SeqT<Idx...>)
+            {
+                static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
+                return VecT<DataT, VecSize>{exec(get<Idx>(src0), get<Idx>(src1))...};
+            }
 
         public:
             // Sanity checks
@@ -50,7 +67,12 @@ namespace rocwmma
                               || (BlendOp::opId() == CrossLaneOps::Properties::OP_ID_PERM_BYTE),
                           "BlendOp is unsupported");
 
-            template <typename Src0, typename Src1>
+            template <
+                typename Src0,
+                typename Src1,
+                std::enable_if_t<sizeof(Src0) == sizeof(uint32_t) && sizeof(Src0) == sizeof(Src1),
+                                 uint32_t>
+                = 0u>
             ROCWMMA_DEVICE static inline auto exec(Src0&& src0, Src1&& src1)
             {
                 return BlendOp::exec(std::forward<Src0>(src0), std::forward<Src1>(src1));
@@ -60,47 +82,14 @@ namespace rocwmma
             ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src0,
                                                    DataT const&                src1)
             {
-                VecT<DataT, VecSize> result;
-                auto const           itR = makeVectorIterator(src0).begin();
-                auto                 itW = makeVectorIterator(result).begin();
-
-                static_assert(decltype(itR)::range() == VecSize,
-                              "VecSize inconsistent with iterator range");
-                static_assert(decltype(itW)::range() == VecSize,
-                              "VecSize inconsistent with iterator range");
-
-#pragma unroll
-                for(uint32_t i = 0; i < VecSize; ++i, itR++, itW++)
-                {
-                    get<0>(*itW) = exec(get<0>(*itR), src1);
-                }
-
-                return result;
+                return forEach(src0, src1, detail::Seq<VecSize>{});
             }
 
             template <typename DataT, uint32_t VecSize>
             ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src0,
                                                    VecT<DataT, VecSize> const& src1)
             {
-                VecT<DataT, VecSize> result;
-                auto const           itR0 = makeVectorIterator(src0).begin();
-                auto const           itR1 = makeVectorIterator(src1).begin();
-                auto                 itW  = makeVectorIterator(result).begin();
-
-                static_assert(decltype(itR0)::range() == VecSize,
-                              "VecSize inconsistent with iterator range");
-                static_assert(decltype(itR1)::range() == VecSize,
-                              "VecSize inconsistent with iterator range");
-                static_assert(decltype(itW)::range() == VecSize,
-                              "VecSize inconsistent with iterator range");
-
-#pragma unroll
-                for(uint32_t i = 0; i < VecSize; ++i, itR0++, itR1++, itW++)
-                {
-                    get<0>(*itW) = exec(get<0>(*itR0), get<0>(*itR1));
-                }
-
-                return result;
+                return forEach(src0, src1, detail::Seq<VecSize>{});
             }
         };
 

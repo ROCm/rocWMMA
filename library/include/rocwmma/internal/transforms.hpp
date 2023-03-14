@@ -30,24 +30,93 @@
 
 namespace rocwmma
 {
-    // AOS -> SOA
-    // Transform FROM mem friendly layout TO MFMA friendly layout
-    template <typename DataT>
-    __device__ void aos_soa_16x32_vw8_b32_opt(VecT<DataT, 8>& v);
-    template <typename DataT>
-    __device__ void aos_soa_16x16_vw4_b32_opt(VecT<DataT, 4>& v);
-    template <typename DataT>
-    __device__ void aos_soa_16x8_vw2_b32_opt(VecT<DataT, 2>& v);
+    ///
+    /// AOS -> SOA : Transform from inline VW to ortho VW
+    ///
 
+    // BlockDim = 16
     template <typename DataT>
-    __device__ void aos_soa_32x4_vw2_b32_opt(VecT<DataT, 2>& v);
+    ROCWMMA_DEVICE static inline auto aos_soa_16xk_b32(VecT<DataT, 8> const& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto aos_soa_16xk_b32(VecT<DataT, 4> const& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto aos_soa_16xk_b32(VecT<DataT, 2> const& v);
 
-    // SOA -> AOS
-    // Transform FROM MFMA friendly layout to mem friendly layout
+    // BlockDim = 32
     template <typename DataT>
-    __device__ void soa_aos_16x16_vw4_b32_opt(VecT<DataT, 4>& v);
+    ROCWMMA_DEVICE static inline auto aos_soa_32xk_b32(VecT<DataT, 8> const& v);
     template <typename DataT>
-    __device__ void soa_aos_16x8_vw2_b32_opt(VecT<DataT, 2>& v);
+    ROCWMMA_DEVICE static inline auto aos_soa_32xk_b32(VecT<DataT, 4> const& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto aos_soa_32xk_b32(VecT<DataT, 2> const& v);
+
+    // BlockDim = 64
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto aos_soa_64xk_b32(VecT<DataT, 8>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto aos_soa_64xk_b32(VecT<DataT, 4>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto aos_soa_64xk_b32(VecT<DataT, 2>& v);
+
+    // BlockDim = 128
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto aos_soa_128xk_b32(VecT<DataT, 8>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto aos_soa_128xk_b32(VecT<DataT, 4>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto aos_soa_128xk_b32(VecT<DataT, 2>& v);
+
+    // BlockDim = 256
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto aos_soa_256xk_b32(VecT<DataT, 8>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto aos_soa_256xk_b32(VecT<DataT, 4>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto aos_soa_256xk_b32(VecT<DataT, 2>& v);
+
+    //
+    /// SOA -> AOS : Transform from ortho VW to inline VW
+    ///
+
+    // BlockDim = 16
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto soa_aos_16xk_b32(VecT<DataT, 8>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto soa_aos_16xk_b32(VecT<DataT, 4>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto soa_aos_16xk_b32(VecT<DataT, 2>& v);
+
+    // BlockDim = 32
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto soa_aos_32xk_b32(VecT<DataT, 8>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto soa_aos_32xk_b32(VecT<DataT, 4>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto soa_aos_32xk_b32(VecT<DataT, 2>& v);
+
+    // BlockDim = 64
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto soa_aos_64xk_b32(VecT<DataT, 8>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto soa_aos_64xk_b32(VecT<DataT, 4>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto soa_aos_64xk_b32(VecT<DataT, 2>& v);
+
+    // BlockDim = 128
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto soa_aos_128xk_b32(VecT<DataT, 8>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto soa_aos_128xk_b32(VecT<DataT, 4>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto soa_aos_128xk_b32(VecT<DataT, 2>& v);
+
+    // BlockDim = 256
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto soa_aos_256xk_b32(VecT<DataT, 8>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto soa_aos_256xk_b32(VecT<DataT, 4>& v);
+    template <typename DataT>
+    ROCWMMA_DEVICE static inline auto soa_aos_256xk_b32(VecT<DataT, 2>& v);
 
 } // namespace rocwmma
 
