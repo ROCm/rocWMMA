@@ -187,6 +187,7 @@ namespace rocwmma
             for(uint32_t i = 0u; i < decltype(rIt)::range(); i++, rIt++, wIt++)
             {
                 FootSpace a;
+                a.emplaced             = get<0>(*wIt);
                 a.extracted[SelectIdx] = get<0>(*rIt);
                 get<0>(*wIt)           = a.emplaced;
             }
