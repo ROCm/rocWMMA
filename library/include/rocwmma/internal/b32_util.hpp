@@ -91,6 +91,28 @@ namespace rocwmma
             }
             return result;
         }
+
+        template <uint32_t VecSize, uint32_t SelectIdx = 0u>
+        __device__ static auto emplace(VecT<EmplacedT, VecSize>&        dst,
+                                       VecT<ExtractedT, VecSize> const& v)
+        {
+            auto const rIt = makeVectorIterator(v).begin();
+            auto       wIt = makeVectorIterator(dst).begin();
+
+            static_assert(decltype(rIt)::range() == decltype(wIt)::range(),
+                          "Unexpected iterator range mismatch");
+
+            static_assert(SelectIdx < (sizeof(EmplacedT) / sizeof(ExtractedT)),
+                          "Invalid index selection");
+
+            for(uint32_t i = 0u; i < decltype(rIt)::range(); i++, rIt++, wIt++)
+            {
+                FootSpace a;
+                a.extracted  = get<0>(*rIt);
+                get<0>(*wIt) = a.emplaced[SelectIdx];
+            }
+            return dst;
+        }
     };
 
     template <>
