@@ -108,13 +108,11 @@ namespace rocwmma
         template <uint32_t VecSize, uint32_t SelectIdx = 0u>
         __device__ static auto extract(VecT<EmplacedT, VecSize> const& v)
         {
-            const uint32_t inflatedSize = VecSize << 1;
+            VecT<ExtractedT, VecSize> result;
+            auto const                rIt = makeVectorIterator(v).begin();
+            auto                      wIt = makeVectorIterator(result).begin();
 
-            VecT<ExtractedT, inflatedSize> result;
-            auto const                     rIt = makeVectorIterator(v).begin();
-            auto                           wIt = makeVectorIterator(result).begin();
-
-            static_assert(decltype(rIt)::range() == (decltype(wIt)::range() >> 1),
+            static_assert(decltype(rIt)::range() == decltype(wIt)::range(),
                           "Unexpected iterator range mismatch");
 
             static_assert(SelectIdx < (sizeof(EmplacedT) / sizeof(ExtractedT)),
@@ -123,9 +121,8 @@ namespace rocwmma
             for(uint32_t i = 0u; i < decltype(rIt)::range(); i++, rIt++, wIt++)
             {
                 FootSpace a;
-                a.emplaced         = get<0>(*rIt);
-                get<0>(*wIt)       = a.extracted[0];
-                get<VecSize>(*wIt) = a.extracted[1];
+                a.emplaced   = get<0>(*rIt);
+                get<0>(*wIt) = a.extracted[SelectIdx];
             }
             return result;
         }
@@ -133,26 +130,45 @@ namespace rocwmma
         template <uint32_t VecSize, uint32_t SelectIdx = 0u>
         __device__ static auto emplace(VecT<ExtractedT, VecSize> const& v)
         {
-            const uint32_t inflatedSize = VecSize << 1;
-
             VecT<EmplacedT, VecSize> result;
             auto const               rIt = makeVectorIterator(v).begin();
             auto                     wIt = makeVectorIterator(result).begin();
 
-            static_assert((decltype(rIt)::range() >> 1) == decltype(wIt)::range(),
+            static_assert(decltype(rIt)::range() == decltype(wIt)::range(),
                           "Unexpected iterator range mismatch");
 
             static_assert(SelectIdx < (sizeof(EmplacedT) / sizeof(ExtractedT)),
                           "Invalid index selection");
 
-            for(uint32_t i = 0u; i < decltype(wIt)::range(); i++, rIt++, wIt++)
+            for(uint32_t i = 0u; i < decltype(rIt)::range(); i++, rIt++, wIt++)
             {
                 FootSpace a;
-                a.extracted[0] = get<0>(*rIt);
-                a.extracted[1] = get<VecSize>(*rIt);
-                get<0>(*wIt)   = a.emplaced;
+                a.extracted[SelectIdx] = get<0>(*rIt);
+                get<0>(*wIt)           = a.emplaced;
             }
             return result;
+        }
+
+        template <uint32_t VecSize, uint32_t SelectIdx = 0u>
+        __device__ static auto emplace(VecT<EmplacedT, VecSize>&        dst,
+                                       VecT<ExtractedT, VecSize> const& v)
+        {
+            auto const rIt = makeVectorIterator(v).begin();
+            auto       wIt = makeVectorIterator(dst).begin();
+
+            static_assert(decltype(rIt)::range() == decltype(wIt)::range(),
+                          "Unexpected iterator range mismatch");
+
+            static_assert(SelectIdx < (sizeof(EmplacedT) / sizeof(ExtractedT)),
+                          "Invalid index selection");
+
+            for(uint32_t i = 0u; i < decltype(rIt)::range(); i++, rIt++, wIt++)
+            {
+                FootSpace a;
+                a.extracted[SelectIdx] = get<0>(*rIt);
+                get<0>(*wIt)           = a.emplaced;
+            }
+            return dst;
         }
     };
 

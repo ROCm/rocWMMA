@@ -37,8 +37,9 @@
 
 namespace rocwmma
 {
-    template <typename DataT>
-    __device__ void aos_soa_16x32_vw8_b32_opt(VecT<DataT, 8>& v)
+    template <typename DataT, uint32_t VecSize, uint32_t... Idx>
+    ROCWMMA_DEVICE constexpr static inline auto extractEven(VecT<DataT, VecSize> const& v,
+                                                            detail::SeqT<Idx...>)
     {
         static_assert(sizeof...(Idx) == VecSize / 2u, "Index count must be half the vector size");
         return VecT<DataT, VecSize / 2u>{get<Idx * 2>(v)...};
