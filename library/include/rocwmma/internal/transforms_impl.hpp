@@ -37,68 +37,6 @@
 
 namespace rocwmma
 {
-    template <typename DataT>
-    struct Lufi
-    {
-        using PackTraits = detail::PackTraits<DataT>;
-
-        using InflatedT = typename PackTraits::PackedT;
-        using DeflatedT = typename PackTraits::UnpackedT;
-
-        using FootSpace = union
-        {
-            InflatedT inflated;
-            DeflatedT deflated[PackTraits::PackRatio];
-        };
-
-        template <uint32_t VecSize, uint32_t SelectIdx = 0u>
-        __device__ static auto inflate(VecT<DeflatedT, VecSize> const& v)
-        {
-            VecT<InflatedT, VecSize> result;
-            auto const               rIt = makeVectorIterator(v).begin();
-            auto                     wIt = makeVectorIterator(result).begin();
-
-            static_assert(decltype(rIt)::range() == decltype(wIt)::range(),
-                          "Unexpected iterator range mismatch");
-
-            static_assert(SelectIdx < (sizeof(InflatedT) / sizeof(DeflatedT)),
-                          "Invalid index selection");
-
-            for(uint32_t i = 0u; i < decltype(rIt)::range(); i++, rIt++, wIt++)
-            {
-                FootSpace a;
-                a.deflated[SelectIdx] = get<0>(*rIt);
-                get<0>(*wIt)          = a.inflated;
-            }
-            return result;
-        }
-
-        template <uint32_t VecSize, uint32_t SelectIdx = 0u>
-        __device__ static auto deflate(VecT<InflatedT, VecSize> const& v)
-        {
-            VecT<DeflatedT, VecSize> result;
-            auto const               rIt = makeVectorIterator(v).begin();
-            auto                     wIt = makeVectorIterator(result).begin();
-
-            static_assert(decltype(rIt)::range() == decltype(wIt)::range(),
-                          "Unexpected iterator range mismatch");
-
-            static_assert(SelectIdx < (sizeof(InflatedT) / sizeof(DeflatedT)),
-                          "Invalid index selection");
-
-            for(uint32_t i = 0u; i < decltype(rIt)::range(); i++, rIt++, wIt++)
-            {
-                FootSpace a;
-                a.inflated   = get<0>(*rIt);
-                get<0>(*wIt) = a.deflated[SelectIdx];
-            }
-            return result;
-        }
-    };
-
-    ///
-    /// AOS -> SOA : Transform from inline VW to ortho VW
-    ///
     template <typename DataT, uint32_t VecSize, uint32_t... Idx>
     ROCWMMA_DEVICE constexpr static inline auto extractEven(VecT<DataT, VecSize> const& v,
                                                             detail::SeqT<Idx...>)
