@@ -32,9 +32,8 @@
 #include "io_shape.hpp"
 #include "opaque_load.hpp"
 #include "opaque_store.hpp"
-#include "pack.hpp"
+#include "pack_util.hpp"
 #include "types.hpp"
-#include "unpack.hpp"
 
 namespace rocwmma
 {
@@ -85,8 +84,7 @@ namespace rocwmma
     {
         using IOShape     = IOShape<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>;
         using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT, IOShape::VectorWidth>;
-        using Packer      = Pack<DataT>;
-        using Unpacker    = Unpack<DataT>;
+        using PackUtil    = PackUtil<DataT>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
 
         using MappingUtil
@@ -133,8 +131,7 @@ namespace rocwmma
     {
         using IOShape     = IOShape<accumulator, BlockM, BlockN, BlockK, DataT, void>;
         using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT>;
-        using Packer      = Pack<DataT>;
-        using Unpacker    = Unpack<DataT>;
+        using PackUtil    = PackUtil<DataT>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
     };
 

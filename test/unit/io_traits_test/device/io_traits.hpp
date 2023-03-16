@@ -49,7 +49,7 @@ namespace rocwmma
 
         bool err = false;
 
-        using PackTraits = detail::PackTraits<DataT>;
+        using PackTraits = PackTraits<DataT>;
 
         // Check on pack ratio sizes
         err |= (PackTraits::PackRatio * sizeof(typename PackTraits::UnpackedT)
