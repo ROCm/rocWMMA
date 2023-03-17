@@ -30,6 +30,18 @@ Optional:
 * rocBLAS minimum version 2.46.0 for ROCm 5.4 (for rocBLAS validation / benchmarks)
 * doxygen (for building documentation)
 
+## Documentation
+
+Run the steps below to build documentation locally.
+
+```
+cd docs
+
+pip3 install -r .sphinx/requirements.txt
+
+python3 -m sphinx -T -E -b html -d _build/doctrees -D language=en . _build/html
+```
+
 ## Currently supported configurations (ongoing)
 - Wave Size: Wave32 (gfx11), Wave64 (gfx9)
 
