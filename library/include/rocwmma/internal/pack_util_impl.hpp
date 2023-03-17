@@ -242,13 +242,12 @@ namespace rocwmma
         // Case 1: No padding required
         if constexpr(Traits::PackRatio == 1)
         {
-            return std::forward<std::decay_t<decltype(v)>>(v);
+            return v;
         }
         // Case 2: Padding to 32b for each of the elements
         else
         {
-            return VecT<PackedT, VecSize>{
-                padHelper<PadIdx, GetIdx>(std::forward<std::decay_t<decltype(v)>>(v))...};
+            return VecT<PackedT, VecSize>{padHelper<PadIdx, GetIdx>(v)...};
         }
     }
 
@@ -262,13 +261,12 @@ namespace rocwmma
         // Case 1: No padding required
         if constexpr(Traits::PackRatio == 1)
         {
-            return std::forward<std::decay_t<decltype(v)>>(v);
+            return v;
         }
         // Case 2: Unpadding from b32 for each of the elements
         else
         {
-            return VecT<UnpackedT, VecSize>{
-                unpadHelper<PadIdx, GetIdx>(std::forward<std::decay_t<decltype(v)>>(v))...};
+            return VecT<UnpackedT, VecSize>{unpadHelper<PadIdx, GetIdx>(v)...};
         }
     }
 
@@ -277,7 +275,7 @@ namespace rocwmma
     ROCWMMA_DEVICE /*static*/ inline decltype(auto)
         PackUtil<DataT>::pack(VecT<UnpackedT, VecSize> const& v)
     {
-        return packHelper(std::forward<std::decay_t<decltype(v)>>(v));
+        return packHelper(v);
     }
 
     template <typename DataT>
@@ -285,7 +283,7 @@ namespace rocwmma
     ROCWMMA_DEVICE /*static*/ inline decltype(auto)
         PackUtil<DataT>::unpack(VecT<PackedT, VecSize> const& v)
     {
-        return unpackHelper(std::forward<std::decay_t<decltype(v)>>(v));
+        return unpackHelper(v);
     }
 
     template <typename DataT>
@@ -293,7 +291,7 @@ namespace rocwmma
     ROCWMMA_DEVICE /*static*/ inline decltype(auto)
         PackUtil<DataT>::pad(VecT<UnpackedT, VecSize> const& v)
     {
-        return pad(std::forward<std::decay_t<decltype(v)>>(v), detail::Seq<VecSize>{});
+        return pad(v, detail::Seq<VecSize>{});
     }
 
     template <typename DataT>
@@ -301,7 +299,7 @@ namespace rocwmma
     ROCWMMA_DEVICE /*static*/ inline decltype(auto)
         PackUtil<DataT>::unpad(VecT<PackedT, VecSize> const& v)
     {
-        return unpad(std::forward<std::decay_t<decltype(v)>>(v), detail::Seq<VecSize>{});
+        return unpad(v, detail::Seq<VecSize>{});
     }
 
     template <typename DataT>
@@ -317,13 +315,12 @@ namespace rocwmma
         // Duplicate the inputs for padding
         else if constexpr((VecSize * 2u) == Traits::PackRatio)
         {
-            return packHelper(concat(std::forward<std::decay_t<decltype(v)>>(v),
-                                     std::forward<std::decay_t<decltype(v)>>(v)));
+            return packHelper(concat(v, v));
         }
         // Pad single element data to b32
         else if constexpr(VecSize == 1u)
         {
-            return pad(std::forward<std::decay_t<decltype(v)>>(v));
+            return pad(v);
         }
     }
 
@@ -340,12 +337,12 @@ namespace rocwmma
         // Take lower half of vector
         else if constexpr((UnpaddedSize * 2u) == Traits::PackRatio)
         {
-            return extractLo(std::forward<std::decay_t<decltype(v)>>(v));
+            return extractLo(v);
         }
         // Pad single element data to b32
         else if constexpr(UnpaddedSize == 1u)
         {
-            return unpad(std::forward<std::decay_t<decltype(v)>>(v));
+            return unpad(v);
         }
     }
 
