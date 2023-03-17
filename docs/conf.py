@@ -6,7 +6,7 @@
 
 from rocm_docs import ROCmDocs
 
-docs_core = ROCmDocs("hipBLAS Documentation")
+docs_core = ROCmDocs("rocWMMA Documentation")
 docs_core.run_doxygen()
 docs_core.setup()
 
