@@ -25,6 +25,18 @@ Optional:
 * [rocBLAS 2.39.0 for ROCm 4.3.0](https://github.com/ROCmSoftwarePlatform/rocBLAS/releases/tag/rocm-4.3.0) (for rocBLAS validation / benchmarks)
 * doxygen (for building documentation)
 
+## Documentation
+
+Run the steps below to build documentation locally.
+
+```
+cd docs
+
+pip3 install -r .sphinx/requirements.txt
+
+python3 -m sphinx -T -E -b html -d _build/doctrees -D language=en . _build/html
+```
+
 ## Currently supported configurations (ongoing)
 
 - Matrix Layout <LayoutA, LayoutB, Layout C, LayoutD> (N = col major, T = row major)
