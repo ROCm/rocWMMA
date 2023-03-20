@@ -74,9 +74,10 @@ namespace rocwmma
         int sharedMemSize() const;
         int cuCount() const;
         int maxFreqMhz() const;
+        int curFreqMhz() const;
 
         template <typename InputT>
-        double maxGFlopsPerSec() const;
+        double peakGFlopsPerSec() const;
 
         ~HipDevice();
 
@@ -89,22 +90,21 @@ namespace rocwmma
         int             mSharedMemSize;
         int             mCuCount;
         int             mMaxFreqMhz;
+        int             mCurFreqMhz;
     };
 
     template <typename InputT>
-    double HipDevice::maxGFlopsPerSec() const
+    double HipDevice::peakGFlopsPerSec() const
     {
-        uint32_t mMaxFreqMhz = maxFreqMhz();
-
         double result = -1.0;
         switch(mGcnArch)
         {
         case hipGcnArch_t::GFX908:
-            result = calculateGFlopsPerSec<InputT, MI100>(mMaxFreqMhz, mCuCount);
+            result = calculatePeakGFlopsPerSec<InputT, MI100>(mCurFreqMhz, mCuCount);
             break;
 
         case hipGcnArch_t::GFX90A:
-            result = calculateGFlopsPerSec<InputT, MI200>(mMaxFreqMhz, mCuCount);
+            result = calculatePeakGFlopsPerSec<InputT, MI200>(mCurFreqMhz, mCuCount);
             break;
         default:;
         }

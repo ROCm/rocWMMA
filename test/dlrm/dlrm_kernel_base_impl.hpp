@@ -386,7 +386,7 @@ namespace rocwmma
             // Calculate efficiency
             auto& deviceInfo             = DeviceInfo::instance();
 
-            auto  deviceMaxGFlopsPerSec = deviceInfo->maxGFlopsPerSec<DataT>();
+            auto  devicePeakGFlopsPerSec  = deviceInfo->peakGFlopsPerSec<DataT>();
             auto  outputSize = (passDirection == DlrmDirection_t::Forward) ? mM * mM : mM * mK;
 
             mElapsedTimeMs        = float64_t(timeMs);
@@ -394,7 +394,7 @@ namespace rocwmma
             mMeasuredTFlopsPerSec = calculateTFlopsPerSec(outputSize, mB, mK, mElapsedTimeMs)
                                     * static_cast<float64_t>(mRepeats);
 
-            mEfficiency = round(mMeasuredTFlopsPerSec / deviceMaxGFlopsPerSec * 100000.0);
+            mEfficiency = round(mMeasuredTFlopsPerSec / devicePeakGFlopsPerSec  * 100000.0);
 
             CHECK_HIP_ERROR(hipEventDestroy(startEvent));
             CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
