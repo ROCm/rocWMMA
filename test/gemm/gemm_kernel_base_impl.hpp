@@ -626,14 +626,14 @@ namespace rocwmma
                 // Calculate efficiency
                 auto& deviceInfo             = DeviceInfo::instance();
 
-                auto  deviceMaxGFlopsPerSec = deviceInfo->maxGFlopsPerSec<InputT>();
+                auto  devicePeakGFlopsPerSec  = deviceInfo->peakGFlopsPerSec<InputT>();
 
                 mElapsedTimeMs        = float64_t(timeMs);
                 mTotalGFlops          = calculateGFlops(mM, mN, mK);
                 mMeasuredTFlopsPerSec = calculateTFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
                                         * static_cast<float64_t>(mRepeats);
 
-                mEfficiency = round(mMeasuredTFlopsPerSec / deviceMaxGFlopsPerSec * 100000.0);
+                mEfficiency = round(mMeasuredTFlopsPerSec / devicePeakGFlopsPerSec  * 100000.0);
 
                 CHECK_HIP_ERROR(hipEventDestroy(startEvent));
                 CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
@@ -764,13 +764,13 @@ namespace rocwmma
                 {
                     // Calculate GPU efficiency
                     auto& deviceInfo             = DeviceInfo::instance();
-                    auto  deviceMaxGFlopsPerSec = deviceInfo->maxGFlopsPerSec<InputT>();
+                    auto  devicePeakGFlopsPerSec  = deviceInfo->peakGFlopsPerSec<InputT>();
 
                     auto elapsedTimeMs        = float64_t(timeMs);
                     auto measuredTFlopsPerSec = calculateTFlopsPerSec(mM, mN, mK, elapsedTimeMs)
                                                 * static_cast<float64_t>(mRepeats);
                     mReferenceEfficiency
-                        = round(measuredTFlopsPerSec / deviceMaxGFlopsPerSec * 100000.0);
+                        = round(measuredTFlopsPerSec / devicePeakGFlopsPerSec  * 100000.0);
                 }
 
                 CHECK_HIP_ERROR(hipEventDestroy(startEvent));
