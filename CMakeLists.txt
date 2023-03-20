@@ -97,8 +97,13 @@ message( VERBOSE "AMDGPU_TARGETS=${AMDGPU_TARGETS}")
 find_package( hip REQUIRED )
 find_package( OpenMP REQUIRED )
 
+find_path(ROCM_SMI_ROOT "include/rocm_smi/rocm_smi.h"
+    PATHS "${ROCM_ROOT}"
+    PATH_SUFFIXES "rocm_smi"
+    )
+    
 find_library(ROCM_SMI_LIBRARY rocm_smi64
-    PATHS "${ROCM_PATH}")
+    PATHS "${ROCM_SMI_ROOT}/lib")
 
 add_library(rocwmma INTERFACE)
 target_link_libraries(rocwmma INTERFACE hip::device hip::host OpenMP::OpenMP_CXX ROCM_SMI_LIBRARY)
