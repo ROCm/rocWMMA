@@ -105,12 +105,15 @@ namespace rocwmma
                   bool     BoundCtrl     = false>
         struct Driver
         {
+        private:
             template <typename DataT, uint32_t VecSize, uint32_t... Idx>
             ROCWMMA_DEVICE static inline auto forEach(VecT<DataT, VecSize> const& src,
                                                       detail::SeqT<Idx...>)
             {
                 static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{exec(get<Idx>(src))...};
+                return VecT<DataT, VecSize>{
+                    DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(get<Idx>(src),
+                                                                                 get<Idx>(src))...};
             }
 
             template <typename DataT, uint32_t VecSize, uint32_t... Idx>
@@ -118,7 +121,10 @@ namespace rocwmma
                 forEach(VecT<DataT, VecSize> const& src0, DataT const& src1, detail::SeqT<Idx...>)
             {
                 static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{exec(get<Idx>(src0), src1)...};
+                static_assert(sizeof(DataT) == sizeof(uint32_t), "Scalar must be 32b");
+                return VecT<DataT, VecSize>{
+                    DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(get<Idx>(src0),
+                                                                                 src1)...};
             }
 
             template <typename DataT, uint32_t VecSize, uint32_t... Idx>
@@ -127,9 +133,12 @@ namespace rocwmma
                                                       detail::SeqT<Idx...>)
             {
                 static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{exec(get<Idx>(src0), get<Idx>(src1))...};
+                return VecT<DataT, VecSize>{
+                    DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(
+                        get<Idx>(src0), get<Idx>(src1))...};
             }
 
+        public:
             // Sanity checks
             static_assert(DppOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP,
                           "DppOp must use dpp backend");
@@ -143,24 +152,10 @@ namespace rocwmma
                               || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_MOVE),
                           "DppOp is unsupported");
 
-            template <
-                typename Src0,
-                typename Src1,
-                std::enable_if_t<sizeof(Src0) == sizeof(uint32_t) && sizeof(Src0) == sizeof(Src1),
-                                 uint32_t>
-                = 0u>
-            ROCWMMA_DEVICE static inline auto exec(Src0&& src0, Src1&& src1)
+            template <typename DataT>
+            ROCWMMA_DEVICE static inline auto exec(DataT const& src0, DataT const& src1)
             {
-                return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(
-                    std::forward<Src0>(src0), std::forward<Src1>(src1));
-            }
-
-            template <typename Src0,
-                      std::enable_if_t<sizeof(Src0) == sizeof(uint32_t), uint32_t> = 0u>
-            ROCWMMA_DEVICE static inline auto exec(Src0&& src0)
-            {
-                return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(
-                    std::forward<Src0>(src0), std::forward<Src0>(src0));
+                return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(src0, src1);
             }
 
             // Self as prev
