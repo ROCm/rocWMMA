@@ -250,7 +250,7 @@ namespace rocwmma
     template <typename InputT,
               typename GfxArch,
               template <typename, typename> class PerfTraits = rocwmma::MfmaPerfTraits>
-    inline double calculatePeakGFlopsPerSec(uint32_t freqMHz, uint32_t cuCount)
+    inline double calculateGFlopsPerSec(uint32_t freqMHz, uint32_t cuCount)
     {
         return static_cast<double>(PerfTraits<GfxArch, InputT>::Multiplier)
                * static_cast<double>(cuCount) * static_cast<double>(freqMHz) * 1.0e-3;

@@ -98,7 +98,7 @@ find_package( hip REQUIRED )
 find_package( OpenMP REQUIRED )
 
 add_library(rocwmma INTERFACE)
-target_link_libraries(rocwmma INTERFACE hip::device hip::host OpenMP::OpenMP_CXX)
+target_link_libraries(rocwmma INTERFACE hip::device hip::host OpenMP::OpenMP_CXX rocm_smi64)
 
 rocm_install_targets(
   TARGETS rocwmma

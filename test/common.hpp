@@ -51,6 +51,23 @@
     }
 #endif
 
+
+#ifndef CHECK_RSMI_ERROR
+#define CHECK_RSMI_ERROR(status)                            \
+    if(status != RSMI_STATUS_SUCCESS )                      \
+    {                                                       \
+        const char* errName = nullptr;                      \
+        rsmi_status_string(status, &errName);               \
+        fprintf(stderr,                                     \
+                "rsmi error: '%s'(%d) at %s:%d\n",          \
+                errName,                                    \
+                status,                                     \
+                __FILE__,                                   \
+                __LINE__);                                  \
+        exit(EXIT_FAILURE);                                 \
+    }
+#endif
+
 namespace rocwmma
 {
 

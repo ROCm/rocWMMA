@@ -28,6 +28,8 @@
 #define ROCWMMA_TEST_HIP_DEVICE_HPP
 
 #include <hip/hip_runtime_api.h>
+#include <hip/hip_runtime.h>
+#include <rocm_smi/rocm_smi.h>
 #include <rocwmma/internal/constants.hpp>
 
 #include "performance.hpp"
@@ -74,7 +76,9 @@ namespace rocwmma
         int maxFreqMhz() const;
 
         template <typename InputT>
-        double peakGFlopsPerSec() const;
+        double maxGFlopsPerSec() const;
+
+        ~HipDevice();
 
     private:
         hipDevice_t     mHandle;
@@ -88,23 +92,24 @@ namespace rocwmma
     };
 
     template <typename InputT>
-    double HipDevice::peakGFlopsPerSec() const
+    double HipDevice::maxGFlopsPerSec() const
     {
+        uint32_t mMaxFreqMhz = maxFreqMhz();
+
         double result = -1.0;
         switch(mGcnArch)
         {
         case hipGcnArch_t::GFX908:
-            result = calculatePeakGFlopsPerSec<InputT, MI100>(mMaxFreqMhz, mCuCount);
+            result = calculateGFlopsPerSec<InputT, MI100>(mMaxFreqMhz, mCuCount);
             break;
 
         case hipGcnArch_t::GFX90A:
-            result = calculatePeakGFlopsPerSec<InputT, MI200>(mMaxFreqMhz, mCuCount);
+            result = calculateGFlopsPerSec<InputT, MI200>(mMaxFreqMhz, mCuCount);
             break;
         default:;
         }
         return result;
     }
-
 } // namespace rocwmma
 
 #endif // ROCWMMA_TEST_HIP_DEVICE_HPP
