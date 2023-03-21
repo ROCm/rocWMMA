@@ -92,22 +92,6 @@ namespace rocwmma
         }
     };
 
-    // Kernel_PGR0_LB0_MP0_MB_NC<
-    //             std::tuple_element_t<BlockM, TestParamsT>::value, // BlockM
-    //             std::tuple_element_t<BlockN, TestParamsT>::value, // BlockN
-    //             std::tuple_element_t<BlockK, TestParamsT>::value, // BlockK
-    //             std::tuple_element_t<InputT, TestParamsT>, // InputT
-    //             std::tuple_element_t<OutputT, TestParamsT>, // OutputT
-    //             std::tuple_element_t<ComputeT, TestParamsT>, // ComputeT
-    //             std::tuple_element_t<LayoutA, TestParamsT>, // LayoutA
-    //             std::tuple_element_t<LayoutB, TestParamsT>, // LayoutB
-    //             std::tuple_element_t<LayoutCD, TestParamsT>, // LayoutC
-    //             std::tuple_element_t<LayoutCD, TestParamsT>, // LayoutD
-    //             std::tuple_element_t<BlocksX, TestParamsT>::value, // BlocksX
-    //             std::tuple_element_t<BlocksY, TestParamsT>::value // BlocksY
-    //             >;
-    // template struct TestParams::GeneratorImpl::Kernel_PGR0_LB0_MP0_MB_NC<std::tuple_element_t<0, TestParams::KernelParams>>;
-
 } // namespace rocwmma
 
 ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE_NO_WARMUP(Gemm_PGR0_LB0_MP0_MB_NC,
