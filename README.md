@@ -549,7 +549,9 @@ Run simple gemm sample:
 ```
 
 **Peformant SGEMM**
+
 To implement and measure performance of Matrix Multiply-Accumulate(D = Alpha * A x B + Beta * C) with user-defined configurations on GPU.
+
 It contains the best performant version of multi-block GEMM algorithm with LDS memory, Macro Tile Collaboration, Data re-use and
 Optimized pipeline, configured with the finest parameters for larger sizes (1K and above).
 
@@ -572,7 +574,11 @@ Run perf gemm sample:
 
 **SGEMV**
 
-Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose. Calculates Y = alpha * (A) * X + beta * Y with mixed precision fp16 inputs and fp32 output. Includes simple CPU validation and benchmark.
+Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose. 
+
+Calculates Y = alpha * (A) * X + beta * Y with mixed precision fp16 inputs and fp32 output.
+
+Includes simple CPU validation and benchmark.
 
  A = Matrix of size m * k (row-major)
 
@@ -587,7 +593,11 @@ Run sgemv sample:
 
 **DGEMV**
 
-Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose. Calculates Y = alpha * (A) * X + beta * Y with fp64 inputs and output. Includes simple CPU validation and benchmark.
+Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose. 
+
+Calculates Y = alpha * (A) * X + beta * Y with fp64 inputs and output.
+
+Includes simple CPU validation and benchmark.
 
  A = Matrix of size m * k (row-major)
 

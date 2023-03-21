@@ -50,6 +50,7 @@ samples/hipRTC_gemm.cpp
 
 sample code for calling Simple GEMM algorithm demonstration without LDS memory usage and no transpose, from within the hipRTC environment.
 
+
 samples/simple_sgemv.cpp
 ''''''''''''''''''''''''
 
