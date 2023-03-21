@@ -44,7 +44,8 @@ add_subdirectory(test/wave)
 add_subdirectory(test/workgroup)
 
 # Ad hoc test
-set(${ROCWMMA_AD_HOC_TARGET_SOURCES} ${GemmCommonSources}
+# Note: GemmKernelBase and GemmResource instantiations required.
+set(${ROCWMMA_AD_HOC_TARGET_SOURCES} ${ROCWMMA_COMMON_TEST_SOURCES}
                                      ${CMAKE_CURRENT_SOURCE_DIR}/test/ad_hoc_test.cpp)
 
 add_gemm_test(${ROCWMMA_AD_HOC_TARGET_NAME} ${${ROCWMMA_AD_HOC_TARGET_SOURCES}})
