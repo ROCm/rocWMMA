@@ -182,7 +182,7 @@ namespace rocwmma
         {
             PaddingB32 p;
             p.unpacked[PadIdx] = get<GetIdx>(v);
-            return p.packed;
+            return static_cast<PackedT>(p.packed);
         }
     }
 
@@ -204,7 +204,7 @@ namespace rocwmma
         {
             PaddingB32 p;
             p.packed = get<GetIdx>(v);
-            return p.unpacked[PadIdx];
+            return static_cast<UnpackedT>(p.unpacked[PadIdx]);
         }
     }
 
@@ -291,7 +291,7 @@ namespace rocwmma
     ROCWMMA_DEVICE /*static*/ inline decltype(auto)
         PackUtil<DataT>::pad(VecT<UnpackedT, VecSize> const& v)
     {
-        return pad(v, detail::Seq<VecSize>{});
+        return pad<PadIdx>(v, detail::Seq<VecSize>{});
     }
 
     template <typename DataT>
@@ -299,7 +299,7 @@ namespace rocwmma
     ROCWMMA_DEVICE /*static*/ inline decltype(auto)
         PackUtil<DataT>::unpad(VecT<PackedT, VecSize> const& v)
     {
-        return unpad(v, detail::Seq<VecSize>{});
+        return unpad<PadIdx>(v, detail::Seq<VecSize>{});
     }
 
     template <typename DataT>
