@@ -46,7 +46,7 @@ namespace rocwmma
                 forEach(VecT<DataT, VecSize> const& src0, DataT const& src1, detail::SeqT<Idx...>)
             {
                 static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{exec(get<Idx>(src0), src1)...};
+                return VecT<DataT, VecSize>{BlendOp::exec(get<Idx>(src0), src1)...};
             }
 
             template <typename DataT, uint32_t VecSize, uint32_t... Idx>
@@ -55,7 +55,7 @@ namespace rocwmma
                                                       detail::SeqT<Idx...>)
             {
                 static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{exec(get<Idx>(src0), get<Idx>(src1))...};
+                return VecT<DataT, VecSize>{BlendOp::exec(get<Idx>(src0), get<Idx>(src1))...};
             }
 
         public:
@@ -67,15 +67,10 @@ namespace rocwmma
                               || (BlendOp::opId() == CrossLaneOps::Properties::OP_ID_PERM_BYTE),
                           "BlendOp is unsupported");
 
-            template <
-                typename Src0,
-                typename Src1,
-                std::enable_if_t<sizeof(Src0) == sizeof(uint32_t) && sizeof(Src0) == sizeof(Src1),
-                                 uint32_t>
-                = 0u>
-            ROCWMMA_DEVICE static inline auto exec(Src0&& src0, Src1&& src1)
+            template <typename DataT>
+            ROCWMMA_DEVICE static inline auto exec(DataT const& src0, DataT const& src1)
             {
-                return BlendOp::exec(std::forward<Src0>(src0), std::forward<Src1>(src1));
+                return BlendOp::exec(src0, src1);
             }
 
             template <typename DataT, uint32_t VecSize>

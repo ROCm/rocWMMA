@@ -28,6 +28,7 @@
 
 #include "internal/io_config.hpp"
 #include "internal/io_traits.hpp"
+#include "internal/pack_util.hpp"
 #include "internal/types.hpp"
 
 /**
@@ -213,8 +214,8 @@ namespace rocwmma
         struct Traits
         {
         private:
-            using PackedElementT   = typename detail::PackTraits<DataT>::PackedT;
-            using UnpackedElementT = typename detail::PackTraits<DataT>::UnpackedT;
+            using PackedElementT   = typename PackTraits<DataT>::PackedT;
+            using UnpackedElementT = typename PackTraits<DataT>::UnpackedT;
             using IOTraits =
                 typename io_config<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>::IOTraits;
 
