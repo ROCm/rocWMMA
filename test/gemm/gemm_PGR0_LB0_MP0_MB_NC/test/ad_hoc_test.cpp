@@ -26,9 +26,18 @@
 
 #include "test/test_includes.hpp"
 
+// Instantiate referenced kernels for
+// ad-hoc test only
+#include "gemm_kernel_base_impl.hpp"
+#include "gemm_resource_impl.hpp"
 namespace rocwmma
 {
+    bool KernelI::sHeaderPrinted = false;
+}
 
+namespace rocwmma
+{
+    
     struct TestParams : public CommonTestParams
     {
         using Base = CommonTestParams;

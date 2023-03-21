@@ -174,8 +174,9 @@ if(ROCWMMA_BUILD_EXTENDED_TESTS)
                                     )
 endif()
 
-# Ad hoc test sources
-set(${ROCWMMA_AD_HOC_TARGET_SOURCES} ${GemmCommonSources}
+# Ad hoc test sources.
+# Note: GemmKernelBase and GemmResource instantiations required.
+set(${ROCWMMA_AD_HOC_TARGET_SOURCES} ${ROCWMMA_COMMON_TEST_SOURCES}
     ${CMAKE_CURRENT_SOURCE_DIR}/test/ad_hoc_test.cpp)
 
 # Create targets
