@@ -525,9 +525,60 @@ Run ad-hoc test:
 ### Samples
 These are stand-alone real-world use-cases of the rocWMMA API. They have minimal dependencies and represent a targeted application with a fixed set of parameters.
 
-**SGEMM-V**
+## GEMM
+Matrix Multiply Accumulate to demonstrate rocWMMA API usage in context of wave-level GEMM computation, in both simplified and optimized versions.
 
-Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose. Calculates Y = alpha * (A) * X + beta * Y with mixed precision fp16 inputs and fp32 output. Includes simple CPU validation and benchmark.
+**Simple GEMM**
+
+Simple GEMM algorithm demonstration without LDS memory usage and no transpose. 
+
+simple_sgemm calculates D = Alpha * A x B + Beta * C with fp32 inputs and output.
+
+simple_dgemm calculates D = Alpha * A x B + Beta * C with fp64 inputs and output.
+
+simple_hgemm calculates D = Alpha * A x B + Beta * C with fp16 inputs and output.
+
+Includes simple CPU validation and benchmark.
+
+Run simple gemm sample:
+```
+<build_dir>/samples/simple_sgemm
+<build_dir>/samples/simple_dgemm
+<build_dir>/samples/simple_hgemm
+
+```
+
+**Peformant SGEMM**
+
+To implement and measure performance of Matrix Multiply-Accumulate(D = Alpha * A x B + Beta * C) with user-defined configurations on GPU.
+
+It contains the best performant version of multi-block GEMM algorithm with LDS memory, Macro Tile Collaboration, Data re-use and
+Optimized pipeline, configured with the finest parameters for larger sizes (1K and above).
+
+perf_sgemm calculates D = Alpha * A x B + Beta * C with fp32 inputs and output.
+
+perf_dgemm calculates D = Alpha * A x B + Beta * C with fp64 inputs and output.
+
+perf_hgemm calculates D = Alpha * A x B + Beta * C with fp16 inputs and output.
+
+Includes simple CPU validation and benchmark.
+
+Run perf gemm sample:
+```
+<build_dir>/samples/perf_sgemm
+<build_dir>/samples/perf_dgemm
+<build_dir>/samples/perf_hgemm
+```
+
+## GEMV
+
+**SGEMV**
+
+Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose. 
+
+Calculates Y = alpha * (A) * X + beta * Y with mixed precision fp16 inputs and fp32 output.
+
+Includes simple CPU validation and benchmark.
 
  A = Matrix of size m * k (row-major)
 
@@ -535,12 +586,31 @@ Simple matrix multiply-accumulate with a vector demonstration, without LDS and n
 
  Y = accumulator of size m * 1 (row-major)
 
-Run sgemmv sample:
+Run sgemv sample:
 ```
-<build_dir>/samples/sgemmv
+<build_dir>/samples/simple_sgemv
 ```
 
-**Simple DLRM**
+**DGEMV**
+
+Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose. 
+
+Calculates Y = alpha * (A) * X + beta * Y with fp64 inputs and output.
+
+Includes simple CPU validation and benchmark.
+
+ A = Matrix of size m * k (row-major)
+
+ X = Vector of size k * 1 (col-major)
+
+ Y = accumulator of size m * 1 (row-major)
+
+Run dgemv sample:
+```
+<build_dir>/samples/simple_dgemv
+```
+
+## Simple DLRM
 
 Simple Deep Learning Recommendation Model (DLRM) for machine learning. Implements both forward and backward passes on fp16 inputs and outputs. Includes simple CPU validation and benchmark.
 
@@ -549,14 +619,6 @@ Run simple_dlrm sample:
 <build_dir>/samples/simple_dlrm
 ```
 
-**Simple GEMM**
-
-Simple GEMM algorithm demonstration without LDS memory usage and no transpose. Calculates D = Alpha * A x B + Beta * C with mixed precision fp16 inputs and fp32 output. Includes simple CPU validation and benchmark.
-
-Run simple_gemm sample:
-```
-<build_dir>/samples/simple_gemm
-```
 ## hipRTC Support
 
 HIP's run-time compilation (hipRTC) environment allows on-the-fly compilation, loading and execution of device code on AMD GPUs. The rocWMMA library is compatible with hipRTC where it may be leveraged for run-time generated kernels*. A simple GEMM sample has been included to demonstrate compatibility. hipRTC API documentation may be found in the HIP Programming Guide for the latest release located here: https://docs.amd.com/
