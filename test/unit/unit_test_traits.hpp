@@ -61,7 +61,7 @@ namespace rocwmma
 
             PackedTile
             = ceilDiv((uint32_t)Sizes::TileSize, Granularity* WaveSize* DWord) * Granularity,
-            UnpackedTile = PackedTile * detail::PackTraits<DataT>::PackRatio,
+            UnpackedTile = PackedTile * PackTraits<DataT>::PackRatio,
         };
 
         // Architecture we are testing
