@@ -86,8 +86,8 @@ namespace rocwmma
             >::type>
     {
         // Functional backend
-        using WMMA         = detail::amdgcn_wmma<InputT, ComputeT, BlockM, BlockN>;
-        using AccumAdapter = detail::AccumAdapter<ComputeT, WMMA::Traits::AccumBits>;
+        using WMMA     = detail::amdgcn_wmma<InputT, ComputeT, BlockM, BlockN>;
+        using PackUtil = PackUtil<ComputeT>;
 
         // Full-fragment IO traits
         using IOTraitsA   = IOTraits<BlockM, BlockK, InputT>;
@@ -133,8 +133,12 @@ namespace rocwmma
             static_assert(VecTraits<InputCRegsT>::size() == IOTraitsAcc::PackedSize,
                           "WMMA input size mismatch");
 
-            // Unpack incoming C
-            auto accum = AccumAdapter::unpack(regsC);
+            // WMMA accumulator operates on unpacked, padded data in separate 32b elements.
+            // In the case of f16, what needs to happen is extend each unpacked element to 32b wide
+            // and shift the 16b data to the correct spot (determined by the WMMA backend).
+            // The nasty bit is that due of the extended 32b element size, the final accumulation vector
+            // is masqueraded as a 'packed' type, but with the same vector size as unpacked.
+            auto accum = PackUtil::template pad<WMMA::Traits::AccumBits>(PackUtil::unpack(regsC));
 
             // Iterate over packed WMMA inputs
             auto const aIt = makeVectorIterator<VecTraitsA::size() / 2u>(regsA).begin();
@@ -171,7 +175,7 @@ namespace rocwmma
                 bIt++;
             }
 
-            return AccumAdapter::pack(accum);
+            return PackUtil::pack(PackUtil::template unpad<WMMA::Traits::AccumBits>(accum));
         }
     };
 
