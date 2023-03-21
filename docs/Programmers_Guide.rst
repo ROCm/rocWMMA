@@ -46,20 +46,60 @@ Internal include files for:
 The `samples` directory
 ^^^^^^^^^^^^^^^^^^^^^^^
 samples/hipRTC_gemm.cpp
-''''''''''''''''''
+'''''''''''''''''''''''
 
 sample code for calling Simple GEMM algorithm demonstration without LDS memory usage and no transpose, from within the hipRTC environment.
 
-samples/sgemmv.cpp
-''''''''''''''''''
+samples/simple_sgemv.cpp
+''''''''''''''''''''''''
 
-sample code for calling Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose.
+sample code for calling Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose for mixed precision fp16 inputs and fp32 output.
 
 
-samples/simple_gemm.cpp
-'''''''''''''''''''''''
+samples/simple_dgemv.cpp
+''''''''''''''''''''''''
 
-Sample code for calling Simple GEMM algorithm demonstration without LDS memory usage and no transpose.
+sample code for calling Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose for double-precision floating point types.
+
+
+samples/simple_sgemm.cpp
+''''''''''''''''''''''''
+
+Sample code for calling Simple GEMM algorithm demonstration without LDS memory usage and no transpose for single-precision floating point types.
+
+
+samples/simple_dgemm.cpp
+''''''''''''''''''''''''
+
+Sample code for calling Simple GEMM algorithm demonstration without LDS memory usage and no transpose for double-precision floating point types.
+
+
+samples/simple_hgemm.cpp
+''''''''''''''''''''''''
+
+Sample code for calling Simple GEMM algorithm demonstration without LDS memory usage and no transpose for half-precision floating point types.
+
+
+samples/perf_sgemm.cpp
+''''''''''''''''''''''''
+
+Sample code for calling the best performant multi-block GEMM algorithm demonstration with LDS memory, Macro Tile Collaboration, Data Re-use and
+Optimized pipeline for single-precision floating point types.
+
+
+samples/perf_dgemm.cpp
+''''''''''''''''''''''''
+
+Sample code for calling the best performant multi-block GEMM algorithm demonstration with LDS memory, Macro Tile Collaboration, Data Re-use and
+Optimized pipeline for double-precision floating point types.
+
+
+samples/perf_hgemm.cpp
+''''''''''''''''''''''''
+
+Sample code for calling the best performant multi-block GEMM algorithm demonstration with LDS memory, Macro Tile Collaboration, Data Re-use and
+Optimized pipeline for half-precision floating point types.
+
 
 samples/simple_dlrm.cpp
 '''''''''''''''''''''''

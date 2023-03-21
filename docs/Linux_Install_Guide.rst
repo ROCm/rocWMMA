@@ -198,13 +198,24 @@ After configuration, build with
 
 The samples folder in <build_dir> contains executables in the table below.
 
-================ ===========================================================================
+================ ==============================================================================================================================
 executable name  description
-================ ===========================================================================
-simple-gemm      a simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API
-sgemv            a simple GEMV operation [y = alpha * (A) * x + beta * y] using rocWMMA API
-simple-dlrm      a simple DLRM operation using rocWMMA API
-================ ===========================================================================
+================ ==============================================================================================================================
+simple_sgemm      a simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for single-precision floating point types
+simple_dgemm      a simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for double-precision floating point types
+simple_hgemm      a simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for half-precision floating point types
+
+perf_sgemm        an optimized GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for single-precision floating point types
+perf_dgemm        an optimized GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for double-precision floating point types
+perf_hgemm        an optimized GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for half-precision floating point types
+
+simple_sgemv      a simple GEMV operation [y = alpha * (A) * x + beta * y]] using rocWMMA API for mixed precision fp16 inputs and fp32 output
+simple_dgemv      a simple GEMV operation [y = alpha * (A) * x + beta * y]] using rocWMMA API for double-precision fp64 inputs and output
+
+simple-dlrm       a simple DLRM operation using rocWMMA API
+
+hipRTC_gemm       a simple GEMM operation [D = alpha * (A x B) + beta * C] demonstrating runtime compilation (hipRTC) compatibility
+================ ==============================================================================================================================
 
 
 Build library + tests
