@@ -43,24 +43,6 @@ namespace rocwmma
             }
         };
 
-        template <typename ComputeT, uint32_t AccumBits, typename Enabler = void>
-        struct AccumAdapter
-        {
-            template <typename IncomingT>
-            ROCWMMA_DEVICE static inline auto unpack(IncomingT&& accumVec)
-            {
-                // No unpack needed
-                return accumVec;
-            }
-
-            template <typename IncomingT>
-            ROCWMMA_DEVICE static inline auto pack(IncomingT&& accumVec)
-            {
-                // No pack needed
-                return accumVec;
-            }
-        };
-
 // WMMA instructions are specific to gfx11 architecture
 #if ROCWMMA_ARCH_NAVI
 
@@ -248,111 +230,6 @@ namespace rocwmma
                                                                           regsC.data,
                                                                           Traits::AccumSign)};
                 return result;
-            }
-        };
-
-        // Accumulator data needs some special treatment for data types < 4 Byte, due to unpacked layout AND
-        // variable element placement within 32b element containers.
-        // This adapter supplies the correct accumulator layout for small data types.
-        template <typename ComputeT, uint32_t AccumBits>
-        struct AccumAdapter<ComputeT,
-                            AccumBits,
-                            typename std::enable_if_t<(PackTraits<ComputeT>::PackRatio > 1)>>
-        {
-            using PackTraits = PackTraits<ComputeT>;
-            using UnpackedT  = typename PackTraits::UnpackedT;
-            using PackedT    = typename PackTraits::PackedT;
-
-            template <typename IncomingT>
-            ROCWMMA_DEVICE static inline auto unpack(IncomingT const& accumVec)
-            {
-                // Accum data is comes in packed. WMMA accumulator needs unpacked data.
-                using VecTraitsIn = VecTraits<IncomingT>;
-                using PackUtil    = PackUtil<ComputeT>;
-
-                static_assert(std::is_same<PackedT, typename VecTraitsIn::DataT>::value,
-                              "Unexpected incoming packed type");
-
-                // WMMA accumulator operates on unpacked data in separate 32b elements.
-                // In the case of f16, what needs to happen is extend each unpacked element to 32b wide
-                // and shift the 16b data to the correct spot (determined by the WMMA backend).
-                // The nasty bit is that due of the extended 32b element size, the final accumulation vector
-                // is masqueraded as a 'packed' type, but with the same vector size as unpacked.
-                using AccumExtVecT = typename VecTraitsIn::
-                    template VecT<PackedT, VecTraitsIn::size() * PackTraits::PackRatio>;
-
-                // First step, unpack. This is not yet 32b wide.
-                auto unpacked = PackUtil::unpack(accumVec);
-
-                // Next, create the destination 32b wide elements
-                auto accum = AccumExtVecT();
-
-                // Iterate over both vectors, one read, one write
-                auto const rIt = makeVectorIterator(unpacked).begin();
-                auto       wIt = makeVectorIterator(accum).begin();
-
-                static_assert(decltype(rIt)::range() == decltype(wIt)::range(),
-                              "Unexpected iterator range mismatch");
-
-                // Don't convert, however emplace element data in upper / lower halves of accum.
-#pragma unroll
-                for(uint32_t i = 0u; i < decltype(rIt)::range(); i++)
-                {
-                    union
-                    {
-                        PackedT   packed;
-                        UnpackedT unpacked[PackTraits::PackRatio];
-                    } a = {PackedT(0)};
-
-                    a.unpacked[AccumBits] = get<0>(*rIt);
-                    get<0>(*wIt)          = a.packed;
-
-                    wIt++;
-                    rIt++;
-                }
-
-                return accum;
-            }
-
-            template <typename IncomingT>
-            ROCWMMA_DEVICE static inline auto pack(IncomingT const& accumVec)
-            {
-                // Accum data comes out as unpacked, but with extended 32b elements
-                using VecTraitsIn = VecTraits<IncomingT>;
-                using Packer      = PackUtil<ComputeT>;
-
-                static_assert(std::is_same<PackedT, typename VecTraitsIn::DataT>::value,
-                              "Unexpected incoming unpacked type");
-
-                // As before, WMMA accumulator operates on unpacked data in separate 32b elements.
-                // In the case of f16, what needs to happen is shrink each unpacked 32b element the original
-                // 16b size, preserving the 16b data from correct spot (determined by the WMMA backend).
-                auto accum = typename Packer::Traits::InputT();
-
-                auto const rIt = makeVectorIterator(accumVec).begin();
-                auto       wIt = makeVectorIterator(accum).begin();
-
-                static_assert(decltype(rIt)::range() == decltype(wIt)::range(),
-                              "Unexpected iterator range mismatch");
-
-                // Don't convert, however pick element data in upper / lower halves of accumVec.
-#pragma unroll
-                for(uint32_t i = 0u; i < decltype(rIt)::range(); i++)
-                {
-                    union
-                    {
-                        PackedT   packed;
-                        UnpackedT unpacked[PackTraits::PackRatio];
-                    } a = {PackedT(0)};
-
-                    a.packed     = get<0>(*rIt);
-                    get<0>(*wIt) = a.unpacked[AccumBits];
-
-                    wIt++;
-                    rIt++;
-                }
-
-                return Packer::exec(accum);
             }
         };
 

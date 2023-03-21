@@ -132,7 +132,28 @@ namespace rocwmma
                                                         detail::SeqT<Idx...>)
         {
             static_assert(sizeof...(Idx) == VecSize, "Index count must equal the vector size");
-            return VecT<DataT, VecSize / 2u>{(get<Idx>(v0), get<Idx>(v1))...};
+            return VecT<DataT, VecSize>{((Idx % 2 == 0) ? get<Idx>(v0) : get<Idx>(v1))...};
+        }
+
+        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
+        ROCWMMA_DEVICE constexpr static inline auto unpackLo(VecT<DataT, VecSize> const& v0,
+                                                             VecT<DataT, VecSize> const& v1,
+                                                             detail::SeqT<Idx...>)
+        {
+            static_assert(sizeof...(Idx) == VecSize, "Index count must equal the vector size");
+            return VecT<DataT, VecSize>{
+                ((Idx % 2 == 0) ? get<Idx / 2u>(v0) : get<Idx / 2u>(v1))...};
+        }
+
+        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
+        ROCWMMA_DEVICE constexpr static inline auto unpackHi(VecT<DataT, VecSize> const& v0,
+                                                             VecT<DataT, VecSize> const& v1,
+                                                             detail::SeqT<Idx...>)
+        {
+            constexpr auto startIdx = VecSize / 2u;
+            static_assert(sizeof...(Idx) == VecSize, "Index count must equal the vector size");
+            return VecT<DataT, VecSize>{
+                ((Idx % 2 == 0) ? get<startIdx + Idx / 2u>(v0) : get<startIdx + Idx / 2u>(v1))...};
         }
 
     } // namespace detail
@@ -173,6 +194,20 @@ namespace rocwmma
                                                     VecT<DataT, VecSize> const& v1)
     {
         return detail::zip(v0, v1, detail::Seq<VecSize>{});
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE constexpr static inline auto unpackLo(VecT<DataT, VecSize> const& v0,
+                                                         VecT<DataT, VecSize> const& v1)
+    {
+        return detail::unpackLo(v0, v1, detail::Seq<VecSize>{});
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE constexpr static inline auto unpackHi(VecT<DataT, VecSize> const& v0,
+                                                         VecT<DataT, VecSize> const& v1)
+    {
+        return detail::unpackHi(v0, v1, detail::Seq<VecSize>{});
     }
 
     // Unary swap only considered in 2d vectors.
