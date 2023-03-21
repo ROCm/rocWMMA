@@ -31,6 +31,7 @@
 
 namespace rocwmma
 {
+
     ///////////////////////////////////////////////////////////////////
     ///           HIP_vector_type<T, N> utility overrides           ///
     ///                                                             ///
@@ -70,6 +71,108 @@ namespace rocwmma
         get(non_native_vector_base<DataT, VecSize> const& v)
     {
         return v[Idx];
+    }
+
+    ///////////////////////////////////////////////////////////////////
+    ///                 Vector manipulation identities              ///
+    ///                                                             ///
+    /// Note: performs static unroll                                ///
+    ///////////////////////////////////////////////////////////////////
+
+    namespace detail
+    {
+        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
+        ROCWMMA_DEVICE constexpr static inline auto extractEven(VecT<DataT, VecSize> const& v,
+                                                                detail::SeqT<Idx...>)
+        {
+            static_assert(sizeof...(Idx) == VecSize / 2u,
+                          "Index count must be half the vector size");
+            return VecT<DataT, VecSize / 2u>{get<Idx * 2>(v)...};
+        }
+
+        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
+        ROCWMMA_DEVICE constexpr static inline auto extractOdd(VecT<DataT, VecSize> const& v,
+                                                               detail::SeqT<Idx...>)
+        {
+            static_assert(sizeof...(Idx) == VecSize / 2u,
+                          "Index count must be half the vector size");
+            return VecT<DataT, VecSize / 2u>{get<Idx * 2 + 1>(v)...};
+        }
+
+        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
+        ROCWMMA_DEVICE constexpr static inline auto extractLo(VecT<DataT, VecSize> const& v,
+                                                              detail::SeqT<Idx...>)
+        {
+            static_assert(sizeof...(Idx) == VecSize / 2u,
+                          "Index count must be half the vector size");
+            return VecT<DataT, VecSize / 2u>{get<Idx>(v)...};
+        }
+
+        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
+        ROCWMMA_DEVICE constexpr static inline auto extractHi(VecT<DataT, VecSize> const& v,
+                                                              detail::SeqT<Idx...>)
+        {
+            static_assert(sizeof...(Idx) == VecSize / 2u,
+                          "Index count must be half the vector size");
+            return VecT<DataT, VecSize / 2u>{get<VecSize / 2 + Idx>(v)...};
+        }
+
+        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
+        ROCWMMA_DEVICE constexpr static inline auto concat(VecT<DataT, VecSize> const& v0,
+                                                           VecT<DataT, VecSize> const& v1,
+                                                           detail::SeqT<Idx...>)
+        {
+            static_assert(sizeof...(Idx) == VecSize, "Index count must equal the vector size");
+            return VecT<DataT, VecSize * 2u>{get<Idx>(v0)..., get<Idx>(v1)...};
+        }
+
+        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
+        ROCWMMA_DEVICE constexpr static inline auto zip(VecT<DataT, VecSize> const& v0,
+                                                        VecT<DataT, VecSize> const& v1,
+                                                        detail::SeqT<Idx...>)
+        {
+            static_assert(sizeof...(Idx) == VecSize, "Index count must equal the vector size");
+            return VecT<DataT, VecSize / 2u>{(get<Idx>(v0), get<Idx>(v1))...};
+        }
+
+    } // namespace detail
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE constexpr static inline auto extractEven(VecT<DataT, VecSize> const& v)
+    {
+        return detail::extractEven(v, detail::Seq<VecSize / 2u>{});
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE constexpr static inline auto extractLo(VecT<DataT, VecSize> const& v)
+    {
+        return detail::extractLo(v, detail::Seq<VecSize / 2u>{});
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE constexpr static inline auto extractHi(VecT<DataT, VecSize> const& v)
+    {
+        return detail::extractHi(v, detail::Seq<VecSize / 2u>{});
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE constexpr static inline auto extractOdd(VecT<DataT, VecSize> const& v)
+    {
+        return detail::extractOdd(v, detail::Seq<VecSize / 2u>{});
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE constexpr static inline auto concat(VecT<DataT, VecSize> const& v0,
+                                                       VecT<DataT, VecSize> const& v1)
+    {
+        return detail::concat(v0, v1, detail::Seq<VecSize>{});
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE constexpr static inline auto zip(VecT<DataT, VecSize> const& v0,
+                                                    VecT<DataT, VecSize> const& v1)
+    {
+        return detail::zip(v0, v1, detail::Seq<VecSize>{});
     }
 
     // Unary swap only considered in 2d vectors.
