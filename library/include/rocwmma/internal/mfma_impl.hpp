@@ -100,8 +100,7 @@ namespace rocwmma
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<float16_t, float32_t, 16, 16>;
-                using UnpackC           = Unpack<float16_t>;
-                using PackD             = Pack<float16_t>;
+                using Pack16            = PackUtil<float16_t>;
                 using Convert_fp16_fp32 = Convert<float16_t, float32_t>;
                 using Convert_fp32_fp16 = Convert<float32_t, float16_t>;
 
@@ -109,8 +108,8 @@ namespace rocwmma
                 // Upconvert C to fp32, do MFMA, then down convert D
                 // to fp16 as 'simulated' fp16 computation
                 auto Dfp32
-                    = Mfma::exec(regsA, regsB, Convert_fp16_fp32::exec(UnpackC::exec(regsC)));
-                return PackD::exec(Convert_fp32_fp16::exec(Dfp32));
+                    = Mfma::exec(regsA, regsB, Convert_fp16_fp32::exec(Pack16::unpack(regsC)));
+                return Pack16::pack(Convert_fp32_fp16::exec(Dfp32));
             }
         };
 
@@ -164,16 +163,15 @@ namespace rocwmma
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<float16_t, float32_t, 32, 32>;
-                using UnpackC           = Unpack<float16_t>;
-                using PackD             = Pack<float16_t>;
+                using PackCD            = PackUtil<float16_t>;
                 using Convert_fp16_fp32 = Convert<float16_t, float32_t>;
                 using Convert_fp32_fp16 = Convert<float32_t, float16_t>;
 
                 // MFMA unit compute type is always fp32.
                 // Upconvert C to fp32, do MFMA, then down convert D to fp16 result;
                 auto Dfp32
-                    = Mfma::exec(regsA, regsB, Convert_fp16_fp32::exec(UnpackC::exec(regsC)));
-                return PackD::exec(Convert_fp32_fp16::exec(Dfp32));
+                    = Mfma::exec(regsA, regsB, Convert_fp16_fp32::exec(PackCD::unpack(regsC)));
+                return PackCD::pack(Convert_fp32_fp16::exec(Dfp32));
             }
         };
 
@@ -255,16 +253,15 @@ namespace rocwmma
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<bfloat16_t, float32_t, 16, 16>;
-                using UnpackC           = Unpack<bfloat16_t>;
-                using PackD             = Pack<bfloat16_t>;
+                using PackCD            = PackUtil<bfloat16_t>;
                 using Convert_bf16_fp32 = Convert<bfloat16_t, float32_t>;
                 using Convert_fp32_bf16 = Convert<float32_t, bfloat16_t>;
 
                 // MFMA unit compute type is always fp32.
                 // Upconvert C to fp32, do MFMA, then down convert D to bf16 result
                 auto Dfp32
-                    = Mfma::exec(regsA, regsB, Convert_bf16_fp32::exec(UnpackC::exec(regsC)));
-                return PackD::exec(Convert_fp32_bf16::exec(Dfp32));
+                    = Mfma::exec(regsA, regsB, Convert_bf16_fp32::exec(PackCD::unpack(regsC)));
+                return PackCD::pack(Convert_fp32_bf16::exec(Dfp32));
             }
         };
 
@@ -318,16 +315,15 @@ namespace rocwmma
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<bfloat16_t, float32_t, 32, 32>;
-                using UnpackC           = Unpack<bfloat16_t>;
-                using PackD             = Pack<bfloat16_t>;
+                using PackCD            = PackUtil<bfloat16_t>;
                 using Convert_bf16_fp32 = Convert<bfloat16_t, float32_t>;
                 using Convert_fp32_bf16 = Convert<float32_t, bfloat16_t>;
 
                 // MFMA unit compute type is always fp32.
                 // Upconvert C to fp32, do MFMA, then down convert D to bf16 result
                 auto Dfp32
-                    = Mfma::exec(regsA, regsB, Convert_bf16_fp32::exec(UnpackC::exec(regsC)));
-                return PackD::exec(Convert_fp32_bf16::exec(Dfp32));
+                    = Mfma::exec(regsA, regsB, Convert_bf16_fp32::exec(PackCD::unpack(regsC)));
+                return PackCD::pack(Convert_fp32_bf16::exec(Dfp32));
             }
         };
 
@@ -396,16 +392,15 @@ namespace rocwmma
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<bfloat16_t, float32_t, 16, 16>;
-                using UnpackC           = Unpack<bfloat16_t>;
-                using PackD             = Pack<bfloat16_t>;
+                using PackCD            = PackUtil<bfloat16_t>;
                 using Convert_bf16_fp32 = Convert<bfloat16_t, float32_t>;
                 using Convert_fp32_bf16 = Convert<float32_t, bfloat16_t>;
 
                 // MFMA unit compute type is always fp32.
                 // Upconvert C to fp32, do MFMA, then down convert D to bf16 result
                 auto Dfp32
-                    = Mfma::exec(regsA, regsB, Convert_bf16_fp32::exec(UnpackC::exec(regsC)));
-                return PackD::exec(Convert_fp32_bf16::exec(Dfp32));
+                    = Mfma::exec(regsA, regsB, Convert_bf16_fp32::exec(PackCD::unpack(regsC)));
+                return PackCD::pack(Convert_fp32_bf16::exec(Dfp32));
             }
         };
 
@@ -471,16 +466,15 @@ namespace rocwmma
                 typename Traits::DRegsT
             {
                 using Mfma              = amdgcn_mfma<bfloat16_t, float32_t, 32, 32>;
-                using UnpackC           = Unpack<bfloat16_t>;
-                using PackD             = Pack<bfloat16_t>;
+                using PackCD            = PackUtil<bfloat16_t>;
                 using Convert_bf16_fp32 = Convert<bfloat16_t, float32_t>;
                 using Convert_fp32_bf16 = Convert<float32_t, bfloat16_t>;
 
                 // MFMA unit compute type is always fp32.
                 // Upconvert C to fp32, do MFMA, then down convert D to bf16 result
                 auto Dfp32
-                    = Mfma::exec(regsA, regsB, Convert_bf16_fp32::exec(UnpackC::exec(regsC)));
-                return PackD::exec(Convert_fp32_bf16::exec(Dfp32));
+                    = Mfma::exec(regsA, regsB, Convert_bf16_fp32::exec(PackCD::unpack(regsC)));
+                return PackCD::pack(Convert_fp32_bf16::exec(Dfp32));
             }
         };
 
