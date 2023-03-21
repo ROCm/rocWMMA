@@ -42,7 +42,7 @@
 
 #include <rocblas/rocblas.h>
 
-#if(ROCBLAS_VERSION_MAJOR >= 2) && (ROCBLAS_VERSION_MINOR > 45)
+#if(ROCBLAS_VERSION_MAJOR >= 3) || ((ROCBLAS_VERSION_MAJOR >= 2) && (ROCBLAS_VERSION_MINOR > 45))
 #define ROCBLAS_DATA_TYPE_INVALID
 #endif
 

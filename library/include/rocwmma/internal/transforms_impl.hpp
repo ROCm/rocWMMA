@@ -30,179 +30,129 @@
 
 #include "dpp.hpp"
 #include "io_traits.hpp"
-#include "pack.hpp"
+#include "pack_util.hpp"
 #include "permute.hpp"
-#include "unpack.hpp"
 #include "utils.hpp"
 
 namespace rocwmma
 {
-    template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-    ROCWMMA_DEVICE constexpr static inline auto extractEven(VecT<DataT, VecSize> const& v,
-                                                            detail::SeqT<Idx...>)
-    {
-        static_assert(sizeof...(Idx) == VecSize / 2u, "Index count must be half the vector size");
-        return VecT<DataT, VecSize / 2u>{get<Idx * 2>(v)...};
-    }
-
-    template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-    ROCWMMA_DEVICE constexpr static inline auto extractOdd(VecT<DataT, VecSize> const& v,
-                                                           detail::SeqT<Idx...>)
-    {
-        static_assert(sizeof...(Idx) == VecSize / 2u, "Index count must be half the vector size");
-        return VecT<DataT, VecSize / 2u>{get<Idx * 2 + 1>(v)...};
-    }
-
-    template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-    ROCWMMA_DEVICE constexpr static inline auto
-        concat(VecT<DataT, VecSize> const& v0, VecT<DataT, VecSize> const& v1, detail::SeqT<Idx...>)
-    {
-        static_assert(sizeof...(Idx) == VecSize, "Index count must equal the vector size");
-        return VecT<DataT, VecSize * 2u>{get<Idx>(v0)..., get<Idx>(v1)...};
-    }
-
-    template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-    ROCWMMA_DEVICE constexpr static inline auto
-        zip(VecT<DataT, VecSize> const& v0, VecT<DataT, VecSize> const& v1, detail::SeqT<Idx...>)
-    {
-        static_assert(sizeof...(Idx) == VecSize, "Index count must equal the vector size");
-        return VecT<DataT, VecSize / 2u>{(get<Idx>(v0), get<Idx>(v1))...};
-    }
-
-    template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto extractEven(VecT<DataT, VecSize> const& v)
-    {
-        return extractEven(v, detail::Seq<VecSize / 2u>{});
-    }
-
-    template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto extractOdd(VecT<DataT, VecSize> const& v)
-    {
-        return extractOdd(v, detail::Seq<VecSize / 2u>{});
-    }
-
-    template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto concat(VecT<DataT, VecSize> const& v0,
-                                                       VecT<DataT, VecSize> const& v1)
-    {
-        return concat(v0, v1, detail::Seq<VecSize>{});
-    }
-
-    template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto zip(VecT<DataT, VecSize> const& v0,
-                                                    VecT<DataT, VecSize> const& v1)
-    {
-        return zip(v0, v1, detail::Seq<VecSize>{});
-    }
+    ///
+    /// AOS -> SOA : Transform from inline VW to ortho VW
+    ///
 
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline auto unpackLo2(VecT<DataT, VecSize> const& v)
     {
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        using Packer   = Pack<DataT>;
-        using Unpacker = Unpack<DataT>;
-        return Unpacker::exec(Blend::Zip2::exec(
-            Packer::exec(extractEven(v)), Dpp::RotateR16<2>::exec(Packer::exec(extractOdd(v)))));
+        using PackUtil = PackUtil<DataT>;
+
+        return PackUtil::template paddedUnpack<VecSize / 2>(
+            Blend::Zip2::exec(PackUtil::paddedPack(extractEven(v)),
+                              Dpp::RotateR16<2>::exec(PackUtil::paddedPack(extractOdd(v)))));
     }
 
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline auto unpackLo4(VecT<DataT, VecSize> const& v)
     {
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        using Packer   = Pack<DataT>;
-        using Unpacker = Unpack<DataT>;
-        return Unpacker::exec(Dpp::template RotateR16<4, 0xF, 0xA>::exec(
-            Packer::exec(extractOdd(v)), Packer::exec(extractEven(v))));
+        using PackUtil = PackUtil<DataT>;
+
+        return PackUtil::template paddedUnpack<VecSize / 2>(
+            Dpp::template RotateR16<4, 0xF, 0xA>::exec(PackUtil::paddedPack(extractOdd(v)),
+                                                       PackUtil::paddedPack(extractEven(v))));
     }
 
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline auto unpackLo8(VecT<DataT, VecSize> const& v)
     {
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        using Packer   = Pack<DataT>;
-        using Unpacker = Unpack<DataT>;
-        return Unpacker::exec(Dpp::template RotateR16<8, 0xF, 0xC>::exec(
-            Packer::exec(extractOdd(v)), Packer::exec(extractEven(v))));
+        using PackUtil = PackUtil<DataT>;
+
+        return PackUtil::template paddedUnpack<VecSize / 2>(
+            Dpp::template RotateR16<8, 0xF, 0xC>::exec(PackUtil::paddedPack(extractOdd(v)),
+                                                       PackUtil::paddedPack(extractEven(v))));
     }
 
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline auto unpackHi2(VecT<DataT, VecSize> const& v)
     {
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        using Packer   = Pack<DataT>;
-        using Unpacker = Unpack<DataT>;
-        return Unpacker::exec(Blend::Zip2::exec(
-            Dpp::RotateR16<14>::exec(Packer::exec(extractEven(v))), Packer::exec(extractOdd(v))));
+        using PackUtil = PackUtil<DataT>;
+
+        return PackUtil::template paddedUnpack<VecSize / 2>(
+            Blend::Zip2::exec(Dpp::RotateR16<14>::exec(PackUtil::paddedPack(extractEven(v))),
+                              PackUtil::paddedPack(extractOdd(v))));
     }
 
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline auto unpackHi4(VecT<DataT, VecSize> const& v)
     {
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        using Packer   = Pack<DataT>;
-        using Unpacker = Unpack<DataT>;
-        return Unpacker::exec(Dpp::template RotateR16<12, 0xF, 0x5>::exec(
-            Packer::exec(extractEven(v)), Packer::exec(extractOdd(v))));
+        using PackUtil = PackUtil<DataT>;
+
+        return PackUtil::template paddedUnpack<VecSize / 2>(
+            Dpp::template RotateR16<12, 0xF, 0x5>::exec(PackUtil::paddedPack(extractEven(v)),
+                                                        PackUtil::paddedPack(extractOdd(v))));
     }
 
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline auto unpackHi8(VecT<DataT, VecSize> const& v)
     {
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        using Packer   = Pack<DataT>;
-        using Unpacker = Unpack<DataT>;
-        return Unpacker::exec(Dpp::template RotateR16<8, 0xF, 0x3>::exec(
-            Packer::exec(extractEven(v)), Packer::exec(extractOdd(v))));
+        using PackUtil = PackUtil<DataT>;
+
+        return PackUtil::template paddedUnpack<VecSize / 2>(
+            Dpp::template RotateR16<8, 0xF, 0x3>::exec(PackUtil::paddedPack(extractEven(v)),
+                                                       PackUtil::paddedPack(extractOdd(v))));
     }
 
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline auto unpackLoHi2(VecT<DataT, VecSize> const& v)
     {
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        using Packer   = Pack<DataT>;
-        using Unpacker = Unpack<DataT>;
+        using PackUtil = PackUtil<DataT>;
 
-        auto evens = Packer::exec(extractEven(v));
-        auto odds  = Packer::exec(extractOdd(v));
+        auto evens = PackUtil::paddedPack(extractEven(v));
+        auto odds  = PackUtil::paddedPack(extractOdd(v));
         auto lo    = Blend::Zip2::exec(evens, Dpp::RotateR16<2>::exec(odds));
         auto hi    = Blend::Zip2::exec(Dpp::RotateR16<14>::exec(evens), odds);
 
-        return Unpacker::exec(concat(lo, hi));
+        return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
     }
 
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline auto unpackLoHi4(VecT<DataT, VecSize> const& v)
     {
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        using Packer   = Pack<DataT>;
-        using Unpacker = Unpack<DataT>;
+        using PackUtil = PackUtil<DataT>;
 
-        auto evens = Packer::exec(extractEven(v));
-        auto odds  = Packer::exec(extractOdd(v));
+        auto evens = PackUtil::paddedPack(extractEven(v));
+        auto odds  = PackUtil::paddedPack(extractOdd(v));
         auto lo    = Dpp::template RotateR16<4, 0xF, 0xA>::exec(odds, evens);
         auto hi    = Dpp::template RotateR16<12, 0xF, 0x5>::exec(evens, odds);
 
-        return Unpacker::exec(concat(lo, hi));
+        return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
     }
 
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline auto unpackLoHi8(VecT<DataT, VecSize> const& v)
     {
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        using Packer   = Pack<DataT>;
-        using Unpacker = Unpack<DataT>;
+        using PackUtil = PackUtil<DataT>;
 
-        auto evens = Packer::exec(extractEven(v));
-        auto odds  = Packer::exec(extractOdd(v));
+        auto evens = PackUtil::paddedPack(extractEven(v));
+        auto odds  = PackUtil::paddedPack(extractOdd(v));
         auto lo    = Dpp::template RotateR16<8, 0xF, 0xC>::exec(odds, evens);
         auto hi    = Dpp::template RotateR16<8, 0xF, 0x3>::exec(evens, odds);
 
-        return Unpacker::exec(concat(lo, hi));
+        return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
     }
 
     template <typename DataT>
     ROCWMMA_DEVICE static inline auto aos_soa_16xk_b32(VecT<DataT, 8> const& v)
     {
+        using PackUtil = PackUtil<DataT>;
+
         // Step 1 : Unpack groups of 2
         auto result = unpackLoHi2(v);
 
@@ -212,30 +162,27 @@ namespace rocwmma
         // Step 3 : Unpack groups of 8
         result = unpackLoHi8(result);
 
-        using Packer   = Pack<DataT>;
-        using Unpacker = Unpack<DataT>;
-
         // Step 4 : Gather
-        return Unpacker::exec(Permute::Gather16<8, 0>::exec(Packer::exec(result)));
+        return PackUtil::template paddedUnpack<8>(
+            Permute::Gather16<8, 0>::exec(PackUtil::paddedPack(result)));
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_16xk_b32(VecT<DataT, 4>& v)
+    ROCWMMA_DEVICE static inline auto aos_soa_16xk_b32(VecT<DataT, 4> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_16xk_b32(VecT<DataT, 2>& v)
+    ROCWMMA_DEVICE static inline auto aos_soa_16xk_b32(VecT<DataT, 2> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_32xk_b32(VecT<DataT, 8>& v)
+    ROCWMMA_DEVICE static inline auto aos_soa_32xk_b32(VecT<DataT, 8> const& v)
     {
-        using Packer   = Pack<DataT>;
-        using Unpacker = Unpack<DataT>;
+        using PackUtil = PackUtil<DataT>;
 
         // Step 1 : Unpack groups of 4
         auto result = unpackLoHi4(v);
@@ -245,10 +192,10 @@ namespace rocwmma
 
         // Step 3 : Unpack groups of 16
         // In order to save some operations, we can
-        // rotate the lo components only and rotate the
-        // hi later with the gather offset.
-        auto evens = Packer::exec(extractEven(v));
-        auto odds  = Packer::exec(extractOdd(v));
+        // rotate the odds components only and make up the
+        // offset later in gather.
+        auto evens = PackUtil::paddedPack(extractEven(v));
+        auto odds  = PackUtil::paddedPack(extractOdd(v));
 
         auto rot = Swizzle::RotateR32<16>::exec(odds);
         auto lo  = Blend::Zip16::exec(evens, rot);
@@ -259,71 +206,71 @@ namespace rocwmma
         lo = Permute::Gather32<8, 0>::exec(lo);
         hi = Permute::Gather32<8, 16>::exec(hi);
 
-        return Unpacker::exec(concat(lo, hi));
+        return PackUtil::template paddedUnpack<8>(concat(lo, hi));
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_32xk_b32(VecT<DataT, 4>& v)
+    ROCWMMA_DEVICE static inline auto aos_soa_32xk_b32(VecT<DataT, 4> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_32xk_b32(VecT<DataT, 2>& v)
+    ROCWMMA_DEVICE static inline auto aos_soa_32xk_b32(VecT<DataT, 2> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_64xk_b32(VecT<DataT, 8>& v)
+    ROCWMMA_DEVICE static inline auto aos_soa_64xk_b32(VecT<DataT, 8> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_64xk_b32(VecT<DataT, 4>& v)
+    ROCWMMA_DEVICE static inline auto aos_soa_64xk_b32(VecT<DataT, 4> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_64xk_b32(VecT<DataT, 2>& v)
+    ROCWMMA_DEVICE static inline auto aos_soa_64xk_b32(VecT<DataT, 2> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_128xk_b32(VecT<DataT, 8>& v)
+    ROCWMMA_DEVICE static inline auto aos_soa_128xk_b32(VecT<DataT, 8> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_128xk_b32(VecT<DataT, 4>& v)
+    ROCWMMA_DEVICE static inline auto aos_soa_128xk_b32(VecT<DataT, 4> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_128xk_b32(VecT<DataT, 2>& v)
+    ROCWMMA_DEVICE static inline auto aos_soa_128xk_b32(VecT<DataT, 2> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_256xk_b32(VecT<DataT, 8>& v)
+    ROCWMMA_DEVICE static inline auto aos_soa_256xk_b32(VecT<DataT, 8> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_256xk_b32(VecT<DataT, 4>& v)
+    ROCWMMA_DEVICE static inline auto aos_soa_256xk_b32(VecT<DataT, 4> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_256xk_b32(VecT<DataT, 2>& v)
+    ROCWMMA_DEVICE static inline auto aos_soa_256xk_b32(VecT<DataT, 2> const& v)
     {
         return 0;
     }
@@ -331,97 +278,97 @@ namespace rocwmma
     // SOA -> AOS
     // Transform from ortho VW to inline VW
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto soa_aos_16xk_b32(VecT<DataT, 8>& v)
+    ROCWMMA_DEVICE static inline auto soa_aos_16xk_b32(VecT<DataT, 8> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto soa_aos_16xk_b32(VecT<DataT, 4>& v)
+    ROCWMMA_DEVICE static inline auto soa_aos_16xk_b32(VecT<DataT, 4> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto soa_aos_16xk_b32(VecT<DataT, 2>& v)
+    ROCWMMA_DEVICE static inline auto soa_aos_16xk_b32(VecT<DataT, 2> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto soa_aos_32xk_b32(VecT<DataT, 8>& v)
+    ROCWMMA_DEVICE static inline auto soa_aos_32xk_b32(VecT<DataT, 8> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto soa_aos_32xk_b32(VecT<DataT, 4>& v)
+    ROCWMMA_DEVICE static inline auto soa_aos_32xk_b32(VecT<DataT, 4> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto soa_aos_32xk_b32(VecT<DataT, 2>& v)
+    ROCWMMA_DEVICE static inline auto soa_aos_32xk_b32(VecT<DataT, 2> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto soa_aos_64xk_b32(VecT<DataT, 8>& v)
+    ROCWMMA_DEVICE static inline auto soa_aos_64xk_b32(VecT<DataT, 8> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto soa_aos_64xk_b32(VecT<DataT, 4>& v)
+    ROCWMMA_DEVICE static inline auto soa_aos_64xk_b32(VecT<DataT, 4> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto soa_aos_64xk_b32(VecT<DataT, 2>& v)
+    ROCWMMA_DEVICE static inline auto soa_aos_64xk_b32(VecT<DataT, 2> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto soa_aos_128xk_b32(VecT<DataT, 8>& v)
+    ROCWMMA_DEVICE static inline auto soa_aos_128xk_b32(VecT<DataT, 8> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto soa_aos_128xk_b32(VecT<DataT, 4>& v)
+    ROCWMMA_DEVICE static inline auto soa_aos_128xk_b32(VecT<DataT, 4> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto soa_aos_128xk_b32(VecT<DataT, 2>& v)
+    ROCWMMA_DEVICE static inline auto soa_aos_128xk_b32(VecT<DataT, 2> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto soa_aos_256xk_b32(VecT<DataT, 8>& v)
+    ROCWMMA_DEVICE static inline auto soa_aos_256xk_b32(VecT<DataT, 8> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto soa_aos_256xk_b32(VecT<DataT, 4>& v)
+    ROCWMMA_DEVICE static inline auto soa_aos_256xk_b32(VecT<DataT, 4> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto soa_aos_256xk_b32(VecT<DataT, 2>& v)
+    ROCWMMA_DEVICE static inline auto soa_aos_256xk_b32(VecT<DataT, 2> const& v)
     {
         return 0;
     }
 
     template <typename DataT>
-    __device__ auto aos_soa_16x16_vw4_b32_opt(VecT<DataT, 4>& v)
+    ROCWMMA_DEVICE auto aos_soa_16x16_vw4_b32_opt(VecT<DataT, 4> const& v)
     {
         // Step 1
         // {
@@ -467,7 +414,7 @@ namespace rocwmma
     }
 
     template <typename DataT>
-    __device__ auto aos_soa_16x8_vw2_b32_opt(VecT<DataT, 2>& v)
+    ROCWMMA_DEVICE auto aos_soa_16x8_vw2_b32_opt(VecT<DataT, 2> const& v)
     {
         // Step 1
         // {
@@ -492,7 +439,7 @@ namespace rocwmma
     }
 
     template <typename DataT>
-    __device__ auto aos_soa_32x4_vw2_b32_opt(VecT<DataT, 2>& v)
+    ROCWMMA_DEVICE auto aos_soa_32x4_vw2_b32_opt(VecT<DataT, 2> const& v)
     {
         // Step 1
         // {
@@ -525,7 +472,7 @@ namespace rocwmma
     }
 
     template <typename DataT>
-    __device__ auto aos_soa_32x8_vw4_b32_opt(VecT<DataT, 4>& v)
+    ROCWMMA_DEVICE auto aos_soa_32x8_vw4_b32_opt(VecT<DataT, 4> const& v)
     {
         // {
         //     using DppRotateR16_8_0xF_0xC = Dpp<DppImpl::Ops::RotateR16<8>, 0xF, 0xC>;
@@ -579,7 +526,7 @@ namespace rocwmma
     }
 
     template <typename DataT>
-    __device__ auto soa_aos_16x16_vw4_b32_opt(VecT<DataT, 4>& v)
+    ROCWMMA_DEVICE auto soa_aos_16x16_vw4_b32_opt(VecT<DataT, 4> const& v)
     {
         // // Step 1
         // {
@@ -624,7 +571,7 @@ namespace rocwmma
     }
 
     template <typename DataT>
-    __device__ auto soa_aos_16x8_vw2_b32_opt(VecT<DataT, 2>& v)
+    ROCWMMA_DEVICE auto soa_aos_16x8_vw2_b32_opt(VecT<DataT, 2> const& v)
     {
         // // Step 1
         // {
@@ -647,6 +594,23 @@ namespace rocwmma
         // }
         return 0;
     }
+
+    // template<uint32_t VW>
+    // struct AosToSoa<16, VW>
+    // {
+    //     template <typename DataT, uint32_t VecSize>
+    //     ROCWMMA_DEVICE static inline decltype(auto) exec()(VecT<DataT, VecSize> const& fragData)
+    //     {
+    //         auto it = rocwmma::makeVectorIterator<MaxVW>(fragA.mAccess).begin();
+    //         for(int i=0; i < decltype(it)::range(); i++, it++)
+    //         {
+    //             *it = aos_soa_16xk_b32(*it);
+    //         }
+
+    //         return fragData;
+
+    //     };
+    // };
 
 } // namespace rocwmma
 

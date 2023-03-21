@@ -40,11 +40,11 @@ namespace rocwmma
         {
         private:
             template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-            ROCWMMA_DEVICE static inline auto forEach(VecT<DataT, VecSize> const& src,
-                                                      detail::SeqT<Idx...>)
+            ROCWMMA_DEVICE static inline auto
+                forEach(VecT<DataT, VecSize> const& src, uint32_t laneId, detail::SeqT<Idx...>)
             {
                 static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{exec(get<Idx>(src))...};
+                return VecT<DataT, VecSize>{PermuteOp::exec(get<Idx>(src), laneId)...};
             }
 
         public:
@@ -59,17 +59,37 @@ namespace rocwmma
                               || (PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_SCATTER),
                           "PermuteOp is unsupported");
 
-            template <typename SrcT,
-                      std::enable_if_t<sizeof(SrcT) == sizeof(uint32_t), uint32_t> = 0u>
-            ROCWMMA_DEVICE static inline auto exec(SrcT&& src)
+            template <typename DataT>
+            ROCWMMA_DEVICE static inline auto exec(DataT const& src)
             {
-                return PermuteOp::exec(std::forward<SrcT>(src), detail::WaveSpace<>::localLaneId());
+                return PermuteOp::exec(src, detail::WaveSpace<>::localLaneId());
             }
 
             template <typename DataT, uint32_t VecSize>
             ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src)
             {
-                return forEach(src, detail::Seq<VecSize>{});
+// TODO: Investigate static unroll validation
+#if ROCWMMA_ARCH_GFX1102
+                VecT<DataT, VecSize> result;
+                auto                 itW = makeVectorIterator(result).begin();
+                auto const           itR = makeVectorIterator(src).begin();
+
+                static_assert(decltype(itR)::range() == VecSize,
+                              "VecSize inconsistent with iterator range");
+                static_assert(decltype(itW)::range() == VecSize,
+                              "VecSize inconsistent with iterator range");
+
+#pragma unroll
+                for(uint32_t i = 0; i < VecSize; ++i, itR++, itW++)
+                {
+                    get<0>(*itW) = exec(get<0>(*itR));
+                }
+
+                return result;
+#else
+
+                return forEach(src, detail::WaveSpace<>::localLaneId(), detail::Seq<VecSize>{});
+#endif // ROCWMMA_ARCH_GFX1102
             }
         };
 
