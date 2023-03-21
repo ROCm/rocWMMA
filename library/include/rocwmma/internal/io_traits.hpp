@@ -27,6 +27,7 @@
 #define ROCWMMA_IO_TRAITS_HPP
 
 #include "constants.hpp"
+#include "pack_util.hpp"
 #include "types.hpp"
 #include "utils.hpp"
 
@@ -35,148 +36,6 @@ namespace rocwmma
 
     namespace detail
     {
-        /*
-* The following class is intended to define the packing traits
-* for particular datatypes. We consider that ROCWMMA uses packed
-* registers. The pack ratio is how many registers resulting from
-* raw IO are packed together while used in ROCWMMA.
-*/
-
-        template <typename DataT>
-        struct PackTraits;
-
-        template <>
-        struct PackTraits<int8_t>
-        {
-            enum : uint32_t
-            {
-                PackRatio = 4
-            };
-
-            using UnpackedT = int8_t;
-            using PackedT   = int32_t;
-        };
-
-        template <>
-        struct PackTraits<uint8_t>
-        {
-            enum : uint32_t
-            {
-                PackRatio = 4
-            };
-
-            using UnpackedT = uint8_t;
-            using PackedT   = uint32_t;
-        };
-
-        template <>
-        struct PackTraits<int16_t>
-        {
-            enum : uint32_t
-            {
-                PackRatio = 2
-            };
-
-            using UnpackedT = int16_t;
-            using PackedT   = int32_t;
-        };
-
-        template <>
-        struct PackTraits<uint16_t>
-        {
-            enum : uint32_t
-            {
-                PackRatio = 2
-            };
-
-            using UnpackedT = uint16_t;
-            using PackedT   = uint32_t;
-        };
-
-        template <>
-        struct PackTraits<uint32_t>
-        {
-            enum : uint32_t
-            {
-                PackRatio = 1
-            };
-
-            using UnpackedT = uint32_t;
-            using PackedT   = uint32_t;
-        };
-
-        template <>
-        struct PackTraits<int32_t>
-        {
-            enum : uint32_t
-            {
-                PackRatio = 1
-            };
-
-            using UnpackedT = int32_t;
-            using PackedT   = int32_t;
-        };
-
-        template <>
-        struct PackTraits<float16_t>
-        {
-            enum : uint32_t
-            {
-                PackRatio = 2 // 2 Elements combine to one
-            };
-
-            using UnpackedT = float16_t;
-            using PackedT   = float32_t;
-        };
-
-        template <>
-        struct PackTraits<hfloat16_t>
-        {
-            enum : uint32_t
-            {
-                PackRatio = 2 // 2 Elements combine to one
-            };
-
-            using UnpackedT = hfloat16_t;
-            using PackedT   = float32_t;
-        };
-
-        template <>
-        struct PackTraits<bfloat16_t>
-        {
-            enum : uint32_t
-            {
-                PackRatio = 2 // 2 Elements combine to one
-            };
-
-            using UnpackedT = bfloat16_t;
-            using PackedT   = float32_t;
-        };
-
-        template <>
-        struct PackTraits<float32_t>
-        {
-            enum : uint32_t
-            {
-                PackRatio = 1 // No pack
-            };
-
-            using UnpackedT = float32_t;
-            using PackedT   = float32_t;
-        };
-
-        template <>
-        struct PackTraits<float64_t>
-        {
-            enum : uint32_t
-            {
-                PackRatio = 1 // No pack
-            };
-
-            using UnpackedT = float64_t;
-            using PackedT   = float64_t;
-        };
-
         /*
         * The following class is intended to provide optimistic suggestions for
         * IO vector widths, up to a maximum of dwordx4 which is the largest data
@@ -253,12 +112,11 @@ namespace rocwmma
             // Unpacked vector = raw I/O
             // Packed vector = packed raw I/O
             UnpackedSize = ceilDiv(ElementCount, ThreadsPerIO),
-            PackedSize
-            = ceilDiv((uint32_t)UnpackedSize, (uint32_t)detail::PackTraits<DataT>::PackRatio),
+            PackedSize   = ceilDiv((uint32_t)UnpackedSize, (uint32_t)PackTraits<DataT>::PackRatio),
 
             // Physical number of hardware vregs used to store packed data
             PackedVRegCount = ElementCount * sizeof(DataT) / Constants::AMDGCN_REGISTER_SIZE_BYTES,
-            UnpackedVRegCount = PackedVRegCount * detail::PackTraits<DataT>::PackRatio
+            UnpackedVRegCount = PackedVRegCount * PackTraits<DataT>::PackRatio
         };
 
         static_assert((BlockDim <= ElementsPerIO)
