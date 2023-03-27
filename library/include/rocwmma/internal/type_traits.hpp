@@ -327,9 +327,7 @@ namespace std
 
     // __is_referenceable
     template <typename T>
-    struct __is_referenceable : public __or_<is_object<T>, is_reference<T>>::type
-    {
-    };
+    struct __is_referenceable : public __or_<is_object<T>, is_reference<T>>::type{};
 
     // add_pointer
     template <typename T, bool = __or_<__is_referenceable<T>, is_void<T>>::value>
@@ -398,6 +396,9 @@ namespace std
     public:
         typedef typename __decay_selector<__remove_type>::__type type;
     };
+
+    template <typename T>
+    using decay_t = typename decay<T>::type;
 
 } // namespace std
 #endif
