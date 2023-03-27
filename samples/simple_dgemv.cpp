@@ -59,7 +59,7 @@ __host__ void dgemv_cpu_h(uint32_t         m,
         float64_t accum = 0.0f;
         for(int h = 0; h < k; ++h)
         {
-            accum += a[i * lda + h] * b[h];
+            accum += a[h * lda + i] * b[h];
         }
         c[i] = alpha * accum + beta * c[i];
     }
@@ -80,21 +80,21 @@ const uint32_t WAVE_SIZE = getWarpSize();
 
 // Thread block
 // : T_BLOCK_X must be multiple of WAVE_SIZE.
-// Note: Each wave will compute one BLOCK_M x BLOCK_N output block
+// Note: Each wave will compute one ROCWMMA_M x ROCWMMA_N output block
 // Note: Workgroup will compute
 //  T_BLOCK_X / WAVE_SIZE x T_BLOCK_Y output blocks
 const int T_BLOCK_X = 16 * WAVE_SIZE;
 const int T_BLOCK_Y = 1;
 
 // The following device kernel is a naive implementation
-// of blocked dgemv. Each wave will compute one BLOCK_M x BLOCK_N
+// of blocked dgemv. Each wave will compute one ROCWMMA_M x ROCWMMA_N
 // output block of the m x k x 1 dgemv, generalized as:
 // y = alpha * (A) * x + beta * y
 //
 // In this simplified example, we assume:
-//  A - Matrix of size m * k (row-major)
+//  A - Matrix of size m * k (col-major)
 //  x - Vector of size k * 1 (col-major)
-//  y - accumulator of size m * 1 (row-major)
+//  y - accumulator of size m * 1 (col-major)
 // : Multiplication is NOT in-place, output is written to D matrix
 // : No LDS required
 //
@@ -116,7 +116,7 @@ __global__ void dgemv_rocwmma_d(uint32_t         m,
 {
     // Create frags
     auto fragA
-        = rocwmma::fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t, row_major>();
+        = rocwmma::fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t, col_major>();
     auto fragB
         = rocwmma::fragment<matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t, col_major>();
     auto fragC   = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t>();
