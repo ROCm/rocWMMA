@@ -209,8 +209,8 @@ perf_sgemm        an optimized GEMM operation [D = alpha * (A x B) + beta * C] u
 perf_dgemm        an optimized GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for double-precision floating point types
 perf_hgemm        an optimized GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for half-precision floating point types
 
-simple_sgemv      a simple GEMV operation [y = alpha * (A) * x + beta * y]] using rocWMMA API for mixed precision fp16 inputs and fp32 output
-simple_dgemv      a simple GEMV operation [y = alpha * (A) * x + beta * y]] using rocWMMA API for double-precision fp64 inputs and output
+simple_sgemv      a simple GEMV operation [y = alpha * (A) * x + beta * y] using rocWMMA API for single-precision fp32 inputs and output
+simple_dgemv      a simple GEMV operation [y = alpha * (A) * x + beta * y] using rocWMMA API for double-precision fp64 inputs and output
 
 simple-dlrm       a simple DLRM operation using rocWMMA API
 

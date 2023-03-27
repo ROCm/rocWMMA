@@ -37,9 +37,7 @@
 
 using rocwmma::accumulator;
 using rocwmma::col_major;
-using rocwmma::float16_t;
 using rocwmma::float32_t;
-using rocwmma::float64_t;
 using rocwmma::matrix_a;
 using rocwmma::matrix_b;
 using rocwmma::row_major;
@@ -48,8 +46,8 @@ using rocwmma::row_major;
 __host__ void sgemv_cpu_h(uint32_t         m,
                           uint32_t         n,
                           uint32_t         k,
-                          float16_t const* a,
-                          float16_t const* b,
+                          float32_t const* a,
+                          float32_t const* b,
                           float32_t*       c,
                           float32_t        alpha,
                           float32_t        beta)
@@ -105,8 +103,8 @@ const int T_BLOCK_Y = 1;
 __global__ void sgemv_rocwmma_d(uint32_t         m,
                                 uint32_t         n,
                                 uint32_t         k,
-                                float16_t const* a,
-                                float16_t const* b,
+                                float32_t const* a,
+                                float32_t const* b,
                                 float32_t*       c,
                                 float32_t*       d,
                                 uint32_t         lda,
@@ -118,9 +116,9 @@ __global__ void sgemv_rocwmma_d(uint32_t         m,
 {
     // Create frags
     auto fragA
-        = rocwmma::fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t, col_major>();
+        = rocwmma::fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t, col_major>();
     auto fragB
-        = rocwmma::fragment<matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t, col_major>();
+        = rocwmma::fragment<matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t, col_major>();
     auto fragC   = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
     auto fragAcc = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
 
@@ -172,8 +170,8 @@ __host__ void sgemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float 
 
     std::cout << "Initializing host data..." << std::endl;
     // Initialize input matrices
-    std::vector<float16_t> matrixA(m * k); // matrix
-    std::vector<float16_t> matrixB(k * 1); // vector
+    std::vector<float32_t> matrixA(m * k); // matrix
+    std::vector<float32_t> matrixB(k * 1); // vector
     std::vector<float32_t> matrixC(m * 1, 1.0); //accum
 
     fillRand(matrixA.data(), m, k);
@@ -181,12 +179,12 @@ __host__ void sgemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float 
 
     std::cout << "Initializing device data..." << std::endl;
     // Allocate and copy device memory
-    float16_t* d_a;
-    float16_t* d_b;
+    float32_t* d_a;
+    float32_t* d_b;
     float32_t* d_c;
 
-    const size_t bytesA = matrixA.size() * sizeof(float16_t);
-    const size_t bytesB = matrixB.size() * sizeof(float16_t);
+    const size_t bytesA = matrixA.size() * sizeof(float32_t);
+    const size_t bytesB = matrixB.size() * sizeof(float32_t);
     const size_t bytesC = matrixC.size() * sizeof(float32_t);
 
     CHECK_HIP_ERROR(hipMalloc(&d_a, bytesA));
