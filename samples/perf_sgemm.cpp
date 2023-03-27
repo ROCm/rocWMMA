@@ -854,6 +854,13 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
 
 int main()
 {
-    gemm_test(7168, 7168, 7168, 2, 2);
+    if(!isF32Supported())
+    {
+        std::cout << "f32 sgemm not supported on this device" << std::endl;
+    }
+    else
+    {
+        gemm_test(7168, 7168, 7168, 2, 2);
+    }
     return 0;
 }

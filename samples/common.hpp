@@ -73,6 +73,20 @@ bool isF64Supported()
     return (deviceName.find("gfx90a") != std::string::npos);
 }
 
+bool isF32Supported()
+{
+    hipDevice_t     mHandle;
+    hipDeviceProp_t mProps;
+
+    CHECK_HIP_ERROR(hipGetDevice(&mHandle));
+    CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
+
+    std::string deviceName(mProps.gcnArchName);
+
+    return (deviceName.find("gfx908") != std::string::npos)
+           || (deviceName.find("gfx90a") != std::string::npos);
+}
+
 inline double calculateGFlops(uint32_t m, uint32_t n, uint32_t k)
 {
     return 2.0 * static_cast<double>(m) * static_cast<double>(n) * static_cast<double>(k) * 1.0e-9;

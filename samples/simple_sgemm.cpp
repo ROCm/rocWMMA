@@ -288,6 +288,13 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
 
 int main()
 {
-    gemm_test(256, 256, 256, 2.1f, 2.1f);
+    if(!isF32Supported())
+    {
+        std::cout << "f32 sgemm not supported on this device" << std::endl;
+    }
+    else
+    {
+        gemm_test(256, 256, 256, 2.1f, 2.1f);
+    }
     return 0;
 }
