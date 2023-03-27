@@ -80,14 +80,14 @@ const uint32_t WAVE_SIZE = getWarpSize();
 
 // Thread block
 // : T_BLOCK_X must be multiple of WAVE_SIZE.
-// Note: Each wave will compute one BLOCK_M x BLOCK_N output block
+// Note: Each wave will compute one ROCWMMA_M x ROCWMMA_N output block
 // Note: Workgroup will compute
 //  T_BLOCK_X / WAVE_SIZE x T_BLOCK_Y output blocks
 const int T_BLOCK_X = 16 * WAVE_SIZE;
 const int T_BLOCK_Y = 1;
 
 // The following device kernel is a naive implementation
-// of blocked SGEMV. Each wave will compute one BLOCK_M x BLOCK_N
+// of blocked SGEMV. Each wave will compute one ROCWMMA_M x ROCWMMA_N
 // output block of the m x k x 1 SGEMV, generalized as:
 // y = alpha * (A) * x + beta * y
 //
