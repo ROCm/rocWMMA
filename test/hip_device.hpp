@@ -27,8 +27,8 @@
 #ifndef ROCWMMA_TEST_HIP_DEVICE_HPP
 #define ROCWMMA_TEST_HIP_DEVICE_HPP
 
-#include <hip/hip_runtime_api.h>
 #include <hip/hip_runtime.h>
+#include <hip/hip_runtime_api.h>
 #include <rocm_smi/rocm_smi.h>
 #include <rocwmma/internal/constants.hpp>
 
@@ -106,7 +106,9 @@ namespace rocwmma
         case hipGcnArch_t::GFX90A:
             result = calculatePeakGFlopsPerSec<InputT, MI200>(mCurFreqMhz, mCuCount);
             break;
-        default:;
+
+        default:
+            result = calculatePeakGFlopsPerSec<InputT>(mCurFreqMhz, mCuCount);
         }
         return result;
     }
