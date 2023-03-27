@@ -274,6 +274,13 @@ int main()
     const uint32_t k = 256;
     const uint32_t n = T_BLOCK_Y * ROCWMMA_N;
 
-    sgemv_test(m, n, k, 2.1f, 2.1f);
+    if(!isF32Supported())
+    {
+        std::cout << "f32 sgemv not supported on this device" << std::endl;
+    }
+    else
+    {
+        sgemv_test(m, n, k, 2.1f, 2.1f);
+    }
     return 0;
 }
