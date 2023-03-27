@@ -54,7 +54,7 @@ sample code for calling Simple GEMM algorithm demonstration without LDS memory u
 samples/simple_sgemv.cpp
 ''''''''''''''''''''''''
 
-sample code for calling Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose for mixed precision fp16 inputs and fp32 output.
+sample code for calling Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose for single-precision floating point types.
 
 
 samples/simple_dgemv.cpp

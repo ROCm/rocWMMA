@@ -576,15 +576,15 @@ Run perf gemm sample:
 
 Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose. 
 
-Calculates Y = alpha * (A) * X + beta * Y with mixed precision fp16 inputs and fp32 output.
+Calculates Y = alpha * (A) * X + beta * Y with fp32 inputs and output.
 
 Includes simple CPU validation and benchmark.
 
- A = Matrix of size m * k (row-major)
+ A = Matrix of size m * k (col-major)
 
  X = Vector of size k * 1 (col-major)
 
- Y = accumulator of size m * 1 (row-major)
+ Y = accumulator of size m * 1 (col-major)
 
 Run sgemv sample:
 ```
