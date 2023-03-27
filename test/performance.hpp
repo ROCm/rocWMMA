@@ -35,9 +35,55 @@ namespace rocwmma
     class MI100;
     class MI200;
     class Vega20;
+    class DefaultArch;
 
     template <typename GfxArch, typename DataT>
     struct MfmaPerfTraits;
+
+    template <>
+    struct MfmaPerfTraits<DefaultArch, int8_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 1024
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<DefaultArch, bfloat16_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 1024
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<DefaultArch, float16_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 1024
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<DefaultArch, float32_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 256
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<DefaultArch, float64_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 256
+        };
+    };
 
     // MI-100
     template <>
@@ -248,7 +294,7 @@ namespace rocwmma
     }
 
     template <typename InputT,
-              typename GfxArch,
+              typename GfxArch                               = DefaultArch,
               template <typename, typename> class PerfTraits = rocwmma::MfmaPerfTraits>
     inline double calculatePeakGFlopsPerSec(uint32_t freqMHz, uint32_t cuCount)
     {
