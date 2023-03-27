@@ -61,7 +61,7 @@ __host__ void sgemv_cpu_h(uint32_t         m,
         float32_t accum = 0.0f;
         for(int h = 0; h < k; ++h)
         {
-            accum += static_cast<float32_t>(a[i * lda + h]) * static_cast<float32_t>(b[h]);
+            accum += static_cast<float32_t>(a[h * lda + i]) * static_cast<float32_t>(b[h]);
         }
         c[i] = alpha * accum + beta * c[i];
     }
@@ -94,9 +94,9 @@ const int T_BLOCK_Y = 1;
 // y = alpha * (A) * x + beta * y
 //
 // In this simplified example, we assume:
-//  A - Matrix of size m * k (row-major)
+//  A - Matrix of size m * k (col-major)
 //  x - Vector of size k * 1 (col-major)
-//  y - accumulator of size m * 1 (row-major)
+//  y - accumulator of size m * 1 (col-major)
 // : Multiplication is NOT in-place, output is written to D matrix
 // : No LDS required
 //
@@ -118,7 +118,7 @@ __global__ void sgemv_rocwmma_d(uint32_t         m,
 {
     // Create frags
     auto fragA
-        = rocwmma::fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t, row_major>();
+        = rocwmma::fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t, col_major>();
     auto fragB
         = rocwmma::fragment<matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t, col_major>();
     auto fragC   = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
