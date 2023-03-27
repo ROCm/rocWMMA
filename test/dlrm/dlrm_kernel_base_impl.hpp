@@ -195,21 +195,35 @@ namespace rocwmma
     template <uint32_t TileSize, typename DataT>
     std::ostream& DlrmKernelBase<TileSize, DataT>::printKernel(std::ostream& stream) const
     {
-        return stream << TileSize << ", " << dataTypeToString<DataT>() << ", "
-                      << (passDirection == DlrmDirection_t::Forward ? "Forwards" : "Backwards")
-                      << ", " << mM << ", " << mK << ", " << mB << ", "
+        if(!mRunFlag)
+        {
+            return stream << TileSize << ", " << dataTypeToString<DataT>() << ", "
+                          << (passDirection == DlrmDirection_t::Forward ? "Forwards" : "Backwards")
+                          << ", " << mM << ", " << mK << ", " << mB << ", "
 
 #if defined(ROCWMMA_VALIDATION_TESTS)
-                      << mMaxRelativeError << ", "
+                          << "n/a, "
 #endif
-                      << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredTFlopsPerSec
-                      << ", " << mEfficiency << ", "
+                          << "n/a, n/a, n/a, n/a, SKIPPED" << std::endl;
+        }
+        else
+        {
+            return stream << TileSize << ", " << dataTypeToString<DataT>() << ", "
+                          << (passDirection == DlrmDirection_t::Forward ? "Forwards" : "Backwards")
+                          << ", " << mM << ", " << mK << ", " << mB << ", "
+
 #if defined(ROCWMMA_VALIDATION_TESTS)
-                      << (mValidationResult ? "PASSED" : "FAILED")
+                          << mMaxRelativeError << ", "
+#endif
+                          << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredTFlopsPerSec
+                          << ", " << mEfficiency << ", "
+#if defined(ROCWMMA_VALIDATION_TESTS)
+                          << (mValidationResult ? "PASSED" : "FAILED")
 #else
-                      << "BENCH"
+                          << "BENCH"
 #endif // ROCWMMA_VALIDATION_TESTS
-                      << std::endl;
+                          << std::endl;
+        }
     }
 
     template <uint32_t TileSize, typename DataT>
