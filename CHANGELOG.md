@@ -2,7 +2,25 @@
 
 Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://rocwmma.readthedocs.io/en/latest/).
 
-## rocWMMA 1.0 for ROCm 5.5.0
+## rocWMMA 1.1.0 for ROCm 5.6.0
+
+### Added
+- Added cross-lane operation backends (Blend, Permute, Swizzle and Dpp)
+- Added GPU kernels for rocWMMA unit test pre-process and post-process operations (fill, validation)
+- Added performance gemm samples for half, single and double precision
+- Added rocWMMA cmake versioning
+- Added vectorized support in coordinate transforms
+- Included ROCm smi for runtime clock rate detection
+- Added fragment transforms for transpose and change data layout
+
+### Changed
+- Default to GPU rocBLAS validation against rocWMMA
+- Re-enabled int8 gemm tests on gfx9
+- Upgraded to C++17
+- Restructured unit test folder for consistency
+- Consolidated rocWMMA samples common code
+
+## rocWMMA 1.0.0 for ROCm 5.5.0
 
 ### Added
 - Added support for wave32 on gfx11+
