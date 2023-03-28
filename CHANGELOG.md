@@ -2,7 +2,28 @@
 
 Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://rocwmma.readthedocs.io/en/latest/).
 
-## rocWMMA 1.0 for ROCm 5.5.0
+## rocWMMA 1.1.0 for ROCm 5.6.0
+
+### Added
+- Added GPU kernels for rocWMMA pre-process and post-process operations (Input Fill and Output Comparison) of unit tests
+- Added the best performant gemm samples for half, single and double precision floating point types
+- Added rocWMMA Versioning System
+- Added additional Cross Lane Operations(Blend, Permute and Dpp)
+- Added initial support for Cross Lane Data Transformations (AOS(Array Of Structures) <-> SOA(Structure Of Arrays))
+- Added additional Vector backend operator overloads
+
+### Changed
+- Re-enabled GPU rocBLAS validation against rocWMMA
+- Re-enabled int8 support for rocWMMA
+- Enabled Cross Lane functions on device
+- Enabled C++ 17 features
+- Restructured unit test folder for readability
+- Modified gemv samples for only fp32 and fp64, input and output types
+- Consolidated rocWMMA samples code
+- Modified the benchmark routine to use current frequency instead of peak
+- Reduced the ad-hoc test assembly size by instanting only the ad-hoc kernel and resource instances
+
+## rocWMMA 1.0.0 for ROCm 5.5.0
 
 ### Added
 - Added support for wave32 on gfx11+
