@@ -152,24 +152,29 @@ namespace rocwmma
                 typename WMMA::Traits::ARegsT regsA_Wmma;
                 typename WMMA::Traits::BRegsT regsB_Wmma;
 
-                // Make iterators to store the duplication result
-                auto wmmaItA = makeVectorIterator<VecTraitsA::size() / 2u>(regsA_Wmma).begin();
-                auto wmmaItB = makeVectorIterator<VecTraitsA::size() / 2u>(regsB_Wmma).begin();
+                auto swappedA = Swizzle::Swap16::exec(*aIt);
+                auto swappedB = Swizzle::Swap16::exec(*bIt);
 
-                // Duplicate the upper/lower inputs
-                // Lower has even cols of A in K direction (BlockBCast16<0>)
-                // Upper has odd cols of A in K direction (BlockBCast16<1>)
-                (*wmmaItA) = Permute::BlockBCast16<0>::exec(*aIt);
-                wmmaItA++;
-                (*wmmaItA) = Permute::BlockBCast16<1>::exec(*aIt);
+                // // Make iterators to store the duplication result
+                // auto wmmaItA = makeVectorIterator<VecTraitsA::size() / 2u>(regsA_Wmma).begin();
+                // auto wmmaItB = makeVectorIterator<VecTraitsA::size() / 2u>(regsB_Wmma).begin();
 
-                // Lower has even rows of B in K direction (BlockBCast16<0>)
-                // Upper has odd rows of B in K direction (BlockBCast16<1>)
-                (*wmmaItB) = Permute::BlockBCast16<0>::exec(*bIt);
-                wmmaItB++;
-                (*wmmaItB) = Permute::BlockBCast16<1>::exec(*bIt);
+                // // Duplicate the upper/lower inputs
+                // // Lower has even cols of A in K direction (BlockBCast16<0>)
+                // // Upper has odd cols of A in K direction (BlockBCast16<1>)
+                // (*wmmaItA) = Permute::BlockBCast16<0>::exec(*aIt);
+                // wmmaItA++;
+                // (*wmmaItA) = Permute::BlockBCast16<1>::exec(*aIt);
 
-                accum = WMMA::exec(regsA_Wmma, regsB_Wmma, accum);
+                // // Lower has even rows of B in K direction (BlockBCast16<0>)
+                // // Upper has odd rows of B in K direction (BlockBCast16<1>)
+                // (*wmmaItB) = Permute::BlockBCast16<0>::exec(*bIt);
+                // wmmaItB++;
+                // (*wmmaItB) = Permute::BlockBCast16<1>::exec(*bIt);
+
+                accum = WMMA::exec(concat(unpackLo(*aIt, swappedA), unpackHi(*aIt, swappedA)),
+                                   concat(unpackLo(*bIt, swappedB), unpackHi(*bIt, swappedB)),
+                                   accum);
 
                 aIt++;
                 bIt++;
