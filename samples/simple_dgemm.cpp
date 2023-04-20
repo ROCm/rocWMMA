@@ -78,7 +78,7 @@ const int T_BLOCK_Y = 4;
 //
 // Note: This is a simplified implementation to demonstrate API usage in
 // context of wave-level GEMM computation, and is not optimized.
-__global__ void sgemm_rocwmma_d(uint32_t         m,
+__global__ void dgemm_rocwmma_d(uint32_t         m,
                                 uint32_t         n,
                                 uint32_t         k,
                                 float64_t const* a,
@@ -199,7 +199,7 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha, flo
     CHECK_HIP_ERROR(hipEventCreate(&startEvent));
     CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
 
-    hipExtLaunchKernelGGL(sgemm_rocwmma_d,
+    hipExtLaunchKernelGGL(dgemm_rocwmma_d,
                           gridDim,
                           blockDim,
                           0, // sharedMemBytes
