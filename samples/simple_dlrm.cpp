@@ -615,6 +615,8 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
     std::cout << TILE_DIM << ", " << m << ", " << k << ", " << b << ", " << timeMs << ", " << gFlops
               << ", " << tFlopsPerSec << std::endl;
 
+#if !NDEBUG
+
     std::cout << "Validating result with reference..." << std::endl;
 
     if(passDirection == DlrmDirection_t::Forward)
@@ -683,6 +685,26 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
 
         std::cout << "Max relative error: " << std::get<1>(res) << std::endl;
     }
+
+#endif // !NDEBUG
+
+    // Release device memory
+    CHECK_HIP_ERROR(hipFree(d_input));
+
+    if(passDirection == DlrmDirection_t::Forward)
+    {
+        CHECK_HIP_ERROR(hipFree(d_output));
+        CHECK_HIP_ERROR(hipFree(d_accFwd));
+    }
+    else
+    {
+        CHECK_HIP_ERROR(hipFree(d_upstreamGrad));
+        CHECK_HIP_ERROR(hipFree(d_grad));
+        CHECK_HIP_ERROR(hipFree(d_bottomMlpGrad));
+        CHECK_HIP_ERROR(hipFree(d_accBwd));
+    }
+
+    std::cout << "Finished!" << std::endl;
 }
 
 int main()
