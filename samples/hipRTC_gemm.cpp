@@ -334,6 +334,8 @@ int main()
               << ldc << ", " << ldd << ", " << elapsedTimeMs << ", " << gFlops << ", "
               << tFlopsPerSec << std::endl;
 
+#if !NDEBUG
+
     std::cout << "Validating result with reference..." << std::endl;
 
     // Bring kernel result back to host
@@ -367,6 +369,8 @@ int main()
     }
 
     std::cout << "Max relative error: " << std::get<1>(res) << std::endl;
+
+#endif // !NDEBUG
 
     // Release device memory
     CHECK_HIP_ERROR(hipFree(d_a));

@@ -57,28 +57,32 @@ enum class DlrmDirection_t : bool
 };
 
 // Host forwards DLRM validation
-__host__ void dlrmDotFwdCPU(float16_t* input, float16_t* output, uint32_t m, uint32_t k, uint32_t b)
+void dlrmDotFwdCPU(
+    float16_t const* input, float16_t* output, uint32_t m, uint32_t k, uint32_t batchSize)
 {
-    auto batchOffset = m * k;
-    uint outputIdx   = 0;
-    for(int t = 0; t < b; t++)
+    auto batchOffset       = m * k;
+    uint outputBatchOffset = ((m * (m - 1)) / 2) + k;
+    for(int b = 0; b < batchSize; b++)
     {
+        uint outputIdx = b * outputBatchOffset;
+
+        // Copy MLP to output
+        for(int i = 0; i < k; i++)
+        {
+            output[outputIdx] = input[b * batchOffset + i];
+            outputIdx++;
+        }
         for(int i = 0; i < m; i++)
         {
-            for(int j = 0; j < k; j++)
+            for(int j = 0; j < m; j++)
             {
-                float accum = 0.0f;
+                float accum = static_cast<float>(0);
                 for(int h = 0; h < k; h++)
                 {
-                    accum += static_cast<float>(input[t * batchOffset + i * k + h])
-                             * static_cast<float>(input[t * batchOffset + j * k + h]);
+                    accum += static_cast<float>(input[b * batchOffset + i * k + h])
+                             * static_cast<float>(input[b * batchOffset + j * k + h]);
                 }
-                // Copy MLP to output
-                if(i == 0)
-                {
-                    output[outputIdx] = input[t * batchOffset + j];
-                    outputIdx++;
-                }
+
                 if(j < i)
                 {
                     output[outputIdx] = static_cast<float16_t>(accum);
@@ -611,6 +615,8 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
     std::cout << TILE_DIM << ", " << m << ", " << k << ", " << b << ", " << timeMs << ", " << gFlops
               << ", " << tFlopsPerSec << std::endl;
 
+#if !NDEBUG
+
     std::cout << "Validating result with reference..." << std::endl;
 
     if(passDirection == DlrmDirection_t::Forward)
@@ -679,6 +685,26 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
 
         std::cout << "Max relative error: " << std::get<1>(res) << std::endl;
     }
+
+#endif // !NDEBUG
+
+    // Release device memory
+    CHECK_HIP_ERROR(hipFree(d_input));
+
+    if(passDirection == DlrmDirection_t::Forward)
+    {
+        CHECK_HIP_ERROR(hipFree(d_output));
+        CHECK_HIP_ERROR(hipFree(d_accFwd));
+    }
+    else
+    {
+        CHECK_HIP_ERROR(hipFree(d_upstreamGrad));
+        CHECK_HIP_ERROR(hipFree(d_grad));
+        CHECK_HIP_ERROR(hipFree(d_bottomMlpGrad));
+        CHECK_HIP_ERROR(hipFree(d_accBwd));
+    }
+
+    std::cout << "Finished!" << std::endl;
 }
 
 int main()

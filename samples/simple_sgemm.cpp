@@ -243,6 +243,8 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
               << ldc << ", " << ldd << ", " << elapsedTimeMs << ", " << gFlops << ", "
               << tFlopsPerSec << std::endl;
 
+#if !NDEBUG
+
     std::cout << "Validating result with reference..." << std::endl;
 
     // Bring kernel result back to host
@@ -276,6 +278,8 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
     }
 
     std::cout << "Max relative error: " << std::get<1>(res) << std::endl;
+
+#endif // !NDEBUG
 
     // Release device memory
     CHECK_HIP_ERROR(hipFree(d_a));

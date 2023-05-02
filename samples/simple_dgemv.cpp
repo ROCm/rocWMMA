@@ -238,6 +238,8 @@ __host__ void dgemv_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha, fl
     std::cout << ROCWMMA_M << ", " << ROCWMMA_N << ", " << ROCWMMA_K << ", " << m << ", " << n
               << ", " << k << std::endl;
 
+#if !NDEBUG
+
     std::cout << "Validating result with reference..." << std::endl;
     // Bring kernel result back to host
     std::vector<float64_t> matrixC_device(m * 1, std::numeric_limits<float64_t>::signaling_NaN());
@@ -259,6 +261,8 @@ __host__ void dgemv_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha, fl
     }
 
     std::cout << "Max relative error: " << std::get<1>(res) << std::endl;
+
+#endif // !NDEBUG
 
     // Release device memory
     CHECK_HIP_ERROR(hipFree(d_a));
