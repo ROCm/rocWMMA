@@ -98,6 +98,7 @@ function(add_rocwmma_test TEST_TARGET TEST_SOURCE)
   endif()
 
   add_test(NAME ${TEST_TARGET} COMMAND ${TEST_TARGET})
+  set_property(TEST ${TEST_TARGET} PROPERTY SKIP_REGULAR_EXPRESSION "no ROCm-capable device" "unsupported host device")
 
   rocm_install_targets(
     TARGETS ${TEST_TARGET}
