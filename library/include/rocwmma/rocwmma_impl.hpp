@@ -325,7 +325,7 @@ namespace rocwmma
 
     ROCWMMA_DEVICE void synchronize_workgroup()
     {
-        Barrier::exec();
+        __syncthreads();
     }
 
 } // namespace rocwmma
