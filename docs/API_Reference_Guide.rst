@@ -434,12 +434,6 @@ VecT
 
 
 
-VectorStorage
-'''''''''''''
-
-.. doxygenstruct:: rocwmma::detail::VectorStorage
-
-
 IOConfig
 ''''''''''''
 
