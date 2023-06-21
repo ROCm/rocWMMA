@@ -78,6 +78,7 @@ namespace rocwmma
         mCuCount       = mProps.multiProcessorCount;
         mMaxFreqMhz    = static_cast<int>(static_cast<double>(mProps.clockRate) / 1000.0);
 
+#ifdef ROCWMMA_BENCHMARK_TESTS
         CHECK_RSMI_ERROR(rsmi_init(0));
         uint64_t hipPCIID = 0;
         hipPCIID |= mProps.pciDeviceID & 0xFF;
@@ -104,6 +105,9 @@ namespace rocwmma
         CHECK_RSMI_ERROR(rsmi_dev_gpu_clk_freq_get(m_smiDeviceIndex, RSMI_CLK_TYPE_SYS, &freq));
 
         mCurFreqMhz = freq.frequency[freq.current] / 1000000;
+#else
+        mCurFreqMhz = mMaxFreqMhz;
+#endif
 }
 
     hipDevice_t HipDevice::getDeviceHandle() const
@@ -153,7 +157,9 @@ namespace rocwmma
 
     HipDevice::~HipDevice()
     {
+#ifdef ROCWMMA_BENCHMARK_TESTS
         CHECK_RSMI_ERROR(rsmi_shut_down());
+#endif
     }
 
     // Need to check the host device target support statically before hip modules attempt
