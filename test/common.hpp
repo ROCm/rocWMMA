@@ -51,7 +51,7 @@
     }
 #endif
 
-
+#ifdef ROCWMMA_BENCHMARK_TESTS
 #ifndef CHECK_RSMI_ERROR
 #define CHECK_RSMI_ERROR(status)                            \
     if(status != RSMI_STATUS_SUCCESS )                      \
@@ -66,6 +66,7 @@
                 __LINE__);                                  \
         exit(EXIT_FAILURE);                                 \
     }
+#endif
 #endif
 
 namespace rocwmma
