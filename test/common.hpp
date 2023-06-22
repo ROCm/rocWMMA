@@ -38,33 +38,33 @@
 #include "device/common.hpp"
 
 #ifndef CHECK_HIP_ERROR
-#define CHECK_HIP_ERROR(status)                   \
-    if(status != hipSuccess)                      \
-    {                                             \
-        fprintf(stderr,                           \
-                "hip error: '%s'(%d) at %s:%d\n", \
-                hipGetErrorString(status),        \
-                status,                           \
-                __FILE__,                         \
-                __LINE__);                        \
-        exit(EXIT_FAILURE);                       \
+#define CHECK_HIP_ERROR(expression)                      \
+    if(auto status = (expression); status != hipSuccess) \
+    {                                                    \
+        fprintf(stderr,                                  \
+                "hip error: '%s'(%d) at %s:%d\n",        \
+                hipGetErrorString(status),               \
+                status,                                  \
+                __FILE__,                                \
+                __LINE__);                               \
+        exit(EXIT_FAILURE);                              \
     }
 #endif
 
 #ifdef ROCWMMA_BENCHMARK_TESTS
 #ifndef CHECK_RSMI_ERROR
-#define CHECK_RSMI_ERROR(status)                            \
-    if(status != RSMI_STATUS_SUCCESS )                      \
-    {                                                       \
-        const char* errName = nullptr;                      \
-        rsmi_status_string(status, &errName);               \
-        fprintf(stderr,                                     \
-                "rsmi error: '%s'(%d) at %s:%d\n",          \
-                errName,                                    \
-                status,                                     \
-                __FILE__,                                   \
-                __LINE__);                                  \
-        exit(EXIT_FAILURE);                                 \
+#define CHECK_RSMI_ERROR(expression)                              \
+    if(auto status = (expression); status != RSMI_STATUS_SUCCESS) \
+    {                                                             \
+        const char* errName = nullptr;                            \
+        rsmi_status_string(status, &errName);                     \
+        fprintf(stderr,                                           \
+                "rsmi error: '%s'(%d) at %s:%d\n",                \
+                errName,                                          \
+                status,                                           \
+                __FILE__,                                         \
+                __LINE__);                                        \
+        exit(EXIT_FAILURE);                                       \
     }
 #endif
 #endif
