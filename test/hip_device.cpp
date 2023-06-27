@@ -79,37 +79,43 @@ namespace rocwmma
         mMaxFreqMhz    = static_cast<int>(static_cast<double>(mProps.clockRate) / 1000.0);
         mCurFreqMhz = mMaxFreqMhz;
 
+
 #ifdef ROCWMMA_BENCHMARK_TESTS
         bool smiErrorFlag = false;
         CHECK_RSMI_ERROR(rsmi_init(0), smiErrorFlag);
-        uint64_t hipPCIID = 0;
-        hipPCIID |= mProps.pciDeviceID & 0xFF;
-        hipPCIID |= ((mProps.pciBusID & 0xFF) << 8);
-        hipPCIID |= (mProps.pciDomainID) << 16;
-
-        uint32_t smiCount = 0;
-        CHECK_RSMI_ERROR(rsmi_num_monitor_devices(&smiCount), smiErrorFlag);
-
-        uint32_t m_smiDeviceIndex;
-        for(uint32_t smiIndex = 0; smiIndex < smiCount; smiIndex++)
+        if(!smiErrorFlag)
         {
-            uint64_t rsmiPCIID = 0;
-            CHECK_RSMI_ERROR(rsmi_dev_pci_id_get(smiIndex, &rsmiPCIID), smiErrorFlag);
+            uint64_t hipPCIID = 0;
+            hipPCIID |= mProps.pciDeviceID & 0xFF;
+            hipPCIID |= ((mProps.pciBusID & 0xFF) << 8);
+            hipPCIID |= (mProps.pciDomainID) << 16;
 
-            if(hipPCIID == rsmiPCIID)
+            uint32_t smiCount = 0;
+            CHECK_RSMI_ERROR(rsmi_num_monitor_devices(&smiCount), smiErrorFlag);
+            if(!smiErrorFlag)
             {
-                m_smiDeviceIndex = smiIndex;
-                break;
+                uint32_t m_smiDeviceIndex;
+                for(uint32_t smiIndex = 0; smiIndex < smiCount; smiIndex++)
+                {
+                    uint64_t rsmiPCIID = 0;
+                    CHECK_RSMI_ERROR(rsmi_dev_pci_id_get(smiIndex, &rsmiPCIID), smiErrorFlag);
+                    if(!smiErrorFlag && (hipPCIID == rsmiPCIID))
+                    {
+                        m_smiDeviceIndex = smiIndex;
+                        break;
+                    }
+                }
+
+                rsmi_frequencies_t freq;
+                CHECK_RSMI_ERROR(rsmi_dev_gpu_clk_freq_get(m_smiDeviceIndex, RSMI_CLK_TYPE_SYS, &freq), smiErrorFlag);
+                if(!smiErrorFlag)
+                {
+                    mCurFreqMhz = freq.frequency[freq.current] / 1000000;
+                }
             }
         }
-
-        rsmi_frequencies_t freq;
-        CHECK_RSMI_ERROR(rsmi_dev_gpu_clk_freq_get(m_smiDeviceIndex, RSMI_CLK_TYPE_SYS, &freq), smiErrorFlag);
-
-        if(!smiErrorFlag)
-            mCurFreqMhz = freq.frequency[freq.current] / 1000000;
 #endif
-}
+    }
 
     hipDevice_t HipDevice::getDeviceHandle() const
     {
