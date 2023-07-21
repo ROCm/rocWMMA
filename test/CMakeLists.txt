@@ -113,6 +113,7 @@ function(add_rocwmma_test TEST_TARGET TEST_SOURCE)
       endif()
   endif()
   file(APPEND "${INSTALL_TEST_FILE}" "add_test(${TEST_TARGET} \"../${EXE_NAME}\")\n")
+  file(APPEND "${INSTALL_TEST_FILE}" "set_tests_properties(${TEST_TARGET} PROPERTIES SKIP_REGULAR_EXPRESSION \"no ROCm-capable device;unsupported host device\")\n")
 endfunction()
 
 # Targets that implement specifically validation configuration
