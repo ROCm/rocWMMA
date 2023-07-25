@@ -36,17 +36,20 @@ include( FetchContent )
 FetchContent_Declare(
   googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG 609281088cfefc76f9d0ce82e1ff6c30cc3591e5
+  GIT_TAG release-1.12.1
 )
 FetchContent_GetProperties(googletest)
 if(NOT googletest_POPULATED)
+
   # Fetch the content using default details
   FetchContent_Populate(googletest)
   # Save the shared libs setting, then force to static libs
   set(BUILD_SHARED_LIBS_OLD ${BUILD_SHARED_LIBS})
   set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "Build SHARED libraries" FORCE)
+  
   # Add gtest targets as static libs
   add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
+  
   # Restore shared libs setting
   set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_OLD} CACHE INTERNAL "Build SHARED libraries" FORCE)
 endif()
