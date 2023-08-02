@@ -104,6 +104,21 @@ namespace rocwmma
         using PackedT   = int32_t;
     };
 
+#if defined(__gfx940__)
+    template <>
+    struct PackTraits<float8_t>
+    {
+        enum : uint32_t
+        {
+            PackRatio = 4
+        };
+
+        using UnpackedT = float8_t;
+        using PackedT   = float32_t;
+    };
+
+#endif // defined(__gfx940__)
+
     template <>
     struct PackTraits<float16_t>
     {
