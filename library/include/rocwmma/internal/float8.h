@@ -614,7 +614,7 @@ template <typename T,
           typename Ta,
           bool stochastic_rounding,
           typename std::enable_if<std::is_same<T, Ta>{}, int>::type = 0>
-inline ROCWMMA_HOST_DEVICE T explicit_downcast(Ta a, uint32_t rng = 0)
+inline ROCWMMA_HOST_DEVICE T explicit_downcast(Ta a)
 {
     // same type, no conversion
     return a;
