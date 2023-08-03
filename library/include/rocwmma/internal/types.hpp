@@ -87,10 +87,8 @@ namespace rocwmma
 #endif // !__HIPCC_RTC__
     using hfloat16_t = __half;
 
-#if defined(__gfx940__)
     using bfloat8_t = rocwmma_bf8;
     using float8_t = rocwmma_f8;
-#endif // defined(__gfx940__)
 
     // clang-format off
 

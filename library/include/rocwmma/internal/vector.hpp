@@ -313,8 +313,6 @@ ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::hfloat16_t, 128);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::hfloat16_t, 256);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::hfloat16_t, 512);
 
-#if defined(__gfx940__)
-
 // HIP doesn't have functional support for non-native vector types bfloat8_t or float8_t.
 // Implement full support for those here.
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_t, 1);
@@ -340,8 +338,6 @@ ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_t, 64);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_t, 128);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_t, 256);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_t, 512);
-
-#endif // defined(__gfx940__)
 
 // HIP bfloat16_t is not supported in RTC environment
 #if !defined(__HIPCC_RTC__)
