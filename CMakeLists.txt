@@ -84,7 +84,7 @@ rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
 
 # Variable AMDGPU_TARGET must be a cached variable and must be specified before calling find_package(hip)
 # This is because hip-config.cmake sets --offload-arch via AMDGPU_TARGET cached variable __after__ setting
-# default cached variable AMDGPU_TARGET to "gfx900;gfx906;gfx908;gfx1100;gfx1101;gfx1102", where not all archs are compatible with MFMA instructions
+# default cached variable AMDGPU_TARGET to "gfx900;gfx906;gfx908;gfx1100;gfx1101;gfx1102;gfx940", where not all archs are compatible with MFMA instructions
 #
 # By rule, once cached variable is set, it cannot be overridden unless we use the FORCE option
 if(AMDGPU_TARGETS)

@@ -38,7 +38,7 @@ namespace rocwmma
 /// ROCWMMA_ARCH_GFX1100
 /// ROCWMMA_ARCH_GFX1101
 /// ROCWMMA_ARCH_GFX1102
-///
+/// ROCWMMA_ARCH_GFX940
 #if defined(__gfx908__)
 #define ROCWMMA_ARCH_GFX908 __gfx908__
 #elif defined(__gfx90a__)
@@ -51,6 +51,8 @@ namespace rocwmma
 #define ROCWMMA_ARCH_GFX1101 __gfx1101__
 #elif defined(__gfx1102__)
 #define ROCWMMA_ARCH_GFX1102 __gfx1102__
+#elif defined(__gfx940__)
+#define ROCWMMA_ARCH_GFX940 __gfx940__
 #else
 #define ROCWMMA_ARCH_HOST 1
 #endif
@@ -72,6 +74,9 @@ namespace rocwmma
 #endif
 #if !defined(ROCWMMA_ARCH_GFX1102)
 #define ROCWMMA_ARCH_GFX1102 0
+#endif
+#if !defined(ROCWMMA_ARCH_GFX940)
+#define ROCWMMA_ARCH_GFX940 0
 #endif
 #if !defined(ROCWMMA_ARCH_HOST)
 #define ROCWMMA_ARCH_HOST 0
