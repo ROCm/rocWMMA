@@ -660,6 +660,66 @@ namespace rocwmma
 
 #endif // !ROCWMMA_ARCH_GFX908
 
+#if ROCWMMA_ARCH_GFX940
+
+        template <>
+        struct amdgcn_mfma<float8_t, float32_t, 16, 16>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 32
+                };
+                using ARegsT = VRegF32x2;
+                using BRegsT = VRegF32x2;
+                using CRegsT = AccRegF32x4;
+                using DRegsT = AccRegF32x4;
+            };
+
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
+                typename Traits::DRegsT
+            {
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_f32_16x16x32_fp8_fp8(
+                    regsA.data[0], regsB.data[0], regsC.data, 0, 0, 0)};
+                return result;
+            }
+        };
+
+        template <>
+        struct amdgcn_mfma<float8_t, float32_t, 32, 32>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 16
+                };
+                using ARegsT = VRegF32x2;
+                using BRegsT = VRegF32x2;
+                using CRegsT = AccRegF32x16;
+                using DRegsT = AccRegF32x16;
+            };
+
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
+                typename Traits::DRegsT
+            {
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_f32_32x32x16_fp8_fp8(
+                    regsA.data[0], regsB.data[0], regsC.data, 0, 0, 0)};
+                return result;
+            }
+        };
+
+#endif // ROCWMMA_ARCH_GFX940
+
 #endif // ROCWMMA_ARCH_MI
 
     } // namespace detail

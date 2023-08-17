@@ -397,6 +397,18 @@ namespace rocwmma
     ///////////////////////////////////////////////////////////
 
     template <>
+    constexpr const char* dataTypeToString<float8_t>()
+    {
+        return "f8";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<bfloat8_t>()
+    {
+        return "bf8";
+    }
+
+    template <>
     constexpr const char* dataTypeToString<float16_t>()
     {
         return "f16";
