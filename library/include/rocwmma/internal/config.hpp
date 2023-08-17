@@ -34,6 +34,7 @@ namespace rocwmma
 /// Guaranteed symbols:
 /// ROCWMMA_ARCH_GFX908
 /// ROCWMMA_ARCH_GFX90a
+/// ROCWMMA_ARCH_GFX940
 /// ROCWMMA_ARCH_GFX1100
 /// ROCWMMA_ARCH_GFX1101
 /// ROCWMMA_ARCH_GFX1102
@@ -42,6 +43,8 @@ namespace rocwmma
 #define ROCWMMA_ARCH_GFX908 __gfx908__
 #elif defined(__gfx90a__)
 #define ROCWMMA_ARCH_GFX90A __gfx90a__
+#elif defined(__gfx940__)
+#define ROCWMMA_ARCH_GFX940 __gfx940__
 #elif defined(__gfx1100__)
 #define ROCWMMA_ARCH_GFX1100 __gfx1100__
 #elif defined(__gfx1101__)
@@ -59,6 +62,9 @@ namespace rocwmma
 #endif
 #if !defined(ROCWMMA_ARCH_GFX90A)
 #define ROCWMMA_ARCH_GFX90A 0
+#endif
+#if !defined(ROCWMMA_ARCH_GFX940)
+#define ROCWMMA_ARCH_GFX940 0
 #endif
 #if !defined(ROCWMMA_ARCH_GFX1100)
 #define ROCWMMA_ARCH_GFX1100 0
