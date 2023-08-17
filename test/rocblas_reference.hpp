@@ -88,6 +88,10 @@ namespace rocwmma
             return "bf16_r";
         case rocblas_datatype_bf16_c:
             return "bf16_c";
+        case rocblas_datatype_f8_r:
+            return "f8_r";
+        case rocblas_datatype_bf8_r:
+            return "bf8_r";
 #if defined(ROCBLAS_DATA_TYPE_INVALID)
         case rocblas_datatype_invalid:;
 #endif // ROCBLAS_DATA_TYPE_INVALID
@@ -190,6 +194,26 @@ namespace rocwmma
         constexpr static inline rocblas_datatype type()
         {
             return rocblas_datatype_f64_r;
+        }
+    };
+
+    template <>
+    struct rocblas_types<rocwmma_bf8>
+    {
+        using DataType = rocwmma_bf8;
+        constexpr static inline rocblas_datatype type()
+        {
+            return rocblas_datatype_bf8_r;
+        }
+    };
+
+    template <>
+    struct rocblas_types<rocwmma_f8>
+    {
+        using DataType = rocwmma_f8;
+        constexpr static inline rocblas_datatype type()
+        {
+            return rocblas_datatype_f8_r;
         }
     };
 
