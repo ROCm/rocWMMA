@@ -110,7 +110,6 @@ namespace rocwmma
                 {
                     unroll_right<Depth + 1>(out, dataPtr, ldm, strideCounts, strides2d);
                     dataPtr += strideOffset;
-                    //out++;
                 }
             }
         }
@@ -150,7 +149,6 @@ namespace rocwmma
                 {
                     unroll_left<Depth + 1>(out, dataPtr, ldm, strideCounts, strides2d);
                     dataPtr += strideOffset;
-                    //out++;
                 }
             }
         }
