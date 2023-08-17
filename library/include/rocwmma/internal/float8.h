@@ -169,6 +169,15 @@ struct rocwmma_f8
     {
     }
 
+    // constructor from unsigned int
+    explicit ROCWMMA_HOST_DEVICE rocwmma_f8(unsigned int                          v,
+                                            rocwmma_hip_f8_rounding_mode rm
+                                            = rocwmma_hip_f8_rounding_mode::standard,
+                                            uint32_t rng = 0)
+                                : rocwmma_f8((float)v, rm, rng)
+    {
+    }
+
     // constructor from double
     explicit ROCWMMA_HOST_DEVICE rocwmma_f8(double                       v,
                                             rocwmma_hip_f8_rounding_mode rm
@@ -213,7 +222,13 @@ struct rocwmma_f8
         return rocwmma::bfloat16_t(float(*this)); // convert to float, then convert to f16
     }
     */
-   
+
+    inline ROCWMMA_HOST_DEVICE rocwmma_f8 operator- ()
+    {
+        this->data ^= 0x80;
+        return *this;
+    }
+
     // check for zero
     inline ROCWMMA_HOST_DEVICE bool is_zero() const
     {
@@ -645,8 +660,8 @@ inline ROCWMMA_HOST_DEVICE T explicit_downcast(Ta a, uint32_t rng)
     return val;
 #else // non gfx940
     return T(float(a),
-             stochastic_rounding ? T::rocblas_hip_f8_rounding_mode::stochastic
-                                 : T::rocblas_hip_f8_rounding_mode::standard,
+             stochastic_rounding ? T::rocwmma_hip_f8_rounding_mode::stochastic
+                                 : T::rocwmma_hip_f8_rounding_mode::standard,
              rng);
 #endif // __gfx940__
 }
