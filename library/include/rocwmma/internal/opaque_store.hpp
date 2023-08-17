@@ -26,6 +26,8 @@
 #ifndef ROCWMMA_OPAQUE_STORE_HPP
 #define ROCWMMA_OPAQUE_STORE_HPP
 
+#include <numeric>
+
 #include "io_traits.hpp"
 #include "layout.hpp"
 #include "types.hpp"
@@ -73,24 +75,81 @@ namespace rocwmma
 
         using StoreVecTraits = VecTraits<typename Traits::StoreT>;
 
+        template <std::size_t Depth = 0,
+                  typename Iterator,
+                  typename StrideCounts,
+                  typename Strides2d>
+        ROCWMMA_DEVICE static inline auto unroll_right(DataT*         dataPtr,
+                                                       Iterator&      in,
+                                                       uint32_t       ldm,
+                                                       StrideCounts&& strideCounts,
+                                                       Strides2d&&    strides2d)
+        {
+            auto strideOffset = DataLayout::fromMatrixCoord(std::get<Depth>(strides2d), ldm);
+            auto strideCount  = std::get<Depth>(strideCounts);
+
+            // Last depth layer will invoke the load
+            if constexpr(Depth == (std::tuple_size<std::decay_t<StrideCounts>>::value - 1u))
+            {
+#pragma unroll
+                for(int i = 0; i < strideCount; i++)
+                {
+                    Traits::Storer::exec(dataPtr, *in);
+                    dataPtr += strideOffset;
+                    in++;
+                }
+            }
+            // Recurse to the next nested layer
+            else
+            {
+                if(strideCount > 0)
+                {
+#pragma unroll
+                    for(int i = 0; i < strideCount; i++)
+                    {
+                        unroll_right<Depth + 1>(dataPtr, in, ldm, strideCounts, strides2d);
+                        dataPtr += strideOffset;
+                        //in++;
+                    }
+                }
+                else
+                {
+                    unroll_right<Depth + 1>(dataPtr, in, ldm, strideCounts, strides2d);
+                }
+            }
+        }
+
         ROCWMMA_DEVICE static void
             exec(DataT* dataPtr, typename Traits::InputT const& data, uint32_t ldm)
         {
             // Arrange wave threads to starting matrix layout offsets.
-            auto baseOffset = MatrixLayout::baseOffset();
-            auto it         = makeVectorIterator<StoreVecTraits::size()>(data).begin();
+            auto baseOffset2d = MatrixLayout::baseOffset();
+            auto it           = makeVectorIterator<StoreVecTraits::size()>(data).begin();
 
             static_assert(decltype(it)::range() == IOTraits::IOCount,
                           "IOCount inconsistent with iterator range");
 
-            // Loop through entire block
-#pragma unroll
-            for(auto i = 0; i < IOTraits::IOCount; ++i)
-            {
-                Traits::Storer::exec(dataPtr, *it, DataLayout::fromMatrixCoord(baseOffset, ldm));
-                baseOffset += MatrixLayout::incrementalOffset(it.index());
-                it++;
-            }
+            // Make sure that the IOCount is consistent with the number of total strides
+            static_assert(
+                IOTraits::IOCount
+                    == std::apply([](auto... items) { return ((items == 0 ? 1u : items) * ...); },
+                                  MatrixLayout::strideCounts()),
+                "IOCount inconsistent with total strides");
+
+            unroll_right(dataPtr + DataLayout::fromMatrixCoord(baseOffset2d, ldm),
+                         it,
+                         ldm,
+                         MatrixLayout::strideCounts(),
+                         MatrixLayout::strides());
+
+            //             // Loop through entire block
+            // #pragma unroll
+            //             for(auto i = 0; i < IOTraits::IOCount; ++i)
+            //             {
+            //                 Traits::Storer::exec(dataPtr, *it, DataLayout::fromMatrixCoord(baseOffset, ldm));
+            //                 baseOffset += MatrixLayout::incrementalOffset(it.index());
+            //                 it++;
+            //             }
         }
     };
 
