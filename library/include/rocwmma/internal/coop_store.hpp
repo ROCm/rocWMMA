@@ -180,6 +180,7 @@ namespace rocwmma
             constexpr auto waveCountAdjusted
                 = calcMaxWaves((uint32_t)totalWorkItems, (uint32_t)WaveCount);
 
+<<<<<<< HEAD
             // Ensure that we propagate the corrected wave count
             if constexpr(WaveCount != waveCountAdjusted)
             {
