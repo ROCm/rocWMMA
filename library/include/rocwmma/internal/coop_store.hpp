@@ -141,19 +141,12 @@ namespace rocwmma
             // Recurse to the next nested layer
             else
             {
-                if(strideCount > 0)
-                {
 #pragma unroll
-                    for(int i = 0; i < strideCount; i++)
-                    {
-                        unroll_right<Depth + 1>(dataPtr, in, ldm, strideCounts, strides2d);
-                        dataPtr += strideOffset;
-                        //in++;
-                    }
-                }
-                else
+                for(int i = 0; i < strideCount; i++)
                 {
                     unroll_right<Depth + 1>(dataPtr, in, ldm, strideCounts, strides2d);
+                    dataPtr += strideOffset;
+                    //in++;
                 }
             }
         }
@@ -191,9 +184,22 @@ namespace rocwmma
             // We know how much work each wave will do, however we need to divide up the strides
             // space evenly amongs the waves. Each wave is will at least fill MaxVW on its own, so
             // we can drop the first dimension and divide up the rest evenly.
-            constexpr auto accum1          = [](auto... items) { return (items + ...); };
-            constexpr auto strideCountsR   = pop_right(strideCounts);
-            constexpr auto stridesR        = pop_right(strides);
+            constexpr auto accum1        = [](auto... items) { return (items + ...); };
+            constexpr auto strideCountsR = pop_right(strideCounts);
+            constexpr auto stridesR      = pop_right(strides);
+
+            constexpr auto maxCoord     = strideCountsR - 1u;
+            constexpr auto maxCoord1d   = flatten_coord_left(maxCoord, strideCountsR);
+            constexpr auto splitCoord1d = maxCoord1d / WaveCount;
+            constexpr auto splitCoord2d = inflate_coord_left(splitCoord1d, strideCountsR);
+            constexpr auto newSpace2d   = splitCoord2d + 1;
+            constexpr auto newSpace3d   = std::tuple_cat(
+                newSpace2d,
+                std::make_tuple(
+                    std::get<std::tuple_size<std::decay_t<decltype(strideCounts)>>::value - 1>(
+                        strideCounts)));
+            constexpr auto size = std::tuple_size<std::decay_t<decltype(newSpace3d)>>::value;
+
             constexpr auto totalWorkItemsR = std::apply(accum, strideCountsR);
             constexpr auto waveCountAdjusted
                 = calcMaxWaves((uint32_t)totalWorkItemsR, (uint32_t)WaveCount);
@@ -208,15 +214,11 @@ namespace rocwmma
                 accum1,
                 inflate_coord_left(waveIndex * workItemsPerWaveR, strideCountsR) * stridesR);
 
-            unroll_right(
-                dataPtr + DataLayout::fromMatrixCoord(baseOffset + currentWaveOffset, ldm),
-                it,
-                ldm,
-                std::tuple_cat(
-                    waveStrides,
-                    std::make_tuple(std::get<std::tuple_size<decltype(strideCounts)>::value - 1>(
-                        strideCounts))),
-                strides);
+            unroll_right(dataPtr + DataLayout::fromMatrixCoord(baseOffset + currentWaveOffset, ldm),
+                         it,
+                         ldm,
+                         newSpace3d,
+                         strides);
         }
     };
 

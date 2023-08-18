@@ -71,14 +71,6 @@ namespace std
         return make_tuple(val * get<Indices>(tup)...);
     }
 
-    template <typename T, typename... Types>
-    constexpr static inline auto operator*(T&& val, tuple<Types...> const& tup)
-    {
-        return operator_mult_impl(std::forward<T>(val),
-                                  std::forward<decltype(tup)>(tup),
-                                  make_index_sequence<tuple_size<tuple<Types...>>::value>());
-    }
-
     template <typename... TypesL, typename... TypesR, size_t... Indices>
     constexpr static inline auto operator_mult_impl(tuple<TypesL...> const& lhs,
                                                     tuple<TypesR...> const& rhs,
@@ -87,12 +79,40 @@ namespace std
         return make_tuple(get<Indices>(lhs) * get<Indices>(rhs)...);
     }
 
-    template <typename... TypesL, typename... TypesR>
-    constexpr static inline auto operator*(tuple<TypesL...> const& lhs, tuple<TypesR...> const& rhs)
+    template <typename T, typename... Types>
+    constexpr static inline auto operator*(T&& val, tuple<Types...> const& tup)
     {
-        return operator_mult_impl(std::forward<decltype(lhs)>(lhs),
-                                  std::forward<decltype(rhs)>(rhs),
-                                  make_index_sequence<tuple_size<tuple<TypesL...>>::value>());
+        return operator_mult_impl(std::forward<T>(val),
+                                  std::forward<decltype(tup)>(tup),
+                                  make_index_sequence<tuple_size<tuple<Types...>>::value>());
+    }
+
+    // template <typename... TypesL, typename... TypesR>
+    // constexpr static inline auto operator*(tuple<TypesL...> const& lhs, tuple<TypesR...> const& rhs)
+    // {
+    //     return operator_mult_impl(std::forward<decltype(lhs)>(lhs),
+    //                               std::forward<decltype(rhs)>(rhs),
+    //                               make_index_sequence<tuple_size<tuple<TypesL...>>::value>());
+    // }
+
+    template <typename T,
+              typename... Types,
+              size_t... Indices,
+              typename std::enable_if_t<is_tuple<decay_t<T>>::value == false, int> = 0>
+    constexpr static inline auto
+        operator_add_impl(T&& lhs, tuple<Types...> const& rhs, index_sequence<Indices...>)
+    {
+        return make_tuple(lhs + get<Indices>(rhs)...);
+    }
+
+    template <typename T,
+              typename... Types,
+              size_t... Indices,
+              typename std::enable_if_t<is_tuple<decay_t<T>>::value == false, int> = 0>
+    constexpr static inline auto
+        operator_add_impl(tuple<Types...> const& lhs, T&& rhs, index_sequence<Indices...>)
+    {
+        return make_tuple(get<Indices>(lhs) + rhs...);
     }
 
     template <typename... Types, size_t... Indices>
@@ -103,10 +123,62 @@ namespace std
         return make_tuple(get<Indices>(lhs) + get<Indices>(rhs)...);
     }
 
-    template <typename... Types>
-    constexpr static inline auto operator+(tuple<Types...> const& lhs, tuple<Types...> const& rhs)
+    template <typename T, typename... Types>
+    constexpr static inline auto operator+(T&& lhs, tuple<Types...> const& rhs)
     {
         return operator_add_impl(std::forward<decltype(lhs)>(lhs),
+                                 std::forward<decltype(rhs)>(rhs),
+                                 make_index_sequence<tuple_size<tuple<Types...>>::value>());
+    }
+
+    template <typename T, typename... Types>
+    constexpr static inline auto operator+(tuple<Types...> const& lhs, T&& rhs)
+    {
+        return operator_add_impl(std::forward<decltype(lhs)>(lhs),
+                                 std::forward<decltype(rhs)>(rhs),
+                                 make_index_sequence<tuple_size<tuple<Types...>>::value>());
+    }
+
+    template <typename T,
+              typename... Types,
+              size_t... Indices,
+              typename std::enable_if_t<is_tuple<decay_t<T>>::value == false, int> = 0>
+    constexpr static inline auto
+        operator_sub_impl(T&& lhs, tuple<Types...> const& rhs, index_sequence<Indices...>)
+    {
+        return make_tuple(lhs - get<Indices>(rhs)...);
+    }
+
+    template <typename T,
+              typename... Types,
+              size_t... Indices,
+              typename std::enable_if_t<is_tuple<decay_t<T>>::value == false, int> = 0>
+    constexpr static inline auto
+        operator_sub_impl(tuple<Types...> const& lhs, T&& rhs, index_sequence<Indices...>)
+    {
+        return make_tuple(get<Indices>(lhs) - rhs...);
+    }
+
+    template <typename... Types, size_t... Indices>
+    constexpr static inline auto operator_sub_impl(tuple<Types...> const& lhs,
+                                                   tuple<Types...> const& rhs,
+                                                   index_sequence<Indices...>)
+    {
+        return make_tuple(get<Indices>(lhs) - get<Indices>(rhs)...);
+    }
+
+    template <typename T, typename... Types>
+    constexpr static inline auto operator-(T&& lhs, tuple<Types...> const& rhs)
+    {
+        return operator_sub_impl(std::forward<decltype(lhs)>(lhs),
+                                 std::forward<decltype(rhs)>(rhs),
+                                 make_index_sequence<tuple_size<tuple<Types...>>::value>());
+    }
+
+    template <typename T, typename... Types>
+    constexpr static inline auto operator-(tuple<Types...> const& lhs, T&& rhs)
+    {
+        return operator_sub_impl(std::forward<decltype(lhs)>(lhs),
                                  std::forward<decltype(rhs)>(rhs),
                                  make_index_sequence<tuple_size<tuple<Types...>>::value>());
     }
@@ -197,7 +269,7 @@ namespace rocwmma
     constexpr static auto flatten_coord_left(T&& coord, T&& dims)
     {
         auto result = flatten_coord_left_impl(
-            coord, dims, std::make_index_sequence<std::tuple_size<T>::value>());
+            coord, dims, std::make_index_sequence<std::tuple_size<std::decay_t<T>>::value>());
         return result;
     }
 
