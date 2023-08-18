@@ -49,7 +49,11 @@ namespace rocwmma
         // Types: ALL + double
         // Block Sizes: 16 x 16 x BlockK
         // Layouts: NT
-        using Types      = std::tuple<std::tuple<float16_t, float32_t, float32_t>>;
+        using Types      = std::tuple<std::tuple<int8_t, int32_t, int32_t>>;
+
+        // using BlockSizes = std::tuple<std::tuple<I<16>, I<16>, I<32>>, 
+        //                               std::tuple<I<16>, I<16>, I<64>>,
+        //                               std::tuple<I<16>, I<16>, I<16>>>;
         using BlockSizes = std::tuple<std::tuple<I<16>, I<16>, I<16>>>;
         using Layouts    = std::tuple<
             std::tuple<col_major, row_major, col_major>>; //typename Base::TestLayoutsNT;
@@ -87,14 +91,25 @@ namespace rocwmma
                 //         {32, 64, 1024},
                 // {64, 32, 1024},
                 // {256, 256, 1024},
-                //{1024, 1024, 1024},
-                //{64, 64, 64},
-                {128, 128, 128},
+                {1024, 1024, 1024},
+                // {32, 32, 32},
+                // {16, 16, 32},
+                // {128, 128, 128},
                 //{2048, 2048, 2048},
                 //{7168, 7168, 7168}
 
             };
         }
+
+        // static inline std::vector<AlphaT> alphas()
+        // {
+        //     return {static_cast<AlphaT>(1)};
+        // }
+
+        // static inline std::vector<BetaT> betas()
+        // {
+        //     return {static_cast<BetaT>(0)};
+        // }
     };
 
 } // namespace rocwmma

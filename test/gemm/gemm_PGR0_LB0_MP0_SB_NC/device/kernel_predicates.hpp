@@ -61,8 +61,13 @@ namespace rocwmma
             CostCTest = ((uint32_t)TestTraits::Cost::TileC <= 256u),
             CostDTest = ((uint32_t)TestTraits::Cost::TileD <= 256u),
 
+            // if !(gfx940 && in8 && (blkM/N == 16 && blkK < 32))
+            BlockKTest = ((bool)TestTraits::Arch::IsGfx940 && std::is_same<InputT, int8_t>::value &&
+                        (((BlockM == 16u) || (BlockN == 16u)) && (BlockK >= 32u)) ||
+                        (((BlockM == 32u) || (BlockN == 32u)) && (BlockK >= 16u))),
+
             Enable = ((bool)TestTraits::IsGfx9 && (bool)TestTraits::IsWave64
-                      && CostABTest && CostCTest && CostDTest)
+                      && CostABTest && CostCTest && CostDTest && BlockKTest)
         };
 
         enum struct Gfx11Predicates : bool

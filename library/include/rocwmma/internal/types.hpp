@@ -73,6 +73,8 @@ namespace rocwmma
     using uint16_t  = unsigned short;
     using int32_t   = int;
     using uint32_t  = unsigned int;
+    using int64_t   = long long int;
+    using uint64_t  = unsigned long long int;
     using index_t   = int32_t;
 
 // Non-native types
@@ -155,6 +157,13 @@ namespace rocwmma
     using VRegI32x8  = VecT<int32_t, 8>; //
     using VRegI32x16 = VecT<int32_t, 16>; //
     using VRegI32x32 = VecT<int32_t, 32>; // 32 i32 registers
+
+    using VRegI64x1  = VecT<int64_t, 1>; // Single i64 register
+    using VRegI64x2  = VecT<int64_t, 2>; // Two i64 registers
+    using VRegI64x4  = VecT<int64_t, 4>; // ...
+    using VRegI64x8  = VecT<int64_t, 8>; //
+    using VRegI64x16 = VecT<int64_t, 16>; //
+    using VRegI64x32 = VecT<int64_t, 32>; // 32 i64 registers
 
     using VRegF16x1  = VecT<float16_t, 1>; // Single f16 register
     using VRegF16x2  = VecT<float16_t, 2>; // Two f16 registers

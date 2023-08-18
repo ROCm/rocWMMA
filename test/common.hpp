@@ -138,6 +138,29 @@ namespace rocwmma
             print(mat.data(), m, n, stream);
         }
 
+        template <typename DataT, typename PrintT>
+        __host__ static inline void
+            printAsType(DataT const* mat, uint32_t m, uint32_t n, std::ostream& stream = std::cout)
+        {
+            auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
+            auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
+
+            auto index = std::is_same<Layout, row_major>::value ? rowMjr : colMjr;
+            auto ld    = std::is_same<Layout, row_major>::value ? n : m;
+
+            for(int i = 0; i < m; ++i) // row
+            {
+                stream << "[ ";
+                for(int j = 0; j < n; ++j) // col
+                {
+                    // (Row, col)
+                    stream << static_cast<PrintT>(mat[index(i, j, ld)]) << " ";
+                }
+                stream << "]\n";
+            }
+            stream << "\n";
+        }
+
         template <typename DataT>
         __host__ static inline void fillWithPadding(
             DataT* mat, uint32_t m, uint32_t n, uint32_t padM, uint32_t padN, DataT padValue)
@@ -286,6 +309,17 @@ namespace rocwmma
             auto gridDim  = dim3(ceilDiv(m * n, blockDim.x), 1, 1);
             hipLaunchKernelGGL(
                 (fillValKernel<DataT, Layout>), gridDim, blockDim, 0, 0, d_mat, m, n, value);
+        }
+
+        // fill kernel wrapper for M x N matrix for mat[i] = i
+        template <typename DataT>
+        __host__ static inline void
+            fillIdxLaunchKernel(DataT* d_mat, uint32_t m, uint32_t n)
+        {
+            auto blockDim = dim3(1024, 1, 1);
+            auto gridDim  = dim3(ceilDiv(m * n, blockDim.x), 1, 1);
+            hipLaunchKernelGGL(
+                (fillIdxKernel<DataT, Layout>), gridDim, blockDim, 0, 0, d_mat, m, n);
         }
     };
 
