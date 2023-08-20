@@ -207,9 +207,16 @@ using DataLayoutC   = col_major;
 using DataLayoutLds = row_major;
 
 // Block sizes
+#if defined(__gfx1100__) || defined(__gfx1101__) || defined(__gfx1102__) || defined(__gfx1103__)
+constexpr uint32_t ROCWMMA_M = 16u;
+constexpr uint32_t ROCWMMA_N = 16u;
+constexpr uint32_t ROCWMMA_K = 16u;
+#else
 constexpr uint32_t ROCWMMA_M = 32u;
 constexpr uint32_t ROCWMMA_N = 32u;
 constexpr uint32_t ROCWMMA_K = 16u;
+#endif
+
 
 // Warp size
 constexpr uint32_t WARP_SIZE = Constants::AMDGCN_WAVE_SIZE;
