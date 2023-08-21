@@ -73,7 +73,7 @@ namespace rocwmma
     using uint16_t  = unsigned short;
     using int32_t   = int;
     using uint32_t  = unsigned int;
-    using int64_t   = long long int;
+    using int64_t   = ::int64_t;
     using uint64_t  = unsigned long long int;
     using index_t   = int32_t;
 
