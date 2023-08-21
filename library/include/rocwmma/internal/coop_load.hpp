@@ -201,12 +201,9 @@ namespace rocwmma
 
                 // Alias the original frag due to smaller split size
                 auto& dataR
-                    = (typename LoadVecTraits::
                            template VecT<DataT, workItemsPerWave * LoadVecTraits::size()>&)(data);
                 auto it = makeVectorIterator<LoadVecTraits::size()>(dataR).begin();
 
-                // Align threads to starting matrix offset coordinates
-                auto baseOffset = MatrixLayout::baseOffset();
 
                 // Find current wave offset
                 constexpr auto sum               = [](auto... items) { return (items + ...); };
