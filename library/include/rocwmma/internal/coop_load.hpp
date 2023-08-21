@@ -166,91 +166,79 @@ namespace rocwmma
                                                uint32_t                  waveIndex)
         {
             if(waveIndex >= WaveCount)
-                return;
-            // Align threads to starting matrix offset coordinates
-            auto baseOffset = MatrixLayout::baseOffset();
-
-            // Per-fragment work
-            constexpr auto accum = [](auto... items) { return ((items == 0 ? 1u : items) * ...); };
-            constexpr auto strideCounts   = MatrixLayout::strideCounts();
-            constexpr auto strides        = MatrixLayout::strides();
-            constexpr auto totalWorkItems = std::apply(accum, strideCounts);
-
-            // Per-wave work.
-            constexpr auto workItemsPerWave = std::max(totalWorkItems / WaveCount, 1u);
-            auto&          reducedFt        = reinterpret_cast<
-                typename LoadVecTraits::template VecT<DataT,
-                                                      workItemsPerWave * LoadVecTraits::size()>&>(
-                data);
-            auto it = makeVectorIterator<LoadVecTraits::size()>(reducedFt).begin();
-
-            // We know how much work each wave will do, however we need to divide up the strides
-            // space evenly amongs the waves. Each wave is will at least fill MaxVW on its own, so
-            // we can drop the first dimension and divide up the rest evenly.
-            constexpr auto accum1        = [](auto... items) { return (items + ...); };
-            constexpr auto strideCountsR = pop_right(strideCounts);
-            constexpr auto stridesR      = pop_right(strides);
-
-            constexpr auto maxCoord     = strideCountsR - 1u;
-            constexpr auto maxCoord1d   = flatten_coord_left(maxCoord, strideCountsR);
-            constexpr auto splitCoord1d = maxCoord1d / WaveCount;
-            constexpr auto splitCoord2d = inflate_coord_left(splitCoord1d, strideCountsR);
-            constexpr auto newSpace2d   = splitCoord2d + 1;
-            constexpr auto newSpace3d   = std::tuple_cat(
-                newSpace2d,
-                std::make_tuple(
-                    std::get<std::tuple_size<std::decay_t<decltype(strideCounts)>>::value - 1>(
-                        strideCounts)));
-            constexpr auto size = std::tuple_size<std::decay_t<decltype(newSpace3d)>>::value;
-
-            constexpr auto totalWorkItemsR = std::apply(accum, strideCountsR);
-            constexpr auto waveCountAdjusted
-                = calcMaxWaves((uint32_t)totalWorkItemsR, (uint32_t)WaveCount);
-
-            if(waveIndex >= waveCountAdjusted)
             {
-                if(threadIdx.x % 64 == 0)
-                    printf("Exiting\n");
                 return;
             }
 
-            constexpr auto workItemsPerWaveR = totalWorkItemsR / waveCountAdjusted;
-            constexpr auto waveStrides       = inflate_coord_left(workItemsPerWaveR, strideCountsR);
+            // Full fragment work
+            constexpr auto strideSpace = MatrixLayout::strideCounts();
+            constexpr auto strides     = MatrixLayout::strides();
 
-            auto currentWaveOffset = std::apply(
-                accum1,
-                inflate_coord_left(waveIndex * workItemsPerWaveR, strideCountsR) * stridesR);
-            constexpr auto newStrideCounts = std::tuple_cat(
-                waveStrides,
-                std::make_tuple(
-                    std::get<std::tuple_size<decltype(strideCounts)>::value - 1>(strideCounts)));
+            // Drop the VW strides for splitting (reduced stride space).
+            constexpr auto strideSpaceR = pop_right(strideSpace);
+            constexpr auto stridesR     = pop_right(strides);
+            constexpr auto totalWorkItems
+                = flatten_coord_left((strideSpaceR - 1u), strideSpaceR) + 1u;
 
-            // if(threadIdx.x % 64 == 0)
-            // {
-            //     printf("(%d) newSpace3d: (%d, %d, %d)\n", waveIndex, std::get<0>(newSpace3d), std::get<1>(newSpace3d), std::get<2>(newSpace3d));
-            //     printf("(%d) BlockDim, BlockK: (%d, %d)\n", waveIndex, BlockDim, BlockK);
-            //     printf("(%d) Original strideCounts: (%d, %d, %d)\n", waveIndex, std::get<0>(strideCounts), std::get<1>(strideCounts), std::get<2>(strideCounts));
-            //     printf("(%d) Original strides: (%d, %d), (%d, %d), (%d, %d)\n", waveIndex, get<0>(std::get<0>(strides)), get<1>(std::get<0>(strides)),
-            //                                                                             get<0>(std::get<1>(strides)), get<1>(std::get<1>(strides)),
-            //                                                                             get<0>(std::get<2>(strides)), get<1>(std::get<2>(strides)));
+            // Determine max waves possible.
+            constexpr auto waveCountAdjusted
+                = calcMaxWaves((uint32_t)totalWorkItems, (uint32_t)WaveCount);
 
-            //     printf("(%d) WaveCount: (%d)\n", waveIndex, WaveCount);
-            //     printf("(%d) workItemsPerWaveR (%d)\n", waveIndex, workItemsPerWaveR);
-            //     printf("(%d) waveStrides (%d, %d)\n", waveIndex, std::get<0>(waveStrides), std::get<1>(waveStrides));
+            // Ensure that we propagate the corrected wave count
+            if constexpr(WaveCount != waveCountAdjusted)
+            {
+                exec<waveCountAdjusted, SplitCount>(data, dataPtr, ldm, waveIndex);
+            }
+            // Wave count is acceptable
+            else
+            {
+                // Split the reduced stride space.
+                constexpr auto workItemsPerWave = std::max(totalWorkItems / WaveCount, 1u);
+                constexpr auto strideSpaceS
+                    = inflate_coord_left(workItemsPerWave - 1u, strideSpaceR) + 1u;
 
-            //     printf("(%d) newStrideCounts: (%d, %d, %d)\n\n", waveIndex, std::get<0>(newStrideCounts), std::get<1>(newStrideCounts), std::get<2>(newStrideCounts));
+                // Add back in the VW dimension, for the full stride
+                // space of the current wave
+                constexpr auto strideSpaceW
+                    = std::tuple_cat(strideSpaceS, std::make_tuple(get_last(strideSpace)));
 
-            //     printf("(%d) currentOffset: (%d, %d)\n\n", waveIndex, get<0>(currentWaveOffset), get<1>(currentWaveOffset));
+                // Alias the original frag due to smaller split size
+                auto& dataR
+                    = (typename LoadVecTraits::
+                           template VecT<DataT, workItemsPerWave * LoadVecTraits::size()>&)(data);
+                auto it = makeVectorIterator<LoadVecTraits::size()>(dataR).begin();
 
-            // }
+                // Align threads to starting matrix offset coordinates
+                auto baseOffset = MatrixLayout::baseOffset();
 
-            //static_assert(std::tuple_size<std::decay_t<decltype(newStrideCounts)>>::value == std::tuple_size<std::decay_t<decltype(strides)>>::value, "Mismatched size");
+                // Find current wave offset
+                constexpr auto sum               = [](auto... items) { return (items + ...); };
+                auto           currentWaveOffset = std::apply(
+                    sum, inflate_coord_left(waveIndex * workItemsPerWave, strideSpaceR) * stridesR);
 
-            unroll_right(it,
-                         dataPtr + DataLayout::fromMatrixCoord(baseOffset + currentWaveOffset, ldm),
-                         ldm,
-                         newSpace3d,
-                         strides);
+                // if(threadIdx.x % 64 == 0)
+                // {
+
+                //     printf("(%d) BlockDim, BlockK: (%d, %d)\n", waveIndex, BlockDim, BlockK);
+                //     printf("(%d) Original strideCounts: (%d, %d, %d)\n", waveIndex, std::get<0>(strideSpace), std::get<1>(strideSpace), std::get<2>(strideSpace));
+                //     printf("(%d) Original strides: (%d, %d), (%d, %d), (%d, %d)\n", waveIndex, get<0>(std::get<0>(strides)), get<1>(std::get<0>(strides)),
+                //                                                                             get<0>(std::get<1>(strides)), get<1>(std::get<1>(strides)),
+                //                                                                             get<0>(std::get<2>(strides)), get<1>(std::get<2>(strides)));
+
+                //     printf("(%d) WaveCount: (%d)\n", waveIndex, WaveCount);
+                //     printf("(%d) workItemsPerWave (%d)\n", waveIndex, workItemsPerWave);
+                //     printf("(%d) strideSpaceW: (%d, %d, %d)\n", waveIndex, std::get<0>(strideSpaceW), std::get<1>(strideSpaceW), std::get<2>(strideSpaceW));
+                //     printf("(%d) currentOffset: (%d, %d)\n\n", waveIndex, get<0>(currentWaveOffset), get<1>(currentWaveOffset));
+
+                // }
+
+                unroll_right(it,
+                             dataPtr
+                                 + DataLayout::fromMatrixCoord(baseOffset + currentWaveOffset, ldm),
+                             ldm,
+                             strideSpaceW,
+                             strides);
+            }
         }
     };
 

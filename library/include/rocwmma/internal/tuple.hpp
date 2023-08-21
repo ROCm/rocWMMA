@@ -139,15 +139,15 @@ namespace std
                                  make_index_sequence<tuple_size<tuple<Types...>>::value>());
     }
 
-    template <typename T,
-              typename... Types,
-              size_t... Indices,
-              typename std::enable_if_t<is_tuple<decay_t<T>>::value == false, int> = 0>
-    constexpr static inline auto
-        operator_sub_impl(T&& lhs, tuple<Types...> const& rhs, index_sequence<Indices...>)
-    {
-        return make_tuple(lhs - get<Indices>(rhs)...);
-    }
+    // template <typename T,
+    //           typename... Types,
+    //           size_t... Indices,
+    //           typename std::enable_if_t<is_tuple<decay_t<T>>::value == false, int> = 0>
+    // constexpr static inline auto
+    //     operator_sub_impl(T&& lhs, tuple<Types...> const& rhs, index_sequence<Indices...>)
+    // {
+    //     return make_tuple(lhs - get<Indices>(rhs)...);
+    // }
 
     template <typename T,
               typename... Types,
@@ -156,7 +156,7 @@ namespace std
     constexpr static inline auto
         operator_sub_impl(tuple<Types...> const& lhs, T&& rhs, index_sequence<Indices...>)
     {
-        return make_tuple(get<Indices>(lhs) - rhs...);
+        return make_tuple(get<Indices>(lhs) - std::forward<T>(rhs)...);
     }
 
     template <typename... Types, size_t... Indices>
@@ -167,13 +167,13 @@ namespace std
         return make_tuple(get<Indices>(lhs) - get<Indices>(rhs)...);
     }
 
-    template <typename T, typename... Types>
-    constexpr static inline auto operator-(T&& lhs, tuple<Types...> const& rhs)
-    {
-        return operator_sub_impl(std::forward<decltype(lhs)>(lhs),
-                                 std::forward<decltype(rhs)>(rhs),
-                                 make_index_sequence<tuple_size<tuple<Types...>>::value>());
-    }
+    // template <typename T, typename... Types>
+    // constexpr static inline auto operator-(T&& lhs, tuple<Types...> const& rhs)
+    // {
+    //     return operator_sub_impl(std::forward<decltype(lhs)>(lhs),
+    //                              std::forward<decltype(rhs)>(rhs),
+    //                              make_index_sequence<tuple_size<tuple<Types...>>::value>());
+    // }
 
     template <typename T, typename... Types>
     constexpr static inline auto operator-(tuple<Types...> const& lhs, T&& rhs)
@@ -214,6 +214,18 @@ namespace rocwmma
         return std::apply(pop_front, std::forward<T>(t));
     }
 
+    template <typename T>
+    constexpr static auto get_first(T&& t)
+    {
+        return std::get<0>(std::forward<T>(t));
+    }
+
+    template <typename T>
+    constexpr static auto get_last(T&& t)
+    {
+        return std::get<std::tuple_size<std::decay_t<decltype(t)>>::value - 1>(std::forward<T>(t));
+    }
+
     template <typename T, std::size_t... Indices>
     constexpr static auto reverse_impl(T&& t, std::index_sequence<Indices...>)
     {
@@ -241,17 +253,18 @@ namespace rocwmma
         return (flatten(std::get<Indices>(coord), std::get<Indices>(dims), mult) + ...);
     }
 
-    template <typename T>
-    constexpr static auto flatten_coord_right(T&& coord, T&& dims)
+    template <typename Lhs, typename Rhs>
+    constexpr static auto flatten_coord_right(Lhs&& coord, Rhs&& dims)
     {
-        auto result = flatten_coord_right_impl(
-            coord, dims, std::make_index_sequence<std::tuple_size<T>::value>());
-        return result;
+        return flatten_coord_right_impl(
+            std::forward<Lhs>(coord),
+            std::forward<Rhs>(dims),
+            std::make_index_sequence<std::tuple_size<std::decay_t<Lhs>>::value>());
     }
 
-    template <typename T, std::size_t... Indices>
+    template <typename Lhs, typename Rhs, std::size_t... Indices>
     constexpr static auto
-        flatten_coord_left_impl(T&& coord, T&& dims, std::index_sequence<Indices...>)
+        flatten_coord_left_impl(Lhs&& coord, Rhs&& dims, std::index_sequence<Indices...>)
     {
         auto flatten = [](auto&& c, auto&& d, auto& mul) {
             auto result = c * mul;
@@ -259,18 +272,19 @@ namespace rocwmma
             return result;
         };
         auto mult = 1;
-        return (flatten(std::get<sizeof...(Indices) - 1 - Indices>(coord),
-                        std::get<sizeof...(Indices) - 1 - Indices>(dims),
-                        mult)
+        return (flatten(std::get<sizeof...(Indices) - 1 - Indices>(std::forward<Lhs>(coord)),
+                        std::get<sizeof...(Indices) - 1 - Indices>(std::forward<Rhs>(dims)),
+                        std::forward<decltype(mult)&>(mult))
                 + ...);
     }
 
-    template <typename T>
-    constexpr static auto flatten_coord_left(T&& coord, T&& dims)
+    template <typename Lhs, typename Rhs>
+    constexpr static auto flatten_coord_left(Lhs&& coord, Rhs&& dims)
     {
-        auto result = flatten_coord_left_impl(
-            coord, dims, std::make_index_sequence<std::tuple_size<std::decay_t<T>>::value>());
-        return result;
+        return flatten_coord_left_impl(
+            std::forward<Lhs>(coord),
+            std::forward<Rhs>(dims),
+            std::make_index_sequence<std::tuple_size<std::decay_t<Lhs>>::value>());
     }
 
     template <typename Coord1d, typename T, std::size_t... Indices>
@@ -285,15 +299,19 @@ namespace rocwmma
         };
 
         auto div = 1;
-        return std::decay_t<T>{
-            inflate(flatCoord, std::get<Indices>(dims), div, Indices == sizeof...(Indices) - 1)...};
+        return std::decay_t<T>{inflate(std::forward<Coord1d const&>(flatCoord),
+                                       std::get<Indices>(std::forward<T>(dims)),
+                                       std::forward<decltype(div)&>(div),
+                                       Indices == sizeof...(Indices) - 1)...};
     }
 
     template <typename Coord1d, typename T>
     constexpr static inline auto inflate_coord_right(Coord1d const& flatCoord, T&& dims)
     {
         auto result = inflate_coord_right_impl(
-            flatCoord, dims, std::make_index_sequence<std::tuple_size<std::decay_t<T>>::value>());
+            std::forward<decltype(flatCoord)>(flatCoord),
+            std::forward<T>(dims),
+            std::make_index_sequence<std::tuple_size<std::decay_t<T>>::value>());
         return result;
     }
 
