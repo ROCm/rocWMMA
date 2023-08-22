@@ -163,10 +163,8 @@ namespace rocwmma
                                                uint32_t                       ldm,
                                                uint32_t                       waveIndex)
         {
-            if(waveIndex >= WaveCount)
-            {
-                return;
-            }
+            // Don't go beyond the scope of work
+            waveIndex %= WaveCount;
 
             // Full fragment work
             constexpr auto strideSpace = MatrixLayout::strideCounts();

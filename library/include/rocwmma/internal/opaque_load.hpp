@@ -105,19 +105,12 @@ namespace rocwmma
             // Recurse to the next nested layer
             else
             {
-                if(strideCount > 0)
-                {
 #pragma unroll
-                    for(int i = 0; i < strideCount; i++)
-                    {
-                        unroll_right<Depth + 1>(out, dataPtr, ldm, strideCounts, strides2d);
-                        dataPtr += strideOffset;
-                        //out++;
-                    }
-                }
-                else
+                for(int i = 0; i < strideCount; i++)
                 {
                     unroll_right<Depth + 1>(out, dataPtr, ldm, strideCounts, strides2d);
+                    dataPtr += strideOffset;
+                    //out++;
                 }
             }
         }

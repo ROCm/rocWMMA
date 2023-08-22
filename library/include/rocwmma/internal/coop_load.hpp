@@ -165,11 +165,6 @@ namespace rocwmma
                                                uint32_t                  ldm,
                                                uint32_t                  waveIndex)
         {
-            if(waveIndex >= WaveCount)
-            {
-                return;
-            }
-
             // Full fragment work
             constexpr auto strideSpace = MatrixLayout::strideCounts();
             constexpr auto strides     = MatrixLayout::strides();
@@ -192,6 +187,9 @@ namespace rocwmma
             // Wave count is acceptable
             else
             {
+                // Don't go beyond the scope of work
+                waveIndex %= WaveCount;
+
                 // Split the reduced stride space.
                 constexpr auto workItemsPerWave = std::max(totalWorkItems / WaveCount, 1u);
                 constexpr auto strideSpaceS
