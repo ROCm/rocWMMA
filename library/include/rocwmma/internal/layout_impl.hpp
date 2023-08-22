@@ -520,7 +520,7 @@ namespace rocwmma
                         LargeDim = BlockDim >= WaveSize,
 
                         // Number of segments in BlockDim direction
-                        BlockDimSegs = BlockDim / BlockDimStride_X,
+                        BlockDimSegs = std::max(BlockDim / BlockDimStride_X, 1u),
 
                         // Number of segments in the BlockK direction
                         BlockKSegs = BlockK / BlockKStride_Y,
