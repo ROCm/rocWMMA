@@ -56,7 +56,7 @@ namespace rocwmma
 
         // float8
         using TestTypesF8 = std::tuple<
-            std::tuple<float8_t, float8_t, float32_t>>;
+            std::tuple<float8_t, float32_t, float32_t>>;
 
         // Non-native bfloat16_t
         using TestTypesBF16 = std::tuple<
