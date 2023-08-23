@@ -747,8 +747,9 @@ namespace rocwmma
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
+                using inputType = VRegI64x1;
                 result.data = {__builtin_amdgcn_mfma_f32_16x16x32_fp8_fp8(
-                    regsA.data[0], regsB.data[0], regsC.data, 0, 0, 0)};
+                    ((inputType const&)(regsA)).data[0], ((inputType const&)(regsB)).data[0], regsC.data, 0, 0, 0)};
                 return result;
             }
         };
@@ -775,8 +776,9 @@ namespace rocwmma
                 typename Traits::DRegsT
             {
                 typename Traits::DRegsT result;
+                using inputType = VRegI64x1;
                 result.data = {__builtin_amdgcn_mfma_f32_32x32x16_fp8_fp8(
-                    regsA.data[0], regsB.data[0], regsC.data, 0, 0, 0)};
+                    ((inputType const&)(regsA)).data[0], ((inputType const&)(regsB)).data[0], regsC.data, 0, 0, 0)};
                 return result;
             }
         };
