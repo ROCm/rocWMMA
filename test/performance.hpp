@@ -59,6 +59,15 @@ namespace rocwmma
     };
 
     template <>
+    struct MfmaPerfTraits<DefaultArch, bfloat8_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
     struct MfmaPerfTraits<DefaultArch, bfloat16_t>
     {
         enum : uint32_t
@@ -114,6 +123,15 @@ namespace rocwmma
     };
 
     template <>
+    struct MfmaPerfTraits<MI100, bfloat8_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
     struct MfmaPerfTraits<MI100, bfloat16_t>
     {
         enum : uint32_t
@@ -161,6 +179,15 @@ namespace rocwmma
 
     template <>
     struct MfmaPerfTraits<MI200, float8_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<MI200, bfloat8_t>
     {
         enum : uint32_t
         {

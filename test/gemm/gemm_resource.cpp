@@ -30,6 +30,7 @@ namespace rocwmma
     // All supported instantiations
     template struct GemmResource<int8_t, int32_t>;
     template struct GemmResource<float8_t, float32_t>;
+    template struct GemmResource<bfloat8_t, float32_t>;
     template struct GemmResource<bfloat16_t, float32_t>;
     template struct GemmResource<float16_t, float32_t>;
     template struct GemmResource<hfloat16_t, float32_t>;

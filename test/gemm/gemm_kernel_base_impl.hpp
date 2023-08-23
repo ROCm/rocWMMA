@@ -213,7 +213,8 @@ namespace rocwmma
             = (std::is_same<InputT, float16_t>::value) || (std::is_same<InputT, hfloat16_t>::value);
         auto isBF16Input = (std::is_same<InputT, bfloat16_t>::value);
         auto isI8Input   = (std::is_same<InputT, int8_t>::value);
-        auto isF8Input   = (std::is_same<InputT, float8_t>::value);
+        auto isF8Input
+            = (std::is_same<InputT, float8_t>::value) || (std::is_same<InputT, bfloat8_t>::value);
 
         // Block size
         auto is16x16 = (BlockM == 16 && BlockN == 16);

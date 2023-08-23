@@ -58,6 +58,10 @@ namespace rocwmma
         using TestTypesF8 = std::tuple<
             std::tuple<float8_t, float32_t, float32_t>>;
 
+        // bfloat8
+        using TestTypesBF8 = std::tuple<
+            std::tuple<bfloat8_t, float32_t, float32_t>>;
+
         // Non-native bfloat16_t
         using TestTypesBF16 = std::tuple<
 #if defined(ROCWMMA_EXTENDED_TESTS)
@@ -89,11 +93,11 @@ namespace rocwmma
         using TestTypesF64 = std::tuple<std::tuple<float64_t, float64_t, float64_t>>;
 
         // Aggregate types <= 8 bit
-        using TestTypesTiny = typename Concat<TestTypesF8, TestTypesI8>::Result;
+        using TestTypesTiny = typename Concat<TestTypesF8, TestTypesBF8, TestTypesI8>::Result;
 
         // Aggregate types <= 16 bit
         using TestTypesSmall =
-            typename Concat<TestTypesF8, TestTypesI8, TestTypesBF16, TestTypesF16, TestTypesH16>::Result;
+            typename Concat<TestTypesTiny, TestTypesBF16, TestTypesF16, TestTypesH16>::Result;
 
         // Aggregate types <= 32 bit
         using TestTypesMedium = typename Concat<TestTypesSmall, TestTypesF32>::Result;
