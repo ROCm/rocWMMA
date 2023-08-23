@@ -81,7 +81,8 @@ namespace rocwmma
                              + 2u * (uint32_t)TestTraits::Cost::TileD)
                             <= 256u),
 
-            BlockKTest = ((bool)TestTraits::Arch::IsGfx940 && std::is_same<InputT, int8_t>::value &&
+            BlockKTest = ((bool)TestTraits::Arch::IsGfx940 &&
+                        ( std::is_same<InputT, int8_t>::value || std::is_same<InputT, float8_t>::value) &&
                         (((BlockM == 16u) || (BlockN == 16u)) && (BlockK >= 32u)) ||
                         (((BlockM == 32u) || (BlockN == 32u)) && (BlockK >= 16u))),
 
