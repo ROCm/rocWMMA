@@ -65,6 +65,7 @@
                 __FILE__,                                                 \
                 __LINE__);                                                \
         smiErrorFlag = true;                                              \
+        return;                                                           \
     }
 #endif
 #endif
