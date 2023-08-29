@@ -204,6 +204,24 @@ struct rocwmma_f8
         return _Float16(float(*this)); // convert to float, then convert to f16
     }
 
+    // convert to unsigned int
+    explicit inline ROCWMMA_HOST_DEVICE operator uint32_t() const
+    {
+        return uint32_t(float(*this)); // convert to float, then convert to u32
+    }
+
+    // convert to long
+    explicit inline ROCWMMA_HOST_DEVICE operator long() const
+    {
+        return long(float(*this)); // convert to float, then convert to long
+    }
+
+    // convert to double
+    explicit inline ROCWMMA_HOST_DEVICE operator double() const
+    {
+        return double(float(*this)); // convert to float, then convert to double
+    }
+
     inline ROCWMMA_HOST_DEVICE rocwmma_f8 operator- ()
     {
         this->data ^= 0x80;
@@ -227,6 +245,7 @@ struct rocwmma_f8
     {
         return data == 0x80;
     }
+
 };
 
 struct  rocwmma_bf8
@@ -386,6 +405,24 @@ struct  rocwmma_bf8
         return _Float16(float(*this)); // convert to float, then convert to f16
     }
 
+    // convert to unsigned int
+    explicit inline ROCWMMA_HOST_DEVICE operator uint32_t() const
+    {
+        return uint32_t(float(*this)); // convert to float, then convert to u32
+    }
+
+    // convert to long
+    explicit inline ROCWMMA_HOST_DEVICE operator long() const
+    {
+        return long(float(*this)); // convert to float, then convert to long
+    }
+
+    // convert to double
+    explicit inline ROCWMMA_HOST_DEVICE operator double() const
+    {
+        return double(float(*this)); // convert to float, then convert to double
+    }
+
     inline ROCWMMA_HOST_DEVICE rocwmma_bf8 operator- ()
     {
         this->data ^= 0x80;
@@ -502,6 +539,58 @@ inline ROCWMMA_HOST_DEVICE rocwmma_bf8& operator+=(rocwmma_bf8& a, rocwmma_bf8 b
     return a = rocwmma_bf8(float(a) + float(b));
 }
 
+// all - operator overloading with mixed types
+// mixed types, always converts to f32, does computation in f32, and returns float
+inline ROCWMMA_HOST_DEVICE float operator-(const float fa, rocwmma_f8 b)
+{
+    return (fa - float(b));
+}
+
+inline ROCWMMA_HOST_DEVICE float operator-(const float fa, rocwmma_bf8 b)
+{
+    return (fa - float(b));
+}
+
+inline ROCWMMA_HOST_DEVICE float operator-(rocwmma_f8 a, const float fb)
+{
+    return (float(a) - fb);
+}
+
+inline ROCWMMA_HOST_DEVICE float operator-(rocwmma_bf8 a, const float fb)
+{
+    return (float(a) - fb);
+}
+
+inline ROCWMMA_HOST_DEVICE float operator-(rocwmma_f8 a, rocwmma_bf8 b)
+{
+    return (float(a) - float(b));
+}
+
+inline ROCWMMA_HOST_DEVICE float operator-(rocwmma_bf8 a, rocwmma_f8 b)
+{
+    return (float(a) - float(b));
+}
+
+inline ROCWMMA_HOST_DEVICE rocwmma_f8 operator-(rocwmma_f8 a, rocwmma_f8 b)
+{
+    return rocwmma_f8(float(a) - float(b));
+}
+
+inline ROCWMMA_HOST_DEVICE rocwmma_bf8 operator-(rocwmma_bf8 a, rocwmma_bf8 b)
+{
+    return rocwmma_bf8(float(a) - float(b));
+}
+
+inline ROCWMMA_HOST_DEVICE rocwmma_f8& operator-=(rocwmma_f8& a, rocwmma_f8 b)
+{
+    return a = rocwmma_f8(float(a) - float(b));
+}
+
+inline ROCWMMA_HOST_DEVICE rocwmma_bf8& operator-=(rocwmma_bf8& a, rocwmma_bf8 b)
+{
+    return a = rocwmma_bf8(float(a) - float(b));
+}
+
 // overloading multiplication, always returns float,
 inline ROCWMMA_HOST_DEVICE float operator*(rocwmma_f8 a, rocwmma_f8 b)
 {
@@ -562,6 +651,78 @@ inline ROCWMMA_HOST_DEVICE float operator*(rocwmma_f8 a, rocwmma_bf8 b)
 inline ROCWMMA_HOST_DEVICE float operator*(rocwmma_bf8 a, rocwmma_f8 b)
 {
     return float(a) * float(b);
+}
+
+// overloading division, always returns float,
+inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_f8 a, rocwmma_f8 b)
+{
+    return float(a) / float(b);
+}
+
+inline ROCWMMA_HOST_DEVICE float operator/(float a, rocwmma_f8 b)
+{
+    return (a / float(b));
+}
+
+inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_f8 a, float b)
+{
+    return (float(a) / b);
+}
+
+inline ROCWMMA_HOST_DEVICE float operator/(int32_t a, rocwmma_f8 b)
+{
+    return ((float)a / float(b));
+}
+
+inline ROCWMMA_HOST_DEVICE float operator/(double a, rocwmma_f8 b)
+{
+    return ((float)a / float(b));
+}
+
+inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_bf8 a, rocwmma_bf8 b)
+{
+    return float(a) / float(b);
+}
+
+inline ROCWMMA_HOST_DEVICE float operator/(float a, rocwmma_bf8 b)
+{
+    return (a / float(b));
+}
+
+inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_bf8 a, float b)
+{
+    return (float(a) / b);
+}
+
+inline ROCWMMA_HOST_DEVICE float operator/(int32_t a, rocwmma_bf8 b)
+{
+    return ((float)a / float(b));
+}
+
+inline ROCWMMA_HOST_DEVICE float operator/(double a, rocwmma_bf8 b)
+{
+    return ((float)a / float(b));
+}
+
+// overloading for mixed f8 and bf8 types
+inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_f8 a, rocwmma_bf8 b)
+{
+    return float(a) / float(b);
+}
+
+inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_bf8 a, rocwmma_f8 b)
+{
+    return float(a) / float(b);
+}
+
+inline ROCWMMA_HOST_DEVICE rocwmma_f8& operator/=(rocwmma_f8& a, rocwmma_f8 b)
+{
+    return a = rocwmma_f8(float(a) / float(b));
+}
+
+inline ROCWMMA_HOST_DEVICE rocwmma_bf8& operator/=(rocwmma_bf8& a, rocwmma_bf8 b)
+{
+    return a = rocwmma_bf8(float(a) / float(b));
 }
 
 // overloading for compare
