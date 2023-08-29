@@ -81,7 +81,11 @@ namespace rocwmma
     {
         auto deviceArch = DeviceInfo::instance()->getGcnArch();
         return (deviceArch != DeviceInfo::UNSUPPORTED_ARCH
-                && !(deviceArch == DeviceInfo::GFX908 && std::is_same<DataT, float64_t>::value));
+                && !(deviceArch == DeviceInfo::GFX908 &&
+                    (std::is_same<DataT, float64_t>::value || std::is_same<DataT, float8_t>::value
+                    || std::is_same<DataT, bfloat8_t>::value))
+                && !(deviceArch == DeviceInfo::GFX90A &&
+                    (std::is_same<DataT, float8_t>::value || std::is_same<DataT, bfloat8_t>::value)));
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>

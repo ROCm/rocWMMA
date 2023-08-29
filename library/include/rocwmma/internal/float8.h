@@ -149,17 +149,6 @@ struct rocwmma_f8
     {
     }
 
-    /* TODO : Fix bfloat16 visibility 
-    // constructor from bfloat16
-    explicit ROCWMMA_HOST_DEVICE rocwmma_f8(rocwmma::bfloat16_t             v,
-                                            rocwmma_hip_f8_rounding_mode rm
-                                            = rocwmma_hip_f8_rounding_mode::standard,
-                                            uint32_t rng = 0)
-                                : rocwmma_f8((float)v, rm, rng)
-    {
-    }
-    */
-
     // constructor from int
     explicit ROCWMMA_HOST_DEVICE rocwmma_f8(int                          v,
                                             rocwmma_hip_f8_rounding_mode rm
@@ -215,14 +204,6 @@ struct rocwmma_f8
         return _Float16(float(*this)); // convert to float, then convert to f16
     }
 
-    /* TODO : Fix bfloat16 visibility 
-    // convert to bfloat16
-    explicit inline ROCWMMA_HOST_DEVICE operator rocwmma::bfloat16_t() const
-    {
-        return rocwmma::bfloat16_t(float(*this)); // convert to float, then convert to f16
-    }
-    */
-
     inline ROCWMMA_HOST_DEVICE rocwmma_f8 operator- ()
     {
         this->data ^= 0x80;
@@ -246,15 +227,6 @@ struct rocwmma_f8
     {
         return data == 0x80;
     }
-
-    /* TODO : Copy assignment to default - check 
-    // assignment overloading only from the same F8 types
-    inline ROCWMMA_HOST_DEVICE rocwmma_f8& operator=(const rocwmma_f8& a)
-    {
-        data = a.data;
-        return *this;
-    }
-    */
 };
 
 struct  rocwmma_bf8
@@ -360,17 +332,6 @@ struct  rocwmma_bf8
     {
     }
 
-    /* TODO : Fix bfloat16 visibility 
-    // constructor from bfloat16
-    explicit ROCWMMA_HOST_DEVICE rocwmma_bf8(rocwmma::bfloat16_t             v,
-                                             rocwmma_hip_f8_rounding_mode rm
-                                             = rocwmma_hip_f8_rounding_mode::standard,
-                                             uint32_t rng = 0)
-                                    : rocwmma_bf8((float)v, rm, rng)
-    {
-    }
-    */
-
     // constructor from int
     explicit ROCWMMA_HOST_DEVICE rocwmma_bf8(int                          v,
                                              rocwmma_hip_f8_rounding_mode rm
@@ -379,6 +340,16 @@ struct  rocwmma_bf8
                                     : rocwmma_bf8((float)v, rm, rng)
     {
     }
+
+    // constructor from unsigned int
+    explicit ROCWMMA_HOST_DEVICE rocwmma_bf8(unsigned int                 v,
+                                             rocwmma_hip_f8_rounding_mode rm
+                                             = rocwmma_hip_f8_rounding_mode::standard,
+                                             uint32_t rng = 0)
+                                    : rocwmma_bf8((float)v, rm, rng)
+    {
+    }
+
     // constructor from double
     explicit ROCWMMA_HOST_DEVICE rocwmma_bf8(double                       v,
                                              rocwmma_hip_f8_rounding_mode rm
@@ -415,13 +386,11 @@ struct  rocwmma_bf8
         return _Float16(float(*this)); // convert to float, then convert to f16
     }
 
-    /* TODO : Fix bfloat16 visibility 
-    // convert to bfloat16
-    explicit inline ROCWMMA_HOST_DEVICE operator rocwmma::bfloat16_t() const
+    inline ROCWMMA_HOST_DEVICE rocwmma_bf8 operator- ()
     {
-        return rocwmma::bfloat16_t(float(*this)); // convert to float, then convert to f16
+        this->data ^= 0x80;
+        return *this;
     }
-    */
 
     // check for zero
     inline ROCWMMA_HOST_DEVICE bool is_zero() const
@@ -440,15 +409,6 @@ struct  rocwmma_bf8
     {
         return data == 0x80;
     }
-
-    /* TODO : Copy assignment to default - check      
-    // assignment overloading only from the same F8 types
-    inline ROCWMMA_HOST_DEVICE rocwmma_bf8& operator=(const rocwmma_bf8& a)
-    {
-        data = a.data;
-        return *this;
-    }
-    */
 };
 
 namespace std
