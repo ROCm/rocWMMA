@@ -203,6 +203,7 @@ namespace rocwmma
 
         // Arch
         auto isGfx908 = deviceArch == DeviceInfo::GFX908;
+        auto isGfx90a = deviceArch == DeviceInfo::GFX90A;
         auto isGfx11  = (deviceArch == DeviceInfo::GFX1100) || (deviceArch == DeviceInfo::GFX1101)
                        || (deviceArch == DeviceInfo::GFX1102);
 
@@ -212,6 +213,8 @@ namespace rocwmma
             = (std::is_same<InputT, float16_t>::value) || (std::is_same<InputT, hfloat16_t>::value);
         auto isBF16Input = (std::is_same<InputT, bfloat16_t>::value);
         auto isI8Input   = (std::is_same<InputT, int8_t>::value);
+        auto isF8Input
+            = (std::is_same<InputT, float8_t>::value) || (std::is_same<InputT, bfloat8_t>::value);
 
         // Block size
         auto is16x16 = (BlockM == 16 && BlockN == 16);
@@ -220,12 +223,15 @@ namespace rocwmma
         bool unsupportedDeviceCheck = !(deviceArch == DeviceInfo::UNSUPPORTED_ARCH);
 
         // gfx908 doesn't support f64
-        bool gfx908F64Check = !(isGfx908 && isF64Input);
+        bool gfx908F64F8Check = !(isGfx908 && (isF64Input || isF8Input));
+
+        // gfx90a doesn't support f8
+        bool gfx90aF8Check = !(isGfx90a && isF8Input);
 
         // gfx11 only supports f16, i8 and bf16 inputs with block size 16
         bool gfx11Check = !(isGfx11 && ((!isF16Input && !isBF16Input && !isI8Input) || !is16x16));
 
-        return unsupportedDeviceCheck && gfx908F64Check && gfx11Check;
+        return unsupportedDeviceCheck && gfx908F64F8Check && gfx90aF8Check && gfx11Check;
     }
 
     template <uint32_t BlockM,
