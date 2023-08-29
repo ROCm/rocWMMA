@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,8 +44,8 @@ namespace rocwmma_hip_f8_impl
 
 #include "rocwmma_hip_f8_impl.h"
 
-static ROCWMMA_DEVICE bool  rocwmma_hip_f8_bias_mode_bit_device = true;
-static bool                 rocwmma_hip_f8_bias_mode_bit_host   = true;
+static ROCWMMA_DEVICE bool rocwmma_hip_f8_bias_mode_bit_device = true;
+static bool                rocwmma_hip_f8_bias_mode_bit_host   = true;
 
 struct rocwmma_f8
 {
@@ -90,7 +90,7 @@ struct rocwmma_f8
         else // RNE CVT
         {
             ival = __builtin_amdgcn_cvt_pk_fp8_f32(
-                        val.fval, val.fval, ival, false); // false -> WORD0
+                val.fval, val.fval, ival, false); // false -> WORD0
             val.i32val = ival;
             i8data     = val.i8val[0];
         }
@@ -125,9 +125,9 @@ struct rocwmma_f8
     // both Host and DEVICE for non-gfx940 using s/w simulation
     explicit ROCWMMA_HOST_DEVICE
 #endif
-    rocwmma_f8(float                        v,
-               rocwmma_hip_f8_rounding_mode rm  = rocwmma_hip_f8_rounding_mode::standard,
-               uint32_t                     rng = 0)
+        rocwmma_f8(float                        v,
+                   rocwmma_hip_f8_rounding_mode rm  = rocwmma_hip_f8_rounding_mode::standard,
+                   uint32_t                     rng = 0)
     {
 #ifdef rocwmma_F8_downcast_clipping
         data = rocwmma_hip_f8_impl::
@@ -145,7 +145,7 @@ struct rocwmma_f8
                                             rocwmma_hip_f8_rounding_mode rm
                                             = rocwmma_hip_f8_rounding_mode::standard,
                                             uint32_t rng = 0)
-                                : rocwmma_f8((float)v, rm, rng)
+        : rocwmma_f8((float)v, rm, rng)
     {
     }
 
@@ -154,16 +154,16 @@ struct rocwmma_f8
                                             rocwmma_hip_f8_rounding_mode rm
                                             = rocwmma_hip_f8_rounding_mode::standard,
                                             uint32_t rng = 0)
-                                : rocwmma_f8((float)v, rm, rng)
+        : rocwmma_f8((float)v, rm, rng)
     {
     }
 
     // constructor from unsigned int
-    explicit ROCWMMA_HOST_DEVICE rocwmma_f8(unsigned int                          v,
+    explicit ROCWMMA_HOST_DEVICE rocwmma_f8(unsigned int                 v,
                                             rocwmma_hip_f8_rounding_mode rm
                                             = rocwmma_hip_f8_rounding_mode::standard,
                                             uint32_t rng = 0)
-                                : rocwmma_f8((float)v, rm, rng)
+        : rocwmma_f8((float)v, rm, rng)
     {
     }
 
@@ -172,7 +172,7 @@ struct rocwmma_f8
                                             rocwmma_hip_f8_rounding_mode rm
                                             = rocwmma_hip_f8_rounding_mode::standard,
                                             uint32_t rng = 0)
-                                : rocwmma_f8((float)v, rm, rng)
+        : rocwmma_f8((float)v, rm, rng)
     {
     }
 
@@ -204,7 +204,7 @@ struct rocwmma_f8
         return _Float16(float(*this)); // convert to float, then convert to f16
     }
 
-    inline ROCWMMA_HOST_DEVICE rocwmma_f8 operator- ()
+    inline ROCWMMA_HOST_DEVICE rocwmma_f8 operator-()
     {
         this->data ^= 0x80;
         return *this;
@@ -229,7 +229,7 @@ struct rocwmma_f8
     }
 };
 
-struct  rocwmma_bf8
+struct rocwmma_bf8
 {
     uint8_t data;
     enum class rocwmma_hip_f8_rounding_mode
@@ -297,7 +297,7 @@ struct  rocwmma_bf8
             data = cast_to_bf8_from_f32<true>(v, rng);
         }
         else
-        { 
+        {
             data = cast_to_bf8_from_f32<false>(v);
         }
     }
@@ -308,9 +308,9 @@ struct  rocwmma_bf8
     // both Host and DEVICE for non-gfx940 using s/w simulation
     explicit ROCWMMA_HOST_DEVICE
 #endif
-    rocwmma_bf8(float                        v,
-                rocwmma_hip_f8_rounding_mode rm  = rocwmma_hip_f8_rounding_mode::standard,
-                uint32_t                     rng = 0)
+        rocwmma_bf8(float                        v,
+                    rocwmma_hip_f8_rounding_mode rm  = rocwmma_hip_f8_rounding_mode::standard,
+                    uint32_t                     rng = 0)
     {
 #ifdef rocwmma_F8_downcast_clipping
         data = rocwmma_hip_f8_impl::
@@ -328,7 +328,7 @@ struct  rocwmma_bf8
                                              rocwmma_hip_f8_rounding_mode rm
                                              = rocwmma_hip_f8_rounding_mode::standard,
                                              uint32_t rng = 0)
-                                    : rocwmma_bf8((float)v, rm, rng)
+        : rocwmma_bf8((float)v, rm, rng)
     {
     }
 
@@ -337,7 +337,7 @@ struct  rocwmma_bf8
                                              rocwmma_hip_f8_rounding_mode rm
                                              = rocwmma_hip_f8_rounding_mode::standard,
                                              uint32_t rng = 0)
-                                    : rocwmma_bf8((float)v, rm, rng)
+        : rocwmma_bf8((float)v, rm, rng)
     {
     }
 
@@ -346,7 +346,7 @@ struct  rocwmma_bf8
                                              rocwmma_hip_f8_rounding_mode rm
                                              = rocwmma_hip_f8_rounding_mode::standard,
                                              uint32_t rng = 0)
-                                    : rocwmma_bf8((float)v, rm, rng)
+        : rocwmma_bf8((float)v, rm, rng)
     {
     }
 
@@ -355,7 +355,7 @@ struct  rocwmma_bf8
                                              rocwmma_hip_f8_rounding_mode rm
                                              = rocwmma_hip_f8_rounding_mode::standard,
                                              uint32_t rng = 0)
-                                    : rocwmma_bf8((float)v, rm, rng)
+        : rocwmma_bf8((float)v, rm, rng)
     {
     }
 
@@ -386,7 +386,7 @@ struct  rocwmma_bf8
         return _Float16(float(*this)); // convert to float, then convert to f16
     }
 
-    inline ROCWMMA_HOST_DEVICE rocwmma_bf8 operator- ()
+    inline ROCWMMA_HOST_DEVICE rocwmma_bf8 operator-()
     {
         this->data ^= 0x80;
         return *this;
@@ -487,9 +487,19 @@ inline ROCWMMA_HOST_DEVICE rocwmma_f8 operator+(rocwmma_f8 a, rocwmma_f8 b)
     return rocwmma_f8(float(a) + float(b));
 }
 
+inline ROCWMMA_HOST_DEVICE rocwmma_f8 operator-(rocwmma_f8 a, rocwmma_f8 b)
+{
+    return rocwmma_f8(float(a) - float(b));
+}
+
 inline ROCWMMA_HOST_DEVICE rocwmma_bf8 operator+(rocwmma_bf8 a, rocwmma_bf8 b)
 {
     return rocwmma_bf8(float(a) + float(b));
+}
+
+inline ROCWMMA_HOST_DEVICE rocwmma_bf8 operator-(rocwmma_bf8 a, rocwmma_bf8 b)
+{
+    return rocwmma_bf8(float(a) - float(b));
 }
 
 inline ROCWMMA_HOST_DEVICE rocwmma_f8& operator+=(rocwmma_f8& a, rocwmma_f8 b)
@@ -497,15 +507,30 @@ inline ROCWMMA_HOST_DEVICE rocwmma_f8& operator+=(rocwmma_f8& a, rocwmma_f8 b)
     return a = rocwmma_f8(float(a) + float(b));
 }
 
+inline ROCWMMA_HOST_DEVICE rocwmma_f8& operator-=(rocwmma_f8& a, rocwmma_f8 b)
+{
+    return a = rocwmma_f8(float(a) - float(b));
+}
+
 inline ROCWMMA_HOST_DEVICE rocwmma_bf8& operator+=(rocwmma_bf8& a, rocwmma_bf8 b)
 {
     return a = rocwmma_bf8(float(a) + float(b));
+}
+
+inline ROCWMMA_HOST_DEVICE rocwmma_bf8& operator-=(rocwmma_bf8& a, rocwmma_bf8 b)
+{
+    return a = rocwmma_bf8(float(a) - float(b));
 }
 
 // overloading multiplication, always returns float,
 inline ROCWMMA_HOST_DEVICE float operator*(rocwmma_f8 a, rocwmma_f8 b)
 {
     return float(a) * float(b);
+}
+
+inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_f8 a, rocwmma_f8 b)
+{
+    return float(a) / float(b);
 }
 
 inline ROCWMMA_HOST_DEVICE float operator*(float a, rocwmma_f8 b)
@@ -531,6 +556,11 @@ inline ROCWMMA_HOST_DEVICE float operator*(double a, rocwmma_f8 b)
 inline ROCWMMA_HOST_DEVICE float operator*(rocwmma_bf8 a, rocwmma_bf8 b)
 {
     return float(a) * float(b);
+}
+
+inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_bf8 a, rocwmma_bf8 b)
+{
+    return float(a) / float(b);
 }
 
 inline ROCWMMA_HOST_DEVICE float operator*(float a, rocwmma_bf8 b)
@@ -576,6 +606,11 @@ inline ROCWMMA_HOST_DEVICE bool operator==(rocwmma_bf8 a, rocwmma_bf8 b)
 }
 
 inline ROCWMMA_HOST_DEVICE bool operator!=(rocwmma_f8 a, rocwmma_f8 b)
+{
+    return (a.data != b.data);
+}
+
+inline ROCWMMA_HOST_DEVICE bool operator!=(rocwmma_bf8 a, rocwmma_bf8 b)
 {
     return (a.data != b.data);
 }
