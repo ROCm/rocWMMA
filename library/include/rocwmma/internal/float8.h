@@ -597,11 +597,6 @@ inline ROCWMMA_HOST_DEVICE float operator*(rocwmma_f8 a, rocwmma_f8 b)
     return float(a) * float(b);
 }
 
-inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_f8 a, rocwmma_f8 b)
-{
-    return float(a) / float(b);
-}
-
 inline ROCWMMA_HOST_DEVICE float operator*(float a, rocwmma_f8 b)
 {
     return (a * float(b));
@@ -625,11 +620,6 @@ inline ROCWMMA_HOST_DEVICE float operator*(double a, rocwmma_f8 b)
 inline ROCWMMA_HOST_DEVICE float operator*(rocwmma_bf8 a, rocwmma_bf8 b)
 {
     return float(a) * float(b);
-}
-
-inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_bf8 a, rocwmma_bf8 b)
-{
-    return float(a) / float(b);
 }
 
 inline ROCWMMA_HOST_DEVICE float operator*(float a, rocwmma_bf8 b)
