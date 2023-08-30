@@ -145,7 +145,8 @@ struct rocwmma_f8
                                             rocwmma_hip_f8_rounding_mode rm
                                             = rocwmma_hip_f8_rounding_mode::standard,
                                             uint32_t rng = 0)
-        : rocwmma_f8((float)v, rm, rng)
+                                : rocwmma_f8((float)v, rm, rng)
+
     {
     }
 
@@ -221,7 +222,7 @@ struct rocwmma_f8
     {
         return double(float(*this)); // convert to float, then convert to double
     }
-
+  
     inline ROCWMMA_HOST_DEVICE rocwmma_f8 operator- ()
     {
         this->data ^= 0x80;
@@ -245,7 +246,6 @@ struct rocwmma_f8
     {
         return data == 0x80;
     }
-
 };
 
 struct rocwmma_bf8
