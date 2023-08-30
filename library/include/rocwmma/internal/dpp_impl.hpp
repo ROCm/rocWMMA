@@ -503,8 +503,7 @@ namespace rocwmma
         namespace OpsBase
         {
             /**
-             * \ingroup Cross-Lane Operations
-             * \defgroup Dpp Ops
+             * \ingroup Cross_Lane_Operations
              *
              * @brief Cross-lane operations implemented with the amdgcn_mov_dpp backend.
              * @note In this context:
@@ -517,6 +516,8 @@ namespace rocwmma
              * Here we build out the cross-lane properties specific to DPP, such as the backend (OP_IMPL) and the
              * control code drivers for the backend function call (OP_CTRL). Control code generators are implemented
              * in the DppCtrl namespace.
+             *
+             * @{
              */
 
             template <uint32_t OpId, uint32_t SubGroupSize>
@@ -565,7 +566,7 @@ namespace rocwmma
             };
 
             /*! \class Reverse
-            *  \brief Perform reversal of elements in sub-groups of <SubGroupSize> threads.
+            *  \brief Perform reversal of elements in sub-groups of \p SubGroupSize threads.
             */
 
             template <uint32_t SubGroupSize, class ReverseCtrl>
@@ -575,7 +576,7 @@ namespace rocwmma
             };
 
             /*! \class Rotate
-            *  \brief Perform element-wise rotation in direction <RotateDir> in sub-groups of <SubGroupSize> threads.
+            *  \brief Perform element-wise rotation in direction \p RotateDir in sub-groups of \p SubGroupSize threads.
             *
             * @tparam RotateDir rotation direction: see Properties
             * @tparam RotateDistance element positions to move in specified direction. Positions wrapped by sub group size.
@@ -610,7 +611,7 @@ namespace rocwmma
             using RotateL = Rotate<OP_DIR_L, RotateDistance, SubGroupSize, RotateCtrl>;
 
             /*! \class Shift
-            *  \brief Perform element-wise shift in direction <ShiftDir> in sub-groups of <SubGroupSize> threads.
+            *  \brief Perform element-wise shift in direction \p ShiftDir in sub-groups of \p SubGroupSize threads.
             *
             * @tparam ShiftDir shift direction: see Properties
             * @tparam ShiftDistance element positions to move in specified direction. Positions do not wrap around
@@ -643,7 +644,7 @@ namespace rocwmma
             using ShiftL = Shift<OP_DIR_L, ShiftDistance, SubGroupSize, ShiftCtrl>;
 
             /*! \class Shuffle
-            *  \brief Perform localized shuffling within sub-groups of <SubGroupSize> threads.
+            *  \brief Perform localized shuffling within sub-groups of \p SubGroupSize threads.
             */
             template <uint32_t SubGroupSize, class ShuffleCtrl>
             struct Shuffle : public DppOp<OP_ID_SHUFFLE, SubGroupSize>,
@@ -652,9 +653,9 @@ namespace rocwmma
             };
 
             // Common Shuffle variants
-            /*! \class Shuffle<N>
-            *  \brief Perform localized shuffling within all sub-groups of <N> threads.
-            * <N> = group size.
+            /*! \class Shuffle4
+            *  \brief Shuffle\<N\> Perform localized shuffling within all sub-groups of \em N threads.
+            * \em N = group size.
             *
             * @tparam Select0 - index of element to shuffle to index 0
             * @tparam Select1 - index of element to shuffle to index 1
@@ -715,13 +716,14 @@ namespace rocwmma
             };
 
             /*! \class Swap
-            *  \brief Perform swap of neigbouring sub-groups of <SubGroupSize> threads.
+            *  \brief Perform swap of neigbouring sub-groups of \p SubGroupSize threads.
             */
             template <uint32_t SubGroupSize, class SwapCtrl>
             struct Swap : public DppOp<OP_ID_SWAP, SubGroupSize>,
                           public Backend::amdgcn_mov_dpp<SwapCtrl>
             {
             };
+            /** @}*/
 
         } // namespace OpsBase
 

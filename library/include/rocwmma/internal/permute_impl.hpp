@@ -235,7 +235,7 @@ namespace rocwmma
             };
 
             /*! \class Rotate
-            *  \brief Perform element-wise rotation in direction <RotateDir> in sub-groups of <SubGroupSize> threads.
+            *  \brief Perform element-wise rotation in direction \p RotateDir in sub-groups of \p SubGroupSize threads.
             *
             * @tparam RotateDir rotation direction: see Properties
             * @tparam RotateDistance element positions to move in specified direction. Positions wrapped by sub group size.
@@ -286,8 +286,7 @@ namespace rocwmma
         namespace Ops
         {
             /**
-             * \ingroup Cross-Lane Operations
-             * \defgroup Permute Ops
+             * \ingroup Cross_Lane_Operations
              *
              * @brief Cross-lane operations implemented with the amdgcn_ds_permute and amdgcn_ds_bpermute backends.
              *

@@ -35,8 +35,8 @@ namespace rocwmma
     namespace Swizzle
     {
         /**
-         * \ingroup Swizzle Ops
-         * \defgroup Swizzle Front-End
+         * \ingroup Cross_Lane_Operations
+         * @{
          *
          * @brief Cross-lane operations implemented with the amdgcn_ds_swizzle backend.
          *
@@ -195,6 +195,7 @@ namespace rocwmma
         // Fft variants
         template <uint32_t SubGroupSize, uint32_t FftCtrl>
         using Fft = Driver<SwizzleImpl::Ops::Fft<SubGroupSize, FftCtrl>>;
+        /** @}*/
 
     } // namespace Swizzle
 
