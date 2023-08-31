@@ -691,7 +691,7 @@ namespace rocwmma
                                                          dataInstance->deviceD().get(), // D*
                                                          rocblas_types<OutputT>::type(), // d_type
                                                          this->mM, // ldd (col major output only)
-                                                         rocblas_compute_type_f32, // compute_type
+                                                         rocblas_types<ComputeT>::computeType(), // compute_type
                                                          rocblas_gemm_algo_standard, // algo
                                                          0, // solution_index
                                                          0)); // flags

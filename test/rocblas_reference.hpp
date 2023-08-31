@@ -132,10 +132,6 @@ namespace rocwmma
         {
             return rocblas_datatype_i8_r;
         }
-        constexpr static inline rocblas_computetype computeType()
-        {
-            return rocblas_compute_type_invalid;
-        }
     };
 
     template <>
@@ -145,10 +141,6 @@ namespace rocwmma
         constexpr static inline rocblas_datatype type()
         {
             return rocblas_datatype_u8_r;
-        }
-        constexpr static inline rocblas_computetype computeType()
-        {
-            return rocblas_compute_type_invalid;
         }
     };
 
@@ -160,10 +152,6 @@ namespace rocwmma
         {
             return rocblas_datatype_i32_r;
         }
-        constexpr static inline rocblas_computetype computeType()
-        {
-            return rocblas_compute_type_invalid;
-        }
     };
 
     template <>
@@ -174,10 +162,6 @@ namespace rocwmma
         {
             return rocblas_datatype_u32_r;
         }
-        constexpr static inline rocblas_computetype computeType()
-        {
-            return rocblas_compute_type_invalid;
-        }
     };
 
     template <>
@@ -187,10 +171,6 @@ namespace rocwmma
         constexpr static inline rocblas_datatype type()
         {
             return rocblas_datatype_f16_r;
-        }
-        constexpr static inline rocblas_computetype computeType()
-        {
-            return rocblas_compute_type_invalid;
         }
     };
 
@@ -207,10 +187,6 @@ namespace rocwmma
         {
             return rocblas_datatype_bf16_r;
         }
-        constexpr static inline rocblas_computetype computeType()
-        {
-            return rocblas_compute_type_invalid;
-        }
     };
 
     template <>
@@ -221,10 +197,14 @@ namespace rocwmma
         {
             return rocblas_datatype_f32_r;
         }
-        constexpr static inline rocblas_computetype computeType()
+#if defined(ROCBLAS_DATA_TYPE_FLOAT8)
         {
-            return rocblas_compute_type_f32;
+            constexpr static inline rocblas_computetype computeType()
+            {
+                return rocblas_compute_type_f32;
+            }
         }
+#endif
     };
 
     template <>
@@ -234,10 +214,6 @@ namespace rocwmma
         constexpr static inline rocblas_datatype type()
         {
             return rocblas_datatype_f64_r;
-        }
-        constexpr static inline rocblas_computetype computeType()
-        {
-            return rocblas_compute_type_invalid;
         }
     };
 
@@ -249,10 +225,6 @@ namespace rocwmma
         constexpr static inline rocblas_datatype type()
         {
             return rocblas_datatype_bf8_r;
-        }
-        constexpr static inline rocblas_computetype computeType()
-        {
-            return rocblas_compute_type_invalid;
         }
     }
 #endif
@@ -266,10 +238,6 @@ namespace rocwmma
         constexpr static inline rocblas_datatype type()
         {
             return rocblas_datatype_f8_r;
-        }
-        constexpr static inline rocblas_computetype computeType()
-        {
-            return rocblas_compute_type_invalid;
         }
     }
 #endif
@@ -370,7 +338,7 @@ namespace rocwmma
         {
 #if defined(ROCBLAS_DATA_TYPE_FLOAT8)
             {
-            rocblas_computetype compute_type = rocblas_types<ComputeT>::computetype();
+            rocblas_computetype compute_type = rocblas_types<ComputeT>::computeType();
             CHECK_ROCBLAS_ERROR(rocblas_gemm_ex3(handle,
                                                  opA,
                                                  opB,
