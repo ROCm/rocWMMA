@@ -71,8 +71,8 @@ namespace rocwmma
             MatrixUtil<Layout>::fillWithPaddingLaunchKernel(dataInstance->deviceIn().get(),
                                                             Base::mM,
                                                             Base::mN,
-                                                            Base::mParam1,
-                                                            Base::mParam2,
+                                                            uint32_t(Base::mParam1),
+                                                            uint32_t(Base::mParam2),
                                                             std::numeric_limits<DataT>::max());
 
             // Initialize device output data with NaN

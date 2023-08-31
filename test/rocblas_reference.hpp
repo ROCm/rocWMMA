@@ -40,10 +40,16 @@
         exit(EXIT_FAILURE);                           \
     }
 
+// BETA_FEATURES_API needs to be defined to access the beta features of rocBLAS which includes float8/bfloat8 support.
+#define ROCBLAS_BETA_FEATURES_API
 #include <rocblas/rocblas.h>
 
 #if(ROCBLAS_VERSION_MAJOR >= 3) || ((ROCBLAS_VERSION_MAJOR >= 2) && (ROCBLAS_VERSION_MINOR > 45))
 #define ROCBLAS_DATA_TYPE_INVALID
+#endif
+
+#if((ROCBLAS_VERSION_MAJOR >= 3) && (ROCBLAS_VERSION_MINOR >= 1))
+#define ROCBLAS_DATA_TYPE_FLOAT8
 #endif
 
 #include "common.hpp"
@@ -88,10 +94,12 @@ namespace rocwmma
             return "bf16_r";
         case rocblas_datatype_bf16_c:
             return "bf16_c";
+#if defined(ROCBLAS_DATA_TYPE_FLOAT8)
         case rocblas_datatype_f8_r:
             return "f8_r";
         case rocblas_datatype_bf8_r:
             return "bf8_r";
+#endif
 #if defined(ROCBLAS_DATA_TYPE_INVALID)
         case rocblas_datatype_invalid:;
 #endif // ROCBLAS_DATA_TYPE_INVALID
@@ -199,23 +207,29 @@ namespace rocwmma
 
     template <>
     struct rocblas_types<rocwmma_bf8>
+#if defined(ROCBLAS_DATA_TYPE_FLOAT8)
     {
         using DataType = rocwmma_bf8;
         constexpr static inline rocblas_datatype type()
         {
             return rocblas_datatype_bf8_r;
         }
-    };
+    }
+#endif
+    ;
 
     template <>
     struct rocblas_types<rocwmma_f8>
+#if defined(ROCBLAS_DATA_TYPE_FLOAT8)
     {
         using DataType = rocwmma_f8;
         constexpr static inline rocblas_datatype type()
         {
             return rocblas_datatype_f8_r;
         }
-    };
+    }
+#endif
+    ;
 
     template <typename DataLayoutT>
     struct rocblas_layout;
@@ -265,7 +279,6 @@ namespace rocwmma
         rocblas_datatype b_type       = rocblas_types<InputT>::type();
         rocblas_datatype c_type       = rocblas_types<OutputT>::type();
         rocblas_datatype d_type       = rocblas_types<OutputT>::type();
-        rocblas_datatype compute_type = rocblas_types<ComputeT>::type();
 
         using a_t = typename rocblas_types<InputT>::DataType;
         using b_t = typename rocblas_types<InputT>::DataType;
@@ -309,30 +322,66 @@ namespace rocwmma
         int32_t  solution_index = 0;
         uint32_t flags          = 0;
 
-        CHECK_ROCBLAS_ERROR(rocblas_gemm_ex(handle,
-                                            opA,
-                                            opB,
-                                            m,
-                                            n,
-                                            k,
-                                            &alpha,
-                                            da,
-                                            a_type,
-                                            lda,
-                                            db,
-                                            b_type,
-                                            ldb,
-                                            &beta,
-                                            dc,
-                                            c_type,
-                                            ldc,
-                                            dd,
-                                            d_type,
-                                            ldd,
-                                            compute_type,
-                                            algo,
-                                            solution_index,
-                                            flags));
+        if ((std::is_same<InputT, float8_t>::value) || (std::is_same<InputT, bfloat8_t>::value))
+        {
+#if defined(ROCBLAS_DATA_TYPE_FLOAT8)
+            {
+            rocblas_computetype compute_type = rocblas_compute_type_f32;
+            CHECK_ROCBLAS_ERROR(rocblas_gemm_ex3(handle,
+                                                 opA,
+                                                 opB,
+                                                 m,
+                                                 n,
+                                                 k,
+                                                 &alpha,
+                                                 da,
+                                                 a_type,
+                                                 lda,
+                                                 db,
+                                                 b_type,
+                                                 ldb,
+                                                 &beta,
+                                                 dc,
+                                                 c_type,
+                                                 ldc,
+                                                 dd,
+                                                 d_type,
+                                                 ldd,
+                                                 compute_type,
+                                                 algo,
+                                                 solution_index,
+                                                 flags));
+            }
+#endif
+        }
+        else
+        {
+            rocblas_datatype compute_type = rocblas_types<ComputeT>::type();
+            CHECK_ROCBLAS_ERROR(rocblas_gemm_ex(handle,
+                                                opA,
+                                                opB,
+                                                m,
+                                                n,
+                                                k,
+                                                &alpha,
+                                                da,
+                                                a_type,
+                                                lda,
+                                                db,
+                                                b_type,
+                                                ldb,
+                                                &beta,
+                                                dc,
+                                                c_type,
+                                                ldc,
+                                                dd,
+                                                d_type,
+                                                ldd,
+                                                compute_type,
+                                                algo,
+                                                solution_index,
+                                                flags));
+        }
 
         // copy output from device to CPU
         CHECK_HIP_ERROR(hipMemcpy(&hd[0], dd, sizeof(d_t) * size_d, hipMemcpyDeviceToHost));

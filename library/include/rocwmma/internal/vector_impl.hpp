@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2022-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2022-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -381,7 +381,7 @@ namespace rocwmma
     template <typename... Ts, typename U, typename std::enable_if<(sizeof...(Ts) == Rank)>::type*>
     ROCWMMA_HOST_DEVICE constexpr non_native_vector_base<T, Rank>::non_native_vector_base(
         Ts... args) noexcept
-        : d{args...}
+        : d{static_cast<T>(args)...}
     {
     }
 
@@ -711,27 +711,25 @@ namespace rocwmma
 // Quirk: explicit specialization for ++ / -- operators in HIP_vector_type<bfloat16_t, N>.
 // Why? bfloat16_t doesn't have automatic conversion from integers so we must override the default implementation;
 // Override such that in(de)crement operators use 1.f instead of 1(int)
-#define ROCWMMA_SPECIALIZE_BFLOAT16_VECTOR_OPERATORS(RANK)                 \
-    template <>                                                            \
-    ROCWMMA_HOST_DEVICE inline HIP_vector_type<rocwmma::bfloat16_t, RANK>& \
-        HIP_vector_type<rocwmma::bfloat16_t, RANK>::operator++() noexcept  \
-    {                                                                      \
-        return *this += HIP_vector_type<rocwmma::bfloat16_t, RANK>{        \
-                   static_cast<rocwmma::bfloat16_t>(1.0f)};                \
-    }                                                                      \
-                                                                           \
-    template <>                                                            \
-    ROCWMMA_HOST_DEVICE inline HIP_vector_type<rocwmma::bfloat16_t, RANK>& \
-        HIP_vector_type<rocwmma::bfloat16_t, RANK>::operator--() noexcept  \
-    {                                                                      \
-        return *this -= HIP_vector_type<rocwmma::bfloat16_t, RANK>{        \
-                   static_cast<rocwmma::bfloat16_t>(1.0f)};                \
+#define ROCWMMA_IMPL_VECTOR_INC_DEC_OPS_AS_FLOAT(FLOAT_TYPE, RANK)                        \
+    template <>                                                                           \
+    ROCWMMA_HOST_DEVICE inline HIP_vector_type<FLOAT_TYPE, RANK>&                         \
+        HIP_vector_type<FLOAT_TYPE, RANK>::operator++() noexcept                          \
+    {                                                                                     \
+        return *this += HIP_vector_type<FLOAT_TYPE, RANK>{static_cast<FLOAT_TYPE>(1.0f)}; \
+    }                                                                                     \
+                                                                                          \
+    template <>                                                                           \
+    ROCWMMA_HOST_DEVICE inline HIP_vector_type<FLOAT_TYPE, RANK>&                         \
+        HIP_vector_type<FLOAT_TYPE, RANK>::operator--() noexcept                          \
+    {                                                                                     \
+        return *this -= HIP_vector_type<FLOAT_TYPE, RANK>{static_cast<FLOAT_TYPE>(1.0f)}; \
     }
 
 // Roll the quirk into the registration macro
-#define ROCWMMA_REGISTER_HIP_BFLOAT16_VECTOR_TYPE(RANK)                    \
-    ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat16_t, RANK) \
-    ROCWMMA_SPECIALIZE_BFLOAT16_VECTOR_OPERATORS(RANK)
+#define ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(TYPE, RANK) \
+    ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(TYPE, RANK)                               \
+    ROCWMMA_IMPL_VECTOR_INC_DEC_OPS_AS_FLOAT(TYPE, RANK)
 
 #endif // !__HIPCC_RTC__
 
