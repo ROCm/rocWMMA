@@ -51,7 +51,7 @@ namespace rocwmma
         }
     };
 
-#if ROCWMMA_ARCH_NAVI
+#if ROCWMMA_ARCH_GFX11
 
     // Unlock the WMMA builtins for gfx11 cards
     // Supported Input/Compute types:
@@ -179,7 +179,7 @@ namespace rocwmma
         }
     };
 
-#endif // ROCWMMA_ARCH_NAVI
+#endif // ROCWMMA_ARCH_GFX11
 
 } // namespace rocwmma
 

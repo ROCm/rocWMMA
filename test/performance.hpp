@@ -32,8 +32,8 @@ namespace rocwmma
 {
 
     // Architectures
-    class MI100;
-    class MI200;
+    class ArchGfx908;
+    class ArchGfx90a;
     class Vega20;
     class DefaultArch;
 
@@ -85,9 +85,9 @@ namespace rocwmma
         };
     };
 
-    // MI-100
+    // gfx908
     template <>
-    struct MfmaPerfTraits<MI100, int8_t>
+    struct MfmaPerfTraits<ArchGfx908, int8_t>
     {
         enum : uint32_t
         {
@@ -96,7 +96,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<MI100, bfloat16_t>
+    struct MfmaPerfTraits<ArchGfx908, bfloat16_t>
     {
         enum : uint32_t
         {
@@ -105,7 +105,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<MI100, float16_t>
+    struct MfmaPerfTraits<ArchGfx908, float16_t>
     {
         enum : uint32_t
         {
@@ -114,7 +114,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<MI100, float32_t>
+    struct MfmaPerfTraits<ArchGfx908, float32_t>
     {
         enum : uint32_t
         {
@@ -123,7 +123,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<MI100, float64_t>
+    struct MfmaPerfTraits<ArchGfx908, float64_t>
     {
         enum : uint32_t
         {
@@ -131,9 +131,9 @@ namespace rocwmma
         };
     };
 
-    // MI-200
+    // gfx90a
     template <>
-    struct MfmaPerfTraits<MI200, int8_t>
+    struct MfmaPerfTraits<ArchGfx90a, int8_t>
     {
         enum : uint32_t
         {
@@ -142,7 +142,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<MI200, bfloat16_t>
+    struct MfmaPerfTraits<ArchGfx90a, bfloat16_t>
     {
         enum : uint32_t
         {
@@ -151,7 +151,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<MI200, float16_t>
+    struct MfmaPerfTraits<ArchGfx90a, float16_t>
     {
         enum : uint32_t
         {
@@ -160,7 +160,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<MI200, float32_t>
+    struct MfmaPerfTraits<ArchGfx90a, float32_t>
     {
         enum : uint32_t
         {
@@ -169,7 +169,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<MI200, float64_t>
+    struct MfmaPerfTraits<ArchGfx90a, float64_t>
     {
         enum : uint32_t
         {
@@ -187,7 +187,7 @@ namespace rocwmma
 
     // MI-100
     template <>
-    struct VALUPerfTraits<MI100, int8_t>
+    struct VALUPerfTraits<ArchGfx908, int8_t>
     {
         enum : uint32_t
         {
@@ -196,7 +196,7 @@ namespace rocwmma
     };
 
     template <>
-    struct VALUPerfTraits<MI100, bfloat16_t>
+    struct VALUPerfTraits<ArchGfx908, bfloat16_t>
     {
         enum : uint32_t
         {
@@ -205,7 +205,7 @@ namespace rocwmma
     };
 
     template <>
-    struct VALUPerfTraits<MI100, float16_t>
+    struct VALUPerfTraits<ArchGfx908, float16_t>
     {
         enum : uint32_t
         {
@@ -214,7 +214,7 @@ namespace rocwmma
     };
 
     template <>
-    struct VALUPerfTraits<MI100, float32_t>
+    struct VALUPerfTraits<ArchGfx908, float32_t>
     {
         enum : uint32_t
         {
@@ -223,7 +223,7 @@ namespace rocwmma
     };
 
     template <>
-    struct VALUPerfTraits<MI100, float64_t>
+    struct VALUPerfTraits<ArchGfx908, float64_t>
     {
         enum : uint32_t
         {
@@ -231,9 +231,9 @@ namespace rocwmma
         };
     };
 
-    // MI200
+    // ArchGfx90a
     template <>
-    struct VALUPerfTraits<MI200, int8_t>
+    struct VALUPerfTraits<ArchGfx90a, int8_t>
     {
         enum : uint32_t
         {
@@ -242,7 +242,7 @@ namespace rocwmma
     };
 
     template <>
-    struct VALUPerfTraits<MI200, bfloat16_t>
+    struct VALUPerfTraits<ArchGfx90a, bfloat16_t>
     {
         enum : uint32_t
         {
@@ -251,7 +251,7 @@ namespace rocwmma
     };
 
     template <>
-    struct VALUPerfTraits<MI200, float16_t>
+    struct VALUPerfTraits<ArchGfx90a, float16_t>
     {
         enum : uint32_t
         {
@@ -260,7 +260,7 @@ namespace rocwmma
     };
 
     template <>
-    struct VALUPerfTraits<MI200, float32_t>
+    struct VALUPerfTraits<ArchGfx90a, float32_t>
     {
         enum : uint32_t
         {
@@ -269,7 +269,7 @@ namespace rocwmma
     };
 
     template <>
-    struct VALUPerfTraits<MI200, float64_t>
+    struct VALUPerfTraits<ArchGfx90a, float64_t>
     {
         enum : uint32_t
         {

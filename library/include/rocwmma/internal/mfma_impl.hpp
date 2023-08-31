@@ -48,7 +48,7 @@ namespace rocwmma
         };
 
 // MFMA is MI architecture specific
-#if ROCWMMA_ARCH_MI
+#if ROCWMMA_ARCH_GFX9
 
         template <>
         struct amdgcn_mfma<float16_t, float32_t, 16, 16>
@@ -660,7 +660,7 @@ namespace rocwmma
 
 #endif // !ROCWMMA_ARCH_GFX908
 
-#endif // ROCWMMA_ARCH_MI
+#endif // ROCWMMA_ARCH_GFX9
 
     } // namespace detail
 
