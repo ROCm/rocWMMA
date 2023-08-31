@@ -234,7 +234,7 @@ namespace rocwmma
             };
 
             /*! \class Reverse
-            *  \brief Perform reversal of elements in sub-groups of <SubGroupSize> threads.
+            *  \brief Perform reversal of elements in sub-groups of \p SubGroupSize threads.
             */
             template <uint32_t SubGroupSize>
             struct Reverse : public SwzOp<OP_ID_REVERSE, SubGroupSize>,
@@ -243,7 +243,7 @@ namespace rocwmma
             };
 
             /*! \class Rotate
-            *  \brief Perform element-wise rotation in direction <RotateDir> in sub-groups of <SubGroupSize> threads.
+            *  \brief Perform element-wise rotation in direction \p RotateDir in sub-groups of \p SubGroupSize threads.
             *
             * @tparam RotateDir rotation direction: see Properties
             * @tparam RotateDistance element positions to move in specified direction. Positions wrapped by sub group size.
@@ -276,7 +276,7 @@ namespace rocwmma
             using RotateL = Rotate<OP_DIR_L, RotateDistance, SubGroupSize>;
 
             /*! \class Shuffle
-            *  \brief Perform localized shuffling within sub-groups of <SubGroupSize> threads.
+            *  \brief Perform localized shuffling within sub-groups of \p SubGroupSize threads.
             */
             template <uint32_t SubGroupSize, class ShuffleCtrl>
             struct Shuffle : public SwzOp<OP_ID_SHUFFLE, SubGroupSize>,
@@ -285,9 +285,9 @@ namespace rocwmma
             };
 
             // Common Shuffle variants
-            /*! \class Shuffle<N>
-            *  \brief Perform localized shuffling within all sub-groups of <N> threads.
-            * <N> = group size.
+            /*! \class Shuffle4
+            *  \brief Shuffle\<N\> Perform localized shuffling within all sub-groups of \em N threads.
+            * \em N = group size.
             *
             * @tparam Select0 - index of element to shuffle to index 0
             * @tparam Select1 - index of element to shuffle to index 1
@@ -348,7 +348,7 @@ namespace rocwmma
             };
 
             /*! \class Swap
-            *  \brief Perform swap of neigbouring sub-groups of <SubGroupSize> threads.
+            *  \brief Perform swap of neigbouring sub-groups of \p SubGroupSize threads.
             */
             template <uint32_t SubGroupSize>
             struct Swap : public SwzOp<OP_ID_SWAP, SubGroupSize>,
@@ -362,10 +362,10 @@ namespace rocwmma
         {
 
             /**
-             * \ingroup Cross-Lane Operations
-             * \defgroup Swizzle Ops
+             * \ingroup Cross_Lane_Operations
              *
              * @brief Cross-lane operations implemented with the amdgcn_ds_swizzle backend.
+             * @{
              */
 
             // clang-format off
@@ -452,6 +452,7 @@ namespace rocwmma
             */
             template <uint32_t SubGroupSize, uint32_t FftCtrl>
             using Fft = OpsBase::Fft<SubGroupSize, FftCtrl>;
+            /** @}*/
 
             // clang-format on
         } // namespace Ops

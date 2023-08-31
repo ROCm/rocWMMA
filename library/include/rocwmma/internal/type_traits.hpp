@@ -413,6 +413,7 @@ namespace std
     ///////////  std::numeric_limits<float16_t>  //////////////
     ///////////////////////////////////////////////////////////
 
+    // @cond
     template <>
     ROCWMMA_HOST_DEVICE constexpr rocwmma::float16_t
         numeric_limits<rocwmma::float16_t>::epsilon() noexcept
@@ -588,6 +589,7 @@ namespace std
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7FC0));
         return eps.b16;
     }
+    // @endcond
 
 } // namespace std
 

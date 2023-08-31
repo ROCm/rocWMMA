@@ -35,10 +35,10 @@ namespace rocwmma
     namespace Dpp
     {
         /**
-         * \ingroup Dpp Ops
-         * \defgroup Dpp Front-End
+         * \ingroup Cross_Lane_Operations
          *
          * @brief Cross-lane operations implemented with the amdgcn_mov_dpp backend.
+         * @{
          *
          * This function does not use LDS memory or LDS hardware, therefore does not
          * implicitly require lgkmcnt waits. This is the fastest cross-lane function,
@@ -321,6 +321,7 @@ namespace rocwmma
         using Swap2 = Driver<DppImpl::Ops::Swap2, RowMask, BankMask, BoundCtrl>;
 
         using Nop = MaskMove<>;
+        /** @}*/
 
     } // namespace Dpp
 
