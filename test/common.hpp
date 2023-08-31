@@ -100,6 +100,18 @@ namespace rocwmma
         {
         };
 
+#if !defined(ROCBLAS_DATA_TYPE_FLOAT8)
+        template <>
+        struct rocblas_supported<float8_t, float32_t, float32_t> : std::false_type
+        {
+        };
+
+        template <>
+        struct rocblas_supported<bfloat8_t, float32_t, float32_t> : std::false_type
+        {
+        };
+#endif
+
     } // namespace quirks
 
     template <typename Layout>
@@ -410,7 +422,7 @@ namespace rocwmma
         else if(isNaN)
         {
             retval             = false;
-            max_relative_error = std::numeric_limits<TypeA>::signaling_NaN();
+            max_relative_error = double(std::numeric_limits<TypeA>::signaling_NaN());
         }
         else if(max_relative_error > (eps * tolerance))
         {
@@ -499,7 +511,7 @@ namespace rocwmma
         else if(isNaN)
         {
             retval             = false;
-            max_relative_error = std::numeric_limits<TypeA>::signaling_NaN();
+            max_relative_error = double(std::numeric_limits<TypeA>::signaling_NaN());
         }
         else if(max_relative_error > (eps * tolerance))
         {
@@ -622,7 +634,7 @@ namespace rocwmma
         if(isNaN)
         {
             retval           = false;
-            maxRelativeError = std::numeric_limits<TypeA>::signaling_NaN();
+            maxRelativeError = double(std::numeric_limits<TypeA>::signaling_NaN());
         }
         else if(maxRelativeError > (eps * tolerance))
         {
@@ -703,7 +715,7 @@ namespace rocwmma
         if(isNaN)
         {
             retval           = false;
-            maxRelativeError = std::numeric_limits<TypeA>::signaling_NaN();
+            maxRelativeError = double(std::numeric_limits<TypeA>::signaling_NaN());
         }
         else if(maxRelativeError > (eps * tolerance))
         {

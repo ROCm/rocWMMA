@@ -47,7 +47,9 @@ namespace rocwmma
         ///
 
         // Testing types as Input/Output/Compute (IOC)
-        using TestTypesIOC = std::tuple<bfloat16_t,
+        using TestTypesIOC = std::tuple<float8_t,
+                                        bfloat8_t,
+                                        bfloat16_t,
                                         float16_t,
                                         hfloat16_t,
                                         float32_t,
