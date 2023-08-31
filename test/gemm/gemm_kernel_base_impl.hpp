@@ -671,6 +671,7 @@ namespace rocwmma
                 {
 #if defined(ROCBLAS_DATA_TYPE_FLOAT8)
                     {
+                    rocblas_computetype compute_type = rocblas_compute_type_f32;
                     CHECK_ROCBLAS_ERROR(rocblas_gemm_ex3(handle,
                                                          rocblas_layout<LayoutA>::operation(), // opA
                                                          rocblas_layout<LayoutB>::operation(), // opB
@@ -691,7 +692,7 @@ namespace rocwmma
                                                          dataInstance->deviceD().get(), // D*
                                                          rocblas_types<OutputT>::type(), // d_type
                                                          this->mM, // ldd (col major output only)
-                                                         rocblas_types<ComputeT>::computeType(), // compute_type
+                                                         computeType, // compute_type
                                                          rocblas_gemm_algo_standard, // algo
                                                          0, // solution_index
                                                          0)); // flags

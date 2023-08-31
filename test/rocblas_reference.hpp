@@ -116,10 +116,6 @@ namespace rocwmma
         {
             return rocblas_datatype_invalid;
         }
-        constexpr static inline rocblas_computetype computeType()
-        {
-            return rocblas_compute_type_invalid;
-        }
     }
 #endif //ROCBLAS_DATA_TYPE_INVALID
     ;
@@ -197,14 +193,6 @@ namespace rocwmma
         {
             return rocblas_datatype_f32_r;
         }
-#if defined(ROCBLAS_DATA_TYPE_FLOAT8)
-        {
-            constexpr static inline rocblas_computetype computeType()
-            {
-                return rocblas_compute_type_f32;
-            }
-        }
-#endif
     };
 
     template <>
@@ -338,7 +326,7 @@ namespace rocwmma
         {
 #if defined(ROCBLAS_DATA_TYPE_FLOAT8)
             {
-            rocblas_computetype compute_type = rocblas_types<ComputeT>::computeType();
+            rocblas_computetype compute_type = rocblas_compute_type_f32;
             CHECK_ROCBLAS_ERROR(rocblas_gemm_ex3(handle,
                                                  opA,
                                                  opB,
