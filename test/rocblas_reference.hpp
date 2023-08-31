@@ -40,6 +40,7 @@
         exit(EXIT_FAILURE);                           \
     }
 
+// BETA_FEATURES_API needs to be defined to access the beta features of rocBLAS which includes float8/bfloat8 support.
 #define ROCBLAS_BETA_FEATURES_API
 #include <rocblas/rocblas.h>
 
