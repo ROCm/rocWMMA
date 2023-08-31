@@ -100,7 +100,7 @@ namespace rocwmma
         {
         };
 
-#if((ROCBLAS_VERSION_MAJOR < 3) || (ROCBLAS_VERSION_MINOR < 1))
+#if !defined(ROCBLAS_DATA_TYPE_FLOAT8)
         template <>
         struct rocblas_supported<float8_t, float32_t, float32_t> : std::false_type
         {
