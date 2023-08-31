@@ -205,31 +205,27 @@ namespace rocwmma
         }
     };
 
-    template <>
-    struct rocblas_types<rocwmma_bf8>
 #if defined(ROCBLAS_DATA_TYPE_FLOAT8)
+    template <>
+    struct rocblas_types<bfloat8_t>
     {
-        using DataType = rocwmma_bf8;
+        using DataType = bfloat8_t;
         constexpr static inline rocblas_datatype type()
         {
             return rocblas_datatype_bf8_r;
         }
-    }
-#endif
-    ;
+    };
 
     template <>
-    struct rocblas_types<rocwmma_f8>
-#if defined(ROCBLAS_DATA_TYPE_FLOAT8)
+    struct rocblas_types<float8_t>
     {
-        using DataType = rocwmma_f8;
+        using DataType = float8_t;
         constexpr static inline rocblas_datatype type()
         {
             return rocblas_datatype_f8_r;
         }
-    }
+    };
 #endif
-    ;
 
     template <typename DataLayoutT>
     struct rocblas_layout;
