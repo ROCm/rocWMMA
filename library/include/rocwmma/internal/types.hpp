@@ -37,6 +37,7 @@
 
 #include "config.hpp"
 #include "float8.h"
+#include "rocwmma_xfloat32.hpp"
 
 namespace rocwmma
 {
@@ -91,6 +92,8 @@ namespace rocwmma
 
     using bfloat8_t = rocwmma_bf8;
     using float8_t = rocwmma_f8;
+
+    using xfloat32_t = rocwmma_xfloat32;
 
     // clang-format off
 

@@ -821,10 +821,8 @@ namespace rocwmma
                 enum : uint32_t
                 {
                     KPerMfma = 16
+                    KPerMfma = 4
                 };
-                using ARegsT = VRegF32x2;
-                using BRegsT = VRegF32x2;
-                using CRegsT = AccRegF32x16;
                 using DRegsT = AccRegF32x16;
             };
 

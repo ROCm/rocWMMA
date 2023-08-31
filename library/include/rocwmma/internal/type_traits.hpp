@@ -786,6 +786,12 @@ namespace rocwmma
         return ((int32_t)1 << 3);
     }
 
+    template <typename T, typename std::enable_if_t<std::is_same<T, xfloat32_t>::value, int> = 0>
+    constexpr auto maxExactInteger() -> int32_t
+    {
+        // xf32 mantissa is 7 bits
+        return ((int32_t)1 << 8);
+    }
 #endif // !defined(__HIPCC_RTC__)
 
 } // namespace rocwmma
