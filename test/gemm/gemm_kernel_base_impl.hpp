@@ -671,7 +671,7 @@ namespace rocwmma
                 {
 #if defined(ROCBLAS_DATA_TYPE_FLOAT8)
                     {
-                    rocblas_computetype compute_type = rocblas_compute_type_f32;
+                    rocblas_computetype computeType = rocblas_compute_type_f32;
                     CHECK_ROCBLAS_ERROR(rocblas_gemm_ex3(handle,
                                                          rocblas_layout<LayoutA>::operation(), // opA
                                                          rocblas_layout<LayoutB>::operation(), // opB
