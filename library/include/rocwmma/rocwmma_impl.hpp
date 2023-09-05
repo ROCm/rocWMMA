@@ -316,7 +316,7 @@ namespace rocwmma
         // Sanity check
         // static_assert(detail::MfmaCheck<FragA, FragB>::value,
         //              "A and B fragment layouts must be orthogonal");
-        using MMA = typename std::conditional_t<ROCWMMA_ARCH_MI,
+        using MMA = typename std::conditional_t<ROCWMMA_ARCH_GFX9,
                                                 Mfma<InputT, ComputeT, BlockM, BlockN, BlockK>,
                                                 Wmma<InputT, ComputeT, BlockM, BlockN, BlockK>>;
 
