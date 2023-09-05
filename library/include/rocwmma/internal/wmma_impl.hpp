@@ -44,7 +44,7 @@ namespace rocwmma
         };
 
 // WMMA instructions are specific to gfx11 architecture
-#if ROCWMMA_ARCH_NAVI
+#if ROCWMMA_ARCH_GFX11
 
         struct WmmaCtrlFlags
         {
@@ -233,7 +233,7 @@ namespace rocwmma
             }
         };
 
-#endif // ROCWMMA_ARCH_NAVI
+#endif // ROCWMMA_ARCH_GFX11
 
     } // namespace detail
 
