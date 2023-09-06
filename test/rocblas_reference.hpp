@@ -196,6 +196,16 @@ namespace rocwmma
     };
 
     template <>
+    struct rocblas_types<xfloat32_t>
+    {
+        using DataType = xfloat32_t;
+        constexpr static inline rocblas_datatype type()
+        {
+            return rocblas_datatype_f32_r;
+        }
+    };
+
+    template <>
     struct rocblas_types<float64_t>
     {
         using DataType = float64_t;

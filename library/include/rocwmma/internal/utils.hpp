@@ -433,6 +433,12 @@ namespace rocwmma
     }
 
     template <>
+    constexpr const char* dataTypeToString<xfloat32_t>()
+    {
+        return "xf32";
+    }
+
+    template <>
     constexpr const char* dataTypeToString<float64_t>()
     {
         return "f64";

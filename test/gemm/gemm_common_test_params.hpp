@@ -89,6 +89,9 @@ namespace rocwmma
         // Native single f32
         using TestTypesF32 = std::tuple<std::tuple<float32_t, float32_t, float32_t>>;
 
+        // xfloat32
+        using TestTypesXF32 = std::tuple<std::tuple<xfloat32_t, float32_t, float32_t>>;
+
         // Native double f64
         using TestTypesF64 = std::tuple<std::tuple<float64_t, float64_t, float64_t>>;
 
@@ -100,7 +103,7 @@ namespace rocwmma
             typename Concat<TestTypesTiny, TestTypesBF16, TestTypesF16, TestTypesH16>::Result;
 
         // Aggregate types <= 32 bit
-        using TestTypesMedium = typename Concat<TestTypesSmall, TestTypesF32>::Result;
+        using TestTypesMedium = typename Concat<TestTypesSmall, TestTypesF32, TestTypesXF32>::Result;
 
         // Aggregate types <= 64 bit
         using TestTypesLarge = typename Concat<TestTypesMedium, TestTypesF64>::Result;
