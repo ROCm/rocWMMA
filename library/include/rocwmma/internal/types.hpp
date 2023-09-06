@@ -32,6 +32,7 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_vector_types.h>
 #include <type_traits>
+#include <cfloat>
 #include <utility>
 #endif // !__HIPCC_RTC__
 
