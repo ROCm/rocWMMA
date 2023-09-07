@@ -35,6 +35,7 @@ namespace rocwmma
     template struct GemmResource<float16_t, float32_t>;
     template struct GemmResource<hfloat16_t, float32_t>;
     template struct GemmResource<float32_t, float32_t>;
+    template struct GemmResource<xfloat32_t, float32_t>;
     template struct GemmResource<float64_t, float64_t>;
 
 #if defined(ROCWMMA_EXTENDED_TESTS)

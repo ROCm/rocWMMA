@@ -177,6 +177,18 @@ namespace rocwmma
     };
 
     template <>
+    struct PackTraits<xfloat32_t>
+    {
+        enum : uint32_t
+        {
+            PackRatio = 1 // No pack
+        };
+
+        using UnpackedT = xfloat32_t;
+        using PackedT   = float32_t;
+    };
+
+    template <>
     struct PackTraits<float64_t>
     {
         enum : uint32_t

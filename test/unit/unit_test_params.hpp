@@ -53,6 +53,7 @@ namespace rocwmma
                                         float16_t,
                                         hfloat16_t,
                                         float32_t,
+                                        xfloat32_t,
                                         int8_t,
                                         int32_t
 #ifdef ROCWMMA_EXTENDED_TESTS
