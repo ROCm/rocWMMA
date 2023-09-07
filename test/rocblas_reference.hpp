@@ -48,7 +48,7 @@
 #define ROCBLAS_DATA_TYPE_INVALID
 #endif
 
-#if((ROCBLAS_VERSION_MAJOR >= 3) && (ROCBLAS_VERSION_MINOR >= 1))
+#if(((ROCBLAS_VERSION_MAJOR == 3) && (ROCBLAS_VERSION_MINOR >= 1)) || (ROCBLAS_VERSION_MAJOR > 3))
 #define ROCBLAS_DATA_TYPE_FLOAT8
 #endif
 
@@ -215,31 +215,27 @@ namespace rocwmma
         }
     };
 
+#if defined(ROCBLAS_DATA_TYPE_FLOAT8)
     template <>
     struct rocblas_types<rocwmma_bf8>
-#if defined(ROCBLAS_DATA_TYPE_FLOAT8)
     {
         using DataType = rocwmma_bf8;
         constexpr static inline rocblas_datatype type()
         {
             return rocblas_datatype_bf8_r;
         }
-    }
-#endif
-    ;
+    };
 
     template <>
     struct rocblas_types<rocwmma_f8>
-#if defined(ROCBLAS_DATA_TYPE_FLOAT8)
     {
         using DataType = rocwmma_f8;
         constexpr static inline rocblas_datatype type()
         {
             return rocblas_datatype_f8_r;
         }
-    }
+    };
 #endif
-    ;
 
     template <typename DataLayoutT>
     struct rocblas_layout;
