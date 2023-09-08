@@ -43,10 +43,10 @@ namespace rocwmma
     namespace MatrixLayout
     {
         /**
-         * \ingroup rocwmma
-         * \defgroup Matrix Layouts
+         * \defgroup Matrix_Layouts Matrix Layouts
          *
          * @brief Definition and metadata on supported matrix layouts.
+         * @{
          *
          * These layouts are based in matrix coordinate space. They map each of the wavefront lanes
          * into corresponding (X , Y) = (row,  col) coordinates for a particular memory layout.
@@ -60,11 +60,6 @@ namespace rocwmma
          *
          * - Cumulative offset: the cumulative offset for a particular iteration,
          *   E.g. Sum of incremental offsets for [i = 0, iteration)
-         */
-
-        /**
-         * \ingroup Matrix Layouts
-         * @{
          */
 
         /**
@@ -185,7 +180,6 @@ namespace rocwmma
          *       ...     |   ...    |
          *      RegN*S   |  (N, S)  |
          *       ...     |   ...    |
-         * @}
          */
 
         template <uint32_t BlockDim,
@@ -212,11 +206,6 @@ namespace rocwmma
                               "ColNT in col_major does not support VectorWidth > 1");
             };
         };
-
-        /**
-         * \ingroup Matrix Layouts
-         * @{
-         */
 
         /**
          * RowNT Layout
@@ -315,7 +304,6 @@ namespace rocwmma
          *       ...     |   ...    |
          *      RegN*S   |  (N, S)  |
          *       ...     |   ...    |
-         * @}
          */
         template <uint32_t BlockDim,
                   uint32_t BlockK,
@@ -342,10 +330,6 @@ namespace rocwmma
             };
         };
 
-        /**
-         * \ingroup Matrix Layouts
-         * @{
-         */
         /**
          * Col and Row layouts: unrestricted vector width col and row ordering.
          * Unline their NT cousins, these layouts do not guarantee the same
@@ -391,7 +375,7 @@ namespace rocwmma
          * The column ordering however will be determined as a multiple of MaxVW to
          * fulfill MaxVW priority.
          *
-         *  Data Layout: row_major <same as ColNT>
+         *  Data Layout: row_major \<same as ColNT\>
          *  Register Mapping (BlockDim < 64):
          *
          *      N = Max VectorWidth
@@ -424,7 +408,7 @@ namespace rocwmma
          * across multiple registers. Col ordering still fufills MaxVW
          * priority first.
          *
-         *  Data Layout: row_major <same as ColNT>
+         *  Data Layout: row_major \<same as ColNT\>
          *  Register Mapping (BlockDim == 64):
          *
          *      N = Max Vector Width
@@ -457,7 +441,7 @@ namespace rocwmma
          * to satisfy MaxVW priority before moving on to the next BlockDim
          * segment.
          *
-         *  Data Layout: row_major <same as ColNT>
+         *  Data Layout: row_major \<same as ColNT>
          *  Register Mapping (BlockDim > 64):
          *
          *      Priority 1: Visit MaxVW Segments
@@ -498,7 +482,6 @@ namespace rocwmma
          *   Reg2N-1 | (0, 1, N-1) | (0, 1, 2N-1) | ... | (1, 1, N-1) | ... | (N-1, 1, 64-1)   |
          *   ....    |  ...        |    ...       | ... |   ....      | ... |     ...          |
          *
-         * @}
         */
 
         template <uint32_t BlockDim,
@@ -518,11 +501,6 @@ namespace rocwmma
                 using MatrixCoordT = typename MappingUtil::MatrixCoordT;
             };
         };
-
-        /**
-         * \ingroup Matrix Layouts
-         * @{
-         */
 
         /**
          * Row Layout
@@ -564,7 +542,7 @@ namespace rocwmma
          * The row ordering however will be determined as a multiple of MaxVW to
          * fulfill MaxVW priority.
          *
-         *  Data Layout: col_major <same as RowNT>
+         *  Data Layout: col_major \<same as RowNT\>
          *  Register Mapping (BlockDim < 64):
          *
          *      N = Max VectorWidth
@@ -597,7 +575,7 @@ namespace rocwmma
          * across multiple registers. Row ordering still fufills MaxVW
          * priority first.
          *
-         *  Data Layout: col_major <same as RowNT>
+         *  Data Layout: col_major \<same as RowNT\>
          *  Register Mapping (BlockDim == 64):
          *
          *      N = Max Vector Width
@@ -631,7 +609,7 @@ namespace rocwmma
          * to satisfy MaxVW priority before moving on to the next BlockDim
          * segment.
          *
-         *  Data Layout: col_major <same as RowNT>
+         *  Data Layout: col_major \<same as RowNT\>
          *  Register Mapping (BlockDim > 64):
          *
          *      Priority 1: Visit MaxVW Segments
@@ -671,7 +649,6 @@ namespace rocwmma
          *   ....    |  ...        |    ...       | ... |   ....      | ... |     ...          |
          *   Reg2N-1 | (0, 1, N-1) | (0, 1, 2N-1) | ... | (1, 1, N-1) | ... | (N-1, 1, 64-1)   |
          *   ....    |  ...        |    ...       | ... |   ....      | ... |     ...          |
-         * @}
          */
         template <uint32_t BlockDim,
                   uint32_t BlockK,
@@ -693,6 +670,7 @@ namespace rocwmma
 
         template <typename LayoutT>
         using OrthogonalLayout_t = typename detail::OrthogonalLayout<LayoutT>::Type;
+        /** @}*/
 
     } // namespace MatrixLayout
 

@@ -101,11 +101,11 @@ namespace rocwmma
         switch(mGcnArch)
         {
         case hipGcnArch_t::GFX908:
-            result = calculatePeakGFlopsPerSec<InputT, MI100>(mCurFreqMhz, mCuCount);
+            result = calculatePeakGFlopsPerSec<InputT, ArchGfx908>(mCurFreqMhz, mCuCount);
             break;
 
         case hipGcnArch_t::GFX90A:
-            result = calculatePeakGFlopsPerSec<InputT, MI200>(mCurFreqMhz, mCuCount);
+            result = calculatePeakGFlopsPerSec<InputT, ArchGfx90a>(mCurFreqMhz, mCuCount);
             break;
 
         default:

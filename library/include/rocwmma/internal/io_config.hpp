@@ -39,16 +39,10 @@ namespace rocwmma
 {
 
     /**
- * \ingroup rocwmma
- * \defgroup ROCWMMA IOConfig
- *
- * @brief ROCWMMA fragment input and output configurations leveraging amdgcn architecture
- */
-
-    /**
- * \ingroup ROCWMMA IOConfig
- * @{
- */
+     * \defgroup Rocwmma_ioconf ROCWMMA IOConfig
+     * @brief ROCWMMA fragment input and output configurations leveraging amdgcn architecture
+     * @{
+     */
 
     /*! \struct IOConfig
  *  \brief Definition of ROCWMMA fragment input / output configurations
@@ -134,6 +128,7 @@ namespace rocwmma
         using PackUtil    = PackUtil<DataT>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
     };
+    /** @}*/
 
 } // namespace rocwmma
 

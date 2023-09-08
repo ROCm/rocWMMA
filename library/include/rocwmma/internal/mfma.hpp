@@ -52,7 +52,7 @@ namespace rocwmma
                 BlockM,
                 BlockN,
                 BlockK,
-                typename std::enable_if_t<ROCWMMA_ARCH_MI && (BlockM == BlockN)>>
+                typename std::enable_if_t<ROCWMMA_ARCH_GFX9 && (BlockM == BlockN)>>
     {
         // Full-fragment IO traits
         using IOTraitsA   = IOTraits<BlockM, BlockK, InputT>;

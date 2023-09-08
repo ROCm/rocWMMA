@@ -29,8 +29,6 @@
 #include "rocwmma.hpp"
 
 /**
- * \mainpage
- *
  * ROCWMMACoop complements the ROCWMMA API with support for cooperative operations.
  * Operations may be split into smaller unit work items that are assigned to waves
  * in a collaborative pool using a round-robin fashion.

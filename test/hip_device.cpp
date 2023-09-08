@@ -81,7 +81,7 @@ namespace rocwmma
         mSharedMemSize = mProps.sharedMemPerBlock;
         mCuCount       = mProps.multiProcessorCount;
         mMaxFreqMhz    = static_cast<int>(static_cast<double>(mProps.clockRate) / 1000.0);
-        mCurFreqMhz = mMaxFreqMhz;
+        mCurFreqMhz    = mMaxFreqMhz;
 
 #ifdef ROCWMMA_BENCHMARK_TESTS
         bool smiErrorFlag = false;
@@ -97,28 +97,35 @@ namespace rocwmma
             CHECK_RSMI_ERROR(rsmi_num_monitor_devices(&smiCount), smiErrorFlag);
             if(!smiErrorFlag)
             {
-                uint32_t m_smiDeviceIndex;
+                uint32_t smiDeviceIndex = std::numeric_limits<uint32_t>::max();
                 for(uint32_t smiIndex = 0; smiIndex < smiCount; smiIndex++)
                 {
                     uint64_t rsmiPCIID = 0;
                     CHECK_RSMI_ERROR(rsmi_dev_pci_id_get(smiIndex, &rsmiPCIID), smiErrorFlag);
-                    if(!smiErrorFlag && (hipPCIID == rsmiPCIID))
+                    if(smiErrorFlag)
                     {
-                        m_smiDeviceIndex = smiIndex;
+                        break;
+                    }
+                    else if (hipPCIID == rsmiPCIID)
+                    {
+                        smiDeviceIndex = smiIndex;
                         break;
                     }
                 }
 
-                rsmi_frequencies_t freq;
-                CHECK_RSMI_ERROR(rsmi_dev_gpu_clk_freq_get(m_smiDeviceIndex, RSMI_CLK_TYPE_SYS, &freq), smiErrorFlag);
-                if(!smiErrorFlag)
+                if(!smiErrorFlag && (smiDeviceIndex != std::numeric_limits<uint32_t>::max()))
                 {
-                    mCurFreqMhz = freq.frequency[freq.current] / 1000000;
+                    rsmi_frequencies_t freq;
+                    CHECK_RSMI_ERROR(rsmi_dev_gpu_clk_freq_get(smiDeviceIndex, RSMI_CLK_TYPE_SYS, &freq), smiErrorFlag);
+                    if(!smiErrorFlag)
+                    {
+                        mCurFreqMhz = freq.frequency[freq.current] / 1000000;
+                    }
                 }
             }
         }
 #endif
-}
+    }
 
     hipDevice_t HipDevice::getDeviceHandle() const
     {

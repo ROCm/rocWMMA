@@ -459,6 +459,7 @@ namespace rocwmma
         return detail::unOp<detail::ArithmeticOp::Minus>(*this, detail::Seq<Rank>{});
     }
 
+    // @cond
     template <typename T, unsigned int Rank>
     template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>
     ROCWMMA_HOST_DEVICE inline auto
@@ -466,6 +467,7 @@ namespace rocwmma
     {
         return (*this = detail::binOp<detail::BitwiseOp::And>(*this, x_, detail::Seq<Rank>{}));
     }
+    // @endcond
 
     template <typename T, unsigned int Rank>
     template <typename U, typename std::enable_if<std::is_integral<U>{}>::type*>

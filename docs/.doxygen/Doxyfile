@@ -733,6 +733,8 @@ WARNINGS               = YES
 
 WARN_IF_UNDOCUMENTED   = YES
 
+WARN_AS_ERROR          = YES
+
 # If the WARN_IF_DOC_ERROR tag is set to YES, doxygen will generate warnings for
 # potential errors in the documentation, such as not documenting some parameters
 # in a documented function, or documenting parameters that don't exist or using
@@ -2064,7 +2066,11 @@ INCLUDE_FILE_PATTERNS  =
 # recursively expanded use the := operator instead of the = operator.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-PREDEFINED             = __device__ ROCWMMA_DEVICE
+PREDEFINED             = "__device__= " \
+                          "ROCWMMA_DEVICE= " \
+                          "__align__(n)= " \
+                          "decltype(auto)= T" \
+                          "ROCWMMA_HOST_DEVICE= " 
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The
