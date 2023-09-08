@@ -455,7 +455,7 @@ namespace std
     ///////////////////////////////////////////////////////////
     ///////////  std::numeric_limits<float8_t>  //////////////
     ///////////////////////////////////////////////////////////
-
+    // @cond
     template <>
     ROCWMMA_HOST_DEVICE constexpr rocwmma::float8_t
         numeric_limits<rocwmma::float8_t>::epsilon() noexcept
@@ -576,7 +576,6 @@ namespace std
     ///////////  std::numeric_limits<float16_t>  //////////////
     ///////////////////////////////////////////////////////////
 
-    // @cond
     template <>
     ROCWMMA_HOST_DEVICE constexpr rocwmma::float16_t
         numeric_limits<rocwmma::float16_t>::epsilon() noexcept
@@ -752,7 +751,6 @@ namespace std
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7FC0));
         return eps.b16;
     }
-    // @endcond
 
     ///////////////////////////////////////////////////////////
     ///////////  std::numeric_limits<xfloat32_t>  //////////////
@@ -813,6 +811,7 @@ namespace std
         rocwmma::detail::Fp32Bits eps(static_cast<uint32_t>(0x7FF00000));
         return eps.xf32;
     }
+    // @endcond
 
 } // namespace std
 
