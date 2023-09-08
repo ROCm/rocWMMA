@@ -140,6 +140,7 @@ namespace rocwmma
         };
     };
 
+    template <>
     struct MfmaPerfTraits<ArchGfx908, bfloat16_t>
     {
         enum : uint32_t
@@ -175,6 +176,7 @@ namespace rocwmma
         };
     };
 
+    template <>
     struct MfmaPerfTraits<ArchGfx908, float64_t>
     {
         enum : uint32_t
@@ -211,6 +213,7 @@ namespace rocwmma
         };
     };
 
+    template <>
     struct MfmaPerfTraits<ArchGfx90a, bfloat16_t>
     {
         enum : uint32_t
@@ -246,6 +249,7 @@ namespace rocwmma
         };
     };
 
+    template <>
     struct MfmaPerfTraits<ArchGfx90a, float64_t>
     {
         enum : uint32_t
