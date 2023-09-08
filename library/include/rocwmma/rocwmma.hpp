@@ -180,10 +180,10 @@ namespace rocwmma
     using io_config = rocwmma::IOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
 
     /**
- * \ingroup rocwmma
- * \defgroup ROCWMMA APIs
+ * \defgroup Rocwmma ROCWMMA Public API
  *
  * @brief ROCWMMA Fragment and its API function definitions.
+ * @{
  */
 
     /*! \class fragment
@@ -388,6 +388,7 @@ namespace rocwmma
     //! Synchronization point for all wavefronts in a workgroup.
     ROCWMMA_DEVICE void synchronize_workgroup();
 
+    /** @}*/
 } // namespace rocwmma
 
 #include "rocwmma_impl.hpp"

@@ -44,10 +44,11 @@ namespace rocwmma
 {
 
     /**
- * \ingroup rocwmma
- * \defgroup DataTypes
+ * \defgroup DataTypes Data Type Metadata
  *
  * @brief Definition and metadata on supported data types of matrices.
+ *
+ * @{
  *
  * Native Data Types:
  * float64_t = f64 = double
@@ -134,6 +135,7 @@ namespace rocwmma
         mem_row_major,
         mem_col_major
     };
+    /** @}*/
 
 } // namespace rocwmma
 

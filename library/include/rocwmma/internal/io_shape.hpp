@@ -219,7 +219,7 @@ namespace rocwmma
             BlockDim = BlockN,
             KDim     = BlockM,
 
-            MaxVectorWidth = (std::is_same<DataT, float64_t>::value || ROCWMMA_ARCH_NAVI) ? 1 : 4,
+            MaxVectorWidth = (std::is_same<DataT, float64_t>::value || ROCWMMA_ARCH_GFX11) ? 1 : 4,
 
             VectorWidth = std::is_same<DataLayoutT, col_major>::value ? MaxVectorWidth : 1,
         };

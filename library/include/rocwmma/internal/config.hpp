@@ -51,8 +51,6 @@ namespace rocwmma
 #define ROCWMMA_ARCH_GFX1101 __gfx1101__
 #elif defined(__gfx1102__)
 #define ROCWMMA_ARCH_GFX1102 __gfx1102__
-#elif defined(__gfx940__)
-#define ROCWMMA_ARCH_GFX940 __gfx940__
 #else
 #define ROCWMMA_ARCH_HOST 1
 #endif
@@ -75,9 +73,6 @@ namespace rocwmma
 #if !defined(ROCWMMA_ARCH_GFX1102)
 #define ROCWMMA_ARCH_GFX1102 0
 #endif
-#if !defined(ROCWMMA_ARCH_GFX940)
-#define ROCWMMA_ARCH_GFX940 0
-#endif
 #if !defined(ROCWMMA_ARCH_HOST)
 #define ROCWMMA_ARCH_HOST 0
 #endif
@@ -85,31 +80,31 @@ namespace rocwmma
 ///
 /// Architecture configuration
 /// Guaranteed symbols:
-/// ROCWMMA_ARCH_MI
-/// ROCWMMA_ARCH_NAVI
+/// ROCWMMA_ARCH_GFX9
+/// ROCWMMA_ARCH_GFX11
 /// ROCWMMA_WAVE64_MODE
 /// ROCWMMA_WAVE32_MODE
 /// ROCWMMA_BLOCK_DIM_16_SUPPORTED
 /// ROCWMMA_BLOCK_DIM_32_SUPPORTED
 ///
 #if ROCWMMA_ARCH_GFX908 || ROCWMMA_ARCH_GFX90A || ROCWMMA_ARCH_GFX940
-#define ROCWMMA_ARCH_MI 1
+#define ROCWMMA_ARCH_GFX9 1
 #define ROCWMMA_WAVE64_MODE 1
 #define ROCWMMA_BLOCK_DIM_16_SUPPORTED 1
 #define ROCWMMA_BLOCK_DIM_32_SUPPORTED 1
 #endif
 
 #if ROCWMMA_ARCH_GFX1100 || ROCWMMA_ARCH_GFX1101 || ROCWMMA_ARCH_GFX1102
-#define ROCWMMA_ARCH_NAVI 1
+#define ROCWMMA_ARCH_GFX11 1
 #define ROCWMMA_WAVE32_MODE 1
 #define ROCWMMA_BLOCK_DIM_16_SUPPORTED 1
 #endif
 
-#if !defined(ROCWMMA_ARCH_MI)
-#define ROCWMMA_ARCH_MI 0
+#if !defined(ROCWMMA_ARCH_GFX9)
+#define ROCWMMA_ARCH_GFX9 0
 #endif
-#if !defined(ROCWMMA_ARCH_NAVI)
-#define ROCWMMA_ARCH_NAVI 0
+#if !defined(ROCWMMA_ARCH_GFX11)
+#define ROCWMMA_ARCH_GFX11 0
 #endif
 #if !defined(ROCWMMA_WAVE64_MODE)
 #define ROCWMMA_WAVE64_MODE 0
@@ -133,14 +128,14 @@ namespace rocwmma
 ///
 /// Sanity checks
 ///
-#if ROCWMMA_ARCH_NAVI
+#if ROCWMMA_ARCH_GFX11
     static_assert((bool)(ROCWMMA_WAVE32_MODE) && !(bool)(ROCWMMA_WAVE64_MODE),
                   "rocWMMA supports only wave32 for gfx11 arch");
     static_assert((bool)(ROCWMMA_BLOCK_DIM_16_SUPPORTED) && !(bool)(ROCWMMA_BLOCK_DIM_32_SUPPORTED),
                   "rocWMMA supports only block size of 16 for gfx11 arch");
 #endif
 
-#if ROCWMMA_ARCH_MI
+#if ROCWMMA_ARCH_GFX9
     static_assert(!(bool)(ROCWMMA_WAVE32_MODE) && (bool)(ROCWMMA_WAVE64_MODE),
                   "rocWMMA supports only wave64 for gfx9 arch");
     static_assert((bool)(ROCWMMA_BLOCK_DIM_16_SUPPORTED) && (bool)(ROCWMMA_BLOCK_DIM_32_SUPPORTED),
