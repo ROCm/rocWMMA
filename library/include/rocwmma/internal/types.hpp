@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,6 @@
 #include <hip/hip_fp16.h>
 #include <hip/hip_vector_types.h>
 #include <type_traits>
-#include <cfloat>
 #include <utility>
 #endif // !__HIPCC_RTC__
 
@@ -71,14 +70,14 @@ namespace rocwmma
     using float16_t = _Float16;
     using float32_t = float;
     using float64_t = double;
-    using int8_t    = signed char;
-    using uint8_t   = unsigned char;
-    using int16_t   = short;
-    using uint16_t  = unsigned short;
-    using int32_t   = int;
-    using uint32_t  = unsigned int;
+    using int8_t    = ::int8_t;
+    using uint8_t   = ::uint8_t;
+    using int16_t   = ::int16_t;
+    using uint16_t  = ::uint16_t;
+    using int32_t   = ::int32_t;
+    using uint32_t  = ::uint32_t;
     using int64_t   = ::int64_t;
-    using uint64_t  = unsigned long long int;
+    using uint64_t  = ::uint64_t;
     using index_t   = int32_t;
 
 // Non-native types
@@ -93,7 +92,7 @@ namespace rocwmma
     using hfloat16_t = __half;
 
     using bfloat8_t = rocwmma_bf8;
-    using float8_t = rocwmma_f8;
+    using float8_t  = rocwmma_f8;
 
     using xfloat32_t = rocwmma_xfloat32;
 

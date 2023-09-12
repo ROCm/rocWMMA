@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,8 @@
 #ifndef ROCWMMA_TYPE_TRAITS_HPP
 #define ROCWMMA_TYPE_TRAITS_HPP
 
+#include <cfloat>
+
 #include "types.hpp"
 
 namespace rocwmma
@@ -37,9 +39,9 @@ namespace rocwmma
         {
             union
             {
-                uint8_t     i8;
-                float8_t    f8;
-                bfloat8_t   bf8;
+                uint8_t   i8;
+                float8_t  f8;
+                bfloat8_t bf8;
             };
             constexpr Fp8Bits(uint8_t initVal)
                 : i8(initVal)
@@ -59,10 +61,10 @@ namespace rocwmma
         {
             union
             {
-                uint16_t      i16;
-                float16_t     f16;
-                hfloat16_t    h16;
-                bfloat16_t    b16;
+                uint16_t   i16;
+                float16_t  f16;
+                hfloat16_t h16;
+                bfloat16_t b16;
             };
             constexpr Fp16Bits(uint16_t initVal)
                 : i16(initVal)
@@ -86,9 +88,9 @@ namespace rocwmma
         {
             union
             {
-                uint32_t      i32;
-                float32_t     f32;
-                xfloat32_t    xf32;
+                uint32_t   i32;
+                float32_t  f32;
+                xfloat32_t xf32;
             };
             constexpr Fp32Bits(uint32_t initVal)
                 : i32(initVal)
