@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -203,6 +203,7 @@ namespace rocwmma
 
         // Arch
         auto isGfx908 = deviceArch == DeviceInfo::GFX908;
+        auto isGfx90a = deviceArch == DeviceInfo::GFX90A;
         auto isGfx11  = (deviceArch == DeviceInfo::GFX1100) || (deviceArch == DeviceInfo::GFX1101)
                        || (deviceArch == DeviceInfo::GFX1102);
 
@@ -212,6 +213,8 @@ namespace rocwmma
             = (std::is_same<InputT, float16_t>::value) || (std::is_same<InputT, hfloat16_t>::value);
         auto isBF16Input = (std::is_same<InputT, bfloat16_t>::value);
         auto isI8Input   = (std::is_same<InputT, int8_t>::value);
+        auto isF8Input
+            = (std::is_same<InputT, float8_t>::value) || (std::is_same<InputT, bfloat8_t>::value);
 
         // Block size
         auto is16x16 = (BlockM == 16 && BlockN == 16);
@@ -220,12 +223,15 @@ namespace rocwmma
         bool unsupportedDeviceCheck = !(deviceArch == DeviceInfo::UNSUPPORTED_ARCH);
 
         // gfx908 doesn't support f64
-        bool gfx908F64Check = !(isGfx908 && isF64Input);
+        bool gfx908F64F8Check = !(isGfx908 && (isF64Input || isF8Input));
+
+        // gfx90a doesn't support f8
+        bool gfx90aF8Check = !(isGfx90a && isF8Input);
 
         // gfx11 only supports f16, i8 and bf16 inputs with block size 16
         bool gfx11Check = !(isGfx11 && ((!isF16Input && !isBF16Input && !isI8Input) || !is16x16));
 
-        return unsupportedDeviceCheck && gfx908F64Check && gfx11Check;
+        return unsupportedDeviceCheck && gfx908F64F8Check && gfx90aF8Check && gfx11Check;
     }
 
     template <uint32_t BlockM,
@@ -624,16 +630,16 @@ namespace rocwmma
                 CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
 
                 // Calculate efficiency
-                auto& deviceInfo             = DeviceInfo::instance();
+                auto& deviceInfo = DeviceInfo::instance();
 
-                auto  devicePeakGFlopsPerSec  = deviceInfo->peakGFlopsPerSec<InputT>();
+                auto devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<InputT>();
 
                 mElapsedTimeMs        = float64_t(timeMs);
                 mTotalGFlops          = calculateGFlops(mM, mN, mK);
                 mMeasuredTFlopsPerSec = calculateTFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
                                         * static_cast<float64_t>(mRepeats);
 
-                mEfficiency = round(mMeasuredTFlopsPerSec / devicePeakGFlopsPerSec  * 100000.0);
+                mEfficiency = round(mMeasuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0);
 
                 CHECK_HIP_ERROR(hipEventDestroy(startEvent));
                 CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
@@ -660,30 +666,69 @@ namespace rocwmma
 
             auto rocBlasKernel = [this, &handle]() {
                 auto& dataInstance = DataStorage::instance();
-                CHECK_ROCBLAS_ERROR(rocblas_gemm_ex(handle,
-                                                    rocblas_layout<LayoutA>::operation(), // opA
-                                                    rocblas_layout<LayoutB>::operation(), // opB
-                                                    this->mM, // M
-                                                    this->mN, // N
-                                                    this->mK, // K
-                                                    &(this->mAlpha), // alpha,
-                                                    dataInstance->deviceA().get(), // A*,
-                                                    rocblas_types<InputT>::type(), // a_type
-                                                    this->mLda, // lda
-                                                    dataInstance->deviceB().get(), // B*,
-                                                    rocblas_types<InputT>::type(), // b_type
-                                                    this->mLdb, // ldb
-                                                    &(this->mBeta), // beta
-                                                    dataInstance->deviceC().get(), // C*
-                                                    rocblas_types<OutputT>::type(), // c_type
-                                                    this->mM, // ldc (col major output only)
-                                                    dataInstance->deviceD().get(), // D*
-                                                    rocblas_types<OutputT>::type(), // d_type
-                                                    this->mM, // ldd (col major output only)
-                                                    rocblas_types<ComputeT>::type(), // compute_type
-                                                    rocblas_gemm_algo_standard, // algo
-                                                    0, // solution_index
-                                                    0)); // flags
+
+                if constexpr((std::is_same<InputT, float8_t>::value)
+                             || (std::is_same<InputT, bfloat8_t>::value))
+                {
+#if defined(ROCBLAS_DATA_TYPE_FLOAT8)
+                    {
+                        rocblas_computetype computeType = rocblas_compute_type_f32;
+                        CHECK_ROCBLAS_ERROR(
+                            rocblas_gemm_ex3(handle,
+                                             rocblas_layout<LayoutA>::operation(), // opA
+                                             rocblas_layout<LayoutB>::operation(), // opB
+                                             this->mM, // M
+                                             this->mN, // N
+                                             this->mK, // K
+                                             &(this->mAlpha), // alpha,
+                                             dataInstance->deviceA().get(), // A*,
+                                             rocblas_types<InputT>::type(), // a_type
+                                             this->mLda, // lda
+                                             dataInstance->deviceB().get(), // B*,
+                                             rocblas_types<InputT>::type(), // b_type
+                                             this->mLdb, // ldb
+                                             &(this->mBeta), // beta
+                                             dataInstance->deviceC().get(), // C*
+                                             rocblas_types<OutputT>::type(), // c_type
+                                             this->mM, // ldc (col major output only)
+                                             dataInstance->deviceD().get(), // D*
+                                             rocblas_types<OutputT>::type(), // d_type
+                                             this->mM, // ldd (col major output only)
+                                             computeType, // compute_type
+                                             rocblas_gemm_algo_standard, // algo
+                                             0, // solution_index
+                                             0)); // flags
+                    }
+#endif
+                }
+                else
+                {
+                    CHECK_ROCBLAS_ERROR(
+                        rocblas_gemm_ex(handle,
+                                        rocblas_layout<LayoutA>::operation(), // opA
+                                        rocblas_layout<LayoutB>::operation(), // opB
+                                        this->mM, // M
+                                        this->mN, // N
+                                        this->mK, // K
+                                        &(this->mAlpha), // alpha,
+                                        dataInstance->deviceA().get(), // A*,
+                                        rocblas_types<InputT>::type(), // a_type
+                                        this->mLda, // lda
+                                        dataInstance->deviceB().get(), // B*,
+                                        rocblas_types<InputT>::type(), // b_type
+                                        this->mLdb, // ldb
+                                        &(this->mBeta), // beta
+                                        dataInstance->deviceC().get(), // C*
+                                        rocblas_types<OutputT>::type(), // c_type
+                                        this->mM, // ldc (col major output only)
+                                        dataInstance->deviceD().get(), // D*
+                                        rocblas_types<OutputT>::type(), // d_type
+                                        this->mM, // ldd (col major output only)
+                                        rocblas_types<ComputeT>::type(), // compute_type
+                                        rocblas_gemm_algo_standard, // algo
+                                        0, // solution_index
+                                        0)); // flags
+                }
             };
             if(quirks::rocblas_supported<InputT, OutputT, ComputeT>::value)
             {
@@ -764,13 +809,13 @@ namespace rocwmma
                 {
                     // Calculate GPU efficiency
                     auto& deviceInfo             = DeviceInfo::instance();
-                    auto  devicePeakGFlopsPerSec  = deviceInfo->peakGFlopsPerSec<InputT>();
+                    auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<InputT>();
 
                     auto elapsedTimeMs        = float64_t(timeMs);
                     auto measuredTFlopsPerSec = calculateTFlopsPerSec(mM, mN, mK, elapsedTimeMs)
                                                 * static_cast<float64_t>(mRepeats);
                     mReferenceEfficiency
-                        = round(measuredTFlopsPerSec / devicePeakGFlopsPerSec  * 100000.0);
+                        = round(measuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0);
                 }
 
                 CHECK_HIP_ERROR(hipEventDestroy(startEvent));
