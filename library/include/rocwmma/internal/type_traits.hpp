@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,21 +27,44 @@
 #ifndef ROCWMMA_TYPE_TRAITS_HPP
 #define ROCWMMA_TYPE_TRAITS_HPP
 
+#include <cfloat>
+
 #include "types.hpp"
 
 namespace rocwmma
 {
     namespace detail
     {
+        struct Fp8Bits
+        {
+            union
+            {
+                uint8_t   i8;
+                float8_t  f8;
+                bfloat8_t bf8;
+            };
+            constexpr Fp8Bits(uint8_t initVal)
+                : i8(initVal)
+            {
+            }
+            constexpr Fp8Bits(float8_t initVal)
+                : f8(initVal)
+            {
+            }
+            constexpr Fp8Bits(bfloat8_t initVal)
+                : bf8(initVal)
+            {
+            }
+        };
+
         struct Fp16Bits
         {
             union
             {
-                uint16_t      i16;
-                float16_t     f16;
-                hfloat16_t    h16;
-                bfloat16_t    b16;
-                unsigned char c16[16];
+                uint16_t   i16;
+                float16_t  f16;
+                hfloat16_t h16;
+                bfloat16_t b16;
             };
             constexpr Fp16Bits(uint16_t initVal)
                 : i16(initVal)
@@ -57,6 +80,28 @@ namespace rocwmma
             }
             constexpr Fp16Bits(bfloat16_t initVal)
                 : b16(initVal)
+            {
+            }
+        };
+
+        struct Fp32Bits
+        {
+            union
+            {
+                uint32_t   i32;
+                float32_t  f32;
+                xfloat32_t xf32;
+            };
+            constexpr Fp32Bits(uint32_t initVal)
+                : i32(initVal)
+            {
+            }
+            constexpr Fp32Bits(float32_t initVal)
+                : f32(initVal)
+            {
+            }
+            constexpr Fp32Bits(xfloat32_t initVal)
+                : xf32(initVal)
             {
             }
         };
@@ -410,10 +455,129 @@ namespace std
 #endif
 
     ///////////////////////////////////////////////////////////
+    ///////////  std::numeric_limits<float8_t>  //////////////
+    ///////////////////////////////////////////////////////////
+    // @cond
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::float8_t
+        numeric_limits<rocwmma::float8_t>::epsilon() noexcept
+    {
+        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x28));
+        return eps.f8;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::float8_t
+        numeric_limits<rocwmma::float8_t>::infinity() noexcept
+    {
+        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x80));
+        return eps.f8;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::float8_t
+        numeric_limits<rocwmma::float8_t>::lowest() noexcept
+    {
+        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0xFF));
+        return eps.f8;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::float8_t
+        numeric_limits<rocwmma::float8_t>::max() noexcept
+    {
+        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x7F));
+        return eps.f8;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::float8_t
+        numeric_limits<rocwmma::float8_t>::min() noexcept
+    {
+        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x01));
+        return eps.f8;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::float8_t
+        numeric_limits<rocwmma::float8_t>::quiet_NaN() noexcept
+    {
+        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x80));
+        return eps.f8;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::float8_t
+        numeric_limits<rocwmma::float8_t>::signaling_NaN() noexcept
+    {
+        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x80));
+        return eps.f8;
+    }
+
+    ///////////////////////////////////////////////////////////
+    ///////////  std::numeric_limits<bfloat8_t>  //////////////
+    ///////////////////////////////////////////////////////////
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::bfloat8_t
+        numeric_limits<rocwmma::bfloat8_t>::epsilon() noexcept
+    {
+        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x38));
+        return eps.bf8;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::bfloat8_t
+        numeric_limits<rocwmma::bfloat8_t>::infinity() noexcept
+    {
+        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x80));
+        return eps.bf8;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::bfloat8_t
+        numeric_limits<rocwmma::bfloat8_t>::lowest() noexcept
+    {
+        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0xFF));
+        return eps.bf8;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::bfloat8_t
+        numeric_limits<rocwmma::bfloat8_t>::max() noexcept
+    {
+        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x7F));
+        return eps.bf8;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::bfloat8_t
+        numeric_limits<rocwmma::bfloat8_t>::min() noexcept
+    {
+        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x01));
+        return eps.bf8;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::bfloat8_t
+        numeric_limits<rocwmma::bfloat8_t>::quiet_NaN() noexcept
+    {
+        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x80));
+        return eps.bf8;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::bfloat8_t
+        numeric_limits<rocwmma::bfloat8_t>::signaling_NaN() noexcept
+    {
+        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x80));
+        return eps.bf8;
+    }
+
+    ///////////////////////////////////////////////////////////
     ///////////  std::numeric_limits<float16_t>  //////////////
     ///////////////////////////////////////////////////////////
 
-    // @cond
     template <>
     ROCWMMA_HOST_DEVICE constexpr rocwmma::float16_t
         numeric_limits<rocwmma::float16_t>::epsilon() noexcept
@@ -589,6 +753,66 @@ namespace std
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7FC0));
         return eps.b16;
     }
+
+    ///////////////////////////////////////////////////////////
+    ///////////  std::numeric_limits<xfloat32_t>  //////////////
+    ///////////////////////////////////////////////////////////
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::xfloat32_t
+        numeric_limits<rocwmma::xfloat32_t>::epsilon() noexcept
+    {
+        rocwmma::detail::Fp32Bits eps(static_cast<float>(FLT_EPSILON));
+        return eps.xf32;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::xfloat32_t
+        numeric_limits<rocwmma::xfloat32_t>::infinity() noexcept
+    {
+        rocwmma::detail::Fp32Bits eps(static_cast<float>(HUGE_VALF));
+        return eps.xf32;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::xfloat32_t
+        numeric_limits<rocwmma::xfloat32_t>::lowest() noexcept
+    {
+        rocwmma::detail::Fp32Bits eps(static_cast<float>(-FLT_MAX));
+        return eps.xf32;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::xfloat32_t
+        numeric_limits<rocwmma::xfloat32_t>::max() noexcept
+    {
+        rocwmma::detail::Fp32Bits eps(static_cast<float>(FLT_MAX));
+        return eps.xf32;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::xfloat32_t
+        numeric_limits<rocwmma::xfloat32_t>::min() noexcept
+    {
+        rocwmma::detail::Fp32Bits eps(static_cast<float>(FLT_MIN));
+        return eps.xf32;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::xfloat32_t
+        numeric_limits<rocwmma::xfloat32_t>::quiet_NaN() noexcept
+    {
+        rocwmma::detail::Fp32Bits eps(static_cast<uint32_t>(0x7FF80000));
+        return eps.xf32;
+    }
+
+    template <>
+    ROCWMMA_HOST_DEVICE constexpr rocwmma::xfloat32_t
+        numeric_limits<rocwmma::xfloat32_t>::signaling_NaN() noexcept
+    {
+        rocwmma::detail::Fp32Bits eps(static_cast<uint32_t>(0x7FF00000));
+        return eps.xf32;
+    }
     // @endcond
 
 } // namespace std
@@ -630,6 +854,27 @@ namespace rocwmma
     constexpr auto maxExactInteger() -> int32_t
     {
         // b16 mantissa is 7 bits
+        return ((int32_t)1 << 8);
+    }
+
+    template <typename T, typename std::enable_if_t<std::is_same<T, float8_t>::value, int> = 0>
+    constexpr auto maxExactInteger() -> int32_t
+    {
+        // f8 mantissa is 3 bits
+        return ((int32_t)1 << 4);
+    }
+
+    template <typename T, typename std::enable_if_t<std::is_same<T, bfloat8_t>::value, int> = 0>
+    constexpr auto maxExactInteger() -> int32_t
+    {
+        // bf8 mantissa is 2 bits
+        return ((int32_t)1 << 3);
+    }
+
+    template <typename T, typename std::enable_if_t<std::is_same<T, xfloat32_t>::value, int> = 0>
+    constexpr auto maxExactInteger() -> int32_t
+    {
+        // xf32 mantissa is 7 bits
         return ((int32_t)1 << 8);
     }
 #endif // !defined(__HIPCC_RTC__)

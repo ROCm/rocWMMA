@@ -50,6 +50,24 @@ namespace rocwmma
     };
 
     template <>
+    struct MfmaPerfTraits<DefaultArch, float8_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<DefaultArch, bfloat8_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
     struct MfmaPerfTraits<DefaultArch, bfloat16_t>
     {
         enum : uint32_t
@@ -77,6 +95,15 @@ namespace rocwmma
     };
 
     template <>
+    struct MfmaPerfTraits<DefaultArch, xfloat32_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
     struct MfmaPerfTraits<DefaultArch, float64_t>
     {
         enum : uint32_t
@@ -92,6 +119,24 @@ namespace rocwmma
         enum : uint32_t
         {
             Multiplier = 1024
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<ArchGfx908, float8_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<ArchGfx908, bfloat8_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
         };
     };
 
@@ -123,6 +168,15 @@ namespace rocwmma
     };
 
     template <>
+    struct MfmaPerfTraits<ArchGfx908, xfloat32_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
     struct MfmaPerfTraits<ArchGfx908, float64_t>
     {
         enum : uint32_t
@@ -138,6 +192,24 @@ namespace rocwmma
         enum : uint32_t
         {
             Multiplier = 1024
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<ArchGfx90a, float8_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<ArchGfx90a, bfloat8_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
         };
     };
 
@@ -165,6 +237,15 @@ namespace rocwmma
         enum : uint32_t
         {
             Multiplier = 256
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<ArchGfx90a, xfloat32_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
         };
     };
 
