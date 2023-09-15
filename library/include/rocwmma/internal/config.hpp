@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,16 +35,21 @@ namespace rocwmma
 /// ROCWMMA_ARCH_GFX908
 /// ROCWMMA_ARCH_GFX90a
 /// ROCWMMA_ARCH_GFX940
+/// ROCWMMA_ARCH_GFX941
+/// ROCWMMA_ARCH_GFX942
 /// ROCWMMA_ARCH_GFX1100
 /// ROCWMMA_ARCH_GFX1101
 /// ROCWMMA_ARCH_GFX1102
-/// ROCWMMA_ARCH_GFX940
 #if defined(__gfx908__)
 #define ROCWMMA_ARCH_GFX908 __gfx908__
 #elif defined(__gfx90a__)
 #define ROCWMMA_ARCH_GFX90A __gfx90a__
 #elif defined(__gfx940__)
 #define ROCWMMA_ARCH_GFX940 __gfx940__
+#elif defined(__gfx941__)
+#define ROCWMMA_ARCH_GFX941 __gfx941__
+#elif defined(__gfx942__)
+#define ROCWMMA_ARCH_GFX942 __gfx942__
 #elif defined(__gfx1100__)
 #define ROCWMMA_ARCH_GFX1100 __gfx1100__
 #elif defined(__gfx1101__)
@@ -63,6 +68,12 @@ namespace rocwmma
 #endif
 #if !defined(ROCWMMA_ARCH_GFX940)
 #define ROCWMMA_ARCH_GFX940 0
+#endif
+#if !defined(ROCWMMA_ARCH_GFX941)
+#define ROCWMMA_ARCH_GFX941 0
+#endif
+#if !defined(ROCWMMA_ARCH_GFX942)
+#define ROCWMMA_ARCH_GFX942 0
 #endif
 #if !defined(ROCWMMA_ARCH_GFX1100)
 #define ROCWMMA_ARCH_GFX1100 0
@@ -87,7 +98,8 @@ namespace rocwmma
 /// ROCWMMA_BLOCK_DIM_16_SUPPORTED
 /// ROCWMMA_BLOCK_DIM_32_SUPPORTED
 ///
-#if ROCWMMA_ARCH_GFX908 || ROCWMMA_ARCH_GFX90A || ROCWMMA_ARCH_GFX940
+#if ROCWMMA_ARCH_GFX908 || ROCWMMA_ARCH_GFX90A || ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 \
+    || ROCWMMA_ARCH_GFX942
 #define ROCWMMA_ARCH_GFX9 1
 #define ROCWMMA_WAVE64_MODE 1
 #define ROCWMMA_BLOCK_DIM_16_SUPPORTED 1
