@@ -66,16 +66,19 @@ namespace rocwmma
             TypesTest
             = !(std::is_same<InputT, float8_t>::value || std::is_same<InputT, bfloat8_t>::value
                 || std::is_same<InputT, xfloat32_t>::value)
-              || (bool)TestTraits::Arch::IsGfx940,
+              || (bool)TestTraits::Arch::IsGfx940 || (bool)TestTraits::Arch::IsGfx941
+              || (bool)TestTraits::Arch::IsGfx942,
 
             // BlockK minimums for certain data types to run.
             // The following conditions must be met:
-            // - Gfx940 [int8_t] BlockM/N_16 : BlockK >= 32
-            // - Gfx940 [int8_t] BlockM/N_32 : BlockK >= 16
+            // - Gfx940/1/2 [int8_t] BlockM/N_16 : BlockK >= 32
+            // - Gfx940/1/2 [int8_t] BlockM/N_32 : BlockK >= 16
             // - [float8_t, bfloat8_t] BlockM/N_16 : BlockK >= 32
             // - [float8_t, bfloat8_t] BlockM/N_32 : BlockK >= 16
             BlockKTest
-            = !(((bool)TestTraits::Arch::IsGfx940 && std::is_same<InputT, int8_t>::value)
+            = !((((bool)TestTraits::Arch::IsGfx940 || (bool)TestTraits::Arch::IsGfx941
+                  || (bool)TestTraits::Arch::IsGfx942)
+                 && std::is_same<InputT, int8_t>::value)
                 || std::is_same<InputT, float8_t>::value || std::is_same<InputT, bfloat8_t>::value)
               || (((BlockM == 16u) || (BlockN == 16u)) && (BlockK >= 32u))
               || (((BlockM == 32u) || (BlockN == 32u)) && (BlockK >= 16u)),
