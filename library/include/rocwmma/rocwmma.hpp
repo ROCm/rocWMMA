@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -47,7 +47,7 @@
  * This library is an ongoing Work-In-Progress (WIP).
  *
  * **Supported Hardware**
- * - CDNA architecture: gfx908, gfx90a, gfx940 (gfx9)
+ * - CDNA architecture: gfx908, gfx90a, gfx940, gfx941, gfx942 (gfx9)
  * - RDNA3 architecture: gfx1100, gfx1101, gfx1102 (gfx11)
  *
  * **Supported Wave Sizes**
@@ -57,7 +57,7 @@
  * **Supported Datatypes (gfx9)**
  *  - Native Data Types
  *      - float = f32
- *      - double = f64 (*only on gfx90a & gfx940)
+ *      - double = f64 (*only on gfx90a, gfx940, gfx941 & gfx942)
  *      - _Float16 = f16
  *      - int8
  *
