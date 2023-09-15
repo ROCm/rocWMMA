@@ -72,12 +72,11 @@ namespace rocwmma
 
             IsGfx908  = (ArchId == Constants::AMDGCN_ARCH_ID_GFX908),
             IsGfx90A  = (ArchId == Constants::AMDGCN_ARCH_ID_GFX90A),
-            IsGfx940  = (ArchId == Constants::AMDGCN_ARCH_ID_GFX940),
             IsGfx1100 = (ArchId == Constants::AMDGCN_ARCH_ID_GFX1100),
             IsGfx1101 = (ArchId == Constants::AMDGCN_ARCH_ID_GFX1101),
             IsGfx1102 = (ArchId == Constants::AMDGCN_ARCH_ID_GFX1102),
 
-            IsGfx9  = IsGfx908 || IsGfx90A || IsGfx940,
+            IsGfx9  = IsGfx908 || IsGfx90A,
             IsGfx11 = IsGfx1100 || IsGfx1101 || IsGfx1102,
         };
     };

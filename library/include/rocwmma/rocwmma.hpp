@@ -47,7 +47,7 @@
  * This library is an ongoing Work-In-Progress (WIP).
  *
  * **Supported Hardware**
- * - CDNA architecture: gfx908, gfx90a, gfx940 (gfx9)
+ * - CDNA architecture: gfx908, gfx90a (gfx9)
  * - RDNA3 architecture: gfx1100, gfx1101, gfx1102 (gfx11)
  *
  * **Supported Wave Sizes**
@@ -57,7 +57,7 @@
  * **Supported Datatypes (gfx9)**
  *  - Native Data Types
  *      - float = f32
- *      - double = f64 (*only on gfx90a & gfx940)
+ *      - double = f64 (*only on gfx90a)
  *      - _Float16 = f16
  *      - int8
  *
