@@ -273,23 +273,6 @@ namespace rocwmma
             mat[index] = value;
         }
     }
-
-    // fill kernel for M x N matrix for a mat[i] = i
-    template <typename DataT, typename Layout>
-    __global__ void fillIdxKernel(DataT* mat, uint32_t m, uint32_t n)
-    {
-        uint32_t rowIdx = (blockIdx.x * blockDim.x + threadIdx.x) / n;
-        uint32_t colIdx = (blockIdx.x * blockDim.x + threadIdx.x) % n;
-
-        auto ld    = std::is_same<Layout, row_major>::value ? n : m;
-        auto index = std::is_same<Layout, row_major>::value ? rowMjr(rowIdx, colIdx, ld)
-                                                            : colMjr(rowIdx, colIdx, ld);
-
-        if(rowIdx < m && colIdx < n)
-        {
-            mat[index] = index % 64;
-        }
-    }
 } // namespace rocwmma
 
 #endif // ROCWMMA_TEST_DEVICE_COMMON_HPP
