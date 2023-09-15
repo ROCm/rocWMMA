@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -73,11 +73,13 @@ namespace rocwmma
             IsGfx908  = (ArchId == Constants::AMDGCN_ARCH_ID_GFX908),
             IsGfx90A  = (ArchId == Constants::AMDGCN_ARCH_ID_GFX90A),
             IsGfx940  = (ArchId == Constants::AMDGCN_ARCH_ID_GFX940),
+            IsGfx941  = (ArchId == Constants::AMDGCN_ARCH_ID_GFX941),
+            IsGfx942  = (ArchId == Constants::AMDGCN_ARCH_ID_GFX942),
             IsGfx1100 = (ArchId == Constants::AMDGCN_ARCH_ID_GFX1100),
             IsGfx1101 = (ArchId == Constants::AMDGCN_ARCH_ID_GFX1101),
             IsGfx1102 = (ArchId == Constants::AMDGCN_ARCH_ID_GFX1102),
 
-            IsGfx9  = IsGfx908 || IsGfx90A || IsGfx940,
+            IsGfx9  = IsGfx908 || IsGfx90A || IsGfx940 || IsGfx941 || IsGfx942,
             IsGfx11 = IsGfx1100 || IsGfx1101 || IsGfx1102,
         };
     };
