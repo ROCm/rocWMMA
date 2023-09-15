@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,8 +36,6 @@
 #endif // !__HIPCC_RTC__
 
 #include "config.hpp"
-#include "float8.h"
-#include "rocwmma_xfloat32.hpp"
 
 namespace rocwmma
 {
@@ -70,14 +68,12 @@ namespace rocwmma
     using float16_t = _Float16;
     using float32_t = float;
     using float64_t = double;
-    using int8_t    = ::int8_t;
-    using uint8_t   = ::uint8_t;
-    using int16_t   = ::int16_t;
-    using uint16_t  = ::uint16_t;
-    using int32_t   = ::int32_t;
-    using uint32_t  = ::uint32_t;
-    using int64_t   = ::int64_t;
-    using uint64_t  = ::uint64_t;
+    using int8_t    = signed char;
+    using uint8_t   = unsigned char;
+    using int16_t   = short;
+    using uint16_t  = unsigned short;
+    using int32_t   = int;
+    using uint32_t  = unsigned int;
     using index_t   = int32_t;
 
 // Non-native types
@@ -90,11 +86,6 @@ namespace rocwmma
     } bfloat16_t;
 #endif // !__HIPCC_RTC__
     using hfloat16_t = __half;
-
-    using bfloat8_t = rocwmma_bf8;
-    using float8_t  = rocwmma_f8;
-
-    using xfloat32_t = rocwmma_xfloat32;
 
     // clang-format off
 
@@ -166,13 +157,6 @@ namespace rocwmma
     using VRegI32x8  = VecT<int32_t, 8>; //
     using VRegI32x16 = VecT<int32_t, 16>; //
     using VRegI32x32 = VecT<int32_t, 32>; // 32 i32 registers
-
-    using VRegI64x1  = VecT<int64_t, 1>; // Single i64 register
-    using VRegI64x2  = VecT<int64_t, 2>; // Two i64 registers
-    using VRegI64x4  = VecT<int64_t, 4>; // ...
-    using VRegI64x8  = VecT<int64_t, 8>; //
-    using VRegI64x16 = VecT<int64_t, 16>; //
-    using VRegI64x32 = VecT<int64_t, 32>; // 32 i64 registers
 
     using VRegF16x1  = VecT<float16_t, 1>; // Single f16 register
     using VRegF16x2  = VecT<float16_t, 2>; // Two f16 registers

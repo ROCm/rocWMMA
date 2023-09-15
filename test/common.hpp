@@ -100,18 +100,6 @@ namespace rocwmma
         {
         };
 
-#if !defined(ROCBLAS_DATA_TYPE_FLOAT8)
-        template <>
-        struct rocblas_supported<float8_t, float32_t, float32_t> : std::false_type
-        {
-        };
-
-        template <>
-        struct rocblas_supported<bfloat8_t, float32_t, float32_t> : std::false_type
-        {
-        };
-#endif
-
     } // namespace quirks
 
     template <typename Layout>
@@ -148,29 +136,6 @@ namespace rocwmma
         {
             assert(mat.size() == n * m);
             print(mat.data(), m, n, stream);
-        }
-
-        template <typename DataT, typename PrintT>
-        __host__ static inline void
-            printAsType(DataT const* mat, uint32_t m, uint32_t n, std::ostream& stream = std::cout)
-        {
-            auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
-            auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
-
-            auto index = std::is_same<Layout, row_major>::value ? rowMjr : colMjr;
-            auto ld    = std::is_same<Layout, row_major>::value ? n : m;
-
-            for(int i = 0; i < m; ++i) // row
-            {
-                stream << "[ ";
-                for(int j = 0; j < n; ++j) // col
-                {
-                    // (Row, col)
-                    stream << static_cast<PrintT>(mat[index(i, j, ld)]) << " ";
-                }
-                stream << "]\n";
-            }
-            stream << "\n";
         }
 
         template <typename DataT>
@@ -322,17 +287,6 @@ namespace rocwmma
             hipLaunchKernelGGL(
                 (fillValKernel<DataT, Layout>), gridDim, blockDim, 0, 0, d_mat, m, n, value);
         }
-
-        // fill kernel wrapper for M x N matrix for mat[i] = i
-        template <typename DataT>
-        __host__ static inline void
-            fillIdxLaunchKernel(DataT* d_mat, uint32_t m, uint32_t n)
-        {
-            auto blockDim = dim3(1024, 1, 1);
-            auto gridDim  = dim3(ceilDiv(m * n, blockDim.x), 1, 1);
-            hipLaunchKernelGGL(
-                (fillIdxKernel<DataT, Layout>), gridDim, blockDim, 0, 0, d_mat, m, n);
-        }
     };
 
     // compareEqual on two different layouts: must calculate index offsets
@@ -422,7 +376,7 @@ namespace rocwmma
         else if(isNaN)
         {
             retval             = false;
-            max_relative_error = double(std::numeric_limits<TypeA>::signaling_NaN());
+            max_relative_error = std::numeric_limits<TypeA>::signaling_NaN();
         }
         else if(max_relative_error > (eps * tolerance))
         {
@@ -511,7 +465,7 @@ namespace rocwmma
         else if(isNaN)
         {
             retval             = false;
-            max_relative_error = double(std::numeric_limits<TypeA>::signaling_NaN());
+            max_relative_error = std::numeric_limits<TypeA>::signaling_NaN();
         }
         else if(max_relative_error > (eps * tolerance))
         {
@@ -634,7 +588,7 @@ namespace rocwmma
         if(isNaN)
         {
             retval           = false;
-            maxRelativeError = double(std::numeric_limits<TypeA>::signaling_NaN());
+            maxRelativeError = std::numeric_limits<TypeA>::signaling_NaN();
         }
         else if(maxRelativeError > (eps * tolerance))
         {
@@ -715,7 +669,7 @@ namespace rocwmma
         if(isNaN)
         {
             retval           = false;
-            maxRelativeError = double(std::numeric_limits<TypeA>::signaling_NaN());
+            maxRelativeError = std::numeric_limits<TypeA>::signaling_NaN();
         }
         else if(maxRelativeError > (eps * tolerance))
         {
