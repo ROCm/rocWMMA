@@ -231,7 +231,7 @@ namespace rocwmma
         auto srcTuple = std::make_tuple(1, 2, 3);
 
         auto expect = std::make_tuple(3, 2, 1);
-        auto result = rocwmma::reverse(std::decay_t<decltype(srcTuple)>(srcTuple));
+        auto result = rocwmma::reverse(srcTuple);
         err |= expect != result;
 
         return err;

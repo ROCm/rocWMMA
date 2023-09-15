@@ -236,7 +236,7 @@ namespace rocwmma
     constexpr static auto reverse(T&& t)
     {
         return reverse_impl(std::forward<T>(t),
-                            std::make_index_sequence<std::tuple_size<T>::value>());
+                            std::make_index_sequence<std::tuple_size< std::remove_cv_t<std::remove_reference_t<T>>>::value>());
     }
 
     template <typename T, std::size_t... Indices>
