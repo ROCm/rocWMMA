@@ -480,6 +480,125 @@ namespace rocwmma
 
 #endif // !ROCWMMA_ARCH_GFX908
 #endif // !defined(__HIPCC_RTC__)
+#if !ROCWMMA_ARCH_GFX940
+
+        template <>
+        struct amdgcn_mfma<int8_t, int32_t, 32, 32>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 8
+                };
+                using ARegsT = VRegI32x1;
+                using BRegsT = VRegI32x1;
+                using CRegsT = AccRegI32x16;
+                using DRegsT = AccRegI32x16;
+            };
+
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
+                typename Traits::DRegsT
+            {
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_i32_32x32x8i8(
+                    regsA.data[0], regsB.data[0], regsC.data, 0, 0, 0)};
+                return result;
+            }
+        };
+
+        template <>
+        struct amdgcn_mfma<int8_t, int32_t, 16, 16>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 16
+                };
+                using ARegsT = VRegI32x1;
+                using BRegsT = VRegI32x1;
+                using CRegsT = AccRegI32x4;
+                using DRegsT = AccRegI32x4;
+            };
+
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
+                typename Traits::DRegsT
+            {
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_i32_16x16x16i8(
+                    regsA.data[0], regsB.data[0], regsC.data, 0, 0, 0)};
+                return result;
+            }
+        };
+
+#else // ROCWMMA_ARCH_GFX940
+
+    template <>
+        struct amdgcn_mfma<int8_t, int32_t, 32, 32>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 16
+                };
+                using ARegsT = VRegI32x2;
+                using BRegsT = VRegI32x2;
+                using CRegsT = AccRegI32x16;
+                using DRegsT = AccRegI32x16;
+            };
+
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
+                typename Traits::DRegsT
+            {
+                typename Traits::DRegsT result;
+                using inputType = VRegI64x1;
+                result.data = {__builtin_amdgcn_mfma_i32_32x32x16_i8(
+                    ((inputType const&)(regsA)).data[0], ((inputType const&)(regsB)).data[0], regsC.data, 0, 0, 0)};
+                return result;
+            }
+        };
+
+        template <>
+        struct amdgcn_mfma<int8_t, int32_t, 16, 16>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 32
+                };
+                using ARegsT = VRegI32x2;
+                using BRegsT = VRegI32x2;
+                using CRegsT = AccRegI32x4;
+                using DRegsT = AccRegI32x4;
+            };
+
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
+                typename Traits::DRegsT
+            {
+                typename Traits::DRegsT result;
+                using inputType = VRegI64x1;
+                result.data = {__builtin_amdgcn_mfma_i32_16x16x32_i8(
+                    ((inputType const&)(regsA)).data[0], ((inputType const&)(regsB)).data[0], regsC.data, 0, 0, 0)};
+                return result;
+            }
+        };
+
+#endif // !ROCWMMA_ARCH_GFX940
 
         template <>
         struct amdgcn_mfma<float32_t, float32_t, 16, 16>
@@ -533,62 +652,6 @@ namespace rocwmma
             {
                 typename Traits::DRegsT result;
                 result.data = {__builtin_amdgcn_mfma_f32_32x32x2f32(
-                    regsA.data[0], regsB.data[0], regsC.data, 0, 0, 0)};
-                return result;
-            }
-        };
-
-        template <>
-        struct amdgcn_mfma<int8_t, int32_t, 16, 16>
-        {
-            // Packed register traits
-            struct Traits
-            {
-                enum : uint32_t
-                {
-                    KPerMfma = 16
-                };
-                using ARegsT = VRegI32x1;
-                using BRegsT = VRegI32x1;
-                using CRegsT = AccRegI32x4;
-                using DRegsT = AccRegI32x4;
-            };
-
-            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
-                                                   typename Traits::BRegsT const& regsB,
-                                                   typename Traits::CRegsT const& regsC) ->
-                typename Traits::DRegsT
-            {
-                typename Traits::DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_i32_16x16x16i8(
-                    regsA.data[0], regsB.data[0], regsC.data, 0, 0, 0)};
-                return result;
-            }
-        };
-
-        template <>
-        struct amdgcn_mfma<int8_t, int32_t, 32, 32>
-        {
-            // Packed register traits
-            struct Traits
-            {
-                enum : uint32_t
-                {
-                    KPerMfma = 8
-                };
-                using ARegsT = VRegI32x1;
-                using BRegsT = VRegI32x1;
-                using CRegsT = AccRegI32x16;
-                using DRegsT = AccRegI32x16;
-            };
-
-            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
-                                                   typename Traits::BRegsT const& regsB,
-                                                   typename Traits::CRegsT const& regsC) ->
-                typename Traits::DRegsT
-            {
-                typename Traits::DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_i32_32x32x8i8(
                     regsA.data[0], regsB.data[0], regsC.data, 0, 0, 0)};
                 return result;
             }
@@ -659,6 +722,363 @@ namespace rocwmma
         };
 
 #endif // !ROCWMMA_ARCH_GFX908
+
+#if ROCWMMA_ARCH_GFX940
+
+        template <>
+        struct amdgcn_mfma<float8_t, float32_t, 16, 16>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 32
+                };
+                using ARegsT = VRegF32x2;
+                using BRegsT = VRegF32x2;
+                using CRegsT = AccRegF32x4;
+                using DRegsT = AccRegF32x4;
+            };
+
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
+                typename Traits::DRegsT
+            {
+                typename Traits::DRegsT result;
+                using inputType = VRegI64x1;
+                result.data = {__builtin_amdgcn_mfma_f32_16x16x32_fp8_fp8(
+                    ((inputType const&)(regsA)).data[0], ((inputType const&)(regsB)).data[0], regsC.data, 0, 0, 0)};
+                return result;
+            }
+        };
+
+        template <>
+        struct amdgcn_mfma<float8_t, float32_t, 32, 32>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 16
+                };
+                using ARegsT = VRegF32x2;
+                using BRegsT = VRegF32x2;
+                using CRegsT = AccRegF32x16;
+                using DRegsT = AccRegF32x16;
+            };
+
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
+                typename Traits::DRegsT
+            {
+                typename Traits::DRegsT result;
+                using inputType = VRegI64x1;
+                result.data = {__builtin_amdgcn_mfma_f32_32x32x16_fp8_fp8(
+                    ((inputType const&)(regsA)).data[0], ((inputType const&)(regsB)).data[0], regsC.data, 0, 0, 0)};
+                return result;
+            }
+        };
+
+        template <>
+        struct amdgcn_mfma<bfloat8_t, float32_t, 16, 16>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 32
+                };
+                using ARegsT = VRegF32x2;
+                using BRegsT = VRegF32x2;
+                using CRegsT = AccRegF32x4;
+                using DRegsT = AccRegF32x4;
+            };
+
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
+                typename Traits::DRegsT
+            {
+                typename Traits::DRegsT result;
+                using inputType = VRegI64x1;
+                result.data = {__builtin_amdgcn_mfma_f32_16x16x32_bf8_bf8(
+                    ((inputType const&)(regsA)).data[0], ((inputType const&)(regsB)).data[0], regsC.data, 0, 0, 0)};
+                return result;
+            }
+        };
+
+        template <>
+        struct amdgcn_mfma<bfloat8_t, float32_t, 32, 32>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 16
+                };
+                using ARegsT = VRegF32x2;
+                using BRegsT = VRegF32x2;
+                using CRegsT = AccRegF32x16;
+                using DRegsT = AccRegF32x16;
+            };
+
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
+                typename Traits::DRegsT
+            {
+                typename Traits::DRegsT result;
+                using inputType = VRegI64x1;
+                result.data = {__builtin_amdgcn_mfma_f32_32x32x16_bf8_bf8(
+                    ((inputType const&)(regsA)).data[0], ((inputType const&)(regsB)).data[0], regsC.data, 0, 0, 0)};
+                return result;
+            }
+        };
+
+        template <>
+        struct amdgcn_mfma<xfloat32_t, float32_t, 16, 16>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 8
+                };
+                using ARegsT = VRegF32x2;
+                using BRegsT = VRegF32x2;
+                using CRegsT = AccRegF32x4;
+                using DRegsT = AccRegF32x4;
+            };
+
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
+                typename Traits::DRegsT
+            {
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_f32_16x16x8_xf32(
+                    regsA.data, regsB.data, regsC.data, 0, 0, 0)};
+                return result;
+            }
+        };
+
+        template <>
+        struct amdgcn_mfma<xfloat32_t, float32_t, 32, 32>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 4
+                };
+                using ARegsT = VRegF32x2;
+                using BRegsT = VRegF32x2;
+                using CRegsT = AccRegF32x16;
+                using DRegsT = AccRegF32x16;
+            };
+
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
+                typename Traits::DRegsT
+            {
+                typename Traits::DRegsT result;
+                result.data = {__builtin_amdgcn_mfma_f32_32x32x4_xf32(
+                    regsA.data, regsB.data, regsC.data, 0, 0, 0)};
+                return result;
+            }
+        };
+
+#else // !ROCWMMA_ARCH_GFX940
+
+        // Required for general fp8 support
+        template <>
+        struct amdgcn_mfma<float8_t, float32_t, 16, 16>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 32
+                };
+                using ARegsT = VRegF32x2;
+                using BRegsT = VRegF32x2;
+                using CRegsT = AccRegF32x4;
+                using DRegsT = AccRegF32x4;
+            };
+
+            // This implementation is needed to satisfy the MmaSyncTest interface,
+            // and WILL not function as intended.
+            // gfx908 and gfx90a lacks support for fp8 MFMA instructions.
+            ROCWMMA_UNSUPPORTED_IMPL("fp8 mfma not supported on gfx908/gfx90a")
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC)
+
+                -> typename Traits::DRegsT const&
+            {
+                return regsC;
+            }
+        };
+
+        template <>
+        struct amdgcn_mfma<float8_t, float32_t, 32, 32>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 16
+                };
+                using ARegsT = VRegF32x2;
+                using BRegsT = VRegF32x2;
+                using CRegsT = AccRegF32x16;
+                using DRegsT = AccRegF32x16;
+            };
+
+            // This implementation is needed to satisfy the MmaSyncTest interface,
+            // and WILL not function as intended.
+            // gfx908 and gfx90a lacks support for fp8 MFMA instructions.
+            ROCWMMA_UNSUPPORTED_IMPL("fp8 mfma not supported on gfx908/gfx90a")
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
+                typename Traits::DRegsT
+            {
+                return regsC;
+            }
+        };
+
+        // Required for general bf8 support
+        template <>
+        struct amdgcn_mfma<bfloat8_t, float32_t, 16, 16>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 32
+                };
+                using ARegsT = VRegF32x2;
+                using BRegsT = VRegF32x2;
+                using CRegsT = AccRegF32x4;
+                using DRegsT = AccRegF32x4;
+            };
+
+            // This implementation is needed to satisfy the MmaSyncTest interface,
+            // and WILL not function as intended.
+            // gfx908 and gfx90a lacks support for bf8 MFMA instructions.
+            ROCWMMA_UNSUPPORTED_IMPL("bf8 mfma not supported on gfx908/gfx90a")
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC)
+
+                -> typename Traits::DRegsT const&
+            {
+                return regsC;
+            }
+        };
+
+        template <>
+        struct amdgcn_mfma<bfloat8_t, float32_t, 32, 32>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 16
+                };
+                using ARegsT = VRegF32x2;
+                using BRegsT = VRegF32x2;
+                using CRegsT = AccRegF32x16;
+                using DRegsT = AccRegF32x16;
+            };
+
+            // This implementation is needed to satisfy the MmaSyncTest interface,
+            // and WILL not function as intended.
+            // gfx908 and gfx90a lacks support for bf8 MFMA instructions.
+            ROCWMMA_UNSUPPORTED_IMPL("bf8 mfma not supported on gfx908/gfx90a")
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
+                typename Traits::DRegsT
+            {
+                return regsC;
+            }
+        };
+
+        template <>
+        struct amdgcn_mfma<xfloat32_t, float32_t, 16, 16>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 8
+                };
+                using ARegsT = VRegF32x2;
+                using BRegsT = VRegF32x2;
+                using CRegsT = AccRegF32x4;
+                using DRegsT = AccRegF32x4;
+            };
+
+            // This implementation is needed to satisfy the MmaSyncTest interface,
+            // and WILL not function as intended.
+            // gfx908 and gfx90a lacks support for xf32 MFMA instructions.
+            ROCWMMA_UNSUPPORTED_IMPL("xf32 mfma not supported on gfx908/gfx90a")
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC)
+
+                -> typename Traits::DRegsT const&
+            {
+                return regsC;
+            }
+        };
+
+        template <>
+        struct amdgcn_mfma<xfloat32_t, float32_t, 32, 32>
+        {
+            // Packed register traits
+            struct Traits
+            {
+                enum : uint32_t
+                {
+                    KPerMfma = 4
+                };
+                using ARegsT = VRegF32x2;
+                using BRegsT = VRegF32x2;
+                using CRegsT = AccRegF32x16;
+                using DRegsT = AccRegF32x16;
+            };
+
+            // This implementation is needed to satisfy the MmaSyncTest interface,
+            // and WILL not function as intended.
+            // gfx908 and gfx90a lacks support for xf32 MFMA instructions.
+            ROCWMMA_UNSUPPORTED_IMPL("xf32 mfma not supported on gfx908/gfx90a")
+            ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
+                                                   typename Traits::BRegsT const& regsB,
+                                                   typename Traits::CRegsT const& regsC) ->
+                typename Traits::DRegsT
+            {
+                return regsC;
+            }
+        };
+
+#endif // ROCWMMA_ARCH_GFX940
 
 #endif // ROCWMMA_ARCH_GFX9
 
