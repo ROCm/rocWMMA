@@ -28,6 +28,7 @@
 
 #include "io_traits.hpp"
 #include "layout.hpp"
+#include "tuple.hpp"
 #include "types.hpp"
 #include "vector_iterator.hpp"
 
@@ -75,24 +76,127 @@ namespace rocwmma
 
         using LoadVecTraits = VecTraits<typename Traits::LoadT>;
 
+        // Outer loop = index 0,
+        // Inner loop = index N-1
+        template <std::size_t Depth = 0,
+                  typename Iterator,
+                  typename StrideCounts,
+                  typename Strides2d>
+        ROCWMMA_DEVICE static inline auto unroll_right(Iterator&      out,
+                                                       DataT const*   dataPtr,
+                                                       uint32_t       ldm,
+                                                       StrideCounts&& strideCounts,
+                                                       Strides2d&&    strides2d)
+        {
+            auto strideOffset = DataLayout::fromMatrixCoord(std::get<Depth>(strides2d), ldm);
+            auto strideCount  = std::get<Depth>(strideCounts);
+
+            // Last depth layer will invoke the load
+            if constexpr(Depth == (std::tuple_size<std::decay_t<StrideCounts>>::value - 1u))
+            {
+#pragma unroll
+                for(int i = 0; i < strideCount; i++)
+                {
+                    Traits::Loader::exec(*out, dataPtr);
+                    dataPtr += strideOffset;
+                    out++;
+                }
+            }
+            // Recurse to the next nested layer
+            else
+            {
+#pragma unroll
+                for(int i = 0; i < strideCount; i++)
+                {
+                    unroll_right<Depth + 1>(out, dataPtr, ldm, strideCounts, strides2d);
+                    dataPtr += strideOffset;
+                    //out++;
+                }
+            }
+        }
+
+        template <std::size_t Depth = 0,
+                  typename Iterator,
+                  typename StrideCounts,
+                  typename Strides2d>
+        ROCWMMA_DEVICE static inline auto unroll_left(Iterator&      out,
+                                                      DataT const*   dataPtr,
+                                                      uint32_t       ldm,
+                                                      StrideCounts&& strideCounts,
+                                                      Strides2d&&    strides2d)
+        {
+            constexpr auto size = std::tuple_size<std::decay_t<StrideCounts>>::value;
+
+            auto strideOffset
+                = DataLayout::fromMatrixCoord(std::get<size - 1 - Depth>(strides2d), ldm);
+            auto strideCount = std::get<size - 1 - Depth>(strideCounts);
+
+            // Last depth layer will invoke the load
+            if constexpr(Depth == (size - 1u))
+            {
+#pragma unroll
+                for(int i = 0; i < strideCount; i++)
+                {
+                    Traits::Loader::exec(*out, dataPtr);
+                    dataPtr += strideOffset;
+                    out++;
+                }
+            }
+            // Recurse to the next nested layer
+            else
+            {
+#pragma unroll
+                for(int i = 0; i < strideCount; i++)
+                {
+                    unroll_left<Depth + 1>(out, dataPtr, ldm, strideCounts, strides2d);
+                    dataPtr += strideOffset;
+                    //out++;
+                }
+            }
+        }
+
         ROCWMMA_DEVICE static void
             exec(typename Traits::OutputT& data, DataT const* dataPtr, uint32_t ldm)
         {
             // Arrange wave threads to starting matrix layout offsets.
-            auto baseOffset = MatrixLayout::baseOffset();
-            auto it         = makeVectorIterator<LoadVecTraits::size()>(data).begin();
+            auto baseOffset2d = MatrixLayout::baseOffset();
+            auto it           = makeVectorIterator<LoadVecTraits::size()>(data).begin();
 
             static_assert(decltype(it)::range() == IOTraits::IOCount,
                           "IOCount inconsistent with iterator range");
 
-            // Loop through entire block
-#pragma unroll
-            for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
-            {
-                Traits::Loader::exec(*it, dataPtr, DataLayout::fromMatrixCoord(baseOffset, ldm));
-                baseOffset += MatrixLayout::incrementalOffset(it.index());
-                it++;
-            }
+            // Unroll loading in each strided dimension
+            unroll_right(it,
+                         dataPtr + DataLayout::fromMatrixCoord(baseOffset2d, ldm),
+                         ldm,
+                         MatrixLayout::strideCounts(),
+                         MatrixLayout::strides());
+
+            // auto baseOffset1d = DataLayout::fromMatrixCoord(baseOffset2d, ldm);
+            // auto stride1d0 = DataLayout::fromMatrixCoord(std::get<0>(strides), ldm);
+
+            // #pragma unroll
+            // for(uint32_t i = 0; i < std::get<0>(strideCounts); ++i)
+            // {
+            //     auto currentOffset1d = baseOffset1d;
+            //     auto stride1d1 = DataLayout::fromMatrixCoord(std::get<1>(strides), ldm);
+            //     #pragma unroll
+            //     for(uint32_t j = 0; j < std::get<1>(strideCounts); ++j)
+            //     {
+            //         Traits::Loader::exec(*it, dataPtr, currentOffset1d);
+            //         currentOffset1d += stride1d1;
+            //         it++;
+            //     }
+            //     baseOffset1d += stride1d0;
+            // }
+
+            // #pragma unroll
+            //             for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
+            //             {
+            //                 Traits::Loader::exec(*it, dataPtr, DataLayout::fromMatrixCoord(baseOffset2d, ldm));
+            //                 baseOffset2d += MatrixLayout::incrementalOffset(it.index());
+            //                 it++;
+            //             }
         }
     };
 

@@ -112,52 +112,128 @@ namespace rocwmma
             }
         }
 
+        // Outer loop = index 0,
+        // Inner loop = index N-1
+        template <std::size_t Depth = 0,
+                  typename Iterator,
+                  typename StrideCounts,
+                  typename Strides2d>
+        ROCWMMA_DEVICE static inline auto unroll_right(DataT*         dataPtr,
+                                                       Iterator&      in,
+                                                       uint32_t       ldm,
+                                                       StrideCounts&& strideCounts,
+                                                       Strides2d&&    strides2d)
+        {
+            auto strideOffset = DataLayout::fromMatrixCoord(std::get<Depth>(strides2d), ldm);
+            auto strideCount  = std::get<Depth>(strideCounts);
+
+            // Last depth layer will invoke the load
+            if constexpr(Depth == (std::tuple_size<std::decay_t<StrideCounts>>::value - 1u))
+            {
+#pragma unroll
+                for(int i = 0; i < strideCount; i++)
+                {
+                    Traits::Storer::exec(dataPtr, *in);
+                    dataPtr += strideOffset;
+                    in++;
+                }
+            }
+            // Recurse to the next nested layer
+            else
+            {
+#pragma unroll
+                for(int i = 0; i < strideCount; i++)
+                {
+                    unroll_right<Depth + 1>(dataPtr, in, ldm, strideCounts, strides2d);
+                    dataPtr += strideOffset;
+                    //in++;
+                }
+            }
+        }
+
+        constexpr static uint32_t calcMaxWaves(uint32_t workItems, uint32_t waveCount)
+        {
+            return (workItems % waveCount == 0 ? waveCount
+                                               : calcMaxWaves(workItems, waveCount / 2));
+        };
+
         template <uint32_t WaveCount, uint32_t SplitCount>
         ROCWMMA_DEVICE static inline void exec(DataT*                         dataPtr,
                                                typename Traits::InputT const& data,
                                                uint32_t                       ldm,
                                                uint32_t                       waveIndex)
         {
-            // Ensure that splitCount doesn't exceed our maximum
-            constexpr auto splitCount = std::min(SplitCount, (uint32_t)Traits::MaxSplit);
+            // Don't go beyond the scope of work
+            waveIndex %= WaveCount;
 
-            // For the cases where there are more waves than splits.
-            if(waveIndex >= splitCount)
-                return;
+            // Full fragment work
+            constexpr auto strideSpace = MatrixLayout::strideCounts();
+            constexpr auto strides     = MatrixLayout::strides();
 
-            // Calculate the number of 'work items' for the current wave,
-            // as well as the IOCount per work item.
-            // NOTE: If there are in fact more waves than work items, make sure there
-            // is at least one work item per wave. Waves that can't contribute will be
-            // filtered out by the above check.
-            constexpr auto workItemCount   = std::max(splitCount / WaveCount, 1u);
-            constexpr auto workItemIOCount = IOTraits::IOCount / splitCount;
+            // Drop the VW strides for splitting (reduced stride space).
+            constexpr auto strideSpaceR = pop_right(strideSpace);
+            constexpr auto stridesR     = pop_right(strides);
+            constexpr auto totalWorkItems
+                = flatten_coord_left((strideSpaceR - 1u), strideSpaceR) + 1;
 
-            // Calculate the current wave's starting IO iterator index for the first work item.
-            auto const& reducedFt = reinterpret_cast<typename StoreVecTraits::template VecT<
-                DataT,
-                workItemCount * workItemIOCount * StoreVecTraits::size()> const&>(data);
-            auto        ioIter    = makeVectorIterator<StoreVecTraits::size()>(reducedFt).begin();
+            // Determine max waves possible.
+            constexpr auto waveCountAdjusted
+                = calcMaxWaves((uint32_t)totalWorkItems, (uint32_t)WaveCount);
 
-            // Align threads to starting matrix offset coordinates
-            auto baseOffset = MatrixLayout::baseOffset();
-
-            // Iterate through the work items for this wave only
-            // Both loops may get unrolled if splitCount and waveCount are known at compile time.
-#pragma unroll
-            for(uint32_t i = 0; i < workItemCount; i++)
+            // Ensure that we propagate the corrected wave count
+            if constexpr(WaveCount != waveCountAdjusted)
             {
-                auto cumOffset = (i * WaveCount + waveIndex) * workItemIOCount;
-#pragma unroll
-                for(uint32_t j = 0; j < workItemIOCount; ++j)
-                {
-                    Traits::Storer::exec(
-                        dataPtr,
-                        *ioIter,
-                        DataLayout::fromMatrixCoord(
-                            baseOffset + MatrixLayout::cumulativeOffset(cumOffset++), ldm));
-                    ioIter++;
-                }
+                exec<waveCountAdjusted, SplitCount>(dataPtr, data, ldm, waveIndex);
+            }
+            // Wave count is acceptable
+            else
+            {
+                // Split the reduced stride space.
+                constexpr auto workItemsPerWave = std::max(totalWorkItems / WaveCount, 1u);
+                constexpr auto strideSpaceS
+                    = inflate_coord_left(workItemsPerWave - 1u, strideSpaceR) + 1u;
+
+                // Add back in the VW dimension, for the full stride
+                // space of the current wave
+                constexpr auto strideSpaceW
+                    = std::tuple_cat(strideSpaceS, std::make_tuple(get_last(strideSpace)));
+
+                // Alias the original frag due to smaller split size
+                auto& dataR = (typename StoreVecTraits::template VecT<
+                               DataT,
+                               workItemsPerWave * StoreVecTraits::size()> const&)(data);
+                auto  it    = makeVectorIterator<StoreVecTraits::size()>(dataR).begin();
+
+                // Align threads to starting matrix offset coordinates
+                auto baseOffset = MatrixLayout::baseOffset();
+
+                // Find current wave offset
+                constexpr auto sum               = [](auto... items) { return (items + ...); };
+                auto           currentWaveOffset = std::apply(
+                    sum, inflate_coord_left(waveIndex * workItemsPerWave, strideSpaceR) * stridesR);
+
+                // if(threadIdx.x % 64 == 0)
+                // {
+
+                //     printf("(%d) BlockDim, BlockK: (%d, %d)\n", waveIndex, BlockDim, BlockK);
+                //     printf("(%d) Original strideCounts: (%d, %d, %d)\n", waveIndex, std::get<0>(strideSpace), std::get<1>(strideSpace), std::get<2>(strideSpace));
+                //     printf("(%d) Original strides: (%d, %d), (%d, %d), (%d, %d)\n", waveIndex, get<0>(std::get<0>(strides)), get<1>(std::get<0>(strides)),
+                //                                                                             get<0>(std::get<1>(strides)), get<1>(std::get<1>(strides)),
+                //                                                                             get<0>(std::get<2>(strides)), get<1>(std::get<2>(strides)));
+
+                //     printf("(%d) WaveCount: (%d)\n", waveIndex, WaveCount);
+                //     printf("(%d) workItemsPerWave (%d)\n", waveIndex, workItemsPerWave);
+                //     printf("(%d) strideSpaceW: (%d, %d, %d)\n", waveIndex, std::get<0>(strideSpaceW), std::get<1>(strideSpaceW), std::get<2>(strideSpaceW));
+                //     printf("(%d) currentOffset: (%d, %d)\n\n", waveIndex, get<0>(currentWaveOffset), get<1>(currentWaveOffset));
+
+                // }
+
+                unroll_right(dataPtr
+                                 + DataLayout::fromMatrixCoord(baseOffset + currentWaveOffset, ldm),
+                             it,
+                             ldm,
+                             strideSpaceW,
+                             strides);
             }
         }
     };

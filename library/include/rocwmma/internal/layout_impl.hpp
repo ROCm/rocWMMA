@@ -439,54 +439,54 @@ namespace rocwmma
             * that VW will be mapped orthogonally to the column.
             * This pattern considers VW up to MaxVW, BlockDim <= 64 and BlockDim > 64.
             *
-            * Iterative thread offset cycles: Fill MaxVW => Fill BlockDim => Fill K
+            * Iterative thread stride cycles (same for all threads):
+            *   Fill MaxVW => Fill BlockK => Fill BlockDim
             *
-            * Index on VW segments first, BlockDimSegs second. Below shows the indexing
-            * order of columns for two full major cycles:
+            * Example:
+            *  BlockDim = 128   BlockK = 16
+            *  MaxVW = 4       VW = 1
             *
-            * E.g.
-            * WaveSize = 64    Iterations = 8
-            * BlockDim = 128   BlockK = 8          BlockDimSegs = 2
-            * VectorWidth = 2  MaxVectorWidth = 4  VWSegs = 2
+            *  BlockDim Stride Count = 2, BlockDimStride = (64, 0)
+            *  BlockK   Stride Count = 4, BlockKStride   = (0,  4)
+            *  VW       Stride Count = 4, VWStride       = (0,  1)
             *
-            * Minor cycle = VWSegs = 2 iterations
-            * Major cycle = VWSegs * BlockDimSegs = 4 iterations
-            *
-            * iteration offsets:
-            * i0 = (0, 0)   i1 = (0, 2)  i2 = (64, 0) i3 = (64, 2)
-            * i4 = (0, 4)   i5 = (0, 6)  i6 = (64, 4) i7 = (64, 6)
+            *  Stride mapping (BlockDim, BlockK, VW)
+            *  C_n = Matrix column
+            *  i_n = cumulative iteration
             *
             *   kDim --------->
-            *
-            *   i0          i1          i4          i5
-            *   v_____ _____v_____ _____v_____ _____v_____ _____
-            *   |     |     |     |     |     |     |     |     |
-            *   |     |     |     |     |     |     |     |     |
-            *   | C0  |  C1 |  C2 |  C3 |  C8 |  C9 | C10 | C11 | ...
-            *   |     |     |     |     |     |     |     |     |
-            *   |_____|_____|_____|_____|_____|_____|_____|_____|
-            *   i2          i3          i6          i7
-            *   v_____ _____v_____ _____v_____ _____v_____ _____
-            *   |     |     |     |     |     |     |     |     |
-            *   |     |     |     |     |     |     |     |     |
-            *   | C4  |  C5 |  C6 |  C7 | C12 | C13 | C14 | C15 | ...
-            *   |     |     |     |     |     |     |     |     |
-            *   |_____|_____|_____|_____|_____|_____|_____|_____|
-            *   ^(128, 0)                                       ^(BlockDim, BlockK)
+            *                     VW Stride
+            *   BlockDim          |--1--|
+            *   |                 |-- BlockK Stride = 4 --|
+            *   |                 i0(0,0,0)   i2(0,0,2)   i4(0,1,0)   i6(0,1,2)         i14(0,3,2)
+            *   |            --   v_____ _____v_____ _____v_____ _____v_____ _____      v_____  _____
+            *   v            |    |     |     |     |     |     |     |     |     |     |     ||     |
+            *                |    |     |     |     |     |     |     |     |     |     |     ||     |
+            *       BlockDim 64   | C0  |  C1 |  C2 |  C3 |  C4 |  C5 | C6  | C7  | ... | C14 || C15 |
+            *        Stride  |    |     |     |     |     |     |     |     |     |     |     ||     |
+            *                --   |_____|_____|_____|_____|_____|_____|_____|_____|     |_____||_____|
+            *                     i16(1,0,0)  i18(1,0,2)  i20(1,1,0)  i22(1,1,2)        i30(1,3,2)
+            *                     v_____ _____v_____ _____v_____ _____v_____ _____      v_____  _____
+            *                     |     |     |     |     |     |     |     |     |     |     ||     |
+            *                     |     |     |     |     |     |     |     |     |     |     ||     |
+            *                     | C0  |  C1 |  C2 |  C3 | C4  | C5  | C6  | C7  | ... | C14 || C15 |
+            *                     |     |     |     |     |     |     |     |     |     |     ||     |
+            *                     |_____|_____|_____|_____|_____|_____|_____|_____|     |_____||_____|
+            *                     ^(128, 0)                                                           ^(BlockDim, BlockK)
             *   ...                                          ...
             *
             * Register file (for all VectorWidths = [1, MaxVectorWidth]):
             *
-            * Elements 0......64
-            *          ______
-            *  Reg0    |  C0  |
-            *  Reg1    |  C1  |
-            *  Reg2    |  C2  |
-            *  Reg3    |  C3  |
-            *  Reg4    |  C4  |
-            *  Reg5    |  C5  |
+            * Elements 0..............63
+            *           ______________
+            *  Reg0    |  C0 [63:0]    |
+            *  Reg1    |  C1 [63:0]    |
+            *  Reg2    |  C2 [63:0]    |
             *  ...       ...
-            *  Reg15   |  C15 |
+            *  Reg15   |  C15[63:0]    |
+            *  Reg16   |  C0 [127:64]  |
+            *  ...       ...
+            *  Reg31   |  C15 [127:64] |
             }*/
 
             template <uint32_t BlockDim,
@@ -505,16 +505,28 @@ namespace rocwmma
                         WaveSize = IOTraits::ThreadsPerIO,
 
                         // Number of BlockDim columns gathered per cycle of MaxVW
-                        MaxKPerIO = WaveSize * MaxVectorWidth / BlockDim,
+                        MaxKPerIO = WaveSize * MaxVectorWidth / std::min(BlockDim, WaveSize),
+
+                        BlockDimStride_X = WaveSize,
+                        BlockDimStride_Y = 0u,
+
+                        BlockKStride_X = 0u,
+                        BlockKStride_Y = MaxKPerIO,
+
+                        VWStride_X = 0u,
+                        VWStride_Y = VectorWidth,
 
                         // Flag for large BlockDim
                         LargeDim = BlockDim >= WaveSize,
 
-                        // Number of column segments (> 0 if LargeDim )
-                        BlockDimSegs = BlockDim / WaveSize,
+                        // Number of segments in BlockDim direction
+                        BlockDimSegs = std::max(BlockDim / BlockDimStride_X, 1u),
 
-                        // Number of vector width segments
-                        VWSegs = MaxVectorWidth / VectorWidth,
+                        // Number of segments in the BlockK direction
+                        BlockKSegs = BlockK / BlockKStride_Y,
+
+                        // Number of segments in the MaxVW direction
+                        VWSegs = MaxVectorWidth / VWStride_Y,
 
                         // Number of columns per wave (> 0 if !LargeDim)
                         WaveSegs = WaveSize / BlockDim,
@@ -536,7 +548,7 @@ namespace rocwmma
                 ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT baseOffset()
                 {
                     // TODO: Use constexpr if on C++17
-                    if(Traits::LargeDim)
+                    if constexpr(Traits::LargeDim)
                     {
                         return make_coord2d(threadIdx.x % Traits::WaveSize, 0u);
                     }
@@ -547,6 +559,24 @@ namespace rocwmma
                                                 % Traits::MaxKPerIO);
                     }
                 }
+
+                ROCWMMA_DEVICE constexpr static inline auto strideCounts()
+                {
+                    return std::make_tuple((uint32_t)Traits::BlockDimSegs, // BlockDim Segments
+                                           (uint32_t)Traits::BlockKSegs, // BlockK Segments
+                                           (uint32_t)Traits::VWSegs); // VW Segments
+                }
+
+                ROCWMMA_DEVICE constexpr static inline auto strides()
+                {
+                    return std::make_tuple(
+                        make_coord2d((uint32_t)Traits::BlockDimStride_X,
+                                     (uint32_t)Traits::BlockDimStride_Y),
+                        make_coord2d((uint32_t)Traits::BlockKStride_X,
+                                     (uint32_t)Traits::BlockKStride_Y),
+                        make_coord2d((uint32_t)Traits::VWStride_X, (uint32_t)Traits::VWStride_Y));
+                }
+
                 ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
                     incrementalOffset(uint32_t iteration)
                 {
@@ -736,6 +766,18 @@ namespace rocwmma
                     using MatrixCoordT = Coord2d;
                 };
 
+                ROCWMMA_DEVICE constexpr static inline auto strideCounts()
+                {
+                    return std::make_tuple(BlockDim * BlockK / Traits::MaxElementsPerIO,
+                                           (uint32_t)Traits::VWSegs);
+                }
+
+                ROCWMMA_DEVICE constexpr static inline auto strides()
+                {
+                    return std::make_tuple(make_coord2d(0, Traits::MaxKPerIO),
+                                           make_coord2d(VectorWidth, 0));
+                }
+
                 ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT baseOffset()
                 {
                     // TODO: Use constexpr if when C++ 17
@@ -859,6 +901,19 @@ namespace rocwmma
                 {
                     return swap(Traits::OrthoLayout::baseOffset());
                 }
+
+                ROCWMMA_DEVICE constexpr static inline auto strideCounts()
+                {
+                    return Traits::OrthoLayout::strideCounts();
+                }
+
+                ROCWMMA_DEVICE constexpr static inline auto strides()
+                {
+                    auto t = Traits::OrthoLayout::strides();
+                    return std::make_tuple(
+                        swap(std::get<0>(t)), swap(std::get<1>(t)), swap(std::get<2>(t)));
+                }
+
                 ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
                     incrementalOffset(uint32_t iteration)
                 {
@@ -892,6 +947,19 @@ namespace rocwmma
                 {
                     return swap(Traits::OrthoLayout::baseOffset());
                 }
+
+                ROCWMMA_DEVICE constexpr static inline auto strideCounts()
+                {
+                    return Traits::OrthoLayout::strideCounts();
+                }
+
+                ROCWMMA_DEVICE constexpr static inline auto strides()
+                {
+                    auto t = Traits::OrthoLayout::strides();
+                    return std::make_tuple(
+                        swap(std::get<0>(t)), swap(std::get<1>(t)), swap(std::get<2>(t)));
+                }
+
                 ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
                     incrementalOffset(uint32_t iteration)
                 {
