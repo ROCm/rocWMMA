@@ -155,23 +155,9 @@ namespace rocwmma
                 auto swappedA = Swizzle::Swap16::exec(*aIt);
                 auto swappedB = Swizzle::Swap16::exec(*bIt);
 
-                // // Make iterators to store the duplication result
-                // auto wmmaItA = makeVectorIterator<VecTraitsA::size() / 2u>(regsA_Wmma).begin();
-                // auto wmmaItB = makeVectorIterator<VecTraitsA::size() / 2u>(regsB_Wmma).begin();
-
-                // // Duplicate the upper/lower inputs
-                // // Lower has even cols of A in K direction (BlockBCast16<0>)
-                // // Upper has odd cols of A in K direction (BlockBCast16<1>)
-                // (*wmmaItA) = Permute::BlockBCast16<0>::exec(*aIt);
-                // wmmaItA++;
-                // (*wmmaItA) = Permute::BlockBCast16<1>::exec(*aIt);
-
-                // // Lower has even rows of B in K direction (BlockBCast16<0>)
-                // // Upper has odd rows of B in K direction (BlockBCast16<1>)
-                // (*wmmaItB) = Permute::BlockBCast16<0>::exec(*bIt);
-                // wmmaItB++;
-                // (*wmmaItB) = Permute::BlockBCast16<1>::exec(*bIt);
-
+                // Combine registers for mult/accum.
+                // Evens: non-swapped
+                // Odds: swapped
                 accum = WMMA::exec(concat(unpackLo(*aIt, swappedA), unpackHi(*aIt, swappedA)),
                                    concat(unpackLo(*bIt, swappedB), unpackHi(*bIt, swappedB)),
                                    accum);
