@@ -196,6 +196,33 @@ using namespace rocwmma;
 /// Parameter configuration
 ///
 
+/* Many parameters need to be modified in order to obtain maximum performance accross different
+*  architectures. This performance sample is setup for running on GFX11 architectures. 
+*  Modifying the following parameters will allow for maximum performance on GFX9 Based
+*  architectures.
+* _________________________________________________________________________________________
+*|         |           |           |           |          |          |          |          |
+*|         | ROCWMMA_M | ROCWMMA_N | ROCWMMA_K | BLOCKS_X | BLOCKS_Y | TBLOCK_X | TBLOCK_Y |
+*|_________|___________|___________|___________|__________|__________|__________|__________|
+*|         |           |           |           |          |          |          |          |
+*|  GFX_9  |    32     |    32     |    16     |    2     |    2     |   128    |    2     |
+*|_________|___________|___________|___________|__________|__________|__________|__________|
+*|         |           |           |           |          |          |          |          |
+*|  GFX_11 |    16     |    16     |    16     |    4     |    2     |    64    |    4     |
+*|_________|___________|___________|___________|__________|__________|__________|__________|
+*
+* __________________________________________
+*|         |                                |
+*|         |           WARP_SIZE            |
+*|_________|________________________________|
+*|         |                                |
+*|  GFX_9  | Constants::AMDGCN_WAVE_SIZE_64 |
+*|_________|________________________________|
+*|         |                                |
+*|  GFX_11 | Constants::AMDGCN_WAVE_SIZE_32 |
+*|_________|________________________________|
+*/
+
 // Types
 using InputT   = float16_t;
 using OutputT  = float16_t;
@@ -207,23 +234,23 @@ using DataLayoutC   = col_major;
 using DataLayoutLds = row_major;
 
 // Block sizes
-constexpr uint32_t ROCWMMA_M = 32u;
-constexpr uint32_t ROCWMMA_N = 32u;
+constexpr uint32_t ROCWMMA_M = 16u;
+constexpr uint32_t ROCWMMA_N = 16u;
 constexpr uint32_t ROCWMMA_K = 16u;
 
 // Warp size
-constexpr uint32_t WARP_SIZE = Constants::AMDGCN_WAVE_SIZE;
+constexpr uint32_t WARP_SIZE = Constants::AMDGCN_WAVE_SIZE_32;
 
 // Warp tile: computed by each warp
-constexpr uint32_t BLOCKS_X    = 2u;
+constexpr uint32_t BLOCKS_X    = 4u;
 constexpr uint32_t BLOCKS_Y    = 2u;
 constexpr uint32_t WARP_TILE_X = BLOCKS_X * ROCWMMA_M;
 constexpr uint32_t WARP_TILE_Y = BLOCKS_Y * ROCWMMA_N;
 
 // Macro Tile: computed by each thread block (workgroup)
 // Note: TBLOCK_X must be multiple of WARP_SIZE.
-constexpr uint32_t TBLOCK_X     = 128u;
-constexpr uint32_t TBLOCK_Y     = 2u;
+constexpr uint32_t TBLOCK_X     = 64u;
+constexpr uint32_t TBLOCK_Y     = 4u;
 constexpr uint32_t WARPS_X      = TBLOCK_X / WARP_SIZE;
 constexpr uint32_t WARPS_Y      = TBLOCK_Y;
 constexpr uint32_t MACRO_TILE_X = WARPS_X * WARP_TILE_X;
@@ -667,11 +694,18 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     auto macroTileSize
         = rocwmma::make_coord2d(TBLOCK_X / warpSize * WARP_TILE_X, TBLOCK_Y * WARP_TILE_Y);
 
+    // Device check for supported block sizes
+    if (isGfx11() && (ROCWMMA_M > 16 || ROCWMMA_N > 16))
+    {
+        std::cout << "Unsupported block size!\n";
+        return;
+    }
+
     // Bounds check
     if((m < get<0>(macroTileSize) || n < get<1>(macroTileSize) || k < ROCWMMA_K)
        || (m % ROCWMMA_M || n % ROCWMMA_N || k % ROCWMMA_K))
     {
-        std::cout << "Unsupported size!\n";
+        std::cout << "Unsupported matrix size!\n";
         return;
     }
 
@@ -684,12 +718,12 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     std::cout << "Initializing host data..." << std::endl;
 
     // Initialize input matrices
-    std::vector<float16_t> matrixA(m * k);
-    std::vector<float16_t> matrixB(k * n);
-    std::vector<float16_t> matrixC(m * n);
+    std::vector<InputT> matrixA(m * k);
+    std::vector<InputT> matrixB(k * n);
+    std::vector<ComputeT> matrixC(m * n);
 
     // Fill outputs with NaN to catch contamination
-    std::vector<float16_t> matrixD(m * n, std::numeric_limits<float16_t>::signaling_NaN());
+    std::vector<OutputT> matrixD(m * n, std::numeric_limits<OutputT>::signaling_NaN());
 
     fillRand(matrixA.data(), m, k);
     fillRand(matrixB.data(), k, n);
@@ -698,15 +732,15 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     std::cout << "Initializing device data..." << std::endl;
 
     // Allocate and copy device memory
-    float16_t* d_a;
-    float16_t* d_b;
-    float16_t* d_c;
-    float16_t* d_d;
+    InputT* d_a;
+    InputT* d_b;
+    OutputT* d_c;
+    OutputT* d_d;
 
-    const size_t bytesA = matrixA.size() * sizeof(float16_t);
-    const size_t bytesB = matrixB.size() * sizeof(float16_t);
-    const size_t bytesC = matrixC.size() * sizeof(float16_t);
-    const size_t bytesD = matrixD.size() * sizeof(float16_t);
+    const size_t bytesA = matrixA.size() * sizeof(InputT);
+    const size_t bytesB = matrixB.size() * sizeof(InputT);
+    const size_t bytesC = matrixC.size() * sizeof(OutputT);
+    const size_t bytesD = matrixD.size() * sizeof(OutputT);
 
     CHECK_HIP_ERROR(hipMalloc(&d_a, bytesA));
     CHECK_HIP_ERROR(hipMalloc(&d_b, bytesB));
@@ -728,7 +762,7 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
 
     // Uses 2 lds blocks for prefetch loop (A and B)
     int ldsusage
-        = 2u * sizeof(float16_t) * (get<0>(macroTileSize) + get<1>(macroTileSize)) * ROCWMMA_K;
+        = 2u * sizeof(InputT) * (get<0>(macroTileSize) + get<1>(macroTileSize)) * ROCWMMA_K;
 
     ////
     auto rocwmmaKernel = [&]() {
@@ -815,8 +849,8 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     CHECK_HIP_ERROR(hipMemcpy(matrixD.data(), d_d, bytesD, hipMemcpyDeviceToHost));
 
     // Setup and run reference computation
-    std::vector<float16_t> matrixD_ref(m * n, std::numeric_limits<float16_t>::signaling_NaN());
-    gemm_cpu_h<float16_t, float16_t, float32_t, col_major, row_major, col_major>(m,
+    std::vector<OutputT> matrixD_ref(m * n, std::numeric_limits<OutputT>::signaling_NaN());
+    gemm_cpu_h<InputT, OutputT, ComputeT, col_major, row_major, col_major>(m,
                                                                                  n,
                                                                                  k,
                                                                                  matrixA.data(),
