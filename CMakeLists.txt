@@ -2,7 +2,7 @@
  #
  # MIT License
  #
- # Copyright 2021-2023 Advanced Micro Devices, Inc.
+ # Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  #
  # Permission is hereby granted, free of charge, to any person obtaining a copy
  # of this software and associated documentation files (the "Software"), to deal
@@ -80,7 +80,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/library/include/rocwmma/internal/roc
                "${CMAKE_CURRENT_SOURCE_DIR}/library/include/rocwmma/rocwmma-version.hpp" )
 
 rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
-  TARGETS "gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx940:xnack-;gfx940:xnack+;gfx1100;gfx1101;gfx1102" )
+  TARGETS "gfx908:xnack-;gfx90a:xnack-;gfx90a:xnack+;gfx940;gfx941;gfx942;gfx1100;gfx1101;gfx1102" )
 
 # Variable AMDGPU_TARGET must be a cached variable and must be specified before calling find_package(hip)
 # This is because hip-config.cmake sets --offload-arch via AMDGPU_TARGET cached variable __after__ setting
@@ -101,7 +101,7 @@ find_path(ROCM_SMI_ROOT "include/rocm_smi/rocm_smi.h"
     PATHS "${ROCM_ROOT}"
     PATH_SUFFIXES "rocm_smi"
     )
-    
+
 find_library(ROCM_SMI_LIBRARY rocm_smi64
     PATHS "${ROCM_SMI_ROOT}/lib")
 

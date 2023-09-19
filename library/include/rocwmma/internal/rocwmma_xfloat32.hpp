@@ -309,7 +309,7 @@ namespace std
     {
         return rocwmma_xfloat32(cosf(float(a)));
     }
-    __device__ __host__ constexpr rocwmma_xfloat32 real(const rocwmma_xfloat32& a)
+    ROCWMMA_HOST_DEVICE constexpr rocwmma_xfloat32 real(const rocwmma_xfloat32& a)
     {
         return a;
     }

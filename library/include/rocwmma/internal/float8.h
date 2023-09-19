@@ -59,7 +59,7 @@ struct rocwmma_f8
     // default constructor
     ROCWMMA_HOST_DEVICE rocwmma_f8() = default;
 
-#if defined(__gfx940__)
+#if ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
     // device specific optimized F8 down-conversion code
     template <bool stochastic_rounding = false>
     static ROCWMMA_DEVICE uint8_t cast_to_f8_from_f32(float v, uint32_t rng = 0)
@@ -97,10 +97,10 @@ struct rocwmma_f8
         return i8data;
     }
 
-#endif // __gfx940__
+#endif // ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
 
     // constructor from float
-#if defined(__gfx940__)
+#if ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
 
     // NOTE: ON-DEVICE... always optimal bias
     explicit ROCWMMA_DEVICE rocwmma_f8(float                        v,
@@ -124,7 +124,7 @@ struct rocwmma_f8
 #else
     // both Host and DEVICE for non-gfx940 using s/w simulation
     explicit ROCWMMA_HOST_DEVICE
-#endif
+#endif // ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
         rocwmma_f8(float                        v,
                    rocwmma_hip_f8_rounding_mode rm  = rocwmma_hip_f8_rounding_mode::standard,
                    uint32_t                     rng = 0)
@@ -145,7 +145,7 @@ struct rocwmma_f8
                                             rocwmma_hip_f8_rounding_mode rm
                                             = rocwmma_hip_f8_rounding_mode::standard,
                                             uint32_t rng = 0)
-                                : rocwmma_f8((float)v, rm, rng)
+        : rocwmma_f8((float)v, rm, rng)
 
     {
     }
@@ -178,7 +178,7 @@ struct rocwmma_f8
     }
 
     // convert to float
-#if defined(__gfx940__)
+#if ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
     // upcast using device specific intrinsic
     explicit inline ROCWMMA_DEVICE operator float() const
     {
@@ -194,7 +194,7 @@ struct rocwmma_f8
     explicit inline ROCWMMA_HOST operator float() const
 #else // non gfx940
     explicit inline ROCWMMA_HOST_DEVICE operator float() const
-#endif
+#endif // ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
     {
         return rocwmma_hip_f8_impl::cast_from_f8<3, 4, float, true /*negative_zero_nan*/>(data);
     }
@@ -222,8 +222,8 @@ struct rocwmma_f8
     {
         return double(float(*this)); // convert to float, then convert to double
     }
-  
-    inline ROCWMMA_HOST_DEVICE rocwmma_f8 operator- ()
+
+    inline ROCWMMA_HOST_DEVICE rocwmma_f8 operator-()
     {
         this->data ^= 0x80;
         return *this;
@@ -260,7 +260,7 @@ struct rocwmma_bf8
     // default constructor
     ROCWMMA_HOST_DEVICE rocwmma_bf8() = default;
 
-#if defined(__gfx940__)
+#if ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
     // device specific optimized F8 down-conversion code
 
     template <bool stochastic_rounding = false>
@@ -299,10 +299,10 @@ struct rocwmma_bf8
         return i8data;
     }
 
-#endif // __gfx940__
+#endif // ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
 
     // constructor from float
-#if defined(__gfx940__)
+#if ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
 
     // NOTE: ON-DEVICE... always optimal bias
     explicit ROCWMMA_DEVICE rocwmma_bf8(float                        v,
@@ -326,7 +326,7 @@ struct rocwmma_bf8
 #else
     // both Host and DEVICE for non-gfx940 using s/w simulation
     explicit ROCWMMA_HOST_DEVICE
-#endif
+#endif // ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
         rocwmma_bf8(float                        v,
                     rocwmma_hip_f8_rounding_mode rm  = rocwmma_hip_f8_rounding_mode::standard,
                     uint32_t                     rng = 0)
@@ -379,7 +379,7 @@ struct rocwmma_bf8
     }
 
     // convert to float
-#if defined(__gfx940__)
+#if ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
     // upcast using device specific intrinsic
     explicit inline ROCWMMA_DEVICE operator float() const
     {
@@ -394,7 +394,7 @@ struct rocwmma_bf8
     explicit inline ROCWMMA_HOST operator float() const
 #else // non gfx940
     explicit inline ROCWMMA_HOST_DEVICE operator float() const
-#endif
+#endif // ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
     {
         return rocwmma_hip_f8_impl::cast_from_f8<2, 5, float, true /*negative_zero_nan*/>(data);
     }
@@ -423,7 +423,7 @@ struct rocwmma_bf8
         return double(float(*this)); // convert to float, then convert to double
     }
 
-    inline ROCWMMA_HOST_DEVICE rocwmma_bf8 operator- ()
+    inline ROCWMMA_HOST_DEVICE rocwmma_bf8 operator-()
     {
         this->data ^= 0x80;
         return *this;
@@ -772,7 +772,7 @@ template <
     = 0>
 inline ROCWMMA_HOST_DEVICE T explicit_downcast(Ta a, uint32_t rng)
 {
-#if defined(__gfx940__)
+#if ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
     // NOTE: we are directly calling cast_to_f8_from_f32 instead of constructor to optimize away one runtime branch
     T val;
     if(std::is_same<T, rocwmma_f8>::value)
@@ -789,7 +789,7 @@ inline ROCWMMA_HOST_DEVICE T explicit_downcast(Ta a, uint32_t rng)
              stochastic_rounding ? T::rocwmma_hip_f8_rounding_mode::stochastic
                                  : T::rocwmma_hip_f8_rounding_mode::standard,
              rng);
-#endif // __gfx940__
+#endif // ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
 }
 
 // NOTE NOTE: The above code is good if we don't consider HIP-GEMM code and only consider the quantization
