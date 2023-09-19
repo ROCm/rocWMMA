@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -53,6 +53,18 @@ namespace rocwmma
         {
             mGcnArch = hipGcnArch_t::GFX90A;
         }
+        else if(deviceName.find("gfx940") != std::string::npos)
+        {
+            mGcnArch = hipGcnArch_t::GFX940;
+        }
+        else if(deviceName.find("gfx941") != std::string::npos)
+        {
+            mGcnArch = hipGcnArch_t::GFX941;
+        }
+        else if(deviceName.find("gfx942") != std::string::npos)
+        {
+            mGcnArch = hipGcnArch_t::GFX942;
+        }
         else if(deviceName.find("gfx1100") != std::string::npos)
         {
             mGcnArch = hipGcnArch_t::GFX1100;
@@ -102,7 +114,7 @@ namespace rocwmma
                     {
                         break;
                     }
-                    else if (hipPCIID == rsmiPCIID)
+                    else if(hipPCIID == rsmiPCIID)
                     {
                         smiDeviceIndex = smiIndex;
                         break;
@@ -112,7 +124,9 @@ namespace rocwmma
                 if(!smiErrorFlag && (smiDeviceIndex != std::numeric_limits<uint32_t>::max()))
                 {
                     rsmi_frequencies_t freq;
-                    CHECK_RSMI_ERROR(rsmi_dev_gpu_clk_freq_get(smiDeviceIndex, RSMI_CLK_TYPE_SYS, &freq), smiErrorFlag);
+                    CHECK_RSMI_ERROR(
+                        rsmi_dev_gpu_clk_freq_get(smiDeviceIndex, RSMI_CLK_TYPE_SYS, &freq),
+                        smiErrorFlag);
                     if(!smiErrorFlag)
                     {
                         mCurFreqMhz = freq.frequency[freq.current] / 1000000;
