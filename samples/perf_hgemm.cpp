@@ -701,13 +701,13 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
         return;
     }
 
-    if(isGfx11() && WAVE_SIZE != Constants::AMDGCN_WAVE_SIZE_32)
+    if(isGfx11() && WARP_SIZE != Constants::AMDGCN_WAVE_SIZE_32)
     {
         std::cout << "Unsupported wave size!\n";
         return;
     }
 
-    if(isGfx9() && WAVE_SIZE != Constants::AMDGCN_WAVE_SIZE_64)
+    if(isGfx9() && WARP_SIZE != Constants::AMDGCN_WAVE_SIZE_64)
     {
         std::cout << "Unsupported wave size!\n";
         return;
