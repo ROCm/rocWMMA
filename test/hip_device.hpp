@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -49,6 +49,8 @@ namespace rocwmma
             GFX908           = Constants::AMDGCN_ARCH_ID_GFX908,
             GFX90A           = Constants::AMDGCN_ARCH_ID_GFX90A,
             GFX940           = Constants::AMDGCN_ARCH_ID_GFX940,
+            GFX941           = Constants::AMDGCN_ARCH_ID_GFX941,
+            GFX942           = Constants::AMDGCN_ARCH_ID_GFX942,
             GFX1100          = Constants::AMDGCN_ARCH_ID_GFX1100,
             GFX1101          = Constants::AMDGCN_ARCH_ID_GFX1101,
             GFX1102          = Constants::AMDGCN_ARCH_ID_GFX1102,

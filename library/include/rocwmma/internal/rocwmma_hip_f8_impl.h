@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,11 +30,11 @@
 namespace rocwmma_hip_f8_impl
 {
 
-    __host__ inline int clz(uint32_t x)
+    ROCWMMA_HOST inline int clz(uint32_t x)
     {
         return __builtin_clz(x);
     }
-    __device__ inline int clz(uint32_t x)
+    ROCWMMA_DEVICE inline int clz(uint32_t x)
     {
         return __clz(x);
     }
@@ -130,7 +130,7 @@ namespace rocwmma_hip_f8_impl
         int act_exponent, f8_exponent, exponent_diff;
 
         if(exponent == 0)
-        { 
+        {
             // fp32/fp16 is in denormal.
             /* fp32 denormal is below 2^-127 so it is usually not a concern here, we mostly concern fp16 here.
    In this case, f8 is usually in denormal. But there could be exceptions.
@@ -143,7 +143,7 @@ namespace rocwmma_hip_f8_impl
                             - act_exponent; // actual exponent is exponent-bias+1 as it is denormal
         }
         else
-        { 
+        {
             // fp32/fp16 is normal with implicit 1
             act_exponent = exponent - bias;
             if(act_exponent <= f8_denormal_act_exponent)
@@ -231,7 +231,7 @@ namespace rocwmma_hip_f8_impl
         {
             return negative_zero_nan ? 0 : (sign << 7);
         }
-        
+
         mantissa &= (1 << wm) - 1;
         return (sign << 7) | (f8_exponent << wm) | mantissa;
     }
