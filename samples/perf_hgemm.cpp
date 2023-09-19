@@ -695,7 +695,13 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
         = rocwmma::make_coord2d(TBLOCK_X / warpSize * WARP_TILE_X, TBLOCK_Y * WARP_TILE_Y);
 
     // Device check for supported block and wave sizes
-    if(isGfx11() && (ROCWMMA_M > 16 || ROCWMMA_N > 16))
+    if(isGfx11() && (ROCWMMA_M != 16 || ROCWMMA_N != 16))
+    {
+        std::cout << "Unsupported block size!\n";
+        return;
+    }
+
+    if(isGfx9() && (ROCWMMA_M != ROCWMMA_N) || (ROCWMMA_M != 16 && ROCWMMA_M != 32))
     {
         std::cout << "Unsupported block size!\n";
         return;
@@ -862,19 +868,19 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
 
     // Setup and run reference computation
     std::vector<OutputT> matrixD_ref(m * n, std::numeric_limits<OutputT>::signaling_NaN());
-    gemm_cpu_h<InputT, OutputT, ComputeT, col_major, row_major, col_major>(m,
-                                                                           n,
-                                                                           k,
-                                                                           matrixA.data(),
-                                                                           matrixB.data(),
-                                                                           matrixC.data(),
-                                                                           matrixD_ref.data(),
-                                                                           lda,
-                                                                           ldb,
-                                                                           ldc,
-                                                                           ldd,
-                                                                           alpha,
-                                                                           beta);
+    gemm_cpu_h<InputT, OutputT, ComputeT, DataLayoutA, DataLayoutB, DataLayoutC>(m,
+                                                                                 n,
+                                                                                 k,
+                                                                                 matrixA.data(),
+                                                                                 matrixB.data(),
+                                                                                 matrixC.data(),
+                                                                                 matrixD_ref.data(),
+                                                                                 lda,
+                                                                                 ldb,
+                                                                                 ldc,
+                                                                                 ldd,
+                                                                                 alpha,
+                                                                                 beta);
 
     auto res = compareEqual(matrixD.data(), matrixD_ref.data(), m * n);
 
