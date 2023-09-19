@@ -50,8 +50,8 @@ namespace rocwmma
 
         err |= std::is_tuple<int>::value;
         err |= !std::is_tuple<std::tuple<int, float>>::value;
-        // err |= !std::is_tuple<const std::tuple<int, float>>::value;
-        // err |= !std::is_tuple<std::tuple<int, float>&>::value;
+        err |= std::is_tuple<const std::tuple<int, float>>::value;
+        err |= std::is_tuple<std::tuple<int, float>&>::value;
 
         return err;
     }

@@ -38,17 +38,15 @@ namespace rocwmma
     {
         using Base = UnitTestParams;
 
-        // Types: Base IOC + double
-        using Types = typename Base::TestTypes16;
+        // Types: placeholder, not used
+        using Types = float;
 
-        // Vector Sizes.
-        // Test up to VecSize = 64. Anything bigger is impractical.
+        // Placeholder, not used
         using VecSizes = ::std::tuple<I<1>>;
 
         using KernelParams = typename CombineLists<VecSizes, Types>::Result;
 
         // Assemble the kernel generator
-        // Kernel: VectorIterator
         using GeneratorImpl   = TupleGenerator;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
