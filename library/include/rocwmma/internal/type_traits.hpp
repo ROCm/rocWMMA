@@ -27,7 +27,18 @@
 #ifndef ROCWMMA_TYPE_TRAITS_HPP
 #define ROCWMMA_TYPE_TRAITS_HPP
 
+#if !defined(__HIPCC_RTC__)
+
 #include <cfloat>
+
+#else
+
+#define FLT_EPSILON __FLT_EPSILON__
+#define FLT_MAX __FLT_MAX__
+#define FLT_MIN __FLT_MIN__
+#define HUGE_VALF (__builtin_huge_valf ())
+
+#endif // !defined(__HIPCC_RTC__)
 
 #include "types.hpp"
 

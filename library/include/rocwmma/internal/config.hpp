@@ -159,11 +159,7 @@ namespace rocwmma
 ///
 #define ROCWMMA_DEVICE __device__
 
-#if !defined(__HIPCC_RTC__)
 #define ROCWMMA_HOST __host__
-#else
-#define ROCWMMA_HOST
-#endif
 
 #define ROCWMMA_HOST_DEVICE ROCWMMA_HOST ROCWMMA_DEVICE
 
