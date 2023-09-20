@@ -57,9 +57,7 @@ namespace rocwmma
         static inline std::vector<ThreadBlockT> threadBlocks()
         {
             auto warpSize = HipDevice::instance()->warpSize();
-            // clang-format off
-            return { {warpSize, 1} };
-            // clang-format on
+            return {{warpSize, 1}};
         }
 
         static inline std::vector<ProblemSizeT> problemSizes()

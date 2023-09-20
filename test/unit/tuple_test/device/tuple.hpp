@@ -37,13 +37,6 @@ static constexpr uint32_t SUCCESS_VALUE = 0u;
 
 namespace rocwmma
 {
-    template <typename DataT, uint32_t VecSize>
-    __device__ static inline DataT get(VecT<DataT, VecSize> const& v, uint32_t idx)
-    {
-        return v.data[idx];
-    }
-
-    template <typename DataT, uint32_t VecSize>
     __device__ static inline bool isTupleTest()
     {
         bool err = false;
@@ -56,7 +49,6 @@ namespace rocwmma
         return err;
     }
 
-    template <typename DataT, uint32_t VecSize>
     __device__ static inline bool operatorMultTest()
     {
         bool err = false;
@@ -64,22 +56,19 @@ namespace rocwmma
         auto srcTuple          = std::make_tuple(1, 2.0, 3u);
         auto expectHeadElement = std::make_tuple(2);
         auto resultHeadElement = std::operator_mult_impl(2, srcTuple, std::index_sequence<0>{});
-
         err |= expectHeadElement != resultHeadElement;
 
         auto expectTailElement = std::make_tuple(4.0, 6u);
         auto resultTailElement = std::operator_mult_impl(2, srcTuple, std::index_sequence<1, 2>{});
-
         err |= expectTailElement != resultTailElement;
 
         auto expectAllElement = std::make_tuple(2, 4.0, 6u);
         auto resultAllElement = 2 * srcTuple;
-
         err |= expectAllElement != resultAllElement;
+
         return err;
     }
 
-    template <typename DataT, uint32_t VecSize>
     __device__ static inline bool operatorAddTest()
     {
         bool err = false;
@@ -117,7 +106,6 @@ namespace rocwmma
         return err;
     }
 
-    template <typename DataT, uint32_t VecSize>
     __device__ static inline bool operatorSubTest()
     {
         bool err = false;
@@ -153,7 +141,6 @@ namespace rocwmma
         return err;
     }
 
-    template <typename DataT, uint32_t VecSize>
     __device__ static inline bool copyTest()
     {
         bool err = false;
@@ -167,7 +154,6 @@ namespace rocwmma
         return err;
     }
 
-    template <typename DataT, uint32_t VecSize>
     __device__ static inline bool popRightTest()
     {
         bool err = false;
@@ -181,7 +167,6 @@ namespace rocwmma
         return err;
     }
 
-    template <typename DataT, uint32_t VecSize>
     __device__ static inline bool popLeftTest()
     {
         bool err = false;
@@ -195,7 +180,6 @@ namespace rocwmma
         return err;
     }
 
-    template <typename DataT, uint32_t VecSize>
     __device__ static inline bool getFirstTest()
     {
         bool err = false;
@@ -209,7 +193,6 @@ namespace rocwmma
         return err;
     }
 
-    template <typename DataT, uint32_t VecSize>
     __device__ static inline bool getLastTest()
     {
         bool err = false;
@@ -223,7 +206,6 @@ namespace rocwmma
         return err;
     }
 
-    template <typename DataT, uint32_t VecSize>
     __device__ static inline bool reverseTest()
     {
         bool err = false;
@@ -241,7 +223,6 @@ namespace rocwmma
      * More Details about flatten and inflate
      * https://coderwall.com/p/fzni3g/bidirectional-translation-between-1d-and-3d-arrays
      */
-    template <typename DataT, uint32_t VecSize>
     __device__ static inline bool flattenCoordRightTest()
     {
         bool err = false;
@@ -262,7 +243,26 @@ namespace rocwmma
         return err;
     }
 
-    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool flattenCoordRightWith1DimTest()
+    {
+        bool err = false;
+
+        auto srcCoord = std::make_tuple(2);
+        auto srcDims  = std::make_tuple(3);
+
+        /**
+         * | c      | 2 |
+         * | d      | 3 |
+         * | mul    | 1 |
+         * | result | 2 |
+         */
+        auto expect = 2;
+        auto result = rocwmma::flatten_coord_right(srcCoord, srcDims);
+        err |= expect != result;
+
+        return err;
+    }
+
     __device__ static inline bool flattenCoordLeftTest()
     {
         bool err = false;
@@ -283,7 +283,26 @@ namespace rocwmma
         return err;
     }
 
-    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool flattenCoordLeftWith1DimTest()
+    {
+        bool err = false;
+
+        auto srcCoord = std::make_tuple(7);
+        auto srcDims  = std::make_tuple(11);
+
+        /**
+         * | c      | 7  |
+         * | d      | 11 |
+         * | mul    | 1  |
+         * | result | 7  |
+         */
+        auto expect = 7;
+        auto result = rocwmma::flatten_coord_left(srcCoord, srcDims);
+        err |= expect != result;
+
+        return err;
+    }
+
     __device__ static inline bool inflateCoordRightTest()
     {
         bool err = false;
@@ -304,7 +323,26 @@ namespace rocwmma
         return err;
     }
 
-    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool inflateCoordRightWith1DimTest()
+    {
+        bool err = false;
+
+        auto srcFlatCoord = 2;
+        auto srcDims      = std::make_tuple(3);
+
+        /**
+         * | c      | 2   |
+         * | d      | 3   |
+         * | div    | 1   |
+         * | result | 2   |
+         */
+        auto expect = std::make_tuple(2);
+        auto result = rocwmma::inflate_coord_right(srcFlatCoord, srcDims);
+        err |= expect != result;
+
+        return err;
+    }
+
     __device__ static inline bool inflateCoordLeftTest()
     {
         bool err = false;
@@ -326,7 +364,27 @@ namespace rocwmma
         return err;
     }
 
-    template <typename DataT, uint32_t VecSize>
+    __device__ static inline bool inflateCoordLeftWith1DimTest()
+    {
+        bool err = false;
+
+        auto srcFlatCoord = 7;
+        auto srcDims      = std::make_tuple(11);
+
+        /**
+         * | c               | 7    |
+         * | d               | 11   |
+         * | div             | 1    |
+         * | result          | 7    |
+         * | reversed result | 2    |
+         */
+        auto expect = std::make_tuple(7);
+        auto result = rocwmma::inflate_coord_left(srcFlatCoord, srcDims);
+        err |= expect != result;
+
+        return err;
+    }
+
     __device__ static inline bool toMatrixSpaceTest()
     {
         bool err = false;
@@ -361,21 +419,25 @@ namespace rocwmma
 
         bool err = false;
 
-        err = err ? err : isTupleTest<DataT, VecSize>();
-        err = err ? err : operatorMultTest<DataT, VecSize>();
-        err = err ? err : operatorAddTest<DataT, VecSize>();
-        err = err ? err : operatorSubTest<DataT, VecSize>();
-        err = err ? err : copyTest<DataT, VecSize>();
-        err = err ? err : popLeftTest<DataT, VecSize>();
-        err = err ? err : popRightTest<DataT, VecSize>();
-        err = err ? err : getFirstTest<DataT, VecSize>();
-        err = err ? err : getLastTest<DataT, VecSize>();
-        err = err ? err : reverseTest<DataT, VecSize>();
-        err = err ? err : flattenCoordRightTest<DataT, VecSize>();
-        err = err ? err : flattenCoordLeftTest<DataT, VecSize>();
-        err = err ? err : inflateCoordRightTest<DataT, VecSize>();
-        err = err ? err : inflateCoordLeftTest<DataT, VecSize>();
-        err = err ? err : toMatrixSpaceTest<DataT, VecSize>();
+        err = err ? err : isTupleTest();
+        err = err ? err : operatorMultTest();
+        err = err ? err : operatorAddTest();
+        err = err ? err : operatorSubTest();
+        err = err ? err : copyTest();
+        err = err ? err : popLeftTest();
+        err = err ? err : popRightTest();
+        err = err ? err : getFirstTest();
+        err = err ? err : getLastTest();
+        err = err ? err : reverseTest();
+        err = err ? err : flattenCoordRightTest();
+        err = err ? err : flattenCoordRightWith1DimTest();
+        err = err ? err : flattenCoordLeftTest();
+        err = err ? err : flattenCoordLeftWith1DimTest();
+        err = err ? err : inflateCoordRightTest();
+        err = err ? err : inflateCoordRightWith1DimTest();
+        err = err ? err : inflateCoordLeftTest();
+        err = err ? err : inflateCoordLeftWith1DimTest();
+        err = err ? err : toMatrixSpaceTest();
 
         // Reduce error count
         atomicAdd(&result, (int32_t)err);
