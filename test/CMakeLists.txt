@@ -46,6 +46,9 @@ if(NOT googletest_POPULATED)
   # Save the shared libs setting, then force to static libs
   set(BUILD_SHARED_LIBS_OLD ${BUILD_SHARED_LIBS})
   set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "Build SHARED libraries" FORCE)
+
+  # Turn off gtest installation
+  set(INSTALL_GTEST OFF)
   
   # Add gtest targets as static libs
   add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
