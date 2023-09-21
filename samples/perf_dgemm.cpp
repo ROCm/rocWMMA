@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -667,11 +667,30 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha,
     auto macroTileSize
         = rocwmma::make_coord2d(TBLOCK_X / warpSize * WARP_TILE_X, TBLOCK_Y * WARP_TILE_Y);
 
+    // Device check for supported block and wave sizes
+    if(isGfx11())
+    {
+        std::cout << "Unsupported architecture!\n";
+        return;
+    }
+
+    if(isGfx9() && (ROCWMMA_M != 16 || ROCWMMA_N != 16))
+    {
+        std::cout << "Unsupported block size!\n";
+        return;
+    }
+
+    if(isGfx9() && WARP_SIZE != Constants::AMDGCN_WAVE_SIZE_64)
+    {
+        std::cout << "Unsupported wave size!\n";
+        return;
+    }
+
     // Bounds check
     if((m < get<0>(macroTileSize) || n < get<1>(macroTileSize) || k < ROCWMMA_K)
        || (m % ROCWMMA_M || n % ROCWMMA_N || k % ROCWMMA_K))
     {
-        std::cout << "Unsupported size!\n";
+        std::cout << "Unsupported matrix size!\n";
         return;
     }
 
