@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -59,6 +59,39 @@
     }
 #endif
 
+// HIP Host functions to determine the gfx architecture
+bool isGfx9()
+{
+    hipDevice_t     mHandle;
+    hipDeviceProp_t mProps;
+
+    CHECK_HIP_ERROR(hipGetDevice(&mHandle));
+    CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
+
+    std::string deviceName(mProps.gcnArchName);
+
+    return ((deviceName.find("gfx908") != std::string::npos)
+            || (deviceName.find("gfx90a") != std::string::npos)
+            || (deviceName.find("gfx940") != std::string::npos)
+            || (deviceName.find("gfx941") != std::string::npos)
+            || (deviceName.find("gfx942") != std::string::npos));
+}
+
+bool isGfx11()
+{
+    hipDevice_t     mHandle;
+    hipDeviceProp_t mProps;
+
+    CHECK_HIP_ERROR(hipGetDevice(&mHandle));
+    CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
+
+    std::string deviceName(mProps.gcnArchName);
+
+    return ((deviceName.find("gfx1100") != std::string::npos)
+            || (deviceName.find("gfx1101") != std::string::npos)
+            || (deviceName.find("gfx1102") != std::string::npos));
+}
+
 // HIP Host function to find if the device supports f64
 bool isF64Supported()
 {
@@ -70,21 +103,15 @@ bool isF64Supported()
 
     std::string deviceName(mProps.gcnArchName);
 
-    return (deviceName.find("gfx90a") != std::string::npos);
+    return ((deviceName.find("gfx90a") != std::string::npos)
+            || (deviceName.find("gfx940") != std::string::npos)
+            || (deviceName.find("gfx941") != std::string::npos)
+            || (deviceName.find("gfx942") != std::string::npos));
 }
 
 bool isF32Supported()
 {
-    hipDevice_t     mHandle;
-    hipDeviceProp_t mProps;
-
-    CHECK_HIP_ERROR(hipGetDevice(&mHandle));
-    CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
-
-    std::string deviceName(mProps.gcnArchName);
-
-    return (deviceName.find("gfx908") != std::string::npos)
-           || (deviceName.find("gfx90a") != std::string::npos);
+    return isGfx9();
 }
 
 inline double calculateGFlops(uint32_t m, uint32_t n, uint32_t k)
