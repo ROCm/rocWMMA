@@ -201,37 +201,8 @@ namespace rocwmma
         auto& deviceInfo = DeviceInfo::instance();
         auto  deviceArch = deviceInfo->getGcnArch();
 
-        // Arch
-        auto isGfx908 = deviceArch == DeviceInfo::GFX908;
-        auto isGfx90a = deviceArch == DeviceInfo::GFX90A;
-        auto isGfx11  = (deviceArch == DeviceInfo::GFX1100) || (deviceArch == DeviceInfo::GFX1101)
-                       || (deviceArch == DeviceInfo::GFX1102);
-
-        // Datatypes
-        auto isF64Input = std::is_same<InputT, float64_t>::value;
-        auto isF16Input
-            = (std::is_same<InputT, float16_t>::value) || (std::is_same<InputT, hfloat16_t>::value);
-        auto isBF16Input = (std::is_same<InputT, bfloat16_t>::value);
-        auto isI8Input   = (std::is_same<InputT, int8_t>::value);
-        auto isF8Input
-            = (std::is_same<InputT, float8_t>::value) || (std::is_same<InputT, bfloat8_t>::value);
-
-        // Block size
-        auto is16x16 = (BlockM == 16 && BlockN == 16);
-
         // No unsupported devices
-        bool unsupportedDeviceCheck = !(deviceArch == DeviceInfo::UNSUPPORTED_ARCH);
-
-        // gfx908 doesn't support f64
-        bool gfx908F64F8Check = !(isGfx908 && (isF64Input || isF8Input));
-
-        // gfx90a doesn't support f8
-        bool gfx90aF8Check = !(isGfx90a && isF8Input);
-
-        // gfx11 only supports f16, i8 and bf16 inputs with block size 16
-        bool gfx11Check = !(isGfx11 && ((!isF16Input && !isBF16Input && !isI8Input) || !is16x16));
-
-        return unsupportedDeviceCheck && gfx908F64F8Check && gfx90aF8Check && gfx11Check;
+        return !(deviceArch == DeviceInfo::UNSUPPORTED_ARCH);
     }
 
     template <uint32_t BlockM,
@@ -355,6 +326,152 @@ namespace rocwmma
 
         mElapsedTimeMs = mTotalGFlops = mMeasuredTFlopsPerSec = 0.0;
         mEfficiency = mReferenceEfficiency = -1;
+    }
+
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename InputT,
+              typename OutputT,
+              typename ComputeT,
+              typename LayoutA,
+              typename LayoutB,
+              typename LayoutC,
+              typename LayoutD>
+    template <template <uint32_t, uint32_t, uint32_t, uint32_t> class TestGuard>
+    bool GemmKernelBase<BlockM,
+                        BlockN,
+                        BlockK,
+                        InputT,
+                        OutputT,
+                        ComputeT,
+                        LayoutA,
+                        LayoutB,
+                        LayoutC,
+                        LayoutD>::dispatchGuard()
+    {
+
+        // The test guard will be dispatched against 4 runtime params:
+        // - TBlockX [32, 64, 128, 256]
+        // - TBlockY [1, 2, 4]
+        // - Wave Size [32, 64]
+        // - Arch [gfx908, gfx90a, gfx940, gfx941, gfx942, gfx1100, gfx1101, gfx1102]
+        auto dispatchGuardFunc = [this]() {
+            bool dispatchResult = false;
+
+            auto waveSize   = DeviceInfo::instance()->warpSize();
+            auto deviceArch = DeviceInfo::instance()->getGcnArch();
+
+            // #define CASE_IMPL_ASSIGN4(TBLOCK_X, TBLOCK_Y, WAVE_SIZE, ARCH_ID) \
+//     dispatchResult = TestGuard<TBLOCK_X, TBLOCK_Y, WAVE_SIZE, ARCH_ID>::enable();
+
+            // #define SWITCH_BODY_TBLOCK_X(TBLOCK_Y, WAVE_SIZE, ARCH_ID) \
+//     ROCWMMA_SWITCH_BODY4_ARG4(                             \
+//         mTBlockX, CASE_IMPL_ASSIGN4, 32u, 64u, 128u, 256u, TBLOCK_Y, WAVE_SIZE, ARCH_ID)
+
+            // #define SWITCH_BODY_TBLOCK_Y(WAVE_SIZE, ARCH_ID) \
+//     ROCWMMA_SWITCH_BODY3_ARG3(mTBlockY, SWITCH_BODY_TBLOCK_X, 1u, 2u, 4u, WAVE_SIZE, ARCH_ID)
+
+            // #define SWITCH_BODY_WAVE_SIZE(ARCH_ID) \
+//     ROCWMMA_SWITCH_BODY2_ARG2(         \
+//         waveSize, SWITCH_BODY_TBLOCK_Y, HipDevice::Wave32, HipDevice::Wave64, ARCH_ID)
+
+            // #define DISPATCH_GUARD_BODY                          \
+//     ROCWMMA_SWITCH_BODY8_ARG1(deviceArch,            \
+//                               SWITCH_BODY_WAVE_SIZE, \
+//                               HipDevice::GFX908,     \
+//                               HipDevice::GFX90A,     \
+//                               HipDevice::GFX940,     \
+//                               HipDevice::GFX941,     \
+//                               HipDevice::GFX942,     \
+//                               HipDevice::GFX1100,    \
+//                               HipDevice::GFX1101,    \
+//                               HipDevice::GFX1102)
+
+            //                 DISPATCH_GUARD_BODY
+
+            // #undef CASE_IMPL_ASSIGN4
+            // #undef SWITCH_BODY_TBLOCK_X
+            // #undef SWITCH_BODY_TBLOCK_Y
+            // #undef SWITCH_BODY_WAVE_SIZE
+            // #undef DISPATCH_GUARD_BODY
+
+            return dispatchResult;
+        };
+
+        // Finally, execute and return the dispatch guard result
+        return dispatchGuardFunc();
+    }
+
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename InputT,
+              typename OutputT,
+              typename ComputeT,
+              typename LayoutA,
+              typename LayoutB,
+              typename LayoutC,
+              typename LayoutD>
+    template <template <uint32_t, uint32_t, uint32_t, uint32_t> class KernelClass>
+    auto GemmKernelBase<BlockM,
+                        BlockN,
+                        BlockK,
+                        InputT,
+                        OutputT,
+                        ComputeT,
+                        LayoutA,
+                        LayoutB,
+                        LayoutC,
+                        LayoutD>::dispatchKernelFunc() -> KernelFunc
+    {
+        // The kernel function will be dispatched against 4 runtime params:
+        // - TBlockX [32, 64, 128, 256]
+        // - TBlockY [1, 2, 4]
+        // - Wave Size [32, 64]
+        // - Arch [gfx908, gfx90a, gfx940, gfx941, gfx942, gfx1100, gfx1101, gfx1102]
+        auto dispatchKernel = [this]() {
+            auto waveSize   = DeviceInfo::instance()->warpSize();
+            auto deviceArch = DeviceInfo::instance()->getGcnArch();
+
+            // Runtime dispatcher to assign compile time TBlock params.
+            auto result = typename decltype(*this)::KernelFunc(nullptr);
+
+            // #define CASE_IMPL_ASSIGN4(TBLOCK_X, TBLOCK_Y, WAVE_SIZE, ARCH_ID)  \
+//         result = KernelClass<TBLOCK_X, TBLOCK_Y, WAVE_SIZE, ARCH_ID>::generate();
+
+            // #define SWITCH_BODY_TBLOCK_X(TBLOCK_Y, WAVE_SIZE, ARCH_ID) \
+// ROCWMMA_SWITCH_BODY4_ARG4(mTBlockX, CASE_IMPL_ASSIGN4, 32u, 64u, 128u, 256u, TBLOCK_Y, WAVE_SIZE, ARCH_ID)
+
+            // #define SWITCH_BODY_TBLOCK_Y(WAVE_SIZE, ARCH_ID) \
+// ROCWMMA_SWITCH_BODY3_ARG3(mTBlockY, SWITCH_BODY_TBLOCK_X, 1u, 2u, 4u, WAVE_SIZE, ARCH_ID)
+
+            // #define SWITCH_BODY_WAVE_SIZE(ARCH_ID) \
+// ROCWMMA_SWITCH_BODY2_ARG2(waveSize, SWITCH_BODY_TBLOCK_Y, HipDevice::Wave32, HipDevice::Wave64, ARCH_ID)
+
+            // #define DISPATCH_KERNEL_FUNC_BODY \
+// ROCWMMA_SWITCH_BODY8_ARG1(deviceArch, SWITCH_BODY_WAVE_SIZE, \
+//                               HipDevice::GFX908,     \
+//                               HipDevice::GFX90A,     \
+//                               HipDevice::GFX940,     \
+//                               HipDevice::GFX941,     \
+//                               HipDevice::GFX942,     \
+//                               HipDevice::GFX1100,    \
+//                               HipDevice::GFX1101,    \
+//                               HipDevice::GFX1102)
+
+            //             DISPATCH_KERNEL_FUNC_BODY
+
+            // #undef CASE_IMPL_ASSIGN4
+            // #undef SWITCH_BODY_TBLOCK_X
+            // #undef SWITCH_BODY_TBLOCK_Y
+            // #undef SWITCH_BODY_WAVE_SIZE
+            // #undef DISPATCH_KERNEL_FUNC_BODY
+
+            return result;
+        };
+
+        return dispatchKernel();
     }
 
     template <uint32_t BlockM,

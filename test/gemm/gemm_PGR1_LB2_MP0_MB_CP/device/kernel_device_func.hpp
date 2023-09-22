@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -79,6 +79,7 @@ namespace rocwmma
                                                                    ComputeT       alpha,
                                                                    ComputeT       beta)
     {
+
         if constexpr(gemm_PGR1_LB2_MP0_MB_CP_guard<BlockM,
                                                    BlockN,
                                                    BlockK,

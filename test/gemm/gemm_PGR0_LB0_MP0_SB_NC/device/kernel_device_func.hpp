@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -60,7 +60,11 @@ namespace rocwmma
               typename LayoutA,
               typename LayoutB,
               typename LayoutC,
-              typename LayoutD>
+              typename LayoutD,
+              uint32_t TBlockX,
+              uint32_t TBlockY,
+              uint32_t WaveSize,
+              uint32_t ArchId>
     __global__ void __launch_bounds__(256) gemm_PGR0_LB0_MP0_SB_NC(uint32_t       m,
                                                                    uint32_t       n,
                                                                    uint32_t       k,
@@ -81,8 +85,10 @@ namespace rocwmma
                                                    InputT,
                                                    OutputT,
                                                    ComputeT,
-                                                   Constants::AMDGCN_WAVE_SIZE,
-                                                   Constants::AMDGCN_CURRENT_ARCH_ID>::enable())
+                                                   TBlockX,
+                                                   TBlockY,
+                                                   WaveSize,
+                                                   ArchId>::enable())
         {
             using FragA   = fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA>;
             using FragB   = fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB>;
