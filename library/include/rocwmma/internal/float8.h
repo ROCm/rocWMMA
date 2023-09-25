@@ -27,7 +27,20 @@
 #ifndef ROCWMMA_FLOAT8_H
 #define ROCWMMA_FLOAT8_H
 
-#include "types.hpp"
+#include "config.hpp"
+
+#if defined(__HIPCC_RTC__)
+
+using uint8_t = __hip_internal::uint8_t;
+using uint16_t = __hip_internal::uint16_t;
+
+namespace std
+{
+    template <bool B, class T, class F>
+    struct conditional;
+}
+
+#endif
 
 // We are clipping in down conversion by default
 #define rocwmma_F8_downcast_clipping 1
@@ -450,19 +463,19 @@ struct rocwmma_bf8
 
 namespace std
 {
-    inline rocwmma_f8 sin(rocwmma_f8 a)
+    ROCWMMA_HOST_DEVICE inline rocwmma_f8 sin(rocwmma_f8 a)
     {
         return rocwmma_f8(sinf(float(a)));
     }
-    inline rocwmma_f8 cos(rocwmma_f8 a)
+    ROCWMMA_HOST_DEVICE inline rocwmma_f8 cos(rocwmma_f8 a)
     {
         return rocwmma_f8(cosf(float(a)));
     }
-    inline rocwmma_bf8 sin(rocwmma_bf8 a)
+    ROCWMMA_HOST_DEVICE inline rocwmma_bf8 sin(rocwmma_bf8 a)
     {
         return rocwmma_bf8(sinf(float(a)));
     }
-    inline rocwmma_bf8 cos(rocwmma_bf8 a)
+    ROCWMMA_HOST_DEVICE inline rocwmma_bf8 cos(rocwmma_bf8 a)
     {
         return rocwmma_bf8(cosf(float(a)));
     }
@@ -476,6 +489,8 @@ namespace std
     }
 }
 
+#if !defined(__HIPCC_RTC__)
+
 // Special operator overloading
 inline std::ostream& operator<<(std::ostream& os, const rocwmma_f8& f8)
 {
@@ -486,6 +501,8 @@ inline std::ostream& operator<<(std::ostream& os, const rocwmma_bf8& bf8)
 {
     return os << float(bf8);
 }
+
+#endif // !defined(__HIPCC_RTC__)
 
 // all + operator overloading with mixed types
 // mixed types, always converts to f32, does computation in f32, and returns float
