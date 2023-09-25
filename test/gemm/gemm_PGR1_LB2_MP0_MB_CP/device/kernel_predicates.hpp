@@ -137,9 +137,15 @@ namespace rocwmma
 #endif // !NDEBUG
 
     public:
-        constexpr static bool enable()
+        constexpr static bool enableBuild()
         {
-            return Base::enable()
+            return Base::enableBuild()
+                   && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable);
+        }
+
+        constexpr static bool enableRun()
+        {
+            return Base::enableRun()
                    && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable);
         }
 
@@ -152,7 +158,8 @@ namespace rocwmma
             debugGfx9Predicates();
             debugGfx11Predicates();
 
-            std::cout << "Overall Enable: " << enable() << std::endl;
+            std::cout << "Overall enable build: " << enableBuild() << std::endl;
+            std::cout << "Overall enable run: " << enableRun() << std::endl;
         }
 #endif // !NDEBUG
     };

@@ -141,10 +141,10 @@ namespace rocwmma
         // Helper function to dispatch kernel guards
         // with runtime TBlockX, TBlockY, WaveSize and Device Arch
         template <template <uint32_t, uint32_t, uint32_t, uint32_t> class TestGuard>
-        bool dispatchGuard();
+        bool dispatchGuard() const;
 
         template <template <uint32_t, uint32_t, uint32_t, uint32_t> class KernelClass>
-        KernelFunc dispatchKernelFunc();
+        KernelFunc dispatchKernelFunc() const;
 
     public:
         // KernelI interface fulfillment
@@ -180,5 +180,7 @@ namespace rocwmma
     };
 
 } // namespace rocwmma
+
+#include "gemm_kernel_base_dispatch_impl.hpp"
 
 #endif // ROCWMMA_KERNEL_BASE_HPP

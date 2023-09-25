@@ -64,7 +64,9 @@ namespace rocwmma
               uint32_t BlocksX = 1,
               uint32_t BlocksY = 1,
               uint32_t TBlockX = 0,
-              uint32_t TBlockY = 0>
+              uint32_t TBlockY = 0,
+              uint32_t WaveSize,
+              uint32_t ArchId>
     __global__ void __launch_bounds__(256) gemm_PGR1_LB2_MP0_MB_CP(uint32_t       m,
                                                                    uint32_t       n,
                                                                    uint32_t       k,
@@ -79,7 +81,6 @@ namespace rocwmma
                                                                    ComputeT       alpha,
                                                                    ComputeT       beta)
     {
-
         if constexpr(gemm_PGR1_LB2_MP0_MB_CP_guard<BlockM,
                                                    BlockN,
                                                    BlockK,
@@ -95,8 +96,8 @@ namespace rocwmma
                                                    BlocksY,
                                                    TBlockX,
                                                    TBlockY,
-                                                   Constants::AMDGCN_WAVE_SIZE,
-                                                   Constants::AMDGCN_CURRENT_ARCH_ID>::enable())
+                                                   WaveSize,
+                                                   ArchId>::enableBuild())
         {
             ///
             /// Assemble the gemm driver from the incoming gemm configuration

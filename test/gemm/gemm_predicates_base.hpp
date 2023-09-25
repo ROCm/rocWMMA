@@ -62,12 +62,28 @@ namespace rocwmma
             // ThreadblockX must be a multiple of the wave size
             TBlockXTest = (TBlockX % WaveSize == 0u),
 
+            // Ensure that we have at least 1 wave
             MinTBlockTest = (TBlockX >= WaveSize && TBlockY >= 1),
+
+            // Ensure that we only build for the current compiler target, which
+            // will also exclude the host.
+            CurrentArchTest = (ArchId == Constants::AMDGCN_CURRENT_ARCH_ID),
+
+            // Ensure that we only build for the current wave size
+            CurrentWaveSizeTest = (WaveSize == Constants::AMDGCN_WAVE_SIZE),
 
             // Only supported hardware allowed
             ArchTest = (bool)TestTraits::Arch::IsGfx9 || (bool)TestTraits::Arch::IsGfx11,
 
-            Enable = (TBlockXTest && ArchTest && MinTBlockTest)
+            // During the build phase, we have information about current target arch.
+            // This means only the current arch and wave size are valid.
+            EnableBuild
+            = (TBlockXTest && MinTBlockTest && CurrentArchTest && CurrentWaveSizeTest && ArchTest),
+
+            // During run phase on the host, we don't have compile time info about current arch or wave size.
+            // We have to trust that the runtime params obtained through HipDevice will dispatch correctly for
+            // the current arch and wave size.
+            EnableRun = (TBlockXTest && MinTBlockTest && ArchTest),
         };
 
 #if !NDEBUG
@@ -77,7 +93,8 @@ namespace rocwmma
             std::cout << "TBlockXTest: " << (bool)GlobalPredicates::TBlockXTest << std::endl;
             std::cout << "MinTBlockTest: " << (bool)GlobalPredicates::MinTBlockTest << std::endl;
             std::cout << "ArchTest: " << (bool)GlobalPredicates::ArchTest << std::endl;
-            std::cout << "Enable: " << (bool)GlobalPredicates::Enable << std::endl;
+            std::cout << "EnableBuild: " << (bool)GlobalPredicates::EnableBuild << std::endl;
+            std::cout << "EnableRun: " << (bool)GlobalPredicates::EnableRun << std::endl;
         }
 #endif // !NDEBUG
 
@@ -87,7 +104,8 @@ namespace rocwmma
 
             WaveSizeTest = (bool)TestTraits::Arch::IsWave64,
 
-            TBlockTest = (TBlockX * TBlockY <= 256u),
+            TBlockTest
+            = (TBlockX * TBlockY >= Constants::AMDGCN_WAVE_SIZE_64) && (TBlockX * TBlockY <= 256u),
 
             InputTypesTest
             = (bool)TestTraits::InputType::IsFloat8 || (bool)TestTraits::InputType::IsBFloat8
@@ -224,7 +242,8 @@ namespace rocwmma
             WaveSizeTest = (bool)TestTraits::Arch::IsWave32,
 
             // Max recommended TBlock size is 256
-            TBlockTest = (TBlockX * TBlockY <= 256u),
+            TBlockTest
+            = (TBlockX * TBlockY >= Constants::AMDGCN_WAVE_SIZE_32) && (TBlockX * TBlockY <= 256u),
 
             // Input types supported
             InputTypesTest = (bool)TestTraits::InputType::IsInt8
@@ -264,9 +283,15 @@ namespace rocwmma
 #endif // !NDEBUG
 
     public:
-        constexpr static bool enable()
+        constexpr static bool enableBuild()
         {
-            return ((bool)GlobalPredicates::Enable
+            return ((bool)GlobalPredicates::EnableBuild
+                    && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable));
+        }
+
+        constexpr static bool enableRun()
+        {
+            return ((bool)GlobalPredicates::EnableRun
                     && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable));
         }
 
@@ -277,7 +302,8 @@ namespace rocwmma
             debugGfx9Predicates();
             debugGfx11Predicates();
 
-            std::cout << "Overall Enable: " << enable() << std::endl;
+            std::cout << "Overall enable build: " << enableBuild() << std::endl;
+            std::cout << "Overall enable run: " << enableRun() << std::endl;
         }
 #endif // !NDEBUG
     };
