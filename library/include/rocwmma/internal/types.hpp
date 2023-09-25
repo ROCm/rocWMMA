@@ -70,6 +70,9 @@ namespace rocwmma
     using float16_t = _Float16;
     using float32_t = float;
     using float64_t = double;
+
+#if !defined(__HIPCC_RTC__)
+
     using int8_t    = ::int8_t;
     using uint8_t   = ::uint8_t;
     using int16_t   = ::int16_t;
@@ -78,7 +81,21 @@ namespace rocwmma
     using uint32_t  = ::uint32_t;
     using int64_t   = ::int64_t;
     using uint64_t  = ::uint64_t;
-    using index_t   = int32_t;
+    using index_t   = ::int32_t;
+
+#else
+
+    using int8_t    = __hip_internal::int8_t;
+    using uint8_t   = __hip_internal::uint8_t;
+    using int16_t   = __hip_internal::int16_t;
+    using uint16_t  = __hip_internal::uint16_t;
+    using int32_t   = __hip_internal::int32_t;
+    using uint32_t  = __hip_internal::uint32_t;
+    using int64_t   = __hip_internal::int64_t;
+    using uint64_t  = __hip_internal::uint64_t;
+    using index_t   = __hip_internal::int32_t;
+
+#endif // !defined(__HIPCC_RTC__)
 
 // Non-native types
 #if !defined(__HIPCC_RTC__)
