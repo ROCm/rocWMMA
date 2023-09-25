@@ -91,7 +91,7 @@ namespace rocwmma
                                                    TBlockX,
                                                    TBlockY,
                                                    WaveSize,
-                                                   ArchId>::enable())
+                                                   ArchId>::enableBuild())
         {
             // Setup global mapping
             using MappingA = MappingUtil<BlockM, BlockK, InputT, LayoutA>;

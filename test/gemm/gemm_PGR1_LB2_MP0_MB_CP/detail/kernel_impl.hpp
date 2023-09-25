@@ -96,24 +96,33 @@ namespace rocwmma
         {
             static constexpr auto generate()
             {
-                return typename Base::KernelFunc(gemm_PGR1_LB2_MP0_MB_CP<BlockM,
-                                                                         BlockN,
-                                                                         BlockK,
-                                                                         InputT,
-                                                                         OutputT,
-                                                                         ComputeT,
-                                                                         LayoutA,
-                                                                         LayoutB,
-                                                                         LayoutC,
-                                                                         LayoutD,
-                                                                         LayoutLds,
-                                                                         GemmConfig,
-                                                                         BlocksX,
-                                                                         BlocksY,
-                                                                         TBlockX,
-                                                                         TBlockY,
-                                                                         WaveSize,
-                                                                         ArchId>);
+                // Avoid attempting to reference kernel functions that haven't passed
+                // predicate tests, as they won't be built!
+                if constexpr(TestGuard<TBlockX, TBlockY, WaveSize, ArchId>::enableRun())
+                {
+                    return typename Base::KernelFunc(gemm_PGR1_LB2_MP0_MB_CP<BlockM,
+                                                                             BlockN,
+                                                                             BlockK,
+                                                                             InputT,
+                                                                             OutputT,
+                                                                             ComputeT,
+                                                                             LayoutA,
+                                                                             LayoutB,
+                                                                             LayoutC,
+                                                                             LayoutD,
+                                                                             LayoutLds,
+                                                                             GemmConfig,
+                                                                             BlocksX,
+                                                                             BlocksY,
+                                                                             TBlockX,
+                                                                             TBlockY,
+                                                                             WaveSize,
+                                                                             ArchId>);
+                }
+                else
+                {
+                    return typename Base::KernelFunc(nullptr);
+                }
             }
         };
 

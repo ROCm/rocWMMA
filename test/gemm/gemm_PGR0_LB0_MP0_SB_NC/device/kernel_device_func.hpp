@@ -88,7 +88,7 @@ namespace rocwmma
                                                    TBlockX,
                                                    TBlockY,
                                                    WaveSize,
-                                                   ArchId>::enable())
+                                                   ArchId>::enableBuild())
         {
             using FragA   = fragment<matrix_a, BlockM, BlockN, BlockK, InputT, LayoutA>;
             using FragB   = fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB>;
