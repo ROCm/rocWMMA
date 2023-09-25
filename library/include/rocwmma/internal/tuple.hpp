@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -236,7 +236,7 @@ namespace rocwmma
     constexpr static auto reverse(T&& t)
     {
         return reverse_impl(std::forward<T>(t),
-                            std::make_index_sequence<std::tuple_size< std::remove_cv_t<std::remove_reference_t<T>>>::value>());
+                            std::make_index_sequence<std::tuple_size<std::decay_t<T>>::value>());
     }
 
     template <typename T, std::size_t... Indices>
