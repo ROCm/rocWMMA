@@ -479,7 +479,7 @@ ROCWMMA_DEVICE static inline void uniformFma(MfmaFragD (&fragsD)[BLOCKS_X][BLOCK
             {
                 // Perform computation in ComputeT and cast back to OutputT
                 fragsD[i][j].x[k] = static_cast<OutputT>(
-                    alpha * fragsAcc[i][j].x[k] + beta * static_cast<ComputeT>(fragsC[i][j].x[k]));
+                    alpha * fragsAcc[i][j].x[k] + beta * static_cast<OutputT>(fragsC[i][j].x[k]));
             }
         }
     }
@@ -736,9 +736,9 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     std::cout << "Initializing host data..." << std::endl;
 
     // Initialize input matrices
-    std::vector<InputT>   matrixA(m * k);
-    std::vector<InputT>   matrixB(k * n);
-    std::vector<ComputeT> matrixC(m * n);
+    std::vector<InputT>  matrixA(m * k);
+    std::vector<InputT>  matrixB(k * n);
+    std::vector<OutputT> matrixC(m * n);
 
     // Fill outputs with NaN to catch contamination
     std::vector<OutputT> matrixD(m * n, std::numeric_limits<OutputT>::signaling_NaN());
