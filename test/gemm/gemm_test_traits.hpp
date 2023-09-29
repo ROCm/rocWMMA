@@ -50,23 +50,23 @@ namespace rocwmma
     struct GemmTestTraits
     {
         // Size properties of gemm tiles
-        enum struct Sizes : uint32_t
+        enum struct TileSizes : uint32_t
         {
-            TileAX    = BlocksX * BlockM,
-            TileAY    = BlockK,
-            TileASize = TileAX * TileAY * sizeof(InputT),
+            A_X    = BlocksX * BlockM,
+            A_Y    = BlockK,
+            A_Size = A_X * A_Y,
 
-            TileBX    = BlockK,
-            TileBY    = BlocksY * BlockN,
-            TileBSize = TileBX * TileBY * sizeof(InputT),
+            B_X    = BlockK,
+            B_Y    = BlocksY * BlockN,
+            B_Size = B_X * B_Y,
 
-            TileCX    = BlocksX * BlockM,
-            TileCY    = BlocksY * BlockN,
-            TileCSize = TileCX * TileCY * sizeof(ComputeT),
+            C_X    = BlocksX * BlockM,
+            C_Y    = BlocksY * BlockN,
+            C_Size = C_X * C_Y,
 
-            TileDX    = BlocksX * BlockM,
-            TileDY    = BlocksY * BlockN,
-            TileDSize = TileDX * TileDY * sizeof(OutputT),
+            D_X    = BlocksX * BlockM,
+            D_Y    = BlocksY * BlockN,
+            D_Size = D_X * D_Y,
         };
 
         // Tile costs
@@ -75,14 +75,22 @@ namespace rocwmma
             Granularity = 16u,
             DWord       = 4u,
 
-            TileA = ceilDiv((uint32_t)Sizes::TileASize, Granularity* WaveSize* DWord) * Granularity,
-            TileB = ceilDiv((uint32_t)Sizes::TileBSize, Granularity* WaveSize* DWord) * Granularity,
-            TileC = ceilDiv((uint32_t)Sizes::TileCSize, Granularity* WaveSize* DWord) * Granularity,
-            TileD = ceilDiv((uint32_t)Sizes::TileDSize, Granularity* WaveSize* DWord) * Granularity,
+            TileA
+            = ceilDiv((uint32_t)TileSizes::A_Size * sizeof(InputT), Granularity* WaveSize* DWord)
+              * Granularity,
+            TileB
+            = ceilDiv((uint32_t)TileSizes::B_Size * sizeof(InputT), Granularity* WaveSize* DWord)
+              * Granularity,
+            TileC
+            = ceilDiv((uint32_t)TileSizes::C_Size * sizeof(ComputeT), Granularity* WaveSize* DWord)
+              * Granularity,
+            TileD
+            = ceilDiv((uint32_t)TileSizes::D_Size * sizeof(OutputT), Granularity* WaveSize* DWord)
+              * Granularity,
         };
 
         // Architecture we are testing
-        enum Arch : bool
+        enum struct Arch : bool
         {
             IsWave32 = (WaveSize == Constants::AMDGCN_WAVE_SIZE_32),
             IsWave64 = (WaveSize == Constants::AMDGCN_WAVE_SIZE_64),
@@ -98,6 +106,57 @@ namespace rocwmma
 
             IsGfx9  = IsGfx908 || IsGfx90A || IsGfx940 || IsGfx941 || IsGfx942,
             IsGfx11 = IsGfx1100 || IsGfx1101 || IsGfx1102,
+        };
+
+        enum struct InputType : bool
+        {
+            IsInt8    = std::is_same_v<InputT, int8_t>,
+            IsFloat8  = std::is_same_v<InputT, float8_t>,
+            IsBFloat8 = std::is_same_v<InputT, bfloat8_t>,
+
+            IsFloat16  = std::is_same_v<InputT, float16_t> || std::is_same_v<InputT, hfloat16_t>,
+            IsBFloat16 = std::is_same_v<InputT, bfloat16_t>,
+
+            IsFloat32  = std::is_same_v<InputT, float32_t>,
+            IsXFloat32 = std::is_same_v<InputT, xfloat32_t>,
+
+            IsFloat64 = std::is_same_v<InputT, float64_t>,
+        };
+
+        enum struct OutputType : bool
+        {
+            IsInt8    = std::is_same_v<OutputT, int8_t>,
+            IsFloat8  = std::is_same_v<OutputT, float8_t>,
+            IsBFloat8 = std::is_same_v<OutputT, bfloat8_t>,
+
+            IsFloat16  = std::is_same_v<OutputT, float16_t> || std::is_same_v<OutputT, hfloat16_t>,
+            IsBFloat16 = std::is_same_v<OutputT, bfloat16_t>,
+
+            IsFloat32  = std::is_same_v<OutputT, float32_t>,
+            IsXFloat32 = std::is_same_v<OutputT, xfloat32_t>,
+
+            IsFloat64 = std::is_same_v<OutputT, float64_t>,
+        };
+
+        enum struct ComputeType : bool
+        {
+            IsInt8    = std::is_same_v<ComputeT, int8_t>,
+            IsFloat8  = std::is_same_v<ComputeT, float8_t>,
+            IsBFloat8 = std::is_same_v<ComputeT, bfloat8_t>,
+
+            IsFloat16 = std::is_same_v<ComputeT, float16_t> || std::is_same_v<ComputeT, hfloat16_t>,
+            IsBFloat16 = std::is_same_v<ComputeT, bfloat16_t>,
+
+            IsFloat32  = std::is_same_v<ComputeT, float32_t>,
+            IsXFloat32 = std::is_same_v<ComputeT, xfloat32_t>,
+
+            IsFloat64 = std::is_same_v<ComputeT, float64_t>,
+        };
+
+        enum struct BlockSizes : bool
+        {
+            isBlockMN16 = (BlockM == 16u) && (BlockN == 16u),
+            isBlockMN32 = (BlockM == 32u) && (BlockN == 32u)
         };
     };
 

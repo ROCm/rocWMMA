@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -138,6 +138,14 @@ namespace rocwmma
         // Reset all members to default values
         virtual void reset();
 
+        // Helper function to dispatch kernel guards
+        // with runtime TBlockX, TBlockY, WaveSize and Device Arch
+        template <template <uint32_t, uint32_t, uint32_t, uint32_t> class TestGuard>
+        bool dispatchGuard() const;
+
+        template <template <uint32_t, uint32_t, uint32_t, uint32_t> class KernelClass>
+        KernelFunc dispatchKernelFunc() const;
+
     public:
         // KernelI interface fulfillment
         virtual void          setup(ProblemParams const& problem) override;
@@ -172,5 +180,7 @@ namespace rocwmma
     };
 
 } // namespace rocwmma
+
+#include "gemm_kernel_base_dispatch_impl.hpp"
 
 #endif // ROCWMMA_KERNEL_BASE_HPP
