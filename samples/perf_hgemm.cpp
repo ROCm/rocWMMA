@@ -721,7 +721,7 @@ if constexpr(ROCWMMA_ARCH_GFX9 || ROCWMMA_ARCH_GFX11)
 }
 }
 
-ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, float32_t beta)
+ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, ComputeT beta)
 {
     // Runtime checks for host parameters
     uint32_t hTBLOCK_X = isGfx9() ? gfx9Params::TBLOCK_X : gfx11Params::TBLOCK_X;
@@ -955,6 +955,6 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
 
 int main()
 {
-    gemm_test(256, 256, 256, 2, 2);
+    gemm_test(7168, 7168, 7168, 2, 2);
     return 0;
 }
