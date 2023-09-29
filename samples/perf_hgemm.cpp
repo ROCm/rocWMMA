@@ -196,10 +196,8 @@ using namespace rocwmma;
 /// Parameter configuration
 ///
 
-/* Many parameters need to be modified in order to obtain maximum performance across different
-*  architectures. This performance sample is setup for running on GFX11 architectures.
-*  Modifying the following parameters will allow for maximum performance on GFX9 Based
-*  architectures.
+/* Depending on the GPU architecture this sample is run on, the following kernel parameters need to
+*  be modified in order to obtain high performance.
 * _________________________________________________________________________________________
 *|         |           |           |           |          |          |          |          |
 *|         | ROCWMMA_M | ROCWMMA_N | ROCWMMA_K | BLOCKS_X | BLOCKS_Y | TBLOCK_X | TBLOCK_Y |
@@ -255,8 +253,6 @@ namespace gfx11Params
 
 #if (ROCWMMA_ARCH_GFX9)
 using namespace gfx9Params;
-#elif (ROCWMMA_ARCH_GFX11)
-using namespace gfx11Params;
 #else
 using namespace gfx11Params;
 #endif // defined(ROCWMMA_ARCH_GFX9)
@@ -510,7 +506,7 @@ ROCWMMA_DEVICE static inline void uniformFma(MfmaFragD (&fragsD)[BLOCKS_X][BLOCK
             {
                 // Perform computation in ComputeT and cast back to OutputT
                 fragsD[i][j].x[k] = static_cast<OutputT>(
-                    alpha * fragsAcc[i][j].x[k] + beta * static_cast<OutputT>(fragsC[i][j].x[k]));
+                    alpha * fragsAcc[i][j].x[k] + beta * static_cast<ComputeT>(fragsC[i][j].x[k]));
             }
         }
     }
