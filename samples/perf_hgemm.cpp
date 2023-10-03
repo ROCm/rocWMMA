@@ -196,10 +196,8 @@ using namespace rocwmma;
 /// Parameter configuration
 ///
 
-/* Many parameters need to be modified in order to obtain maximum performance across different
-*  architectures. This performance sample is setup for running on GFX11 architectures.
-*  Modifying the following parameters will allow for maximum performance on GFX9 Based
-*  architectures.
+/* Depending on the GPU architecture this sample is run on, the following kernel parameters need to
+*  be modified in order to obtain high performance.
 * _________________________________________________________________________________________
 *|         |           |           |           |          |          |          |          |
 *|         | ROCWMMA_M | ROCWMMA_N | ROCWMMA_K | BLOCKS_X | BLOCKS_Y | TBLOCK_X | TBLOCK_Y |
@@ -223,7 +221,46 @@ using namespace rocwmma;
 *|_________|________________________________|
 */
 
-// Types
+namespace gfx9Params
+{
+    enum kernelParams : uint32_t
+    {
+        ROCWMMA_M = 32u,
+        ROCWMMA_N = 32u,
+        ROCWMMA_K = 16u,
+        BLOCKS_X  = 2u,
+        BLOCKS_Y  = 2u,
+        TBLOCK_X  = 128u,
+        TBLOCK_Y  = 2u,
+        WARP_SIZE = Constants::AMDGCN_WAVE_SIZE_64
+    };
+}
+
+namespace gfx11Params
+{
+    enum kernelParams : uint32_t
+    {
+        ROCWMMA_M = 16u,
+        ROCWMMA_N = 16u,
+        ROCWMMA_K = 16u,
+        BLOCKS_X  = 4u,
+        BLOCKS_Y  = 2u,
+        TBLOCK_X  = 64u,
+        TBLOCK_Y  = 4u,
+        WARP_SIZE = Constants::AMDGCN_WAVE_SIZE_32
+    };
+}
+
+#if (ROCWMMA_ARCH_GFX9)
+using namespace gfx9Params;
+#else
+using namespace gfx11Params;
+#endif // defined(ROCWMMA_ARCH_GFX9)
+
+///
+/// Types and Data Layouts
+///
+
 using InputT   = float16_t;
 using OutputT  = float16_t;
 using ComputeT = float32_t;
@@ -233,32 +270,21 @@ using DataLayoutB   = row_major;
 using DataLayoutC   = col_major;
 using DataLayoutLds = row_major;
 
-// Block sizes
-constexpr uint32_t ROCWMMA_M = 16u;
-constexpr uint32_t ROCWMMA_N = 16u;
-constexpr uint32_t ROCWMMA_K = 16u;
+///
+/// Fragment types
+///
 
-// Warp size
-constexpr uint32_t WARP_SIZE = Constants::AMDGCN_WAVE_SIZE_32;
-
+// #if (ROCWMMA_ARCH_GFX9 || ROCWMMA_ARCH_GFX11)
 // Warp tile: computed by each warp
-constexpr uint32_t BLOCKS_X    = 4u;
-constexpr uint32_t BLOCKS_Y    = 2u;
 constexpr uint32_t WARP_TILE_X = BLOCKS_X * ROCWMMA_M;
 constexpr uint32_t WARP_TILE_Y = BLOCKS_Y * ROCWMMA_N;
 
 // Macro Tile: computed by each thread block (workgroup)
 // Note: TBLOCK_X must be multiple of WARP_SIZE.
-constexpr uint32_t TBLOCK_X     = 64u;
-constexpr uint32_t TBLOCK_Y     = 4u;
 constexpr uint32_t WARPS_X      = TBLOCK_X / WARP_SIZE;
 constexpr uint32_t WARPS_Y      = TBLOCK_Y;
 constexpr uint32_t MACRO_TILE_X = WARPS_X * WARP_TILE_X;
 constexpr uint32_t MACRO_TILE_Y = WARPS_Y * WARP_TILE_Y;
-
-///
-/// Fragment types
-///
 
 // Mfma frags
 using MfmaFragA   = fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, InputT, DataLayoutA>;
@@ -282,6 +308,7 @@ using LWBuffB = ApplyDataLayout_t<ApplyTranspose_t<GRBuffB>, DataLayoutLds>;
 // - Lds has transposed B frags.
 using LRFragA = ApplyDataLayout_t<MfmaFragA, DataLayoutLds>;
 using LRFragB = ApplyDataLayout_t<ApplyTranspose_t<MfmaFragB>, DataLayoutLds>;
+// #endif // (ROCWMMA_ARCH_GFX9 || ROCWMMA_ARCH_GFX11)
 
 ///
 /// Wrapper functions: repeat mfma tile operations across entire warp tile.
@@ -499,6 +526,8 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
                                                           ComputeT       alpha,
                                                           ComputeT       beta)
 {
+if constexpr(ROCWMMA_ARCH_GFX9 || ROCWMMA_ARCH_GFX11)
+{
     ///
     /// 2D matrix coordinate setup
     ///
@@ -624,7 +653,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
     ///
     /// Accumulate A * B for all mfma frags in warp tile
     ///
-    for(auto currentK = ROCWMMA_K; currentK < k; currentK += ROCWMMA_K)
+    for(uint32_t currentK = ROCWMMA_K; currentK < k; currentK += ROCWMMA_K)
     {
         MfmaFragA fragsA[BLOCKS_X];
         MfmaFragB fragsB[BLOCKS_Y];
@@ -686,42 +715,56 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
     uniformFma(fragsD, alpha, fragsAcc, beta, fragsC);
     globalWriteD(d + MfmaFragDMap1d::fromMatrixCoord(warpTileCoord, ldd), fragsD, ldd);
 }
+}
 
-ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, float32_t beta)
+ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, ComputeT beta)
 {
+    // Runtime checks for host parameters
+    uint32_t hTBLOCK_X = isGfx9() ? gfx9Params::TBLOCK_X : gfx11Params::TBLOCK_X;
+    uint32_t hTBLOCK_Y = isGfx9() ? gfx9Params::TBLOCK_Y : gfx11Params::TBLOCK_Y;
+    uint32_t hBLOCKS_X = isGfx9() ? gfx9Params::BLOCKS_X : gfx11Params::BLOCKS_X;
+    uint32_t hBLOCKS_Y = isGfx9() ? gfx9Params::BLOCKS_Y : gfx11Params::BLOCKS_Y;
+    uint32_t hROCWMMA_M = isGfx9() ? gfx9Params::ROCWMMA_M : gfx11Params::ROCWMMA_M;
+    uint32_t hROCWMMA_N = isGfx9() ? gfx9Params::ROCWMMA_N : gfx11Params::ROCWMMA_N;
+    uint32_t hROCWMMA_K = isGfx9() ? gfx9Params::ROCWMMA_K : gfx11Params::ROCWMMA_K;
+    uint32_t hWARP_TILE_X = hBLOCKS_X * hROCWMMA_M;
+    uint32_t hWARP_TILE_Y = hBLOCKS_Y * hROCWMMA_N;
+
     // Runtime warp calculation (host code needs to query warpsize dynamically)
     auto warpSize = getWarpSize();
     auto macroTileSize
-        = rocwmma::make_coord2d(TBLOCK_X / warpSize * WARP_TILE_X, TBLOCK_Y * WARP_TILE_Y);
+        = rocwmma::make_coord2d(hTBLOCK_X / warpSize * hWARP_TILE_X, hTBLOCK_Y * hWARP_TILE_Y);
+
+    
 
     // Device check for supported block and wave sizes
-    if(isGfx11() && (ROCWMMA_M != 16 || ROCWMMA_N != 16))
+    if(isGfx11() && (hROCWMMA_M != 16 || hROCWMMA_N != 16))
     {
         std::cout << "Unsupported block size!\n";
         return;
     }
 
-    if(isGfx9() && (ROCWMMA_M != ROCWMMA_N) || (ROCWMMA_M != 16 && ROCWMMA_M != 32))
+    if(isGfx9() && (hROCWMMA_M != hROCWMMA_N) || (hROCWMMA_M != 16 && hROCWMMA_M != 32))
     {
         std::cout << "Unsupported block size!\n";
         return;
     }
 
-    if(isGfx11() && WARP_SIZE != Constants::AMDGCN_WAVE_SIZE_32)
+    if(isGfx11() && getWarpSize() != Constants::AMDGCN_WAVE_SIZE_32)
     {
         std::cout << "Unsupported wave size!\n";
         return;
     }
 
-    if(isGfx9() && WARP_SIZE != Constants::AMDGCN_WAVE_SIZE_64)
+    if(isGfx9() && getWarpSize() != Constants::AMDGCN_WAVE_SIZE_64)
     {
         std::cout << "Unsupported wave size!\n";
         return;
     }
 
     // Bounds check
-    if((m < get<0>(macroTileSize) || n < get<1>(macroTileSize) || k < ROCWMMA_K)
-       || (m % ROCWMMA_M || n % ROCWMMA_N || k % ROCWMMA_K))
+    if((m < get<0>(macroTileSize) || n < get<1>(macroTileSize) || k < hROCWMMA_K)
+       || (m % hROCWMMA_M || n % hROCWMMA_N || k % hROCWMMA_K))
     {
         std::cout << "Unsupported matrix size!\n";
         return;
@@ -736,9 +779,9 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     std::cout << "Initializing host data..." << std::endl;
 
     // Initialize input matrices
-    std::vector<InputT>   matrixA(m * k);
-    std::vector<InputT>   matrixB(k * n);
-    std::vector<ComputeT> matrixC(m * n);
+    std::vector<InputT>  matrixA(m * k);
+    std::vector<InputT>  matrixB(k * n);
+    std::vector<OutputT> matrixC(m * n);
 
     // Fill outputs with NaN to catch contamination
     std::vector<OutputT> matrixD(m * n, std::numeric_limits<OutputT>::signaling_NaN());
@@ -770,7 +813,7 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     CHECK_HIP_ERROR(hipMemcpy(d_c, matrixC.data(), bytesC, hipMemcpyHostToDevice));
     CHECK_HIP_ERROR(hipMemcpy(d_d, matrixD.data(), bytesD, hipMemcpyHostToDevice));
 
-    auto blockDim = dim3(TBLOCK_X, TBLOCK_Y);
+    auto blockDim = dim3(hTBLOCK_X, hTBLOCK_Y);
     auto gridDim  = dim3(rocwmma::ceilDiv(m, get<0>(macroTileSize)),
                         rocwmma::ceilDiv(n, get<1>(macroTileSize)));
 
@@ -848,8 +891,8 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
               << "beta, ldc, ldd, "
               << "elapsedMs, Problem Size(GFlops), TFlops/s" << std::endl;
 
-    std::cout << TBLOCK_X << ", " << TBLOCK_Y << ", " << BLOCKS_X << ", " << BLOCKS_Y << ", "
-              << ROCWMMA_M << ", " << ROCWMMA_N << ", " << ROCWMMA_K << ", " << m << ", " << n
+    std::cout << hTBLOCK_X << ", " << hTBLOCK_Y << ", " << hBLOCKS_X << ", " << hBLOCKS_Y << ", "
+              << hROCWMMA_M << ", " << hROCWMMA_N << ", " << hROCWMMA_K << ", " << m << ", " << n
               << ", " << k << ", " << alpha << ", " << lda << ", " << ldb << ", " << beta << ", "
               << ldc << ", " << ldd << ", " << elapsedTimeMs << ", " << gFlops << ", "
               << tFlopsPerSec << std::endl;

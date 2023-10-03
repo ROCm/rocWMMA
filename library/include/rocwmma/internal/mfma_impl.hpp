@@ -199,7 +199,6 @@ namespace rocwmma
         {
         };
 
-#if !defined(__HIPCC_RTC__)
 #if !ROCWMMA_ARCH_GFX908
 
         // NOTE: Successors to gfx908 have upgraded bf16 instructions
@@ -479,7 +478,6 @@ namespace rocwmma
         };
 
 #endif // !ROCWMMA_ARCH_GFX908
-#endif // !defined(__HIPCC_RTC__)
 #if(!ROCWMMA_ARCH_GFX940) && (!ROCWMMA_ARCH_GFX941) && (!ROCWMMA_ARCH_GFX942)
 
         template <>
