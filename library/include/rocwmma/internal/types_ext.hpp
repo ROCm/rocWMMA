@@ -48,13 +48,13 @@ namespace rocwmma
     ///////////////////////////////////////////////////////////
 
     template<typename Incoming, typename Outgoing>
-    __host__ inline Outgoing convert(Incoming& value)
+    __host__ __device__ inline Outgoing convert(const Incoming& value)
     {
         return static_cast<Outgoing>(value);
     }
 
     template<typename Incoming>
-    __host__ inline hfloat16_t convert(Incoming& value)
+    __host__ __device__ inline hfloat16_t convert(const Incoming& value)
     {
 #if defined(__HIP_NO_HALF_CONVERSIONS__)
         float16_t fp16 = static_cast<float16_t>(value);
@@ -65,35 +65,13 @@ namespace rocwmma
     }
 
     template<typename Outgoing>
-    __host__ inline Outgoing convert(hfloat16_t& value)
+    __host__ __device__ inline Outgoing convert(const hfloat16_t& value)
     {
 #if defined(__HIP_NO_HALF_CONVERSIONS__)
         detail::Fp16Bits fp16(value);
         return convert<float16_t, Outgoing>(fp16.f16);
 #else
         return static_cast<Outgoing>(value);
-#endif
-    }
-
-    template<>
-    __host__ inline hfloat16_t convert(float16_t& value)
-    {
-#if defined(__HIP_NO_HALF_CONVERSIONS__)
-        detail::Fp16Bits fp16(value);
-        return fp16.h16;
-#else
-        return static_cast<hfloat16_t>(value);
-#endif
-    }
-
-    template<>
-    __host__ inline float16_t convert(hfloat16_t& value)
-    {
-#if defined(__HIP_NO_HALF_CONVERSIONS__)
-        detail::Fp16Bits fp16(value);
-        return fp16.f16;
-#else
-        return static_cast<float16_t>(value);
 #endif
     }
 
