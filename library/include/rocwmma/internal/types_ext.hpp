@@ -42,6 +42,61 @@ namespace rocwmma
 {
 
 #if !defined(__HIPCC_RTC__)
+
+    ///////////////////////////////////////////////////////////
+    ///////////  rocwmma::hfloat16_t host conversions  //////////
+    ///////////////////////////////////////////////////////////
+
+    template<typename Incoming, typename Outgoing>
+    __host__ inline Outgoing convert(Incoming& value)
+    {
+        return static_cast<Outgoing>(value);
+    }
+
+    template<typename Incoming>
+    __host__ inline hfloat16_t convert(Incoming& value)
+    {
+#if defined(__HIP_NO_HALF_CONVERSIONS__)
+        float16_t fp16 = static_cast<float16_t>(value);
+        return convert<float16_t, hfloat16_t>(fp16);
+#else
+        return static_cast<hfloat16_t>(value);
+#endif
+    }
+
+    template<typename Outgoing>
+    __host__ inline Outgoing convert(hfloat16_t& value)
+    {
+#if defined(__HIP_NO_HALF_CONVERSIONS__)
+        detail::Fp16Bits fp16(value);
+        return convert<float16_t, Outgoing>(fp16.f16);
+#else
+        return static_cast<Outgoing>(value);
+#endif
+    }
+
+    template<>
+    __host__ inline hfloat16_t convert(float16_t& value)
+    {
+#if defined(__HIP_NO_HALF_CONVERSIONS__)
+        detail::Fp16Bits fp16(value);
+        return fp16.h16;
+#else
+        return static_cast<hfloat16_t>(value);
+#endif
+    }
+
+    template<>
+    __host__ inline float16_t convert(hfloat16_t& value)
+    {
+#if defined(__HIP_NO_HALF_CONVERSIONS__)
+        detail::Fp16Bits fp16(value);
+        return fp16.f16;
+#else
+        return static_cast<float16_t>(value);
+#endif
+    }
+
     ///////////////////////////////////////////////////////////
     ///////////  rocwmma::hfloat16_t host operators  //////////
     ///////////////////////////////////////////////////////////
@@ -68,43 +123,84 @@ namespace rocwmma
 
     __host__ inline hfloat16_t operator+(const hfloat16_t& x, const hfloat16_t& y)
     {
+#if !defined(__HIP_NO_HALF_OPERATORS__)
         return static_cast<hfloat16_t>(static_cast<float16_t>(x) + static_cast<float16_t>(y));
+#else
+        float16_t fp16_xy = (*(float16_t *)(&x)) + (*(float16_t *)(&y));
+        detail::Fp16Bits fp16(fp16_xy);
+        return fp16.h16;
+#endif
     }
 
     __host__ inline hfloat16_t operator-(const hfloat16_t& x, const hfloat16_t& y)
     {
+#if !defined(__HIP_NO_HALF_OPERATORS__)
         return static_cast<hfloat16_t>(static_cast<float16_t>(x) - static_cast<float16_t>(y));
+#else
+        float16_t fp16_xy = (*(float16_t *)(&x)) - (*(float16_t *)(&y));
+        detail::Fp16Bits fp16(fp16_xy);
+        return fp16.h16;
+#endif
     }
 
     __host__ inline hfloat16_t operator*(const hfloat16_t& x, const hfloat16_t& y)
     {
+#if !defined(__HIP_NO_HALF_OPERATORS__)
         return static_cast<hfloat16_t>(static_cast<float16_t>(x) * static_cast<float16_t>(y));
+#else
+        float16_t fp16_xy = (*(float16_t *)(&x)) * (*(float16_t *)(&y));
+        detail::Fp16Bits fp16(fp16_xy);
+        return fp16.h16;
+#endif
     }
 
     __host__ inline hfloat16_t operator/(const hfloat16_t& x, const hfloat16_t& y)
     {
+#if !defined(__HIP_NO_HALF_OPERATORS__)
         return static_cast<hfloat16_t>(static_cast<float16_t>(x) / static_cast<float16_t>(y));
+#else
+        float16_t fp16_xy = (*(float16_t *)(&x)) / (*(float16_t *)(&y));
+        detail::Fp16Bits fp16(fp16_xy);
+        return fp16.h16;
+#endif
     }
 
     __host__ inline hfloat16_t& operator+=(hfloat16_t& x, const hfloat16_t& y)
     {
+#if !defined(__HIP_NO_HALF_OPERATORS__)
         return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) + static_cast<float16_t>(y));
+#else
+        return x = x + y;
+#endif
     }
 
     __host__ inline hfloat16_t& operator-=(hfloat16_t& x, const hfloat16_t& y)
     {
+#if !defined(__HIP_NO_HALF_OPERATORS__)
         return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) - static_cast<float16_t>(y));
+#else
+        return x = x - y;
+#endif
     }
 
     __host__ inline hfloat16_t& operator*=(hfloat16_t& x, const hfloat16_t& y)
     {
+#if !defined(__HIP_NO_HALF_OPERATORS__)
         return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) * static_cast<float16_t>(y));
+#else
+        return x = x * y;
+#endif
     }
 
     __host__ inline hfloat16_t& operator/=(hfloat16_t& x, const hfloat16_t& y)
     {
+#if !defined(__HIP_NO_HALF_OPERATORS__)
         return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) / static_cast<float16_t>(y));
+#else
+        return x = x / y;
+#endif
     }
+
 #endif // !defined(__HIPCC_RTC__)
 
 } // namespace rocwmma
