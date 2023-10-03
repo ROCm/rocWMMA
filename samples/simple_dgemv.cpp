@@ -37,26 +37,31 @@
 
 using rocwmma::accumulator;
 using rocwmma::col_major;
-using rocwmma::float64_t;
+using rocwmma::row_major;
+
 using rocwmma::matrix_a;
 using rocwmma::matrix_b;
-using rocwmma::row_major;
+
+// Types
+using InputT   = rocwmma::float64_t;
+using OutputT  = rocwmma::float64_t;
+using ComputeT = rocwmma::float64_t;
 
 // Host dgemv validation
 __host__ void dgemv_cpu_h(uint32_t         m,
                           uint32_t         n,
                           uint32_t         k,
-                          float64_t const* a,
-                          float64_t const* b,
-                          float64_t*       c,
-                          float64_t        alpha,
-                          float64_t        beta)
+                          InputT const* a,
+                          InputT const* b,
+                          OutputT*       c,
+                          ComputeT        alpha,
+                          ComputeT        beta)
 {
     uint32_t lda = m;
 
     for(int i = 0; i < m; ++i)
     {
-        float64_t accum = 0.0f;
+        ComputeT accum = 0.0f;
         for(int h = 0; h < k; ++h)
         {
             accum += a[h * lda + i] * b[h];
@@ -68,23 +73,27 @@ __host__ void dgemv_cpu_h(uint32_t         m,
 // Supports ROCWMMA_M/N square sizes of
 // : 16 x 16
 // : 32 x 32 ( only MI )
-const int ROCWMMA_M = 16;
-const int ROCWMMA_N = 16;
+constexpr uint32_t ROCWMMA_M = 16;
+constexpr uint32_t ROCWMMA_N = 16;
 
 // Supports ROCWMMA_K sizes as
 // : multiples of 16.
-const int ROCWMMA_K = 16;
+constexpr uint32_t ROCWMMA_K = 16;
 
 // AMDGCN default wave size
-const uint32_t WAVE_SIZE = getWarpSize();
+const uint32_t WARP_SIZE = rocwmma::Constants::AMDGCN_WAVE_SIZE;
+
+// Warp tile: computed by each warp
+constexpr uint32_t BLOCKS_X    = 1u;
+constexpr uint32_t BLOCKS_Y    = 1u;
 
 // Thread block
-// : T_BLOCK_X must be multiple of WAVE_SIZE.
+// : T_BLOCK_X must be multiple of WARP_SIZE.
 // Note: Each wave will compute one ROCWMMA_M x ROCWMMA_N output block
 // Note: Workgroup will compute
-//  T_BLOCK_X / WAVE_SIZE x T_BLOCK_Y output blocks
-const int T_BLOCK_X = 16 * WAVE_SIZE;
-const int T_BLOCK_Y = 1;
+//  T_BLOCK_X / WARP_SIZE x T_BLOCK_Y output blocks
+constexpr uint32_t T_BLOCK_X = 16 * WARP_SIZE;
+constexpr uint32_t T_BLOCK_Y = 1;
 
 // The following device kernel is a naive implementation
 // of blocked dgemv. Each wave will compute one ROCWMMA_M x ROCWMMA_N
@@ -103,24 +112,24 @@ const int T_BLOCK_Y = 1;
 __global__ void dgemv_rocwmma_d(uint32_t         m,
                                 uint32_t         n,
                                 uint32_t         k,
-                                float64_t const* a,
-                                float64_t const* b,
-                                float64_t*       c,
-                                float64_t*       d,
+                                InputT const* a,
+                                InputT const* b,
+                                OutputT*       c,
+                                OutputT*       d,
                                 uint32_t         lda,
                                 uint32_t         ldb,
                                 uint32_t         ldc,
                                 uint32_t         ldd,
-                                float64_t        alpha,
-                                float64_t        beta)
+                                ComputeT        alpha,
+                                ComputeT        beta)
 {
     // Create frags
     auto fragA
-        = rocwmma::fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t, col_major>();
+        = rocwmma::fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, InputT, col_major>();
     auto fragB
-        = rocwmma::fragment<matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t, col_major>();
-    auto fragC   = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t>();
-    auto fragAcc = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float64_t>();
+        = rocwmma::fragment<matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, InputT, col_major>();
+    auto fragC   = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, OutputT>();
+    auto fragAcc = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, ComputeT>();
 
     rocwmma::fill_fragment(fragAcc, 0.0);
 
@@ -154,7 +163,7 @@ __global__ void dgemv_rocwmma_d(uint32_t         m,
     }
 }
 
-__host__ void dgemv_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha, float64_t beta)
+__host__ void dgemv_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, ComputeT beta)
 {
     // Bounds check
     if(m % ROCWMMA_M || n % ROCWMMA_N || k % ROCWMMA_K)
@@ -170,22 +179,22 @@ __host__ void dgemv_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha, fl
 
     std::cout << "Initializing host data..." << std::endl;
     // Initialize input matrices
-    std::vector<float64_t> matrixA(m * k); // matrix
-    std::vector<float64_t> matrixB(k * 1); // vector
-    std::vector<float64_t> matrixC(m * 1, 1.0); //accum
+    std::vector<InputT> matrixA(m * k); // matrix
+    std::vector<InputT> matrixB(k * 1); // vector
+    std::vector<OutputT> matrixC(m * 1, 1.0); //accum
 
     fillRand(matrixA.data(), m, k);
     fillRand(matrixB.data(), k, 1);
 
     std::cout << "Initializing device data..." << std::endl;
     // Allocate and copy device memory
-    float64_t* d_a;
-    float64_t* d_b;
-    float64_t* d_c;
+    InputT* d_a;
+    InputT* d_b;
+    OutputT* d_c;
 
-    const size_t bytesA = matrixA.size() * sizeof(float64_t);
-    const size_t bytesB = matrixB.size() * sizeof(float64_t);
-    const size_t bytesC = matrixC.size() * sizeof(float64_t);
+    const size_t bytesA = matrixA.size() * sizeof(InputT);
+    const size_t bytesB = matrixB.size() * sizeof(InputT);
+    const size_t bytesC = matrixC.size() * sizeof(OutputT);
 
     CHECK_HIP_ERROR(hipMalloc(&d_a, bytesA));
     CHECK_HIP_ERROR(hipMalloc(&d_b, bytesB));
@@ -196,7 +205,7 @@ __host__ void dgemv_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha, fl
     CHECK_HIP_ERROR(hipMemcpy(d_c, matrixC.data(), bytesC, hipMemcpyHostToDevice));
 
     auto blockDim = dim3(T_BLOCK_X, T_BLOCK_Y);
-    auto gridDim  = dim3(rocwmma::ceilDiv(m, ROCWMMA_M * T_BLOCK_X / WAVE_SIZE),
+    auto gridDim  = dim3(rocwmma::ceilDiv(m, ROCWMMA_M * T_BLOCK_X / WARP_SIZE),
                         rocwmma::ceilDiv(n, ROCWMMA_N * T_BLOCK_Y));
 
     std::cout << "Launching dgemv kernel..." << std::endl;
@@ -242,14 +251,14 @@ __host__ void dgemv_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha, fl
 
     std::cout << "Validating result with reference..." << std::endl;
     // Bring kernel result back to host
-    std::vector<float64_t> matrixC_device(m * 1, std::numeric_limits<float64_t>::signaling_NaN());
+    std::vector<OutputT> matrixC_device(m * 1, std::numeric_limits<OutputT>::signaling_NaN());
     CHECK_HIP_ERROR(hipMemcpy(matrixC_device.data(), d_c, bytesC, hipMemcpyDeviceToHost));
 
     // Setup and run reference computation
-    std::vector<float64_t> matrixC_host(matrixC);
+    std::vector<OutputT> matrixC_host(matrixC);
     dgemv_cpu_h(m, n, k, matrixA.data(), matrixB.data(), matrixC_host.data(), alpha, beta);
 
-    auto res = compareEqual<float64_t>(matrixC_host.data(), matrixC_device.data(), m);
+    auto res = compareEqual<OutputT>(matrixC_host.data(), matrixC_device.data(), m);
 
     if(std::get<0>(res) == false)
     {
@@ -278,14 +287,23 @@ int main()
     const uint32_t k = 256;
     const uint32_t n = T_BLOCK_Y * ROCWMMA_N;
 
-    if(!isF64Supported())
+    if (!canEnable<ROCWMMA_M,
+                   ROCWMMA_N,
+                   ROCWMMA_K,
+                   InputT,
+                   OutputT,
+                   ComputeT,
+                   BLOCKS_X,
+                   BLOCKS_Y,
+                   T_BLOCK_X,
+                   T_BLOCK_Y,
+                   rocwmma::Constants::AMDGCN_WAVE_SIZE>())
     {
-        std::cout << "f64 dgemv not supported on this device" << std::endl;
+        std::cout << " Unsupported configurations " << std::endl;
+        exit(0);
     }
-    else
-    {
-        dgemv_test(m, n, k, 2.1, 2.1);
-    }
+
+    dgemv_test(m, n, k, 2.1, 2.1);
 
     return 0;
 }

@@ -212,7 +212,7 @@ constexpr uint32_t ROCWMMA_N = 32u;
 constexpr uint32_t ROCWMMA_K = 16u;
 
 // Warp size
-constexpr uint32_t WARP_SIZE = Constants::AMDGCN_WAVE_SIZE;
+constexpr uint32_t WARP_SIZE = rocwmma::Constants::AMDGCN_WAVE_SIZE;
 
 // Warp tile: computed by each warp
 constexpr uint32_t BLOCKS_X    = 2u;
@@ -660,7 +660,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
     globalWriteD(d + MfmaFragDMap1d::fromMatrixCoord(warpTileCoord, ldd), fragsD, ldd);
 }
 
-ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, float32_t beta)
+ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, ComputeT beta)
 {
     // Runtime warp calculation (host code needs to query warpsize dynamically)
     auto warpSize = getWarpSize();
@@ -703,11 +703,11 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     std::cout << "Initializing host data..." << std::endl;
 
     // Initialize input matrices
-    std::vector<float32_t> matrixA(m * k);
-    std::vector<float32_t> matrixB(k * n);
-    std::vector<float32_t> matrixC(m * n);
+    std::vector<InputT> matrixA(m * k);
+    std::vector<InputT> matrixB(k * n);
+    std::vector<OutputT> matrixC(m * n);
     // Fill outputs with NaN to catch contamination
-    std::vector<float32_t> matrixD(m * n, std::numeric_limits<float32_t>::signaling_NaN());
+    std::vector<OutputT> matrixD(m * n, std::numeric_limits<OutputT>::signaling_NaN());
 
     fillRand(matrixA.data(), m, k);
     fillRand(matrixB.data(), k, n);
@@ -716,15 +716,15 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     std::cout << "Initializing device data..." << std::endl;
 
     // Allocate and copy device memory
-    float32_t* d_a;
-    float32_t* d_b;
-    float32_t* d_c;
-    float32_t* d_d;
+    InputT* d_a;
+    InputT* d_b;
+    OutputT* d_c;
+    OutputT* d_d;
 
-    const size_t bytesA = matrixA.size() * sizeof(float32_t);
-    const size_t bytesB = matrixB.size() * sizeof(float32_t);
-    const size_t bytesC = matrixC.size() * sizeof(float32_t);
-    const size_t bytesD = matrixD.size() * sizeof(float32_t);
+    const size_t bytesA = matrixA.size() * sizeof(InputT);
+    const size_t bytesB = matrixB.size() * sizeof(InputT);
+    const size_t bytesC = matrixC.size() * sizeof(OutputT);
+    const size_t bytesD = matrixD.size() * sizeof(OutputT);
 
     CHECK_HIP_ERROR(hipMalloc(&d_a, bytesA));
     CHECK_HIP_ERROR(hipMalloc(&d_b, bytesB));
@@ -746,7 +746,7 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
 
     // Uses 2 lds blocks for prefetch loop (A and B)
     int ldsusage
-        = 2u * sizeof(float32_t) * (get<0>(macroTileSize) + get<1>(macroTileSize)) * ROCWMMA_K;
+        = 2u * sizeof(InputT) * (get<0>(macroTileSize) + get<1>(macroTileSize)) * ROCWMMA_K;
 
     auto rocwmmaKernel = [&]() {
         hipExtLaunchKernelGGL(gemm_rocwmma_d,
@@ -832,8 +832,8 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     CHECK_HIP_ERROR(hipMemcpy(matrixD.data(), d_d, bytesD, hipMemcpyDeviceToHost));
 
     // Setup and run reference computation
-    std::vector<float32_t> matrixD_ref(m * n, std::numeric_limits<float32_t>::signaling_NaN());
-    gemm_cpu_h<float32_t, float32_t, float32_t, col_major, row_major, col_major>(m,
+    std::vector<OutputT> matrixD_ref(m * n, std::numeric_limits<OutputT>::signaling_NaN());
+    gemm_cpu_h<InputT, OutputT, ComputeT, col_major, row_major, col_major>(m,
                                                                                  n,
                                                                                  k,
                                                                                  matrixA.data(),
@@ -873,13 +873,23 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
 
 int main()
 {
-    if(!isF32Supported())
+    if (!canEnable<ROCWMMA_M,
+                   ROCWMMA_N,
+                   ROCWMMA_K,
+                   InputT,
+                   OutputT,
+                   ComputeT,
+                   BLOCKS_X,
+                   BLOCKS_Y,
+                   TBLOCK_X,
+                   TBLOCK_Y,
+                   rocwmma::Constants::AMDGCN_WAVE_SIZE>())
     {
-        std::cout << "f32 sgemm not supported on this device" << std::endl;
+        std::cout << " Unsupported configurations " << std::endl;
+        exit(0);
     }
-    else
-    {
-        gemm_test(7168, 7168, 7168, 2, 2);
-    }
+
+    gemm_test(7168, 7168, 7168, 2, 2);
+
     return 0;
 }
