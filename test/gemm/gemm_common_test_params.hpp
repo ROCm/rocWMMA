@@ -78,6 +78,7 @@ namespace rocwmma
 #endif // ROCWMMA_EXTENDED_TESTS
             std::tuple<float16_t, float32_t, float32_t>>;
 
+#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
         // Non-native hfloat16_t (i.e. __half)
         using TestTypesH16 = std::tuple<
 #if defined(ROCWMMA_EXTENDED_TESTS)
@@ -85,6 +86,7 @@ namespace rocwmma
             std::tuple<hfloat16_t, hfloat16_t, float32_t>,
 #endif // ROCWMMA_EXTENDED_TESTS
             std::tuple<hfloat16_t, float32_t, float32_t>>;
+#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
 
         // Native single f32
         using TestTypesF32 = std::tuple<std::tuple<float32_t, float32_t, float32_t>>;

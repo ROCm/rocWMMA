@@ -33,7 +33,9 @@ namespace rocwmma
     template struct GemmResource<bfloat8_t, float32_t>;
     template struct GemmResource<bfloat16_t, float32_t>;
     template struct GemmResource<float16_t, float32_t>;
+#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
     template struct GemmResource<hfloat16_t, float32_t>;
+#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
     template struct GemmResource<float32_t, float32_t>;
     template struct GemmResource<xfloat32_t, float32_t>;
     template struct GemmResource<float64_t, float64_t>;
@@ -42,7 +44,9 @@ namespace rocwmma
     template struct GemmResource<int8_t, int8_t>;
     template struct GemmResource<bfloat16_t, bfloat16_t>;
     template struct GemmResource<float16_t, float16_t>;
+#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
     template struct GemmResource<hfloat16_t, hfloat16_t>;
+#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
 #endif // ROCWMMA_EXTENDED_TESTS
 
 }

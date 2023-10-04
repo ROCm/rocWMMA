@@ -51,7 +51,9 @@ namespace rocwmma
                                         bfloat8_t,
                                         bfloat16_t,
                                         float16_t,
+#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
                                         hfloat16_t,
+#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
                                         float32_t,
                                         xfloat32_t,
                                         int8_t,
