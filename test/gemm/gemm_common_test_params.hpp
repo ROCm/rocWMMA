@@ -100,9 +100,15 @@ namespace rocwmma
         // Aggregate types <= 8 bit
         using TestTypesTiny = typename Concat<TestTypesF8, TestTypesBF8, TestTypesI8>::Result;
 
+#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
         // Aggregate types <= 16 bit
         using TestTypesSmall =
             typename Concat<TestTypesTiny, TestTypesBF16, TestTypesF16, TestTypesH16>::Result;
+#else
+        // Aggregate types <= 16 bit
+        using TestTypesSmall =
+            typename Concat<TestTypesTiny, TestTypesBF16, TestTypesF16>::Result;
+#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
 
         // Aggregate types <= 32 bit
         using TestTypesMedium = typename Concat<TestTypesSmall, TestTypesF32, TestTypesXF32>::Result;
