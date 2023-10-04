@@ -114,6 +114,23 @@ bool isF32Supported()
     return isGfx9();
 }
 
+struct Fp16Bits
+{
+    union
+    {
+        rocwmma::float16_t  f16;
+        rocwmma::hfloat16_t h16;
+    };
+    constexpr Fp16Bits(rocwmma::float16_t initVal)
+        : f16(initVal)
+    {
+    }
+    constexpr Fp16Bits(rocwmma::hfloat16_t initVal)
+        : h16(initVal)
+    {
+    }
+};
+
 inline double calculateGFlops(uint32_t m, uint32_t n, uint32_t k)
 {
     return 2.0 * static_cast<double>(m) * static_cast<double>(n) * static_cast<double>(k) * 1.0e-9;
@@ -175,7 +192,11 @@ __host__ static inline void
                 // Random values normalized such that output is between 0 and 1
                 auto value = __float2half(static_cast<float>(rand() / normalization)
                                           / static_cast<float>(RAND_MAX));
+#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
                 mat[t * batchOffset + i * k + j] = static_cast<DataT>(value);
+#else
+                mat[t * batchOffset + i * k + j] = static_cast<DataT>(Fp16Bits(value).f16);
+#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
             }
         }
     }
