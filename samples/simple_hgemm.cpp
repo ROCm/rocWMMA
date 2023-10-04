@@ -57,7 +57,7 @@ constexpr uint32_t ROCWMMA_N = 16;
 constexpr uint32_t ROCWMMA_K = 16;
 
 // Device warp size
-const uint32_t WARP_SIZE = rocwmma::Constants::AMDGCN_WAVE_SIZE;
+const int WARP_SIZE = getWarpSize();
 
 // Warp tile: computed by each warp
 constexpr uint32_t BLOCKS_X    = 1u;
@@ -299,17 +299,14 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, Comp
 
 int main()
 {
-    if (!canEnable<ROCWMMA_M,
-                   ROCWMMA_N,
-                   ROCWMMA_K,
-                   InputT,
-                   OutputT,
-                   ComputeT,
-                   BLOCKS_X,
-                   BLOCKS_Y,
-                   T_BLOCK_X,
-                   T_BLOCK_Y,
-                   rocwmma::Constants::AMDGCN_WAVE_SIZE>())
+    if (!isSupportedConfig <ROCWMMA_M,
+                            ROCWMMA_N,
+                            ROCWMMA_K,
+                            InputT,
+                            OutputT,
+                            ComputeT,
+                            BLOCKS_X,
+                            BLOCKS_Y>( T_BLOCK_X, T_BLOCK_Y))
     {
         std::cout << " Unsupported configurations " << std::endl;
         exit(0);

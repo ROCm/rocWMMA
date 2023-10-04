@@ -73,27 +73,27 @@ __host__ void dgemv_cpu_h(uint32_t         m,
 // Supports ROCWMMA_M/N square sizes of
 // : 16 x 16
 // : 32 x 32 ( only MI )
-constexpr uint32_t ROCWMMA_M = 16;
-constexpr uint32_t ROCWMMA_N = 16;
+const uint32_t ROCWMMA_M = 16;
+const uint32_t ROCWMMA_N = 16;
 
 // Supports ROCWMMA_K sizes as
 // : multiples of 16.
-constexpr uint32_t ROCWMMA_K = 16;
+const uint32_t ROCWMMA_K = 16;
 
 // AMDGCN default wave size
-const uint32_t WARP_SIZE = rocwmma::Constants::AMDGCN_WAVE_SIZE;
+const int WARP_SIZE = getWarpSize();
 
 // Warp tile: computed by each warp
-constexpr uint32_t BLOCKS_X    = 1u;
-constexpr uint32_t BLOCKS_Y    = 1u;
+const uint32_t BLOCKS_X    = 1u;
+const uint32_t BLOCKS_Y    = 1u;
 
 // Thread block
 // : T_BLOCK_X must be multiple of WARP_SIZE.
 // Note: Each wave will compute one ROCWMMA_M x ROCWMMA_N output block
 // Note: Workgroup will compute
 //  T_BLOCK_X / WARP_SIZE x T_BLOCK_Y output blocks
-constexpr uint32_t T_BLOCK_X = 16 * WARP_SIZE;
-constexpr uint32_t T_BLOCK_Y = 1;
+const uint32_t T_BLOCK_X = 16 * WARP_SIZE;
+const uint32_t T_BLOCK_Y = 1;
 
 // The following device kernel is a naive implementation
 // of blocked dgemv. Each wave will compute one ROCWMMA_M x ROCWMMA_N
@@ -287,17 +287,14 @@ int main()
     const uint32_t k = 256;
     const uint32_t n = T_BLOCK_Y * ROCWMMA_N;
 
-    if (!canEnable<ROCWMMA_M,
-                   ROCWMMA_N,
-                   ROCWMMA_K,
-                   InputT,
-                   OutputT,
-                   ComputeT,
-                   BLOCKS_X,
-                   BLOCKS_Y,
-                   T_BLOCK_X,
-                   T_BLOCK_Y,
-                   rocwmma::Constants::AMDGCN_WAVE_SIZE>())
+    if (!isSupportedConfig <ROCWMMA_M,
+                            ROCWMMA_N,
+                            ROCWMMA_K,
+                            InputT,
+                            OutputT,
+                            ComputeT,
+                            BLOCKS_X,
+                            BLOCKS_Y>( T_BLOCK_X, T_BLOCK_Y))
     {
         std::cout << " Unsupported configurations " << std::endl;
         exit(0);

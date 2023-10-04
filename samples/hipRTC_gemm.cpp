@@ -52,27 +52,27 @@ using ComputeT = float32_t;
 // Supports ROCWMMA_M/N square sizes of
 // : 16 x 16
 // : 32 x 32
-constexpr uint32_t ROCWMMA_M = 16;
-constexpr uint32_t ROCWMMA_N = 16;
+const uint32_t ROCWMMA_M = 16;
+const uint32_t ROCWMMA_N = 16;
 
 // Supports ROCWMMA_K sizes as
 // : multiples of 16.
-constexpr uint32_t ROCWMMA_K = 16;
+const uint32_t ROCWMMA_K = 16;
 
 // Device warp size
-const int WARP_SIZE =  rocwmma::Constants::AMDGCN_WAVE_SIZE;
+const int WARP_SIZE = getWarpSize();
 
 // Warp tile: computed by each warp
-constexpr uint32_t BLOCKS_X    = 1u;
-constexpr uint32_t BLOCKS_Y    = 1u;
+const int BLOCKS_X    = 1u;
+const int BLOCKS_Y    = 1u;
 
 // Thread block
 // : T_BLOCK_X must be multiple of WARP_SIZE.
 // Note: Each wave will compute one BLOCK_M x BLOCK_N output block
 // Note: Workgroup will compute
 //  T_BLOCK_X / WARP_SIZE x T_BLOCK_Y output blocks
-constexpr uint32_t T_BLOCK_X = 4 * WARP_SIZE;
-constexpr uint32_t T_BLOCK_Y = 4;
+const uint32_t T_BLOCK_X = 4 * WARP_SIZE;
+const uint32_t T_BLOCK_Y = 4;
 
 std::string source = R"(
 
@@ -88,9 +88,9 @@ using InputT   = bfloat16_t;
 using OutputT  = float32_t;
 using ComputeT = float32_t;
 
-constexpr int ROCWMMA_M = 16;
-constexpr int ROCWMMA_N = 16;
-constexpr int ROCWMMA_K = 16;
+const int ROCWMMA_M = 16;
+const int ROCWMMA_N = 16;
+const int ROCWMMA_K = 16;
 
 // The following device kernel is a naive implementation
 // of blocked GEMM. Each wave will compute one BLOCK_M x BLOCK_N
@@ -182,17 +182,14 @@ char const* src = source.c_str();
 
 int main()
 {
-    if (!canEnable<ROCWMMA_M,
-                   ROCWMMA_N,
-                   ROCWMMA_K,
-                   InputT,
-                   OutputT,
-                   ComputeT,
-                   BLOCKS_X,
-                   BLOCKS_Y,
-                   T_BLOCK_X,
-                   T_BLOCK_Y,
-                   rocwmma::Constants::AMDGCN_WAVE_SIZE>())
+    if (!isSupportedConfig <ROCWMMA_M,
+                            ROCWMMA_N,
+                            ROCWMMA_K,
+                            InputT,
+                            OutputT,
+                            ComputeT,
+                            BLOCKS_X,
+                            BLOCKS_Y>( T_BLOCK_X, T_BLOCK_Y))
     {
         std::cout << " Unsupported configurations " << std::endl;
         exit(0);

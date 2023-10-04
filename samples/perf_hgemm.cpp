@@ -949,17 +949,14 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, 
 
 int main()
 {
-    if (!canEnable<ROCWMMA_M,
-                   ROCWMMA_N,
-                   ROCWMMA_K,
-                   InputT,
-                   OutputT,
-                   ComputeT,
-                   BLOCKS_X,
-                   BLOCKS_Y,
-                   TBLOCK_X,
-                   TBLOCK_Y,
-                   rocwmma::Constants::AMDGCN_WAVE_SIZE>())
+    if (!isSupportedConfig <ROCWMMA_M,
+                            ROCWMMA_N,
+                            ROCWMMA_K,
+                            InputT,
+                            OutputT,
+                            ComputeT,
+                            BLOCKS_X,
+                            BLOCKS_Y>( T_BLOCK_X, T_BLOCK_Y))
     {
         std::cout << " Unsupported configurations " << std::endl;
         exit(0);
