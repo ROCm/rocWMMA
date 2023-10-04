@@ -170,10 +170,12 @@ namespace rocwmma
         }
     };
 
+#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
     template <>
     struct rocblas_types<hfloat16_t> : public rocblas_types<float16_t>
     {
     };
+#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
 
     template <>
     struct rocblas_types<bfloat16_t>

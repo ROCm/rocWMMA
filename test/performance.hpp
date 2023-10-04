@@ -258,10 +258,12 @@ namespace rocwmma
         };
     };
 
+#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
     template <typename GfxArch>
     struct MfmaPerfTraits<GfxArch, hfloat16_t> : public MfmaPerfTraits<GfxArch, float16_t>
     {
     };
+#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
 
     template <typename GfxArch, typename DataT>
     struct VALUPerfTraits;
@@ -358,10 +360,12 @@ namespace rocwmma
         };
     };
 
+#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
     template <typename GfxArch>
     struct VALUPerfTraits<GfxArch, hfloat16_t> : public VALUPerfTraits<GfxArch, float16_t>
     {
     };
+#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
 
     inline double calculateGFlops(uint32_t m, uint32_t n, uint32_t k)
     {

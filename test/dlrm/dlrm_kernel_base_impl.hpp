@@ -112,8 +112,12 @@ namespace rocwmma
 
         // Datatypes
         auto isF64 = std::is_same<DataT, float64_t>::value;
+        auto isH16 = false;
+#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
+        isH16 = std::is_same<DataT, hfloat16_t>::value;
+#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
         auto isF16
-            = (std::is_same<DataT, float16_t>::value) || (std::is_same<DataT, hfloat16_t>::value);
+            = std::is_same<DataT, float16_t>::value || isH16;
         auto isBF16 = (std::is_same<DataT, bfloat16_t>::value);
         auto isI8   = (std::is_same<DataT, int8_t>::value);
 
