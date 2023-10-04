@@ -838,7 +838,9 @@ namespace rocwmma
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(bfloat8_t, float32_t, float32_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(bfloat16_t, float32_t, float32_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(float16_t, float32_t, float32_t);
+#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(hfloat16_t, float32_t, float32_t);
+#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(float32_t, float32_t, float32_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(xfloat32_t, float32_t, float32_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(float64_t, float64_t, float64_t);
@@ -849,8 +851,10 @@ namespace rocwmma
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(bfloat16_t, bfloat16_t, float32_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(float16_t, float16_t, float16_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(float16_t, float16_t, float32_t);
+#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(hfloat16_t, hfloat16_t, hfloat16_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(hfloat16_t, hfloat16_t, float32_t);
+#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
 #endif // ROCWMMA_EXTENDED_TESTS
 
 } // namespace rocwmma
