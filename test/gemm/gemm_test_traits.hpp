@@ -113,11 +113,11 @@ namespace rocwmma
             IsInt8    = std::is_same_v<InputT, int8_t>,
             IsFloat8  = std::is_same_v<InputT, float8_t>,
             IsBFloat8 = std::is_same_v<InputT, bfloat8_t>,
-#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
+#if !ROCWMMA_TESTS_NO_HALF
             IsHFloat16 = std::is_same_v<InputT, hfloat16_t>,
 #else
             IsHFloat16 = false,
-#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
+#endif // !ROCWMMA_TESTS_NO_HALF
             IsFloat16  = std::is_same_v<InputT, float16_t> || IsHFloat16,
             IsBFloat16 = std::is_same_v<InputT, bfloat16_t>,
 
@@ -133,11 +133,11 @@ namespace rocwmma
             IsFloat8  = std::is_same_v<OutputT, float8_t>,
             IsBFloat8 = std::is_same_v<OutputT, bfloat8_t>,
 
-#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
+#if !ROCWMMA_TESTS_NO_HALF
             IsHFloat16 = std::is_same_v<OutputT, hfloat16_t>,
 #else
             IsHFloat16 = false,
-#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
+#endif // !ROCWMMA_TESTS_NO_HALF
 
             IsFloat16  = std::is_same_v<OutputT, float16_t> || IsHFloat16,
             IsBFloat16 = std::is_same_v<OutputT, bfloat16_t>,
@@ -154,13 +154,13 @@ namespace rocwmma
             IsFloat8  = std::is_same_v<ComputeT, float8_t>,
             IsBFloat8 = std::is_same_v<ComputeT, bfloat8_t>,
 
-#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
+#if !ROCWMMA_TESTS_NO_HALF
             IsHFloat16 = std::is_same_v<ComputeT, hfloat16_t>,
 #else
             IsHFloat16 = false,
-#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
+#endif // !ROCWMMA_TESTS_NO_HALF
 
-            IsFloat16 = std::is_same_v<ComputeT, float16_t> || IsHFloat16,
+            IsFloat16  = std::is_same_v<ComputeT, float16_t> || IsHFloat16,
             IsBFloat16 = std::is_same_v<ComputeT, bfloat16_t>,
 
             IsFloat32  = std::is_same_v<ComputeT, float32_t>,
