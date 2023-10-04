@@ -46,33 +46,33 @@ namespace rocwmma
     ///////////////////////////////////////////////////////////
     ///////////  rocwmma::hfloat16_t host conversions  //////////
     ///////////////////////////////////////////////////////////
-        template<typename Incoming, typename Outgoing , typename std::enable_if_t<!std::is_same<Incoming, hfloat16_t>::value && !std::is_same<Outgoing, hfloat16_t>::value, int> = 0>
-        __host__ __device__ inline Outgoing convert(const Incoming& value)
-        {
-                return static_cast<Outgoing>(value);
-        }
+    template<typename Incoming, typename Outgoing , typename std::enable_if_t<!std::is_same<Incoming, hfloat16_t>::value && !std::is_same<Outgoing, hfloat16_t>::value, int> = 0>
+    __host__ __device__ inline Outgoing convert(const Incoming& value)
+    {
+        return static_cast<Outgoing>(value);
+    }
 
-        template<typename Incoming, typename Outgoing, typename std::enable_if_t<std::is_same<Outgoing, hfloat16_t>::value, int> = 0>
-        __host__ __device__ inline hfloat16_t convert(const Incoming& value)
-        {
-        #if defined(__HIP_NO_HALF_CONVERSIONS__)
-                float16_t fp16 = static_cast<float16_t>(value);
-                return convert<float16_t, hfloat16_t>(fp16);
-        #else
-                return static_cast<hfloat16_t>(value);
-        #endif
-        }
+    template<typename Incoming, typename Outgoing, typename std::enable_if_t<std::is_same<Outgoing, hfloat16_t>::value, int> = 0>
+    __host__ __device__ inline hfloat16_t convert(const Incoming& value)
+    {
+#if defined(__HIP_NO_HALF_CONVERSIONS__)
+        detail::Fp16Bits fp16(static_cast<float16_t>(value));
+        return fp16.h16;
+#else
+        return static_cast<hfloat16_t>(value);
+#endif
+    }
 
-        template<typename Incoming, typename Outgoing, typename std::enable_if_t<std::is_same<Incoming, hfloat16_t>::value, int> = 0>
-        __host__ __device__ inline Outgoing convert(const hfloat16_t& value)
-        {
-        #if defined(__HIP_NO_HALF_CONVERSIONS__)
-                detail::Fp16Bits fp16(value);
-                return convert<float16_t, Outgoing>(fp16.f16);
-        #else
-                return static_cast<Outgoing>(value);
-        #endif
-        }
+    template<typename Incoming, typename Outgoing, typename std::enable_if_t<std::is_same<Incoming, hfloat16_t>::value, int> = 0>
+    __host__ __device__ inline Outgoing convert(const hfloat16_t& value)
+    {
+#if defined(__HIP_NO_HALF_CONVERSIONS__)
+        detail::Fp16Bits fp16(value);
+        return convert<float16_t, Outgoing>(fp16.f16);
+#else
+        return static_cast<Outgoing>(value);
+#endif
+    }
 
     ///////////////////////////////////////////////////////////
     ///////////  rocwmma::hfloat16_t host operators  //////////
