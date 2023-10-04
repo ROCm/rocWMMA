@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,11 +36,18 @@
 
 #include "common.hpp"
 
-using rocwmma::col_major;
+using rocwmma::bfloat16_t;
 using rocwmma::float16_t;
 using rocwmma::float32_t;
 using rocwmma::float64_t;
+
+using rocwmma::col_major;
 using rocwmma::row_major;
+
+// Types
+using InputT   = bfloat16_t;
+using OutputT  = float32_t;
+using ComputeT = float32_t;
 
 // Supports ROCWMMA_M/N square sizes of
 // : 16 x 16
@@ -70,6 +77,12 @@ std::string source = R"(
 using rocwmma::float16_t;
 using rocwmma::float32_t;
 using rocwmma::float64_t;
+using rocwmma::bfloat16_t;
+
+
+using InputT   = bfloat16_t;
+using OutputT  = float32_t;
+using ComputeT = float32_t;
 
 constexpr int ROCWMMA_M = 16;
 constexpr int ROCWMMA_N = 16;
@@ -93,34 +106,34 @@ extern "C"
 __global__ void gemm_rocwmma_d(uint32_t         m,
                                uint32_t         n,
                                uint32_t         k,
-                               float16_t const* a,
-                               float16_t const* b,
-                               float32_t const* c,
-                               float32_t*       d,
+                               InputT const* a,
+                               InputT const* b,
+                               OutputT const* c,
+                               OutputT*       d,
                                uint32_t         lda,
                                uint32_t         ldb,
                                uint32_t         ldc,
                                uint32_t         ldd,
-                               float32_t        alpha,
-                               float32_t        beta)
+                               ComputeT        alpha,
+                               ComputeT        beta)
 {
     // Create frags
     auto fragA = rocwmma::fragment<rocwmma::matrix_a,
                                    ROCWMMA_M,
                                    ROCWMMA_N,
                                    ROCWMMA_K,
-                                   float16_t,
+                                   InputT,
                                    rocwmma::row_major>();
     auto fragB = rocwmma::fragment<rocwmma::matrix_b,
                                    ROCWMMA_M,
                                    ROCWMMA_N,
                                    ROCWMMA_K,
-                                   float16_t,
+                                   InputT,
                                    rocwmma::col_major>();
     auto fragC
-        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
+        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, OutputT>();
     auto fragAcc
-        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
+        = rocwmma::fragment<rocwmma::accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, ComputeT>();
 
     rocwmma::fill_fragment(fragAcc, 0.0f);
 
@@ -173,11 +186,11 @@ int main()
     std::string rocWMMAIncludePath = std::string("-I") + rocm_path + std::string("/include");
 
     // gemm parameters
-    uint32_t  m     = 256;
-    uint32_t  n     = 256;
-    uint32_t  k     = 256;
-    float32_t alpha = 2.1f;
-    float32_t beta  = 2.1f;
+    uint32_t m     = 256;
+    uint32_t n     = 256;
+    uint32_t k     = 256;
+    ComputeT alpha = 2.1f;
+    ComputeT beta  = 2.1f;
 
     hiprtcProgram prog;
     CHECK_HIPRTC_ERROR(hiprtcCreateProgram(&prog, src, nullptr, 0, nullptr, nullptr));
@@ -231,11 +244,11 @@ int main()
     std::cout << "Initializing host data..." << std::endl;
 
     // Initialize input matrices
-    std::vector<float16_t> matrixA(m * k);
-    std::vector<float16_t> matrixB(k * n);
-    std::vector<float32_t> matrixC(m * n);
+    std::vector<InputT>  matrixA(m * k);
+    std::vector<InputT>  matrixB(k * n);
+    std::vector<OutputT> matrixC(m * n);
     // Fill outputs with NaN to catch contamination
-    std::vector<float32_t> matrixD(m * n, std::numeric_limits<float32_t>::signaling_NaN());
+    std::vector<OutputT> matrixD(m * n, std::numeric_limits<OutputT>::signaling_NaN());
 
     fillRand(matrixA.data(), m, k);
     fillRand(matrixB.data(), k, n);
@@ -246,10 +259,10 @@ int main()
     // Allocate and copy device memory
     hipDeviceptr_t d_a, d_b, d_c, d_d;
 
-    const size_t bytesA = matrixA.size() * sizeof(float16_t);
-    const size_t bytesB = matrixB.size() * sizeof(float16_t);
-    const size_t bytesC = matrixC.size() * sizeof(float32_t);
-    const size_t bytesD = matrixD.size() * sizeof(float32_t);
+    const size_t bytesA = matrixA.size() * sizeof(InputT);
+    const size_t bytesB = matrixB.size() * sizeof(InputT);
+    const size_t bytesC = matrixC.size() * sizeof(OutputT);
+    const size_t bytesD = matrixD.size() * sizeof(OutputT);
 
     CHECK_HIP_ERROR(hipMalloc(&d_a, bytesA));
     CHECK_HIP_ERROR(hipMalloc(&d_b, bytesB));
@@ -278,8 +291,8 @@ int main()
         uint32_t       _ldb;
         uint32_t       _ldc;
         uint32_t       _ldd;
-        float32_t      _alpha;
-        float32_t      _beta;
+        ComputeT       _alpha;
+        ComputeT       _beta;
     } args{m, n, k, d_a, d_b, d_c, d_d, lda, ldb, ldc, ldd, alpha, beta};
 
     std::size_t args_size = sizeof(args);
@@ -342,22 +355,22 @@ int main()
     CHECK_HIP_ERROR(hipMemcpy(matrixD.data(), d_d, bytesD, hipMemcpyDeviceToHost));
 
     // Setup and run reference computation
-    std::vector<float32_t> matrixD_ref(m * n, std::numeric_limits<float32_t>::signaling_NaN());
-    gemm_cpu_h<float16_t, float32_t, float32_t, row_major, col_major, row_major>(m,
-                                                                                 n,
-                                                                                 k,
-                                                                                 matrixA.data(),
-                                                                                 matrixB.data(),
-                                                                                 matrixC.data(),
-                                                                                 matrixD_ref.data(),
-                                                                                 lda,
-                                                                                 ldb,
-                                                                                 ldc,
-                                                                                 ldd,
-                                                                                 alpha,
-                                                                                 beta);
+    std::vector<OutputT> matrixD_ref(m * n, std::numeric_limits<OutputT>::signaling_NaN());
+    gemm_cpu_h<InputT, OutputT, ComputeT, row_major, col_major, row_major>(m,
+                                                                           n,
+                                                                           k,
+                                                                           matrixA.data(),
+                                                                           matrixB.data(),
+                                                                           matrixC.data(),
+                                                                           matrixD_ref.data(),
+                                                                           lda,
+                                                                           ldb,
+                                                                           ldc,
+                                                                           ldd,
+                                                                           alpha,
+                                                                           beta);
 
-    auto res = compareEqual<float32_t>(matrixD.data(), matrixD_ref.data(), m * n);
+    auto res = compareEqual<OutputT>(matrixD.data(), matrixD_ref.data(), m * n);
 
     if(std::get<0>(res) == false)
     {
