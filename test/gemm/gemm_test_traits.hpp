@@ -114,7 +114,7 @@ namespace rocwmma
             IsFloat8  = std::is_same_v<InputT, float8_t>,
             IsBFloat8 = std::is_same_v<InputT, bfloat8_t>,
 #if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
-            IsHFloat16 = std::is_same<DataT, hfloat16_t>::value,
+            IsHFloat16 = std::is_same_v<InputT, hfloat16_t>,
 #else
             IsHFloat16 = false,
 #endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
@@ -134,7 +134,7 @@ namespace rocwmma
             IsBFloat8 = std::is_same_v<OutputT, bfloat8_t>,
 
 #if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
-            IsHFloat16 = std::is_same<DataT, hfloat16_t>::value,
+            IsHFloat16 = std::is_same_v<OutputT, hfloat16_t>,
 #else
             IsHFloat16 = false,
 #endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
@@ -155,7 +155,7 @@ namespace rocwmma
             IsBFloat8 = std::is_same_v<ComputeT, bfloat8_t>,
 
 #if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
-            IsHFloat16 = std::is_same<DataT, hfloat16_t>::value,
+            IsHFloat16 = std::is_same_v<ComputeT, hfloat16_t>,
 #else
             IsHFloat16 = false,
 #endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
