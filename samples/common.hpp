@@ -32,32 +32,34 @@
 
 // Helper macro for HIP errors
 #ifndef CHECK_HIP_ERROR
-#define CHECK_HIP_ERROR(status)                   \
-    if(status != hipSuccess)                      \
-    {                                             \
-        fprintf(stderr,                           \
-                "hip error: '%s'(%d) at %s:%d\n", \
-                hipGetErrorString(status),        \
-                status,                           \
-                __FILE__,                         \
-                __LINE__);                        \
-        exit(EXIT_FAILURE);                       \
+#define CHECK_HIP_ERROR(expression)                      \
+    if(auto status = (expression); status != hipSuccess) \
+    {                                                    \
+        fprintf(stderr,                                  \
+                "hip error: '%s'(%d) at %s:%d\n",        \
+                hipGetErrorString(status),               \
+                status,                                  \
+                __FILE__,                                \
+                __LINE__);                               \
+        exit(EXIT_FAILURE);                              \
     }
 #endif
 
 #ifndef CHECK_HIPRTC_ERROR
-#define CHECK_HIPRTC_ERROR(status)                   \
-    if(status != HIPRTC_SUCCESS)                     \
-    {                                                \
-        fprintf(stderr,                              \
-                "hipRTC error: '%s'(%d) at %s:%d\n", \
-                hiprtcGetErrorString(status),        \
-                status,                              \
-                __FILE__,                            \
-                __LINE__);                           \
-        exit(EXIT_FAILURE);                          \
+#define CHECK_HIPRTC_ERROR(expression)                       \
+    if(auto status = (expression); status != HIPRTC_SUCCESS) \
+    {                                                        \
+        fprintf(stderr,                                      \
+                "hipRTC error: '%s'(%d) at %s:%d\n",         \
+                hiprtcGetErrorString(status),                \
+                status,                                      \
+                __FILE__,                                    \
+                __LINE__);                                   \
+        exit(EXIT_FAILURE);                                  \
     }
 #endif
+
+#include <rocwmma/internal/type_traits.hpp>
 
 // HIP Host functions to determine the gfx architecture
 bool isGfx9()
@@ -113,23 +115,6 @@ bool isF32Supported()
 {
     return isGfx9();
 }
-
-struct Fp16Bits
-{
-    union
-    {
-        rocwmma::float16_t  f16;
-        rocwmma::hfloat16_t h16;
-    };
-    constexpr Fp16Bits(rocwmma::float16_t initVal)
-        : f16(initVal)
-    {
-    }
-    constexpr Fp16Bits(rocwmma::hfloat16_t initVal)
-        : h16(initVal)
-    {
-    }
-};
 
 inline double calculateGFlops(uint32_t m, uint32_t n, uint32_t k)
 {
@@ -192,11 +177,8 @@ __host__ static inline void
                 // Random values normalized such that output is between 0 and 1
                 auto value = __float2half(static_cast<float>(rand() / normalization)
                                           / static_cast<float>(RAND_MAX));
-#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
-                mat[t * batchOffset + i * k + j] = static_cast<DataT>(value);
-#else
-                mat[t * batchOffset + i * k + j] = static_cast<DataT>(Fp16Bits(value).f16);
-#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
+
+                mat[t * batchOffset + i * k + j] = rocwmma::convert<DataT>(value);
             }
         }
     }

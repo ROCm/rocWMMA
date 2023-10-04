@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -140,6 +140,7 @@ namespace rocwmma
         using PackedT   = float32_t;
     };
 
+#if !ROCWMMA_NO_HALF
     template <>
     struct PackTraits<hfloat16_t>
     {
@@ -151,6 +152,7 @@ namespace rocwmma
         using UnpackedT = hfloat16_t;
         using PackedT   = float32_t;
     };
+#endif // !ROCWMMA_NO_HALF
 
     template <>
     struct PackTraits<bfloat16_t>
