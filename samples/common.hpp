@@ -140,6 +140,41 @@ uint32_t getGCNArchId()
     return mGcnArch;
 }
 
+
+// HIP Host function to retrieve the warp size
+enum hipWarpSize_t : uint32_t
+{
+    Wave32 = 32,
+    Wave64 = 64,
+    UNSUPPORTED_WARP_SIZE,
+};
+
+uint32_t getWarpSize()
+{
+    hipDevice_t     mHandle;
+    hipDeviceProp_t mProps;
+    uint32_t        mWarpSize = hipWarpSize_t::UNSUPPORTED_WARP_SIZE;
+
+    CHECK_HIP_ERROR(hipGetDevice(&mHandle));
+    CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
+
+    switch(mProps.warpSize)
+    {
+    case hipWarpSize_t::Wave32:
+    case hipWarpSize_t::Wave64:
+        mWarpSize = mProps.warpSize;
+    default:;
+    }
+
+    if(mWarpSize == hipWarpSize_t::UNSUPPORTED_WARP_SIZE)
+    {
+        std::cerr << "Cannot proceed: unsupported warp sizev detected. Exiting." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    return mWarpSize;
+}
+
 template <uint32_t BlockM,
           uint32_t BlockN,
           uint32_t BlockK,
@@ -148,11 +183,9 @@ template <uint32_t BlockM,
           typename ComputeT,
           uint32_t BlocksX,
           uint32_t BlocksY,
-          uint32_t TBlockX,
-          uint32_t TBlockY,
           uint32_t WaveSize,
           uint32_t ArchId>
-bool checkConfigs()
+bool checkConfigs(const uint32_t TBlockX, const uint32_t TBlockY )
 {
     // Architecture we are testing
     const bool IsWave32 = (WaveSize == rocwmma::Constants::AMDGCN_WAVE_SIZE_32);
@@ -219,27 +252,18 @@ bool checkConfigs()
     // Ensure that we have at least 1 wave
     const bool MinTBlockTest = (TBlockX >= WaveSize && TBlockY >= 1);
 
-    // Ensure that we only build for the current compiler target, which
-    // will also exclude the host.
-    const bool CurrentArchTest = (ArchId == rocwmma::Constants::AMDGCN_CURRENT_ARCH_ID);
-
     // Ensure that we only build for the current wave size
     const bool CurrentWaveSizeTest = (WaveSize == rocwmma::Constants::AMDGCN_WAVE_SIZE);
 
     // Only supported hardware allowed
     const bool ArchTest = (bool)IsGfx9 || (bool)IsGfx11;
 
-    // During the build phase, we have information about current target arch.
-    // This means only the current arch and wave size are valid.
-    const bool EnableBuild
-        = (TBlockXTest && MinTBlockTest && CurrentArchTest && CurrentWaveSizeTest && ArchTest);
-
     // During run phase on the host, we don't have compile time info about current arch or wave size.
     // We have to trust that the runtime params obtained through HipDevice will dispatch correctly for
     // the current arch and wave size.
     const bool EnableRun = (TBlockXTest && MinTBlockTest && ArchTest);
 
-    const bool EnableGfx9 = []() {
+    auto EnableGfx9 = [](const uint32_t TBlockX, const uint32_t TBlockY) {
         const bool ArchTestGfx9 = (bool)IsGfx9;
 
         const bool WaveSizeTest = (bool)IsWave64;
@@ -349,7 +373,7 @@ bool checkConfigs()
                     && XF32BlockSizeTest && F64BlockSizeTest);
     };
 
-    const bool EnableGfx11 = []() {
+    auto EnableGfx11 = [](const uint32_t TBlockX, const uint32_t TBlockY) {
 
         // Valid for gfx11 only
         const bool ArchTestGfx11 = (bool)IsGfx11;
@@ -383,14 +407,10 @@ bool checkConfigs()
                     && F16BlockSizeTest);
 
     };
+    const bool enableRun   = ((bool)EnableRun
+                                  && ((bool)EnableGfx9(TBlockX, TBlockY) || (bool)EnableGfx11(TBlockX, TBlockY)));
 
-    const bool finalEnableBuild = ((bool)EnableBuild
-                                  && ((bool)EnableGfx9 || (bool)EnableGfx11));
-
-    const bool finalEnableRun   = ((bool)EnableRun
-                                  && ((bool)EnableGfx9 || (bool)EnableGfx11));
-
-    return finalEnableBuild && finalEnableRun;
+    return enableRun;
 }
 
 template <uint32_t BlockM,
@@ -400,15 +420,16 @@ template <uint32_t BlockM,
           typename OutputT,
           typename ComputeT,
           uint32_t BlocksX,
-          uint32_t BlocksY,
-          uint32_t TBlockX,
-          uint32_t TBlockY,
-          uint32_t WaveSize>
-const bool canEnable()
+          uint32_t BlocksY>
+const bool isSupportedConfig(const uint32_t T_BLOCK_X,
+                             const uint32_t T_BLOCK_Y )
 {
     uint32_t Id = getGCNArchId();
+
+    uint32_t WaveSize = getWarpSize();
+
     // - Arch [gfx908, gfx90a, gfx940, gfx941, gfx942, gfx1100, gfx1101, gfx1102]
-    auto dispatchGuardFunc = [Id]() {
+    auto dispatchGuardFunc = [Id, WaveSize, T_BLOCK_X, T_BLOCK_Y]() {
         bool dispatchResult = false;
 
 #define ROCWMMA_CASE_BODY_ARG0(CASE_LABEL, CASE_IMPL) \
@@ -424,6 +445,22 @@ const bool canEnable()
         CASE_IMPL(CASE_IMPL_ARG0)                                     \
     }                                                                 \
     break;
+
+#define ROCWMMA_CASE_BODY_ARG2(CASE_LABEL, CASE_IMPL, CASE_IMPL_ARG0, CASE_IMPL_ARG1) \
+    case CASE_LABEL:                                                                  \
+    {                                                                                 \
+        CASE_IMPL(CASE_IMPL_ARG0, CASE_IMPL_ARG1)                                     \
+    }                                                                                 \
+    break;
+
+// First arg is always case label, second is a constant
+#define ROCWMMA_SWITCH_BODY2_ARG2(SWITCH_ARG, CASE_IMPL, CASE_LABEL0, CASE_LABEL1, FWD_ARG_0) \
+    switch(SWITCH_ARG)                                                                        \
+    {                                                                                         \
+        ROCWMMA_CASE_BODY_ARG2(CASE_LABEL0, CASE_IMPL, CASE_LABEL0, FWD_ARG_0)                \
+        ROCWMMA_CASE_BODY_ARG2(CASE_LABEL1, CASE_IMPL, CASE_LABEL1, FWD_ARG_0)                \
+    default:;                                                                                 \
+    }
 
 #define ROCWMMA_SWITCH_BODY8_ARG1(SWITCH_ARG,                       \
                                   CASE_IMPL,                        \
@@ -448,25 +485,29 @@ const bool canEnable()
     default:;                                                       \
     }
 
+#define CASE_IMPL_ASSIGN4(WAVE_SIZE, ARCH_ID) \
+    dispatchResult = checkConfigs<BlockM, BlockN, BlockK, InputT, OutputT, ComputeT, BlocksX, BlocksY, WAVE_SIZE, ARCH_ID>(T_BLOCK_X, T_BLOCK_Y);
 
-#define CASE_IMPL_ASSIGN1(ARCH_ID) \
-dispatchResult = checkConfigs<BlockM, BlockN, BlockK, InputT, OutputT, ComputeT, BlocksX, BlocksY, TBlockX, TBlockY, WaveSize, ARCH_ID>();
+#define SWITCH_BODY_WAVE_SIZE(ARCH_ID) \
+    ROCWMMA_SWITCH_BODY2_ARG2(         \
+        WaveSize, CASE_IMPL_ASSIGN4, rocwmma::Constants::AMDGCN_WAVE_SIZE_32, rocwmma::Constants::AMDGCN_WAVE_SIZE_64, ARCH_ID)
 
-#define DISPATCH_GUARD_BODY                     \
-ROCWMMA_SWITCH_BODY8_ARG1(Id,                   \
-                          CASE_IMPL_ASSIGN1,    \
-                          rocwmma::Constants::AMDGCN_ARCH_ID_GFX908,     \
-                          rocwmma::Constants::AMDGCN_ARCH_ID_GFX90A,     \
-                          rocwmma::Constants::AMDGCN_ARCH_ID_GFX940,     \
-                          rocwmma::Constants::AMDGCN_ARCH_ID_GFX941,     \
-                          rocwmma::Constants::AMDGCN_ARCH_ID_GFX942,     \
-                          rocwmma::Constants::AMDGCN_ARCH_ID_GFX1100,    \
-                          rocwmma::Constants::AMDGCN_ARCH_ID_GFX1101,    \
-                          rocwmma::Constants::AMDGCN_ARCH_ID_GFX1102)
-
+#define DISPATCH_GUARD_BODY                          \
+    ROCWMMA_SWITCH_BODY8_ARG1(Id,                    \
+                              SWITCH_BODY_WAVE_SIZE, \
+                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX908,     \
+                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX90A,     \
+                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX940,     \
+                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX941,     \
+                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX942,     \
+                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX1100,    \
+                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX1101,    \
+                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX1102)
+        
         DISPATCH_GUARD_BODY
 
-#undef CASE_IMPL_ASSIGN1
+#undef CASE_IMPL_ASSIGN4
+#undef SWITCH_BODY_WAVE_SIZE
 #undef DISPATCH_GUARD_BODY
 
         return dispatchResult;
@@ -486,40 +527,6 @@ inline double calculateTFlopsPerSec(
 {
     // elapsedTimeMs is over all iterations
     return calculateGFlops(m, n, k) / elapsedTimeMs * static_cast<double>(repeats);
-}
-
-// HIP Host function to retrieve the warp size
-enum hipWarpSize_t : uint32_t
-{
-    Wave32 = 32,
-    Wave64 = 64,
-    UNSUPPORTED_WARP_SIZE,
-};
-
-uint32_t getWarpSize()
-{
-    hipDevice_t     mHandle;
-    hipDeviceProp_t mProps;
-    uint32_t        mWarpSize = hipWarpSize_t::UNSUPPORTED_WARP_SIZE;
-
-    CHECK_HIP_ERROR(hipGetDevice(&mHandle));
-    CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
-
-    switch(mProps.warpSize)
-    {
-    case hipWarpSize_t::Wave32:
-    case hipWarpSize_t::Wave64:
-        mWarpSize = mProps.warpSize;
-    default:;
-    }
-
-    if(mWarpSize == hipWarpSize_t::UNSUPPORTED_WARP_SIZE)
-    {
-        std::cerr << "Cannot proceed: unsupported warp sizev detected. Exiting." << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    return mWarpSize;
 }
 
 // Batched matrix data initialization
