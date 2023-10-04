@@ -175,6 +175,7 @@ namespace rocwmma
             }
         };
 
+#if !ROCWMMA_NO_HALF
         template <>
         struct amdgcn_mfma<hfloat16_t, float32_t, 16, 16>
             : public amdgcn_mfma<float16_t, float32_t, 16, 16>
@@ -198,6 +199,7 @@ namespace rocwmma
             : public amdgcn_mfma<float16_t, float16_t, 32, 32>
         {
         };
+#endif // !ROCWMMA_NO_HALF
 
 #if !ROCWMMA_ARCH_GFX908
 

@@ -317,6 +317,7 @@ ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint64_t, 512);
 
 // HIP doesn't have functional support for non-native vector types __half or bfloat16_t.
 // Implement full support for those here.
+#if !ROCWMMA_NO_HALF
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::hfloat16_t, 1);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::hfloat16_t, 2);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::hfloat16_t, 3);
@@ -328,6 +329,7 @@ ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::hfloat16_t, 64);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::hfloat16_t, 128);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::hfloat16_t, 256);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::hfloat16_t, 512);
+#endif // !ROCWMMA_NO_HALF
 
 // Register bfloat8_t vector types
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat8_t, 1);

@@ -99,7 +99,10 @@ namespace rocwmma
 
     // Non-native types
     using bfloat16_t = hip_bfloat16;
+
+#if !ROCWMMA_NO_HALF
     using hfloat16_t = __half;
+#endif // !ROCWMMA_NO_HALF
 
     using bfloat8_t = rocwmma_bf8;
     using float8_t  = rocwmma_f8;
