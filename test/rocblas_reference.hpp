@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,16 +28,16 @@
 
 #define ROCM_USE_FLOAT16
 
-#define CHECK_ROCBLAS_ERROR(status)                   \
-    if(status != rocblas_status_success)              \
-    {                                                 \
-        fprintf(stderr,                               \
-                "rocBLAS error: '%s'(%d) at %s:%d\n", \
-                rocblas_status_to_string(status),     \
-                status,                               \
-                __FILE__,                             \
-                __LINE__);                            \
-        exit(EXIT_FAILURE);                           \
+#define CHECK_ROCBLAS_ERROR(expression)                              \
+    if(auto status = (expression); status != rocblas_status_success) \
+    {                                                                \
+        fprintf(stderr,                                              \
+                "rocBLAS error: '%s'(%d) at %s:%d\n",                \
+                rocblas_status_to_string(status),                    \
+                status,                                              \
+                __FILE__,                                            \
+                __LINE__);                                           \
+        exit(EXIT_FAILURE);                                          \
     }
 
 // BETA_FEATURES_API needs to be defined to access the beta features of rocBLAS which includes float8/bfloat8 support.
@@ -170,12 +170,12 @@ namespace rocwmma
         }
     };
 
-#if !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
+#if !ROCWMMA_TESTS_NO_HALF
     template <>
     struct rocblas_types<hfloat16_t> : public rocblas_types<float16_t>
     {
     };
-#endif // !(defined(__HIP_NO_HALF_CONVERSIONS__) || defined(HIP_NO_HALF))
+#endif // !ROCWMMA_TESTS_NO_HALF
 
     template <>
     struct rocblas_types<bfloat16_t>
@@ -283,10 +283,10 @@ namespace rocwmma
                       ComputeT       alpha,
                       ComputeT       beta)
     {
-        rocblas_datatype a_type       = rocblas_types<InputT>::type();
-        rocblas_datatype b_type       = rocblas_types<InputT>::type();
-        rocblas_datatype c_type       = rocblas_types<OutputT>::type();
-        rocblas_datatype d_type       = rocblas_types<OutputT>::type();
+        rocblas_datatype a_type = rocblas_types<InputT>::type();
+        rocblas_datatype b_type = rocblas_types<InputT>::type();
+        rocblas_datatype c_type = rocblas_types<OutputT>::type();
+        rocblas_datatype d_type = rocblas_types<OutputT>::type();
 
         using a_t = typename rocblas_types<InputT>::DataType;
         using b_t = typename rocblas_types<InputT>::DataType;
@@ -330,35 +330,35 @@ namespace rocwmma
         int32_t  solution_index = 0;
         uint32_t flags          = 0;
 
-        if ((std::is_same<InputT, float8_t>::value) || (std::is_same<InputT, bfloat8_t>::value))
+        if((std::is_same<InputT, float8_t>::value) || (std::is_same<InputT, bfloat8_t>::value))
         {
 #if defined(ROCBLAS_DATA_TYPE_FLOAT8)
             {
-            rocblas_computetype compute_type = rocblas_compute_type_f32;
-            CHECK_ROCBLAS_ERROR(rocblas_gemm_ex3(handle,
-                                                 opA,
-                                                 opB,
-                                                 m,
-                                                 n,
-                                                 k,
-                                                 &alpha,
-                                                 da,
-                                                 a_type,
-                                                 lda,
-                                                 db,
-                                                 b_type,
-                                                 ldb,
-                                                 &beta,
-                                                 dc,
-                                                 c_type,
-                                                 ldc,
-                                                 dd,
-                                                 d_type,
-                                                 ldd,
-                                                 compute_type,
-                                                 algo,
-                                                 solution_index,
-                                                 flags));
+                rocblas_computetype compute_type = rocblas_compute_type_f32;
+                CHECK_ROCBLAS_ERROR(rocblas_gemm_ex3(handle,
+                                                     opA,
+                                                     opB,
+                                                     m,
+                                                     n,
+                                                     k,
+                                                     &alpha,
+                                                     da,
+                                                     a_type,
+                                                     lda,
+                                                     db,
+                                                     b_type,
+                                                     ldb,
+                                                     &beta,
+                                                     dc,
+                                                     c_type,
+                                                     ldc,
+                                                     dd,
+                                                     d_type,
+                                                     ldd,
+                                                     compute_type,
+                                                     algo,
+                                                     solution_index,
+                                                     flags));
             }
 #endif
         }
