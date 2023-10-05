@@ -20,11 +20,14 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
     String amdgpuTargets = env.BRANCH_NAME.startsWith('PR-') ? '-DAMDGPU_TARGETS="$gfx_arch"' : ''
     String compilerLauncher = project.defaults.ccache ? '-DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache' : ''
     String cmakeArgs = "-DCMAKE_C_COMPILER=/opt/rocm/bin/hipcc -DCMAKE_CXX_COMPILER=/opt/rocm/bin/hipcc ${compilerLauncher} ${buildTypeArg} ${amdgpuTargets}"
+    String hipccCompileFlags = "export HIPCC_COMPILE_FLAGS_APPEND='-O3 -Wno-format-nonliteral -parallel-jobs=1'"
 
     def command = """#!/usr/bin/env bash
                 set -x
                 cd ${project.paths.project_build_prefix}
                 ${getDependenciesCommand}
+                echo Original HIPCC_COMPILE_FLAGS_APPEND: \$HIPCC_COMPILE_FLAGS_APPEND
+                ${hipccCompileFlags}
                 mkdir -p build/${buildTypeDir} && cd build/${buildTypeDir}
                 ${auxiliary.gfxTargetParser()}
                 ${cmake} ${cmakeArgs} -DROCWMMA_BUILD_BENCHMARK_TESTS=OFF ../..
