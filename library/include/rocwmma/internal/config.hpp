@@ -137,6 +137,18 @@ namespace rocwmma
 #define ROCWMMA_UNSUPPORTED_IMPL(MSG) __attribute__((deprecated(MSG)))
 #endif
 
+#if defined(HIP_NO_HALF)
+#define ROCWMMA_NO_HALF 1
+#else
+#define ROCWMMA_NO_HALF 0
+#endif // HIP_NO_HALF
+
+#if ROCWMMA_NO_HALF || (!ROCWMMA_NO_HALF && defined(__HIP_NO_HALF_CONVERSIONS__))
+#define ROCWMMA_TESTS_NO_HALF 1
+#else
+#define ROCWMMA_TESTS_NO_HALF 0
+#endif // !ROCWMMA_NO_HALF && defined(__HIP_NO_HALF_CONVERSIONS__)
+
 ///
 /// Sanity checks
 ///
