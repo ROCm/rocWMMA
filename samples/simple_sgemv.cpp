@@ -37,29 +37,34 @@
 
 using rocwmma::accumulator;
 using rocwmma::col_major;
-using rocwmma::float32_t;
+using rocwmma::row_major;
+
 using rocwmma::matrix_a;
 using rocwmma::matrix_b;
-using rocwmma::row_major;
+
+// Types
+using InputT   = rocwmma::float32_t;
+using OutputT  = rocwmma::float32_t;
+using ComputeT = rocwmma::float32_t;
 
 // Host sgemv validation
 __host__ void sgemv_cpu_h(uint32_t         m,
                           uint32_t         n,
                           uint32_t         k,
-                          float32_t const* a,
-                          float32_t const* b,
-                          float32_t*       c,
-                          float32_t        alpha,
-                          float32_t        beta)
+                          InputT const*    a,
+                          InputT const*    b,
+                          OutputT*       c,
+                          ComputeT        alpha,
+                          ComputeT        beta)
 {
     uint32_t lda = m;
 
     for(int i = 0; i < m; ++i)
     {
-        float32_t accum = 0.0f;
+        ComputeT accum = 0.0f;
         for(int h = 0; h < k; ++h)
         {
-            accum += static_cast<float32_t>(a[h * lda + i]) * static_cast<float32_t>(b[h]);
+            accum += static_cast<ComputeT>(a[h * lda + i]) * static_cast<ComputeT>(b[h]);
         }
         c[i] = alpha * accum + beta * c[i];
     }
@@ -103,24 +108,24 @@ const int T_BLOCK_Y = 1;
 __global__ void sgemv_rocwmma_d(uint32_t         m,
                                 uint32_t         n,
                                 uint32_t         k,
-                                float32_t const* a,
-                                float32_t const* b,
-                                float32_t*       c,
-                                float32_t*       d,
+                                InputT const*    a,
+                                InputT const*    b,
+                                OutputT*         c,
+                                OutputT*         d,
                                 uint32_t         lda,
                                 uint32_t         ldb,
                                 uint32_t         ldc,
                                 uint32_t         ldd,
-                                float32_t        alpha,
-                                float32_t        beta)
+                                ComputeT         alpha,
+                                ComputeT         beta)
 {
     // Create frags
     auto fragA
-        = rocwmma::fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t, col_major>();
+        = rocwmma::fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, InputT, col_major>();
     auto fragB
-        = rocwmma::fragment<matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t, col_major>();
-    auto fragC   = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
-    auto fragAcc = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
+        = rocwmma::fragment<matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, InputT, col_major>();
+    auto fragC   = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, OutputT>();
+    auto fragAcc = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, ComputeT>();
 
     rocwmma::fill_fragment(fragAcc, 0.0f);
 
@@ -154,7 +159,7 @@ __global__ void sgemv_rocwmma_d(uint32_t         m,
     }
 }
 
-__host__ void sgemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float beta)
+__host__ void sgemv_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, ComputeT beta)
 {
     // Bounds check
     if(m % ROCWMMA_M || n % ROCWMMA_N || k % ROCWMMA_K)
@@ -170,22 +175,22 @@ __host__ void sgemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float 
 
     std::cout << "Initializing host data..." << std::endl;
     // Initialize input matrices
-    std::vector<float32_t> matrixA(m * k); // matrix
-    std::vector<float32_t> matrixB(k * 1); // vector
-    std::vector<float32_t> matrixC(m * 1, 1.0); //accum
+    std::vector<InputT> matrixA(m * k); // matrix
+    std::vector<InputT> matrixB(k * 1); // vector
+    std::vector<OutputT> matrixC(m * 1, 1.0); //accum
 
     fillRand(matrixA.data(), m, k);
     fillRand(matrixB.data(), k, 1);
 
     std::cout << "Initializing device data..." << std::endl;
     // Allocate and copy device memory
-    float32_t* d_a;
-    float32_t* d_b;
-    float32_t* d_c;
+    InputT* d_a;
+    InputT* d_b;
+    OutputT* d_c;
 
-    const size_t bytesA = matrixA.size() * sizeof(float32_t);
-    const size_t bytesB = matrixB.size() * sizeof(float32_t);
-    const size_t bytesC = matrixC.size() * sizeof(float32_t);
+    const size_t bytesA = matrixA.size() * sizeof(InputT);
+    const size_t bytesB = matrixB.size() * sizeof(InputT);
+    const size_t bytesC = matrixC.size() * sizeof(OutputT);
 
     CHECK_HIP_ERROR(hipMalloc(&d_a, bytesA));
     CHECK_HIP_ERROR(hipMalloc(&d_b, bytesB));
@@ -242,14 +247,14 @@ __host__ void sgemv_test(uint32_t m, uint32_t n, uint32_t k, float alpha, float 
 
     std::cout << "Validating result with reference..." << std::endl;
     // Bring kernel result back to host
-    std::vector<float32_t> matrixC_device(m, std::numeric_limits<float32_t>::signaling_NaN());
+    std::vector<OutputT> matrixC_device(m, std::numeric_limits<OutputT>::signaling_NaN());
     CHECK_HIP_ERROR(hipMemcpy(matrixC_device.data(), d_c, bytesC, hipMemcpyDeviceToHost));
 
     // Setup and run reference computation
-    std::vector<float32_t> matrixC_host(matrixC);
+    std::vector<OutputT> matrixC_host(matrixC);
     sgemv_cpu_h(m, n, k, matrixA.data(), matrixB.data(), matrixC_host.data(), alpha, beta);
 
-    auto res = compareEqual<float32_t>(matrixC_host.data(), matrixC_device.data(), m);
+    auto res = compareEqual<OutputT>(matrixC_host.data(), matrixC_device.data(), m);
 
     if(std::get<0>(res) == false)
     {
@@ -278,13 +283,18 @@ int main()
     const uint32_t k = 256;
     const uint32_t n = T_BLOCK_Y * ROCWMMA_N;
 
-    if(!isF32Supported())
+    if (!isSupportedConfig <ROCWMMA_M,
+                            ROCWMMA_N,
+                            ROCWMMA_K,
+                            InputT,
+                            OutputT,
+                            ComputeT>( T_BLOCK_X, T_BLOCK_Y))
     {
-        std::cout << "f32 sgemv not supported on this device" << std::endl;
+        std::cout << " Unsupported configurations " << std::endl;
+        exit(0);
     }
-    else
-    {
-        sgemv_test(m, n, k, 2.1f, 2.1f);
-    }
+
+    sgemv_test(m, n, k, 2.1f, 2.1f);
+
     return 0;
 }

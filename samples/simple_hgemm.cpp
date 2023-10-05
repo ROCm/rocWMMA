@@ -36,12 +36,9 @@
 
 using rocwmma::accumulator;
 using rocwmma::col_major;
-using rocwmma::float16_t;
-using rocwmma::float32_t;
-using rocwmma::float64_t;
+using rocwmma::row_major;
 using rocwmma::matrix_a;
 using rocwmma::matrix_b;
-using rocwmma::row_major;
 
 // Supports ROCWMMA_M/N square sizes of
 // : 16 x 16
@@ -64,6 +61,14 @@ const uint32_t WAVE_SIZE = getWarpSize();
 const int T_BLOCK_X = 4 * WAVE_SIZE;
 const int T_BLOCK_Y = 4;
 
+///
+/// Types
+///
+
+using InputT   = rocwmma::float16_t;
+using OutputT  = rocwmma::float16_t;
+using ComputeT = rocwmma::float32_t;
+
 // The following device kernel is a naive implementation
 // of blocked GEMM. Each wave will compute one BLOCK_M x BLOCK_N
 // output block of the M x N x K GEMM, generalized as:
@@ -81,24 +86,24 @@ const int T_BLOCK_Y = 4;
 __global__ void hgemm_rocwmma_d(uint32_t         m,
                                 uint32_t         n,
                                 uint32_t         k,
-                                float16_t const* a,
-                                float16_t const* b,
-                                float16_t const* c,
-                                float16_t*       d,
+                                InputT    const* a,
+                                InputT    const* b,
+                                OutputT   const* c,
+                                OutputT*         d,
                                 uint32_t         lda,
                                 uint32_t         ldb,
                                 uint32_t         ldc,
                                 uint32_t         ldd,
-                                float32_t        alpha,
-                                float32_t        beta)
+                                ComputeT         alpha,
+                                ComputeT         beta)
 {
     // Create frags
     auto fragA
-        = rocwmma::fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t, row_major>();
+        = rocwmma::fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, InputT, row_major>();
     auto fragB
-        = rocwmma::fragment<matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t, col_major>();
-    auto fragC   = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float16_t>();
-    auto fragAcc = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, float32_t>();
+        = rocwmma::fragment<matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, InputT, col_major>();
+    auto fragC   = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, OutputT>();
+    auto fragAcc = rocwmma::fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, ComputeT>();
 
     rocwmma::fill_fragment(fragAcc, 0.0f);
 
@@ -138,7 +143,7 @@ __global__ void hgemm_rocwmma_d(uint32_t         m,
     }
 }
 
-__host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, float32_t beta)
+__host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, ComputeT beta)
 {
     // Bounds check
     if((m < (ROCWMMA_M * T_BLOCK_X / WAVE_SIZE) || n < (ROCWMMA_N * T_BLOCK_Y) || k < ROCWMMA_K)
@@ -156,11 +161,11 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
     std::cout << "Initializing host data..." << std::endl;
 
     // Initialize input matrices
-    std::vector<float16_t> matrixA(m * k);
-    std::vector<float16_t> matrixB(k * n);
-    std::vector<float16_t> matrixC(m * n);
+    std::vector<InputT> matrixA(m * k);
+    std::vector<InputT> matrixB(k * n);
+    std::vector<OutputT> matrixC(m * n);
     // Fill outputs with NaN to catch contamination
-    std::vector<float16_t> matrixD(m * n, std::numeric_limits<float16_t>::signaling_NaN());
+    std::vector<OutputT> matrixD(m * n, std::numeric_limits<OutputT>::signaling_NaN());
 
     fillRand(matrixA.data(), m, k);
     fillRand(matrixB.data(), k, n);
@@ -169,15 +174,15 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
     std::cout << "Initializing device data..." << std::endl;
 
     // Allocate and copy device memory
-    float16_t* d_a;
-    float16_t* d_b;
-    float16_t* d_c;
-    float16_t* d_d;
+    InputT* d_a;
+    InputT* d_b;
+    OutputT* d_c;
+    OutputT* d_d;
 
-    const size_t bytesA = matrixA.size() * sizeof(float16_t);
-    const size_t bytesB = matrixB.size() * sizeof(float16_t);
-    const size_t bytesC = matrixC.size() * sizeof(float16_t);
-    const size_t bytesD = matrixD.size() * sizeof(float16_t);
+    const size_t bytesA = matrixA.size() * sizeof(InputT);
+    const size_t bytesB = matrixB.size() * sizeof(InputT);
+    const size_t bytesC = matrixC.size() * sizeof(OutputT);
+    const size_t bytesD = matrixD.size() * sizeof(OutputT);
 
     CHECK_HIP_ERROR(hipMalloc(&d_a, bytesA));
     CHECK_HIP_ERROR(hipMalloc(&d_b, bytesB));
@@ -251,22 +256,22 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
     CHECK_HIP_ERROR(hipMemcpy(matrixD.data(), d_d, bytesD, hipMemcpyDeviceToHost));
 
     // Setup and run reference computation
-    std::vector<float16_t> matrixD_ref(m * n, std::numeric_limits<float16_t>::signaling_NaN());
-    gemm_cpu_h<float16_t, float16_t, float32_t, row_major, col_major, row_major>(m,
-                                                                                 n,
-                                                                                 k,
-                                                                                 matrixA.data(),
-                                                                                 matrixB.data(),
-                                                                                 matrixC.data(),
-                                                                                 matrixD_ref.data(),
-                                                                                 lda,
-                                                                                 ldb,
-                                                                                 ldc,
-                                                                                 ldd,
-                                                                                 alpha,
-                                                                                 beta);
+    std::vector<OutputT> matrixD_ref(m * n, std::numeric_limits<OutputT>::signaling_NaN());
+    gemm_cpu_h<InputT, OutputT, ComputeT, row_major, col_major, row_major>(m,
+                                                                           n,
+                                                                           k,
+                                                                           matrixA.data(),
+                                                                           matrixB.data(),
+                                                                           matrixC.data(),
+                                                                           matrixD_ref.data(),
+                                                                           lda,
+                                                                           ldb,
+                                                                           ldc,
+                                                                           ldd,
+                                                                           alpha,
+                                                                           beta);
 
-    auto res = compareEqual<float16_t>(matrixD.data(), matrixD_ref.data(), m * n);
+    auto res = compareEqual<OutputT>(matrixD.data(), matrixD_ref.data(), m * n);
 
     if(std::get<0>(res) == false)
     {
@@ -292,6 +297,18 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
 
 int main()
 {
+    if (!isSupportedConfig <ROCWMMA_M,
+                            ROCWMMA_N,
+                            ROCWMMA_K,
+                            InputT,
+                            OutputT,
+                            ComputeT>( T_BLOCK_X, T_BLOCK_Y))
+    {
+        std::cout << " Unsupported configurations " << std::endl;
+        exit(0);
+    }
+
     gemm_test(256, 256, 256, 2.1f, 2.1f);
+
     return 0;
 }

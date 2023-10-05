@@ -667,25 +667,6 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, 
     auto macroTileSize
         = rocwmma::make_coord2d(TBLOCK_X / warpSize * WARP_TILE_X, TBLOCK_Y * WARP_TILE_Y);
 
-    // Device check for supported block and wave sizes
-    if(isGfx11())
-    {
-        std::cout << "Unsupported architecture!\n";
-        return;
-    }
-
-    if(isGfx9() && (ROCWMMA_M != ROCWMMA_N) || (ROCWMMA_M != 16 && ROCWMMA_M != 32))
-    {
-        std::cout << "Unsupported block size!\n";
-        return;
-    }
-
-    if(isGfx9() && WARP_SIZE != Constants::AMDGCN_WAVE_SIZE_64)
-    {
-        std::cout << "Unsupported wave size!\n";
-        return;
-    }
-
     // Bounds check
     if((m < get<0>(macroTileSize) || n < get<1>(macroTileSize) || k < ROCWMMA_K)
        || (m % ROCWMMA_M || n % ROCWMMA_N || k % ROCWMMA_K))
@@ -873,13 +854,20 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, 
 
 int main()
 {
-    if(!isF32Supported())
+    if (!isSupportedConfig <ROCWMMA_M,
+                            ROCWMMA_N,
+                            ROCWMMA_K,
+                            InputT,
+                            OutputT,
+                            ComputeT,
+                            BLOCKS_X,
+                            BLOCKS_Y>( TBLOCK_X, TBLOCK_Y))
     {
-        std::cout << "f32 sgemm not supported on this device" << std::endl;
+        std::cout << " Unsupported configurations " << std::endl;
+        exit(0);
     }
-    else
-    {
-        gemm_test(7168, 7168, 7168, 2, 2);
-    }
+
+    gemm_test(7168, 7168, 7168, 2, 2);
+
     return 0;
 }
