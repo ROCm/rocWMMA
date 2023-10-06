@@ -924,19 +924,20 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, 
 
 int main()
 {
-    if (!isSupportedConfig <ROCWMMA_M,
-                            ROCWMMA_N,
-                            ROCWMMA_K,
-                            InputT,
-                            OutputT,
-                            ComputeT,
-                            BLOCKS_X,
-                            BLOCKS_Y>( TBLOCK_X, TBLOCK_Y))
+    if (!canRun <InputT, OutputT, ComputeT>(ROCWMMA_M,
+                                            ROCWMMA_N,
+                                            ROCWMMA_K,
+                                            TBLOCK_X,
+                                            TBLOCK_Y,
+                                            BLOCKS_X,
+                                            BLOCKS_Y))
     {
         std::cout << " Unsupported configurations " << std::endl;
-        exit(0);
+    }
+    else
+    {
+        gemm_test(7168, 7168, 7168, 2, 2);
     }
 
-    gemm_test(7168, 7168, 7168, 2, 2);
     return 0;
 }

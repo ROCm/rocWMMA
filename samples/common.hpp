@@ -123,7 +123,6 @@ uint32_t getWarpSize()
     return mWarpSize;
 }
 
-// HIP Host function to find if the device supports f64
 uint32_t getGCNArchId()
 {
     hipDevice_t     mHandle;
@@ -171,18 +170,20 @@ uint32_t getGCNArchId()
     return mGcnArch;
 }
 
-template <uint32_t BlockM,
-          uint32_t BlockN,
-          uint32_t BlockK,
-          typename InputT,
-          typename OutputT,
-          typename ComputeT,
-          uint32_t BlocksX,
-          uint32_t BlocksY,
-          uint32_t WaveSize,
-          uint32_t ArchId>
-bool checkConfigs(const uint32_t TBlockX, const uint32_t TBlockY )
+template<typename InputT,
+         typename OutputT,
+         typename ComputeT>
+bool canRun(const uint32_t BlockM,
+            const uint32_t BlockN,
+            const uint32_t BlockK,
+            const uint32_t TBlockX,
+            const uint32_t TBlockY,
+            const uint32_t BlocksX = 1,
+            const uint32_t BlocksY = 1)
 {
+    const uint32_t WaveSize = getWarpSize();
+    const uint32_t ArchId = getGCNArchId();
+
     // Architecture we are testing
     const bool IsWave32 = (WaveSize == rocwmma::Constants::AMDGCN_WAVE_SIZE_32);
     const bool IsWave64 = (WaveSize == rocwmma::Constants::AMDGCN_WAVE_SIZE_64);
@@ -225,9 +226,6 @@ bool checkConfigs(const uint32_t TBlockX, const uint32_t TBlockY )
     // Only supported hardware allowed
     const bool ArchTest = (bool)IsGfx9 || (bool)IsGfx11;
 
-    // During run phase on the host, we don't have compile time info about current arch or wave size.
-    // We have to trust that the runtime params obtained through HipDevice will dispatch correctly for
-    // the current arch and wave size.
     const bool EnableRun = (TBlockXTest && MinTBlockTest && ArchTest);
 
 #if !NDEBUG
@@ -237,7 +235,7 @@ bool checkConfigs(const uint32_t TBlockX, const uint32_t TBlockY )
     std::cout << "EnableRun: " << (bool)EnableRun << std::endl;
 #endif // !NDEBUG
 
-    auto EnableGfx9 = [](const uint32_t TBlockX, const uint32_t TBlockY) {
+    auto EnableGfx9 = [isBlockMN16, isBlockMN32, IsGfx9, IsGfx940, IsGfx941, IsGfx942, IsGfx908, IsWave64, TBlockX, TBlockY, BlockK]() {
         const bool ArchTestGfx9 = (bool)IsGfx9;
 
         const bool WaveSizeTest = (bool)IsWave64;
@@ -371,7 +369,7 @@ bool checkConfigs(const uint32_t TBlockX, const uint32_t TBlockY )
                     && XF32BlockSizeTest && F64BlockSizeTest);
     };
 
-    auto EnableGfx11 = [](const uint32_t TBlockX, const uint32_t TBlockY) {
+    auto EnableGfx11 = [IsGfx11, IsWave32, TBlockX, TBlockY, isBlockMN16, BlockK]() {
 
         // Valid for gfx11 only
         const bool ArchTestGfx11 = (bool)IsGfx11;
@@ -416,114 +414,8 @@ bool checkConfigs(const uint32_t TBlockX, const uint32_t TBlockY )
                     && F16BlockSizeTest);
 
     };
-    const bool enable   = ((bool)EnableRun
-                                  && ((bool)EnableGfx9(TBlockX, TBlockY) || (bool)EnableGfx11(TBlockX, TBlockY)));
 
-    return enable;
-}
-
-template <uint32_t BlockM,
-          uint32_t BlockN,
-          uint32_t BlockK,
-          typename InputT,
-          typename OutputT,
-          typename ComputeT,
-          uint32_t BlocksX = 1,
-          uint32_t BlocksY = 1>
-const bool isSupportedConfig(const uint32_t T_BLOCK_X,
-                             const uint32_t T_BLOCK_Y )
-{
-    uint32_t Id = getGCNArchId();
-
-    uint32_t WaveSize = getWarpSize();
-
-    // - Arch [gfx908, gfx90a, gfx940, gfx941, gfx942, gfx1100, gfx1101, gfx1102]
-    auto dispatchGuardFunc = [Id, WaveSize, T_BLOCK_X, T_BLOCK_Y]() {
-        bool dispatchResult = false;
-
-#define ROCWMMA_CASE_BODY_ARG0(CASE_LABEL, CASE_IMPL) \
-    case CASE_LABEL:                                  \
-    {                                                 \
-        CASE_IMPL                                     \
-    }                                                 \
-    break;
-
-#define ROCWMMA_CASE_BODY_ARG1(CASE_LABEL, CASE_IMPL, CASE_IMPL_ARG0) \
-    case CASE_LABEL:                                                  \
-    {                                                                 \
-        CASE_IMPL(CASE_IMPL_ARG0)                                     \
-    }                                                                 \
-    break;
-
-#define ROCWMMA_CASE_BODY_ARG2(CASE_LABEL, CASE_IMPL, CASE_IMPL_ARG0, CASE_IMPL_ARG1) \
-    case CASE_LABEL:                                                                  \
-    {                                                                                 \
-        CASE_IMPL(CASE_IMPL_ARG0, CASE_IMPL_ARG1)                                     \
-    }                                                                                 \
-    break;
-
-// First arg is always case label, second is a constant
-#define ROCWMMA_SWITCH_BODY2_ARG2(SWITCH_ARG, CASE_IMPL, CASE_LABEL0, CASE_LABEL1, FWD_ARG_0) \
-    switch(SWITCH_ARG)                                                                        \
-    {                                                                                         \
-        ROCWMMA_CASE_BODY_ARG2(CASE_LABEL0, CASE_IMPL, CASE_LABEL0, FWD_ARG_0)                \
-        ROCWMMA_CASE_BODY_ARG2(CASE_LABEL1, CASE_IMPL, CASE_LABEL1, FWD_ARG_0)                \
-    default:;                                                                                 \
-    }
-
-#define ROCWMMA_SWITCH_BODY8_ARG1(SWITCH_ARG,                       \
-                                  CASE_IMPL,                        \
-                                  CASE_LABEL0,                      \
-                                  CASE_LABEL1,                      \
-                                  CASE_LABEL2,                      \
-                                  CASE_LABEL3,                      \
-                                  CASE_LABEL4,                      \
-                                  CASE_LABEL5,                      \
-                                  CASE_LABEL6,                      \
-                                  CASE_LABEL7)                      \
-    switch(SWITCH_ARG)                                              \
-    {                                                               \
-        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL0, CASE_IMPL, CASE_LABEL0) \
-        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL1, CASE_IMPL, CASE_LABEL1) \
-        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL2, CASE_IMPL, CASE_LABEL2) \
-        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL3, CASE_IMPL, CASE_LABEL3) \
-        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL4, CASE_IMPL, CASE_LABEL4) \
-        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL5, CASE_IMPL, CASE_LABEL5) \
-        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL6, CASE_IMPL, CASE_LABEL6) \
-        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL7, CASE_IMPL, CASE_LABEL7) \
-    default:;                                                       \
-    }
-
-#define CASE_IMPL_ASSIGN4(WAVE_SIZE, ARCH_ID) \
-    dispatchResult = checkConfigs<BlockM, BlockN, BlockK, InputT, OutputT, ComputeT, BlocksX, BlocksY, WAVE_SIZE, ARCH_ID>(T_BLOCK_X, T_BLOCK_Y);
-
-#define SWITCH_BODY_WAVE_SIZE(ARCH_ID) \
-    ROCWMMA_SWITCH_BODY2_ARG2(         \
-        WaveSize, CASE_IMPL_ASSIGN4, rocwmma::Constants::AMDGCN_WAVE_SIZE_32, rocwmma::Constants::AMDGCN_WAVE_SIZE_64, ARCH_ID)
-
-#define DISPATCH_GUARD_BODY                          \
-    ROCWMMA_SWITCH_BODY8_ARG1(Id,                    \
-                              SWITCH_BODY_WAVE_SIZE, \
-                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX908,     \
-                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX90A,     \
-                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX940,     \
-                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX941,     \
-                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX942,     \
-                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX1100,    \
-                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX1101,    \
-                              rocwmma::Constants::AMDGCN_ARCH_ID_GFX1102)
-
-        DISPATCH_GUARD_BODY
-
-#undef CASE_IMPL_ASSIGN4
-#undef SWITCH_BODY_WAVE_SIZE
-#undef DISPATCH_GUARD_BODY
-
-        return dispatchResult;
-    };
-
-    // Finally, execute and return the dispatch guard result
-    return dispatchGuardFunc();
+    return ((bool)EnableRun && ((bool)EnableGfx9() || (bool)EnableGfx11()));
 }
 
 // Batched matrix data initialization

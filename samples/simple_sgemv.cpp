@@ -283,18 +283,18 @@ int main()
     const uint32_t k = 256;
     const uint32_t n = T_BLOCK_Y * ROCWMMA_N;
 
-    if (!isSupportedConfig <ROCWMMA_M,
-                            ROCWMMA_N,
-                            ROCWMMA_K,
-                            InputT,
-                            OutputT,
-                            ComputeT>( T_BLOCK_X, T_BLOCK_Y))
+    if (!canRun <InputT, OutputT, ComputeT>(ROCWMMA_M,
+                                            ROCWMMA_N,
+                                            ROCWMMA_K,
+                                            T_BLOCK_X,
+                                            T_BLOCK_Y))
     {
         std::cout << " Unsupported configurations " << std::endl;
-        exit(0);
     }
-
-    sgemv_test(m, n, k, 2.1f, 2.1f);
+    else
+    {
+        sgemv_test(m, n, k, 2.1f, 2.1f);
+    }
 
     return 0;
 }

@@ -297,18 +297,18 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, Comp
 
 int main()
 {
-    if (!isSupportedConfig <ROCWMMA_M,
-                            ROCWMMA_N,
-                            ROCWMMA_K,
-                            InputT,
-                            OutputT,
-                            ComputeT>( T_BLOCK_X, T_BLOCK_Y))
+    if (!canRun <InputT, OutputT, ComputeT>(ROCWMMA_M,
+                                            ROCWMMA_N,
+                                            ROCWMMA_K,
+                                            T_BLOCK_X,
+                                            T_BLOCK_Y))
     {
         std::cout << " Unsupported configurations " << std::endl;
-        exit(0);
     }
-
-    gemm_test(256, 256, 256, 2.1f, 2.1f);
+    else
+    {
+        gemm_test(256, 256, 256, 2.1f, 2.1f);
+    }
 
     return 0;
 }
