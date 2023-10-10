@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -55,12 +55,10 @@ namespace rocwmma
             std::tuple<int8_t, int32_t, int32_t>>;
 
         // float8
-        using TestTypesF8 = std::tuple<
-            std::tuple<float8_t, float32_t, float32_t>>;
+        using TestTypesF8 = std::tuple<std::tuple<float8_t, float32_t, float32_t>>;
 
         // bfloat8
-        using TestTypesBF8 = std::tuple<
-            std::tuple<bfloat8_t, float32_t, float32_t>>;
+        using TestTypesBF8 = std::tuple<std::tuple<bfloat8_t, float32_t, float32_t>>;
 
         // Non-native bfloat16_t
         using TestTypesBF16 = std::tuple<
@@ -78,6 +76,7 @@ namespace rocwmma
 #endif // ROCWMMA_EXTENDED_TESTS
             std::tuple<float16_t, float32_t, float32_t>>;
 
+#if !ROCWMMA_TESTS_NO_HALF
         // Non-native hfloat16_t (i.e. __half)
         using TestTypesH16 = std::tuple<
 #if defined(ROCWMMA_EXTENDED_TESTS)
@@ -85,6 +84,7 @@ namespace rocwmma
             std::tuple<hfloat16_t, hfloat16_t, float32_t>,
 #endif // ROCWMMA_EXTENDED_TESTS
             std::tuple<hfloat16_t, float32_t, float32_t>>;
+#endif // !ROCWMMA_TESTS_NO_HALF
 
         // Native single f32
         using TestTypesF32 = std::tuple<std::tuple<float32_t, float32_t, float32_t>>;
@@ -99,11 +99,18 @@ namespace rocwmma
         using TestTypesTiny = typename Concat<TestTypesF8, TestTypesBF8, TestTypesI8>::Result;
 
         // Aggregate types <= 16 bit
-        using TestTypesSmall =
-            typename Concat<TestTypesTiny, TestTypesBF16, TestTypesF16, TestTypesH16>::Result;
+        using TestTypesSmall = typename Concat<TestTypesTiny,
+                                               TestTypesBF16,
+                                               TestTypesF16
+#if !ROCWMMA_TESTS_NO_HALF
+                                               ,
+                                               TestTypesH16
+#endif // !ROCWMMA_TESTS_NO_HALF
+                                               >::Result;
 
         // Aggregate types <= 32 bit
-        using TestTypesMedium = typename Concat<TestTypesSmall, TestTypesF32, TestTypesXF32>::Result;
+        using TestTypesMedium =
+            typename Concat<TestTypesSmall, TestTypesF32, TestTypesXF32>::Result;
 
         // Aggregate types <= 64 bit
         using TestTypesLarge = typename Concat<TestTypesMedium, TestTypesF64>::Result;
