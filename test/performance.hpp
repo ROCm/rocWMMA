@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -258,10 +258,12 @@ namespace rocwmma
         };
     };
 
+#if !ROCWMMA_TESTS_NO_HALF
     template <typename GfxArch>
     struct MfmaPerfTraits<GfxArch, hfloat16_t> : public MfmaPerfTraits<GfxArch, float16_t>
     {
     };
+#endif // !ROCWMMA_TESTS_NO_HALF
 
     template <typename GfxArch, typename DataT>
     struct VALUPerfTraits;
@@ -358,10 +360,12 @@ namespace rocwmma
         };
     };
 
+#if !ROCWMMA_TESTS_NO_HALF
     template <typename GfxArch>
     struct VALUPerfTraits<GfxArch, hfloat16_t> : public VALUPerfTraits<GfxArch, float16_t>
     {
     };
+#endif // !ROCWMMA_TESTS_NO_HALF
 
     inline double calculateGFlops(uint32_t m, uint32_t n, uint32_t k)
     {
