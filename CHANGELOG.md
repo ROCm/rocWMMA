@@ -1,6 +1,46 @@
 # Change Log for rocWMMA
 
-Full documentation for rocWMMA is available at [rocwmma.readthedocs.io](https://rocwmma.readthedocs.io/en/latest/).
+Full documentation for rocWMMA is available at [rocm.docs.amd.com/projects/rocWMMA](https://rocm.docs.amd.com/projects/rocWMMA/en/latest).
+
+## (Unreleased) rocWMMA 1.3.0 for ROCm 6.0.0
+
+### Added
+- Added support for gfx940, gfx941 and gfx942 targets
+- Added support for f8, bf8 and xfloat32 datatypes
+- Added support for HIP_NO_HALF, __ HIP_NO_HALF_CONVERSIONS__ and __ HIP_NO_HALF_OPERATORS__ (e.g. pytorch environment)
+
+### Changed
+- rocWMMA with hipRTC now supports bfloat16_t datatype
+- gfx11 wmma now uses lane swap instead of broadcast for layout adjustment
+- Updated samples GEMM parameter validation on host arch
+
+### Fixed
+- Disabled gtest static library deployment
+- Extended tests now build in large code model
+
+## rocWMMA 1.2.0 for ROCm 5.7.0
+
+### Changed
+- Fixed a bug with synchronization
+- Updated rocWMMA cmake versioning
+
+## rocWMMA 1.1.0 for ROCm 5.6.0
+
+### Added
+- Added cross-lane operation backends (Blend, Permute, Swizzle and Dpp)
+- Added GPU kernels for rocWMMA unit test pre-process and post-process operations (fill, validation)
+- Added performance gemm samples for half, single and double precision
+- Added rocWMMA cmake versioning
+- Added vectorized support in coordinate transforms
+- Included ROCm smi for runtime clock rate detection
+- Added fragment transforms for transpose and change data layout
+
+### Changed
+- Default to GPU rocBLAS validation against rocWMMA
+- Re-enabled int8 gemm tests on gfx9
+- Upgraded to C++17
+- Restructured unit test folder for consistency
+- Consolidated rocWMMA samples common code
 
 ## rocWMMA 1.0 for ROCm 5.5.0
 
