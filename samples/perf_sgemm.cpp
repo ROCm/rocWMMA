@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -703,8 +703,8 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, 
     std::cout << "Initializing host data..." << std::endl;
 
     // Initialize input matrices
-    std::vector<InputT> matrixA(m * k);
-    std::vector<InputT> matrixB(k * n);
+    std::vector<InputT>  matrixA(m * k);
+    std::vector<InputT>  matrixB(k * n);
     std::vector<OutputT> matrixC(m * n);
     // Fill outputs with NaN to catch contamination
     std::vector<OutputT> matrixD(m * n, std::numeric_limits<OutputT>::signaling_NaN());
@@ -716,8 +716,8 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, 
     std::cout << "Initializing device data..." << std::endl;
 
     // Allocate and copy device memory
-    InputT* d_a;
-    InputT* d_b;
+    InputT*  d_a;
+    InputT*  d_b;
     OutputT* d_c;
     OutputT* d_d;
 
@@ -834,18 +834,18 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, 
     // Setup and run reference computation
     std::vector<OutputT> matrixD_ref(m * n, std::numeric_limits<OutputT>::signaling_NaN());
     gemm_cpu_h<InputT, OutputT, ComputeT, col_major, row_major, col_major>(m,
-                                                                                 n,
-                                                                                 k,
-                                                                                 matrixA.data(),
-                                                                                 matrixB.data(),
-                                                                                 matrixC.data(),
-                                                                                 matrixD_ref.data(),
-                                                                                 lda,
-                                                                                 ldb,
-                                                                                 ldc,
-                                                                                 ldd,
-                                                                                 alpha,
-                                                                                 beta);
+                                                                           n,
+                                                                           k,
+                                                                           matrixA.data(),
+                                                                           matrixB.data(),
+                                                                           matrixC.data(),
+                                                                           matrixD_ref.data(),
+                                                                           lda,
+                                                                           ldb,
+                                                                           ldc,
+                                                                           ldd,
+                                                                           alpha,
+                                                                           beta);
 
     auto res = compareEqual(matrixD.data(), matrixD_ref.data(), m * n);
 
