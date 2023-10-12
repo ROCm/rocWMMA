@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,8 +27,8 @@
 #ifndef ROCWMMA_DETAIL_LOAD_STORE_MATRIX_COOP_SYNC_HPP
 #define ROCWMMA_DETAIL_LOAD_STORE_MATRIX_COOP_SYNC_HPP
 
-#include "load_store_matrix_sync_test/detail/load_store_matrix_sync.hpp"
 #include "device/load_store_matrix_coop_sync.hpp"
+#include "load_store_matrix_sync_test/detail/load_store_matrix_sync.hpp"
 
 namespace rocwmma
 {
