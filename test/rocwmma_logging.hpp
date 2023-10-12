@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,8 +27,8 @@
 #ifndef ROCWMMA_LOGGING_HPP
 #define ROCWMMA_LOGGING_HPP
 
-#include "rocwmma_ostream.hpp"
 #include "rocwmma/rocwmma-version.hpp"
+#include "rocwmma_ostream.hpp"
 #include "singleton.hpp"
 #include <stdlib.h>
 

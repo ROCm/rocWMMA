@@ -530,7 +530,7 @@ Matrix Multiply Accumulate to demonstrate rocWMMA API usage in context of wave-l
 
 **Simple GEMM**
 
-Simple GEMM algorithm demonstration without LDS memory usage and no transpose. 
+Simple GEMM algorithm demonstration without LDS memory usage and no transpose.
 
 simple_sgemm calculates D = Alpha * A x B + Beta * C with fp32 inputs and output.
 
@@ -574,7 +574,7 @@ Run perf gemm sample:
 
 **SGEMV**
 
-Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose. 
+Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose.
 
 Calculates Y = alpha * (A) * X + beta * Y with fp32 inputs and output.
 
@@ -593,7 +593,7 @@ Run sgemv sample:
 
 **DGEMV**
 
-Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose. 
+Simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose.
 
 Calculates Y = alpha * (A) * X + beta * Y with fp64 inputs and output.
 
