@@ -187,13 +187,6 @@ namespace rocwmma
             else
             {
                 // Don't go beyond the scope of work
-                // if constexpr !(can split 4 waves)
-                // {
-                //     if(waveIndex >= WaveCount)
-                //     {
-                //         return;
-                //     }
-                // }
                 waveIndex %= WaveCount;
 
                 // Split the reduced stride space.
