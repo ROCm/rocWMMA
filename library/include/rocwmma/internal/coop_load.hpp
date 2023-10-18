@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -187,6 +187,13 @@ namespace rocwmma
             else
             {
                 // Don't go beyond the scope of work
+                // if constexpr !(can split 4 waves)
+                // {
+                //     if(waveIndex >= WaveCount)
+                //     {
+                //         return;
+                //     }
+                // }
                 waveIndex %= WaveCount;
 
                 // Split the reduced stride space.
@@ -201,9 +208,12 @@ namespace rocwmma
 
                 // Alias the original frag due to smaller split size
                 auto& dataR
+                    = (typename LoadVecTraits::
                            template VecT<DataT, workItemsPerWave * LoadVecTraits::size()>&)(data);
                 auto it = makeVectorIterator<LoadVecTraits::size()>(dataR).begin();
 
+                // Align threads to starting matrix offset coordinates
+                auto baseOffset = MatrixLayout::baseOffset();
 
                 // Find current wave offset
                 constexpr auto sum               = [](auto... items) { return (items + ...); };

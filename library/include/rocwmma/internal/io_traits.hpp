@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,54 +33,6 @@
 
 namespace rocwmma
 {
-
-    namespace detail
-    {
-        /*
-        * The following class is intended to provide optimistic suggestions for
-        * IO vector widths, up to a maximum of dwordx4 which is the largest data
-        * movement instruction. Keep halving the vector width until it can fit
-        * the entire block, or split evenly amongst IO iterations.
-        *
-        * TODO: As of ROCm 5.3, the compiler has issue with fp64 TestWidth = 2 in some
-        * corner cases.
-        */
-
-        template <uint32_t BlockDim,
-                  uint32_t BlockK,
-                  typename DataT,
-                  uint32_t TestWidth
-                  = std::is_same<DataT, float64_t>::value
-                        ? 8u * Constants::AMDGCN_DWORD_SIZE_BYTES / (uint32_t)sizeof(DataT)
-                        : // TODO: fp64 compiler bug
-                        4u * Constants::AMDGCN_DWORD_SIZE_BYTES / (uint32_t)sizeof(DataT)>
-        struct VecWidthTraits
-        {
-            enum : uint32_t
-            {
-                ElementCount  = BlockDim * BlockK,
-                ElementsPerIO = TestWidth * Constants::AMDGCN_WAVE_SIZE,
-                MaxVectorWidth
-                = (TestWidth <= BlockDim) && (TestWidth <= BlockK)
-                          && (ElementsPerIO <= ElementCount) && (ElementCount % ElementsPerIO == 0)
-                      ? TestWidth
-                      : VecWidthTraits<BlockDim, BlockK, DataT, TestWidth / 2>::MaxVectorWidth
-            };
-        };
-
-        template <uint32_t BlockDim, uint32_t BlockK, typename DataT>
-        struct VecWidthTraits<BlockDim, BlockK, DataT, 0>
-        {
-            enum : uint32_t
-            {
-                ElementCount   = BlockDim * BlockK,
-                ElementsPerIO  = Constants::AMDGCN_WAVE_SIZE,
-                MaxVectorWidth = 1
-            };
-        };
-
-    } // namespace detail
-
     /*
 * The following class provides IO meta-data that is used
 * to provide static information used in inference and controlling

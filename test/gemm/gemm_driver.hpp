@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -62,7 +62,7 @@ namespace rocwmma
             using LRFragB = typename LdsMapping::LRFragB;
 
             template <typename FragT>
-            using MappingUtil = typename FragT::IOConfig::MappingUtil;
+            using MappingUtil = GetMappingUtil_t<FragT>;
 
             // Ensure that splitCounts are the same on both sides of
             // global fetch and local writes to match fragment data locality.

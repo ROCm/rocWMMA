@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +34,84 @@
 
 namespace rocwmma
 {
+    namespace detail
+    {
+        template <typename MatrixT,
+                  uint32_t BlockDim,
+                  uint32_t BlockK,
+                  typename DataT,
+                  typename DataLayoutT,
+                  uint32_t WaveCount = 1u,
+                  uint32_t TestWidth
+                  = 4u * Constants::AMDGCN_DWORD_SIZE_BYTES / (uint32_t)sizeof(DataT)>
+        struct MaxVWSelector
+        {
+            //using IOTraits = IOTraits<BlockDim, BlockK, DataT, TestWidth>;
+
+        private:
+            enum : uint32_t
+            {
+                // Total number of elements in a single I/O operation
+                ElementsPerIO = Constants::AMDGCN_WAVE_SIZE * TestWidth * WaveCount,
+
+                // Total number of elements per for the entire block
+                ElementCount = BlockDim * BlockK,
+
+                // Ensure that for MaxVW:
+                // - A minimum of one IO from each wave can fit
+                // - A balanced multiple of IOs from each wave
+                ElementCountTest
+                = (ElementsPerIO <= ElementCount) && (ElementCount % ElementsPerIO == 0),
+
+                // MaxVW contiguous element MUST at least fit inside block dims:
+                // Matrix A:
+                // - Col major: MaxVW <= BlockDim
+                // - Row major: MaxVW <= BlockK
+                // Matrix B / Accumulator:
+                // - Col Major: MaxVW <= BlockK
+                // - Row Major: MaxVW <= BlockDim
+                LeadingDimTest
+                = (std::is_same_v<MatrixT, matrix_a>
+                       && (std::is_same_v<DataLayoutT, col_major> && (TestWidth <= BlockDim))
+                   || (std::is_same_v<DataLayoutT, row_major> && (TestWidth <= BlockK)))
+                  || ((std::is_same_v<MatrixT, matrix_b> || std::is_same_v<MatrixT, accumulator>)&&(
+                          std::is_same_v<DataLayoutT, row_major> && (TestWidth <= BlockDim))
+                      || (std::is_same_v<DataLayoutT, col_major> && (TestWidth <= BlockK))),
+
+                MaxVectorWidth = (bool)ElementCountTest && (bool)LeadingDimTest
+                                     ? TestWidth
+                                     : MaxVWSelector<MatrixT,
+                                                     BlockDim,
+                                                     BlockK,
+                                                     DataT,
+                                                     DataLayoutT,
+                                                     WaveCount,
+                                                     TestWidth / 2>::Result,
+            };
+
+        public:
+            enum : uint32_t
+            {
+                Result = (uint32_t)MaxVectorWidth
+            };
+        };
+
+        template <typename MatrixT,
+                  uint32_t BlockDim,
+                  uint32_t BlockK,
+                  typename DataT,
+                  typename DataLayoutT,
+                  uint32_t WaveCount>
+        struct MaxVWSelector<MatrixT, BlockDim, BlockK, DataT, DataLayoutT, WaveCount, 0u>
+        {
+            enum : uint32_t
+            {
+                Result = 1u
+            };
+        };
+
+    } // namespace detail
+
     /*! \struct IOShape
  *  \brief Definition of rocWMMA data and matrix mapping utilities
  *         in specific matrix context.
@@ -43,13 +121,96 @@ namespace rocwmma
  * @tparam DataT data type
  * @tparam DataLayoutT in-memory layout as col_major or row_major
  */
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
+    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
     struct IOShape;
+
+    template <typename MatrixT,
+              uint32_t BlockDim,
+              uint32_t KDim,
+              typename DataT,
+              typename DataLayoutT,
+              uint32_t WaveCount>
+    struct IOLayout;
+
+    template <uint32_t BlockDim,
+              uint32_t KDim,
+              typename DataT,
+              typename DataLayoutT,
+              uint32_t WaveCount>
+    struct IOLayout<matrix_a, BlockDim, KDim, DataT, DataLayoutT, WaveCount>
+    {
+        // Vector size properties
+        enum : uint32_t
+        {
+            MaxVW = detail::MaxVWSelector<matrix_a, BlockDim, KDim, DataT, DataLayoutT, WaveCount>::
+                Result,
+            VW = std::is_same<DataLayoutT, row_major>::value ? MaxVW : 1u
+        };
+
+        // Layout mapping for 1d / 2d
+        using DataLayout = DataLayout::template Array1d<DataLayoutT>;
+        using MatrixLayout
+            = MatrixLayout::template ColNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
+
+        static_assert(!(std::is_same_v<DataLayoutT, col_major> && VW > 1),
+                      "matrix_a in col_major currently does not support VW > 1");
+    };
+
+    template <uint32_t BlockDim,
+              uint32_t KDim,
+              typename DataT,
+              typename DataLayoutT,
+              uint32_t WaveCount>
+    struct IOLayout<matrix_b, BlockDim, KDim, DataT, DataLayoutT, WaveCount>
+    {
+        // Vector size properties
+        enum : uint32_t
+        {
+            MaxVW = detail::MaxVWSelector<matrix_b, BlockDim, KDim, DataT, DataLayoutT, WaveCount>::
+                Result,
+            VW = std::is_same<DataLayoutT, col_major>::value ? MaxVW : 1u
+        };
+
+        // Layout mapping for 1d / 2d
+        using DataLayout = DataLayout::template Array1d<DataLayoutT>;
+        using MatrixLayout
+            = MatrixLayout::template RowNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
+
+        static_assert(!(std::is_same_v<DataLayoutT, row_major> && VW > 1),
+                      "matrix_b in row_major currently does not support VW > 1");
+    };
+
+    template <uint32_t BlockDim,
+              uint32_t KDim,
+              typename DataT,
+              typename DataLayoutT,
+              uint32_t WaveCount>
+    struct IOLayout<accumulator, BlockDim, KDim, DataT, DataLayoutT, WaveCount>
+    {
+        // Vector size properties
+        enum : uint32_t
+        {
+            MaxVW = (std::is_same<DataT, float64_t>::value || ROCWMMA_ARCH_GFX11) ? 1u : 4u,
+            VW    = std::is_same<DataLayoutT, col_major>::value ? MaxVW : 1u
+        };
+
+        // Layout mapping for 1d / 2d
+        using DataLayout = DataLayout::template Array1d<DataLayoutT>;
+        using MatrixLayout
+            = MatrixLayout::template RowNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
+
+        static_assert(!(std::is_same<DataLayoutT, row_major>::value && VW > 1),
+                      "accumulator in row_major currently does not support VW > 1");
+
+        static_assert(WaveCount == 1, "WaveCount > 1 not supported for accumulator fragments");
+    };
+
+    template <uint32_t BlockDim, uint32_t KDim, typename DataT, uint32_t WaveCount>
+    struct IOLayout<accumulator, BlockDim, KDim, DataT, void, WaveCount>
+    {
+        // No layout mapping without VW, MaxVW and DataLayoutT info
+        static_assert(WaveCount == 1, "WaveCount > 1 not supported for accumulator fragments");
+    };
 
     /************************************************
  * Matrix A default configuration: ColNT
@@ -84,12 +245,8 @@ namespace rocwmma
  * For as many groups of N registers to hold BlockDim x BlockK elements.
  *
  ***********************************************/
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    struct IOShape<matrix_a, BlockM, BlockN, BlockK, DataT, DataLayoutT>
+    template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
+    struct IOShape<matrix_a, BlockM, BlockN, BlockK>
     {
         enum : uint32_t
         {
@@ -98,17 +255,7 @@ namespace rocwmma
 
             BlockDim = BlockM,
             KDim     = BlockK,
-
-            MaxVectorWidth = detail::VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth,
-            VectorWidth    = std::is_same<DataLayoutT, row_major>::value ? MaxVectorWidth : 1
         };
-
-        static_assert(!(std::is_same<DataLayoutT, col_major>::value && VectorWidth > 1),
-                      "matrix_a in col_major currently does not support VectorWidth > 1");
-
-        using DataLayout   = DataLayout::template Array1d<DataLayoutT>;
-        using MatrixLayout = MatrixLayout::
-            template ColNT<BlockDim, KDim, DataT, DataLayoutT, VectorWidth, MaxVectorWidth>;
     };
 
     /************************************************
@@ -144,12 +291,8 @@ namespace rocwmma
  * For as many groups of N registers to hold BlockDim x BlockK elements.
  *
  ***********************************************/
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    struct IOShape<matrix_b, BlockM, BlockN, BlockK, DataT, DataLayoutT>
+    template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
+    struct IOShape<matrix_b, BlockM, BlockN, BlockK>
     {
         enum : uint32_t
         {
@@ -158,17 +301,7 @@ namespace rocwmma
 
             BlockDim = BlockN,
             KDim     = BlockK,
-
-            MaxVectorWidth = detail::VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth,
-            VectorWidth    = std::is_same<DataLayoutT, col_major>::value ? MaxVectorWidth : 1
         };
-
-        static_assert(!(std::is_same<DataLayoutT, row_major>::value && VectorWidth > 1),
-                      "matrix_b in row_major currently does not support VectorWidth > 1");
-
-        using DataLayout   = DataLayout::template Array1d<DataLayoutT>;
-        using MatrixLayout = MatrixLayout::
-            template RowNT<BlockDim, KDim, DataT, DataLayoutT, VectorWidth, MaxVectorWidth>;
     };
 
     /************************************************
@@ -204,12 +337,8 @@ namespace rocwmma
  * For as many groups of 4 registers to hold BlockDim x BlockK elements.
  *
  ***********************************************/
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    struct IOShape<accumulator, BlockM, BlockN, BlockK, DataT, DataLayoutT>
+    template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK>
+    struct IOShape<accumulator, BlockM, BlockN, BlockK>
     {
         enum : uint32_t
         {
@@ -218,33 +347,7 @@ namespace rocwmma
 
             BlockDim = BlockN,
             KDim     = BlockM,
-
-            MaxVectorWidth = (std::is_same<DataT, float64_t>::value || ROCWMMA_ARCH_GFX11) ? 1 : 4,
-
-            VectorWidth = std::is_same<DataLayoutT, col_major>::value ? MaxVectorWidth : 1,
         };
-
-        static_assert(!(std::is_same<DataLayoutT, row_major>::value && VectorWidth > 1),
-                      "accumulator in row_major currently does not support VectorWidth > 1");
-
-        using DataLayout   = DataLayout::template Array1d<DataLayoutT>;
-        using MatrixLayout = MatrixLayout::
-            template RowNT<BlockDim, KDim, DataT, DataLayoutT, VectorWidth, MaxVectorWidth>;
-    };
-
-    template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
-    struct IOShape<accumulator, BlockM, BlockN, BlockK, DataT, void>
-    {
-        enum : uint32_t
-        {
-            BlockHeight = BlockM,
-            BlockWidth  = BlockN,
-
-            BlockDim = BlockN,
-            KDim     = BlockM
-        };
-
-        // No DataLayout or MatrixLayout without VW, MaxVW and DataOrientation info
     };
 
 } // namespace rocwmma

@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -49,14 +49,14 @@ namespace rocwmma
     using GetIOConfig_t = typename GetIOConfig<Obj>::type;
 
     ///
-    /// IOShape access
+    /// CoopConfig access
     ///
 
-    template <typename Obj>
-    struct GetIOShape;
+    template <typename Obj, uint32_t WaveCount>
+    struct GetCoopIOConfig;
 
-    template <typename Obj>
-    using GetIOShape_t = typename GetIOShape<Obj>::type;
+    template <typename Obj, uint32_t WaveCount = 1u>
+    using GetCoopIOConfig_t = typename GetCoopIOConfig<Obj, WaveCount>::type;
 
     ///
     /// IOTraits access
@@ -67,6 +67,16 @@ namespace rocwmma
 
     template <typename Obj>
     using GetIOTraits_t = typename GetIOTraits<Obj>::type;
+
+    ///
+    /// IOShape access
+    ///
+
+    template <typename Obj>
+    struct GetIOShape;
+
+    template <typename Obj>
+    using GetIOShape_t = typename GetIOShape<Obj>::type;
 
     ///
     /// MatrixLayout access
@@ -87,6 +97,16 @@ namespace rocwmma
 
     template <typename Obj>
     using GetDataLayout_t = typename GetDataLayout<Obj>::type;
+
+    ///
+    /// MappingUtil access
+    ///
+
+    template <typename Obj>
+    struct GetMappingUtil;
+
+    template <typename Obj>
+    using GetMappingUtil_t = typename GetMappingUtil<Obj>::type;
 
 } // namespace rocwmma
 

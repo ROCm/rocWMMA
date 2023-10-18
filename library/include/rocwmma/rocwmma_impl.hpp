@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -86,7 +86,7 @@ namespace rocwmma
               typename DataT,
               typename LayoutT>
     ROCWMMA_DEVICE fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>&
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator=(
+                   fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator=(
             const fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>& other)
     {
         mStorage = other.mStorage;
@@ -152,7 +152,7 @@ namespace rocwmma
     ROCWMMA_DEVICE constexpr inline uint32_t
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::blockDim()
     {
-        return IOConfig::BlockDim;
+        return GetIOConfig_t<decltype(fragment())>::BlockDim;
     }
 
     template <typename MatrixT,
@@ -164,7 +164,7 @@ namespace rocwmma
     ROCWMMA_DEVICE constexpr inline uint32_t
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::kDim()
     {
-        return IOConfig::KDim;
+        return GetIOConfig_t<decltype(fragment())>::KDim;
     }
 
     template <typename MatrixT,
@@ -189,7 +189,7 @@ namespace rocwmma
         fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                       DataT                                                         value)
     {
-        using FragT       = typename std::decay<decltype(frag)>::type;
+        using FragT       = typename std::decay_t<decltype(frag)>;
         using Broadcaster = typename GetIOConfig_t<FragT>::Broadcaster;
 
         // Sanity check
@@ -211,7 +211,7 @@ namespace rocwmma
                          const DataT*                                                  data,
                          uint32_t                                                      ldm)
     {
-        using FragT  = typename std::decay<decltype(frag)>::type;
+        using FragT  = typename std::decay_t<decltype(frag)>;
         using Loader = typename GetIOConfig_t<FragT>::Loader;
 
         // Sanity checks
@@ -258,7 +258,7 @@ namespace rocwmma
                           fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
                           uint32_t                                                            ldm)
     {
-        using FragT  = typename std::decay<decltype(frag)>::type;
+        using FragT  = typename std::decay_t<decltype(frag)>;
         using Storer = typename GetIOConfig_t<FragT>::Storer;
 
         // Sanity check
@@ -310,8 +310,8 @@ namespace rocwmma
                  fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB> const&      b,
                  fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutC> const& c)
     {
-        using FragA = typename std::decay<decltype(a)>::type;
-        using FragB = typename std::decay<decltype(b)>::type;
+        using FragA = typename std::decay_t<decltype(a)>;
+        using FragB = typename std::decay_t<decltype(b)>;
 
         // Sanity check
         // static_assert(detail::MfmaCheck<FragA, FragB>::value,

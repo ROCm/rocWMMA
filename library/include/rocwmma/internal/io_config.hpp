@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -76,8 +76,11 @@ namespace rocwmma
               typename DataLayoutT>
     struct IOConfig
     {
-        using IOShape     = IOShape<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>;
-        using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT, IOShape::VectorWidth>;
+        using IOShape = IOShape<MatrixT, BlockM, BlockN, BlockK>;
+        using IOLayout
+            = IOLayout<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, 1u>;
+        using IOTraits = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT, IOLayout::VW>;
+
         using PackUtil    = PackUtil<DataT>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
 
@@ -87,30 +90,16 @@ namespace rocwmma
         using Loader = OpaqueLoad<IOShape::BlockDim,
                                   IOShape::KDim,
                                   DataT,
-                                  typename IOShape::DataLayout,
-                                  typename IOShape::MatrixLayout,
-                                  IOShape::VectorWidth>;
+                                  typename IOLayout::DataLayout,
+                                  typename IOLayout::MatrixLayout,
+                                  IOLayout::VW>;
 
         using Storer = OpaqueStore<IOShape::BlockDim,
                                    IOShape::KDim,
                                    DataT,
-                                   typename IOShape::DataLayout,
-                                   typename IOShape::MatrixLayout,
-                                   IOShape::VectorWidth>;
-
-        using CoopLoader = CooperativeLoad<IOShape::BlockDim,
-                                           IOShape::KDim,
-                                           DataT,
-                                           typename IOShape::DataLayout,
-                                           typename IOShape::MatrixLayout,
-                                           IOShape::VectorWidth>;
-
-        using CoopStorer = CooperativeStore<IOShape::BlockDim,
-                                            IOShape::KDim,
-                                            DataT,
-                                            typename IOShape::DataLayout,
-                                            typename IOShape::MatrixLayout,
-                                            IOShape::VectorWidth>;
+                                   typename IOLayout::DataLayout,
+                                   typename IOLayout::MatrixLayout,
+                                   IOLayout::VW>;
     };
 
     /************************************************
@@ -123,10 +112,59 @@ namespace rocwmma
     template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
     struct IOConfig<accumulator, BlockM, BlockN, BlockK, DataT, void>
     {
-        using IOShape     = IOShape<accumulator, BlockM, BlockN, BlockK, DataT, void>;
+        using IOShape     = IOShape<accumulator, BlockM, BlockN, BlockK>;
         using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT>;
         using PackUtil    = PackUtil<DataT>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
+    };
+    /** @}*/
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayoutT,
+              uint32_t WaveCount>
+    struct CoopIOConfig
+    {
+        using IOShape = IOShape<MatrixT, BlockM, BlockN, BlockK>;
+        using IOLayout
+            = IOLayout<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, WaveCount>;
+        using IOTraits = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT, IOLayout::VW>;
+
+        using PackUtil = PackUtil<DataT>;
+        using Loader   = CooperativeLoad<IOShape::BlockDim,
+                                       IOShape::KDim,
+                                       DataT,
+                                       typename IOLayout::DataLayout,
+                                       typename IOLayout::MatrixLayout,
+                                       IOLayout::VW>;
+
+        using Storer = CooperativeStore<IOShape::BlockDim,
+                                        IOShape::KDim,
+                                        DataT,
+                                        typename IOLayout::DataLayout,
+                                        typename IOLayout::MatrixLayout,
+                                        IOLayout::VW>;
+    };
+
+    /************************************************
+ * Matrix C/D (accumulator) with undetermined DataLayout
+ *
+ * Fewer specific indications for matrix data geometry I/O, however
+ * general IOTraits, Pack/Unpack, Broadcast still available.
+ *
+ * */
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayoutT,
+              uint32_t WaveCount>
+    struct CoopIOConfig<accumulator, BlockM, BlockN, BlockK, DataT, DataLayoutT, WaveCount>
+    {
+        //static_assert(0, "Cooperative operations not supported on accumulator fragments");
     };
     /** @}*/
 
