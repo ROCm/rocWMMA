@@ -175,67 +175,81 @@ namespace rocwmma
                 = flatten_coord_left((strideSpaceR - 1u), strideSpaceR) + 1u;
 
             // Determine max waves possible.
-            constexpr auto waveCountAdjusted
-                = calcMaxWaves((uint32_t)totalWorkItems, (uint32_t)WaveCount);
+            constexpr auto maxWaves = calcMaxWaves((uint32_t)totalWorkItems, (uint32_t)WaveCount);
 
-            // Ensure that we propagate the corrected wave count
-            if constexpr(WaveCount != waveCountAdjusted)
+            static_assert(maxWaves <= WaveCount, "Max waves cannot exceed given WaveCount");
+
+            // maxWaves is the maximum amount of waves split the work into.
+            // For the rest of the waves, we need to decide what to do -
+            // either bail, or can attempt duplicate work to keep them busy.
+            // Each has their costs:
+            // - Bail forces a branch condition
+            // - Duplication can incur extra memory pressure and reduce performance.
+            //
+            // Fortunately, we can make a good guess which to use
+            // 1. Strided data should bail because it is not cache friendly (higher risk of cache-miss)
+            // 2. Non-strided data can duplicate work as is more cache friendly (lower risk of cache-miss)
+            if constexpr(WaveCount != maxWaves)
             {
-                exec<waveCountAdjusted, SplitCount>(data, dataPtr, ldm, waveIndex);
+                if constexpr(MatrixLayout::isStrided())
+                {
+                    if(waveIndex >= maxWaves)
+                    {
+                        return; // bail
+                    }
+                }
+                else
+                {
+                    // Hit the last index
+                    waveIndex = std::max(maxWaves - 1u, waveIndex);
+                }
             }
-            // Wave count is acceptable
-            else
-            {
-                // Don't go beyond the scope of work
-                waveIndex %= WaveCount;
 
-                // Split the reduced stride space.
-                constexpr auto workItemsPerWave = std::max(totalWorkItems / WaveCount, 1u);
-                constexpr auto strideSpaceS
-                    = inflate_coord_left(workItemsPerWave - 1u, strideSpaceR) + 1u;
+            // Split the reduced stride space.
+            constexpr auto workItemsPerWave = std::max(totalWorkItems / maxWaves, 1u);
+            constexpr auto strideSpaceS
+                = inflate_coord_left(workItemsPerWave - 1u, strideSpaceR) + 1u;
 
-                // Add back in the VW dimension, for the full stride
-                // space of the current wave
-                constexpr auto strideSpaceW
-                    = std::tuple_cat(strideSpaceS, std::make_tuple(get_last(strideSpace)));
+            // Add back in the VW dimension, for the full stride
+            // space of the current wave
+            constexpr auto strideSpaceW
+                = std::tuple_cat(strideSpaceS, std::make_tuple(get_last(strideSpace)));
 
-                // Alias the original frag due to smaller split size
-                auto& dataR
-                    = (typename LoadVecTraits::
-                           template VecT<DataT, workItemsPerWave * LoadVecTraits::size()>&)(data);
-                auto it = makeVectorIterator<LoadVecTraits::size()>(dataR).begin();
+            // Alias the original frag due to smaller split size
+            auto& dataR
+                = (typename LoadVecTraits::
+                       template VecT<DataT, workItemsPerWave * LoadVecTraits::size()>&)(data);
+            auto it = makeVectorIterator<LoadVecTraits::size()>(dataR).begin();
 
-                // Align threads to starting matrix offset coordinates
-                auto baseOffset = MatrixLayout::baseOffset();
+            // Align threads to starting matrix offset coordinates
+            auto baseOffset = MatrixLayout::baseOffset();
 
-                // Find current wave offset
-                constexpr auto sum               = [](auto... items) { return (items + ...); };
-                auto           currentWaveOffset = std::apply(
-                    sum, inflate_coord_left(waveIndex * workItemsPerWave, strideSpaceR) * stridesR);
+            // Find current wave offset
+            constexpr auto sum               = [](auto... items) { return (items + ...); };
+            auto           currentWaveOffset = std::apply(
+                sum, inflate_coord_left(waveIndex * workItemsPerWave, strideSpaceR) * stridesR);
 
-                // if(threadIdx.x % 64 == 0)
-                // {
+            // if(threadIdx.x % 64 == 0)
+            // {
 
-                //     printf("(%d) BlockDim, BlockK: (%d, %d)\n", waveIndex, BlockDim, BlockK);
-                //     printf("(%d) Original strideCounts: (%d, %d, %d)\n", waveIndex, std::get<0>(strideSpace), std::get<1>(strideSpace), std::get<2>(strideSpace));
-                //     printf("(%d) Original strides: (%d, %d), (%d, %d), (%d, %d)\n", waveIndex, get<0>(std::get<0>(strides)), get<1>(std::get<0>(strides)),
-                //                                                                             get<0>(std::get<1>(strides)), get<1>(std::get<1>(strides)),
-                //                                                                             get<0>(std::get<2>(strides)), get<1>(std::get<2>(strides)));
+            //     printf("(%d) BlockDim, BlockK: (%d, %d)\n", waveIndex, BlockDim, BlockK);
+            //     printf("(%d) Original strideCounts: (%d, %d, %d)\n", waveIndex, std::get<0>(strideSpace), std::get<1>(strideSpace), std::get<2>(strideSpace));
+            //     printf("(%d) Original strides: (%d, %d), (%d, %d), (%d, %d)\n", waveIndex, get<0>(std::get<0>(strides)), get<1>(std::get<0>(strides)),
+            //                                                                             get<0>(std::get<1>(strides)), get<1>(std::get<1>(strides)),
+            //                                                                             get<0>(std::get<2>(strides)), get<1>(std::get<2>(strides)));
 
-                //     printf("(%d) WaveCount: (%d)\n", waveIndex, WaveCount);
-                //     printf("(%d) workItemsPerWave (%d)\n", waveIndex, workItemsPerWave);
-                //     printf("(%d) strideSpaceW: (%d, %d, %d)\n", waveIndex, std::get<0>(strideSpaceW), std::get<1>(strideSpaceW), std::get<2>(strideSpaceW));
-                //     printf("(%d) currentOffset: (%d, %d)\n\n", waveIndex, get<0>(currentWaveOffset), get<1>(currentWaveOffset));
+            //     printf("(%d) WaveCount: (%d)\n", waveIndex, WaveCount);
+            //     printf("(%d) workItemsPerWave (%d)\n", waveIndex, workItemsPerWave);
+            //     printf("(%d) strideSpaceW: (%d, %d, %d)\n", waveIndex, std::get<0>(strideSpaceW), std::get<1>(strideSpaceW), std::get<2>(strideSpaceW));
+            //     printf("(%d) currentOffset: (%d, %d)\n\n", waveIndex, get<0>(currentWaveOffset), get<1>(currentWaveOffset));
 
-                // }
+            // }
 
-                unroll_right(it,
-                             dataPtr
-                                 + DataLayout::fromMatrixCoord(baseOffset + currentWaveOffset, ldm),
-                             ldm,
-                             strideSpaceW,
-                             strides);
-            }
+            unroll_right(it,
+                         dataPtr + DataLayout::fromMatrixCoord(baseOffset + currentWaveOffset, ldm),
+                         ldm,
+                         strideSpaceW,
+                         strides);
         }
     };
 
