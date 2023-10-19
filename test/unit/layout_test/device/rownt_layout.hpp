@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,12 +38,12 @@ namespace rocwmma
     template <uint32_t BlockM,
               uint32_t BlockN,
               typename DataT,
-              typename DataLayout,
+              typename DataLayoutT,
               typename std::enable_if_t<
                   FragSize_guard<BlockM,
                                  BlockN,
                                  DataT,
-                                 DataLayout,
+                                 DataLayoutT,
                                  Constants::AMDGCN_WAVE_SIZE,
                                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
     __global__ void RowNTLayout(uint32_t     m,
@@ -62,16 +62,17 @@ namespace rocwmma
             BlockDim = BlockN,
             KDim     = BlockM,
 
-            MaxVectorWidth = std::is_same<DataT, float64_t>::value
-                                 ? 1
-                                 : detail::VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth,
-            VectorWidth    = std::is_same<DataLayout, col_major>::value ? MaxVectorWidth : 1,
+            MaxVectorWidth
+            = std::is_same_v<DataT, float64_t>
+                  ? 1
+                  : detail::MaxVWSelector<matrix_b, BlockM, BlockN, DataT, DataLayoutT>::Result,
+            VectorWidth = std::is_same_v<DataLayoutT, col_major> ? MaxVectorWidth : 1,
         };
 
         using IOTraits = IOTraits<BlockDim, KDim, DataT, VectorWidth>;
         using LayoutT
-            = MatrixLayout::RowNT<BlockDim, KDim, DataT, DataLayout, VectorWidth, MaxVectorWidth>;
-        using Mapping = MappingUtil<BlockHeight, BlockWidth, DataT, DataLayout>;
+            = MatrixLayout::RowNT<BlockDim, KDim, DataT, DataLayoutT, VectorWidth, MaxVectorWidth>;
+        using Mapping = MappingUtil<BlockHeight, BlockWidth, DataT, DataLayoutT>;
 
         auto baseOffset  = LayoutT::baseOffset();
         auto iocount     = IOTraits::IOCount;
@@ -79,8 +80,8 @@ namespace rocwmma
 
         enum : uint32_t
         {
-            MajorIndex = std::is_same<DataLayout, row_major>::value ? 0 : 1,
-            MinorIndex = std::is_same<DataLayout, row_major>::value ? 1 : 0
+            MajorIndex = std::is_same_v<DataLayoutT, row_major> ? 0 : 1,
+            MinorIndex = std::is_same_v<DataLayoutT, row_major> ? 1 : 0
         };
 
         for(uint32_t i = 0; i < iocount; ++i)
@@ -98,12 +99,12 @@ namespace rocwmma
     template <uint32_t BlockM,
               uint32_t BlockN,
               typename DataT,
-              typename DataLayout,
+              typename DataLayoutT,
               typename std::enable_if_t<
                   !FragSize_guard<BlockM,
                                   BlockN,
                                   DataT,
-                                  DataLayout,
+                                  DataLayoutT,
                                   Constants::AMDGCN_WAVE_SIZE,
                                   Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
     __global__ void RowNTLayout(uint32_t     m,

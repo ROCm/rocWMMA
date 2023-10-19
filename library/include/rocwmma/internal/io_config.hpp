@@ -156,13 +156,8 @@ namespace rocwmma
  * general IOTraits, Pack/Unpack, Broadcast still available.
  *
  * */
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT,
-              uint32_t WaveCount>
-    struct CoopIOConfig<accumulator, BlockM, BlockN, BlockK, DataT, DataLayoutT, WaveCount>
+    template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, uint32_t WaveCount>
+    struct CoopIOConfig<accumulator, BlockM, BlockN, BlockK, DataT, void, WaveCount>
     {
         //static_assert(0, "Cooperative operations not supported on accumulator fragments");
     };

@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -156,6 +156,9 @@ namespace rocwmma
 #define ROCWMMA_HOST_DEVICE ROCWMMA_HOST ROCWMMA_DEVICE
 
 #define ROCWMMA_KERNEL __global__
+
+#define ROCWMMA_MIN_COOP_WAVES 1u
+#define ROCWMMA_MAX_COOP_WAVES 4u
 
 } // namespace rocwmma
 

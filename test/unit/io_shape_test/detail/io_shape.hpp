@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -58,49 +58,71 @@ namespace rocwmma
             dataInstance->hostOut().get()[0] = static_cast<DataT>(ERROR_VALUE);
         }
 
+        template <uint32_t WaveCount>
+        bool waveTest()
+        {
+            bool           err      = false;
+            constexpr auto BlockDim = std::is_same_v<MatrixT, matrix_a> ? BlockM : BlockN;
+            constexpr auto KDim     = std::is_same_v<MatrixT, accumulator> ? BlockM : BlockK;
+
+            constexpr auto MaxVW
+                = (std::is_same_v<MatrixT, accumulator>)
+                      ? (std::is_same_v<DataT, float64_t> ? 1u : 4u)
+                      : (detail::
+                             MaxVWSelector<MatrixT, BlockDim, KDim, DataT, DataLayoutT, WaveCount>::
+                                 Result);
+
+            constexpr auto VW
+                = ((std::is_same_v<MatrixT, matrix_a> && std::is_same_v<DataLayoutT, col_major>)
+                   || ((std::is_same_v<MatrixT, matrix_b>
+                        || std::is_same_v<MatrixT, accumulator>)&&std::is_same_v<DataLayoutT,
+                                                                                 row_major>))
+                      ? 1u
+                      : MaxVW;
+
+            using RowNT
+                = MatrixLayout::template RowNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
+            using ColNT
+                = MatrixLayout::template ColNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
+
+            using MatrixLayout =
+                typename std::conditional_t<std::is_same<MatrixT, matrix_a>::value, ColNT, RowNT>;
+
+            using DataLayout = DataLayout::template Array1d<DataLayoutT>;
+
+            using IOLayout = IOLayout<MatrixT, BlockDim, KDim, DataT, DataLayoutT, WaveCount>;
+
+            err |= (IOLayout::MaxVW != MaxVW);
+            err |= (IOLayout::VW != VW);
+            err |= (!std::is_same<typename IOLayout::MatrixLayout, MatrixLayout>::value);
+            err |= (!std::is_same<typename IOLayout::DataLayout, DataLayout>::value);
+
+            return err;
+        }
+
         void exec() final
         {
             if(Base::mRunFlag)
             {
                 bool err = false;
 
-                using IOShape = IOShape<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>;
-                constexpr auto BlockDim = std::is_same<MatrixT, matrix_a>::value ? BlockM : BlockN;
-                constexpr auto KDim = std::is_same<MatrixT, accumulator>::value ? BlockM : BlockK;
-                constexpr auto BlockHeight
-                    = std::is_same<MatrixT, matrix_b>::value ? BlockK : BlockM;
-                constexpr auto BlockWidth
-                    = std::is_same<MatrixT, matrix_a>::value ? BlockK : BlockN;
-                constexpr auto MaxVW
-                    = (std::is_same<MatrixT, accumulator>::value)
-                          ? (std::is_same<DataT, float64_t>::value ? 1u : 4u)
-                          : (detail::VecWidthTraits<BlockDim, KDim, DataT>::MaxVectorWidth);
-                constexpr auto VW = ((std::is_same<MatrixT, matrix_a>::value
-                                      && std::is_same<DataLayoutT, col_major>::value)
-                                     || ((std::is_same<MatrixT, matrix_b>::value
-                                          || std::is_same<MatrixT, accumulator>::value)
-                                         && std::is_same<DataLayoutT, row_major>::value))
-                                        ? 1u
-                                        : MaxVW;
+                constexpr auto BlockDim    = std::is_same_v<MatrixT, matrix_a> ? BlockM : BlockN;
+                constexpr auto KDim        = std::is_same_v<MatrixT, accumulator> ? BlockM : BlockK;
+                constexpr auto BlockHeight = std::is_same_v<MatrixT, matrix_b> ? BlockK : BlockM;
+                constexpr auto BlockWidth  = std::is_same_v<MatrixT, matrix_a> ? BlockK : BlockN;
 
-                using RowNT
-                    = MatrixLayout::template RowNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
-                using ColNT
-                    = MatrixLayout::template ColNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
-
-                using MatrixLayout = typename std::
-                    conditional_t<std::is_same<MatrixT, matrix_a>::value, ColNT, RowNT>;
-                using DataLayout = DataLayout::template Array1d<DataLayoutT>;
+                using IOShape = IOShape<MatrixT, BlockM, BlockN, BlockK>;
 
                 // Sanity check on matrix shape properties
                 err |= (IOShape::BlockDim != BlockDim);
                 err |= (IOShape::KDim != KDim);
                 err |= (IOShape::BlockHeight != BlockHeight);
                 err |= (IOShape::BlockWidth != BlockWidth);
-                err |= (IOShape::MaxVectorWidth != MaxVW);
-                err |= (IOShape::VectorWidth != VW);
-                err |= (!std::is_same<typename IOShape::MatrixLayout, MatrixLayout>::value);
-                err |= (!std::is_same<typename IOShape::DataLayout, DataLayout>::value);
+
+                // Test on all supported wave counts
+                err |= waveTest<1>();
+                err |= waveTest<2>();
+                err |= waveTest<4>();
 
                 if(!err)
                 {

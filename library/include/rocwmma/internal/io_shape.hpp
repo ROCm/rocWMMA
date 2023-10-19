@@ -63,6 +63,7 @@ namespace rocwmma
                 ElementCountTest
                 = (ElementsPerIO <= ElementCount) && (ElementCount % ElementsPerIO == 0),
 
+                // TODO: When Col / Row layouts come into effect:
                 // MaxVW contiguous element MUST at least fit inside block dims:
                 // Matrix A:
                 // - Col major: MaxVW <= BlockDim
@@ -70,13 +71,16 @@ namespace rocwmma
                 // Matrix B / Accumulator:
                 // - Col Major: MaxVW <= BlockK
                 // - Row Major: MaxVW <= BlockDim
-                LeadingDimTest
-                = (std::is_same_v<MatrixT, matrix_a>
-                       && (std::is_same_v<DataLayoutT, col_major> && (TestWidth <= BlockDim))
-                   || (std::is_same_v<DataLayoutT, row_major> && (TestWidth <= BlockK)))
-                  || ((std::is_same_v<MatrixT, matrix_b> || std::is_same_v<MatrixT, accumulator>)&&(
-                          std::is_same_v<DataLayoutT, row_major> && (TestWidth <= BlockDim))
-                      || (std::is_same_v<DataLayoutT, col_major> && (TestWidth <= BlockK))),
+                // LeadingDimTest
+                // = (std::is_same_v<MatrixT, matrix_a>
+                //        && (std::is_same_v<DataLayoutT, col_major> && (TestWidth <= BlockDim))
+                //    || (std::is_same_v<DataLayoutT, row_major> && (TestWidth <= BlockK)))
+                //   || ((std::is_same_v<MatrixT, matrix_b> || std::is_same_v<MatrixT, accumulator>)&&(
+                //           std::is_same_v<DataLayoutT, row_major> && (TestWidth <= BlockDim))
+                //       || (std::is_same_v<DataLayoutT, col_major> && (TestWidth <= BlockK))),
+
+                // Currently, all layouts are using ColOrthoVW. This means that VW must be less than BlockK
+                LeadingDimTest = (TestWidth <= BlockK),
 
                 MaxVectorWidth = (bool)ElementCountTest && (bool)LeadingDimTest
                                      ? TestWidth
@@ -201,15 +205,12 @@ namespace rocwmma
 
         static_assert(!(std::is_same<DataLayoutT, row_major>::value && VW > 1),
                       "accumulator in row_major currently does not support VW > 1");
-
-        static_assert(WaveCount == 1, "WaveCount > 1 not supported for accumulator fragments");
     };
 
     template <uint32_t BlockDim, uint32_t KDim, typename DataT, uint32_t WaveCount>
     struct IOLayout<accumulator, BlockDim, KDim, DataT, void, WaveCount>
     {
         // No layout mapping without VW, MaxVW and DataLayoutT info
-        static_assert(WaveCount == 1, "WaveCount > 1 not supported for accumulator fragments");
     };
 
     /************************************************
