@@ -46,15 +46,18 @@ namespace rocwmma
                   = 4u * Constants::AMDGCN_DWORD_SIZE_BYTES / (uint32_t)sizeof(DataT)>
         struct MaxVWSelector
         {
-            //using IOTraits = IOTraits<BlockDim, BlockK, DataT, TestWidth>;
 
         private:
             enum : uint32_t
             {
-                // Total number of elements in a single I/O operation
-                ElementsPerIO = Constants::AMDGCN_WAVE_SIZE * TestWidth * WaveCount,
+                // For small block sizes (16, 32):
+                // Best to keep MaxVW high and reduce splits amongst waves.
+                WaveCountFactor = (BlockDim <= 32) ? 1u : WaveCount,
 
-                // Total number of elements per for the entire block
+                // Total number of elements in a single I/O operation
+                ElementsPerIO = Constants::AMDGCN_WAVE_SIZE * TestWidth * WaveCountFactor,
+
+                // Total number of elements for the entire block
                 ElementCount = BlockDim * BlockK,
 
                 // Ensure that for MaxVW:
