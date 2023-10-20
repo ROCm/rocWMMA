@@ -211,12 +211,12 @@ namespace rocwmma
                         || (std::is_same<DataLayout, row_major>::value
                             && (MaxVectorWidth <= BlockK)),
                     "MaxVectorWidth is larger than leading dimension. Try reducing MaxVectorWidth");
-
-                constexpr static inline bool isStrided()
-                {
-                    return std::is_same_v<DataLayout, row_major>;
-                }
             };
+
+            constexpr static inline bool isStrided()
+            {
+                return std::is_same_v<DataLayout, row_major>;
+            }
         };
 
         /**
@@ -346,12 +346,12 @@ namespace rocwmma
                         || (std::is_same<DataLayout, col_major>::value
                             && (MaxVectorWidth <= BlockK)),
                     "MaxVectorWidth is larger than leading dimension. Try reducing MaxVectorWidth");
-
-                constexpr static inline bool isStrided()
-                {
-                    return std::is_same_v<DataLayout, col_major>;
-                }
             };
+
+            constexpr static inline bool isStrided()
+            {
+                return std::is_same_v<DataLayout, col_major>;
+            }
         };
 
         /**
