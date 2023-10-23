@@ -190,7 +190,7 @@ namespace rocwmma
             {
                 if constexpr(MatrixLayout::isStrided())
                 {
-                    if(waveIndex >= maxWaves)
+                    if(__builtin_amdgcn_readfirstlane(waveIndex) >= maxWaves)
                     {
                         return; // bail
                     }
@@ -198,7 +198,7 @@ namespace rocwmma
                 else
                 {
                     // Hit the last index again
-                    waveIndex = std::max(maxWaves - 1u, waveIndex);
+                    waveIndex = std::min(maxWaves - 1u, waveIndex);
                 }
             }
 
