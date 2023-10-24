@@ -90,6 +90,7 @@ namespace rocwmma
                                                    LayoutC,
                                                    LayoutD,
                                                    LayoutLds,
+                                                   GemmConfig,
                                                    BlocksX,
                                                    BlocksY,
                                                    TBlockX,
