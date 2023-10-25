@@ -27,6 +27,7 @@
 #define ROCWMMA_ACCESSORS_IMPL_HPP
 
 #include "accessors.hpp"
+#include "coop_io_config.hpp"
 #include "io_config.hpp"
 #include "io_shape.hpp"
 

@@ -157,9 +157,6 @@ namespace rocwmma
 
 #define ROCWMMA_KERNEL __global__
 
-#define ROCWMMA_MIN_COOP_WAVES 1u
-#define ROCWMMA_MAX_COOP_WAVES 4u
-
 } // namespace rocwmma
 
 #endif // ROCWMMA_CONFIG_HPP

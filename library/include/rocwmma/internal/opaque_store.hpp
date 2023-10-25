@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -133,15 +133,6 @@ namespace rocwmma
                          ldm,
                          MatrixLayout::strideCounts(),
                          MatrixLayout::strides());
-
-            //             // Loop through entire block
-            // #pragma unroll
-            //             for(auto i = 0; i < IOTraits::IOCount; ++i)
-            //             {
-            //                 Traits::Storer::exec(dataPtr, *it, DataLayout::fromMatrixCoord(baseOffset, ldm));
-            //                 baseOffset += MatrixLayout::incrementalOffset(it.index());
-            //                 it++;
-            //             }
         }
     };
 

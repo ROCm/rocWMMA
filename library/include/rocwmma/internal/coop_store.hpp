@@ -210,22 +210,6 @@ namespace rocwmma
             auto           currentWaveOffset = std::apply(
                 sum, inflate_coord_left(waveIndex * workItemsPerWave, strideSpaceR) * stridesR);
 
-            // if(threadIdx.x % 64 == 0)
-            // {
-
-            //     printf("(%d) BlockDim, BlockK: (%d, %d)\n", waveIndex, BlockDim, BlockK);
-            //     printf("(%d) Original strideCounts: (%d, %d, %d)\n", waveIndex, std::get<0>(strideSpace), std::get<1>(strideSpace), std::get<2>(strideSpace));
-            //     printf("(%d) Original strides: (%d, %d), (%d, %d), (%d, %d)\n", waveIndex, get<0>(std::get<0>(strides)), get<1>(std::get<0>(strides)),
-            //                                                                             get<0>(std::get<1>(strides)), get<1>(std::get<1>(strides)),
-            //                                                                             get<0>(std::get<2>(strides)), get<1>(std::get<2>(strides)));
-
-            //     printf("(%d) WaveCount: (%d)\n", waveIndex, WaveCount);
-            //     printf("(%d) workItemsPerWave (%d)\n", waveIndex, workItemsPerWave);
-            //     printf("(%d) strideSpaceW: (%d, %d, %d)\n", waveIndex, std::get<0>(strideSpaceW), std::get<1>(strideSpaceW), std::get<2>(strideSpaceW));
-            //     printf("(%d) currentOffset: (%d, %d)\n\n", waveIndex, get<0>(currentWaveOffset), get<1>(currentWaveOffset));
-
-            // }
-
             unroll_right(dataPtr + DataLayout::fromMatrixCoord(baseOffset + currentWaveOffset, ldm),
                          it,
                          ldm,

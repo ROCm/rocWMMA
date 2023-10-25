@@ -36,6 +36,7 @@
 #include "internal/dpp.hpp"
 #include "internal/flow_control.hpp"
 #include "internal/io_config.hpp"
+#include "internal/io_layout.hpp"
 #include "internal/io_shape.hpp"
 #include "internal/io_traits.hpp"
 #include "internal/layout.hpp"

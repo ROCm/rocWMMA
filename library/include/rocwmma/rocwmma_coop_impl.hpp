@@ -26,8 +26,10 @@
 #ifndef ROCWMMA_COOP_API_IMPL_HPP
 #define ROCWMMA_COOP_API_IMPL_HPP
 
+#include "internal/coop_io_config.hpp"
 #include "internal/coop_load.hpp"
 #include "internal/coop_store.hpp"
+
 #include "rocwmma_coop.hpp"
 
 namespace rocwmma

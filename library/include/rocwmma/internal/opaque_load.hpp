@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -169,32 +169,6 @@ namespace rocwmma
                          ldm,
                          MatrixLayout::strideCounts(),
                          MatrixLayout::strides());
-
-            // auto baseOffset1d = DataLayout::fromMatrixCoord(baseOffset2d, ldm);
-            // auto stride1d0 = DataLayout::fromMatrixCoord(std::get<0>(strides), ldm);
-
-            // #pragma unroll
-            // for(uint32_t i = 0; i < std::get<0>(strideCounts); ++i)
-            // {
-            //     auto currentOffset1d = baseOffset1d;
-            //     auto stride1d1 = DataLayout::fromMatrixCoord(std::get<1>(strides), ldm);
-            //     #pragma unroll
-            //     for(uint32_t j = 0; j < std::get<1>(strideCounts); ++j)
-            //     {
-            //         Traits::Loader::exec(*it, dataPtr, currentOffset1d);
-            //         currentOffset1d += stride1d1;
-            //         it++;
-            //     }
-            //     baseOffset1d += stride1d0;
-            // }
-
-            // #pragma unroll
-            //             for(uint32_t i = 0; i < IOTraits::IOCount; ++i)
-            //             {
-            //                 Traits::Loader::exec(*it, dataPtr, DataLayout::fromMatrixCoord(baseOffset2d, ldm));
-            //                 baseOffset2d += MatrixLayout::incrementalOffset(it.index());
-            //                 it++;
-            //             }
         }
     };
 
