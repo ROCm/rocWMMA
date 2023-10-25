@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -204,6 +204,13 @@ namespace rocwmma
                 // ordering is broken.
                 static_assert(!(std::is_same<DataLayout, col_major>::value && VectorWidth > 1),
                               "ColNT in col_major does not support VectorWidth > 1");
+
+                // Must ensure that MaxVectorWidth fits inside the leading dimension
+                static_assert(
+                    (std::is_same<DataLayout, col_major>::value && (MaxVectorWidth <= BlockDim))
+                        || (std::is_same<DataLayout, row_major>::value
+                            && (MaxVectorWidth <= BlockK)),
+                    "MaxVectorWidth is larger than leading dimension. Try reducing MaxVectorWidth");
             };
         };
 
@@ -327,6 +334,13 @@ namespace rocwmma
                 // ordering is broken.
                 static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
                               "RowNT in row_major does not support VectorWidth > 1");
+
+                // Must ensure that MaxVectorWidth fits inside the leading dimension
+                static_assert(
+                    (std::is_same<DataLayout, row_major>::value && (MaxVectorWidth <= BlockDim))
+                        || (std::is_same<DataLayout, col_major>::value
+                            && (MaxVectorWidth <= BlockK)),
+                    "MaxVectorWidth is larger than leading dimension. Try reducing MaxVectorWidth");
             };
         };
 

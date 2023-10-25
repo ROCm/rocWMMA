@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,61 +32,61 @@ namespace rocwmma
     /// DataType access
     ///
 
-    template <typename Obj>
+    template <typename FragT>
     struct GetDataType;
 
-    template <typename Obj>
-    using GetDataType_t = typename GetDataType<Obj>::type;
+    template <typename FragT>
+    using GetDataType_t = typename GetDataType<FragT>::type;
 
     ///
     /// IOConfig access
     ///
 
-    template <typename Obj>
+    template <typename FragT>
     struct GetIOConfig;
 
-    template <typename Obj>
-    using GetIOConfig_t = typename GetIOConfig<Obj>::type;
+    template <typename FragT>
+    using GetIOConfig_t = typename GetIOConfig<FragT>::type;
+
+    ///
+    /// CoopConfig access
+    ///
+
+    template <typename FragT, uint32_t WaveCount>
+    struct GetCoopIOConfig;
+
+    template <typename FragT, uint32_t WaveCount = 1u>
+    using GetCoopIOConfig_t = typename GetCoopIOConfig<FragT, WaveCount>::type;
 
     ///
     /// IOShape access
     ///
 
-    template <typename Obj>
+    template <typename FragT>
     struct GetIOShape;
 
-    template <typename Obj>
-    using GetIOShape_t = typename GetIOShape<Obj>::type;
-
-    ///
-    /// IOTraits access
-    ///
-
-    template <typename Obj>
-    struct GetIOTraits;
-
-    template <typename Obj>
-    using GetIOTraits_t = typename GetIOTraits<Obj>::type;
-
-    ///
-    /// MatrixLayout access
-    ///
-
-    template <typename Obj>
-    struct GetMatrixLayout;
-
-    template <typename Obj>
-    using GetMatrixLayout_t = typename GetMatrixLayout<Obj>::type;
+    template <typename FragT>
+    using GetIOShape_t = typename GetIOShape<FragT>::type;
 
     ///
     /// DataLayout access
     ///
 
-    template <typename Obj>
+    template <typename FragT>
     struct GetDataLayout;
 
-    template <typename Obj>
-    using GetDataLayout_t = typename GetDataLayout<Obj>::type;
+    template <typename FragT>
+    using GetDataLayout_t = typename GetDataLayout<FragT>::type;
+
+    ///
+    /// MappingUtil access
+    ///
+
+    template <typename FragT>
+    struct GetMappingUtil;
+
+    template <typename FragT>
+    using GetMappingUtil_t = typename GetMappingUtil<FragT>::type;
 
 } // namespace rocwmma
 

@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -62,24 +62,34 @@ namespace rocwmma
             using LRFragB = typename LdsMapping::LRFragB;
 
             template <typename FragT>
-            using MappingUtil = typename FragT::IOConfig::MappingUtil;
+            using MappingUtil = GetMappingUtil_t<FragT>;
+
+            template <typename FragT>
+            using GetIOTraitsFragA =
+                typename GetCoopIOConfig_t<FragT, CoopSchedulerA::waveCount()>::IOTraits;
+
+            template <typename FragT>
+            using GetIOTraitsFragB =
+                typename GetCoopIOConfig_t<FragT, CoopSchedulerB::waveCount()>::IOTraits;
 
             // Ensure that splitCounts are the same on both sides of
             // global fetch and local writes to match fragment data locality.
-            constexpr static auto splitCountA = std::min((uint32_t)GetIOTraits_t<GRFragA>::IOCount,
-                                                         (uint32_t)GetIOTraits_t<LWFragA>::IOCount);
+            constexpr static auto splitCountA
+                = std::min((uint32_t)GetIOTraitsFragA<GRFragA>::IOCount,
+                           (uint32_t)GetIOTraitsFragA<LWFragA>::IOCount);
 
-            constexpr static auto splitCountB = std::min((uint32_t)GetIOTraits_t<GRFragB>::IOCount,
-                                                         (uint32_t)GetIOTraits_t<LWFragB>::IOCount);
+            constexpr static auto splitCountB
+                = std::min((uint32_t)GetIOTraitsFragB<GRFragB>::IOCount,
+                           (uint32_t)GetIOTraitsFragB<LWFragB>::IOCount);
 
             static_assert(
-                ((uint32_t)GetIOTraits_t<GRFragA>::IOCount % splitCountA == 0u)
-                    && ((uint32_t)GetIOTraits_t<LWFragA>::IOCount % splitCountA == 0u),
+                ((uint32_t)GetIOTraitsFragA<GRFragA>::IOCount % splitCountA == 0u)
+                    && ((uint32_t)GetIOTraitsFragA<LWFragA>::IOCount % splitCountA == 0u),
                 "splitCount A is not common divisor of GlobalRead and LocalWrite IOCounts");
 
             static_assert(
-                ((uint32_t)GetIOTraits_t<GRFragB>::IOCount % splitCountB == 0u)
-                    && ((uint32_t)GetIOTraits_t<LWFragB>::IOCount % splitCountB == 0u),
+                ((uint32_t)GetIOTraitsFragB<GRFragB>::IOCount % splitCountB == 0u)
+                    && ((uint32_t)GetIOTraitsFragB<LWFragB>::IOCount % splitCountB == 0u),
                 "splitCount B is not common divisor of GlobalRead and LocalWrite IOCounts");
 
             ///

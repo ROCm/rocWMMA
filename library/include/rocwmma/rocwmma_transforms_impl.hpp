@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,16 +34,36 @@ namespace rocwmma
         /// Consistency and orthogonality checks as they apply to fragment types
         ///
         template <typename LhsFrag, typename RhsFrag>
-        struct ConsistencyCheck : public MatrixLayout::detail::ConsistencyCheck<
-                                      typename GetIOShape_t<LhsFrag>::MatrixLayout,
-                                      typename GetIOShape_t<RhsFrag>::MatrixLayout>
+        struct ConsistencyCheck
+            : public std::conditional_t<
+                  MatrixLayout::detail::ConsistencyCheck<
+                      typename GetIOConfig_t<LhsFrag>::IOLayout::MatrixLayout,
+                      typename GetIOConfig_t<RhsFrag>::IOLayout::MatrixLayout>::value
+                      && MatrixLayout::detail::ConsistencyCheck<
+                          typename GetCoopIOConfig_t<LhsFrag, 2u>::IOLayout::MatrixLayout,
+                          typename GetCoopIOConfig_t<RhsFrag, 2u>::IOLayout::MatrixLayout>::value
+                      && MatrixLayout::detail::ConsistencyCheck<
+                          typename GetCoopIOConfig_t<LhsFrag, 4u>::IOLayout::MatrixLayout,
+                          typename GetCoopIOConfig_t<RhsFrag, 4u>::IOLayout::MatrixLayout>::value,
+                  std::true_type,
+                  std::false_type>
         {
         };
 
         template <typename LhsFrag, typename RhsFrag>
-        struct OrthogonalCheck : public MatrixLayout::detail::OrthogonalCheck<
-                                     typename GetIOShape_t<LhsFrag>::MatrixLayout,
-                                     typename GetIOShape_t<RhsFrag>::MatrixLayout>
+        struct OrthogonalCheck
+            : public std::conditional_t<
+                  MatrixLayout::detail::OrthogonalCheck<
+                      typename GetIOConfig_t<LhsFrag>::IOLayout::MatrixLayout,
+                      typename GetIOConfig_t<RhsFrag>::IOLayout::MatrixLayout>::value
+                      && MatrixLayout::detail::OrthogonalCheck<
+                          typename GetCoopIOConfig_t<LhsFrag, 2u>::IOLayout::MatrixLayout,
+                          typename GetCoopIOConfig_t<RhsFrag, 2u>::IOLayout::MatrixLayout>::value
+                      && MatrixLayout::detail::OrthogonalCheck<
+                          typename GetCoopIOConfig_t<LhsFrag, 4u>::IOLayout::MatrixLayout,
+                          typename GetCoopIOConfig_t<RhsFrag, 4u>::IOLayout::MatrixLayout>::value,
+                  std::true_type,
+                  std::false_type>
         {
         };
 

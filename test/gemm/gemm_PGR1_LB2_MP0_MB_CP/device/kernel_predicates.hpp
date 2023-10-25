@@ -42,6 +42,7 @@ namespace rocwmma
               typename LayoutC,
               typename LayoutD,
               typename LayoutLds,
+              typename GemmConfig,
               uint32_t BlocksX,
               uint32_t BlocksY,
               uint32_t TBlockX,
@@ -68,7 +69,14 @@ namespace rocwmma
             TBlockXMult   = (TBlockX % WaveSize == 0u),
             MaxWaveCount4 = (TBlockX / WaveSize * TBlockY <= 4u),
 
-            Enable = (TBlockXMult && MaxWaveCount4)
+            // Quirk for LdsRF is that it requires matching waves in X and Y directions
+            // for correctness.
+            // Second part is that the ldsRF crosses threshold from 16/32 block sizes to 64, which has different considerations
+            // for the MaxVW. This unfortunately limits applicability in cooperative environment.
+            LdsRFTest = !(std::is_same_v<GemmConfig, typename CooperativeGemm::BlockLevel::LdsRF>)
+                        || ((BlockM * BlockK / WaveSize > 8u) && (BlockN * BlockK / WaveSize > 8u)),
+
+            Enable = (TBlockXMult && MaxWaveCount4 && LdsRFTest)
         };
 
         enum struct Gfx9Predicates : bool

@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -90,6 +90,7 @@ namespace rocwmma
                                                    LayoutC,
                                                    LayoutD,
                                                    LayoutLds,
+                                                   GemmConfig,
                                                    BlocksX,
                                                    BlocksY,
                                                    TBlockX,
@@ -133,10 +134,10 @@ namespace rocwmma
             using MfmaFragAcc = typename GlobalMapping::MfmaFragAcc;
 
             // Mapping utils for each fragment type
-            using DataMappingA   = typename GetIOShape_t<MfmaFragA>::DataLayout;
-            using DataMappingB   = typename GetIOShape_t<MfmaFragB>::DataLayout;
-            using DataMappingC   = typename GetIOShape_t<MfmaFragC>::DataLayout;
-            using DataMappingD   = typename GetIOShape_t<MfmaFragD>::DataLayout;
+            using DataMappingA   = GetDataLayout_t<MfmaFragA>;
+            using DataMappingB   = GetDataLayout_t<MfmaFragB>;
+            using DataMappingC   = GetDataLayout_t<MfmaFragC>;
+            using DataMappingD   = GetDataLayout_t<MfmaFragD>;
             using DataMappingLds = typename LdsMapping::DataLayout;
 
             ///

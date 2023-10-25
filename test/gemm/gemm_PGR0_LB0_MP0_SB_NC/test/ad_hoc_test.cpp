@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -89,8 +89,8 @@ namespace rocwmma
                 // {256, 256, 1024},
                 //{1024, 1024, 1024},
                 //{64, 64, 64},
-                //{128, 128, 128},
-                {2048, 2048, 2048},
+                {128, 128, 128},
+                //{2048, 2048, 2048},
                 //{7168, 7168, 7168}
 
             };

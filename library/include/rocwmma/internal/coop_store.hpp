@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -163,9 +163,6 @@ namespace rocwmma
                                                uint32_t                       ldm,
                                                uint32_t                       waveIndex)
         {
-            // Don't go beyond the scope of work
-            waveIndex %= WaveCount;
-
             // Full fragment work
             constexpr auto strideSpace = MatrixLayout::strideCounts();
             constexpr auto strides     = MatrixLayout::strides();
@@ -174,67 +171,50 @@ namespace rocwmma
             constexpr auto strideSpaceR = pop_right(strideSpace);
             constexpr auto stridesR     = pop_right(strides);
             constexpr auto totalWorkItems
-                = flatten_coord_left((strideSpaceR - 1u), strideSpaceR) + 1;
+                = flatten_coord_left((strideSpaceR - 1u), strideSpaceR) + 1u;
 
             // Determine max waves possible.
-            constexpr auto waveCountAdjusted
-                = calcMaxWaves((uint32_t)totalWorkItems, (uint32_t)WaveCount);
+            constexpr auto maxWaves = calcMaxWaves((uint32_t)totalWorkItems, (uint32_t)WaveCount);
 
-            // Ensure that we propagate the corrected wave count
-            if constexpr(WaveCount != waveCountAdjusted)
+            // maxWaves is the maximum amount of waves split the work into.
+            // For the rest of the waves, bail out
+            if constexpr(WaveCount != maxWaves)
             {
-                exec<waveCountAdjusted, SplitCount>(dataPtr, data, ldm, waveIndex);
+                if(__builtin_amdgcn_readfirstlane(waveIndex) >= maxWaves)
+                {
+                    return; // bail
+                }
             }
-            // Wave count is acceptable
-            else
-            {
-                // Split the reduced stride space.
-                constexpr auto workItemsPerWave = std::max(totalWorkItems / WaveCount, 1u);
-                constexpr auto strideSpaceS
-                    = inflate_coord_left(workItemsPerWave - 1u, strideSpaceR) + 1u;
 
-                // Add back in the VW dimension, for the full stride
-                // space of the current wave
-                constexpr auto strideSpaceW
-                    = std::tuple_cat(strideSpaceS, std::make_tuple(get_last(strideSpace)));
+            // Split the reduced stride space.
+            constexpr auto workItemsPerWave = std::max(totalWorkItems / maxWaves, 1u);
+            constexpr auto strideSpaceS
+                = inflate_coord_left(workItemsPerWave - 1u, strideSpaceR) + 1u;
 
-                // Alias the original frag due to smaller split size
-                auto& dataR = (typename StoreVecTraits::template VecT<
-                               DataT,
-                               workItemsPerWave * StoreVecTraits::size()> const&)(data);
-                auto  it    = makeVectorIterator<StoreVecTraits::size()>(dataR).begin();
+            // Add back in the VW dimension, for the full stride
+            // space of the current wave
+            constexpr auto strideSpaceW
+                = std::tuple_cat(strideSpaceS, std::make_tuple(get_last(strideSpace)));
 
-                // Align threads to starting matrix offset coordinates
-                auto baseOffset = MatrixLayout::baseOffset();
+            // Alias the original frag due to smaller split size
+            auto& dataR = (typename StoreVecTraits::template VecT<
+                           DataT,
+                           workItemsPerWave * StoreVecTraits::size()> const&)(data);
+            auto  it    = makeVectorIterator<StoreVecTraits::size()>(dataR).begin();
 
-                // Find current wave offset
-                constexpr auto sum               = [](auto... items) { return (items + ...); };
-                auto           currentWaveOffset = std::apply(
-                    sum, inflate_coord_left(waveIndex * workItemsPerWave, strideSpaceR) * stridesR);
+            // Align threads to starting matrix offset coordinates
+            auto baseOffset = MatrixLayout::baseOffset();
 
-                // if(threadIdx.x % 64 == 0)
-                // {
+            // Find current wave offset
+            constexpr auto sum               = [](auto... items) { return (items + ...); };
+            auto           currentWaveOffset = std::apply(
+                sum, inflate_coord_left(waveIndex * workItemsPerWave, strideSpaceR) * stridesR);
 
-                //     printf("(%d) BlockDim, BlockK: (%d, %d)\n", waveIndex, BlockDim, BlockK);
-                //     printf("(%d) Original strideCounts: (%d, %d, %d)\n", waveIndex, std::get<0>(strideSpace), std::get<1>(strideSpace), std::get<2>(strideSpace));
-                //     printf("(%d) Original strides: (%d, %d), (%d, %d), (%d, %d)\n", waveIndex, get<0>(std::get<0>(strides)), get<1>(std::get<0>(strides)),
-                //                                                                             get<0>(std::get<1>(strides)), get<1>(std::get<1>(strides)),
-                //                                                                             get<0>(std::get<2>(strides)), get<1>(std::get<2>(strides)));
-
-                //     printf("(%d) WaveCount: (%d)\n", waveIndex, WaveCount);
-                //     printf("(%d) workItemsPerWave (%d)\n", waveIndex, workItemsPerWave);
-                //     printf("(%d) strideSpaceW: (%d, %d, %d)\n", waveIndex, std::get<0>(strideSpaceW), std::get<1>(strideSpaceW), std::get<2>(strideSpaceW));
-                //     printf("(%d) currentOffset: (%d, %d)\n\n", waveIndex, get<0>(currentWaveOffset), get<1>(currentWaveOffset));
-
-                // }
-
-                unroll_right(dataPtr
-                                 + DataLayout::fromMatrixCoord(baseOffset + currentWaveOffset, ldm),
-                             it,
-                             ldm,
-                             strideSpaceW,
-                             strides);
-            }
+            unroll_right(dataPtr + DataLayout::fromMatrixCoord(baseOffset + currentWaveOffset, ldm),
+                         it,
+                         ldm,
+                         strideSpaceW,
+                         strides);
         }
     };
 

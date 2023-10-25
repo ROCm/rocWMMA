@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -46,19 +46,19 @@ namespace rocwmma
 
         enum : uint32_t
         {
-            MajorIndex = std::is_same<DataLayout, row_major>::value ? 0 : 1,
-            MinorIndex = std::is_same<DataLayout, row_major>::value ? 1 : 0,
-            ldmajor    = std::is_same<DataLayout, row_major>::value ? BlockM : BlockN,
-            ldminor    = std::is_same<DataLayout, row_major>::value ? BlockN : BlockM
+            MajorIndex = std::is_same_v<DataLayout, row_major> ? 0 : 1,
+            MinorIndex = std::is_same_v<DataLayout, row_major> ? 1 : 0,
+            ldmajor    = std::is_same_v<DataLayout, row_major> ? BlockM : BlockN,
+            ldminor    = std::is_same_v<DataLayout, row_major> ? BlockN : BlockM
         };
 
         auto majCoord
-            = (std::is_same<DataLayout, row_major>::value
+            = (std::is_same_v<DataLayout, row_major>
                    ? ((threadIdx.x + blockDim.x * blockIdx.x) / Constants::AMDGCN_WAVE_SIZE)
                    : (threadIdx.y + blockDim.y * blockIdx.y))
               * ldmajor;
         auto minCoord
-            = (std::is_same<DataLayout, row_major>::value
+            = (std::is_same_v<DataLayout, row_major>
                    ? (threadIdx.y + blockDim.y * blockIdx.y)
                    : ((threadIdx.x + blockDim.x * blockIdx.x) / Constants::AMDGCN_WAVE_SIZE))
               * ldminor;
