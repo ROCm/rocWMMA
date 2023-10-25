@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -70,26 +70,39 @@ namespace rocwmma
     using float16_t = _Float16;
     using float32_t = float;
     using float64_t = double;
-    using int8_t    = ::int8_t;
-    using uint8_t   = ::uint8_t;
-    using int16_t   = ::int16_t;
-    using uint16_t  = ::uint16_t;
-    using int32_t   = ::int32_t;
-    using uint32_t  = ::uint32_t;
-    using int64_t   = ::int64_t;
-    using uint64_t  = ::uint64_t;
-    using index_t   = int32_t;
 
-// Non-native types
 #if !defined(__HIPCC_RTC__)
-    using bfloat16_t = hip_bfloat16;
+
+    using int8_t   = ::int8_t;
+    using uint8_t  = ::uint8_t;
+    using int16_t  = ::int16_t;
+    using uint16_t = ::uint16_t;
+    using int32_t  = ::int32_t;
+    using uint32_t = ::uint32_t;
+    using int64_t  = ::int64_t;
+    using uint64_t = ::uint64_t;
+    using index_t  = ::int32_t;
+
 #else
-    typedef struct
-    {
-        uint16_t data;
-    } bfloat16_t;
-#endif // !__HIPCC_RTC__
+
+    using int8_t   = __hip_internal::int8_t;
+    using uint8_t  = __hip_internal::uint8_t;
+    using int16_t  = __hip_internal::int16_t;
+    using uint16_t = __hip_internal::uint16_t;
+    using int32_t  = __hip_internal::int32_t;
+    using uint32_t = __hip_internal::uint32_t;
+    using int64_t  = __hip_internal::int64_t;
+    using uint64_t = __hip_internal::uint64_t;
+    using index_t  = __hip_internal::int32_t;
+
+#endif // !defined(__HIPCC_RTC__)
+
+    // Non-native types
+    using bfloat16_t = hip_bfloat16;
+
+#if !ROCWMMA_NO_HALF
     using hfloat16_t = __half;
+#endif // !ROCWMMA_NO_HALF
 
     using bfloat8_t = rocwmma_bf8;
     using float8_t  = rocwmma_f8;

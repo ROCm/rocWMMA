@@ -2,7 +2,7 @@
  #
  # MIT License
  #
- # Copyright 2021-2023 Advanced Micro Devices, Inc.
+ # Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  #
  # Permission is hereby granted, free of charge, to any person obtaining a copy
  # of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,9 @@ cmake_dependent_option( ROCWMMA_BUILD_VALIDATION_TESTS "Build validation tests" 
 cmake_dependent_option( ROCWMMA_BUILD_BENCHMARK_TESTS "Build benchmarking tests" OFF "ROCWMMA_BUILD_TESTS" OFF )
 cmake_dependent_option( ROCWMMA_BUILD_EXTENDED_TESTS "Build extended test parameter coverage" OFF "ROCWMMA_BUILD_TESTS" OFF )
 
+add_compile_options(-mcmodel=large)
+add_link_options(-mcmodel=large)
+
 # Test/benchmark requires additional dependencies
 include( FetchContent )
 
@@ -46,10 +49,13 @@ if(NOT googletest_POPULATED)
   # Save the shared libs setting, then force to static libs
   set(BUILD_SHARED_LIBS_OLD ${BUILD_SHARED_LIBS})
   set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "Build SHARED libraries" FORCE)
-  
+
+  # Turn off gtest installation
+  set(INSTALL_GTEST OFF)
+
   # Add gtest targets as static libs
   add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
-  
+
   # Restore shared libs setting
   set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_OLD} CACHE INTERNAL "Build SHARED libraries" FORCE)
 endif()

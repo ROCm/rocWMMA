@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
- #include "gemm_resource_impl.hpp"
+#include "gemm_resource_impl.hpp"
 
 namespace rocwmma
 {
@@ -33,7 +33,9 @@ namespace rocwmma
     template struct GemmResource<bfloat8_t, float32_t>;
     template struct GemmResource<bfloat16_t, float32_t>;
     template struct GemmResource<float16_t, float32_t>;
+#if !ROCWMMA_TESTS_NO_HALF
     template struct GemmResource<hfloat16_t, float32_t>;
+#endif // !ROCWMMA_TESTS_NO_HALF
     template struct GemmResource<float32_t, float32_t>;
     template struct GemmResource<xfloat32_t, float32_t>;
     template struct GemmResource<float64_t, float64_t>;
@@ -42,7 +44,9 @@ namespace rocwmma
     template struct GemmResource<int8_t, int8_t>;
     template struct GemmResource<bfloat16_t, bfloat16_t>;
     template struct GemmResource<float16_t, float16_t>;
+#if !ROCWMMA_TESTS_NO_HALF
     template struct GemmResource<hfloat16_t, hfloat16_t>;
+#endif // !ROCWMMA_TESTS_NO_HALF
 #endif // ROCWMMA_EXTENDED_TESTS
 
 }

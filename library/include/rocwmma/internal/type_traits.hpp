@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,18 @@
 #ifndef ROCWMMA_TYPE_TRAITS_HPP
 #define ROCWMMA_TYPE_TRAITS_HPP
 
+#if !defined(__HIPCC_RTC__)
+
 #include <cfloat>
+
+#else
+
+#define FLT_EPSILON __FLT_EPSILON__
+#define FLT_MAX __FLT_MAX__
+#define FLT_MIN __FLT_MIN__
+#define HUGE_VALF (__builtin_huge_valf())
+
+#endif // !defined(__HIPCC_RTC__)
 
 #include "types.hpp"
 
@@ -61,9 +72,11 @@ namespace rocwmma
         {
             union
             {
-                uint16_t   i16;
-                float16_t  f16;
+                uint16_t  i16;
+                float16_t f16;
+#if !ROCWMMA_NO_HALF
                 hfloat16_t h16;
+#endif // !ROCWMMA_NO_HALF
                 bfloat16_t b16;
             };
             constexpr Fp16Bits(uint16_t initVal)
@@ -74,10 +87,12 @@ namespace rocwmma
                 : f16(initVal)
             {
             }
+#if !ROCWMMA_NO_HALF
             constexpr Fp16Bits(hfloat16_t initVal)
                 : h16(initVal)
             {
             }
+#endif
             constexpr Fp16Bits(bfloat16_t initVal)
                 : b16(initVal)
             {
@@ -637,7 +652,7 @@ namespace std
     ///////////////////////////////////////////////////////////
     ///////////  std::numeric_limits<hfloat16_t>  /////////////
     ///////////////////////////////////////////////////////////
-
+#if !ROCWMMA_NO_HALF
     template <>
     ROCWMMA_HOST_DEVICE constexpr rocwmma::hfloat16_t
         numeric_limits<rocwmma::hfloat16_t>::epsilon() noexcept
@@ -693,6 +708,8 @@ namespace std
         rocwmma::detail::Fp16Bits eps(static_cast<uint16_t>(0x7DFF));
         return eps.h16;
     }
+
+#endif // !ROCWMMA_NO_HALF
 
     ///////////////////////////////////////////////////////////
     ///////////  std::numeric_limits<bfloat16_t>  /////////////
@@ -840,9 +857,12 @@ namespace rocwmma
     }
 
     template <typename T,
-              typename std::enable_if_t<std::is_same<T, hfloat16_t>::value
-                                            || std::is_same<T, float16_t>::value,
-                                        int>
+              typename std::enable_if_t<
+#if !ROCWMMA_NO_HALF
+                  std::is_same<T, hfloat16_t>::value ||
+#endif // !ROCWMMA_NO_HALF
+                      std::is_same<T, float16_t>::value,
+                  int>
               = 0>
     constexpr auto maxExactInteger() -> int32_t
     {

@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -61,7 +61,11 @@ namespace rocwmma
               typename LayoutC,
               typename LayoutD,
               uint32_t BlocksX = 1,
-              uint32_t BlocksY = 1>
+              uint32_t BlocksY = 1,
+              uint32_t TBlockX,
+              uint32_t TBlockY,
+              uint32_t WaveSize,
+              uint32_t ArchId>
     __global__ void __launch_bounds__(256) gemm_PGR0_LB0_MP0_MB_NC(uint32_t       m,
                                                                    uint32_t       n,
                                                                    uint32_t       k,
@@ -84,8 +88,10 @@ namespace rocwmma
                                                    ComputeT,
                                                    BlocksX,
                                                    BlocksY,
-                                                   Constants::AMDGCN_WAVE_SIZE,
-                                                   Constants::AMDGCN_CURRENT_ARCH_ID>::enable())
+                                                   TBlockX,
+                                                   TBlockY,
+                                                   WaveSize,
+                                                   ArchId>::enableBuild())
         {
             // Setup global mapping
             using MappingA = MappingUtil<BlockM, BlockK, InputT, LayoutA>;

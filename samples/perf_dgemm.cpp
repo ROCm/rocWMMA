@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -662,18 +662,37 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
     globalWriteD(d + MfmaFragDMap1d::fromMatrixCoord(warpTileCoord, ldd), fragsD, ldd);
 }
 
-ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha, float64_t beta)
+ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, ComputeT beta)
 {
     // Runtime warp calculation (host code needs to query warpsize dynamically)
     auto warpSize = getWarpSize();
     auto macroTileSize
         = rocwmma::make_coord2d(TBLOCK_X / warpSize * WARP_TILE_X, TBLOCK_Y * WARP_TILE_Y);
 
+    // Device check for supported block and wave sizes
+    if(isGfx11())
+    {
+        std::cout << "Unsupported architecture!\n";
+        return;
+    }
+
+    if(isGfx9() && (ROCWMMA_M != 16 || ROCWMMA_N != 16))
+    {
+        std::cout << "Unsupported block size!\n";
+        return;
+    }
+
+    if(isGfx9() && WARP_SIZE != Constants::AMDGCN_WAVE_SIZE_64)
+    {
+        std::cout << "Unsupported wave size!\n";
+        return;
+    }
+
     // Bounds check
     if((m < get<0>(macroTileSize) || n < get<1>(macroTileSize) || k < ROCWMMA_K)
        || (m % ROCWMMA_M || n % ROCWMMA_N || k % ROCWMMA_K))
     {
-        std::cout << "Unsupported size!\n";
+        std::cout << "Unsupported matrix size!\n";
         return;
     }
 
@@ -686,11 +705,11 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha,
     std::cout << "Initializing host data..." << std::endl;
 
     // Initialize input matrices
-    std::vector<float64_t> matrixA(m * k);
-    std::vector<float64_t> matrixB(k * n);
-    std::vector<float64_t> matrixC(m * n);
+    std::vector<InputT>  matrixA(m * k);
+    std::vector<InputT>  matrixB(k * n);
+    std::vector<OutputT> matrixC(m * n);
     // Fill outputs with NaN to catch contamination
-    std::vector<float64_t> matrixD(m * n, std::numeric_limits<float64_t>::signaling_NaN());
+    std::vector<OutputT> matrixD(m * n, std::numeric_limits<OutputT>::signaling_NaN());
 
     fillRand(matrixA.data(), m, k);
     fillRand(matrixB.data(), k, n);
@@ -699,15 +718,15 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha,
     std::cout << "Initializing device data..." << std::endl;
 
     // Allocate and copy device memory
-    float64_t* d_a;
-    float64_t* d_b;
-    float64_t* d_c;
-    float64_t* d_d;
+    InputT*  d_a;
+    InputT*  d_b;
+    OutputT* d_c;
+    OutputT* d_d;
 
-    const size_t bytesA = matrixA.size() * sizeof(float64_t);
-    const size_t bytesB = matrixB.size() * sizeof(float64_t);
-    const size_t bytesC = matrixC.size() * sizeof(float64_t);
-    const size_t bytesD = matrixD.size() * sizeof(float64_t);
+    const size_t bytesA = matrixA.size() * sizeof(InputT);
+    const size_t bytesB = matrixB.size() * sizeof(InputT);
+    const size_t bytesC = matrixC.size() * sizeof(OutputT);
+    const size_t bytesD = matrixD.size() * sizeof(OutputT);
 
     CHECK_HIP_ERROR(hipMalloc(&d_a, bytesA));
     CHECK_HIP_ERROR(hipMalloc(&d_b, bytesB));
@@ -729,7 +748,7 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha,
 
     // Uses 2 lds blocks for prefetch loop (A and B)
     int ldsusage
-        = 2u * sizeof(float64_t) * (get<0>(macroTileSize) + get<1>(macroTileSize)) * ROCWMMA_K;
+        = 2u * sizeof(InputT) * (get<0>(macroTileSize) + get<1>(macroTileSize)) * ROCWMMA_K;
 
     auto rocwmmaKernel = [&]() {
         hipExtLaunchKernelGGL(gemm_rocwmma_d,
@@ -815,20 +834,20 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha,
     CHECK_HIP_ERROR(hipMemcpy(matrixD.data(), d_d, bytesD, hipMemcpyDeviceToHost));
 
     // Setup and run reference computation
-    std::vector<float64_t> matrixD_ref(m * n, std::numeric_limits<float64_t>::signaling_NaN());
-    gemm_cpu_h<float64_t, float64_t, float64_t, col_major, row_major, col_major>(m,
-                                                                                 n,
-                                                                                 k,
-                                                                                 matrixA.data(),
-                                                                                 matrixB.data(),
-                                                                                 matrixC.data(),
-                                                                                 matrixD_ref.data(),
-                                                                                 lda,
-                                                                                 ldb,
-                                                                                 ldc,
-                                                                                 ldd,
-                                                                                 alpha,
-                                                                                 beta);
+    std::vector<OutputT> matrixD_ref(m * n, std::numeric_limits<OutputT>::signaling_NaN());
+    gemm_cpu_h<InputT, OutputT, ComputeT, col_major, row_major, col_major>(m,
+                                                                           n,
+                                                                           k,
+                                                                           matrixA.data(),
+                                                                           matrixB.data(),
+                                                                           matrixC.data(),
+                                                                           matrixD_ref.data(),
+                                                                           lda,
+                                                                           ldb,
+                                                                           ldc,
+                                                                           ldd,
+                                                                           alpha,
+                                                                           beta);
 
     auto res = compareEqual(matrixD.data(), matrixD_ref.data(), m * n);
 

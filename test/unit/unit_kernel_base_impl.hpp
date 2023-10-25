@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -80,12 +80,14 @@ namespace rocwmma
     bool UnitKernelBase<BlockM, BlockN, DataT, Layout>::checkDevice() const
     {
         auto deviceArch = DeviceInfo::instance()->getGcnArch();
-        return (deviceArch != DeviceInfo::UNSUPPORTED_ARCH
-                && !(deviceArch == DeviceInfo::GFX908 &&
-                    (std::is_same<DataT, float64_t>::value || std::is_same<DataT, float8_t>::value
-                    || std::is_same<DataT, bfloat8_t>::value))
-                && !(deviceArch == DeviceInfo::GFX90A &&
-                    (std::is_same<DataT, float8_t>::value || std::is_same<DataT, bfloat8_t>::value)));
+        return (
+            deviceArch != DeviceInfo::UNSUPPORTED_ARCH
+            && !(deviceArch == DeviceInfo::GFX908
+                 && (std::is_same<DataT, float64_t>::value || std::is_same<DataT, float8_t>::value
+                     || std::is_same<DataT, bfloat8_t>::value))
+            && !(deviceArch == DeviceInfo::GFX90A
+                 && (std::is_same<DataT, float8_t>::value
+                     || std::is_same<DataT, bfloat8_t>::value)));
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
@@ -123,7 +125,7 @@ namespace rocwmma
         mTBlockX = mTBlockY = 0;
         mM = mN = 0;
         mLd     = 0;
-        mParam1 = mParam2 = DataT(0);
+        mParam1 = mParam2 = rocwmma::convert<DataT>(0);
 
         mRunFlag          = true;
         mValidationResult = false;
@@ -189,8 +191,8 @@ namespace rocwmma
                        static_cast<uint32_t const&>(std::get<1>(problem.threadBlockSize)));
         std::tie(mM, mN) = std::tie(static_cast<uint32_t const&>(std::get<0>(problem.problemSize)),
                                     static_cast<uint32_t const&>(std::get<1>(problem.problemSize)));
-        mParam1          = static_cast<DataT>(problem.param1);
-        mParam2          = static_cast<DataT>(problem.param2);
+        mParam1          = rocwmma::convert<DataT>(problem.param1);
+        mParam2          = rocwmma::convert<DataT>(problem.param2);
         mLd              = std::is_same<Layout, row_major>::value ? mN : mM;
 
         // Clear the kernel to run

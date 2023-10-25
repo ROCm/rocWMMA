@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -69,7 +69,7 @@ namespace rocwmma
                                     LayoutC,
                                     LayoutD>;
 
-        template <uint32_t WaveSize, uint32_t ArchId>
+        template <uint32_t TBlockX, uint32_t TBlockY, uint32_t WaveSize, uint32_t ArchId>
         using TestGuard = gemm_PGR0_LB0_MP0_MB_NC_guard<BlockM,
                                                         BlockN,
                                                         BlockK,
@@ -78,8 +78,43 @@ namespace rocwmma
                                                         ComputeT,
                                                         BlocksX,
                                                         BlocksY,
+                                                        TBlockX,
+                                                        TBlockY,
                                                         WaveSize,
                                                         ArchId>;
+
+        template <uint32_t TBlockX, uint32_t TBlockY, uint32_t WaveSize, uint32_t ArchId>
+        struct TestKernelFunc
+        {
+            static constexpr auto generate()
+            {
+                // Avoid attempting to reference kernel functions that haven't passed
+                // predicate tests, as they won't be built!
+                if constexpr(TestGuard<TBlockX, TBlockY, WaveSize, ArchId>::enableRun())
+                {
+                    return typename Base::KernelFunc(gemm_PGR0_LB0_MP0_MB_NC<BlockM,
+                                                                             BlockN,
+                                                                             BlockK,
+                                                                             InputT,
+                                                                             OutputT,
+                                                                             ComputeT,
+                                                                             LayoutA,
+                                                                             LayoutB,
+                                                                             LayoutC,
+                                                                             LayoutD,
+                                                                             BlocksX,
+                                                                             BlocksY,
+                                                                             TBlockX,
+                                                                             TBlockY,
+                                                                             WaveSize,
+                                                                             ArchId>);
+                }
+                else
+                {
+                    return typename Base::KernelFunc(nullptr);
+                }
+            }
+        };
 
     public:
         Kernel_PGR0_LB0_MP0_MB_NC() {}
@@ -102,56 +137,12 @@ namespace rocwmma
 
         bool checkQuirks() const final
         {
-            auto waveSize   = Base::DeviceInfo::instance()->warpSize();
-            auto deviceArch = Base::DeviceInfo::instance()->getGcnArch();
-
-            // The test guard for this class requires 2 values at runtime.
-            auto dispatchGuard = [waveSize, deviceArch]() {
-                bool dispatchResult = false;
-
-#define CASE_IMPL_ASSIGN2(WAVE_SIZE, ARCH_ID) \
-    dispatchResult = TestGuard<WAVE_SIZE, ARCH_ID>::enable();
-
-#define SWITCH_BODY_WAVE_SIZE(ARCH_ID) \
-    ROCWMMA_SWITCH_BODY2_ARG2(         \
-        waveSize, CASE_IMPL_ASSIGN2, HipDevice::Wave32, HipDevice::Wave64, ARCH_ID)
-
-#define DISPATCH_GUARD_BODY                          \
-    ROCWMMA_SWITCH_BODY6_ARG1(deviceArch,            \
-                              SWITCH_BODY_WAVE_SIZE, \
-                              HipDevice::GFX908,     \
-                              HipDevice::GFX90A,     \
-                              HipDevice::GFX940,     \
-                              HipDevice::GFX1100,    \
-                              HipDevice::GFX1101,    \
-                              HipDevice::GFX1102)
-
-                DISPATCH_GUARD_BODY
-
-#undef CASE_IMPL_ASSIGN2
-#undef SWITCH_BODY_WAVE_SIZE
-#undef DISPATCH_GUARD_BODY
-
-                return dispatchResult;
-            };
-
-            return Base::checkQuirks() && dispatchGuard();
+            return Base::checkQuirks() && Base::template dispatchGuard<TestGuard>();
         }
 
         typename Base::KernelFunc kernelImpl() const final
         {
-            return typename Base::KernelFunc(gemm_PGR0_LB0_MP0_MB_NC<BlockM,
-                                                                     BlockN,
-                                                                     BlockK,
-                                                                     InputT,
-                                                                     OutputT,
-                                                                     ComputeT,
-                                                                     LayoutA,
-                                                                     LayoutB,
-                                                                     LayoutC,
-                                                                     LayoutD,
-                                                                     BlocksX,
-                                                                     BlocksY>);
+            return Base::template dispatchKernelFunc<TestKernelFunc>();
         }
 
         std::ostream& printHeader(std::ostream& stream = std::cout) const final

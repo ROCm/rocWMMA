@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -145,17 +145,67 @@
     default:;                                                                               \
     }
 
-#define ROCWMMA_SWITCH_BODY6_ARG1(                                                          \
-    SWITCH_ARG, CASE_IMPL, CASE_LABEL0, CASE_LABEL1, CASE_LABEL2, CASE_LABEL3, CASE_LABEL4, CASE_LABEL5) \
-    switch(SWITCH_ARG)                                                                      \
-    {                                                                                       \
-        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL0, CASE_IMPL, CASE_LABEL0)                         \
-        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL1, CASE_IMPL, CASE_LABEL1)                         \
-        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL2, CASE_IMPL, CASE_LABEL2)                         \
-        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL3, CASE_IMPL, CASE_LABEL3)                         \
-        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL4, CASE_IMPL, CASE_LABEL4)                         \
-        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL5, CASE_IMPL, CASE_LABEL5)                         \
-    default:;                                                                               \
+#define ROCWMMA_SWITCH_BODY6_ARG1(SWITCH_ARG,                       \
+                                  CASE_IMPL,                        \
+                                  CASE_LABEL0,                      \
+                                  CASE_LABEL1,                      \
+                                  CASE_LABEL2,                      \
+                                  CASE_LABEL3,                      \
+                                  CASE_LABEL4,                      \
+                                  CASE_LABEL5)                      \
+    switch(SWITCH_ARG)                                              \
+    {                                                               \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL0, CASE_IMPL, CASE_LABEL0) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL1, CASE_IMPL, CASE_LABEL1) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL2, CASE_IMPL, CASE_LABEL2) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL3, CASE_IMPL, CASE_LABEL3) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL4, CASE_IMPL, CASE_LABEL4) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL5, CASE_IMPL, CASE_LABEL5) \
+    default:;                                                       \
+    }
+
+#define ROCWMMA_SWITCH_BODY7_ARG1(SWITCH_ARG,                       \
+                                  CASE_IMPL,                        \
+                                  CASE_LABEL0,                      \
+                                  CASE_LABEL1,                      \
+                                  CASE_LABEL2,                      \
+                                  CASE_LABEL3,                      \
+                                  CASE_LABEL4,                      \
+                                  CASE_LABEL5,                      \
+                                  CASE_LABEL6)                      \
+    switch(SWITCH_ARG)                                              \
+    {                                                               \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL0, CASE_IMPL, CASE_LABEL0) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL1, CASE_IMPL, CASE_LABEL1) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL2, CASE_IMPL, CASE_LABEL2) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL3, CASE_IMPL, CASE_LABEL3) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL4, CASE_IMPL, CASE_LABEL4) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL5, CASE_IMPL, CASE_LABEL5) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL6, CASE_IMPL, CASE_LABEL6) \
+    default:;                                                       \
+    }
+
+#define ROCWMMA_SWITCH_BODY8_ARG1(SWITCH_ARG,                       \
+                                  CASE_IMPL,                        \
+                                  CASE_LABEL0,                      \
+                                  CASE_LABEL1,                      \
+                                  CASE_LABEL2,                      \
+                                  CASE_LABEL3,                      \
+                                  CASE_LABEL4,                      \
+                                  CASE_LABEL5,                      \
+                                  CASE_LABEL6,                      \
+                                  CASE_LABEL7)                      \
+    switch(SWITCH_ARG)                                              \
+    {                                                               \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL0, CASE_IMPL, CASE_LABEL0) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL1, CASE_IMPL, CASE_LABEL1) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL2, CASE_IMPL, CASE_LABEL2) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL3, CASE_IMPL, CASE_LABEL3) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL4, CASE_IMPL, CASE_LABEL4) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL5, CASE_IMPL, CASE_LABEL5) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL6, CASE_IMPL, CASE_LABEL6) \
+        ROCWMMA_CASE_BODY_ARG1(CASE_LABEL7, CASE_IMPL, CASE_LABEL7) \
+    default:;                                                       \
     }
 
 // First arg is always case label, second is a constant

@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -196,7 +196,71 @@ using namespace rocwmma;
 /// Parameter configuration
 ///
 
-// Types
+/* Depending on the GPU architecture this sample is run on, the following kernel parameters need to
+*  be modified in order to obtain high performance.
+* _________________________________________________________________________________________
+*|         |           |           |           |          |          |          |          |
+*|         | ROCWMMA_M | ROCWMMA_N | ROCWMMA_K | BLOCKS_X | BLOCKS_Y | TBLOCK_X | TBLOCK_Y |
+*|_________|___________|___________|___________|__________|__________|__________|__________|
+*|         |           |           |           |          |          |          |          |
+*|  GFX_9  |    32     |    32     |    16     |    2     |    2     |   128    |    2     |
+*|_________|___________|___________|___________|__________|__________|__________|__________|
+*|         |           |           |           |          |          |          |          |
+*|  GFX_11 |    16     |    16     |    16     |    4     |    2     |    64    |    4     |
+*|_________|___________|___________|___________|__________|__________|__________|__________|
+*
+* __________________________________________
+*|         |                                |
+*|         |           WARP_SIZE            |
+*|_________|________________________________|
+*|         |                                |
+*|  GFX_9  | Constants::AMDGCN_WAVE_SIZE_64 |
+*|_________|________________________________|
+*|         |                                |
+*|  GFX_11 | Constants::AMDGCN_WAVE_SIZE_32 |
+*|_________|________________________________|
+*/
+
+namespace gfx9Params
+{
+    enum kernelParams : uint32_t
+    {
+        ROCWMMA_M = 32u,
+        ROCWMMA_N = 32u,
+        ROCWMMA_K = 16u,
+        BLOCKS_X  = 2u,
+        BLOCKS_Y  = 2u,
+        TBLOCK_X  = 128u,
+        TBLOCK_Y  = 2u,
+        WARP_SIZE = Constants::AMDGCN_WAVE_SIZE_64
+    };
+}
+
+namespace gfx11Params
+{
+    enum kernelParams : uint32_t
+    {
+        ROCWMMA_M = 16u,
+        ROCWMMA_N = 16u,
+        ROCWMMA_K = 16u,
+        BLOCKS_X  = 4u,
+        BLOCKS_Y  = 2u,
+        TBLOCK_X  = 64u,
+        TBLOCK_Y  = 4u,
+        WARP_SIZE = Constants::AMDGCN_WAVE_SIZE_32
+    };
+}
+
+#if(ROCWMMA_ARCH_GFX9)
+using namespace gfx9Params;
+#else
+using namespace gfx11Params;
+#endif // defined(ROCWMMA_ARCH_GFX9)
+
+///
+/// Types and Data Layouts
+///
+
 using InputT   = float16_t;
 using OutputT  = float16_t;
 using ComputeT = float32_t;
@@ -206,32 +270,21 @@ using DataLayoutB   = row_major;
 using DataLayoutC   = col_major;
 using DataLayoutLds = row_major;
 
-// Block sizes
-constexpr uint32_t ROCWMMA_M = 32u;
-constexpr uint32_t ROCWMMA_N = 32u;
-constexpr uint32_t ROCWMMA_K = 16u;
+///
+/// Fragment types
+///
 
-// Warp size
-constexpr uint32_t WARP_SIZE = Constants::AMDGCN_WAVE_SIZE;
-
+// #if (ROCWMMA_ARCH_GFX9 || ROCWMMA_ARCH_GFX11)
 // Warp tile: computed by each warp
-constexpr uint32_t BLOCKS_X    = 2u;
-constexpr uint32_t BLOCKS_Y    = 2u;
 constexpr uint32_t WARP_TILE_X = BLOCKS_X * ROCWMMA_M;
 constexpr uint32_t WARP_TILE_Y = BLOCKS_Y * ROCWMMA_N;
 
 // Macro Tile: computed by each thread block (workgroup)
 // Note: TBLOCK_X must be multiple of WARP_SIZE.
-constexpr uint32_t TBLOCK_X     = 128u;
-constexpr uint32_t TBLOCK_Y     = 2u;
 constexpr uint32_t WARPS_X      = TBLOCK_X / WARP_SIZE;
 constexpr uint32_t WARPS_Y      = TBLOCK_Y;
 constexpr uint32_t MACRO_TILE_X = WARPS_X * WARP_TILE_X;
 constexpr uint32_t MACRO_TILE_Y = WARPS_Y * WARP_TILE_Y;
-
-///
-/// Fragment types
-///
 
 // Mfma frags
 using MfmaFragA   = fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, InputT, DataLayoutA>;
@@ -255,6 +308,7 @@ using LWBuffB = ApplyDataLayout_t<ApplyTranspose_t<GRBuffB>, DataLayoutLds>;
 // - Lds has transposed B frags.
 using LRFragA = ApplyDataLayout_t<MfmaFragA, DataLayoutLds>;
 using LRFragB = ApplyDataLayout_t<ApplyTranspose_t<MfmaFragB>, DataLayoutLds>;
+// #endif // (ROCWMMA_ARCH_GFX9 || ROCWMMA_ARCH_GFX11)
 
 ///
 /// Wrapper functions: repeat mfma tile operations across entire warp tile.
@@ -472,30 +526,53 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
                                                           ComputeT       alpha,
                                                           ComputeT       beta)
 {
-    ///
-    /// 2D matrix coordinate setup
-    ///
-
-    // Tile Sizes
-    constexpr auto warpTileSize  = make_coord2d(WARP_TILE_X, WARP_TILE_Y);
-    constexpr auto macroTileSize = make_coord2d(MACRO_TILE_X, MACRO_TILE_Y);
-
-    // Local warp coordinate relative to current threadblock (wg).
-    constexpr auto warpDims        = make_coord2d(WARPS_X, WARPS_Y);
-    auto           localWarpCoord  = make_coord2d(threadIdx.x / WARP_SIZE, threadIdx.y);
-    auto           localWarpOffset = localWarpCoord * warpTileSize;
-
-    // Global matrix coordinates for C/D
-    auto macroTileCoord = make_coord2d(blockIdx.x, blockIdx.y) * macroTileSize;
-    auto warpTileCoord  = macroTileCoord + localWarpOffset;
-
-    // Bounds check
-    auto warpTileBound = warpTileCoord + warpTileSize;
-    if(get<0>(warpTileBound) > m || get<1>(warpTileBound) > n)
+    if constexpr(ROCWMMA_ARCH_GFX9 || ROCWMMA_ARCH_GFX11)
     {
-        return;
-    }
+        ///
+        /// 2D matrix coordinate setup
+        ///
 
+        // Tile Sizes
+        constexpr auto warpTileSize  = make_coord2d(WARP_TILE_X, WARP_TILE_Y);
+        constexpr auto macroTileSize = make_coord2d(MACRO_TILE_X, MACRO_TILE_Y);
+
+        // Local warp coordinate relative to current threadblock (wg).
+        constexpr auto warpDims        = make_coord2d(WARPS_X, WARPS_Y);
+        auto           localWarpCoord  = make_coord2d(threadIdx.x / WARP_SIZE, threadIdx.y);
+        auto           localWarpOffset = localWarpCoord * warpTileSize;
+
+        // Global matrix coordinates for C/D
+        auto macroTileCoord = make_coord2d(blockIdx.x, blockIdx.y) * macroTileSize;
+        auto warpTileCoord  = macroTileCoord + localWarpOffset;
+
+        // Bounds check
+        auto warpTileBound = warpTileCoord + warpTileSize;
+        if(get<0>(warpTileBound) > m || get<1>(warpTileBound) > n)
+        {
+            return;
+        }
+
+        ///
+        /// 1D global read coordinate setup
+        ///
+        using GRBuffAMap1d = GetDataLayout_t<GRBuffA>;
+        using GRBuffBMap1d = GetDataLayout_t<GRBuffB>;
+
+        // Initial globa read address offsets
+        auto globalReadOffsetA
+            = GRBuffAMap1d::fromMatrixCoord(make_coord2d(get<0>(macroTileCoord), 0u), lda);
+        auto globalReadOffsetB
+            = GRBuffBMap1d::fromMatrixCoord(make_coord2d(0u, get<1>(macroTileCoord)), ldb);
+
+        // Incremental global read address offsets
+        auto kStepOffsetA = GRBuffAMap1d::fromMatrixCoord(make_coord2d(0u, ROCWMMA_K), lda);
+        auto kStepOffsetB = GRBuffBMap1d::fromMatrixCoord(make_coord2d(ROCWMMA_K, 0u), ldb);
+
+        ///
+        /// Cooperative config for global read A / B
+        ///
+
+<<<<<<< HEAD
     ///
     /// 1D global read coordinate setup
     ///
@@ -603,77 +680,201 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
     {
         MfmaFragA fragsA[BLOCKS_X];
         MfmaFragB fragsB[BLOCKS_Y];
+=======
+        // WorkItems will be split up by minimum IOCount to perform either global read or local write.
+        // These are inputs to cooperative functions.
+        constexpr auto warpCount   = get<0>(warpDims) * get<1>(warpDims);
+        constexpr auto splitCountA = std::min((uint32_t)GetIOTraits_t<GRBuffA>::IOCount,
+                                              (uint32_t)GetIOTraits_t<LWBuffA>::IOCount);
+>>>>>>> develop
 
-        // Local read mfma frags from first LDS buffer
-        localReadA(fragsA, ldsPtrLo + ldsReadOffsetA, ldsWidth);
-        localReadB(fragsB, ldsPtrLo + ldsReadOffsetB, ldsWidth);
+        constexpr auto splitCountB = std::min((uint32_t)GetIOTraits_t<GRBuffB>::IOCount,
+                                              (uint32_t)GetIOTraits_t<LWBuffB>::IOCount);
 
-        // Prefetch next round of global frags
+        // Scheduling warp order is analogous to row major priority.
+        // E.g. Wg = (128, 2) = 2x2 warps
+        // (0, 0)   (0, 1)   Share Schedule: w0 = (0, 0), w1 = (0, 1),
+        // (1, 0)   (1, 1)                   w2 = (1, 0), w3 = (1, 1), count = 4
+        const auto warpIndex = get<0>(localWarpCoord) * get<1>(warpDims) + get<1>(localWarpCoord);
+
+        ///
+        /// Perform initial global pre-fetch
+        ///
+
+        GRBuffA grBuffA;
+        GRBuffB grBuffB;
+
         globalReadCoopA<warpCount, splitCountA>(grBuffA, a + globalReadOffsetA, lda, warpIndex);
         globalReadCoopB<warpCount, splitCountB>(grBuffB, b + globalReadOffsetB, ldb, warpIndex);
 
-        // Advance offsets to next k step
         globalReadOffsetA += kStepOffsetA;
         globalReadOffsetB += kStepOffsetB;
 
-        // accum(A * B)
-        mfma(fragsAcc, fragsA, fragsB, fragsAcc);
+        ///
+        /// Setup LDS addressing
+        /// This kernel will use 2 separate LDS blocks for pipelining
+        /// the input prefetching during the accumulation loop
+        ///
 
-        // Write prefetch to second LDS buffer
+        HIP_DYNAMIC_SHARED(void*, localMemPtr);
+        constexpr uint32_t ldsWidth = ROCWMMA_K;
+
+        using LWBuffAShape = GetIOShape_t<LWBuffA>;
+        using LWBuffBShape = GetIOShape_t<LWBuffB>;
+        using LWBuffAMap1d = GetDataLayout_t<LWBuffA>;
+        using LWBuffBMap1d = GetDataLayout_t<LWBuffB>;
+
+        uint32_t sizeLds  = (LWBuffAShape::BlockHeight + LWBuffBShape::BlockHeight) * ldsWidth;
+        auto*    ldsPtrLo = reinterpret_cast<InputT*>(localMemPtr);
+        auto*    ldsPtrHi = ldsPtrLo + sizeLds;
+
+        // Local write offsets to start of A / B data
+        auto ldsWriteOffsetA = 0u;
+        auto ldsWriteOffsetB
+            = LWBuffAMap1d::fromMatrixCoord(make_coord2d(LWBuffAShape::BlockHeight, 0u), ldsWidth);
+
+        // Local read offsets for mfma frags
+        auto ldsReadOffsetA
+            = ldsWriteOffsetA
+              + LWBuffAMap1d::fromMatrixCoord(make_coord2d(get<0>(localWarpOffset), 0u), ldsWidth);
+        auto ldsReadOffsetB
+            = ldsWriteOffsetB
+              + LWBuffBMap1d::fromMatrixCoord(make_coord2d(get<1>(localWarpOffset), 0u), ldsWidth);
+
+        ///
+        /// Write prefetch to local
+        ///
         localWriteCoopA<warpCount, splitCountA>(
-            ldsPtrHi + ldsWriteOffsetA, grBuffA, ldsWidth, warpIndex);
+            ldsPtrLo + ldsWriteOffsetA, grBuffA, ldsWidth, warpIndex);
         localWriteCoopB<warpCount, splitCountB>(
-            ldsPtrHi + ldsWriteOffsetB, grBuffB, ldsWidth, warpIndex);
+            ldsPtrLo + ldsWriteOffsetB, grBuffB, ldsWidth, warpIndex);
 
-        // Make sure that all waves have finished reading / writing to lds for currentK.
+        ///
+        /// Initialize accumulation frags
+        ///
+        MfmaFragAcc fragsAcc[BLOCKS_X][BLOCKS_Y];
+        fill(fragsAcc, 0.0f);
+
+        ///
+        /// Synchronize warps and memory
+        ///
         synchronize_workgroup();
 
-        // Swap Lds buffers
-        auto* tmp = ldsPtrLo;
-        ldsPtrLo  = ldsPtrHi;
-        ldsPtrHi  = tmp;
+        ///
+        /// Accumulate A * B for all mfma frags in warp tile
+        ///
+        for(uint32_t currentK = ROCWMMA_K; currentK < k; currentK += ROCWMMA_K)
+        {
+            MfmaFragA fragsA[BLOCKS_X];
+            MfmaFragB fragsB[BLOCKS_Y];
+
+            // Local read mfma frags from first LDS buffer
+            localReadA(fragsA, ldsPtrLo + ldsReadOffsetA, ldsWidth);
+            localReadB(fragsB, ldsPtrLo + ldsReadOffsetB, ldsWidth);
+
+            // Prefetch next round of global frags
+            globalReadCoopA<warpCount, splitCountA>(grBuffA, a + globalReadOffsetA, lda, warpIndex);
+            globalReadCoopB<warpCount, splitCountB>(grBuffB, b + globalReadOffsetB, ldb, warpIndex);
+
+            // Advance offsets to next k step
+            globalReadOffsetA += kStepOffsetA;
+            globalReadOffsetB += kStepOffsetB;
+
+            // accum(A * B)
+            mfma(fragsAcc, fragsA, fragsB, fragsAcc);
+
+            // Write prefetch to second LDS buffer
+            localWriteCoopA<warpCount, splitCountA>(
+                ldsPtrHi + ldsWriteOffsetA, grBuffA, ldsWidth, warpIndex);
+            localWriteCoopB<warpCount, splitCountB>(
+                ldsPtrHi + ldsWriteOffsetB, grBuffB, ldsWidth, warpIndex);
+
+            // Make sure that all waves have finished reading / writing to lds for currentK.
+            synchronize_workgroup();
+
+            // Swap Lds buffers
+            auto* tmp = ldsPtrLo;
+            ldsPtrLo  = ldsPtrHi;
+            ldsPtrHi  = tmp;
+        }
+
+        ///
+        /// Start loading C
+        ///
+        using MfmaFragCMap1d = GetDataLayout_t<MfmaFragC>;
+        using MfmaFragDMap1d = GetDataLayout_t<MfmaFragD>;
+
+        MfmaFragC fragsC[BLOCKS_X][BLOCKS_Y];
+        globalReadC(fragsC, c + MfmaFragCMap1d::fromMatrixCoord(warpTileCoord, ldc), ldc);
+
+        ///
+        /// Clean up tail A * B
+        ///
+        MfmaFragA fragsA[BLOCKS_X];
+        MfmaFragB fragsB[BLOCKS_Y];
+
+        // Local read mfma frags
+        localReadA(fragsA, ldsPtrLo + ldsReadOffsetA, ldsWidth);
+        localReadB(fragsB, ldsPtrLo + ldsReadOffsetB, ldsWidth);
+        mfma(fragsAcc, fragsA, fragsB, fragsAcc);
+
+        ///
+        /// D = alpha * accum + beta * C
+        ///
+        MfmaFragD fragsD[BLOCKS_X][BLOCKS_Y];
+        uniformFma(fragsD, alpha, fragsAcc, beta, fragsC);
+        globalWriteD(d + MfmaFragDMap1d::fromMatrixCoord(warpTileCoord, ldd), fragsD, ldd);
     }
-
-    ///
-    /// Start loading C
-    ///
-    using MfmaFragCMap1d = GetDataLayout_t<MfmaFragC>;
-    using MfmaFragDMap1d = GetDataLayout_t<MfmaFragD>;
-
-    MfmaFragC fragsC[BLOCKS_X][BLOCKS_Y];
-    globalReadC(fragsC, c + MfmaFragCMap1d::fromMatrixCoord(warpTileCoord, ldc), ldc);
-
-    ///
-    /// Clean up tail A * B
-    ///
-    MfmaFragA fragsA[BLOCKS_X];
-    MfmaFragB fragsB[BLOCKS_Y];
-
-    // Local read mfma frags
-    localReadA(fragsA, ldsPtrLo + ldsReadOffsetA, ldsWidth);
-    localReadB(fragsB, ldsPtrLo + ldsReadOffsetB, ldsWidth);
-    mfma(fragsAcc, fragsA, fragsB, fragsAcc);
-
-    ///
-    /// D = alpha * accum + beta * C
-    ///
-    MfmaFragD fragsD[BLOCKS_X][BLOCKS_Y];
-    uniformFma(fragsD, alpha, fragsAcc, beta, fragsC);
-    globalWriteD(d + MfmaFragDMap1d::fromMatrixCoord(warpTileCoord, ldd), fragsD, ldd);
 }
 
-ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, float32_t beta)
+ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, ComputeT beta)
 {
+    // Runtime checks for host parameters
+    uint32_t hTBLOCK_X    = isGfx9() ? gfx9Params::TBLOCK_X : gfx11Params::TBLOCK_X;
+    uint32_t hTBLOCK_Y    = isGfx9() ? gfx9Params::TBLOCK_Y : gfx11Params::TBLOCK_Y;
+    uint32_t hBLOCKS_X    = isGfx9() ? gfx9Params::BLOCKS_X : gfx11Params::BLOCKS_X;
+    uint32_t hBLOCKS_Y    = isGfx9() ? gfx9Params::BLOCKS_Y : gfx11Params::BLOCKS_Y;
+    uint32_t hROCWMMA_M   = isGfx9() ? gfx9Params::ROCWMMA_M : gfx11Params::ROCWMMA_M;
+    uint32_t hROCWMMA_N   = isGfx9() ? gfx9Params::ROCWMMA_N : gfx11Params::ROCWMMA_N;
+    uint32_t hROCWMMA_K   = isGfx9() ? gfx9Params::ROCWMMA_K : gfx11Params::ROCWMMA_K;
+    uint32_t hWARP_TILE_X = hBLOCKS_X * hROCWMMA_M;
+    uint32_t hWARP_TILE_Y = hBLOCKS_Y * hROCWMMA_N;
+
     // Runtime warp calculation (host code needs to query warpsize dynamically)
     auto warpSize = getWarpSize();
     auto macroTileSize
-        = rocwmma::make_coord2d(TBLOCK_X / warpSize * WARP_TILE_X, TBLOCK_Y * WARP_TILE_Y);
+        = rocwmma::make_coord2d(hTBLOCK_X / warpSize * hWARP_TILE_X, hTBLOCK_Y * hWARP_TILE_Y);
+
+    // Device check for supported block and wave sizes
+    if(isGfx11() && (hROCWMMA_M != 16 || hROCWMMA_N != 16))
+    {
+        std::cout << "Unsupported block size!\n";
+        return;
+    }
+
+    if(isGfx9() && (hROCWMMA_M != hROCWMMA_N) || (hROCWMMA_M != 16 && hROCWMMA_M != 32))
+    {
+        std::cout << "Unsupported block size!\n";
+        return;
+    }
+
+    if(isGfx11() && getWarpSize() != Constants::AMDGCN_WAVE_SIZE_32)
+    {
+        std::cout << "Unsupported wave size!\n";
+        return;
+    }
+
+    if(isGfx9() && getWarpSize() != Constants::AMDGCN_WAVE_SIZE_64)
+    {
+        std::cout << "Unsupported wave size!\n";
+        return;
+    }
 
     // Bounds check
-    if((m < get<0>(macroTileSize) || n < get<1>(macroTileSize) || k < ROCWMMA_K)
-       || (m % ROCWMMA_M || n % ROCWMMA_N || k % ROCWMMA_K))
+    if((m < get<0>(macroTileSize) || n < get<1>(macroTileSize) || k < hROCWMMA_K)
+       || (m % hROCWMMA_M || n % hROCWMMA_N || k % hROCWMMA_K))
     {
-        std::cout << "Unsupported size!\n";
+        std::cout << "Unsupported matrix size!\n";
         return;
     }
 
@@ -686,12 +887,12 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     std::cout << "Initializing host data..." << std::endl;
 
     // Initialize input matrices
-    std::vector<float16_t> matrixA(m * k);
-    std::vector<float16_t> matrixB(k * n);
-    std::vector<float16_t> matrixC(m * n);
+    std::vector<InputT>  matrixA(m * k);
+    std::vector<InputT>  matrixB(k * n);
+    std::vector<OutputT> matrixC(m * n);
 
     // Fill outputs with NaN to catch contamination
-    std::vector<float16_t> matrixD(m * n, std::numeric_limits<float16_t>::signaling_NaN());
+    std::vector<OutputT> matrixD(m * n, std::numeric_limits<OutputT>::signaling_NaN());
 
     fillRand(matrixA.data(), m, k);
     fillRand(matrixB.data(), k, n);
@@ -700,15 +901,15 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     std::cout << "Initializing device data..." << std::endl;
 
     // Allocate and copy device memory
-    float16_t* d_a;
-    float16_t* d_b;
-    float16_t* d_c;
-    float16_t* d_d;
+    InputT*  d_a;
+    InputT*  d_b;
+    OutputT* d_c;
+    OutputT* d_d;
 
-    const size_t bytesA = matrixA.size() * sizeof(float16_t);
-    const size_t bytesB = matrixB.size() * sizeof(float16_t);
-    const size_t bytesC = matrixC.size() * sizeof(float16_t);
-    const size_t bytesD = matrixD.size() * sizeof(float16_t);
+    const size_t bytesA = matrixA.size() * sizeof(InputT);
+    const size_t bytesB = matrixB.size() * sizeof(InputT);
+    const size_t bytesC = matrixC.size() * sizeof(OutputT);
+    const size_t bytesD = matrixD.size() * sizeof(OutputT);
 
     CHECK_HIP_ERROR(hipMalloc(&d_a, bytesA));
     CHECK_HIP_ERROR(hipMalloc(&d_b, bytesB));
@@ -720,7 +921,7 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     CHECK_HIP_ERROR(hipMemcpy(d_c, matrixC.data(), bytesC, hipMemcpyHostToDevice));
     CHECK_HIP_ERROR(hipMemcpy(d_d, matrixD.data(), bytesD, hipMemcpyHostToDevice));
 
-    auto blockDim = dim3(TBLOCK_X, TBLOCK_Y);
+    auto blockDim = dim3(hTBLOCK_X, hTBLOCK_Y);
     auto gridDim  = dim3(rocwmma::ceilDiv(m, get<0>(macroTileSize)),
                         rocwmma::ceilDiv(n, get<1>(macroTileSize)));
 
@@ -730,7 +931,7 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
 
     // Uses 2 lds blocks for prefetch loop (A and B)
     int ldsusage
-        = 2u * sizeof(float16_t) * (get<0>(macroTileSize) + get<1>(macroTileSize)) * ROCWMMA_K;
+        = 2u * sizeof(InputT) * (get<0>(macroTileSize) + get<1>(macroTileSize)) * ROCWMMA_K;
 
     ////
     auto rocwmmaKernel = [&]() {
@@ -798,8 +999,8 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
               << "beta, ldc, ldd, "
               << "elapsedMs, Problem Size(GFlops), TFlops/s" << std::endl;
 
-    std::cout << TBLOCK_X << ", " << TBLOCK_Y << ", " << BLOCKS_X << ", " << BLOCKS_Y << ", "
-              << ROCWMMA_M << ", " << ROCWMMA_N << ", " << ROCWMMA_K << ", " << m << ", " << n
+    std::cout << hTBLOCK_X << ", " << hTBLOCK_Y << ", " << hBLOCKS_X << ", " << hBLOCKS_Y << ", "
+              << hROCWMMA_M << ", " << hROCWMMA_N << ", " << hROCWMMA_K << ", " << m << ", " << n
               << ", " << k << ", " << alpha << ", " << lda << ", " << ldb << ", " << beta << ", "
               << ldc << ", " << ldd << ", " << elapsedTimeMs << ", " << gFlops << ", "
               << tFlopsPerSec << std::endl;
@@ -817,8 +1018,8 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     CHECK_HIP_ERROR(hipMemcpy(matrixD.data(), d_d, bytesD, hipMemcpyDeviceToHost));
 
     // Setup and run reference computation
-    std::vector<float16_t> matrixD_ref(m * n, std::numeric_limits<float16_t>::signaling_NaN());
-    gemm_cpu_h<float16_t, float16_t, float32_t, col_major, row_major, col_major>(m,
+    std::vector<OutputT> matrixD_ref(m * n, std::numeric_limits<OutputT>::signaling_NaN());
+    gemm_cpu_h<InputT, OutputT, ComputeT, DataLayoutA, DataLayoutB, DataLayoutC>(m,
                                                                                  n,
                                                                                  k,
                                                                                  matrixA.data(),

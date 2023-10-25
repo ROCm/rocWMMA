@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -183,11 +183,13 @@ namespace rocwmma
         waveSize, CASE_IMPL_ASSIGN2, HipDevice::Wave32, HipDevice::Wave64, ARCH_ID)
 
 #define DISPATCH_GUARD_BODY                          \
-    ROCWMMA_SWITCH_BODY6_ARG1(deviceArch,            \
+    ROCWMMA_SWITCH_BODY8_ARG1(deviceArch,            \
                               SWITCH_BODY_WAVE_SIZE, \
                               HipDevice::GFX908,     \
                               HipDevice::GFX90A,     \
                               HipDevice::GFX940,     \
+                              HipDevice::GFX941,     \
+                              HipDevice::GFX942,     \
                               HipDevice::GFX1100,    \
                               HipDevice::GFX1101,    \
                               HipDevice::GFX1102)

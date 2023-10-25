@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -112,8 +112,13 @@ namespace rocwmma
 
         // Datatypes
         auto isF64 = std::is_same<DataT, float64_t>::value;
-        auto isF16
-            = (std::is_same<DataT, float16_t>::value) || (std::is_same<DataT, hfloat16_t>::value);
+
+#if !ROCWMMA_TESTS_NO_HALF
+        auto isH16 = std::is_same<DataT, hfloat16_t>::value;
+#else
+        auto isH16 = false;
+#endif // !ROCWMMA_NO_HALF
+        auto isF16  = std::is_same<DataT, float16_t>::value || isH16;
         auto isBF16 = (std::is_same<DataT, bfloat16_t>::value);
         auto isI8   = (std::is_same<DataT, int8_t>::value);
 
@@ -398,17 +403,17 @@ namespace rocwmma
             CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
 
             // Calculate efficiency
-            auto& deviceInfo             = DeviceInfo::instance();
+            auto& deviceInfo = DeviceInfo::instance();
 
-            auto  devicePeakGFlopsPerSec  = deviceInfo->peakGFlopsPerSec<DataT>();
-            auto  outputSize = (passDirection == DlrmDirection_t::Forward) ? mM * mM : mM * mK;
+            auto devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<DataT>();
+            auto outputSize = (passDirection == DlrmDirection_t::Forward) ? mM * mM : mM * mK;
 
             mElapsedTimeMs        = float64_t(timeMs);
             mTotalGFlops          = calculateGFlops(outputSize, mB, mK);
             mMeasuredTFlopsPerSec = calculateTFlopsPerSec(outputSize, mB, mK, mElapsedTimeMs)
                                     * static_cast<float64_t>(mRepeats);
 
-            mEfficiency = round(mMeasuredTFlopsPerSec / devicePeakGFlopsPerSec  * 100000.0);
+            mEfficiency = round(mMeasuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0);
 
             CHECK_HIP_ERROR(hipEventDestroy(startEvent));
             CHECK_HIP_ERROR(hipEventDestroy(stopEvent));

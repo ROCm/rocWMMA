@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,32 +32,67 @@
 
 // Helper macro for HIP errors
 #ifndef CHECK_HIP_ERROR
-#define CHECK_HIP_ERROR(status)                   \
-    if(status != hipSuccess)                      \
-    {                                             \
-        fprintf(stderr,                           \
-                "hip error: '%s'(%d) at %s:%d\n", \
-                hipGetErrorString(status),        \
-                status,                           \
-                __FILE__,                         \
-                __LINE__);                        \
-        exit(EXIT_FAILURE);                       \
+#define CHECK_HIP_ERROR(expression)                      \
+    if(auto status = (expression); status != hipSuccess) \
+    {                                                    \
+        fprintf(stderr,                                  \
+                "hip error: '%s'(%d) at %s:%d\n",        \
+                hipGetErrorString(status),               \
+                status,                                  \
+                __FILE__,                                \
+                __LINE__);                               \
+        exit(EXIT_FAILURE);                              \
     }
 #endif
 
 #ifndef CHECK_HIPRTC_ERROR
-#define CHECK_HIPRTC_ERROR(status)                   \
-    if(status != HIPRTC_SUCCESS)                     \
-    {                                                \
-        fprintf(stderr,                              \
-                "hipRTC error: '%s'(%d) at %s:%d\n", \
-                hiprtcGetErrorString(status),        \
-                status,                              \
-                __FILE__,                            \
-                __LINE__);                           \
-        exit(EXIT_FAILURE);                          \
+#define CHECK_HIPRTC_ERROR(expression)                       \
+    if(auto status = (expression); status != HIPRTC_SUCCESS) \
+    {                                                        \
+        fprintf(stderr,                                      \
+                "hipRTC error: '%s'(%d) at %s:%d\n",         \
+                hiprtcGetErrorString(status),                \
+                status,                                      \
+                __FILE__,                                    \
+                __LINE__);                                   \
+        exit(EXIT_FAILURE);                                  \
     }
 #endif
+
+#include <rocwmma/internal/type_traits.hpp>
+
+// HIP Host functions to determine the gfx architecture
+bool isGfx9()
+{
+    hipDevice_t     mHandle;
+    hipDeviceProp_t mProps;
+
+    CHECK_HIP_ERROR(hipGetDevice(&mHandle));
+    CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
+
+    std::string deviceName(mProps.gcnArchName);
+
+    return ((deviceName.find("gfx908") != std::string::npos)
+            || (deviceName.find("gfx90a") != std::string::npos)
+            || (deviceName.find("gfx940") != std::string::npos)
+            || (deviceName.find("gfx941") != std::string::npos)
+            || (deviceName.find("gfx942") != std::string::npos));
+}
+
+bool isGfx11()
+{
+    hipDevice_t     mHandle;
+    hipDeviceProp_t mProps;
+
+    CHECK_HIP_ERROR(hipGetDevice(&mHandle));
+    CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
+
+    std::string deviceName(mProps.gcnArchName);
+
+    return ((deviceName.find("gfx1100") != std::string::npos)
+            || (deviceName.find("gfx1101") != std::string::npos)
+            || (deviceName.find("gfx1102") != std::string::npos));
+}
 
 // HIP Host function to find if the device supports f64
 bool isF64Supported()
@@ -70,21 +105,15 @@ bool isF64Supported()
 
     std::string deviceName(mProps.gcnArchName);
 
-    return (deviceName.find("gfx90a") != std::string::npos);
+    return ((deviceName.find("gfx90a") != std::string::npos)
+            || (deviceName.find("gfx940") != std::string::npos)
+            || (deviceName.find("gfx941") != std::string::npos)
+            || (deviceName.find("gfx942") != std::string::npos));
 }
 
 bool isF32Supported()
 {
-    hipDevice_t     mHandle;
-    hipDeviceProp_t mProps;
-
-    CHECK_HIP_ERROR(hipGetDevice(&mHandle));
-    CHECK_HIP_ERROR(hipGetDeviceProperties(&mProps, mHandle));
-
-    std::string deviceName(mProps.gcnArchName);
-
-    return (deviceName.find("gfx908") != std::string::npos)
-           || (deviceName.find("gfx90a") != std::string::npos);
+    return isGfx9();
 }
 
 inline double calculateGFlops(uint32_t m, uint32_t n, uint32_t k)
@@ -148,7 +177,8 @@ __host__ static inline void
                 // Random values normalized such that output is between 0 and 1
                 auto value = __float2half(static_cast<float>(rand() / normalization)
                                           / static_cast<float>(RAND_MAX));
-                mat[t * batchOffset + i * k + j] = static_cast<DataT>(value);
+
+                mat[t * batchOffset + i * k + j] = rocwmma::convert<DataT>(value);
             }
         }
     }

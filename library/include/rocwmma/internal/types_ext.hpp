@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,11 +42,66 @@ namespace rocwmma
 {
 
 #if !defined(__HIPCC_RTC__)
-    ///////////////////////////////////////////////////////////
-    ///////////  rocwmma::hfloat16_t host operators  //////////
-    ///////////////////////////////////////////////////////////
 
-    __host__ inline bool operator==(const hfloat16_t& x, const hfloat16_t& y)
+    ////////////////////////////////////////////////////////////////////////
+    ///////////  rocwmma::hfloat16_t host and device conversions  //////////
+    ////////////////////////////////////////////////////////////////////////
+    template <typename Outgoing,
+              typename Incoming,
+              typename std::enable_if_t<!std::is_same_v<Incoming, Outgoing>, int> = 0>
+    __host__ __device__ inline Outgoing convert(const Incoming& value)
+    {
+#if !ROCWMMA_NO_HALF
+        if constexpr(std::is_same_v<Outgoing, hfloat16_t>)
+        {
+
+#if defined(__HIP_NO_HALF_CONVERSIONS__)
+            detail::Fp16Bits fp16(static_cast<float16_t>(value));
+            return fp16.h16;
+#else
+            return static_cast<hfloat16_t>(value);
+#endif // defined(__HIP_NO_HALF_CONVERSIONS__)
+        }
+        else if constexpr(std::is_same_v<Incoming, hfloat16_t>)
+        {
+
+#if defined(__HIP_NO_HALF_CONVERSIONS__)
+            detail::Fp16Bits fp16(value);
+            return static_cast<Outgoing>(fp16.f16);
+#else
+            return static_cast<Outgoing>(value);
+#endif // defined(__HIP_NO_HALF_CONVERSIONS__)
+        }
+        else
+#endif // !ROCWMMA_NO_HALF
+        {
+            return static_cast<Outgoing>(value);
+        }
+    }
+
+    template <typename Outgoing,
+              typename Incoming,
+              typename std::enable_if_t<std::is_same_v<Incoming, Outgoing>, int> = 0>
+    __host__ __device__ inline Outgoing const& convert(const Incoming& value)
+    {
+        return value;
+    }
+
+    ////////////////////////////////////////////////////////////////////
+    ///////////  rocwmma::hfloat16_t host & device operators  //////////
+    ///////////////////////////////////////////////////////////////////
+
+#if defined(__HIP_NO_HALF_OPERATORS__)
+// No operators defined for host or device
+#define ROCWMMA_HALF_OP_ATTR ROCWMMA_HOST_DEVICE
+#else
+// No operators defined just for host
+#define ROCWMMA_HALF_OP_ATTR ROCWMMA_HOST
+#endif // defined(__HIP_NO_HALF_OPERATORS__)
+
+#if !ROCWMMA_NO_HALF
+
+    ROCWMMA_HALF_OP_ATTR inline bool operator==(const hfloat16_t& x, const hfloat16_t& y)
     {
         auto absDiff = std::fabs(__half2float(x) - __half2float(y));
         auto absAdd  = std::fabs(__half2float(x) + __half2float(y));
@@ -54,57 +109,60 @@ namespace rocwmma
                || absDiff < __half2float(std::numeric_limits<hfloat16_t>::min());
     }
 
-    __host__ inline bool operator!=(const hfloat16_t& x, const hfloat16_t& y)
+    ROCWMMA_HALF_OP_ATTR inline bool operator!=(const hfloat16_t& x, const hfloat16_t& y)
     {
         return !(x == y);
     }
 
-    __host__ inline hfloat16_t operator-(const hfloat16_t& x)
+    ROCWMMA_HALF_OP_ATTR inline hfloat16_t operator-(const hfloat16_t& x)
     {
         detail::Fp16Bits fp16(x);
         fp16.i16 ^= 0x8000; // Flip sign
         return fp16.h16;
     }
 
-    __host__ inline hfloat16_t operator+(const hfloat16_t& x, const hfloat16_t& y)
+    ROCWMMA_HALF_OP_ATTR inline hfloat16_t operator+(const hfloat16_t& x, const hfloat16_t& y)
     {
-        return static_cast<hfloat16_t>(static_cast<float16_t>(x) + static_cast<float16_t>(y));
+        return convert<hfloat16_t>(convert<float16_t>(x) + convert<float16_t>(y));
     }
 
-    __host__ inline hfloat16_t operator-(const hfloat16_t& x, const hfloat16_t& y)
+    ROCWMMA_HALF_OP_ATTR inline hfloat16_t operator-(const hfloat16_t& x, const hfloat16_t& y)
     {
-        return static_cast<hfloat16_t>(static_cast<float16_t>(x) - static_cast<float16_t>(y));
+        return convert<hfloat16_t>(convert<float16_t>(x) - convert<float16_t>(y));
     }
 
-    __host__ inline hfloat16_t operator*(const hfloat16_t& x, const hfloat16_t& y)
+    ROCWMMA_HALF_OP_ATTR inline hfloat16_t operator*(const hfloat16_t& x, const hfloat16_t& y)
     {
-        return static_cast<hfloat16_t>(static_cast<float16_t>(x) * static_cast<float16_t>(y));
+        return convert<hfloat16_t>(convert<float16_t>(x) * convert<float16_t>(y));
     }
 
-    __host__ inline hfloat16_t operator/(const hfloat16_t& x, const hfloat16_t& y)
+    ROCWMMA_HALF_OP_ATTR inline hfloat16_t operator/(const hfloat16_t& x, const hfloat16_t& y)
     {
-        return static_cast<hfloat16_t>(static_cast<float16_t>(x) / static_cast<float16_t>(y));
+        return convert<hfloat16_t>(convert<float16_t>(x) / convert<float16_t>(y));
     }
 
-    __host__ inline hfloat16_t& operator+=(hfloat16_t& x, const hfloat16_t& y)
+    ROCWMMA_HALF_OP_ATTR inline hfloat16_t& operator+=(hfloat16_t& x, const hfloat16_t& y)
     {
-        return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) + static_cast<float16_t>(y));
+        return x = x + y;
     }
 
-    __host__ inline hfloat16_t& operator-=(hfloat16_t& x, const hfloat16_t& y)
+    ROCWMMA_HALF_OP_ATTR inline hfloat16_t& operator-=(hfloat16_t& x, const hfloat16_t& y)
     {
-        return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) - static_cast<float16_t>(y));
+        return x = x - y;
     }
 
-    __host__ inline hfloat16_t& operator*=(hfloat16_t& x, const hfloat16_t& y)
+    ROCWMMA_HALF_OP_ATTR inline hfloat16_t& operator*=(hfloat16_t& x, const hfloat16_t& y)
     {
-        return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) * static_cast<float16_t>(y));
+        return x = x * y;
     }
 
-    __host__ inline hfloat16_t& operator/=(hfloat16_t& x, const hfloat16_t& y)
+    ROCWMMA_HALF_OP_ATTR inline hfloat16_t& operator/=(hfloat16_t& x, const hfloat16_t& y)
     {
-        return x = static_cast<hfloat16_t>(static_cast<float16_t>(x) / static_cast<float16_t>(y));
+        return x = x / y;
     }
+
+#endif // !ROCWMMA_NO_HALF
+
 #endif // !defined(__HIPCC_RTC__)
 
 } // namespace rocwmma
@@ -124,12 +182,14 @@ namespace std
     ///////////////////////////////////////////////////////////
     //////////  std::ostream::operator<<(hfloat16_t)  /////////
     ///////////////////////////////////////////////////////////
-
+#if !ROCWMMA_NO_HALF
     inline ostream& operator<<(ostream& stream, rocwmma::hfloat16_t const& val)
     {
         return stream << __half2float(val);
     }
-#endif // !defined(__HIPCC_RTC__)
+#endif // !ROCWMMA_NO_HALF
+
+#endif // !defined(__HIPCC_RTC__) && !ROCWMMA_NO_HALF
 
 } // namespace std
 

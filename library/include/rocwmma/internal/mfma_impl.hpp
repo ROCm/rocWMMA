@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -175,6 +175,7 @@ namespace rocwmma
             }
         };
 
+#if !ROCWMMA_NO_HALF
         template <>
         struct amdgcn_mfma<hfloat16_t, float32_t, 16, 16>
             : public amdgcn_mfma<float16_t, float32_t, 16, 16>
@@ -198,8 +199,8 @@ namespace rocwmma
             : public amdgcn_mfma<float16_t, float16_t, 32, 32>
         {
         };
+#endif // !ROCWMMA_NO_HALF
 
-#if !defined(__HIPCC_RTC__)
 #if !ROCWMMA_ARCH_GFX908
 
         // NOTE: Successors to gfx908 have upgraded bf16 instructions
@@ -479,8 +480,7 @@ namespace rocwmma
         };
 
 #endif // !ROCWMMA_ARCH_GFX908
-#endif // !defined(__HIPCC_RTC__)
-#if !ROCWMMA_ARCH_GFX940
+#if(!ROCWMMA_ARCH_GFX940) && (!ROCWMMA_ARCH_GFX941) && (!ROCWMMA_ARCH_GFX942)
 
         template <>
         struct amdgcn_mfma<int8_t, int32_t, 32, 32>
@@ -538,9 +538,9 @@ namespace rocwmma
             }
         };
 
-#else // ROCWMMA_ARCH_GFX940
+#else // ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
 
-    template <>
+        template <>
         struct amdgcn_mfma<int8_t, int32_t, 32, 32>
         {
             // Packed register traits
@@ -563,8 +563,13 @@ namespace rocwmma
             {
                 typename Traits::DRegsT result;
                 using inputType = VRegI64x1;
-                result.data = {__builtin_amdgcn_mfma_i32_32x32x16_i8(
-                    ((inputType const&)(regsA)).data[0], ((inputType const&)(regsB)).data[0], regsC.data, 0, 0, 0)};
+                result.data
+                    = {__builtin_amdgcn_mfma_i32_32x32x16_i8(((inputType const&)(regsA)).data[0],
+                                                             ((inputType const&)(regsB)).data[0],
+                                                             regsC.data,
+                                                             0,
+                                                             0,
+                                                             0)};
                 return result;
             }
         };
@@ -592,13 +597,18 @@ namespace rocwmma
             {
                 typename Traits::DRegsT result;
                 using inputType = VRegI64x1;
-                result.data = {__builtin_amdgcn_mfma_i32_16x16x32_i8(
-                    ((inputType const&)(regsA)).data[0], ((inputType const&)(regsB)).data[0], regsC.data, 0, 0, 0)};
+                result.data
+                    = {__builtin_amdgcn_mfma_i32_16x16x32_i8(((inputType const&)(regsA)).data[0],
+                                                             ((inputType const&)(regsB)).data[0],
+                                                             regsC.data,
+                                                             0,
+                                                             0,
+                                                             0)};
                 return result;
             }
         };
 
-#endif // !ROCWMMA_ARCH_GFX940
+#endif // (!ROCWMMA_ARCH_GFX940) && (!ROCWMMA_ARCH_GFX941) && (!ROCWMMA_ARCH_GFX942)
 
         template <>
         struct amdgcn_mfma<float32_t, float32_t, 16, 16>
@@ -723,7 +733,7 @@ namespace rocwmma
 
 #endif // !ROCWMMA_ARCH_GFX908
 
-#if ROCWMMA_ARCH_GFX940
+#if ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
 
         template <>
         struct amdgcn_mfma<float8_t, float32_t, 16, 16>
@@ -748,8 +758,13 @@ namespace rocwmma
             {
                 typename Traits::DRegsT result;
                 using inputType = VRegI64x1;
-                result.data = {__builtin_amdgcn_mfma_f32_16x16x32_fp8_fp8(
-                    ((inputType const&)(regsA)).data[0], ((inputType const&)(regsB)).data[0], regsC.data, 0, 0, 0)};
+                result.data     = {
+                    __builtin_amdgcn_mfma_f32_16x16x32_fp8_fp8(((inputType const&)(regsA)).data[0],
+                                                               ((inputType const&)(regsB)).data[0],
+                                                               regsC.data,
+                                                               0,
+                                                               0,
+                                                               0)};
                 return result;
             }
         };
@@ -777,8 +792,13 @@ namespace rocwmma
             {
                 typename Traits::DRegsT result;
                 using inputType = VRegI64x1;
-                result.data = {__builtin_amdgcn_mfma_f32_32x32x16_fp8_fp8(
-                    ((inputType const&)(regsA)).data[0], ((inputType const&)(regsB)).data[0], regsC.data, 0, 0, 0)};
+                result.data     = {
+                    __builtin_amdgcn_mfma_f32_32x32x16_fp8_fp8(((inputType const&)(regsA)).data[0],
+                                                               ((inputType const&)(regsB)).data[0],
+                                                               regsC.data,
+                                                               0,
+                                                               0,
+                                                               0)};
                 return result;
             }
         };
@@ -806,8 +826,13 @@ namespace rocwmma
             {
                 typename Traits::DRegsT result;
                 using inputType = VRegI64x1;
-                result.data = {__builtin_amdgcn_mfma_f32_16x16x32_bf8_bf8(
-                    ((inputType const&)(regsA)).data[0], ((inputType const&)(regsB)).data[0], regsC.data, 0, 0, 0)};
+                result.data     = {
+                    __builtin_amdgcn_mfma_f32_16x16x32_bf8_bf8(((inputType const&)(regsA)).data[0],
+                                                               ((inputType const&)(regsB)).data[0],
+                                                               regsC.data,
+                                                               0,
+                                                               0,
+                                                               0)};
                 return result;
             }
         };
@@ -835,8 +860,13 @@ namespace rocwmma
             {
                 typename Traits::DRegsT result;
                 using inputType = VRegI64x1;
-                result.data = {__builtin_amdgcn_mfma_f32_32x32x16_bf8_bf8(
-                    ((inputType const&)(regsA)).data[0], ((inputType const&)(regsB)).data[0], regsC.data, 0, 0, 0)};
+                result.data     = {
+                    __builtin_amdgcn_mfma_f32_32x32x16_bf8_bf8(((inputType const&)(regsA)).data[0],
+                                                               ((inputType const&)(regsB)).data[0],
+                                                               regsC.data,
+                                                               0,
+                                                               0,
+                                                               0)};
                 return result;
             }
         };
@@ -897,7 +927,7 @@ namespace rocwmma
             }
         };
 
-#else // !ROCWMMA_ARCH_GFX940
+#else // (!ROCWMMA_ARCH_GFX940) && (!ROCWMMA_ARCH_GFX941) && (!ROCWMMA_ARCH_GFX942)
 
         // Required for general fp8 support
         template <>
@@ -1078,7 +1108,7 @@ namespace rocwmma
             }
         };
 
-#endif // ROCWMMA_ARCH_GFX940
+#endif // ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
 
 #endif // ROCWMMA_ARCH_GFX9
 

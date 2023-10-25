@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,10 @@
 
 #ifndef ROCWMMA_TEST_COMMON_HPP
 #define ROCWMMA_TEST_COMMON_HPP
+
+#if ROCWMMA_TESTS_NO_HALF
+#warning("Building tests with hfloat16_t requires !HIP_NO_HALF && !__HIP_NO_HALF_CONVERSIONS__. Proceeding without hfloat16_t")
+#endif // !ROCWMMA_NO_HALF && __HIP_NO_HALF_CONVERSIONS__
 
 #include <iostream>
 #include <mutex>
@@ -53,18 +57,13 @@
 
 #ifdef ROCWMMA_BENCHMARK_TESTS
 #ifndef CHECK_RSMI_ERROR
-#define CHECK_RSMI_ERROR(expression, smiErrorFlag)                        \
-    if(auto status = (expression); status != RSMI_STATUS_SUCCESS)         \
-    {                                                                     \
-        const char* errName = nullptr;                                    \
-        rsmi_status_string(status, &errName);                             \
-        fprintf(stderr,                                                   \
-                "rsmi error: '%s'(%d) at %s:%d\n",                        \
-                errName,                                                  \
-                status,                                                   \
-                __FILE__,                                                 \
-                __LINE__);                                                \
-        smiErrorFlag = true;                                              \
+#define CHECK_RSMI_ERROR(expression, smiErrorFlag)                                               \
+    if(auto status = (expression); status != RSMI_STATUS_SUCCESS)                                \
+    {                                                                                            \
+        const char* errName = nullptr;                                                           \
+        rsmi_status_string(status, &errName);                                                    \
+        fprintf(stderr, "rsmi error: '%s'(%d) at %s:%d\n", errName, status, __FILE__, __LINE__); \
+        smiErrorFlag = true;                                                                     \
     }
 #endif
 #endif
@@ -325,8 +324,7 @@ namespace rocwmma
 
         // fill kernel wrapper for M x N matrix for mat[i] = i
         template <typename DataT>
-        __host__ static inline void
-            fillIdxLaunchKernel(DataT* d_mat, uint32_t m, uint32_t n)
+        __host__ static inline void fillIdxLaunchKernel(DataT* d_mat, uint32_t m, uint32_t n)
         {
             auto blockDim = dim3(1024, 1, 1);
             auto gridDim  = dim3(ceilDiv(m * n, blockDim.x), 1, 1);

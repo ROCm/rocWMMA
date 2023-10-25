@@ -17,14 +17,17 @@ def runCompileCommand(platform, project, jobName, boolean debug=false)
     String buildTypeDir = debug ? 'debug' : 'release'
     String cmake = platform.jenkinsLabel.contains('centos') ? 'cmake3' : 'cmake'
     //Set CI node's gfx arch as target if PR, otherwise use default targets of the library
-    String amdgpuTargets = env.BRANCH_NAME.startsWith('PR-') ? '-DAMDGPU_TARGETS="$gfx_arch"' : '-DAMDGPU_TARGETS="gfx908:xnack-;gfx908:xnack+;gfx90a:xnack-;gfx90a:xnack+"'
+    String amdgpuTargets = env.BRANCH_NAME.startsWith('PR-') ? '-DAMDGPU_TARGETS="$gfx_arch"' : ''
     String compilerLauncher = project.defaults.ccache ? '-DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache' : ''
     String cmakeArgs = "-DCMAKE_C_COMPILER=/opt/rocm/bin/hipcc -DCMAKE_CXX_COMPILER=/opt/rocm/bin/hipcc ${compilerLauncher} ${buildTypeArg} ${amdgpuTargets}"
+    String hipccCompileFlags = "export HIPCC_COMPILE_FLAGS_APPEND='-O3 -Wno-format-nonliteral -parallel-jobs=1'"
 
     def command = """#!/usr/bin/env bash
                 set -x
                 cd ${project.paths.project_build_prefix}
                 ${getDependenciesCommand}
+                echo Original HIPCC_COMPILE_FLAGS_APPEND: \$HIPCC_COMPILE_FLAGS_APPEND
+                ${hipccCompileFlags}
                 mkdir -p build/${buildTypeDir} && cd build/${buildTypeDir}
                 ${auxiliary.gfxTargetParser()}
                 ${cmake} ${cmakeArgs} -DROCWMMA_BUILD_BENCHMARK_TESTS=OFF ../..

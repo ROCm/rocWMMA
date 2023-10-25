@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,6 +39,8 @@ namespace rocwmma
         static constexpr uint32_t AMDGCN_ARCH_ID_GFX908  = 0x908;
         static constexpr uint32_t AMDGCN_ARCH_ID_GFX90A  = 0x90A;
         static constexpr uint32_t AMDGCN_ARCH_ID_GFX940  = 0x940;
+        static constexpr uint32_t AMDGCN_ARCH_ID_GFX941  = 0x941;
+        static constexpr uint32_t AMDGCN_ARCH_ID_GFX942  = 0x942;
         static constexpr uint32_t AMDGCN_ARCH_ID_GFX1100 = 0x1100;
         static constexpr uint32_t AMDGCN_ARCH_ID_GFX1101 = 0x1101;
         static constexpr uint32_t AMDGCN_ARCH_ID_GFX1102 = 0x1102;
@@ -60,6 +62,10 @@ namespace rocwmma
         static constexpr uint32_t AMDGCN_CURRENT_ARCH_ID = AMDGCN_ARCH_ID_GFX90A;
 #elif ROCWMMA_ARCH_GFX940
         static constexpr uint32_t AMDGCN_CURRENT_ARCH_ID = AMDGCN_ARCH_ID_GFX940;
+#elif ROCWMMA_ARCH_GFX941
+        static constexpr uint32_t AMDGCN_CURRENT_ARCH_ID = AMDGCN_ARCH_ID_GFX941;
+#elif ROCWMMA_ARCH_GFX942
+        static constexpr uint32_t AMDGCN_CURRENT_ARCH_ID = AMDGCN_ARCH_ID_GFX942;
 #elif ROCWMMA_ARCH_GFX1100
         static constexpr uint32_t AMDGCN_CURRENT_ARCH_ID = AMDGCN_ARCH_ID_GFX1100;
 #elif ROCWMMA_ARCH_GFX1101

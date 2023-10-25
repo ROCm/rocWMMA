@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2016-2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,12 +40,26 @@ typedef struct
 
 #else // __cplusplus < 201103L || (!defined(__HCC__) && !defined(__HIPCC__))
 
+#if !defined(__HIPCC_RTC__)
+
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <hip/hip_runtime.h>
 #include <ostream>
 #include <type_traits>
+
+#else
+
+namespace std
+{
+    using __hip_internal::is_standard_layout;
+    using __hip_internal::is_trivial;
+}
+
+#endif // !defined(__HIPCC_RTC__)
+
+#include "config.hpp"
 
 struct rocwmma_xfloat32
 {
@@ -173,14 +187,18 @@ static_assert(std::is_trivial<rocwmma_xfloat32>{},
               "rocwmma_xfloat32 is not a trivial type, and thus is "
               "incompatible with C.");
 
+#if !defined(__HIPCC_RTC__)
 static_assert(sizeof(rocwmma_xfloat32) == sizeof(rocwmma_xfloat32_public)
                   && offsetof(rocwmma_xfloat32, data) == offsetof(rocwmma_xfloat32_public, data),
               "internal rocwmma_xfloat32 does not match public rocwmma_xfloat32");
+#endif // !defined(__HIPCC_RTC__)
 
+#if !defined(__HIPCC_RTC__)
 inline std::ostream& operator<<(std::ostream& os, const rocwmma_xfloat32& xf32)
 {
     return os << float(xf32);
 }
+#endif // !defined(__HIPCC_RTC__)
 inline ROCWMMA_HOST_DEVICE rocwmma_xfloat32 operator+(rocwmma_xfloat32 a)
 {
     return a;
@@ -301,15 +319,17 @@ namespace std
         } u = {a.data};
         return (u.fp32 == 0.0f);
     }
-    inline rocwmma_xfloat32 sin(rocwmma_xfloat32 a)
+
+    ROCWMMA_HOST_DEVICE inline rocwmma_xfloat32 sin(rocwmma_xfloat32 a)
     {
         return rocwmma_xfloat32(sinf(float(a)));
     }
-    inline rocwmma_xfloat32 cos(rocwmma_xfloat32 a)
+    ROCWMMA_HOST_DEVICE inline rocwmma_xfloat32 cos(rocwmma_xfloat32 a)
     {
         return rocwmma_xfloat32(cosf(float(a)));
     }
-    __device__ __host__ constexpr rocwmma_xfloat32 real(const rocwmma_xfloat32& a)
+
+    ROCWMMA_HOST_DEVICE constexpr rocwmma_xfloat32 real(const rocwmma_xfloat32& a)
     {
         return a;
     }

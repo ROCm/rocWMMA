@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -51,7 +51,9 @@ namespace rocwmma
                                         bfloat8_t,
                                         bfloat16_t,
                                         float16_t,
+#if !ROCWMMA_TESTS_NO_HALF
                                         hfloat16_t,
+#endif // !ROCWMMA_TESTS_NO_HALF
                                         float32_t,
                                         xfloat32_t,
                                         int8_t,

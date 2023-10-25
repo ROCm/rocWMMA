@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -838,7 +838,9 @@ namespace rocwmma
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(bfloat8_t, float32_t, float32_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(bfloat16_t, float32_t, float32_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(float16_t, float32_t, float32_t);
+#if !ROCWMMA_TESTS_NO_HALF
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(hfloat16_t, float32_t, float32_t);
+#endif // !ROCWMMA_TESTS_NO_HALF
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(float32_t, float32_t, float32_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(xfloat32_t, float32_t, float32_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(float64_t, float64_t, float64_t);
@@ -849,8 +851,10 @@ namespace rocwmma
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(bfloat16_t, bfloat16_t, float32_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(float16_t, float16_t, float16_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(float16_t, float16_t, float32_t);
+#if !ROCWMMA_TESTS_NO_HALF
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(hfloat16_t, hfloat16_t, hfloat16_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(hfloat16_t, hfloat16_t, float32_t);
+#endif // !ROCWMMA_TESTS_NO_HALF
 #endif // ROCWMMA_EXTENDED_TESTS
 
 } // namespace rocwmma

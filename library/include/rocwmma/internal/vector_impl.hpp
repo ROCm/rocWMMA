@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2022-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2022-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -703,26 +703,25 @@ namespace rocwmma
 #define ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(TYPE, RANK) \
     ROCWMMA_REGISTER_HIP_VECTOR_BASE(TYPE, RANK, ROCWMMA_HIP_NON_NATIVE_VECTOR_STORAGE_IMPL)
 
-////////////////////////
-/// Bfloat16 support ///
-////////////////////////
-
-// HIP bfloat16_t is not supported in RTC environment
-#if !defined(__HIPCC_RTC__)
+#if defined(__HIPCC_RTC__)
+#define ROCWMMA_VEC_OPERATOR ROCWMMA_DEVICE
+#else
+#define ROCWMMA_VEC_OPERATOR ROCWMMA_HOST_DEVICE
+#endif
 
 // Quirk: explicit specialization for ++ / -- operators in HIP_vector_type<bfloat16_t, N>.
 // Why? bfloat16_t doesn't have automatic conversion from integers so we must override the default implementation;
 // Override such that in(de)crement operators use 1.f instead of 1(int)
 #define ROCWMMA_IMPL_VECTOR_INC_DEC_OPS_AS_FLOAT(FLOAT_TYPE, RANK)                        \
     template <>                                                                           \
-    ROCWMMA_HOST_DEVICE inline HIP_vector_type<FLOAT_TYPE, RANK>&                         \
+    ROCWMMA_VEC_OPERATOR inline HIP_vector_type<FLOAT_TYPE, RANK>&                        \
         HIP_vector_type<FLOAT_TYPE, RANK>::operator++() noexcept                          \
     {                                                                                     \
         return *this += HIP_vector_type<FLOAT_TYPE, RANK>{static_cast<FLOAT_TYPE>(1.0f)}; \
     }                                                                                     \
                                                                                           \
     template <>                                                                           \
-    ROCWMMA_HOST_DEVICE inline HIP_vector_type<FLOAT_TYPE, RANK>&                         \
+    ROCWMMA_VEC_OPERATOR inline HIP_vector_type<FLOAT_TYPE, RANK>&                        \
         HIP_vector_type<FLOAT_TYPE, RANK>::operator--() noexcept                          \
     {                                                                                     \
         return *this -= HIP_vector_type<FLOAT_TYPE, RANK>{static_cast<FLOAT_TYPE>(1.0f)}; \
@@ -732,7 +731,5 @@ namespace rocwmma
 #define ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(TYPE, RANK) \
     ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(TYPE, RANK)                               \
     ROCWMMA_IMPL_VECTOR_INC_DEC_OPS_AS_FLOAT(TYPE, RANK)
-
-#endif // !__HIPCC_RTC__
 
 #endif // ROCWMMA_VECTOR_IMPL_HPP
