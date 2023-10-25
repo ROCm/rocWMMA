@@ -572,124 +572,16 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         /// Cooperative config for global read A / B
         ///
 
-<<<<<<< HEAD
-    ///
-    /// 1D global read coordinate setup
-    ///
-    using GRBuffAMap1d = GetDataLayout_t<GRBuffA>;
-    using GRBuffBMap1d = GetDataLayout_t<GRBuffB>;
-
-    // Initial globa read address offsets
-    auto globalReadOffsetA
-        = GRBuffAMap1d::fromMatrixCoord(make_coord2d(get<0>(macroTileCoord), 0u), lda);
-    auto globalReadOffsetB
-        = GRBuffBMap1d::fromMatrixCoord(make_coord2d(0u, get<1>(macroTileCoord)), ldb);
-
-    // Incremental global read address offsets
-    auto kStepOffsetA = GRBuffAMap1d::fromMatrixCoord(make_coord2d(0u, ROCWMMA_K), lda);
-    auto kStepOffsetB = GRBuffBMap1d::fromMatrixCoord(make_coord2d(ROCWMMA_K, 0u), ldb);
-
-    ///
-    /// Cooperative config for global read A / B
-    ///
-
-    // WorkItems will be split up by minimum IOCount to perform either global read or local write.
-    // These are inputs to cooperative functions.
-    constexpr auto warpCount = get<0>(warpDims) * get<1>(warpDims);
-    constexpr auto splitCountA
-        = std::min((uint32_t)GetCoopIOConfig_t<GRBuffA, warpCount>::IOTraits::IOCount,
-                   (uint32_t)GetCoopIOConfig_t<LWBuffA, warpCount>::IOTraits::IOCount);
-
-    constexpr auto splitCountB
-        = std::min((uint32_t)GetCoopIOConfig_t<GRBuffB, warpCount>::IOTraits::IOCount,
-                   (uint32_t)GetCoopIOConfig_t<LWBuffB, warpCount>::IOTraits::IOCount);
-
-    // Scheduling warp order is analogous to row major priority.
-    // E.g. Wg = (128, 2) = 2x2 warps
-    // (0, 0)   (0, 1)   Share Schedule: w0 = (0, 0), w1 = (0, 1),
-    // (1, 0)   (1, 1)                   w2 = (1, 0), w3 = (1, 1), count = 4
-    const auto warpIndex = get<0>(localWarpCoord) * get<1>(warpDims) + get<1>(localWarpCoord);
-
-    ///
-    /// Perform initial global pre-fetch
-    ///
-
-    GRBuffA grBuffA;
-    GRBuffB grBuffB;
-
-    globalReadCoopA<warpCount, splitCountA>(grBuffA, a + globalReadOffsetA, lda, warpIndex);
-    globalReadCoopB<warpCount, splitCountB>(grBuffB, b + globalReadOffsetB, ldb, warpIndex);
-
-    globalReadOffsetA += kStepOffsetA;
-    globalReadOffsetB += kStepOffsetB;
-
-    ///
-    /// Setup LDS addressing
-    /// This kernel will use 2 separate LDS blocks for pipelining
-    /// the input prefetching during the accumulation loop
-    ///
-
-    HIP_DYNAMIC_SHARED(void*, localMemPtr);
-    constexpr uint32_t ldsWidth = ROCWMMA_K;
-
-    using LWBuffAShape = GetIOShape_t<LWBuffA>;
-    using LWBuffBShape = GetIOShape_t<LWBuffB>;
-    using LWBuffAMap1d = GetDataLayout_t<LWBuffA>;
-    using LWBuffBMap1d = GetDataLayout_t<LWBuffB>;
-
-    uint32_t sizeLds  = (LWBuffAShape::BlockHeight + LWBuffBShape::BlockHeight) * ldsWidth;
-    auto*    ldsPtrLo = reinterpret_cast<InputT*>(localMemPtr);
-    auto*    ldsPtrHi = ldsPtrLo + sizeLds;
-
-    // Local write offsets to start of A / B data
-    auto ldsWriteOffsetA = 0u;
-    auto ldsWriteOffsetB
-        = LWBuffAMap1d::fromMatrixCoord(make_coord2d(LWBuffAShape::BlockHeight, 0u), ldsWidth);
-
-    // Local read offsets for mfma frags
-    auto ldsReadOffsetA
-        = ldsWriteOffsetA
-          + LWBuffAMap1d::fromMatrixCoord(make_coord2d(get<0>(localWarpOffset), 0u), ldsWidth);
-    auto ldsReadOffsetB
-        = ldsWriteOffsetB
-          + LWBuffBMap1d::fromMatrixCoord(make_coord2d(get<1>(localWarpOffset), 0u), ldsWidth);
-
-    ///
-    /// Write prefetch to local
-    ///
-    localWriteCoopA<warpCount, splitCountA>(
-        ldsPtrLo + ldsWriteOffsetA, grBuffA, ldsWidth, warpIndex);
-    localWriteCoopB<warpCount, splitCountB>(
-        ldsPtrLo + ldsWriteOffsetB, grBuffB, ldsWidth, warpIndex);
-
-    ///
-    /// Initialize accumulation frags
-    ///
-    MfmaFragAcc fragsAcc[BLOCKS_X][BLOCKS_Y];
-    fill(fragsAcc, 0.0f);
-
-    ///
-    /// Synchronize warps and memory
-    ///
-    synchronize_workgroup();
-
-    ///
-    /// Accumulate A * B for all mfma frags in warp tile
-    ///
-    for(auto currentK = ROCWMMA_K; currentK < k; currentK += ROCWMMA_K)
-    {
-        MfmaFragA fragsA[BLOCKS_X];
-        MfmaFragB fragsB[BLOCKS_Y];
-=======
         // WorkItems will be split up by minimum IOCount to perform either global read or local write.
         // These are inputs to cooperative functions.
-        constexpr auto warpCount   = get<0>(warpDims) * get<1>(warpDims);
-        constexpr auto splitCountA = std::min((uint32_t)GetIOTraits_t<GRBuffA>::IOCount,
-                                              (uint32_t)GetIOTraits_t<LWBuffA>::IOCount);
->>>>>>> develop
+        constexpr auto warpCount = get<0>(warpDims) * get<1>(warpDims);
+        constexpr auto splitCountA
+            = std::min((uint32_t)GetCoopIOConfig_t<GRBuffA, warpCount>::IOTraits::IOCount,
+                    (uint32_t)GetCoopIOConfig_t<LWBuffA, warpCount>::IOTraits::IOCount);
 
-        constexpr auto splitCountB = std::min((uint32_t)GetIOTraits_t<GRBuffB>::IOCount,
-                                              (uint32_t)GetIOTraits_t<LWBuffB>::IOCount);
+        constexpr auto splitCountB
+            = std::min((uint32_t)GetCoopIOConfig_t<GRBuffB, warpCount>::IOTraits::IOCount,
+                    (uint32_t)GetCoopIOConfig_t<LWBuffB, warpCount>::IOTraits::IOCount);
 
         // Scheduling warp order is analogous to row major priority.
         // E.g. Wg = (128, 2) = 2x2 warps
@@ -736,10 +628,10 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         // Local read offsets for mfma frags
         auto ldsReadOffsetA
             = ldsWriteOffsetA
-              + LWBuffAMap1d::fromMatrixCoord(make_coord2d(get<0>(localWarpOffset), 0u), ldsWidth);
+            + LWBuffAMap1d::fromMatrixCoord(make_coord2d(get<0>(localWarpOffset), 0u), ldsWidth);
         auto ldsReadOffsetB
             = ldsWriteOffsetB
-              + LWBuffBMap1d::fromMatrixCoord(make_coord2d(get<1>(localWarpOffset), 0u), ldsWidth);
+            + LWBuffBMap1d::fromMatrixCoord(make_coord2d(get<1>(localWarpOffset), 0u), ldsWidth);
 
         ///
         /// Write prefetch to local
