@@ -177,28 +177,12 @@ namespace rocwmma
             constexpr auto maxWaves = calcMaxWaves((uint32_t)totalWorkItems, (uint32_t)WaveCount);
 
             // maxWaves is the maximum amount of waves split the work into.
-            // For the rest of the waves, we need to decide what to do -
-            // either bail, or can attempt duplicate work to keep them busy.
-            // Each has their costs:
-            // - Bail forces a branch condition
-            // - Duplication can incur extra memory pressure and reduce performance.
-            //
-            // Fortunately, we can make a good guess which to use
-            // 1. Strided data should bail because it is not cache friendly (higher risk of cache-miss)
-            // 2. Non-strided data can duplicate work as is more cache friendly (lower risk of cache-miss)
+            // For the rest of the waves, bail out
             if constexpr(WaveCount != maxWaves)
             {
-                if constexpr(MatrixLayout::isStrided())
+                if(__builtin_amdgcn_readfirstlane(waveIndex) >= maxWaves)
                 {
-                    if(__builtin_amdgcn_readfirstlane(waveIndex) >= maxWaves)
-                    {
-                        return; // bail
-                    }
-                }
-                else
-                {
-                    // Hit the last index again
-                    waveIndex = std::min(maxWaves - 1u, waveIndex);
+                    return; // bail
                 }
             }
 
