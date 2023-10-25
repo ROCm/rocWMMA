@@ -151,9 +151,33 @@ namespace rocwmma
               typename DataT,
               typename LayoutT>
     ROCWMMA_DEVICE constexpr inline uint32_t
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::height()
+    {
+        return GetIOShape_t<decltype(fragment())>::BlockHeight;
+    }
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename LayoutT>
+    ROCWMMA_DEVICE constexpr inline uint32_t
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::width()
+    {
+        return GetIOShape_t<decltype(fragment())>::BlockWidth;
+    }
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename LayoutT>
+    ROCWMMA_DEVICE constexpr inline uint32_t
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::blockDim()
     {
-        return GetIOConfig_t<decltype(fragment())>::BlockDim;
+        return GetIOShape_t<decltype(fragment())>::BlockDim;
     }
 
     template <typename MatrixT,
@@ -165,7 +189,7 @@ namespace rocwmma
     ROCWMMA_DEVICE constexpr inline uint32_t
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::kDim()
     {
-        return GetIOConfig_t<decltype(fragment())>::KDim;
+        return GetIOShape_t<decltype(fragment())>::KDim;
     }
 
     template <typename MatrixT,

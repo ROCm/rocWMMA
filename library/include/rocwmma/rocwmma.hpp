@@ -236,7 +236,6 @@ namespace rocwmma
         // Traits
         ROCWMMA_DEVICE constexpr static inline uint32_t height();
         ROCWMMA_DEVICE constexpr static inline uint32_t width();
-
         ROCWMMA_DEVICE constexpr static inline uint32_t blockDim();
         ROCWMMA_DEVICE constexpr static inline uint32_t kDim();
         ROCWMMA_DEVICE constexpr static inline uint32_t size();
