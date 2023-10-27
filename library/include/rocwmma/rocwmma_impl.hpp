@@ -36,6 +36,7 @@
 #include "internal/dpp.hpp"
 #include "internal/flow_control.hpp"
 #include "internal/io_config.hpp"
+#include "internal/io_layout.hpp"
 #include "internal/io_shape.hpp"
 #include "internal/io_traits.hpp"
 #include "internal/layout.hpp"
@@ -86,7 +87,7 @@ namespace rocwmma
               typename DataT,
               typename LayoutT>
     ROCWMMA_DEVICE fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>&
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator=(
+                   fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator=(
             const fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>& other)
     {
         mStorage = other.mStorage;
@@ -150,9 +151,33 @@ namespace rocwmma
               typename DataT,
               typename LayoutT>
     ROCWMMA_DEVICE constexpr inline uint32_t
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::height()
+    {
+        return GetIOShape_t<decltype(fragment())>::BlockHeight;
+    }
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename LayoutT>
+    ROCWMMA_DEVICE constexpr inline uint32_t
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::width()
+    {
+        return GetIOShape_t<decltype(fragment())>::BlockWidth;
+    }
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename LayoutT>
+    ROCWMMA_DEVICE constexpr inline uint32_t
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::blockDim()
     {
-        return IOConfig::BlockDim;
+        return GetIOShape_t<decltype(fragment())>::BlockDim;
     }
 
     template <typename MatrixT,
@@ -164,7 +189,7 @@ namespace rocwmma
     ROCWMMA_DEVICE constexpr inline uint32_t
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::kDim()
     {
-        return IOConfig::KDim;
+        return GetIOShape_t<decltype(fragment())>::KDim;
     }
 
     template <typename MatrixT,
@@ -189,7 +214,7 @@ namespace rocwmma
         fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                       DataT                                                         value)
     {
-        using FragT       = typename std::decay<decltype(frag)>::type;
+        using FragT       = typename std::decay_t<decltype(frag)>;
         using Broadcaster = typename GetIOConfig_t<FragT>::Broadcaster;
 
         // Sanity check
@@ -211,7 +236,7 @@ namespace rocwmma
                          const DataT*                                                  data,
                          uint32_t                                                      ldm)
     {
-        using FragT  = typename std::decay<decltype(frag)>::type;
+        using FragT  = typename std::decay_t<decltype(frag)>;
         using Loader = typename GetIOConfig_t<FragT>::Loader;
 
         // Sanity checks
@@ -258,7 +283,7 @@ namespace rocwmma
                           fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
                           uint32_t                                                            ldm)
     {
-        using FragT  = typename std::decay<decltype(frag)>::type;
+        using FragT  = typename std::decay_t<decltype(frag)>;
         using Storer = typename GetIOConfig_t<FragT>::Storer;
 
         // Sanity check
@@ -310,8 +335,8 @@ namespace rocwmma
                  fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB> const&      b,
                  fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutC> const& c)
     {
-        using FragA = typename std::decay<decltype(a)>::type;
-        using FragB = typename std::decay<decltype(b)>::type;
+        using FragA = typename std::decay_t<decltype(a)>;
+        using FragB = typename std::decay_t<decltype(b)>;
 
         // Sanity check
         // static_assert(detail::MfmaCheck<FragA, FragB>::value,

@@ -26,8 +26,10 @@
 #ifndef ROCWMMA_COOP_API_IMPL_HPP
 #define ROCWMMA_COOP_API_IMPL_HPP
 
+#include "internal/coop_io_config.hpp"
 #include "internal/coop_load.hpp"
 #include "internal/coop_store.hpp"
+
 #include "rocwmma_coop.hpp"
 
 namespace rocwmma
@@ -46,22 +48,22 @@ namespace rocwmma
                               uint32_t waveCount,
                               uint32_t splitCount)
     {
-        using FragT      = typename std::decay<decltype(frag)>::type;
-        using CoopLoader = typename GetIOConfig_t<FragT>::CoopLoader;
+        using FragT  = typename std::decay_t<decltype(frag)>;
+        using Loader = typename GetCoopIOConfig_t<FragT>::Loader;
 
         // Sanity checks
         static_assert(!std::is_same<DataLayout, void>::value,
                       "Must provide layout information. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
-        static_assert(std::is_same<typename FragT::Traits::AccessT,
-                                   typename CoopLoader::Traits::OutputT>::value,
-                      "Fragment access and coop load output types do not match");
+        static_assert(
+            std::is_same<typename FragT::Traits::AccessT, typename Loader::Traits::OutputT>::value,
+            "Fragment access and coop load output types do not match");
 
         // Load and implicit pack
         // Note: the frag will only be partially filled with useful data.
         // Layout and thread locality is not guaranteed.
-        CoopLoader::exec(frag.mAccess, data, ldm, waveIndex, waveCount, splitCount);
+        Loader::exec(frag.mAccess, data, ldm, waveIndex, waveCount, splitCount);
     }
 
     template <uint32_t WaveCount,
@@ -78,28 +80,22 @@ namespace rocwmma
                               uint32_t                                                      ldm,
                               uint32_t waveIndex)
     {
-        using FragT      = typename std::decay<decltype(frag)>::type;
-        using IOShape    = GetIOShape_t<FragT>;
-        using CoopLoader = CooperativeLoad<IOShape::BlockDim,
-                                           IOShape::KDim,
-                                           DataT,
-                                           typename IOShape::DataLayout,
-                                           typename IOShape::MatrixLayout,
-                                           IOShape::VectorWidth>;
+        using FragT  = typename std::decay_t<decltype(frag)>;
+        using Loader = typename GetCoopIOConfig_t<FragT, WaveCount>::Loader;
 
         // Sanity checks
         static_assert(!std::is_same<DataLayout, void>::value,
                       "Must provide layout information. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
-        static_assert(std::is_same<typename FragT::Traits::AccessT,
-                                   typename CoopLoader::Traits::OutputT>::value,
-                      "Fragment access and coop load output types do not match");
+        static_assert(
+            std::is_same<typename FragT::Traits::AccessT, typename Loader::Traits::OutputT>::value,
+            "Fragment access and coop load output types do not match");
 
         // Load and implicit pack
         // Note: the frag will only be partially filled with useful data.
         // Layout and thread locality is not guaranteed.
-        CoopLoader::template exec<WaveCount, SplitCount>(frag.mAccess, data, ldm, waveIndex);
+        Loader::template exec<WaveCount, SplitCount>(frag.mAccess, data, ldm, waveIndex);
     }
 
     template <typename MatrixT,
@@ -129,8 +125,8 @@ namespace rocwmma
                               const DataT*                                                  data,
                               uint32_t                                                      ldm)
     {
-        using FragT       = typename std::decay<decltype(frag)>::type;
-        using Config      = GetIOConfig_t<FragT>;
+        using FragT       = typename std::decay_t<decltype(frag)>;
+        using Config      = GetCoopIOConfig_t<FragT>;
         using MappingUtil = typename Config::MappingUtil;
 
         // Matrix A:
@@ -160,22 +156,22 @@ namespace rocwmma
         uint32_t                                                            splitCount)
     {
 
-        using FragT      = typename std::decay<decltype(frag)>::type;
-        using CoopStorer = typename GetIOConfig_t<FragT>::CoopStorer;
+        using FragT  = typename std::decay_t<decltype(frag)>;
+        using Storer = typename GetCoopIOConfig_t<FragT>::Storer;
 
         // Sanity checks
         static_assert(!std::is_same<DataLayout, void>::value,
                       "Must provide data layout. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
-        static_assert(std::is_same<typename FragT::Traits::AccessT,
-                                   typename CoopStorer::Traits::InputT>::value,
-                      "Fragment access and coop stor input types do not match");
+        static_assert(
+            std::is_same<typename FragT::Traits::AccessT, typename Storer::Traits::InputT>::value,
+            "Fragment access and coop store input types do not match");
 
         // Implicit unpack and store
         // Note: the frag is only be partially filled with useful data.
         // Layout and thread locality is not guaranteed.
-        CoopStorer::exec(data, frag.mAccess, ldm, waveIndex, waveCount, splitCount);
+        Storer::exec(data, frag.mAccess, ldm, waveIndex, waveCount, splitCount);
     }
 
     template <uint32_t WaveCount,
@@ -193,28 +189,22 @@ namespace rocwmma
         uint32_t                                                            waveIndex)
     {
 
-        using FragT      = typename std::decay<decltype(frag)>::type;
-        using IOShape    = GetIOShape_t<FragT>;
-        using CoopStorer = CooperativeStore<IOShape::BlockDim,
-                                            IOShape::KDim,
-                                            DataT,
-                                            typename IOShape::DataLayout,
-                                            typename IOShape::MatrixLayout,
-                                            IOShape::VectorWidth>;
+        using FragT  = typename std::decay_t<decltype(frag)>;
+        using Storer = typename GetCoopIOConfig_t<FragT, WaveCount>::Storer;
 
         // Sanity checks
         static_assert(!std::is_same<DataLayout, void>::value,
                       "Must provide data layout. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
-        static_assert(std::is_same<typename FragT::Traits::AccessT,
-                                   typename CoopStorer::Traits::InputT>::value,
-                      "Fragment access and coop stor input types do not match");
+        static_assert(
+            std::is_same<typename FragT::Traits::AccessT, typename Storer::Traits::InputT>::value,
+            "Fragment access and coop stor input types do not match");
 
         // Implicit unpack and store
         // Note: the frag is only be partially filled with useful data.
         // Layout and thread locality is not guaranteed.
-        CoopStorer::template exec<WaveCount, SplitCount>(data, frag.mAccess, ldm, waveIndex);
+        Storer::template exec<WaveCount, SplitCount>(data, frag.mAccess, ldm, waveIndex);
     }
 
     template <typename MatrixT,

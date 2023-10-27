@@ -164,9 +164,12 @@ namespace rocwmma
     private:
         // Calculate offsets based on DataLayout of LDS, A frags and B frags.
         // All of them will have the same workgroupDim and waveCoord values.
-        using LdsOffsets     = typename LocalWriteFragA::IOConfig::MappingUtil;
-        using GlobalAOffsets = typename GlobalReadFragA::IOConfig::MappingUtil;
-        using GlobalBOffsets = typename GlobalReadFragB::IOConfig::MappingUtil;
+        using LdsOffsets     = GetMappingUtil_t<LocalWriteFragA>;
+        using GlobalAOffsets = GetMappingUtil_t<GlobalReadFragA>;
+        using GlobalBOffsets = GetMappingUtil_t<GlobalReadFragB>;
+
+        template <typename FragT>
+        using IOTraits = typename GetIOConfig_t<FragT>::IOTraits;
 
     public:
         __device__ static inline auto ldsWidth()
@@ -231,18 +234,17 @@ namespace rocwmma
             // we need to ensure that splitCounts are the same on both sides of
             // global fetch and local writes - Otherwise the waves don't have the
             // same data responsibility.
-            auto           workgroupDim = GlobalAOffsets::workgroupDim();
-            auto           waveCoord    = GlobalAOffsets::waveCoord();
-            auto           waveIndex    = get<1>(waveCoord);
-            auto           waveCount    = get<1>(workgroupDim);
-            constexpr auto splitCount
-                = std::min((uint32_t)GlobalReadFragA::IOConfig::IOTraits::IOCount,
-                           (uint32_t)LocalWriteFragA::IOConfig::IOTraits::IOCount);
+            auto workgroupDim = GlobalAOffsets::workgroupDim();
+            auto waveCoord    = GlobalAOffsets::waveCoord();
+            auto waveIndex    = get<1>(waveCoord);
+            auto waveCount    = get<1>(workgroupDim);
 
-            static_assert(
-                ((uint32_t)GlobalReadFragA::IOConfig::IOTraits::IOCount % splitCount == 0)
-                    && ((uint32_t)LocalWriteFragA::IOConfig::IOTraits::IOCount % splitCount == 0),
-                "splitCount is not common divisor of GlobalRead and LocalWrite IOCounts");
+            constexpr auto splitCount = std::min((uint32_t)IOTraits<GlobalReadFragA>::IOCount,
+                                                 (uint32_t)IOTraits<LocalWriteFragA>::IOCount);
+
+            static_assert(((uint32_t)IOTraits<GlobalReadFragA>::IOCount % splitCount == 0)
+                              && ((uint32_t)IOTraits<LocalWriteFragA>::IOCount % splitCount == 0),
+                          "splitCount is not common divisor of GlobalRead and LocalWrite IOCounts");
 
             for(int32_t i = 0; i < BlocksX; ++i)
             {
@@ -277,14 +279,12 @@ namespace rocwmma
             auto           waveCoord    = GlobalBOffsets::waveCoord();
             auto           waveIndex    = get<0>(waveCoord);
             auto           waveCount    = get<0>(workgroupDim);
-            constexpr auto splitCount
-                = std::min((uint32_t)GlobalReadFragB::IOConfig::IOTraits::IOCount,
-                           (uint32_t)LocalWriteFragB::IOConfig::IOTraits::IOCount);
+            constexpr auto splitCount   = std::min((uint32_t)IOTraits<GlobalReadFragB>::IOCount,
+                                                 (uint32_t)IOTraits<LocalWriteFragB>::IOCount);
 
-            static_assert(
-                ((uint32_t)GlobalReadFragB::IOConfig::IOTraits::IOCount % splitCount == 0)
-                    && ((uint32_t)LocalWriteFragB::IOConfig::IOTraits::IOCount % splitCount == 0),
-                "splitCount is not common divisor of GlobalRead and LocalWrite IOCounts");
+            static_assert(((uint32_t)IOTraits<GlobalReadFragB>::IOCount % splitCount == 0)
+                              && ((uint32_t)IOTraits<LocalWriteFragB>::IOCount % splitCount == 0),
+                          "splitCount is not common divisor of GlobalRead and LocalWrite IOCounts");
 
             for(int32_t i = 0; i < BlocksY; ++i)
             {
