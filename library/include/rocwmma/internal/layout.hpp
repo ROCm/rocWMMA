@@ -202,15 +202,12 @@ namespace rocwmma
                 // elements in both row_major or col_major data layouts.
                 // This layout cannot support for VW > 1 in col_major data layout otherwise the
                 // ordering is broken.
-                static_assert(!(std::is_same<DataLayout, col_major>::value && VectorWidth > 1),
+                static_assert(!(std::is_same_v<DataLayout, col_major> && VectorWidth > 1),
                               "ColNT in col_major does not support VectorWidth > 1");
 
                 // Must ensure that MaxVectorWidth fits inside the leading dimension
-                static_assert(
-                    (std::is_same<DataLayout, col_major>::value && (MaxVectorWidth <= BlockDim))
-                        || (std::is_same<DataLayout, row_major>::value
-                            && (MaxVectorWidth <= BlockK)),
-                    "MaxVectorWidth is larger than leading dimension. Try reducing MaxVectorWidth");
+                static_assert(std::is_same_v<DataLayout, row_major> && (MaxVectorWidth <= BlockK),
+                    "MaxVectorWidth is larger than BlockK dimension. Try reducing MaxVectorWidth");
             };
         };
 
@@ -332,15 +329,12 @@ namespace rocwmma
                 // elements in both in row_major or col_major data layouts.
                 // This layout cannot support for VW > 1 in row_major data layout otherwise the
                 // ordering is broken.
-                static_assert(!(std::is_same<DataLayout, row_major>::value && VectorWidth > 1),
+                static_assert(!(std::is_same_v<DataLayout, row_major> && VectorWidth > 1),
                               "RowNT in row_major does not support VectorWidth > 1");
 
                 // Must ensure that MaxVectorWidth fits inside the leading dimension
-                static_assert(
-                    (std::is_same<DataLayout, row_major>::value && (MaxVectorWidth <= BlockDim))
-                        || (std::is_same<DataLayout, col_major>::value
-                            && (MaxVectorWidth <= BlockK)),
-                    "MaxVectorWidth is larger than leading dimension. Try reducing MaxVectorWidth");
+                static_assert(std::is_same_v<DataLayout, col_major> && (MaxVectorWidth <= BlockK),
+                    "MaxVectorWidth is larger than BlockK dimension. Try reducing MaxVectorWidth");
             };
         };
 

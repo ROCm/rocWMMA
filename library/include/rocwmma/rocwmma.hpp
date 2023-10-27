@@ -27,7 +27,6 @@
 #define ROCWMMA_API_HPP
 
 #include "internal/accessors.hpp"
-#include "internal/io_config.hpp"
 #include "internal/io_traits.hpp"
 #include "internal/pack_util.hpp"
 #include "internal/types.hpp"

@@ -163,6 +163,13 @@ namespace rocwmma
             static_assert(decltype(it)::range() == IOTraits::IOCount,
                           "IOCount inconsistent with iterator range");
 
+            // Make sure that the IOCount is consistent with the number of total strides
+            static_assert(
+                IOTraits::IOCount
+                    == std::apply([](auto... items) { return (items * ...); },
+                                  MatrixLayout::strideCounts()),
+                "IOCount inconsistent with total strides");
+
             // Unroll loading in each strided dimension
             unroll_right(it,
                          dataPtr + DataLayout::fromMatrixCoord(baseOffset2d, ldm),

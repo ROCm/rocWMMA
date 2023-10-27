@@ -124,7 +124,7 @@ namespace rocwmma
             // Make sure that the IOCount is consistent with the number of total strides
             static_assert(
                 IOTraits::IOCount
-                    == std::apply([](auto... items) { return ((items == 0 ? 1u : items) * ...); },
+                    == std::apply([](auto... items) { return (items * ...); },
                                   MatrixLayout::strideCounts()),
                 "IOCount inconsistent with total strides");
 
