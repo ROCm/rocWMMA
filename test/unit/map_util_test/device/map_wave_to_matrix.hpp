@@ -50,10 +50,10 @@ namespace rocwmma
 
         enum : uint32_t
         {
-            MajorIndex = std::is_same<DataLayout, row_major>::value ? 0 : 1,
-            MinorIndex = std::is_same<DataLayout, row_major>::value ? 1 : 0,
-            ldmajor    = std::is_same<DataLayout, row_major>::value ? BlockM : BlockN,
-            ldminor    = std::is_same<DataLayout, row_major>::value ? BlockN : BlockM
+            MajorIndex = std::is_same_v<DataLayout, row_major> ? 0 : 1,
+            MinorIndex = std::is_same_v<DataLayout, row_major> ? 1 : 0,
+            ldmajor    = std::is_same_v<DataLayout, row_major> ? BlockM : BlockN,
+            ldminor    = std::is_same_v<DataLayout, row_major> ? BlockN : BlockM
         };
 
         auto majCoord

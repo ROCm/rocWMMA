@@ -52,7 +52,7 @@ namespace rocwmma
                                              DataT        param2)
     {
         using Frag    = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>;
-        using Mapping = typename Frag::IOConfig::MappingUtil;
+        using Mapping = GetMappingUtil_t<Frag>;
 
         // Override read M coord
         auto readCoord
@@ -105,7 +105,7 @@ namespace rocwmma
                                              DataT        param2)
     {
         using Frag    = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>;
-        using Mapping = typename Frag::IOConfig::MappingUtil;
+        using Mapping = GetMappingUtil_t<Frag>;
 
         // Override read N coord
         auto readCoord

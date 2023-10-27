@@ -42,6 +42,7 @@ namespace rocwmma
               typename LayoutC,
               typename LayoutD,
               typename LayoutLds,
+              typename GemmConfig,
               uint32_t BlocksX,
               uint32_t BlocksY,
               uint32_t TBlockX,
@@ -74,6 +75,19 @@ namespace rocwmma
                                         WaveSize,
                                         ArchId>;
 
+    private:
+        enum struct GlobalPredicates : bool
+        {
+            // Quirk for LdsRF is that it requires matching waves in X and Y directions
+            // for correctness.
+            // Second part is that the ldsRF crosses threshold from 16/32 block sizes to 64, which has different considerations
+            // for the MaxVW. This unfortunately limits applicability in cooperative environment.
+            LdsRFTest = !(std::is_same_v<GemmConfig, typename CooperativeGemm::BlockLevel::LdsRF>)
+                        || ((BlockM * BlockK / WaveSize > 8u) && (BlockN * BlockK / WaveSize > 8u)),
+
+            Enable = (LdsRFTest)
+        };
+        
         using TestTraits = typename Base::TestTraits;
 
     private:
@@ -139,13 +153,13 @@ namespace rocwmma
     public:
         constexpr static bool enableBuild()
         {
-            return Base::enableBuild()
+            return Base::enableBuild() && (bool)GlobalPredicates::Enable
                    && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable);
         }
 
         constexpr static bool enableRun()
         {
-            return Base::enableRun()
+            return Base::enableRun() && (bool)GlobalPredicates::Enable
                    && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable);
         }
 

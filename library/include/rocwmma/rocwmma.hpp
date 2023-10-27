@@ -26,7 +26,7 @@
 #ifndef ROCWMMA_API_HPP
 #define ROCWMMA_API_HPP
 
-#include "internal/io_config.hpp"
+#include "internal/accessors.hpp"
 #include "internal/io_traits.hpp"
 #include "internal/pack_util.hpp"
 #include "internal/types.hpp"
@@ -170,15 +170,6 @@
 
 namespace rocwmma
 {
-    // Configuration profile used in rocwmma calls
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout>
-    using io_config = rocwmma::IOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
-
     /**
  * \defgroup Rocwmma ROCWMMA Public API
  *
@@ -211,13 +202,13 @@ namespace rocwmma
     class __align__(4) fragment
     {
     public:
+        using IOTraits =
+            typename IOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>::IOTraits;
         struct Traits
         {
         private:
             using PackedElementT   = typename PackTraits<DataT>::PackedT;
             using UnpackedElementT = typename PackTraits<DataT>::UnpackedT;
-            using IOTraits =
-                typename io_config<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>::IOTraits;
 
         public:
             using AccessT  = VecT<UnpackedElementT, IOTraits::UnpackedSize>;
@@ -231,8 +222,6 @@ namespace rocwmma
                           "Unable to pack fragment elements");
         };
 
-        using IOConfig = io_config<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
-
         ROCWMMA_DEVICE           fragment() = default;
         ROCWMMA_DEVICE           fragment(const fragment& other);
         ROCWMMA_DEVICE fragment& operator=(const fragment& other);
@@ -244,6 +233,8 @@ namespace rocwmma
         ROCWMMA_DEVICE inline typename Traits::StorageT const& operator*() const;
 
         // Traits
+        ROCWMMA_DEVICE constexpr static inline uint32_t height();
+        ROCWMMA_DEVICE constexpr static inline uint32_t width();
         ROCWMMA_DEVICE constexpr static inline uint32_t blockDim();
         ROCWMMA_DEVICE constexpr static inline uint32_t kDim();
         ROCWMMA_DEVICE constexpr static inline uint32_t size();

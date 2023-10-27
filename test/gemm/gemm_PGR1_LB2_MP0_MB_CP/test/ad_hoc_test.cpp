@@ -55,7 +55,7 @@ namespace rocwmma
             std::tuple<col_major, row_major, row_major>>; //typename Base::TestLayoutsNT;
         using LayoutsLds  = std::tuple<col_major>; //typename Base::TestLayoutTypes;
         using GemmConfigs = std::tuple<typename CooperativeGemm::WorkgroupLevel::LdsNT>;
-        using BlocksXY    = std::tuple<std::tuple<I<4>, I<2>>>;
+        using BlocksXY    = std::tuple<std::tuple<I<4>, I<4>>>;
         using KernelParams =
             typename CombineLists<Types, BlockSizes, Layouts, LayoutsLds, GemmConfigs, BlocksXY>::
                 Result;
@@ -93,8 +93,9 @@ namespace rocwmma
                 // {256, 256, 1024},
                 //{1024, 1024, 1024},
                 //{64, 64, 64},
-                {128, 128, 128},
+                //{128, 128, 128},
                 //{2048, 2048, 2048},
+                {4096, 4096, 4096},
                 //{8192, 8192, 8192}
 
             };

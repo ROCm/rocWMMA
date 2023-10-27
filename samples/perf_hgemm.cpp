@@ -366,7 +366,7 @@ ROCWMMA_DEVICE static inline void
     localReadA(MfmaFragA (&fragsA)[BLOCKS_X], InputT const* ldsAddrA, uint32_t ldsWidth)
 {
     using FragShape = GetIOShape_t<LRFragA>;
-    using Mapper1d  = typename FragShape::DataLayout;
+    using Mapper1d  = GetDataLayout_t<LRFragA>;
 
     // Each A block is stacked vertically in LDS
     auto blockStep = Mapper1d::fromMatrixCoord(make_coord2d(FragShape::BlockHeight, 0u), ldsWidth);
@@ -574,12 +574,14 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
 
         // WorkItems will be split up by minimum IOCount to perform either global read or local write.
         // These are inputs to cooperative functions.
-        constexpr auto warpCount   = get<0>(warpDims) * get<1>(warpDims);
-        constexpr auto splitCountA = std::min((uint32_t)GetIOTraits_t<GRBuffA>::IOCount,
-                                              (uint32_t)GetIOTraits_t<LWBuffA>::IOCount);
+        constexpr auto warpCount = get<0>(warpDims) * get<1>(warpDims);
+        constexpr auto splitCountA
+            = std::min((uint32_t)GetCoopIOConfig_t<GRBuffA, warpCount>::IOTraits::IOCount,
+                    (uint32_t)GetCoopIOConfig_t<LWBuffA, warpCount>::IOTraits::IOCount);
 
-        constexpr auto splitCountB = std::min((uint32_t)GetIOTraits_t<GRBuffB>::IOCount,
-                                              (uint32_t)GetIOTraits_t<LWBuffB>::IOCount);
+        constexpr auto splitCountB
+            = std::min((uint32_t)GetCoopIOConfig_t<GRBuffB, warpCount>::IOTraits::IOCount,
+                    (uint32_t)GetCoopIOConfig_t<LWBuffB, warpCount>::IOTraits::IOCount);
 
         // Scheduling warp order is analogous to row major priority.
         // E.g. Wg = (128, 2) = 2x2 warps
@@ -626,10 +628,10 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         // Local read offsets for mfma frags
         auto ldsReadOffsetA
             = ldsWriteOffsetA
-              + LWBuffAMap1d::fromMatrixCoord(make_coord2d(get<0>(localWarpOffset), 0u), ldsWidth);
+            + LWBuffAMap1d::fromMatrixCoord(make_coord2d(get<0>(localWarpOffset), 0u), ldsWidth);
         auto ldsReadOffsetB
             = ldsWriteOffsetB
-              + LWBuffBMap1d::fromMatrixCoord(make_coord2d(get<1>(localWarpOffset), 0u), ldsWidth);
+            + LWBuffBMap1d::fromMatrixCoord(make_coord2d(get<1>(localWarpOffset), 0u), ldsWidth);
 
         ///
         /// Write prefetch to local

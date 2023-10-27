@@ -23,15 +23,14 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_IO_CONFIG_HPP
-#define ROCWMMA_IO_CONFIG_HPP
+#ifndef ROCWMMA_COOP_IO_CONFIG_HPP
+#define ROCWMMA_COOP_IO_CONFIG_HPP
 
-#include "broadcast.hpp"
 #include "coop_load.hpp"
 #include "coop_store.hpp"
+#include "io_layout.hpp"
 #include "io_shape.hpp"
-#include "opaque_load.hpp"
-#include "opaque_store.hpp"
+#include "io_traits.hpp"
 #include "pack_util.hpp"
 #include "types.hpp"
 
@@ -40,12 +39,12 @@ namespace rocwmma
 
     /**
      * \defgroup Rocwmma_ioconf ROCWMMA IOConfig
-     * @brief ROCWMMA fragment input and output configurations
+     * @brief ROCWMMA cooperative fragment input and output configurations
      * @{
      */
 
-    /*! \struct IOConfig
-  *  \brief Definition of fragment input / output configurations
+    /*! \struct CoopIOConfig
+ *  \brief Definition of cooperative fragment input / output configurations
  *         in specific matrix context.
  *
  * @tparam Matrix fragment context
@@ -56,10 +55,9 @@ namespace rocwmma
  * @param IOLayout 1d and 2d layouts of the fragment
  * @param IOTraits meta-properties for input and output of the fragment
  * @param PackUtil utility for packing / unpacking fragment data
- * @param Broadcaster utility for assigning a single value to entire fragment
  * @param MappingUtil global mapping utility for current fragment
- * @param Loader Issues load instructions for raw fragment data
- * @param Storer Issues store instructions for raw fragment data
+ * @param Loader Issues cooperative load instructions for raw fragment data
+ * @param Storer Issues cooperative store instructions for raw fragment data
  */
 
     template <typename MatrixT,
@@ -67,52 +65,49 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayoutT>
-    struct IOConfig
+              typename DataLayoutT,
+              uint32_t WaveCount>
+    struct CoopIOConfig
     {
         using IOShape = IOShape<MatrixT, BlockM, BlockN, BlockK>;
         using IOLayout
-            = IOLayout<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, 1u>;
+            = IOLayout<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, WaveCount>;
         using IOTraits = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT, IOLayout::VW>;
 
-        using PackUtil    = PackUtil<DataT>;
-        using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
-
+        using PackUtil = PackUtil<DataT>;
         using MappingUtil
             = MappingUtil<IOShape::BlockHeight, IOShape::BlockWidth, DataT, DataLayoutT>;
 
-        using Loader = OpaqueLoad<IOShape::BlockDim,
-                                  IOShape::KDim,
-                                  DataT,
-                                  typename IOLayout::DataLayout,
-                                  typename IOLayout::MatrixLayout,
-                                  IOLayout::VW>;
+        using Loader = CooperativeLoad<IOShape::BlockDim,
+                                       IOShape::KDim,
+                                       DataT,
+                                       typename IOLayout::DataLayout,
+                                       typename IOLayout::MatrixLayout,
+                                       IOLayout::VW>;
 
-        using Storer = OpaqueStore<IOShape::BlockDim,
-                                   IOShape::KDim,
-                                   DataT,
-                                   typename IOLayout::DataLayout,
-                                   typename IOLayout::MatrixLayout,
-                                   IOLayout::VW>;
+        using Storer = CooperativeStore<IOShape::BlockDim,
+                                        IOShape::KDim,
+                                        DataT,
+                                        typename IOLayout::DataLayout,
+                                        typename IOLayout::MatrixLayout,
+                                        IOLayout::VW>;
     };
 
     /************************************************
  * Matrix C/D (accumulator) with undetermined DataLayout
  *
  * Fewer specific indications for matrix data geometry I/O, however
- * general IOTraits, Pack/Unpack, Broadcast still available.
+ * general IOShape, PackUtil, Broadcast still available.
  *
  * */
-    template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
-    struct IOConfig<accumulator, BlockM, BlockN, BlockK, DataT, void>
+    template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, uint32_t WaveCount>
+    struct CoopIOConfig<accumulator, BlockM, BlockN, BlockK, DataT, void, WaveCount>
     {
-        using IOShape     = IOShape<accumulator, BlockM, BlockN, BlockK>;
-        using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT>;
-        using PackUtil    = PackUtil<DataT>;
-        using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
+        using IOShape  = IOShape<accumulator, BlockM, BlockN, BlockK>;
+        using PackUtil = PackUtil<DataT>;
     };
     /** @}*/
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_IO_CONFIG_HPP
+#endif // ROCWMMA_COOP_IO_CONFIG_HPP
