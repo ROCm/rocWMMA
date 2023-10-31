@@ -62,73 +62,26 @@ namespace rocwmma
 
         using StoreVecTraits = VecTraits<typename Traits::StoreT>;
 
-        ROCWMMA_DEVICE static inline void exec(DataT*                         dataPtr,
-                                               typename Traits::InputT const& data,
-                                               uint32_t                       ldm,
-                                               uint32_t                       waveIndex,
-                                               uint32_t                       waveCount,
-                                               uint32_t                       splitCount)
-        {
-            // Ensure that splitCount doesn't exceed our maximum
-            splitCount = std::min(splitCount, (uint32_t)Traits::MaxSplit);
-
-            // For the cases where there are more waves than splits.
-            if(waveIndex >= splitCount)
-                return;
-
-            // Calculate the number of 'work items' for the current wave,
-            // as well as the IOCount per work item.
-            // NOTE: If there are in fact more waves than work items, make sure there
-            // is at least one work item per wave. Waves that can't contribute will be
-            // filtered out by the above check.
-            auto workItemCount   = std::max(splitCount / waveCount, 1u);
-            auto workItemIOCount = IOTraits::IOCount / splitCount;
-
-            // Calculate the current wave's starting IO iterator index for the first work item.
-            // Calculate the IO offset between work items for the current wave.
-            auto ioIter
-                = makeVectorIterator<StoreVecTraits::size()>(data).it(waveIndex * workItemIOCount);
-            auto workItemIOInc = waveCount * workItemIOCount;
-
-            // Align threads to starting matrix offset coordinates
-            auto baseOffset = MatrixLayout::baseOffset();
-
-            // Iterate through the work items for this wave only
-            // Both loops may get unrolled if splitCount and waveCount are known at compile time.
-            for(uint32_t i = 0; i < workItemCount; i++)
-            {
-                auto workItemIOIter = ioIter;
-                for(uint32_t j = 0; j < workItemIOCount; ++j)
-                {
-                    Traits::Storer::exec(
-                        dataPtr,
-                        *workItemIOIter,
-                        DataLayout::fromMatrixCoord(
-                            baseOffset + MatrixLayout::cumulativeOffset(workItemIOIter.index()),
-                            ldm));
-                    workItemIOIter++;
-                }
-                ioIter += waveCount * workItemIOCount;
-            }
-        }
-
         // Outer loop = index 0,
         // Inner loop = index N-1
         template <std::size_t Depth = 0,
                   typename Iterator,
-                  typename StrideCounts,
+                  typename StrideSpace,
                   typename Strides2d>
-        ROCWMMA_DEVICE static inline auto unroll_right(DataT*         dataPtr,
-                                                       Iterator&      in,
-                                                       uint32_t       ldm,
-                                                       StrideCounts&& strideCounts,
-                                                       Strides2d&&    strides2d)
+        ROCWMMA_DEVICE static inline auto unroll_right(DataT*        dataPtr,
+                                                       Iterator&     in,
+                                                       uint32_t      ldm,
+                                                       StrideSpace&& strideCounts,
+                                                       Strides2d&&   strides2d)
         {
+            static_assert(std::tuple_size<std::decay_t<StrideSpace>>::value
+                              == std::tuple_size<std::decay_t<Strides2d>>::value,
+                          "Mismatched size");
             auto strideOffset = DataLayout::fromMatrixCoord(std::get<Depth>(strides2d), ldm);
             auto strideCount  = std::get<Depth>(strideCounts);
 
             // Last depth layer will invoke the load
-            if constexpr(Depth == (std::tuple_size<std::decay_t<StrideCounts>>::value - 1u))
+            if constexpr(Depth == (std::tuple_size<std::decay_t<StrideSpace>>::value - 1u))
             {
 #pragma unroll
                 for(int i = 0; i < strideCount; i++)
@@ -156,7 +109,59 @@ namespace rocwmma
                                                : calcMaxWaves(workItems, waveCount / 2));
         };
 
-        template <uint32_t WaveCount, uint32_t SplitCount>
+        ROCWMMA_DEVICE static inline void exec(DataT*                         dataPtr,
+                                               typename Traits::InputT const& data,
+                                               uint32_t                       ldm,
+                                               uint32_t                       waveIndex,
+                                               uint32_t                       waveCount)
+        {
+            // Full fragment work
+            constexpr auto strideSpace = MatrixLayout::strideCounts();
+            constexpr auto strides     = MatrixLayout::strides();
+
+            // Drop the VW strides for splitting (reduced stride space).
+            constexpr auto strideSpaceR = pop_right(strideSpace);
+            constexpr auto stridesR     = pop_right(strides);
+            constexpr auto totalWorkItems
+                = flatten_coord_left((strideSpaceR - 1u), strideSpaceR) + 1u;
+
+            // Determine max waves possible.
+            auto maxWaves = calcMaxWaves((uint32_t)totalWorkItems, (uint32_t)waveCount);
+
+            // maxWaves is the maximum amount of waves split the work into.
+            // For the rest of the waves, bail out
+            if(__builtin_amdgcn_readfirstlane(waveIndex) >= maxWaves)
+            {
+                return; // bail
+            }
+
+            // Split the reduced stride space.
+            auto workItemsPerWave = std::max(totalWorkItems / maxWaves, 1u);
+            auto strideSpaceS     = inflate_coord_left(workItemsPerWave - 1u, strideSpaceR) + 1u;
+
+            // Add back in the VW dimension, for the full stride
+            // space of the current wave
+            auto strideSpaceW
+                = std::tuple_cat(strideSpaceS, std::make_tuple(get_last(strideSpace)));
+
+            auto it = makeVectorIterator<StoreVecTraits::size()>(data).begin();
+
+            // Align threads to starting matrix offset coordinates
+            auto baseOffset = MatrixLayout::baseOffset();
+
+            // Find current wave offset
+            constexpr auto sum               = [](auto... items) { return (items + ...); };
+            auto           currentWaveOffset = std::apply(
+                sum, inflate_coord_left(waveIndex * workItemsPerWave, strideSpaceR) * stridesR);
+
+            unroll_right(dataPtr + DataLayout::fromMatrixCoord(baseOffset + currentWaveOffset, ldm),
+                         it,
+                         ldm,
+                         strideSpaceW,
+                         strides);
+        }
+
+        template <uint32_t WaveCount>
         ROCWMMA_DEVICE static inline void exec(DataT*                         dataPtr,
                                                typename Traits::InputT const& data,
                                                uint32_t                       ldm,
