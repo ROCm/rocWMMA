@@ -36,7 +36,7 @@
 #endif // !__HIPCC_RTC__
 
 #include "config.hpp"
-#include "float8.h"
+#include "float8.hpp"
 #include "rocwmma_xfloat32.hpp"
 
 namespace rocwmma
