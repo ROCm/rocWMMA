@@ -51,34 +51,12 @@ namespace rocwmma
             ROCWMMA_DEVICE static inline void
                 exec(LoadT& data, DataT const* dataPtr, index_t offset = 0)
             {
-                // TODO: Implement a cross-lane ops version to perform shuffle
+                // TODO: Implement a cross-lane ops version to perform TR shuffle
                 data = *reinterpret_cast<LoadT const*>(&(dataPtr[offset]));
             }
         };
 
-#if ROCWMMA_GFX12
-
-        template <>
-        struct amdgcn_tr_load<float16_t, 4u>
-        {
-            using DataT = float16_t;
-            enum : uint32_t
-            {
-                VectorWidth = 4u
-            };
-
-            static_assert(sizeof(DataT[(uint32_t)VectorWidth])
-                              == sizeof(VecT<DataT, (uint32_t)VectorWidth>),
-                          "Cannot vectorize input");
-
-            using LoadT = VecT<DataT, (uint32_t)VectorWidth>;
-
-            ROCWMMA_DEVICE static inline void
-                exec(LoadT& data, DataT const* dataPtr, index_t offset = 0)
-            {
-                data = __builtin_amdgcn_global_load_tr_b64_v2i32(dataPtr + offset);
-            }
-        };
+#if ROCWMMA_ARCH_GFX12
 
         template <>
         struct amdgcn_tr_load<float16_t, 8u>
@@ -89,38 +67,25 @@ namespace rocwmma
                 VectorWidth = 8u
             };
 
-            static_assert(sizeof(DataT[(uint32_t)VectorWidth])
-                              == sizeof(VecT<DataT, (uint32_t)VectorWidth>),
-                          "Cannot vectorize input");
+            // rocWMMA vector type
+            using LoadT = VecT<DataT, VectorWidth>;
 
-            using LoadT = VecT<DataT, (uint32_t)VectorWidth>;
+            // Intrinsic type
+            using LoadIT = decltype(__builtin_amdgcn_global_load_tr_b128_v8f16(nullptr));
 
-            ROCWMMA_DEVICE static inline void
-                exec(LoadT& data, DataT const* dataPtr, index_t offset = 0)
-            {
-                data = __builtin_amdgcn_global_load_tr_b128_v8i16(dataPtr + offset);
-            }
-        };
-
-        template <>
-        struct amdgcn_tr_load<bfloat16_t, 4u>
-        {
-            using DataT = bfloat16_t;
-            enum : uint32_t
-            {
-                VectorWidth = 4u
-            };
-
-            static_assert(sizeof(DataT[(uint32_t)VectorWidth])
-                              == sizeof(VecT<DataT, (uint32_t)VectorWidth>),
-                          "Cannot vectorize input");
-
-            using LoadT = VecT<DataT, (uint32_t)VectorWidth>;
+            static_assert(VectorWidth > 0u, "Vector width must be greater than 0");
+            static_assert(sizeof(DataT[VectorWidth]) == sizeof(LoadT), "Cannot vectorize input");
+            static_assert(sizeof(LoadIT) == sizeof(LoadT), "Load types must match");
 
             ROCWMMA_DEVICE static inline void
                 exec(LoadT& data, DataT const* dataPtr, index_t offset = 0)
             {
-                data = __builtin_amdgcn_global_load_tr_b64_v2i32(dataPtr + offset);
+                union
+                {
+                    LoadIT in;
+                    LoadT  out;
+                } v{__builtin_amdgcn_global_load_tr_b128_v8f16((LoadIT* const)(dataPtr + offset))};
+                data = v.out;
             }
         };
 
@@ -133,60 +98,118 @@ namespace rocwmma
                 VectorWidth = 8u
             };
 
-            static_assert(sizeof(DataT[(uint32_t)VectorWidth])
-                              == sizeof(VecT<DataT, (uint32_t)VectorWidth>),
-                          "Cannot vectorize input");
+            // rocWMMA vector type
+            using LoadT = VecT<DataT, VectorWidth>;
 
-            using LoadT = VecT<DataT, (uint32_t)VectorWidth>;
+            // Intrinsic type
+            using LoadIT = decltype(__builtin_amdgcn_global_load_tr_b128_v8i16(nullptr));
 
-            ROCWMMA_DEVICE static inline void
-                exec(LoadT& data, DataT const* dataPtr, index_t offset = 0)
-            {
-                data = __builtin_amdgcn_global_load_tr_b128_v8i16(dataPtr + offset);
-            }
-        };
-
-        template <>
-        struct amdgcn_tr_load<hfloat16_t, 4u>
-        {
-            using DataT = hfloat16_t;
-            enum : uint32_t
-            {
-                VectorWidth = 4u
-            };
-
-            static_assert(sizeof(DataT[(uint32_t)VectorWidth])
-                              == sizeof(VecT<DataT, (uint32_t)VectorWidth>),
-                          "Cannot vectorize input");
-
-            using LoadT = VecT<DataT, (uint32_t)VectorWidth>;
+            static_assert(VectorWidth > 0, "Vector width must be greater than 0");
+            static_assert(sizeof(DataT[VectorWidth]) == sizeof(LoadT), "Cannot vectorize input");
+            static_assert(sizeof(LoadIT) == sizeof(LoadT), "Load types must match");
 
             ROCWMMA_DEVICE static inline void
                 exec(LoadT& data, DataT const* dataPtr, index_t offset = 0)
             {
-                data = __builtin_amdgcn_global_load_tr_b64_v2i32(dataPtr + offset);
+                union
+                {
+                    LoadIT in;
+                    LoadT  out;
+                } v{__builtin_amdgcn_global_load_tr_b128_v8i16((LoadIT* const)(dataPtr + offset))};
+                data = v.out;
             }
         };
 
         template <>
-        struct amdgcn_tr_load<hfloat16_t, 8u>
+        struct amdgcn_tr_load<int8_t, 8u>
         {
-            using DataT = hfloat16_t;
+            using DataT = int8_t;
             enum : uint32_t
             {
                 VectorWidth = 8u
             };
 
-            static_assert(sizeof(DataT[(uint32_t)VectorWidth])
-                              == sizeof(VecT<DataT, (uint32_t)VectorWidth>),
-                          "Cannot vectorize input");
+            // rocWMMA vector type
+            using LoadT = VecT<DataT, VectorWidth>;
 
-            using LoadT = VecT<DataT, (uint32_t)VectorWidth>;
+            // Intrinsic type
+            using LoadIT = decltype(__builtin_amdgcn_global_load_tr_b64_v2i32(nullptr));
+
+            static_assert(VectorWidth > 0, "Vector width must be greater than 0");
+            static_assert(sizeof(DataT[VectorWidth]) == sizeof(LoadT), "Cannot vectorize input");
+            static_assert(sizeof(LoadIT) == sizeof(LoadT), "Load types must match");
 
             ROCWMMA_DEVICE static inline void
                 exec(LoadT& data, DataT const* dataPtr, index_t offset = 0)
             {
-                data = __builtin_amdgcn_global_load_tr_b128_v8i16(dataPtr + offset);
+                union
+                {
+                    LoadIT in;
+                    LoadT  out;
+                } v{__builtin_amdgcn_global_load_tr_b64_v2i32((LoadIT* const)(dataPtr + offset))};
+                data = v.out;
+            }
+        };
+
+        template <>
+        struct amdgcn_tr_load<bfloat8_t, 8u>
+        {
+            using DataT = bfloat8_t;
+            enum : uint32_t
+            {
+                VectorWidth = 8u
+            };
+
+            // rocWMMA vector type
+            using LoadT = VecT<DataT, VectorWidth>;
+
+            // Intrinsic type
+            using LoadIT = decltype(__builtin_amdgcn_global_load_tr_b64_v2i32(nullptr));
+
+            static_assert(VectorWidth > 0, "Vector width must be greater than 0");
+            static_assert(sizeof(DataT[VectorWidth]) == sizeof(LoadT), "Cannot vectorize input");
+            static_assert(sizeof(LoadIT) == sizeof(LoadT), "Load types must match");
+
+            ROCWMMA_DEVICE static inline void
+                exec(LoadT& data, DataT const* dataPtr, index_t offset = 0)
+            {
+                union
+                {
+                    LoadIT in;
+                    LoadT  out;
+                } v{__builtin_amdgcn_global_load_tr_b64_v2i32((LoadIT* const)(dataPtr + offset))};
+                data = v.out;
+            }
+        };
+
+        template <>
+        struct amdgcn_tr_load<float8_t, 8u>
+        {
+            using DataT = float8_t;
+            enum : uint32_t
+            {
+                VectorWidth = 8u
+            };
+
+            // rocWMMA vector type
+            using LoadT = VecT<DataT, VectorWidth>;
+
+            // Intrinsic type
+            using LoadIT = decltype(__builtin_amdgcn_global_load_tr_b64_v2i32(nullptr));
+
+            static_assert(VectorWidth > 0, "Vector width must be greater than 0");
+            static_assert(sizeof(DataT[VectorWidth]) == sizeof(LoadT), "Cannot vectorize input");
+            static_assert(sizeof(LoadIT) == sizeof(LoadT), "Load types must match");
+
+            ROCWMMA_DEVICE static inline void
+                exec(LoadT& data, DataT const* dataPtr, index_t offset = 0)
+            {
+                union
+                {
+                    LoadIT in;
+                    LoadT  out;
+                } v{__builtin_amdgcn_global_load_tr_b64_v2i32((LoadIT* const)(dataPtr + offset))};
+                data = v.out;
             }
         };
 
