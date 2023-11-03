@@ -51,7 +51,7 @@ namespace rocwmma
         }
     };
 
-#if ROCWMMA_ARCH_GFX11
+#if ROCWMMA_ARCH_GFX11 || ROCWMMA_ARCH_GFX12
 
     // Unlock the WMMA builtins for gfx11 cards
     // Supported Input/Compute types:
@@ -98,8 +98,9 @@ namespace rocwmma
         {
             enum : uint32_t
             {
-                WmmaCount = BlockK / WMMA::Traits::KPerWmma,
-                MinK      = WMMA::Traits::KPerWmma,
+                WmmaCount         = BlockK / WMMA::Traits::KPerWmma,
+                MinK              = WMMA::Traits::KPerWmma,
+                InputSizeModifier = ROCWMMA_ARCH_GFX11 ? 2u : 1u
             };
 
             // Sanity checks
@@ -114,9 +115,11 @@ namespace rocwmma
         using VecTraitsD = VecTraits<typename WMMA::Traits::DRegsT>;
 
         // amdgcn backend requires duplicated packed inputs A / B, and unpacked accumulator
-        static_assert(VecTraitsA::size() * Traits::WmmaCount == IOTraitsA::PackedSize * 2u,
+        static_assert(VecTraitsA::size() * Traits::WmmaCount
+                          == IOTraitsA::PackedSize * Traits::InputSizeModifier,
                       "WMMA backend input size mismatch");
-        static_assert(VecTraitsB::size() * Traits::WmmaCount == IOTraitsB::PackedSize * 2u,
+        static_assert(VecTraitsB::size() * Traits::WmmaCount
+                          == IOTraitsB::PackedSize * Traits::InputSizeModifier,
                       "WMMA backend input size mismatch");
         static_assert(VecTraitsC::size() == IOTraitsAcc::UnpackedSize,
                       "WMMA backend input size mismatch");
@@ -141,26 +144,32 @@ namespace rocwmma
             auto accum = PackUtil::template pad<WMMA::Traits::AccumBits>(PackUtil::unpack(regsC));
 
             // Iterate over packed WMMA inputs
-            auto const aIt = makeVectorIterator<VecTraitsA::size() / 2u>(regsA).begin();
-            auto const bIt = makeVectorIterator<VecTraitsB::size() / 2u>(regsB).begin();
+            auto const aIt
+                = makeVectorIterator<VecTraitsA::size() / Traits::InputSizeModifier>(regsA).begin();
+            auto const bIt
+                = makeVectorIterator<VecTraitsB::size() / Traits::InputSizeModifier>(regsB).begin();
 
             // Accumulate over WMMA count
 #pragma unroll
             for(uint32_t i = 0; i < Traits::WmmaCount; i++)
             {
-                // Create WMMA input registers
-                typename WMMA::Traits::ARegsT regsA_Wmma;
-                typename WMMA::Traits::BRegsT regsB_Wmma;
-
+#if ROCWMMA_ARCH_GFX11
+                // Swap upper / lower 16 elements
                 auto swappedA = Swizzle::Swap16::exec(*aIt);
                 auto swappedB = Swizzle::Swap16::exec(*bIt);
 
-                // Combine registers for mult/accum.
+                // Combine duplicated data for mult/accum.
                 // Evens: non-swapped
                 // Odds: swapped
                 accum = WMMA::exec(concat(unpackLo(*aIt, swappedA), unpackHi(*aIt, swappedA)),
                                    concat(unpackLo(*bIt, swappedB), unpackHi(*bIt, swappedB)),
                                    accum);
+#else
+
+                // Inputs not duplicated in gfx12
+                accum = WMMA::exec(*aIt, *bIt, accum);
+
+#endif
 
                 aIt++;
                 bIt++;
