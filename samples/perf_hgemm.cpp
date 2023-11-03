@@ -526,7 +526,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
                                                           ComputeT       alpha,
                                                           ComputeT       beta)
 {
-    if constexpr(ROCWMMA_ARCH_GFX9 || ROCWMMA_ARCH_GFX11)
+    if constexpr(ROCWMMA_ARCH_GFX9 || ROCWMMA_ARCH_GFX11 || ROCWMMA_ARCH_GFX12)
     {
         ///
         /// 2D matrix coordinate setup
@@ -729,7 +729,7 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, 
         = rocwmma::make_coord2d(hTBLOCK_X / warpSize * hWARP_TILE_X, hTBLOCK_Y * hWARP_TILE_Y);
 
     // Device check for supported block and wave sizes
-    if(isGfx11() && (hROCWMMA_M != 16 || hROCWMMA_N != 16))
+    if((isGfx11() || isGfx12()) && (hROCWMMA_M != 16 || hROCWMMA_N != 16))
     {
         std::cout << "Unsupported block size!\n";
         return;
@@ -741,7 +741,7 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, 
         return;
     }
 
-    if(isGfx11() && getWarpSize() != Constants::AMDGCN_WAVE_SIZE_32)
+    if((isGfx11() || isGfx12()) && getWarpSize() != Constants::AMDGCN_WAVE_SIZE_32)
     {
         std::cout << "Unsupported wave size!\n";
         return;
