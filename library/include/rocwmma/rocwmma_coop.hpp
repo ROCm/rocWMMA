@@ -177,6 +177,7 @@ namespace rocwmma
       \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
       \param ldm Leading dimension size
+      \param waveIndex Index assignment of current wave in collaboration
       \tparam uint32_t WaveCount
       \tparam uint32_t SplitCount
       \tparam MatrixT fragment context
@@ -217,8 +218,8 @@ namespace rocwmma
       \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
       \param ldm Leading dimension size
+      \param waveIndex Index assignment of current wave in collaboration
       \tparam uint32_t WaveCount
-      \tparam uint32_t SplitCount
       \tparam MatrixT fragment context
       \tparam BlockM/N/K block dimensions
       \tparam DataT data type
@@ -249,8 +250,8 @@ namespace rocwmma
     //! Work items are consumed in order by waves [0, waveCount) until there are no more
     //! work items and the operation is completed.
     /*!
-      \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
+      \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param ldm Leading dimension size
       \param waveIndex Index assignment of current wave in collaboration
       \param waveCount Number of waves assigned for collaboration
@@ -287,8 +288,8 @@ namespace rocwmma
     //! Work items are consumed in order by waves [0, waveCount) until there are no more
     //! work items and the operation is completed.
     /*!
-      \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
+      \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param ldm Leading dimension size
       \param waveIndex Index assignment of current wave in collaboration
       \param waveCount Number of waves assigned for collaboration
@@ -321,8 +322,8 @@ namespace rocwmma
     //! Work items are consumed in order by waves [0, waveCount) until
     //! there are no more work items and the operation is completed.
     /*!
-      \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
+      \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param ldm Leading dimension size
       \tparam MatrixT fragment context
       \tparam BlockM/N/K block dimensions
@@ -355,8 +356,8 @@ namespace rocwmma
     //! Work items are consumed in order by waves [0, waveCount) until there are no more
     //! work items and the operation is completed.
     /*!
-      \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
+      \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param ldm Leading dimension size
       \param waveIndex Index assignment of current wave in collaboration
       \tparam WaveCount Number of waves participating
@@ -397,8 +398,8 @@ namespace rocwmma
     //! Work items are consumed in order by waves [0, waveCount) until there are no more
     //! work items and the operation is completed.
     /*!
-      \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param data Data pointer to global/local memory
+      \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
       \param ldm Leading dimension size
       \param waveIndex Index assignment of current wave in collaboration
       \tparam WaveCount Number of waves participating
