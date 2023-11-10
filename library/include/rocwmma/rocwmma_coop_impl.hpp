@@ -48,6 +48,24 @@ namespace rocwmma
                               uint32_t waveCount,
                               uint32_t splitCount)
     {
+        // splitCount unused
+        load_matrix_coop_sync(frag, data, ldm, waveIndex, waveCount);
+    }
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout>
+    ROCWMMA_DEVICE inline void
+        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
+                              const DataT*                                                  data,
+                              uint32_t                                                      ldm,
+                              uint32_t waveIndex,
+                              uint32_t waveCount)
+    {
+
         using FragT  = typename std::decay_t<decltype(frag)>;
         using Loader = typename GetCoopIOConfig_t<FragT>::Loader;
 
@@ -63,11 +81,51 @@ namespace rocwmma
         // Load and implicit pack
         // Note: the frag will only be partially filled with useful data.
         // Layout and thread locality is not guaranteed.
-        Loader::exec(frag.mAccess, data, ldm, waveIndex, waveCount, splitCount);
+        Loader::exec(frag.mAccess, data, ldm, waveIndex, waveCount);
+    }
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout>
+    ROCWMMA_DEVICE void
+        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
+                              const DataT*                                                  data,
+                              uint32_t                                                      ldm)
+    {
+        using FragT       = typename std::decay_t<decltype(frag)>;
+        using MappingUtil = GetMappingUtil_t<FragT>;
+
+        // Default: all waves participate in 'row major' order
+        auto waveCoord = MappingUtil::waveCoord();
+        auto wgDim     = MappingUtil::workgroupDim();
+
+        auto waveIndex = get<0>(waveCoord) * get<1>(wgDim) + get<1>(waveCoord);
+        auto waveCount = get<0>(wgDim) * get<1>(wgDim);
+        load_matrix_coop_sync(frag, data, ldm, waveIndex, waveCount);
     }
 
     template <uint32_t WaveCount,
               uint32_t SplitCount,
+              typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout>
+    ROCWMMA_DEVICE void
+        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
+                              const DataT*                                                  data,
+                              uint32_t                                                      ldm,
+                              uint32_t waveIndex)
+    {
+        // SplitCount is unused
+        load_matrix_coop_sync<WaveCount>(frag, data, ldm, waveIndex);
+    }
+
+    template <uint32_t WaveCount,
               typename MatrixT,
               uint32_t BlockM,
               uint32_t BlockN,
@@ -95,50 +153,7 @@ namespace rocwmma
         // Load and implicit pack
         // Note: the frag will only be partially filled with useful data.
         // Layout and thread locality is not guaranteed.
-        Loader::template exec<WaveCount, SplitCount>(frag.mAccess, data, ldm, waveIndex);
-    }
-
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout>
-    ROCWMMA_DEVICE inline void
-        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
-                              const DataT*                                                  data,
-                              uint32_t                                                      ldm,
-                              uint32_t waveIndex,
-                              uint32_t waveCount)
-    {
-        load_matrix_coop_sync(frag, data, ldm, waveIndex, waveCount, waveCount);
-    }
-
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout>
-    ROCWMMA_DEVICE void
-        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
-                              const DataT*                                                  data,
-                              uint32_t                                                      ldm)
-    {
-        using FragT       = typename std::decay_t<decltype(frag)>;
-        using Config      = GetCoopIOConfig_t<FragT>;
-        using MappingUtil = typename Config::MappingUtil;
-
-        // Matrix A:
-        // - shares work with waves on same row (different col).
-        // - waves in different rows work on different blocks
-        //
-        // Matrix B / Accumulator:
-        // - shares work with waves on same col (different row)
-        // - waves in different cols work on different blocks
-        auto waveIndex = get<Config::CoopIndex>(MappingUtil::waveCoord());
-        auto waveCount = get<Config::CoopIndex>(MappingUtil::workgroupDim());
-        load_matrix_coop_sync(frag, data, ldm, waveIndex, waveCount);
+        Loader::template exec<WaveCount>(frag.mAccess, data, ldm, waveIndex);
     }
 
     template <typename MatrixT,
@@ -155,7 +170,23 @@ namespace rocwmma
         uint32_t                                                            waveCount,
         uint32_t                                                            splitCount)
     {
+        // splitCount unused
+        store_matrix_coop_sync(data, frag, ldm, waveIndex, waveCount);
+    }
 
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout>
+    ROCWMMA_DEVICE void store_matrix_coop_sync(
+        DataT*                                                              data,
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
+        uint32_t                                                            ldm,
+        uint32_t                                                            waveIndex,
+        uint32_t                                                            waveCount)
+    {
         using FragT  = typename std::decay_t<decltype(frag)>;
         using Storer = typename GetCoopIOConfig_t<FragT>::Storer;
 
@@ -171,11 +202,53 @@ namespace rocwmma
         // Implicit unpack and store
         // Note: the frag is only be partially filled with useful data.
         // Layout and thread locality is not guaranteed.
-        Storer::exec(data, frag.mAccess, ldm, waveIndex, waveCount, splitCount);
+        Storer::exec(data, frag.mAccess, ldm, waveIndex, waveCount);
+    }
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout>
+    ROCWMMA_DEVICE void store_matrix_coop_sync(
+        DataT*                                                              data,
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
+        uint32_t                                                            ldm)
+    {
+        using FragT       = typename std::decay<decltype(frag)>::type;
+        using MappingUtil = GetMappingUtil_t<FragT>;
+
+        // Default: all waves participate in 'row major' order
+        auto waveCoord = MappingUtil::waveCoord();
+        auto wgDim     = MappingUtil::workgroupDim();
+
+        auto waveIndex = get<0>(waveCoord) * get<1>(wgDim) + get<1>(waveCoord);
+        auto waveCount = get<0>(wgDim) * get<1>(wgDim);
+        store_matrix_coop_sync(data, frag, ldm, waveIndex, waveCount);
     }
 
     template <uint32_t WaveCount,
               uint32_t SplitCount,
+              typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayout>
+    ROCWMMA_DEVICE void store_matrix_coop_sync(
+        DataT*                                                              data,
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
+        uint32_t                                                            ldm,
+        uint32_t                                                            waveIndex)
+    {
+        // Implicit unpack and store
+        // Note: the frag is only be partially filled with useful data.
+        // Layout and thread locality is not guaranteed.
+        store_matrix_coop_sync<WaveCount>(data, frag, ldm, waveIndex);
+    }
+
+    template <uint32_t WaveCount,
               typename MatrixT,
               uint32_t BlockM,
               uint32_t BlockN,
@@ -204,50 +277,7 @@ namespace rocwmma
         // Implicit unpack and store
         // Note: the frag is only be partially filled with useful data.
         // Layout and thread locality is not guaranteed.
-        Storer::template exec<WaveCount, SplitCount>(data, frag.mAccess, ldm, waveIndex);
-    }
-
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout>
-    ROCWMMA_DEVICE void store_matrix_coop_sync(
-        DataT*                                                              data,
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
-        uint32_t                                                            ldm,
-        uint32_t                                                            waveIndex,
-        uint32_t                                                            waveCount)
-    {
-        store_matrix_coop_sync(data, frag, ldm, waveIndex, waveCount, waveCount);
-    }
-
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayout>
-    ROCWMMA_DEVICE void store_matrix_coop_sync(
-        DataT*                                                              data,
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
-        uint32_t                                                            ldm)
-    {
-        using FragT       = typename std::decay<decltype(frag)>::type;
-        using Config      = GetIOConfig_t<FragT>;
-        using MappingUtil = typename Config::MappingUtil;
-
-        // Matrix A:
-        // - shares work with waves on same row (different col).
-        // - waves in different rows work on different blocks
-        //
-        // Matrix B / Accumulator:
-        // - shares work with waves on same col (different row)
-        // - waves in different cols work on different blocks
-        auto waveIndex = get<Config::CoopIndex>(MappingUtil::waveCoord());
-        auto waveCount = get<Config::CoopIndex>(MappingUtil::workgroupDim());
-        store_matrix_coop_sync(data, frag, ldm, waveIndex, waveCount);
+        Storer::template exec<WaveCount>(data, frag.mAccess, ldm, waveIndex);
     }
 
 } // namespace rocwmma
