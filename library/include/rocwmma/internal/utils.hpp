@@ -29,6 +29,12 @@
 #include "types.hpp"
 #include "vector.hpp"
 
+#if defined(__HIPCC_RTC__)
+#include "uses_allocator.hpp"
+#include "move.hpp"
+#include "tuple.hpp"
+#endif
+
 namespace rocwmma
 {
 

@@ -934,7 +934,7 @@ namespace rocwmma
                 {
                     auto t = Traits::OrthoLayout::strides();
                     return std::make_tuple(
-                        swap(std::get<0>(t)), swap(std::get<1>(t)), swap(std::get<2>(t)));
+                        swap(get<0>(t)), swap(get<1>(t)), swap(get<2>(t)));
                 }
 
                 ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
@@ -980,7 +980,7 @@ namespace rocwmma
                 {
                     auto t = Traits::OrthoLayout::strides();
                     return std::make_tuple(
-                        swap(std::get<0>(t)), swap(std::get<1>(t)), swap(std::get<2>(t)));
+                        swap(get<0>(t)), swap(get<1>(t)), swap(get<2>(t)));
                 }
 
                 ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
