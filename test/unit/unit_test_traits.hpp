@@ -78,9 +78,11 @@ namespace rocwmma
             IsGfx1100 = (ArchId == Constants::AMDGCN_ARCH_ID_GFX1100),
             IsGfx1101 = (ArchId == Constants::AMDGCN_ARCH_ID_GFX1101),
             IsGfx1102 = (ArchId == Constants::AMDGCN_ARCH_ID_GFX1102),
+            IsGfx1201 = (ArchId == Constants::AMDGCN_ARCH_ID_GFX1201),
 
             IsGfx9  = IsGfx908 || IsGfx90A || IsGfx940 || IsGfx941 || IsGfx942,
             IsGfx11 = IsGfx1100 || IsGfx1101 || IsGfx1102,
+            IsGfx12 = IsGfx1201,
         };
     };
 
@@ -109,10 +111,18 @@ namespace rocwmma
             Enable   = ((bool)TestTraits::IsGfx11 && (bool)TestTraits::IsWave32 && CostTest)
         };
 
+        enum struct Gfx12Predicates : bool
+        {
+            // Cost for a full tile, unpacked data
+            CostTest = ((uint32_t)TestTraits::Cost::UnpackedTile <= 256u),
+            Enable   = ((bool)TestTraits::IsGfx12 && (bool)TestTraits::IsWave32 && CostTest)
+        };
+
     public:
         constexpr static bool enable()
         {
-            return ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable);
+            return ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable
+                    || (bool)Gfx12Predicates::Enable);
         }
     };
 
