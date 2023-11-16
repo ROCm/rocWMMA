@@ -1,4 +1,8 @@
 # Change Log for rocWMMA
+# Change Log for rocWMMA
+# Change Log for rocWMMA
+# Change Log for rocWMMA
+# Change Log for rocWMMA
 
 Full documentation for rocWMMA is available at [rocm.docs.amd.com/projects/rocWMMA](https://rocm.docs.amd.com/projects/rocWMMA/en/latest).
 
