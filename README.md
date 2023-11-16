@@ -1,4 +1,7 @@
 # rocWMMA
+# rocWMMA
+# rocWMMA
+# rocWMMA
 
 AMD's C++ library for accelerating mixed-precision matrix multiply-accumulate (MMA) operations leveraging AMD GPU hardware. rocWMMA provides a C++ API to facilitate breaking down matrix multiply-accumulate problems into fragments and distributes block-wise MMA operations in parallel across GPU wavefronts. The API consists of a header library such that MMA acceleration may be compiled directly into GPU kernel device code. This can benefit from compiler optimization in the generation of kernel assembly, and does not incur additional overhead costs of linking to external runtime libraries or having to launch separate kernels.
 
