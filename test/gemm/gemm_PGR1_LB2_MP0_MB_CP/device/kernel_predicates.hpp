@@ -106,6 +106,7 @@ namespace rocwmma
         {
             std::cout << "Gfx9 Predicates:\n";
             std::cout << "ArchTest: " << (bool)Gfx9Predicates::ArchTest << std::endl;
+            std::cout << "LdsRFTest: " << (bool)Gfx9Predicates::LdsRFTest << std::endl;
             std::cout << "CostABTest: " << (bool)Gfx9Predicates::CostABTest << std::endl;
             std::cout << "CostAccTest: " << (bool)Gfx9Predicates::CostAccTest << std::endl;
             std::cout << "CostTailTest: " << (bool)Gfx9Predicates::CostTailTest << std::endl;
