@@ -184,6 +184,8 @@ int main()
     std::string rocm_path
         = (std::getenv("ROCM_PATH") == nullptr) ? "/opt/rocm" : std::getenv("ROCM_PATH");
     std::string rocWMMAIncludePath = std::string("-I") + rocm_path + std::string("/include");
+    std::string stlIncludePath     = "-I/usr/include/c++/9";
+    std::string cIncludePath       = "-I/usr/lib/gcc/x86_64-linux-gnu/9/include";
 
     // gemm parameters
     uint32_t m     = 256;
@@ -196,7 +198,11 @@ int main()
     CHECK_HIPRTC_ERROR(hiprtcCreateProgram(&prog, src, nullptr, 0, nullptr, nullptr));
     hiprtcResult result;
     hiprtcResult logResult;
-    const char*  opts[] = {"-D__HIP_PLATFORM_AMD__", rocWMMAIncludePath.c_str()};
+    const char*  opts[] = {"-D__HIP_PLATFORM_AMD__",
+                           stlIncludePath.c_str(),
+                           cIncludePath.c_str(),
+                           "--std=c++17",
+                           rocWMMAIncludePath.c_str()};
 
     result = hiprtcCompileProgram(prog, sizeof(opts) / sizeof(opts[0]), opts);
     if(result != HIPRTC_SUCCESS)

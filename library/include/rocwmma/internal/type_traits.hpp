@@ -169,16 +169,26 @@ namespace std
     using conditional_t = typename conditional<B, T, F>::type;
 
     template <typename T>
-    ROCWMMA_HOST_DEVICE const T& max(const T& a, const T& b)
+    ROCWMMA_HOST_DEVICE constexpr inline const T& max(const T& a, const T& b)
     {
         return (a < b) ? b : a;
     }
 
     template <typename T>
-    ROCWMMA_HOST_DEVICE const T& min(const T& a, const T& b)
+    ROCWMMA_HOST_DEVICE constexpr inline const T& min(const T& a, const T& b)
     {
-        return (b < a) ? a : b;
+        return (b < a) ? b : a;
     }
+
+    template <typename _Tp>
+    struct __success_type
+    {
+        typedef _Tp type;
+    };
+
+    struct __failure_type
+    {
+    };
 
     // Meta programming helper types.
 
@@ -379,6 +389,40 @@ namespace std
     {
     };
 
+    template <typename>
+    struct __is_member_object_pointer_helper : public false_type
+    {
+    };
+
+    template <typename _Tp, typename _Cp>
+    struct __is_member_object_pointer_helper<_Tp _Cp::*> : public __not_<is_function<_Tp>>::type
+    {
+    };
+
+    /// is_member_object_pointer
+    template <typename _Tp>
+    struct is_member_object_pointer
+        : public __is_member_object_pointer_helper<typename remove_cv<_Tp>::type>::type
+    {
+    };
+
+    template <typename>
+    struct __is_member_function_pointer_helper : public false_type
+    {
+    };
+
+    template <typename _Tp, typename _Cp>
+    struct __is_member_function_pointer_helper<_Tp _Cp::*> : public is_function<_Tp>::type
+    {
+    };
+
+    /// is_member_function_pointer
+    template <typename _Tp>
+    struct is_member_function_pointer
+        : public __is_member_function_pointer_helper<typename remove_cv<_Tp>::type>::type
+    {
+    };
+
     // is_object
     template <typename T>
     struct is_object : public __not_<__or_<is_function<T>, is_reference<T>, is_void<T>>>::type
@@ -460,310 +504,766 @@ namespace std
     template <typename T>
     using decay_t = typename decay<T>::type;
 
-    template<typename _Tp>
+    template <typename _Tp>
     class reference_wrapper;
 
     // Helper which adds a reference to a type when given a reference_wrapper
-    template<typename _Tp>
+    template <typename _Tp>
     struct __strip_reference_wrapper
     {
         typedef _Tp __type;
     };
 
-    template<typename _Tp>
-    struct __strip_reference_wrapper<reference_wrapper<_Tp> >
+    template <typename _Tp>
+    struct __strip_reference_wrapper<reference_wrapper<_Tp>>
     {
         typedef _Tp& __type;
     };
 
-    template<typename _Tp>
+    template <typename _Tp>
     struct __decay_and_strip
     {
-        typedef typename __strip_reference_wrapper<
-	    typename decay<_Tp>::type>::__type __type;
+        typedef typename __strip_reference_wrapper<typename decay<_Tp>::type>::__type __type;
     };
 
     /// is_empty
-    template<typename _Tp>
-    struct is_empty
-        : public integral_constant<bool, __is_empty(_Tp)>
-    { };
+    template <typename _Tp>
+    struct is_empty : public integral_constant<bool, __is_empty(_Tp)>
+    {
+    };
 
     // __void_t (std::void_t for C++11)
-    template<typename...> using __void_t = void;
+    template <typename...>
+    using __void_t = void;
 
-    template<typename _Tp, typename _Up = _Tp&&>
-    _Up
-    __declval(int);
+    template <typename _Tp, typename _Up = _Tp&&>
+    _Up __declval(int);
 
-    template<typename _Tp>
-    _Tp
-    __declval(long);
+    template <typename _Tp>
+    _Tp __declval(long);
 
-    template<typename _Tp>
+    template <typename _Tp>
     auto declval() noexcept -> decltype(__declval<_Tp>(0));
 
-    template<typename, unsigned = 0>
+    template <typename, unsigned = 0>
     struct extent;
 
-    template<typename>
+    template <typename>
     struct remove_all_extents;
 
     /// is_constructible
-    template<typename _Tp, typename... _Args>
-    struct is_constructible
-        : public __bool_constant<__is_constructible(_Tp, _Args...)>
-    { };
+    template <typename _Tp, typename... _Args>
+    struct is_constructible : public __bool_constant<__is_constructible(_Tp, _Args...)>
+    {
+    };
 
     /// is_default_constructible
-    template<typename _Tp>
-    struct is_default_constructible
-        : public is_constructible<_Tp>::type
-    { };
+    template <typename _Tp>
+    struct is_default_constructible : public is_constructible<_Tp>::type
+    {
+    };
 
-    template<typename _Tp, bool = __is_referenceable<_Tp>::value>
+    template <typename _Tp, bool = __is_referenceable<_Tp>::value>
     struct __is_copy_constructible_impl;
 
-    template<typename _Tp>
-    struct __is_copy_constructible_impl<_Tp, false>
-        : public false_type { };
+    template <typename _Tp>
+    struct __is_copy_constructible_impl<_Tp, false> : public false_type
+    {
+    };
 
-    template<typename _Tp>
-    struct __is_copy_constructible_impl<_Tp, true>
-        : public is_constructible<_Tp, const _Tp&>
-    { };
+    template <typename _Tp>
+    struct __is_copy_constructible_impl<_Tp, true> : public is_constructible<_Tp, const _Tp&>
+    {
+    };
 
-  /// is_copy_constructible
-    template<typename _Tp>
-    struct is_copy_constructible
-        : public __is_copy_constructible_impl<_Tp>
-    { };
+    /// is_copy_constructible
+    template <typename _Tp>
+    struct is_copy_constructible : public __is_copy_constructible_impl<_Tp>
+    {
+    };
 
-    template<typename _Tp, bool = __is_referenceable<_Tp>::value>
+    template <typename _Tp, bool = __is_referenceable<_Tp>::value>
     struct __is_move_constructible_impl;
 
-    template<typename _Tp>
-    struct __is_move_constructible_impl<_Tp, false>
-        : public false_type { };
+    template <typename _Tp>
+    struct __is_move_constructible_impl<_Tp, false> : public false_type
+    {
+    };
 
-    template<typename _Tp>
-    struct __is_move_constructible_impl<_Tp, true>
-        : public is_constructible<_Tp, _Tp&&>
-    { };
+    template <typename _Tp>
+    struct __is_move_constructible_impl<_Tp, true> : public is_constructible<_Tp, _Tp&&>
+    {
+    };
 
-  /// is_move_constructible
-    template<typename _Tp>
-    struct is_move_constructible
-        : public __is_move_constructible_impl<_Tp>
-    { };
+    /// is_move_constructible
+    template <typename _Tp>
+    struct is_move_constructible : public __is_move_constructible_impl<_Tp>
+    {
+    };
 
-    template<bool, typename _Tp, typename... _Args>
-    struct __is_nt_constructible_impl
-        : public false_type
-    { };
+    template <bool, typename _Tp, typename... _Args>
+    struct __is_nt_constructible_impl : public false_type
+    {
+    };
 
-    template<typename _Tp, typename... _Args>
+    template <typename _Tp, typename... _Args>
     struct __is_nt_constructible_impl<true, _Tp, _Args...>
         : public __bool_constant<noexcept(_Tp(std::declval<_Args>()...))>
-    { };
+    {
+    };
 
-    template<typename _Tp, typename _Arg>
+    template <typename _Tp, typename _Arg>
     struct __is_nt_constructible_impl<true, _Tp, _Arg>
         : public __bool_constant<noexcept(static_cast<_Tp>(std::declval<_Arg>()))>
-    { };
+    {
+    };
 
-    template<typename _Tp>
-    struct __is_nt_constructible_impl<true, _Tp>
-        : public __bool_constant<noexcept(_Tp())>
-    { };
+    template <typename _Tp>
+    struct __is_nt_constructible_impl<true, _Tp> : public __bool_constant<noexcept(_Tp())>
+    {
+    };
 
-    template<typename _Tp, size_t _Num>
+    template <typename _Tp, size_t _Num>
     struct __is_nt_constructible_impl<true, _Tp[_Num]>
         : public __bool_constant<noexcept(typename remove_all_extents<_Tp>::type())>
-    { };
+    {
+    };
 
-    template<typename _Tp, typename... _Args>
+    template <typename _Tp, typename... _Args>
     using __is_nothrow_constructible_impl
-        = __is_nt_constructible_impl<__is_constructible(_Tp, _Args...),
-				   _Tp, _Args...>;
+        = __is_nt_constructible_impl<__is_constructible(_Tp, _Args...), _Tp, _Args...>;
 
-  /// is_nothrow_constructible
-    template<typename _Tp, typename... _Args>
-    struct is_nothrow_constructible
-        : public __is_nothrow_constructible_impl<_Tp, _Args...>::type
-    { };
+    /// is_nothrow_constructible
+    template <typename _Tp, typename... _Args>
+    struct is_nothrow_constructible : public __is_nothrow_constructible_impl<_Tp, _Args...>::type
+    {
+    };
 
-  /// is_nothrow_default_constructible
-    template<typename _Tp>
-    struct is_nothrow_default_constructible
-        : public __is_nothrow_constructible_impl<_Tp>::type
-    { };
+    /// is_nothrow_default_constructible
+    template <typename _Tp>
+    struct is_nothrow_default_constructible : public __is_nothrow_constructible_impl<_Tp>::type
+    {
+    };
 
-
-    template<typename _Tp, bool = __is_referenceable<_Tp>::value>
+    template <typename _Tp, bool = __is_referenceable<_Tp>::value>
     struct __is_nothrow_copy_constructible_impl;
 
-    template<typename _Tp>
-    struct __is_nothrow_copy_constructible_impl<_Tp, false>
-        : public false_type { };
+    template <typename _Tp>
+    struct __is_nothrow_copy_constructible_impl<_Tp, false> : public false_type
+    {
+    };
 
-    template<typename _Tp>
+    template <typename _Tp>
     struct __is_nothrow_copy_constructible_impl<_Tp, true>
         : public is_nothrow_constructible<_Tp, const _Tp&>
-    { };
+    {
+    };
 
-  /// is_nothrow_copy_constructible
-    template<typename _Tp>
-    struct is_nothrow_copy_constructible
-        : public __is_nothrow_copy_constructible_impl<_Tp>
-    { };
+    /// is_nothrow_copy_constructible
+    template <typename _Tp>
+    struct is_nothrow_copy_constructible : public __is_nothrow_copy_constructible_impl<_Tp>
+    {
+    };
 
-    template<typename _Tp, bool = __is_referenceable<_Tp>::value>
+    template <typename _Tp, bool = __is_referenceable<_Tp>::value>
     struct __is_nothrow_move_constructible_impl;
 
-    template<typename _Tp>
-    struct __is_nothrow_move_constructible_impl<_Tp, false>
-        : public false_type { };
+    template <typename _Tp>
+    struct __is_nothrow_move_constructible_impl<_Tp, false> : public false_type
+    {
+    };
 
-    template<typename _Tp>
+    template <typename _Tp>
     struct __is_nothrow_move_constructible_impl<_Tp, true>
         : public is_nothrow_constructible<_Tp, _Tp&&>
-    { };
+    {
+    };
+
+    struct __do_is_implicitly_default_constructible_impl
+    {
+        template <typename _Tp>
+        static void __helper(const _Tp&);
+
+        template <typename _Tp>
+        static true_type __test(const _Tp&, decltype(__helper<const _Tp&>({}))* = 0);
+
+        static false_type __test(...);
+    };
+
+    template <typename _Tp>
+    struct __is_implicitly_default_constructible_impl
+        : public __do_is_implicitly_default_constructible_impl
+    {
+        typedef decltype(__test(declval<_Tp>())) type;
+    };
+
+    template <typename _Tp>
+    struct __is_implicitly_default_constructible_safe
+        : public __is_implicitly_default_constructible_impl<_Tp>::type
+    {
+    };
+
+    template <typename _Tp>
+    struct __is_implicitly_default_constructible
+        : public __and_<is_default_constructible<_Tp>,
+                        __is_implicitly_default_constructible_safe<_Tp>>
+    {
+    };
 
     /// is_assignable
-    template<typename _Tp, typename _Up>
-    struct is_assignable
-        : public __bool_constant<__is_assignable(_Tp, _Up)>
-    { };
+    template <typename _Tp, typename _Up>
+    struct is_assignable : public __bool_constant<__is_assignable(_Tp, _Up)>
+    {
+    };
 
-    template<typename _Tp, bool = __is_referenceable<_Tp>::value>
+    template <typename _Tp, bool = __is_referenceable<_Tp>::value>
     struct __is_copy_assignable_impl;
 
-    template<typename _Tp>
-    struct __is_copy_assignable_impl<_Tp, false>
-        : public false_type { };
+    template <typename _Tp>
+    struct __is_copy_assignable_impl<_Tp, false> : public false_type
+    {
+    };
 
-    template<typename _Tp>
-    struct __is_copy_assignable_impl<_Tp, true>
-        : public is_assignable<_Tp&, const _Tp&>
-    { };
+    template <typename _Tp>
+    struct __is_copy_assignable_impl<_Tp, true> : public is_assignable<_Tp&, const _Tp&>
+    {
+    };
 
     /// is_copy_assignable
-    template<typename _Tp>
-    struct is_copy_assignable
-        : public __is_copy_assignable_impl<_Tp>
-    { };
+    template <typename _Tp>
+    struct is_copy_assignable : public __is_copy_assignable_impl<_Tp>
+    {
+    };
 
     /// is_nothrow_move_constructible
-    template<typename _Tp>
-    struct is_nothrow_move_constructible
-        : public __is_nothrow_move_constructible_impl<_Tp>
-    { };
+    template <typename _Tp>
+    struct is_nothrow_move_constructible : public __is_nothrow_move_constructible_impl<_Tp>
+    {
+    };
 
-    template<typename _Tp, bool = __is_referenceable<_Tp>::value>
+    template <typename _Tp, bool = __is_referenceable<_Tp>::value>
     struct __is_move_assignable_impl;
 
-    template<typename _Tp>
-    struct __is_move_assignable_impl<_Tp, false>
-        : public false_type { };
+    template <typename _Tp>
+    struct __is_move_assignable_impl<_Tp, false> : public false_type
+    {
+    };
 
-    template<typename _Tp>
-    struct __is_move_assignable_impl<_Tp, true>
-        : public is_assignable<_Tp&, _Tp&&>
-    { };
+    template <typename _Tp>
+    struct __is_move_assignable_impl<_Tp, true> : public is_assignable<_Tp&, _Tp&&>
+    {
+    };
 
     /// is_move_assignable
-    template<typename _Tp>
-    struct is_move_assignable
-        : public __is_move_assignable_impl<_Tp>
-    { };
+    template <typename _Tp>
+    struct is_move_assignable : public __is_move_assignable_impl<_Tp>
+    {
+    };
 
-    template<typename _Tp, typename _Up>
+    template <typename _Tp, typename _Up>
     struct __is_nt_assignable_impl
-    : public integral_constant<bool, noexcept(declval<_Tp>() = declval<_Up>())>
-    { };
+        : public integral_constant<bool, noexcept(declval<_Tp>() = declval<_Up>())>
+    {
+    };
 
     /// is_nothrow_assignable
-    template<typename _Tp, typename _Up>
+    template <typename _Tp, typename _Up>
     struct is_nothrow_assignable
-    : public __and_<is_assignable<_Tp, _Up>,
-		    __is_nt_assignable_impl<_Tp, _Up>>
-    { };
+        : public __and_<is_assignable<_Tp, _Up>, __is_nt_assignable_impl<_Tp, _Up>>
+    {
+    };
 
-    template<typename _Tp, bool = __is_referenceable<_Tp>::value>
+    template <typename _Tp, bool = __is_referenceable<_Tp>::value>
     struct __is_nt_copy_assignable_impl;
 
-    template<typename _Tp>
-    struct __is_nt_copy_assignable_impl<_Tp, false>
-    : public false_type { };
+    template <typename _Tp>
+    struct __is_nt_copy_assignable_impl<_Tp, false> : public false_type
+    {
+    };
 
-    template<typename _Tp>
-    struct __is_nt_copy_assignable_impl<_Tp, true>
-    : public is_nothrow_assignable<_Tp&, const _Tp&>
-    { };
+    template <typename _Tp>
+    struct __is_nt_copy_assignable_impl<_Tp, true> : public is_nothrow_assignable<_Tp&, const _Tp&>
+    {
+    };
 
     /// is_nothrow_copy_assignable
-    template<typename _Tp>
-    struct is_nothrow_copy_assignable
-    : public __is_nt_copy_assignable_impl<_Tp>
-    { };
+    template <typename _Tp>
+    struct is_nothrow_copy_assignable : public __is_nt_copy_assignable_impl<_Tp>
+    {
+    };
 
-    template<typename _Tp, bool = __is_referenceable<_Tp>::value>
+    template <typename _Tp, bool = __is_referenceable<_Tp>::value>
     struct __is_nt_move_assignable_impl;
 
-    template<typename _Tp>
-    struct __is_nt_move_assignable_impl<_Tp, false>
-    : public false_type { };
+    template <typename _Tp>
+    struct __is_nt_move_assignable_impl<_Tp, false> : public false_type
+    {
+    };
 
-    template<typename _Tp>
-    struct __is_nt_move_assignable_impl<_Tp, true>
-    : public is_nothrow_assignable<_Tp&, _Tp&&>
-    { };
+    template <typename _Tp>
+    struct __is_nt_move_assignable_impl<_Tp, true> : public is_nothrow_assignable<_Tp&, _Tp&&>
+    {
+    };
 
     /// is_nothrow_move_assignable
-    template<typename _Tp>
-    struct is_nothrow_move_assignable
-    : public __is_nt_move_assignable_impl<_Tp>
-    { };
+    template <typename _Tp>
+    struct is_nothrow_move_assignable : public __is_nt_move_assignable_impl<_Tp>
+    {
+    };
 
-    template<typename _Tp>
-    using __remove_cvref_t
-        = typename remove_cv<typename remove_reference<_Tp>::type>::type;
+    template <typename _Tp>
+    using __remove_cvref_t = typename remove_cv<typename remove_reference<_Tp>::type>::type;
 
-    template<typename... _Elements>
+    template <typename _Tp>
+    struct __is_swappable;
+
+    template <typename _Tp>
+    struct __is_nothrow_swappable;
+
+    template <typename... _Elements>
     class tuple;
 
-    template<typename>
-    struct __is_tuple_like_impl : false_type
-    { };
+    /// tuple_size
+    template <typename _Tp>
+    struct tuple_size;
 
-    template<typename... _Tps>
+    /// tuple_element
+    template <std::size_t _Int, typename _Tp>
+    struct tuple_element;
+
+    template <typename>
+    struct __is_tuple_like_impl : false_type
+    {
+    };
+
+    template <typename... _Tps>
     struct __is_tuple_like_impl<tuple<_Tps...>> : true_type
-    { };
+    {
+    };
 
     // Internal type trait that allows us to sfinae-protect tuple_cat.
-    template<typename _Tp>
-    struct __is_tuple_like
-    : public __is_tuple_like_impl<__remove_cvref_t<_Tp>>::type
-    { };
+    template <typename _Tp>
+    struct __is_tuple_like : public __is_tuple_like_impl<__remove_cvref_t<_Tp>>::type
+    {
+    };
 
-    template<bool _Cond, typename _Tp = void>
+    template <typename _Tp>
+    inline typename enable_if<__and_<__not_<__is_tuple_like<_Tp>>,
+                                     is_move_constructible<_Tp>,
+                                     is_move_assignable<_Tp>>::value>::type
+        swap(_Tp&, _Tp&) noexcept(
+            __and_<is_nothrow_move_constructible<_Tp>, is_nothrow_move_assignable<_Tp>>::value);
+
+    template <typename _Tp, size_t _Nm>
+    inline typename enable_if<__is_swappable<_Tp>::value>::type
+        swap(_Tp (&__a)[_Nm], _Tp (&__b)[_Nm]) noexcept(__is_nothrow_swappable<_Tp>::value);
+
+    namespace __swappable_details
+    {
+        using std::swap;
+
+        struct __do_is_swappable_impl
+        {
+            template <typename _Tp,
+                      typename = decltype(swap(std::declval<_Tp&>(), std::declval<_Tp&>()))>
+            static true_type __test(int);
+
+            template <typename>
+            static false_type __test(...);
+        };
+
+        struct __do_is_nothrow_swappable_impl
+        {
+            template <typename _Tp>
+            static __bool_constant<noexcept(swap(std::declval<_Tp&>(), std::declval<_Tp&>()))>
+                __test(int);
+
+            template <typename>
+            static false_type __test(...);
+        };
+
+    } // namespace __swappable_details
+
+    template <typename _Tp>
+    struct __is_swappable_impl : public __swappable_details::__do_is_swappable_impl
+    {
+        typedef decltype(__test<_Tp>(0)) type;
+    };
+
+    template <typename _Tp>
+    struct __is_nothrow_swappable_impl : public __swappable_details::__do_is_nothrow_swappable_impl
+    {
+        typedef decltype(__test<_Tp>(0)) type;
+    };
+
+    template <typename _Tp>
+    struct __is_swappable : public __is_swappable_impl<_Tp>::type
+    {
+    };
+
+    template <typename _Tp>
+    struct __is_nothrow_swappable : public __is_nothrow_swappable_impl<_Tp>::type
+    {
+    };
+
+    template <bool _Cond, typename _Tp = void>
     using __enable_if_t = typename enable_if<_Cond, _Tp>::type;
 
-    struct __nonesuch 
+    template <typename _Tp>
+    using remove_reference_t = typename remove_reference<_Tp>::type;
+
+    struct __nonesuch
     {
-        __nonesuch() = delete;
-        ~__nonesuch() = delete;
-        __nonesuch(__nonesuch const&) = delete;
+        __nonesuch()                      = delete;
+        ~__nonesuch()                     = delete;
+        __nonesuch(__nonesuch const&)     = delete;
         void operator=(__nonesuch const&) = delete;
     };
-    struct __nonesuch_no_braces : std::__nonesuch 
+    struct __nonesuch_no_braces : std::__nonesuch
     {
         explicit __nonesuch_no_braces(const __nonesuch&) = delete;
     };
 
-} // namespace std
+    // Stores a tuple of indices.  Used by tuple and pair, and by bind() to
+    // extract the elements in a tuple.
+    template <size_t... _Indexes>
+    struct _Index_tuple
+    {
+    };
+
+#ifdef __has_builtin
+#if __has_builtin(__make_integer_seq)
+#define _GLIBCXX_USE_MAKE_INTEGER_SEQ 1
 #endif
+#endif
+
+    // Builds an _Index_tuple<0, 1, 2, ..., _Num-1>.
+    template <size_t _Num>
+    struct _Build_index_tuple
+    {
+#if _GLIBCXX_USE_MAKE_INTEGER_SEQ
+        template <typename, size_t... _Indices>
+        using _IdxTuple = _Index_tuple<_Indices...>;
+
+        using __type = __make_integer_seq<_IdxTuple, size_t, _Num>;
+#else
+        using __type = _Index_tuple<__integer_pack(_Num)...>;
+#endif
+    };
+
+    // template<typename _Base, typename _Derived>
+    // struct __is_base_of_helper
+    // {
+    //     typedef typename remove_cv<_Base>::type    _NoCv_Base;
+    //     typedef typename remove_cv<_Derived>::type _NoCv_Derived;
+    //     static const bool __value = (is_same<_Base, _Derived>::value
+    // 			    || (__is_base_of(_Base, _Derived)
+    // 			        && !is_same<_NoCv_Base,
+    // 			                    _NoCv_Derived>::value));
+    // };
+
+    // template<typename _Base, typename _Derived>
+    // struct is_base_of
+    // : public integral_constant<bool,
+    // 		       __is_base_of_helper<_Base, _Derived>::__value>
+    // { };
+
+    /// is_base_of
+    template <typename _Base, typename _Derived>
+    struct is_base_of : public integral_constant<bool, __is_base_of(_Base, _Derived)>
+    {
+    };
+
+    template <typename _Tp, typename _Up>
+    constexpr bool is_same_v = is_same<_Tp, _Up>::value;
+
+    /// result_of
+    template <typename _Signature>
+    class result_of;
+
+    struct __invoke_memfun_ref
+    {
+    };
+    struct __invoke_memfun_deref
+    {
+    };
+    struct __invoke_memobj_ref
+    {
+    };
+    struct __invoke_memobj_deref
+    {
+    };
+    struct __invoke_other
+    {
+    };
+
+    // Associate a tag type with a specialization of __success_type.
+    template <typename _Tp, typename _Tag>
+    struct __result_of_success : __success_type<_Tp>
+    {
+        using __invoke_type = _Tag;
+    };
+
+    struct __result_of_memfun_ref_impl
+    {
+        template <typename _Fp, typename _Tp1, typename... _Args>
+        static __result_of_success<decltype((std::declval<_Tp1>()
+                                             .*std::declval<_Fp>())(std::declval<_Args>()...)),
+                                   __invoke_memfun_ref>
+            _S_test(int);
+
+        template <typename...>
+        static __failure_type _S_test(...);
+    };
+
+    template <typename _MemPtr, typename _Arg, typename... _Args>
+    struct __result_of_memfun_ref : private __result_of_memfun_ref_impl
+    {
+        typedef decltype(_S_test<_MemPtr, _Arg, _Args...>(0)) type;
+    };
+
+    struct __result_of_memfun_deref_impl
+    {
+        template <typename _Fp, typename _Tp1, typename... _Args>
+        static __result_of_success<decltype(((*std::declval<_Tp1>())
+                                             .*std::declval<_Fp>())(std::declval<_Args>()...)),
+                                   __invoke_memfun_deref>
+            _S_test(int);
+
+        template <typename...>
+        static __failure_type _S_test(...);
+    };
+
+    template <typename _MemPtr, typename _Arg, typename... _Args>
+    struct __result_of_memfun_deref : private __result_of_memfun_deref_impl
+    {
+        typedef decltype(_S_test<_MemPtr, _Arg, _Args...>(0)) type;
+    };
+
+    struct __result_of_memobj_ref_impl
+    {
+        template <typename _Fp, typename _Tp1>
+        static __result_of_success<decltype(std::declval<_Tp1>().*std::declval<_Fp>()),
+                                   __invoke_memobj_ref>
+            _S_test(int);
+
+        template <typename, typename>
+        static __failure_type _S_test(...);
+    };
+
+    template <typename _MemPtr, typename _Arg>
+    struct __result_of_memobj_ref : private __result_of_memobj_ref_impl
+    {
+        typedef decltype(_S_test<_MemPtr, _Arg>(0)) type;
+    };
+
+    struct __result_of_memobj_deref_impl
+    {
+        template <typename _Fp, typename _Tp1>
+        static __result_of_success<decltype((*std::declval<_Tp1>()).*std::declval<_Fp>()),
+                                   __invoke_memobj_deref>
+            _S_test(int);
+
+        template <typename, typename>
+        static __failure_type _S_test(...);
+    };
+
+    template <typename _MemPtr, typename _Arg>
+    struct __result_of_memobj_deref : private __result_of_memobj_deref_impl
+    {
+        typedef decltype(_S_test<_MemPtr, _Arg>(0)) type;
+    };
+
+    template <typename _MemPtr, typename _Arg>
+    struct __result_of_memobj;
+
+    template <typename _Res, typename _Class, typename _Arg>
+    struct __result_of_memobj<_Res _Class::*, _Arg>
+    {
+        typedef __remove_cvref_t<_Arg> _Argval;
+        typedef _Res _Class::*_MemPtr;
+        typedef typename conditional<
+            __or_<is_same<_Argval, _Class>, is_base_of<_Class, _Argval>>::value,
+            __result_of_memobj_ref<_MemPtr, _Arg>,
+            __result_of_memobj_deref<_MemPtr, _Arg>>::type::type type;
+    };
+
+    template <typename _MemPtr, typename _Arg, typename... _Args>
+    struct __result_of_memfun;
+
+    template <typename _Res, typename _Class, typename _Arg, typename... _Args>
+    struct __result_of_memfun<_Res _Class::*, _Arg, _Args...>
+    {
+        typedef typename remove_reference<_Arg>::type _Argval;
+        typedef _Res _Class::*_MemPtr;
+        typedef typename conditional<is_base_of<_Class, _Argval>::value,
+                                     __result_of_memfun_ref<_MemPtr, _Arg, _Args...>,
+                                     __result_of_memfun_deref<_MemPtr, _Arg, _Args...>>::type::type
+            type;
+    };
+
+    // Used by result_of, invoke etc. to unwrap a reference_wrapper.
+    template <typename _Tp, typename _Up = __remove_cvref_t<_Tp>>
+    struct __inv_unwrap
+    {
+        using type = _Tp;
+    };
+
+    template <typename _Tp, typename _Up>
+    struct __inv_unwrap<_Tp, reference_wrapper<_Up>>
+    {
+        using type = _Up&;
+    };
+
+    template <bool, bool, typename _Functor, typename... _ArgTypes>
+    struct __result_of_impl
+    {
+        typedef __failure_type type;
+    };
+
+    template <typename _MemPtr, typename _Arg>
+    struct __result_of_impl<true, false, _MemPtr, _Arg>
+        : public __result_of_memobj<typename decay<_MemPtr>::type,
+                                    typename __inv_unwrap<_Arg>::type>
+    {
+    };
+
+    template <typename _MemPtr, typename _Arg, typename... _Args>
+    struct __result_of_impl<false, true, _MemPtr, _Arg, _Args...>
+        : public __result_of_memfun<typename decay<_MemPtr>::type,
+                                    typename __inv_unwrap<_Arg>::type,
+                                    _Args...>
+    {
+    };
+
+    struct __result_of_other_impl
+    {
+        template <typename _Fn, typename... _Args>
+        static __result_of_success<decltype(std::declval<_Fn>()(std::declval<_Args>()...)),
+                                   __invoke_other>
+            _S_test(int);
+
+        template <typename...>
+        static __failure_type _S_test(...);
+    };
+
+    template <typename _Functor, typename... _ArgTypes>
+    struct __result_of_impl<false, false, _Functor, _ArgTypes...> : private __result_of_other_impl
+    {
+        typedef decltype(_S_test<_Functor, _ArgTypes...>(0)) type;
+    };
+
+    // __invoke_result (std::invoke_result for C++11)
+    template <typename _Functor, typename... _ArgTypes>
+    struct __invoke_result
+        : public __result_of_impl<
+              is_member_object_pointer<typename remove_reference<_Functor>::type>::value,
+              is_member_function_pointer<typename remove_reference<_Functor>::type>::value,
+              _Functor,
+              _ArgTypes...>::type
+    {
+    };
+
+    template <typename _Functor, typename... _ArgTypes>
+    struct result_of<_Functor(_ArgTypes...)> : public __invoke_result<_Functor, _ArgTypes...>
+    {
+    };
+
+    // The primary template is used for invalid INVOKE expressions.
+    template <typename _Result, typename _Ret, bool = is_void<_Ret>::value, typename = void>
+    struct __is_invocable_impl : false_type
+    {
+    };
+
+    // Used for valid INVOKE and INVOKE<void> expressions.
+    template <typename _Result, typename _Ret>
+    struct __is_invocable_impl<_Result,
+                               _Ret,
+                               /* is_void<_Ret> = */ true,
+                               __void_t<typename _Result::type>> : true_type
+    {
+    };
+
+    // Used for INVOKE<R> expressions to check the implicit conversion to R.
+    template <typename _Result, typename _Ret>
+    struct __is_invocable_impl<_Result,
+                               _Ret,
+                               /* is_void<_Ret> = */ false,
+                               __void_t<typename _Result::type>>
+    {
+    private:
+        // The type of the INVOKE expression.
+        // Unlike declval, this doesn't add_rvalue_reference.
+        static typename _Result::type _S_get();
+
+        template <typename _Tp>
+        static void _S_conv(_Tp);
+
+        // This overload is viable if INVOKE(f, args...) can convert to _Tp.
+        template <typename _Tp, typename = decltype(_S_conv<_Tp>(_S_get()))>
+        static true_type _S_test(int);
+
+        template <typename _Tp>
+        static false_type _S_test(...);
+
+    public:
+        using type = decltype(_S_test<_Ret>(1));
+    };
+
+    template <typename _Fn, typename... _ArgTypes>
+    struct __is_invocable : __is_invocable_impl<__invoke_result<_Fn, _ArgTypes...>, void>::type
+    {
+    };
+
+    template <typename _Fn, typename _Tp, typename... _Args>
+    constexpr bool __call_is_nt(__invoke_memfun_ref)
+    {
+        using _Up = typename __inv_unwrap<_Tp>::type;
+        return noexcept((std::declval<_Up>().*std::declval<_Fn>())(std::declval<_Args>()...));
+    }
+
+    template <typename _Fn, typename _Tp, typename... _Args>
+    constexpr bool __call_is_nt(__invoke_memfun_deref)
+    {
+        return noexcept(((*std::declval<_Tp>()).*std::declval<_Fn>())(std::declval<_Args>()...));
+    }
+
+    template <typename _Fn, typename _Tp>
+    constexpr bool __call_is_nt(__invoke_memobj_ref)
+    {
+        using _Up = typename __inv_unwrap<_Tp>::type;
+        return noexcept(std::declval<_Up>().*std::declval<_Fn>());
+    }
+
+    template <typename _Fn, typename _Tp>
+    constexpr bool __call_is_nt(__invoke_memobj_deref)
+    {
+        return noexcept((*std::declval<_Tp>()).*std::declval<_Fn>());
+    }
+
+    template <typename _Fn, typename... _Args>
+    constexpr bool __call_is_nt(__invoke_other)
+    {
+        return noexcept(std::declval<_Fn>()(std::declval<_Args>()...));
+    }
+
+    template <typename _Result, typename _Fn, typename... _Args>
+    struct __call_is_nothrow
+        : __bool_constant<std::__call_is_nt<_Fn, _Args...>(typename _Result::__invoke_type{})>
+    {
+    };
+
+    template <typename _Fn, typename... _Args>
+    using __call_is_nothrow_ = __call_is_nothrow<__invoke_result<_Fn, _Args...>, _Fn, _Args...>;
+
+    template <typename _Fn, typename... _Args>
+    struct __is_nothrow_invocable
+        : __and_<__is_invocable<_Fn, _Args...>, __call_is_nothrow_<_Fn, _Args...>>::type
+    {
+    };
+
+} // namespace std
+#endif // defined(__HIPCC_RTC__)
 
 namespace std
 {

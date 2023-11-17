@@ -30,9 +30,23 @@
 #include "vector.hpp"
 
 #if defined(__HIPCC_RTC__)
-#include "uses_allocator.hpp"
+#include "invoke.hpp"
 #include "move.hpp"
-#include "tuple.hpp"
+#include "uses_allocator.hpp"
+
+namespace std
+{
+    // utilize rocwmma's index_sequence impl if compiling with hipRTC
+    template <size_t... Indices>
+    using index_sequence = rocwmma::detail::index_sequence<Indices...>;
+
+    template <std::size_t N>
+    using make_index_sequence = rocwmma::detail::make_index_sequence<N>;
+
+    template <typename Int, Int N>
+    using make_integer_sequence = rocwmma::detail::make_integer_sequence<Int, N>;
+}
+
 #endif
 
 namespace rocwmma
@@ -254,18 +268,20 @@ namespace rocwmma
 ///////////////////////////////////////////////////////////
 ////////  std::apply fold expressions (<= C++14)  /////////
 ///////////////////////////////////////////////////////////
-#if !defined(__HIPCC_RTC__)
+// #if !defined(__HIPCC_RTC__)
 namespace std
 {
 
-#if !(__cplusplus >= 201703L)
+#if(!(__cplusplus >= 201703L) && !defined(__HIPCC_RTC__))
     template <typename F, typename Tuple, size_t... I>
-    auto apply_impl(F fn, Tuple t, std::index_sequence<I...>)
+    ROCWMMA_HOST_DEVICE constexpr decltype(auto)
+        apply_impl(F fn, Tuple t, std::index_sequence<I...>)
     {
-        return fn(std::get<I>(t)...);
+        return fn(get<I>(t)...);
     }
+
     template <typename F, typename Tuple>
-    auto apply(F fn, Tuple t)
+    ROCWMMA_HOST_DEVICE constexpr decltype(auto) apply(F fn, Tuple t)
     {
         const std::size_t size = std::tuple_size<Tuple>::value;
         return apply_impl(fn, t, std::make_index_sequence<size>());
@@ -274,6 +290,7 @@ namespace std
 
 } // namespace std
 
+#if !defined(__HIPCC_RTC__)
 ///////////////////////////////////////////////////////////
 /////////////  std::pair<T, T> extensions  ////////////////
 ///////////////////////////////////////////////////////////
@@ -330,6 +347,10 @@ namespace std
 
 } // namespace std
 #endif // !defined(__HIPCC_RTC__)
+
+#if defined(__HIPCC_RTC__)
+#include "tuple.hpp"
+#endif
 
 namespace rocwmma
 {

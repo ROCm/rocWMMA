@@ -26,7 +26,9 @@
 #ifndef ROCWMMA_OPAQUE_STORE_HPP
 #define ROCWMMA_OPAQUE_STORE_HPP
 
+#if !defined(__HIPCC_RTC__)
 #include <numeric>
+#endif
 
 #include "io_traits.hpp"
 #include "layout.hpp"
@@ -122,11 +124,10 @@ namespace rocwmma
                           "IOCount inconsistent with iterator range");
 
             // Make sure that the IOCount is consistent with the number of total strides
-            static_assert(
-                IOTraits::IOCount
-                    == std::apply([](auto... items) { return (items * ...); },
-                                  MatrixLayout::strideCounts()),
-                "IOCount inconsistent with total strides");
+            static_assert(IOTraits::IOCount
+                              == std::apply([](auto... items) constexpr { return (items * ...); },
+                                            MatrixLayout::strideCounts()),
+                          "IOCount inconsistent with total strides");
 
             unroll_right(dataPtr + DataLayout::fromMatrixCoord(baseOffset2d, ldm),
                          it,
