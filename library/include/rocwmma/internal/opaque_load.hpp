@@ -28,7 +28,6 @@
 
 #include "io_traits.hpp"
 #include "layout.hpp"
-#include "tuple.hpp"
 #include "types.hpp"
 #include "vector_iterator.hpp"
 
