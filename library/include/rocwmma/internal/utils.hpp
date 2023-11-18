@@ -348,9 +348,7 @@ namespace std
 } // namespace std
 #endif // !defined(__HIPCC_RTC__)
 
-#if defined(__HIPCC_RTC__)
 #include "tuple.hpp"
-#endif
 
 namespace rocwmma
 {

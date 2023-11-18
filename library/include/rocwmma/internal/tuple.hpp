@@ -1386,8 +1386,6 @@ namespace std
 
 #if __cplusplus >= 201402L
 
-#define __cpp_lib_tuples_by_type 201304
-
     template <typename _Head, size_t __i, typename... _Tail>
     constexpr _Head& __get_helper2(_Tuple_impl<__i, _Head, _Tail...>& __t) noexcept
     {
@@ -1673,9 +1671,6 @@ namespace std
     struct uses_allocator<tuple<_Types...>, _Alloc> : true_type
     {
     };
-
-    // #if __cplusplus >= 201703L
-    // # define __cpp_lib_apply 201603
 
     template <typename _Fn, typename _Tuple, size_t... _Idx>
     constexpr decltype(auto) __apply_impl(_Fn&& __f, _Tuple&& __t, index_sequence<_Idx...>)
