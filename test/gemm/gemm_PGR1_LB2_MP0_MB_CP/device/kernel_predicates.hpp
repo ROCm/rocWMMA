@@ -75,19 +75,6 @@ namespace rocwmma
                                         WaveSize,
                                         ArchId>;
 
-    private:
-        enum struct GlobalPredicates : bool
-        {
-            // Quirk for LdsRF is that it requires matching waves in X and Y directions
-            // for correctness.
-            // Second part is that the ldsRF crosses threshold from 16/32 block sizes to 64, which has different considerations
-            // for the MaxVW. This unfortunately limits applicability in cooperative environment.
-            LdsRFTest = !(std::is_same_v<GemmConfig, typename CooperativeGemm::BlockLevel::LdsRF>)
-                        || ((BlockM * BlockK / WaveSize > 8u) && (BlockN * BlockK / WaveSize > 8u)),
-
-            Enable = (LdsRFTest)
-        };
-        
         using TestTraits = typename Base::TestTraits;
 
     private:
@@ -95,6 +82,13 @@ namespace rocwmma
         {
             // Valid for gfx9 only
             ArchTest = (bool)TestTraits::Arch::IsGfx9,
+
+            // Quirk for LdsRF is that it requires matching waves in X and Y directions
+            // for correctness.
+            // Second part is that the ldsRF layout supports only one wave due to MaxVW considerations.
+            // This unfortunately limits applicability in cooperative environment.
+            LdsRFTest = !(std::is_same_v<GemmConfig, typename CooperativeGemm::BlockLevel::LdsRF>)
+                        || (((TBlockX / WaveSize) * TBlockY) == 1),
 
             CostABTest
             = ((2u * ((uint32_t)TestTraits::Cost::TileA + (uint32_t)TestTraits::Cost::TileB))
@@ -104,7 +98,7 @@ namespace rocwmma
                              + 2u * (uint32_t)TestTraits::Cost::TileD)
                             <= 256u),
 
-            Enable = (ArchTest && CostABTest && CostAccTest && CostTailTest)
+            Enable = (ArchTest && LdsRFTest && CostABTest && CostAccTest && CostTailTest)
         };
 
 #if !NDEBUG
@@ -112,6 +106,7 @@ namespace rocwmma
         {
             std::cout << "Gfx9 Predicates:\n";
             std::cout << "ArchTest: " << (bool)Gfx9Predicates::ArchTest << std::endl;
+            std::cout << "LdsRFTest: " << (bool)Gfx9Predicates::LdsRFTest << std::endl;
             std::cout << "CostABTest: " << (bool)Gfx9Predicates::CostABTest << std::endl;
             std::cout << "CostAccTest: " << (bool)Gfx9Predicates::CostAccTest << std::endl;
             std::cout << "CostTailTest: " << (bool)Gfx9Predicates::CostTailTest << std::endl;
@@ -153,13 +148,13 @@ namespace rocwmma
     public:
         constexpr static bool enableBuild()
         {
-            return Base::enableBuild() && (bool)GlobalPredicates::Enable
+            return Base::enableBuild()
                    && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable);
         }
 
         constexpr static bool enableRun()
         {
-            return Base::enableRun() && (bool)GlobalPredicates::Enable
+            return Base::enableRun()
                    && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable);
         }
 
