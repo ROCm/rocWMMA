@@ -124,6 +124,8 @@ namespace rocwmma
             }
         };
 
+#if !ROCWMMA_NO_HALF
+
         template <>
         struct amdgcn_wmma<hfloat16_t, float32_t, 16, 16>
             : public amdgcn_wmma<float16_t, float32_t, 16, 16>
@@ -135,6 +137,8 @@ namespace rocwmma
             : public amdgcn_wmma<float16_t, float16_t, 16, 16>
         {
         };
+        
+#endif // !ROCWMMA_NO_HALF
 
         template <>
         struct amdgcn_wmma<bfloat16_t, float32_t, 16, 16>
@@ -316,6 +320,8 @@ namespace rocwmma
             }
         };
 
+#if !ROCWMMA_NO_HALF
+
         template <>
         struct amdgcn_wmma<hfloat16_t, float32_t, 16, 16>
             : public amdgcn_wmma<float16_t, float32_t, 16, 16>
@@ -327,6 +333,9 @@ namespace rocwmma
             : public amdgcn_wmma<float16_t, float16_t, 16, 16>
         {
         };
+
+#endif // !ROCWMMA_NO_HALF
+
 
         template <>
         struct amdgcn_wmma<bfloat16_t, float32_t, 16, 16>
