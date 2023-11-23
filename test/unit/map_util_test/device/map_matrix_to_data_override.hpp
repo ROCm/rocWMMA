@@ -35,14 +35,7 @@ namespace rocwmma
     template <uint32_t BlockM,
               uint32_t BlockN,
               typename DataT,
-              typename DataLayout,
-              typename std::enable_if_t<
-                  FragSize_guard<BlockM,
-                                 BlockN,
-                                 DataT,
-                                 DataLayout,
-                                 Constants::AMDGCN_WAVE_SIZE,
-                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
+              typename DataLayout>
     __global__ void MapMatrixToDataOverrideM(uint32_t     m,
                                              uint32_t     n,
                                              DataT const* in,
@@ -51,83 +44,31 @@ namespace rocwmma
                                              DataT        param1,
                                              DataT        param2)
     {
-        using Frag    = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>;
-        using Mapping = GetMappingUtil_t<Frag>;
-
-        // Override read M coord
-        auto readCoord
-            = Mapping::matrixCoordM(static_cast<uint32_t>(static_cast<float32_t>(param1)));
-        auto writeCoord = Mapping::matrixCoord();
-
-        Frag f;
-        load_matrix_sync(f, Mapping::dataCoord(in, readCoord, ld), ld);
-        store_matrix_sync(Mapping::dataCoord(out, writeCoord, ld), f, ld);
-    }
-
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              typename DataT,
-              typename DataLayout,
-              typename std::enable_if_t<
-                  !FragSize_guard<BlockM,
-                                  BlockN,
-                                  DataT,
-                                  DataLayout,
-                                  Constants::AMDGCN_WAVE_SIZE,
-                                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
-    __global__ void MapMatrixToDataOverrideM(uint32_t     m,
-                                             uint32_t     n,
-                                             DataT const* in,
-                                             DataT*       out,
-                                             uint32_t     ld,
-                                             DataT        param1,
-                                             DataT        param2)
-    {
-    }
-
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              typename DataT,
-              typename DataLayout,
-              typename std::enable_if_t<
-                  FragSize_guard<BlockM,
+        if constexpr (FragSize_guard<BlockM,
                                  BlockN,
                                  DataT,
                                  DataLayout,
                                  Constants::AMDGCN_WAVE_SIZE,
-                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
-    __global__ void MapMatrixToDataOverrideN(uint32_t     m,
-                                             uint32_t     n,
-                                             DataT const* in,
-                                             DataT*       out,
-                                             uint32_t     ld,
-                                             DataT        param1,
-                                             DataT        param2)
-    {
-        using Frag    = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>;
-        using Mapping = GetMappingUtil_t<Frag>;
+                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable())
+        {
+            using Frag    = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>;
+            using Mapping = GetMappingUtil_t<Frag>;
 
-        // Override read N coord
-        auto readCoord
-            = Mapping::matrixCoordN(static_cast<uint32_t>(static_cast<float32_t>(param1)));
-        auto writeCoord = Mapping::matrixCoord();
+            // Override read M coord
+            auto readCoord
+                = Mapping::matrixCoordM(static_cast<uint32_t>(static_cast<float32_t>(param1)));
+            auto writeCoord = Mapping::matrixCoord();
 
-        Frag f;
-        load_matrix_sync(f, Mapping::dataCoord(in, readCoord, ld), ld);
-        store_matrix_sync(Mapping::dataCoord(out, writeCoord, ld), f, ld);
+            Frag f;
+            load_matrix_sync(f, Mapping::dataCoord(in, readCoord, ld), ld);
+            store_matrix_sync(Mapping::dataCoord(out, writeCoord, ld), f, ld);
+        }
     }
 
     template <uint32_t BlockM,
               uint32_t BlockN,
               typename DataT,
-              typename DataLayout,
-              typename std::enable_if_t<
-                  !FragSize_guard<BlockM,
-                                  BlockN,
-                                  DataT,
-                                  DataLayout,
-                                  Constants::AMDGCN_WAVE_SIZE,
-                                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
+              typename DataLayout>
     __global__ void MapMatrixToDataOverrideN(uint32_t     m,
                                              uint32_t     n,
                                              DataT const* in,
@@ -136,7 +77,27 @@ namespace rocwmma
                                              DataT        param1,
                                              DataT        param2)
     {
+        if constexpr (FragSize_guard<BlockM,
+                                 BlockN,
+                                 DataT,
+                                 DataLayout,
+                                 Constants::AMDGCN_WAVE_SIZE,
+                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable())
+        {
+            using Frag    = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>;
+            using Mapping = GetMappingUtil_t<Frag>;
+
+            // Override read N coord
+            auto readCoord
+                = Mapping::matrixCoordN(static_cast<uint32_t>(static_cast<float32_t>(param1)));
+            auto writeCoord = Mapping::matrixCoord();
+
+            Frag f;
+            load_matrix_sync(f, Mapping::dataCoord(in, readCoord, ld), ld);
+            store_matrix_sync(Mapping::dataCoord(out, writeCoord, ld), f, ld);
+        }
     }
+
 } // namespace rocwmma
 
 #endif // ROCWMMA_DEVICE_MAP_MATRIX_TO_DATA_OVERRIDE_HPP
