@@ -33,6 +33,9 @@
 
 namespace rocwmma
 {
+    using detail::index_sequence;
+    using detail::make_index_sequence;
+
     template <typename T, unsigned int n, typename U>
     ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
         operator+(const non_native_vector_base<T, n>& x, U y) noexcept
@@ -92,7 +95,7 @@ namespace rocwmma
     namespace detail
     {
         template <typename VecT, std::size_t... Indices>
-        constexpr static auto copy_impl(VecT&& t, std::index_sequence<Indices...>&&)
+        constexpr static auto copy_impl(VecT&& t, index_sequence<Indices...>&&)
         {
             return make_vector(std::get<Indices>(std::forward<VecT>(t))...);
         }
@@ -101,9 +104,8 @@ namespace rocwmma
     template <typename VecT>
     constexpr static auto pop_right(VecT&& t)
     {
-        return detail::copy_impl(
-            std::forward<VecT>(t),
-            std::make_index_sequence<VecTraits<std::decay_t<VecT>>::size() - 1>{});
+        return detail::copy_impl(std::forward<VecT>(t),
+                                 make_index_sequence<VecTraits<std::decay_t<VecT>>::size() - 1>{});
     }
 
     template <typename VecT>
@@ -126,7 +128,7 @@ namespace rocwmma
     }
 
     template <typename VecT, std::size_t... Indices>
-    constexpr static auto reverse_impl(VecT&& t, std::index_sequence<Indices...>)
+    constexpr static auto reverse_impl(VecT&& t, index_sequence<Indices...>)
     {
         return make_vector(std::get<sizeof...(Indices) - 1 - Indices>(std::forward<VecT>(t))...);
     }
@@ -135,12 +137,11 @@ namespace rocwmma
     constexpr static auto reverse(VecT&& t)
     {
         return reverse_impl(std::forward<VecT>(t),
-                            std::make_index_sequence<VecTraits<std::decay_t<VecT>>::size()>{});
+                            make_index_sequence<VecTraits<std::decay_t<VecT>>::size()>{});
     }
 
     template <typename T, std::size_t... Indices>
-    constexpr static auto
-        flatten_coord_right_impl(T&& coord, T&& dims, std::index_sequence<Indices...>)
+    constexpr static auto flatten_coord_right_impl(T&& coord, T&& dims, index_sequence<Indices...>)
     {
         auto flatten = [](auto&& c, auto&& d, auto& mul) {
             auto result = c * mul;
@@ -158,12 +159,12 @@ namespace rocwmma
         return flatten_coord_right_impl(
             std::forward<Lhs>(coord),
             std::forward<Rhs>(dims),
-            std::make_index_sequence<VecTraits<std::decay_t<Lhs>>::size()>{});
+            make_index_sequence<VecTraits<std::decay_t<Lhs>>::size()>{});
     }
 
     template <typename Lhs, typename Rhs, std::size_t... Indices>
     constexpr static auto
-        flatten_coord_left_impl(Lhs&& coord, Rhs&& dims, std::index_sequence<Indices...>)
+        flatten_coord_left_impl(Lhs&& coord, Rhs&& dims, index_sequence<Indices...>)
     {
         auto flatten = [](auto&& c, auto&& d, auto& mul) {
             auto result = c * mul;
@@ -180,16 +181,14 @@ namespace rocwmma
     template <typename Lhs, typename Rhs>
     constexpr static auto flatten_coord_left(Lhs&& coord, Rhs&& dims)
     {
-        return flatten_coord_left_impl(
-            std::forward<Lhs>(coord),
-            std::forward<Rhs>(dims),
-            std::make_index_sequence<VecTraits<std::decay_t<Lhs>>::size()>{});
+        return flatten_coord_left_impl(std::forward<Lhs>(coord),
+                                       std::forward<Rhs>(dims),
+                                       make_index_sequence<VecTraits<std::decay_t<Lhs>>::size()>{});
     }
 
     template <typename Coord1d, typename T, std::size_t... Indices>
-    constexpr static inline auto inflate_coord_right_impl(Coord1d const& flatCoord,
-                                                          T&&            dims,
-                                                          std::index_sequence<Indices...>)
+    constexpr static inline auto
+        inflate_coord_right_impl(Coord1d const& flatCoord, T&& dims, index_sequence<Indices...>)
     {
         auto inflate = [](auto&& c, auto&& d, auto& div, bool last) {
             auto result = (last ? (c / div) : (c / div % d));
@@ -207,16 +206,16 @@ namespace rocwmma
     template <typename Coord1d, typename T>
     constexpr static inline auto inflate_coord_right(Coord1d const& flatCoord, T&& dims)
     {
-        auto result = inflate_coord_right_impl(
-            std::forward<decltype(flatCoord)>(flatCoord),
-            std::forward<T>(dims),
-            std::make_index_sequence<VecTraits<std::decay_t<T>>::size()>{});
+        auto result
+            = inflate_coord_right_impl(std::forward<decltype(flatCoord)>(flatCoord),
+                                       std::forward<T>(dims),
+                                       make_index_sequence<VecTraits<std::decay_t<T>>::size()>{});
         return result;
     }
 
     template <typename Coord1d, typename T, std::size_t... Indices>
     constexpr static inline auto
-        inflate_coord_left_impl(Coord1d const& flatCoord, T&& dims, std::index_sequence<Indices...>)
+        inflate_coord_left_impl(Coord1d const& flatCoord, T&& dims, index_sequence<Indices...>)
     {
         auto inflate = [](auto&& c, auto&& d, auto& div, bool last) {
             auto result = (last ? (c / div) : (c / div % d));
@@ -236,13 +235,13 @@ namespace rocwmma
     constexpr static inline auto inflate_coord_left(Coord1d const& flatCoord, T&& dims)
     {
         auto result = inflate_coord_left_impl(
-            flatCoord, dims, std::make_index_sequence<VecTraits<std::decay_t<T>>::size()>{});
+            flatCoord, dims, make_index_sequence<VecTraits<std::decay_t<T>>::size()>{});
         return result;
     }
 
     template <typename T, typename Y, std::size_t... Indices>
     constexpr static inline auto
-        to_matrix_space_impl(T&& strides, Y&& strideCounts, std::index_sequence<Indices...>)
+        to_matrix_space_impl(T&& strides, Y&& strideCounts, index_sequence<Indices...>)
     {
         auto inflate = [](auto&& stride, auto&& count) { return count * stride; };
 
@@ -254,7 +253,7 @@ namespace rocwmma
     constexpr static inline auto to_matrix_space(T&& strides, Y&& strideCounts)
     {
         auto result = to_matrix_space_impl(
-            strides, strideCounts, std::make_index_sequence<VecTraits<std::decay_t<T>>::size()>{});
+            strides, strideCounts, make_index_sequence<VecTraits<std::decay_t<T>>::size()>{});
         return result;
     }
 
