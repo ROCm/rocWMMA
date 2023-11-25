@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@
 #include <rocwmma/internal/io_traits.hpp>
 #include <rocwmma/internal/layout.hpp>
 #include <rocwmma/internal/tuple.hpp>
+#include <rocwmma/internal/vector.hpp>
 #include <rocwmma/rocwmma.hpp>
 
 static constexpr uint32_t ERROR_VALUE   = 7u;
@@ -37,106 +38,24 @@ static constexpr uint32_t SUCCESS_VALUE = 0u;
 
 namespace rocwmma
 {
-    __device__ static inline bool isTupleTest()
-    {
-        bool err = false;
-
-        err |= std::is_tuple<int>::value;
-        err |= !std::is_tuple<std::tuple<int, float>>::value;
-        err |= std::is_tuple<const std::tuple<int, float>>::value;
-        err |= std::is_tuple<std::tuple<int, float>&>::value;
-
-        return err;
-    }
-
     __device__ static inline bool operatorMultTest()
     {
         bool err = false;
 
-        auto srcTuple          = std::make_tuple(1, 2.0, 3u);
-        auto expectHeadElement = std::make_tuple(2);
-        auto resultHeadElement = std::operator_mult_impl(2, srcTuple, std::index_sequence<0>{});
+        auto srcTuple          = make_vector(1, 2, 3);
+        auto expectHeadElement = make_vector(2);
+        auto resultHeadElement = detail::mult_poly_vec_impl(
+            make_vector(2, 2, 2), srcTuple, detail::index_sequence<0>{});
         err |= expectHeadElement != resultHeadElement;
 
-        auto expectTailElement = std::make_tuple(4.0, 6u);
-        auto resultTailElement = std::operator_mult_impl(2, srcTuple, std::index_sequence<1, 2>{});
+        auto expectTailElement = make_vector(4, 6);
+        auto resultTailElement = detail::mult_poly_vec_impl(
+            make_vector(2, 2, 2), srcTuple, detail::index_sequence<1, 2>{});
         err |= expectTailElement != resultTailElement;
 
-        auto expectAllElement = std::make_tuple(2, 4.0, 6u);
+        auto expectAllElement = make_vector(2, 4, 6);
         auto resultAllElement = 2 * srcTuple;
         err |= expectAllElement != resultAllElement;
-
-        return err;
-    }
-
-    __device__ static inline bool operatorAddTest()
-    {
-        bool err = false;
-
-        auto srcTuple = std::make_tuple(1, 2.0, 3u);
-
-        auto expectLeftAddImplHeadElement = std::make_tuple(2);
-        auto resultLeftAddImplHeadElement
-            = std::operator_add_impl(1, srcTuple, std::index_sequence<0>{});
-        err |= expectLeftAddImplHeadElement != resultLeftAddImplHeadElement;
-
-        auto expectLeftAddImplTailElement = std::make_tuple(3.0, 4u);
-        auto resultLeftAddImplTailElement
-            = std::operator_add_impl(1, srcTuple, std::index_sequence<1, 2>{});
-        err |= expectLeftAddImplTailElement != resultLeftAddImplTailElement;
-
-        auto expectRightAddImplHeadElement = std::make_tuple(2);
-        auto resultRightAddImplHeadElement
-            = std::operator_add_impl(srcTuple, 1, std::index_sequence<0>{});
-        err |= expectRightAddImplHeadElement != resultRightAddImplHeadElement;
-
-        auto expectRightAddImplTailElement = std::make_tuple(3.0, 4u);
-        auto resultRightAddImplTailElement
-            = std::operator_add_impl(srcTuple, 1, std::index_sequence<1, 2>{});
-        err |= expectRightAddImplTailElement != resultRightAddImplTailElement;
-
-        auto expectLeftAddElement = std::make_tuple(2, 3.0, 4u);
-        auto resultLeftAddElement = 1 + srcTuple;
-        err |= expectLeftAddElement != resultLeftAddElement;
-
-        auto expectRightAddElement = std::make_tuple(2, 3.0, 4u);
-        auto resultRightAddElement = srcTuple + 1;
-        err |= expectRightAddElement != resultRightAddElement;
-
-        return err;
-    }
-
-    __device__ static inline bool operatorSubTest()
-    {
-        bool err = false;
-
-        auto srcTuple = std::make_tuple(1, 2.0, 3u);
-
-        // auto expectLeftSubImplHeadElement = std::make_tuple(2);
-        // auto resultLeftSubImplHeadElement = std::operator_sub_impl(1, srcTuple, std::index_sequence<0>{});
-        // err |= expectLeftSubImplHeadElement != resultLeftSubImplHeadElement;
-
-        // auto expectLeftSubImplTailElement = std::make_tuple(3.0, 4u);
-        // auto resultLeftSubImplTailElement = std::operator_sub_impl(1, srcTuple, std::index_sequence<1, 2>{});
-        // err |= expectLeftSubImplTailElement != resultLeftSubImplTailElement;
-
-        auto expectRightSubImplHeadElement = std::make_tuple(0);
-        auto resultRightSubImplHeadElement
-            = std::operator_sub_impl(srcTuple, 1, std::index_sequence<0>{});
-        err |= expectRightSubImplHeadElement != resultRightSubImplHeadElement;
-
-        auto expectRightSubImplTailElement = std::make_tuple(1.0, 2u);
-        auto resultRightSubImplTailElement
-            = std::operator_sub_impl(srcTuple, 1, std::index_sequence<1, 2>{});
-        err |= expectRightSubImplTailElement != resultRightSubImplTailElement;
-
-        // auto expectLeftSubElement = std::make_tuple(2, 3.0, 4u);
-        // auto resultLeftSubElement = 1 + srcTuple;
-        // err |= expectLeftSubElement != resultLeftSubElement;
-
-        auto expectRightSubElement = std::make_tuple(0, 1.0, 2u);
-        auto resultRightSubElement = srcTuple - 1;
-        err |= expectRightSubElement != resultRightSubElement;
 
         return err;
     }
@@ -145,10 +64,10 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto srcTuple = std::make_tuple(1, 2.0, 3u);
+        auto srcTuple = make_vector(1, 2, 3);
 
-        auto expect = std::make_tuple(1, 3u);
-        auto result = rocwmma::copy_impl(srcTuple, std::index_sequence<0, 2>{});
+        auto expect = make_vector(1, 3);
+        auto result = detail::copy_impl(srcTuple, detail::index_sequence<0, 2>{});
         err |= expect != result;
 
         return err;
@@ -158,10 +77,10 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto srcTuple = std::make_tuple(1, 2.0, 3u);
+        auto srcTuple = make_vector(1, 2, 3);
 
-        auto expect = std::make_tuple(1, 2.0);
-        auto result = rocwmma::pop_right(srcTuple);
+        auto expect = make_vector(1, 2);
+        auto result = pop_right(srcTuple);
         err |= expect != result;
 
         return err;
@@ -171,10 +90,10 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto srcTuple = std::make_tuple(1, 2.0, 3u);
+        auto srcTuple = make_vector(1, 2.0, 3u);
 
-        auto expect = std::make_tuple(2.0, 3u);
-        auto result = rocwmma::pop_left(srcTuple);
+        auto expect = make_vectpr(2.0, 3u);
+        auto result = pop_left(srcTuple);
         err |= expect != result;
 
         return err;
@@ -184,10 +103,10 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto srcTuple = std::make_tuple(1, 2.0, 3u);
+        auto srcTuple = make_vector(1, 2, 3);
 
         auto expect = 1;
-        auto result = rocwmma::get_first(srcTuple);
+        auto result = get_first(srcTuple);
         err |= expect != result;
 
         return err;
@@ -197,10 +116,10 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto srcTuple = std::make_tuple(1, 2.0, 3u);
+        auto srcTuple = make_vector(1, 2, 3);
 
         auto expect = 3u;
-        auto result = rocwmma::get_last(srcTuple);
+        auto result = get_last(srcTuple);
         err |= expect != result;
 
         return err;
@@ -210,10 +129,10 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto srcTuple = std::make_tuple(1, 2, 3);
+        auto srcTuple = make_vector(1, 2, 3);
 
-        auto expect = std::make_tuple(3, 2, 1);
-        auto result = rocwmma::reverse(srcTuple);
+        auto expect = make_vector(3, 2, 1);
+        auto result = reverse(srcTuple);
         err |= expect != result;
 
         return err;
@@ -227,8 +146,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto srcCoord = std::make_tuple(2, 3, 5, 7);
-        auto srcDims  = std::make_tuple(3, 5, 7, 11);
+        auto srcCoord = make_vector(2, 3, 5, 7);
+        auto srcDims  = make_vector(3, 5, 7, 11);
 
         /**
          * | c      | 2 | 3  | 5  | 7   |
@@ -237,7 +156,7 @@ namespace rocwmma
          * | result | 2 | 11 | 86 | 821 |
          */
         auto expect = 821;
-        auto result = rocwmma::flatten_coord_right(srcCoord, srcDims);
+        auto result = flatten_coord_right(srcCoord, srcDims);
         err |= expect != result;
 
         return err;
@@ -247,8 +166,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto srcCoord = std::make_tuple(2);
-        auto srcDims  = std::make_tuple(3);
+        auto srcCoord = make_vector(2);
+        auto srcDims  = make_vector(3);
 
         /**
          * | c      | 2 |
@@ -257,7 +176,7 @@ namespace rocwmma
          * | result | 2 |
          */
         auto expect = 2;
-        auto result = rocwmma::flatten_coord_right(srcCoord, srcDims);
+        auto result = flatten_coord_right(srcCoord, srcDims);
         err |= expect != result;
 
         return err;
@@ -267,8 +186,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto srcCoord = std::make_tuple(2, 3, 5, 7);
-        auto srcDims  = std::make_tuple(3, 5, 7, 11);
+        auto srcCoord = make_vector(2, 3, 5, 7);
+        auto srcDims  = make_vector(3, 5, 7, 11);
 
         /**
          * | c      | 7  | 5  | 3   | 2    |
@@ -277,7 +196,7 @@ namespace rocwmma
          * | result | 7  | 62 | 293 | 1063 |
          */
         auto expect = 1063;
-        auto result = rocwmma::flatten_coord_left(srcCoord, srcDims);
+        auto result = flatten_coord_left(srcCoord, srcDims);
         err |= expect != result;
 
         return err;
@@ -287,8 +206,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto srcCoord = std::make_tuple(7);
-        auto srcDims  = std::make_tuple(11);
+        auto srcCoord = make_vector(7);
+        auto srcDims  = make_vector(11);
 
         /**
          * | c      | 7  |
@@ -297,7 +216,7 @@ namespace rocwmma
          * | result | 7  |
          */
         auto expect = 7;
-        auto result = rocwmma::flatten_coord_left(srcCoord, srcDims);
+        auto result = flatten_coord_left(srcCoord, srcDims);
         err |= expect != result;
 
         return err;
@@ -308,7 +227,7 @@ namespace rocwmma
         bool err = false;
 
         auto srcFlatCoord = 821;
-        auto srcDims      = std::make_tuple(3, 5, 7, 11);
+        auto srcDims      = make_vector(3, 5, 7, 11);
 
         /**
          * | c      | 821 | 821 | 821 | 821 |
@@ -316,8 +235,8 @@ namespace rocwmma
          * | div    | 1   | 3   | 15  | 105 |
          * | result | 2   | 3   | 5   | 7   |
          */
-        auto expect = std::make_tuple(2, 3, 5, 7);
-        auto result = rocwmma::inflate_coord_right(srcFlatCoord, srcDims);
+        auto expect = make_vector(2, 3, 5, 7);
+        auto result = inflate_coord_right(srcFlatCoord, srcDims);
         err |= expect != result;
 
         return err;
@@ -328,7 +247,7 @@ namespace rocwmma
         bool err = false;
 
         auto srcFlatCoord = 2;
-        auto srcDims      = std::make_tuple(3);
+        auto srcDims      = make_vector(3);
 
         /**
          * | c      | 2   |
@@ -336,8 +255,8 @@ namespace rocwmma
          * | div    | 1   |
          * | result | 2   |
          */
-        auto expect = std::make_tuple(2);
-        auto result = rocwmma::inflate_coord_right(srcFlatCoord, srcDims);
+        auto expect = make_vector(2);
+        auto result = inflate_coord_right(srcFlatCoord, srcDims);
         err |= expect != result;
 
         return err;
@@ -348,7 +267,7 @@ namespace rocwmma
         bool err = false;
 
         auto srcFlatCoord = 1063;
-        auto srcDims      = std::make_tuple(3, 5, 7, 11);
+        auto srcDims      = make_vector(3, 5, 7, 11);
 
         /**
          * | c               | 1063 | 1063 | 1063 | 1063 |
@@ -357,8 +276,8 @@ namespace rocwmma
          * | result          | 7    | 5    | 3    | 2    |
          * | reversed result | 2    | 3    | 5    | 7    |
          */
-        auto expect = std::make_tuple(2, 3, 5, 7);
-        auto result = rocwmma::inflate_coord_left(srcFlatCoord, srcDims);
+        auto expect = make_vector(2, 3, 5, 7);
+        auto result = inflate_coord_left(srcFlatCoord, srcDims);
         err |= expect != result;
 
         return err;
@@ -369,7 +288,7 @@ namespace rocwmma
         bool err = false;
 
         auto srcFlatCoord = 7;
-        auto srcDims      = std::make_tuple(11);
+        auto srcDims      = make_vector(11);
 
         /**
          * | c               | 7    |
@@ -378,8 +297,8 @@ namespace rocwmma
          * | result          | 7    |
          * | reversed result | 2    |
          */
-        auto expect = std::make_tuple(7);
-        auto result = rocwmma::inflate_coord_left(srcFlatCoord, srcDims);
+        auto expect = make_vector(7);
+        auto result = inflate_coord_left(srcFlatCoord, srcDims);
         err |= expect != result;
 
         return err;
@@ -389,8 +308,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto srcStrides      = std::make_tuple(2, 3, 5, 7);
-        auto srcStrideCounts = std::make_tuple(3, 5, 7, 11);
+        auto srcStrides      = make_vector(2, 3, 5, 7);
+        auto srcStrideCounts = make_vector(3, 5, 7, 11);
 
         /**
          * | stride | 2 | 3  | 5  | 7   |
@@ -398,7 +317,7 @@ namespace rocwmma
          * | result | 6 | 21 | 56 | 133 |
          */
         auto expect = 133;
-        auto result = rocwmma::to_matrix_space(srcStrides, srcStrideCounts);
+        auto result = to_matrix_space(srcStrides, srcStrideCounts);
         err |= expect != result;
 
         return err;
@@ -419,10 +338,7 @@ namespace rocwmma
 
         bool err = false;
 
-        err = err ? err : isTupleTest();
         err = err ? err : operatorMultTest();
-        err = err ? err : operatorAddTest();
-        err = err ? err : operatorSubTest();
         err = err ? err : copyTest();
         err = err ? err : popLeftTest();
         err = err ? err : popRightTest();

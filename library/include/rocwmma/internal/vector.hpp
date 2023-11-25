@@ -157,22 +157,28 @@ namespace rocwmma
         constexpr inline T operator[](unsigned int idx) const noexcept;
 
         ROCWMMA_HOST_DEVICE
-        inline VecT& operator+=(const VecT& x_) noexcept;
+        constexpr inline VecT& operator+=(const VecT& x_) noexcept;
 
         ROCWMMA_HOST_DEVICE
-        inline VecT& operator-=(const VecT& x_) noexcept;
+        constexpr inline VecT& operator-=(const VecT& x_) noexcept;
 
         ROCWMMA_HOST_DEVICE
-        inline VecT& operator*=(const VecT& x_) noexcept;
+        constexpr inline VecT& operator*=(const VecT& x_) noexcept;
 
         ROCWMMA_HOST_DEVICE
-        inline VecT& operator/=(const VecT& x_) noexcept;
+        constexpr inline VecT& operator/=(const VecT& x_) noexcept;
 
         ROCWMMA_HOST_DEVICE
-        inline VecT operator+(const VecT& x_) noexcept;
+        constexpr inline VecT operator+(const VecT& x_) noexcept;
 
         ROCWMMA_HOST_DEVICE
-        inline VecT operator-(const VecT& x_) noexcept;
+        constexpr inline VecT operator-(const VecT& x_) noexcept;
+
+        ROCWMMA_HOST_DEVICE
+        constexpr inline VecT operator*(const VecT& x_) noexcept;
+
+        ROCWMMA_HOST_DEVICE
+        constexpr inline VecT operator/(const VecT& x_) noexcept;
 
         template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT& operator%=(const VecT& x_) noexcept;
@@ -403,6 +409,182 @@ namespace rocwmma
             return VecSize;
         }
     };
+
+    template <typename T, uint32_t VecSize>
+    struct VecTraits<non_native_vector_base<T, VecSize>>
+    {
+        // Vector class blueprint
+        template <typename DataT = T, uint32_t size = VecSize>
+        using VecT = non_native_vector_base<T, size>;
+
+        // Current data type
+        using DataT = T;
+
+        // Current vector size
+        constexpr static inline uint32_t size()
+        {
+            return VecSize;
+        }
+    };
+
+    namespace detail
+    {
+        template <typename T, typename... Ts>
+        constexpr auto getFirstType()
+        {
+            return T();
+        }
+
+        template <typename T>
+        constexpr bool isSameType()
+        {
+            return true;
+        }
+
+        template <typename T, typename Y, typename... Ts>
+        constexpr bool isSameType()
+        {
+            return std::is_same<T, Y>::value && isSameType<Y, Ts...>();
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////
+    ///           HIP_vector_type<T, N> utility overrides           ///
+    ///                                                             ///
+    /// Note: HIP_vector_type<T, N> uses vector extensions.         ///
+    /// Element-wise access of vectors in constexpr is forbidden.   ///
+    ///////////////////////////////////////////////////////////////////
+    template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    ROCWMMA_HOST_DEVICE constexpr inline DataT& get(HIP_vector_type<DataT, VecSize>& v)
+    {
+        return reinterpret_cast<DataT*>(&v.data)[Idx];
+    }
+
+    template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    ROCWMMA_HOST_DEVICE constexpr inline DataT get(HIP_vector_type<DataT, VecSize> const& v)
+    {
+        return v.data[Idx];
+    }
+
+    template <typename DataT>
+    ROCWMMA_HOST_DEVICE constexpr inline auto swap(HIP_vector_type<DataT, 2> const& v)
+    {
+        return HIP_vector_type<DataT, 2>{get<1>(v), get<0>(v)};
+    }
+
+    namespace detail
+    {
+        template <typename F, typename DataT, uint32_t Rank, size_t... I>
+        constexpr decltype(auto)
+            apply_impl(F fn, HIP_vector_type<DataT, Rank> const& v, index_sequence<I...>)
+        {
+            return fn(get<I>(v)...);
+        }
+
+    } // namespace detail
+
+    template <typename F, typename DataT, uint32_t Rank>
+    constexpr decltype(auto) apply(F fn, HIP_vector_type<DataT, Rank>& v)
+    {
+        constexpr std::size_t size = VecTraits<std::decay_t<decltype(v)>>::size();
+        return detail::apply_impl(fn, v, detail::make_index_sequence<size>());
+    }
+
+    ///////////////////////////////////////////////////////////////////
+    ///     non_native_vector_base<T, N> utility overrides          ///
+    ///////////////////////////////////////////////////////////////////
+    template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    ROCWMMA_HOST_DEVICE constexpr static inline DataT&
+        get(non_native_vector_base<DataT, VecSize>& v)
+    {
+        return v[Idx];
+    }
+
+    template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    ROCWMMA_HOST_DEVICE constexpr static inline DataT
+        get(non_native_vector_base<DataT, VecSize> const& v)
+    {
+        return v[Idx];
+    }
+
+    namespace detail
+    {
+        template <typename F, typename DataT, uint32_t Rank, size_t... I>
+        constexpr decltype(auto)
+            apply_impl(F fn, non_native_vector_base<DataT, Rank> const& v, index_sequence<I...>)
+        {
+            return fn(get<I>(v)...);
+        }
+
+    } // namespace detail
+
+    template <typename F, typename DataT, uint32_t Rank>
+    constexpr decltype(auto) apply(F fn, non_native_vector_base<DataT, Rank> const& v)
+    {
+        constexpr std::size_t size = VecTraits<std::decay_t<decltype(v)>>::size();
+        return detail::apply_impl(fn, v, detail::make_index_sequence<size>());
+    }
+
+    template <typename... Ts>
+    constexpr decltype(auto) make_vector(Ts&&... ts)
+    {
+        // TODO: When HIP_vector_type becomes constexpr replace with non_native_vector type.
+
+        // Ensure that all the arguments are the same type
+        static_assert(detail::isSameType<Ts...>(), "Vector arguments must all be the same type");
+
+        using DataT = std::decay_t<decltype(detail::getFirstType<Ts...>())>;
+        return non_native_vector_base<DataT, sizeof...(Ts)>{std::forward<Ts>(ts)...};
+    }
+
+    namespace detail
+    {
+        template <typename DataT0,
+                  uint32_t Rank0,
+                  size_t... Is0,
+                  typename DataT1,
+                  uint32_t Rank1,
+                  size_t... Is1>
+        constexpr decltype(auto) vector_cat_impl(non_native_vector_base<DataT0, Rank0> const& lhs,
+                                                 index_sequence<Is0...>,
+                                                 non_native_vector_base<DataT1, Rank1> const& rhs,
+                                                 index_sequence<Is1...>)
+        {
+            return make_vector(get<Is0>(lhs)..., get<Is1>(rhs)...);
+        }
+
+    } // namespace detail
+
+    template <typename Lhs, typename Rhs>
+    constexpr decltype(auto) vector_cat(Lhs&& lhs, Rhs&& rhs)
+    {
+        constexpr std::size_t Size0 = VecTraits<std::decay_t<decltype(lhs)>>::size();
+        constexpr std::size_t Size1 = VecTraits<std::decay_t<decltype(rhs)>>::size();
+
+        return detail::vector_cat_impl(std::forward<Lhs>(lhs),
+                                       detail::make_index_sequence<Size0>(),
+                                       std::forward<Rhs>(rhs),
+                                       detail::make_index_sequence<Size1>());
+    }
+
+    namespace detail
+    {
+        template <typename DataT0, typename DataT1, uint32_t Rank, size_t... Is>
+        constexpr decltype(auto) mult_poly_vec_impl(non_native_vector_base<DataT0, Rank> const& lhs,
+                                                    non_native_vector_base<DataT1, Rank> const& rhs,
+                                                    index_sequence<Is...>)
+        {
+            return make_vector((get<Is>(lhs) * get<Is>(rhs))...);
+        }
+
+    } // namespace detail
+
+    template <typename DataT0, typename DataT1, uint32_t Rank>
+    constexpr decltype(auto) operator*(non_native_vector_base<DataT0, Rank> const& lhs,
+                                       non_native_vector_base<DataT1, Rank> const& rhs)
+    {
+        return detail::mult_poly_vec_impl(lhs, rhs, detail::make_index_sequence<Rank>());
+    }
 
 } // namespace rocwmma
 

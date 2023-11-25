@@ -562,14 +562,14 @@ namespace rocwmma
 
                 ROCWMMA_DEVICE constexpr static inline auto strideCounts()
                 {
-                    return std::make_tuple((uint32_t)Traits::BlockDimSegs, // BlockDim Segments
-                                           (uint32_t)Traits::BlockKSegs, // BlockK Segments
-                                           (uint32_t)Traits::VWSegs); // VW Segments
+                    return make_vector((uint32_t)Traits::BlockDimSegs, // BlockDim Segments
+                                       (uint32_t)Traits::BlockKSegs, // BlockK Segments
+                                       (uint32_t)Traits::VWSegs); // VW Segments
                 }
 
                 ROCWMMA_DEVICE constexpr static inline auto strides()
                 {
-                    return std::make_tuple(
+                    return make_vector(
                         make_coord2d((uint32_t)Traits::BlockDimStride_X,
                                      (uint32_t)Traits::BlockDimStride_Y),
                         make_coord2d((uint32_t)Traits::BlockKStride_X,
@@ -786,14 +786,14 @@ namespace rocwmma
 
                 ROCWMMA_DEVICE constexpr static inline auto strideCounts()
                 {
-                    return std::make_tuple((uint32_t)Traits::BlockDimSegs, // BlockDim Segments
-                                           (uint32_t)Traits::BlockKSegs, // BlockK Segments
-                                           (uint32_t)Traits::VWSegs); // VW Segments
+                    return make_vector((uint32_t)Traits::BlockDimSegs, // BlockDim Segments
+                                       (uint32_t)Traits::BlockKSegs, // BlockK Segments
+                                       (uint32_t)Traits::VWSegs); // VW Segments
                 }
 
                 ROCWMMA_DEVICE constexpr static inline auto strides()
                 {
-                    return std::make_tuple(
+                    return make_vector(
                         make_coord2d((uint32_t)Traits::BlockDimStride_X,
                                      (uint32_t)Traits::BlockDimStride_Y),
                         make_coord2d((uint32_t)Traits::BlockKStride_X,
@@ -933,7 +933,7 @@ namespace rocwmma
                 ROCWMMA_DEVICE constexpr static inline auto strides()
                 {
                     auto t = Traits::OrthoLayout::strides();
-                    return std::make_tuple(
+                    return make_vector(
                         swap(std::get<0>(t)), swap(std::get<1>(t)), swap(std::get<2>(t)));
                 }
 
@@ -979,7 +979,7 @@ namespace rocwmma
                 ROCWMMA_DEVICE constexpr static inline auto strides()
                 {
                     auto t = Traits::OrthoLayout::strides();
-                    return std::make_tuple(
+                    return make_vector(
                         swap(std::get<0>(t)), swap(std::get<1>(t)), swap(std::get<2>(t)));
                 }
 

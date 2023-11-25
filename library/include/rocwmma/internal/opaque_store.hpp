@@ -85,11 +85,11 @@ namespace rocwmma
                                                        StrideCounts&& strideCounts,
                                                        Strides2d&&    strides2d)
         {
-            auto strideOffset = DataLayout::fromMatrixCoord(std::get<Depth>(strides2d), ldm);
-            auto strideCount  = std::get<Depth>(strideCounts);
+            auto strideOffset = DataLayout::fromMatrixCoord(get<Depth>(strides2d), ldm);
+            auto strideCount  = get<Depth>(strideCounts);
 
             // Last depth layer will invoke the load
-            if constexpr(Depth == (std::tuple_size<std::decay_t<StrideCounts>>::value - 1u))
+            if constexpr(Depth == (VecTraits<std::decay_t<StrideCounts>>::size() - 1u))
             {
 #pragma unroll
                 for(int i = 0; i < strideCount; i++)
@@ -122,11 +122,10 @@ namespace rocwmma
                           "IOCount inconsistent with iterator range");
 
             // Make sure that the IOCount is consistent with the number of total strides
-            static_assert(
-                IOTraits::IOCount
-                    == std::apply([](auto... items) { return (items * ...); },
-                                  MatrixLayout::strideCounts()),
-                "IOCount inconsistent with total strides");
+            static_assert(IOTraits::IOCount
+                              == apply([](auto... items) { return (items * ...); },
+                                       MatrixLayout::strideCounts()),
+                          "IOCount inconsistent with total strides");
 
             unroll_right(dataPtr + DataLayout::fromMatrixCoord(baseOffset2d, ldm),
                          it,

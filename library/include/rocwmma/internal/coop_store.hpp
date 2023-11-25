@@ -74,14 +74,14 @@ namespace rocwmma
                                                        StrideSpace&& strideCounts,
                                                        Strides2d&&   strides2d)
         {
-            static_assert(std::tuple_size<std::decay_t<StrideSpace>>::value
-                              == std::tuple_size<std::decay_t<Strides2d>>::value,
+            static_assert(VecTraits<std::decay_t<StrideSpace>>::size()
+                              == VecTraits<std::decay_t<Strides2d>>::size(),
                           "Mismatched size");
             auto strideOffset = DataLayout::fromMatrixCoord(std::get<Depth>(strides2d), ldm);
             auto strideCount  = std::get<Depth>(strideCounts);
 
             // Last depth layer will invoke the load
-            if constexpr(Depth == (std::tuple_size<std::decay_t<StrideSpace>>::value - 1u))
+            if constexpr(Depth == (VecTraits<std::decay_t<StrideSpace>>::size() - 1u))
             {
 #pragma unroll
                 for(int i = 0; i < strideCount; i++)
@@ -141,8 +141,7 @@ namespace rocwmma
 
             // Add back in the VW dimension, for the full stride
             // space of the current wave
-            auto strideSpaceW
-                = std::tuple_cat(strideSpaceS, std::make_tuple(get_last(strideSpace)));
+            auto strideSpaceW = vector_cat(strideSpaceS, make_vector(get_last(strideSpace)));
 
             auto it = makeVectorIterator<StoreVecTraits::size()>(data).begin();
 
@@ -151,7 +150,7 @@ namespace rocwmma
 
             // Find current wave offset
             constexpr auto sum               = [](auto... items) { return (items + ...); };
-            auto           currentWaveOffset = std::apply(
+            auto           currentWaveOffset = apply(
                 sum, inflate_coord_left(waveIndex * workItemsPerWave, strideSpaceR) * stridesR);
 
             unroll_right(dataPtr + DataLayout::fromMatrixCoord(baseOffset + currentWaveOffset, ldm),
@@ -198,7 +197,7 @@ namespace rocwmma
             // Add back in the VW dimension, for the full stride
             // space of the current wave
             constexpr auto strideSpaceW
-                = std::tuple_cat(strideSpaceS, std::make_tuple(get_last(strideSpace)));
+                = vector_cat(strideSpaceS, make_vector(get_last(strideSpace)));
 
             // Alias the original frag due to smaller split size
             auto& dataR = (typename StoreVecTraits::template VecT<
@@ -211,7 +210,7 @@ namespace rocwmma
 
             // Find current wave offset
             constexpr auto sum               = [](auto... items) { return (items + ...); };
-            auto           currentWaveOffset = std::apply(
+            auto           currentWaveOffset = apply(
                 sum, inflate_coord_left(waveIndex * workItemsPerWave, strideSpaceR) * stridesR);
 
             unroll_right(dataPtr + DataLayout::fromMatrixCoord(baseOffset + currentWaveOffset, ldm),

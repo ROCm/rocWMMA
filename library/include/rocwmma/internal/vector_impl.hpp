@@ -400,35 +400,35 @@ namespace rocwmma
     }
 
     template <typename T, unsigned int Rank>
-    ROCWMMA_HOST_DEVICE inline auto
+    ROCWMMA_HOST_DEVICE constexpr inline auto
         non_native_vector_base<T, Rank>::operator+=(const VecT& x_) noexcept -> VecT&
     {
         return (*this = detail::binOp<detail::ArithmeticOp::Add>(*this, x_, detail::Seq<Rank>{}));
     }
 
     template <typename T, unsigned int Rank>
-    ROCWMMA_HOST_DEVICE inline auto
+    ROCWMMA_HOST_DEVICE constexpr inline auto
         non_native_vector_base<T, Rank>::operator-=(const VecT& x_) noexcept -> VecT&
     {
         return (*this = detail::binOp<detail::ArithmeticOp::Sub>(*this, x_, detail::Seq<Rank>{}));
     }
 
     template <typename T, unsigned int Rank>
-    ROCWMMA_HOST_DEVICE inline auto
+    ROCWMMA_HOST_DEVICE constexpr inline auto
         non_native_vector_base<T, Rank>::operator*=(const VecT& x_) noexcept -> VecT&
     {
         return (*this = detail::binOp<detail::ArithmeticOp::Mult>(*this, x_, detail::Seq<Rank>{}));
     }
 
     template <typename T, unsigned int Rank>
-    ROCWMMA_HOST_DEVICE inline auto
+    ROCWMMA_HOST_DEVICE constexpr inline auto
         non_native_vector_base<T, Rank>::operator/=(const VecT& x_) noexcept -> VecT&
     {
         return (*this = detail::binOp<detail::ArithmeticOp::Div>(*this, x_, detail::Seq<Rank>{}));
     }
 
     template <typename T, unsigned int Rank>
-    ROCWMMA_HOST_DEVICE inline auto
+    ROCWMMA_HOST_DEVICE constexpr inline auto
         non_native_vector_base<T, Rank>::operator+(const VecT& x_) noexcept -> VecT
     {
         auto ret = VecT{*this};
@@ -436,11 +436,27 @@ namespace rocwmma
     }
 
     template <typename T, unsigned int Rank>
-    ROCWMMA_HOST_DEVICE inline auto
+    ROCWMMA_HOST_DEVICE constexpr inline auto
         non_native_vector_base<T, Rank>::operator-(const VecT& x_) noexcept -> VecT
     {
         auto ret = VecT{*this};
         return (ret -= x_);
+    }
+
+    template <typename T, unsigned int Rank>
+    ROCWMMA_HOST_DEVICE constexpr inline auto
+        non_native_vector_base<T, Rank>::operator*(const VecT& x_) noexcept -> VecT
+    {
+        auto ret = VecT{*this};
+        return (ret *= x_);
+    }
+
+    template <typename T, unsigned int Rank>
+    ROCWMMA_HOST_DEVICE constexpr inline auto
+        non_native_vector_base<T, Rank>::operator/(const VecT& x_) noexcept -> VecT
+    {
+        auto ret = VecT{*this};
+        return (ret /= x_);
     }
 
     template <typename T, unsigned int Rank>

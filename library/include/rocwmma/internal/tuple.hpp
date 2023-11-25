@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,214 +29,113 @@
 #include <iostream>
 #include <tuple>
 
+#include "utils.hpp"
+
 namespace rocwmma
 {
     template <typename T, unsigned int n, typename U>
-    __HOST_DEVICE__ inline constexpr non_native_vector_base<T, n>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
+        operator+(const non_native_vector_base<T, n>& x, U y) noexcept
+    {
+        return non_native_vector_base<T, n>{x} += non_native_vector_base<T, n>{y};
+    }
+
+    template <typename T, unsigned int n, typename U>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
+        operator+(U y, const non_native_vector_base<T, n>& x) noexcept
+    {
+        return non_native_vector_base<T, n>{x} += non_native_vector_base<T, n>{y};
+    }
+
+    template <typename T, unsigned int n, typename U>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
+        operator-(const non_native_vector_base<T, n>& x, U y) noexcept
+    {
+        return non_native_vector_base<T, n>{x} -= non_native_vector_base<T, n>{y};
+    }
+
+    template <typename T, unsigned int n, typename U>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
+        operator-(U y, const non_native_vector_base<T, n>& x) noexcept
+    {
+        return non_native_vector_base<T, n>{x} -= non_native_vector_base<T, n>{y};
+    }
+
+    template <typename T, unsigned int n, typename U>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
         operator*(const non_native_vector_base<T, n>& x, U y) noexcept
     {
         return non_native_vector_base<T, n>{x} *= non_native_vector_base<T, n>{y};
     }
 
     template <typename T, unsigned int n, typename U>
-    __HOST_DEVICE__ inline constexpr non_native_vector_base<T, n>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
         operator*(U y, const non_native_vector_base<T, n>& x) noexcept
     {
         return non_native_vector_base<T, n>{x} *= non_native_vector_base<T, n>{y};
     }
-}
 
-namespace std
-{
-
-    template <typename T>
-    struct is_tuple
+    template <typename T, unsigned int n, typename U>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
+        operator/(const non_native_vector_base<T, n>& x, U y) noexcept
     {
-        constexpr static auto value = false;
-    };
-
-    template <typename... ArgsT>
-    struct is_tuple<tuple<ArgsT...>>
-    {
-        constexpr static auto value = true;
-    };
-
-    template <typename T,
-              typename... Types,
-              size_t... Indices,
-              typename std::enable_if_t<is_tuple<decay_t<T>>::value == false, int> = 0>
-    constexpr static inline auto
-        operator_mult_impl(T&& val, tuple<Types...> const& tup, index_sequence<Indices...>)
-    {
-        return make_tuple(val * get<Indices>(tup)...);
+        return non_native_vector_base<T, n>{x} /= non_native_vector_base<T, n>{y};
     }
 
-    template <typename... TypesL, typename... TypesR, size_t... Indices>
-    constexpr static inline auto operator_mult_impl(tuple<TypesL...> const& lhs,
-                                                    tuple<TypesR...> const& rhs,
-                                                    index_sequence<Indices...>)
+    template <typename T, unsigned int n, typename U>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
+        operator/(U y, const non_native_vector_base<T, n>& x) noexcept
     {
-        return make_tuple(get<Indices>(lhs) * get<Indices>(rhs)...);
+        return non_native_vector_base<T, n>{x} /= non_native_vector_base<T, n>{y};
     }
 
-    template <typename T, typename... Types>
-    constexpr static inline auto operator*(T&& val, tuple<Types...> const& tup)
+    namespace detail
     {
-        return operator_mult_impl(std::forward<T>(val),
-                                  std::forward<decltype(tup)>(tup),
-                                  make_index_sequence<tuple_size<tuple<Types...>>::value>());
+        template <typename VecT, std::size_t... Indices>
+        constexpr static auto copy_impl(VecT&& t, std::index_sequence<Indices...>&&)
+        {
+            return make_vector(std::get<Indices>(std::forward<VecT>(t))...);
+        }
     }
 
-    // template <typename... TypesL, typename... TypesR>
-    // constexpr static inline auto operator*(tuple<TypesL...> const& lhs, tuple<TypesR...> const& rhs)
-    // {
-    //     return operator_mult_impl(std::forward<decltype(lhs)>(lhs),
-    //                               std::forward<decltype(rhs)>(rhs),
-    //                               make_index_sequence<tuple_size<tuple<TypesL...>>::value>());
-    // }
-
-    template <typename T,
-              typename... Types,
-              size_t... Indices,
-              typename std::enable_if_t<is_tuple<decay_t<T>>::value == false, int> = 0>
-    constexpr static inline auto
-        operator_add_impl(T&& lhs, tuple<Types...> const& rhs, index_sequence<Indices...>)
+    template <typename VecT>
+    constexpr static auto pop_right(VecT&& t)
     {
-        return make_tuple(lhs + get<Indices>(rhs)...);
+        return detail::copy_impl(
+            std::forward<VecT>(t),
+            std::make_index_sequence<VecTraits<std::decay_t<VecT>>::size() - 1>{});
     }
 
-    template <typename T,
-              typename... Types,
-              size_t... Indices,
-              typename std::enable_if_t<is_tuple<decay_t<T>>::value == false, int> = 0>
-    constexpr static inline auto
-        operator_add_impl(tuple<Types...> const& lhs, T&& rhs, index_sequence<Indices...>)
+    template <typename VecT>
+    constexpr static auto pop_left(VecT&& t)
     {
-        return make_tuple(get<Indices>(lhs) + rhs...);
+        auto pop_front = [](auto front, auto... rest) { return make_vector(rest...); };
+        return std::apply(pop_front, std::forward<VecT>(t));
     }
 
-    template <typename... Types, size_t... Indices>
-    constexpr static inline auto operator_add_impl(tuple<Types...> const& lhs,
-                                                   tuple<Types...> const& rhs,
-                                                   index_sequence<Indices...>)
+    template <typename VecT>
+    constexpr static auto get_first(VecT&& t)
     {
-        return make_tuple(get<Indices>(lhs) + get<Indices>(rhs)...);
+        return std::get<0>(std::forward<VecT>(t));
     }
 
-    template <typename T, typename... Types>
-    constexpr static inline auto operator+(T&& lhs, tuple<Types...> const& rhs)
+    template <typename VecT>
+    constexpr static auto get_last(VecT&& t)
     {
-        return operator_add_impl(std::forward<decltype(lhs)>(lhs),
-                                 std::forward<decltype(rhs)>(rhs),
-                                 make_index_sequence<tuple_size<tuple<Types...>>::value>());
+        return std::get<VecTraits<std::decay_t<VecT>>::size() - 1u>(std::forward<VecT>(t));
     }
 
-    template <typename T, typename... Types>
-    constexpr static inline auto operator+(tuple<Types...> const& lhs, T&& rhs)
+    template <typename VecT, std::size_t... Indices>
+    constexpr static auto reverse_impl(VecT&& t, std::index_sequence<Indices...>)
     {
-        return operator_add_impl(std::forward<decltype(lhs)>(lhs),
-                                 std::forward<decltype(rhs)>(rhs),
-                                 make_index_sequence<tuple_size<tuple<Types...>>::value>());
+        return make_vector(std::get<sizeof...(Indices) - 1 - Indices>(std::forward<VecT>(t))...);
     }
 
-    // template <typename T,
-    //           typename... Types,
-    //           size_t... Indices,
-    //           typename std::enable_if_t<is_tuple<decay_t<T>>::value == false, int> = 0>
-    // constexpr static inline auto
-    //     operator_sub_impl(T&& lhs, tuple<Types...> const& rhs, index_sequence<Indices...>)
-    // {
-    //     return make_tuple(lhs - get<Indices>(rhs)...);
-    // }
-
-    template <typename T,
-              typename... Types,
-              size_t... Indices,
-              typename std::enable_if_t<is_tuple<decay_t<T>>::value == false, int> = 0>
-    constexpr static inline auto
-        operator_sub_impl(tuple<Types...> const& lhs, T&& rhs, index_sequence<Indices...>)
+    template <typename VecT>
+    constexpr static auto reverse(VecT&& t)
     {
-        return make_tuple(get<Indices>(lhs) - std::forward<T>(rhs)...);
-    }
-
-    template <typename... Types, size_t... Indices>
-    constexpr static inline auto operator_sub_impl(tuple<Types...> const& lhs,
-                                                   tuple<Types...> const& rhs,
-                                                   index_sequence<Indices...>)
-    {
-        return make_tuple(get<Indices>(lhs) - get<Indices>(rhs)...);
-    }
-
-    // template <typename T, typename... Types>
-    // constexpr static inline auto operator-(T&& lhs, tuple<Types...> const& rhs)
-    // {
-    //     return operator_sub_impl(std::forward<decltype(lhs)>(lhs),
-    //                              std::forward<decltype(rhs)>(rhs),
-    //                              make_index_sequence<tuple_size<tuple<Types...>>::value>());
-    // }
-
-    template <typename T, typename... Types>
-    constexpr static inline auto operator-(tuple<Types...> const& lhs, T&& rhs)
-    {
-        return operator_sub_impl(std::forward<decltype(lhs)>(lhs),
-                                 std::forward<decltype(rhs)>(rhs),
-                                 make_index_sequence<tuple_size<tuple<Types...>>::value>());
-    }
-
-} // namespace std
-
-namespace rocwmma
-{
-
-    // struct MakeTuple
-    // {
-    //     template<typename... ArgsT>
-    //     auto operator()(ArgsT&&... args) { return std::make_tuple(std::forward<ArgsT>(args)...); }
-    // };
-
-    template <typename T, std::size_t... Indices>
-    constexpr static auto copy_impl(T&& t, std::index_sequence<Indices...>&&)
-    {
-        return std::make_tuple(std::get<Indices>(std::forward<T>(t))...);
-    }
-
-    template <typename T>
-    constexpr static auto pop_right(T&& t)
-    {
-        return copy_impl(std::forward<T>(t),
-                         std::make_index_sequence<std::tuple_size<std::decay_t<T>>::value - 1>{});
-    }
-
-    template <typename T>
-    constexpr static auto pop_left(T&& t)
-    {
-        auto pop_front = [](auto front, auto... rest) { return std::make_tuple(rest...); };
-        return std::apply(pop_front, std::forward<T>(t));
-    }
-
-    template <typename T>
-    constexpr static auto get_first(T&& t)
-    {
-        return std::get<0>(std::forward<T>(t));
-    }
-
-    template <typename T>
-    constexpr static auto get_last(T&& t)
-    {
-        return std::get<std::tuple_size<std::decay_t<decltype(t)>>::value - 1>(std::forward<T>(t));
-    }
-
-    template <typename T, std::size_t... Indices>
-    constexpr static auto reverse_impl(T&& t, std::index_sequence<Indices...>)
-    {
-        return std::make_tuple(std::get<sizeof...(Indices) - 1 - Indices>(std::forward<T>(t))...);
-    }
-
-    template <typename T>
-    constexpr static auto reverse(T&& t)
-    {
-        return reverse_impl(std::forward<T>(t),
-                            std::make_index_sequence<std::tuple_size<std::decay_t<T>>::value>());
+        return reverse_impl(std::forward<VecT>(t),
+                            std::make_index_sequence<VecTraits<std::decay_t<VecT>>::size()>{});
     }
 
     template <typename T, std::size_t... Indices>
@@ -259,7 +158,7 @@ namespace rocwmma
         return flatten_coord_right_impl(
             std::forward<Lhs>(coord),
             std::forward<Rhs>(dims),
-            std::make_index_sequence<std::tuple_size<std::decay_t<Lhs>>::value>());
+            std::make_index_sequence<VecTraits<std::decay_t<Lhs>>::size()>{});
     }
 
     template <typename Lhs, typename Rhs, std::size_t... Indices>
@@ -284,7 +183,7 @@ namespace rocwmma
         return flatten_coord_left_impl(
             std::forward<Lhs>(coord),
             std::forward<Rhs>(dims),
-            std::make_index_sequence<std::tuple_size<std::decay_t<Lhs>>::value>());
+            std::make_index_sequence<VecTraits<std::decay_t<Lhs>>::size()>{});
     }
 
     template <typename Coord1d, typename T, std::size_t... Indices>
@@ -311,7 +210,7 @@ namespace rocwmma
         auto result = inflate_coord_right_impl(
             std::forward<decltype(flatCoord)>(flatCoord),
             std::forward<T>(dims),
-            std::make_index_sequence<std::tuple_size<std::decay_t<T>>::value>());
+            std::make_index_sequence<VecTraits<std::decay_t<T>>::size()>{});
         return result;
     }
 
@@ -328,7 +227,7 @@ namespace rocwmma
         auto div = 1;
         return reverse(std::decay_t<T>{
             inflate(flatCoord,
-                    std::get<std::tuple_size<std::decay_t<T>>::value - 1 - Indices>(dims),
+                    std::get<VecTraits<std::decay_t<T>>::size() - 1 - Indices>(dims),
                     div,
                     Indices == sizeof...(Indices) - 1)...});
     }
@@ -337,7 +236,7 @@ namespace rocwmma
     constexpr static inline auto inflate_coord_left(Coord1d const& flatCoord, T&& dims)
     {
         auto result = inflate_coord_left_impl(
-            flatCoord, dims, std::make_index_sequence<std::tuple_size<std::decay_t<T>>::value>());
+            flatCoord, dims, std::make_index_sequence<VecTraits<std::decay_t<T>>::size()>{});
         return result;
     }
 
@@ -347,7 +246,7 @@ namespace rocwmma
     {
         auto inflate = [](auto&& stride, auto&& count) { return count * stride; };
 
-        return std::tuple_element_t<0, std::decay_t<T>>{
+        return typename VecTraits<std::decay_t<T>>::DataT{
             (inflate(std::get<Indices>(strides), std::get<Indices>(strideCounts)) + ...)};
     }
 
@@ -355,9 +254,7 @@ namespace rocwmma
     constexpr static inline auto to_matrix_space(T&& strides, Y&& strideCounts)
     {
         auto result = to_matrix_space_impl(
-            strides,
-            strideCounts,
-            std::make_index_sequence<std::tuple_size<std::decay_t<T>>::value>());
+            strides, strideCounts, std::make_index_sequence<VecTraits<std::decay_t<T>>::size()>{});
         return result;
     }
 
@@ -384,7 +281,6 @@ namespace std
     {
         return rocwmma::print(os, t);
     }
-
 }
 
 #endif // ROCWMMA_TUPLE_HPP
