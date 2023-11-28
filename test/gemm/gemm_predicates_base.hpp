@@ -93,6 +93,10 @@ namespace rocwmma
             std::cout << "Global Predicates:\n";
             std::cout << "TBlockXTest: " << (bool)GlobalPredicates::TBlockXTest << std::endl;
             std::cout << "MinTBlockTest: " << (bool)GlobalPredicates::MinTBlockTest << std::endl;
+            std::cout << "CurrentArchTest: " << (bool)GlobalPredicates::CurrentArchTest
+                      << std::endl;
+            std::cout << "CurrentWaveSizeTest: " << (bool)GlobalPredicates::CurrentWaveSizeTest
+                      << std::endl;
             std::cout << "ArchTest: " << (bool)GlobalPredicates::ArchTest << std::endl;
             std::cout << "EnableBuild: " << (bool)GlobalPredicates::EnableBuild << std::endl;
             std::cout << "EnableRun: " << (bool)GlobalPredicates::EnableRun << std::endl;
@@ -324,14 +328,14 @@ namespace rocwmma
         static constexpr void debugGfx12Predicates()
         {
             std::cout << "Gfx12 Predicates:\n";
-            std::cout << "ArchTest: " << (bool)Gfx11Predicates::ArchTest << std::endl;
-            std::cout << "WaveSizeTest: " << (bool)Gfx11Predicates::WaveSizeTest << std::endl;
-            std::cout << "TBlockTest: " << (bool)Gfx11Predicates::TBlockTest << std::endl;
-            std::cout << "InputTypesTest: " << (bool)Gfx11Predicates::InputTypesTest << std::endl;
-            std::cout << "I8BlockSizeTest: " << (bool)Gfx11Predicates::I8BlockSizeTest << std::endl;
-            std::cout << "F16BlockSizeTest: " << (bool)Gfx11Predicates::F16BlockSizeTest
+            std::cout << "ArchTest: " << (bool)Gfx12Predicates::ArchTest << std::endl;
+            std::cout << "WaveSizeTest: " << (bool)Gfx12Predicates::WaveSizeTest << std::endl;
+            std::cout << "TBlockTest: " << (bool)Gfx12Predicates::TBlockTest << std::endl;
+            std::cout << "InputTypesTest: " << (bool)Gfx12Predicates::InputTypesTest << std::endl;
+            std::cout << "I8BlockSizeTest: " << (bool)Gfx12Predicates::I8BlockSizeTest << std::endl;
+            std::cout << "F16BlockSizeTest: " << (bool)Gfx12Predicates::F16BlockSizeTest
                       << std::endl;
-            std::cout << "Enable: " << (bool)Gfx11Predicates::Enable << std::endl;
+            std::cout << "Enable: " << (bool)Gfx12Predicates::Enable << std::endl;
         }
 #endif // !NDEBUG
 
@@ -347,7 +351,7 @@ namespace rocwmma
         {
             return ((bool)GlobalPredicates::EnableRun
                     && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable
-                        || (bool)Gfx11Predicates::Enable));
+                        || (bool)Gfx12Predicates::Enable));
         }
 
 #if !NDEBUG
@@ -356,6 +360,7 @@ namespace rocwmma
             debugGlobalPredicates();
             debugGfx9Predicates();
             debugGfx11Predicates();
+            debugGfx12Predicates();
 
             std::cout << "Overall enable build: " << enableBuild() << std::endl;
             std::cout << "Overall enable run: " << enableRun() << std::endl;
