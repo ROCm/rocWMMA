@@ -119,8 +119,14 @@ namespace rocwmma
     struct non_native_vector_base
     {
         /// Types
-        using BoolVecT = uint32_t __attribute__((ext_vector_type(next_pow2(Rank))));
+        using BoolVecT = non_native_vector_base<bool, Rank>;
         using VecT     = non_native_vector_base<T, Rank>;
+
+        ROCWMMA_HOST_DEVICE
+        constexpr static inline uint32_t size()
+        {
+            return Rank;
+        }
 
         /// Ctor, dtor, assignment
         ROCWMMA_HOST_DEVICE
@@ -531,9 +537,10 @@ namespace rocwmma
         // TODO: When HIP_vector_type becomes constexpr replace with non_native_vector type.
 
         // Ensure that all the arguments are the same type
-        static_assert(detail::isSameType<Ts...>(), "Vector arguments must all be the same type");
+        static_assert(detail::isSameType<std::decay_t<Ts>...>(),
+                      "Vector arguments must all be the same type");
 
-        using DataT = std::decay_t<decltype(detail::getFirstType<Ts...>())>;
+        using DataT = decltype(detail::getFirstType<std::decay_t<Ts>...>());
         return non_native_vector_base<DataT, sizeof...(Ts)>{std::forward<Ts>(ts)...};
     }
 
@@ -545,10 +552,11 @@ namespace rocwmma
                   typename DataT1,
                   uint32_t Rank1,
                   size_t... Is1>
-        constexpr decltype(auto) vector_cat_impl(non_native_vector_base<DataT0, Rank0> const& lhs,
-                                                 index_sequence<Is0...>,
-                                                 non_native_vector_base<DataT1, Rank1> const& rhs,
-                                                 index_sequence<Is1...>)
+        constexpr static inline decltype(auto)
+            vector_cat_impl(non_native_vector_base<DataT0, Rank0> const& lhs,
+                            index_sequence<Is0...>,
+                            non_native_vector_base<DataT1, Rank1> const& rhs,
+                            index_sequence<Is1...>)
         {
             return make_vector(get<Is0>(lhs)..., get<Is1>(rhs)...);
         }
@@ -570,9 +578,10 @@ namespace rocwmma
     namespace detail
     {
         template <typename DataT0, typename DataT1, uint32_t Rank, size_t... Is>
-        constexpr decltype(auto) mult_poly_vec_impl(non_native_vector_base<DataT0, Rank> const& lhs,
-                                                    non_native_vector_base<DataT1, Rank> const& rhs,
-                                                    index_sequence<Is...>)
+        constexpr static inline decltype(auto)
+            mult_poly_vec_impl(non_native_vector_base<DataT0, Rank> const& lhs,
+                               non_native_vector_base<DataT1, Rank> const& rhs,
+                               index_sequence<Is...>)
         {
             return make_vector((get<Is>(lhs) * get<Is>(rhs))...);
         }
@@ -584,6 +593,49 @@ namespace rocwmma
                                        non_native_vector_base<DataT1, Rank> const& rhs)
     {
         return detail::mult_poly_vec_impl(lhs, rhs, detail::make_index_sequence<Rank>());
+    }
+
+    namespace detail
+    {
+        template <class BinOp, typename T, typename... Ts>
+        ROCWMMA_HOST_DEVICE constexpr static inline std::decay_t<T>
+            reduceOp_impl(T&& t, Ts&&... ts) noexcept
+        {
+            using CastT = std::decay_t<T>;
+            if constexpr(sizeof...(Ts) >= 1)
+            {
+                return BinOp::exec(static_cast<CastT>(t),
+                                   reduceOp_impl<BinOp>(std::forward<Ts>(ts)...));
+            }
+            else
+            {
+                return static_cast<CastT>(t);
+            }
+        }
+
+        template <class BinOp, typename VecT, size_t... Is>
+        ROCWMMA_HOST_DEVICE constexpr static inline decltype(auto)
+            vector_reduce_impl(VecT&& v, index_sequence<Is...>) noexcept
+        {
+            return reduceOp_impl<BinOp>(get<Is>(v)...);
+        }
+
+        // Use with operations that have 1 operands
+        template <class BinOp, typename VecT>
+        ROCWMMA_HOST_DEVICE constexpr static inline decltype(auto)
+            vector_reduce(VecT&& lhs) noexcept
+        {
+            return vector_reduce_impl<BinOp>(
+                std::forward<VecT>(lhs),
+                detail::make_index_sequence<VecTraits<std::decay_t<VecT>>::size()>{});
+        }
+    }
+
+    template <typename VecT>
+    ROCWMMA_HOST_DEVICE constexpr static inline decltype(auto)
+        vector_reduce_and(VecT&& lhs) noexcept
+    {
+        return detail::vector_reduce<detail::BitwiseOp::And>(std::forward<VecT>(lhs));
     }
 
 } // namespace rocwmma
