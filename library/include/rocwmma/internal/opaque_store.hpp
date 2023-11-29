@@ -26,8 +26,6 @@
 #ifndef ROCWMMA_OPAQUE_STORE_HPP
 #define ROCWMMA_OPAQUE_STORE_HPP
 
-#include <numeric>
-
 #include "io_traits.hpp"
 #include "layout.hpp"
 #include "types.hpp"

@@ -206,6 +206,14 @@ namespace rocwmma
 ///////////////////////////////////////////////////////////
 ////////  std::apply fold expressions (<= C++14)  /////////
 ///////////////////////////////////////////////////////////
+
+namespace std
+{
+    // TODO: Remove after utils refactor
+    using rocwmma::apply;
+    using rocwmma::get;
+}
+
 #if !defined(__HIPCC_RTC__)
 namespace std
 {
@@ -223,10 +231,6 @@ namespace std
         return apply_impl(fn, t, std::make_index_sequence<size>());
     }
 #endif
-
-    // TODO: Migrate to internal rocwmma utils
-    using rocwmma::apply;
-    using rocwmma::get;
 
 } // namespace std
 

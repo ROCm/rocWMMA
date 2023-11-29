@@ -169,13 +169,13 @@ namespace std
     using conditional_t = typename conditional<B, T, F>::type;
 
     template <typename T>
-    ROCWMMA_HOST_DEVICE const T& max(const T& a, const T& b)
+    ROCWMMA_HOST_DEVICE constexpr const T& max(const T& a, const T& b)
     {
         return (a < b) ? b : a;
     }
 
     template <typename T>
-    ROCWMMA_HOST_DEVICE const T& min(const T& a, const T& b)
+    ROCWMMA_HOST_DEVICE constexpr const T& min(const T& a, const T& b)
     {
         return (a < b) ? a : b;
     }
@@ -459,6 +459,9 @@ namespace std
 
     template <typename T>
     using decay_t = typename decay<T>::type;
+
+    template <class T, class U>
+    inline constexpr bool is_same_v = is_same<T, U>::value;
 
 } // namespace std
 #endif

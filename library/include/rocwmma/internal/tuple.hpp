@@ -26,8 +26,12 @@
 #ifndef ROCWMMA_TUPLE_HPP
 #define ROCWMMA_TUPLE_HPP
 
+#if !defined(__HIPCC_RTC__)
+
 #include <iostream>
 #include <tuple>
+
+#endif // !defined(__HIPCC_RTC__)
 
 #include "utils.hpp"
 
@@ -297,6 +301,8 @@ namespace rocwmma
             make_index_sequence<VecTraits<std::decay_t<Vec0>>::size()>{});
     }
 
+#if !defined(__HIPCC_RTC__)
+
     template <class T, size_t... I>
     auto& print(std::ostream& os, T&& t, std::index_sequence<I...>&&)
     {
@@ -311,8 +317,11 @@ namespace rocwmma
         return print(os, t, std::make_index_sequence<sizeof...(ArgsT)>());
     }
 
+#endif // !defined(__HIPCC_RTC__)
+
 } // namespace rocwmma
 
+#if !defined(__HIPCC_RTC__)
 namespace std
 {
     template <typename... Args>
@@ -321,5 +330,6 @@ namespace std
         return rocwmma::print(os, t);
     }
 }
+#endif // !defined(__HIPCC_RTC__)
 
 #endif // ROCWMMA_TUPLE_HPP
