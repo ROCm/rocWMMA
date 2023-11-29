@@ -42,20 +42,20 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto srcTuple          = make_vector(1, 2, 3);
-        auto expectHeadElement = make_vector(2);
-        auto resultHeadElement = detail::mult_poly_vec_impl(
+        auto const srcTuple          = make_vector(1, 2, 3);
+        auto       expectHeadElement = make_vector(2);
+        auto       resultHeadElement = detail::mult_poly_vec_impl(
             make_vector(2, 2, 2), srcTuple, detail::index_sequence<0>{});
-        err |= expectHeadElement != resultHeadElement;
+        err |= vector_reduce_and(expectHeadElement != resultHeadElement);
 
         auto expectTailElement = make_vector(4, 6);
         auto resultTailElement = detail::mult_poly_vec_impl(
             make_vector(2, 2, 2), srcTuple, detail::index_sequence<1, 2>{});
-        err |= expectTailElement != resultTailElement;
+        err |= vector_reduce_and(expectTailElement != resultTailElement);
 
         auto expectAllElement = make_vector(2, 4, 6);
         auto resultAllElement = 2 * srcTuple;
-        err |= expectAllElement != resultAllElement;
+        err |= vector_reduce_and(expectAllElement != resultAllElement);
 
         return err;
     }
@@ -64,11 +64,11 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto srcTuple = make_vector(1, 2, 3);
+        auto const srcTuple = make_vector(1, 2, 3);
 
         auto expect = make_vector(1, 3);
         auto result = detail::copy_impl(srcTuple, detail::index_sequence<0, 2>{});
-        err |= expect != result;
+        err |= vector_reduce_and(expect != result);
 
         return err;
     }
@@ -81,7 +81,7 @@ namespace rocwmma
 
         auto expect = make_vector(1, 2);
         auto result = pop_right(srcTuple);
-        err |= expect != result;
+        err |= vector_reduce_and(expect != result);
 
         return err;
     }
@@ -90,11 +90,11 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto srcTuple = make_vector(1, 2.0, 3u);
+        auto srcTuple = make_vector(1, 2, 3);
 
-        auto expect = make_vectpr(2.0, 3u);
+        auto expect = make_vector(2, 3);
         auto result = pop_left(srcTuple);
-        err |= expect != result;
+        err |= vector_reduce_and(expect != result);
 
         return err;
     }
@@ -107,7 +107,7 @@ namespace rocwmma
 
         auto expect = 1;
         auto result = get_first(srcTuple);
-        err |= expect != result;
+        err |= (expect != result);
 
         return err;
     }
@@ -120,7 +120,7 @@ namespace rocwmma
 
         auto expect = 3u;
         auto result = get_last(srcTuple);
-        err |= expect != result;
+        err |= (expect != result);
 
         return err;
     }
@@ -133,7 +133,7 @@ namespace rocwmma
 
         auto expect = make_vector(3, 2, 1);
         auto result = reverse(srcTuple);
-        err |= expect != result;
+        err |= vector_reduce_and(expect != result);
 
         return err;
     }
@@ -157,7 +157,7 @@ namespace rocwmma
          */
         auto expect = 821;
         auto result = flatten_coord_right(srcCoord, srcDims);
-        err |= expect != result;
+        err |= (expect != result);
 
         return err;
     }
@@ -177,7 +177,7 @@ namespace rocwmma
          */
         auto expect = 2;
         auto result = flatten_coord_right(srcCoord, srcDims);
-        err |= expect != result;
+        err |= (expect != result);
 
         return err;
     }
@@ -197,7 +197,7 @@ namespace rocwmma
          */
         auto expect = 1063;
         auto result = flatten_coord_left(srcCoord, srcDims);
-        err |= expect != result;
+        err |= (expect != result);
 
         return err;
     }
@@ -217,7 +217,7 @@ namespace rocwmma
          */
         auto expect = 7;
         auto result = flatten_coord_left(srcCoord, srcDims);
-        err |= expect != result;
+        err |= (expect != result);
 
         return err;
     }
@@ -237,7 +237,7 @@ namespace rocwmma
          */
         auto expect = make_vector(2, 3, 5, 7);
         auto result = inflate_coord_right(srcFlatCoord, srcDims);
-        err |= expect != result;
+        err |= vector_reduce_and(expect != result);
 
         return err;
     }
@@ -257,7 +257,7 @@ namespace rocwmma
          */
         auto expect = make_vector(2);
         auto result = inflate_coord_right(srcFlatCoord, srcDims);
-        err |= expect != result;
+        err |= vector_reduce_and(expect != result);
 
         return err;
     }
@@ -278,7 +278,7 @@ namespace rocwmma
          */
         auto expect = make_vector(2, 3, 5, 7);
         auto result = inflate_coord_left(srcFlatCoord, srcDims);
-        err |= expect != result;
+        err |= vector_reduce_and(expect != result);
 
         return err;
     }
@@ -299,7 +299,7 @@ namespace rocwmma
          */
         auto expect = make_vector(7);
         auto result = inflate_coord_left(srcFlatCoord, srcDims);
-        err |= expect != result;
+        err |= vector_reduce_and(expect != result);
 
         return err;
     }
@@ -318,7 +318,7 @@ namespace rocwmma
          */
         auto expect = 133;
         auto result = to_matrix_space(srcStrides, srcStrideCounts);
-        err |= expect != result;
+        err |= (expect != result);
 
         return err;
     }
