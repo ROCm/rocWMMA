@@ -177,7 +177,7 @@ namespace std
     template <typename T>
     ROCWMMA_HOST_DEVICE const T& min(const T& a, const T& b)
     {
-        return (b < a) ? a : b;
+        return (a < b) ? a : b;
     }
 
     // Meta programming helper types.
