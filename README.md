@@ -25,10 +25,10 @@ from LDS.
 Memory addresses are treated as 1D arrays. The rocWMMA API can opaquely handle moving data
 between both global and shared memory address locations. The library code includes utilities for
 mapping 2D grid and matrix coordinates to 1D array coordinates, and supports either row-major or
-column-major data layouts. Block-wise dimensions (BlockM,N,K) familiar to block-wise GEMM matrix
-product algorithms are supported directly through the availability of matrix instructions for the target
-architecture. Likewise, you can vary mixed-precision data types for input, output, and accumulation
-fragments (as listed in the supported configurations section).
+column-major data layouts. Block-wise dimensions (BlockM,N,K) familiar to block-wise general matrix
+multiply (GEMM) product algorithms are supported directly through the availability of matrix
+instructions for the target architecture. Likewise, you can vary mixed-precision data types for input,
+output, and accumulation fragments (as listed in the supported configurations section).
 
 rocWMMA is a header library that includes test and sample projects to validate and demonstrate API
 use. GEMM is used as primary validation given the heavy precedent for the library. However, we are
@@ -91,8 +91,8 @@ python3 -m sphinx -T -E -b html -d _build/doctrees -D language=en . _build/html
 TBlockX must be a multiple of WaveSize
 ```
 
-Currently for GEMM, rocWMMA focuses on thread blocks of up to 4 waves for optimal resource usage / occupancy.
-Larger thread block sizes are possible but are not officially supported.
+For GEMM, rocWMMA focuses on thread blocks of up to 4 waves for optimal resource usage and
+occupancy. Larger thread block sizes are possible but are not officially supported.
 
 ```bash
 WS = Wave Size
@@ -417,7 +417,7 @@ The build time for all projects can take several minutes.
     |`rocwmma_unit_tests`|Build all rocWMMA unit tests|
     |`rocwmma_gemm_tests_validate`|Build all GEMM validation tests|
     |`rocwmma_gemm_tests_bench`|Build all GEMM benchmark tests|
-    |`rocwmma_dlrm_tests_validate`|Build all DLRM validation tests|
+    |`rocwmma_dlrm_tests_validate`|Build all deep learning recommendation model (DLRM) validation tests|
     |`rocwmma_dlrm_tests_bench`|Build all DLRM benchmark tests|
     |`rocwmma_samples`|Build all rocWMMA samples|
     |Individual target name (`contamination_test`, `simple_sgemm`, etcetera)|Build individual rocWMMA test or sample|
@@ -443,7 +443,7 @@ Otherwise, individual tests can be run as follows:
 Unit tests for loading and storing APIs to verify that data boundaries are not crossed and pristine data
 remain untouched.
 
-Run validation:
+Run the validation:
 
 ```bash
 <build_dir>/test/unit/contamination_test
@@ -453,7 +453,7 @@ Run validation:
 
 Unit tests for vector cross-lane operations.
 
-Run validation:
+Run the validation:
 
 ```bash
 <build_dir>/test/unit/cross_lane_ops_test
@@ -464,7 +464,7 @@ Run validation:
 Tests the `rocwmma::fill_fragment` API function for all supported configurations. Tests broadcasting of a
 desired value to all elements in the fragment.
 
-Run validation:
+Run the validation:
 
 ```bash
 <build_dir>/test/unit/fill_fragment_test
@@ -474,7 +474,7 @@ Run validation:
 
 Unit test for I/O shape meta-data generation on host machine
 
-Run validation:
+Run the validation:
 
 ```bash
 <build_dir>/test/unit/io_shape_test
@@ -484,7 +484,7 @@ Run validation:
 
 Unit test for I/O traits metadata generation on host machine.
 
-Run validation:
+Run the validation:
 
 ```bash
 <build_dir>/test/unit/io_traits_test
@@ -494,7 +494,7 @@ Run validation:
 
 Unit tests for the internal collect and scatter matrix element to register mapping transforms.
 
-Run validation:
+Run the validation:
 
 ```bash
 <build_dir>/test/unit/layout_test
@@ -505,7 +505,7 @@ Run validation:
 Tests the `rocwmma::load_matrix_sync` and `rocwmma::store_matrix_sync` API functions for all
 supported configurations. Tests proper emplacement of data during loads and stores.
 
-Run validation:
+Run the validation:
 
 ```bash
 <build_dir>/test/unit/load_store_matrix_sync_test
@@ -517,7 +517,7 @@ Run validation:
 Unit tests for the utility class used to calculate transforms and offsets between grid, matrix, and data
 coordinate systems.
 
-Run validation:
+Run the validation:
 
 ```bash
 <build_dir>/test/unit/map_util_test
@@ -527,7 +527,7 @@ Run validation:
 
 Unit tests for internal vector iteration and navigation during access and storage.
 
-Run validation:
+Run the validation:
 
 ```bash
 <build_dir>/test/unit/vector_iterator_test
@@ -537,7 +537,7 @@ Run validation:
 
 Unit tests for internal vector storage.
 
-Run validation:
+Run the validation:
 
 ```bash
 <build_dir>/test/unit/vector_test
@@ -600,7 +600,7 @@ WG - Cooperative load / store per macro tile
 
 Validation tests are postfixed with `-validate`. Benchmark tests are postfixed with `-bench`.
 
-Run validation tests:
+Run the validation tests:
 
 ```bash
 <build_dir>/test/gemm/gemm_PGR0_LB0_MP0_SB_NC-validate
@@ -610,7 +610,9 @@ Run validation tests:
 <build_dir>/test/gemm/gemm_PGR1_LB2_MP0_MB_CP_WG-validate
 ```
 
-Run benchmark only (**Benchmark runs can take several hours to complete**):
+Run the benchmark only:
+
+Note that benchmark runs can take **several hours** to complete.
 
 ```bash
 <build_dir>/test/gemm/gemm_PGR0_LB0_MP0_SB_NC-bench
@@ -620,7 +622,7 @@ Run benchmark only (**Benchmark runs can take several hours to complete**):
 <build_dir>/test/gemm/gemm_PGR1_LB2_MP0_MB_CP_WG-bench
 ```
 
-Run ad-hoc test:
+Run the ad hoc test:
 
 ```bash
 <build_dir>/test/gemm/gemm_PGR0_LB0_MP0_SB_NC_ad_hoc-validate
@@ -653,15 +655,15 @@ Run ad-hoc test:
 
 ### Samples
 
-These are stand-alone, real-world use cases of the rocWMMA API. They have minimal dependencies
-and represent a targeted application with a fixed set of parameters.
+These are standalone, practical use cases for the rocWMMA API. They have minimal dependencies and
+represent a targeted application with a fixed set of parameters.
 
 ## GEMM
 
 Use MMA to demonstrate rocWMMA API usage in the context of wave-level GEMM computation, in
 both simplified and optimized versions.
 
-**Simple GEMM**
+### Simple GEMM
 
 Simple GEMM algorithm demonstration without LDS memory usage and no transpose.
 
@@ -671,25 +673,24 @@ simple_dgemm calculates D = Alpha * A x B + Beta * C with fp64 inputs and output
 
 simple_hgemm calculates D = Alpha * A x B + Beta * C with fp16 inputs and output.
 
-Includes simple CPU validation and benchmark.
+Includes a simple CPU validation and benchmark.
 
-Run simple gemm sample:
+Run a `simple gemm` sample:
 
 ```bash
 <build_dir>/samples/simple_sgemm
 <build_dir>/samples/simple_dgemm
 <build_dir>/samples/simple_hgemm
-
 ```
 
-**Peformant SGEMM**
+### Peformant SGEMM
 
 To implement and measure performance of Matrix Multiply-Accumulate(D = Alpha * A x B + Beta * C)
-with user-defined configurations on GPU.
+with user-defined configurations on a GPU.
 
-It contains the best performant version of multi-block GEMM algorithm with LDS memory, macro-tile
-collaboration, data reuse, and optimized pipeline, configured with the finest parameters for larger sizes
-(1K and above).
+It contains the best performant version of the multi-block GEMM algorithm with LDS memory,
+macro-tile collaboration, data reuse, and optimized pipeline, configured with the finest parameters for
+larger sizes (1K and greater).
 
 perf_sgemm calculates D = Alpha * A x B + Beta * C with fp32 inputs and output.
 
@@ -697,9 +698,9 @@ perf_dgemm calculates D = Alpha * A x B + Beta * C with fp64 inputs and output.
 
 perf_hgemm calculates D = Alpha * A x B + Beta * C with fp16 inputs and output.
 
-Includes simple CPU validation and benchmark.
+Includes a simple CPU validation and benchmark.
 
-Run perf gemm sample:
+Run a `perf gemm` sample:
 
 ```bash
 <build_dir>/samples/perf_sgemm
@@ -709,13 +710,13 @@ Run perf gemm sample:
 
 ## GEMV
 
-**SGEMV**
+### SGEMV
 
 Simple MMA with a vector demonstration, without LDS or transpose.
 
 Calculates Y = alpha * (A) * X + beta * Y with fp32 inputs and output.
 
-Includes simple CPU validation and benchmark.
+Includes a simple CPU validation and benchmark.
 
  A = Matrix of size m * k (col-major)
 
@@ -723,19 +724,19 @@ Includes simple CPU validation and benchmark.
 
  Y = accumulator of size m * 1 (col-major)
 
-Run `sgemv` sample:
+Run the `sgemv` sample:
 
 ```bash
 <build_dir>/samples/simple_sgemv
 ```
 
-**DGEMV**
+### DGEMV
 
 Simple MMA with a vector demonstration, without LDS or transpose.
 
 Calculates Y = alpha * (A) * X + beta * Y with fp64 inputs and output.
 
-Includes simple CPU validation and benchmark.
+Includes a simple CPU validation and benchmark.
 
  A = Matrix of size m * k (row-major)
 
@@ -743,7 +744,7 @@ Includes simple CPU validation and benchmark.
 
  Y = accumulator of size m * 1 (row-major)
 
-Run `dgemv` sample:
+Run the `dgemv` sample:
 
 ```bash
 <build_dir>/samples/simple_dgemv
@@ -752,34 +753,36 @@ Run `dgemv` sample:
 ## Simple deep learning recommendation model
 
 Simple deep learning recommendation model (DLRM) for machine learning. Implements both forward
-and backward passes on fp16 inputs and outputs. Includes simple CPU validation and benchmark.
+and backward passes on fp16 inputs and outputs.
 
-Run `simple_dlrm` sample:
+Includes a simple CPU validation and benchmark.
+
+Run the `simple_dlrm` sample:
 
 ```bash
 <build_dir>/samples/simple_dlrm
 ```
 
-## hipRTC Support
+## hipRTC support
 
-HIP's runtime compilation (hipRTC) environment allows on-the-fly compilation, loading, and running of
-device code on AMD GPUs. The rocWMMA library is compatible with hipRTC, you can leverage it for
-runtime generated kernels. A simple GEMM sample is included to demonstrate compatibility. For more
-information, refer to the
+The HIP runtime compilation (hipRTC) environment allows simultaneous compilation, loading, and
+running of device code on AMD GPUs. The rocWMMA library is compatible with hipRTC, so you can
+leverage it for runtime-generated kernels. A simple GEMM sample is included to demonstrate
+compatibility. For more information, refer to the
 [HIP API reference](https://rocm.docs.amd.com/projects/HIP/en/latest/.doxygen/docBin/html/index.html).
 
 ```important
 The `rocwmma::bfloat16_t` data type is not currently supported in hipRTC.
 ```
 
-**hipRTC GEMM sample**
+### hipRTC GEMM sample
 
 A simple GEMM algorithm demonstrating runtime compilation (hipRTC) compatibility. Calculates
 D = Alpha * A x B + Beta * C with mixed-precision fp16 inputs and fp32 output. Includes code
 compilation, module loading, and kernel launch with the hipRTC API, with simple CPU validation and
 benchmarking.
 
-Run `hipRTC_gemm` sample:
+Run the `hipRTC_gemm` sample:
 
 ```bash
 <build_dir>/samples/hipRTC_gemm
