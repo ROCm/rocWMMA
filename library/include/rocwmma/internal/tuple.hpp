@@ -40,60 +40,60 @@ namespace rocwmma
     using detail::index_sequence;
     using detail::make_index_sequence;
 
-    template <typename T, unsigned int n, typename U>
-    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
-        operator+(const non_native_vector_base<T, n>& x, U y) noexcept
+    template <typename VecT, unsigned int Rank, typename U>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<VecT, Rank>
+        operator+(non_native_vector_base<VecT, Rank> const& x, U y) noexcept
     {
-        return non_native_vector_base<T, n>{x} += non_native_vector_base<T, n>{y};
+        return non_native_vector_base<VecT, Rank>{x} += non_native_vector_base<VecT, Rank>{y};
     }
 
-    template <typename T, unsigned int n, typename U>
-    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
-        operator+(U y, const non_native_vector_base<T, n>& x) noexcept
+    template <typename VecT, unsigned int Rank, typename U>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<VecT, Rank>
+        operator+(U x, non_native_vector_base<VecT, Rank> const& y) noexcept
     {
-        return non_native_vector_base<T, n>{x} += non_native_vector_base<T, n>{y};
+        return non_native_vector_base<VecT, Rank>{x} += non_native_vector_base<VecT, Rank>{y};
     }
 
-    template <typename T, unsigned int n, typename U>
-    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
-        operator-(const non_native_vector_base<T, n>& x, U y) noexcept
+    template <typename VecT, unsigned int Rank, typename U>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<VecT, Rank>
+        operator-(non_native_vector_base<VecT, Rank> const& x, U y) noexcept
     {
-        return non_native_vector_base<T, n>{x} -= non_native_vector_base<T, n>{y};
+        return non_native_vector_base<VecT, Rank>{x} -= non_native_vector_base<VecT, Rank>{y};
     }
 
-    template <typename T, unsigned int n, typename U>
-    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
-        operator-(U y, const non_native_vector_base<T, n>& x) noexcept
+    template <typename VecT, unsigned int Rank, typename U>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<VecT, Rank>
+        operator-(U x, const non_native_vector_base<VecT, Rank>& y) noexcept
     {
-        return non_native_vector_base<T, n>{x} -= non_native_vector_base<T, n>{y};
+        return non_native_vector_base<VecT, Rank>{x} -= non_native_vector_base<VecT, Rank>{y};
     }
 
-    template <typename T, unsigned int n, typename U>
-    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
-        operator*(const non_native_vector_base<T, n>& x, U y) noexcept
+    template <typename VecT, unsigned int Rank, typename U>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<VecT, Rank>
+        operator*(const non_native_vector_base<VecT, Rank>& x, U y) noexcept
     {
-        return non_native_vector_base<T, n>{x} *= non_native_vector_base<T, n>{y};
+        return non_native_vector_base<VecT, Rank>{x} *= non_native_vector_base<VecT, Rank>{y};
     }
 
-    template <typename T, unsigned int n, typename U>
-    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
-        operator*(U y, const non_native_vector_base<T, n>& x) noexcept
+    template <typename VecT, unsigned int Rank, typename U>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<VecT, Rank>
+        operator*(U x, const non_native_vector_base<VecT, Rank>& y) noexcept
     {
-        return non_native_vector_base<T, n>{x} *= non_native_vector_base<T, n>{y};
+        return non_native_vector_base<VecT, Rank>{x} *= non_native_vector_base<VecT, Rank>{y};
     }
 
-    template <typename T, unsigned int n, typename U>
-    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
-        operator/(const non_native_vector_base<T, n>& x, U y) noexcept
+    template <typename VecT, unsigned int Rank, typename U>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<VecT, Rank>
+        operator/(const non_native_vector_base<VecT, Rank>& x, U y) noexcept
     {
-        return non_native_vector_base<T, n>{x} /= non_native_vector_base<T, n>{y};
+        return non_native_vector_base<VecT, Rank>{x} /= non_native_vector_base<VecT, Rank>{y};
     }
 
-    template <typename T, unsigned int n, typename U>
-    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, n>
-        operator/(U y, const non_native_vector_base<T, n>& x) noexcept
+    template <typename VecT, unsigned int Rank, typename U>
+    ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<VecT, Rank>
+        operator/(U x, const non_native_vector_base<VecT, Rank>& y) noexcept
     {
-        return non_native_vector_base<T, n>{x} /= non_native_vector_base<T, n>{y};
+        return non_native_vector_base<VecT, Rank>{x} /= non_native_vector_base<VecT, Rank>{y};
     }
 
     namespace detail

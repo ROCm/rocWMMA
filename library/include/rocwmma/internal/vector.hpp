@@ -437,23 +437,34 @@ namespace rocwmma
 
     namespace detail
     {
+        template <typename... Ts>
+        struct first_type;
+
         template <typename T, typename... Ts>
-        constexpr auto getFirstType()
+        struct first_type<T, Ts...>
         {
-            return T();
-        }
+            using type = T;
+        };
+
+        template <typename... Ts>
+        using first_type_t = typename first_type<Ts...>::type;
+
+        template <typename... Ts>
+        struct is_same_type;
 
         template <typename T>
-        constexpr bool isSameType()
+        struct is_same_type<T> : std::true_type
         {
-            return true;
-        }
+        };
 
-        template <typename T, typename Y, typename... Ts>
-        constexpr bool isSameType()
+        template <typename T, typename U, typename... Ts>
+        struct is_same_type<T, U, Ts...>
+            : std::conditional_t<std::is_same<T, U>{}, is_same_type<U, Ts...>, std::false_type>
         {
-            return std::is_same<T, Y>::value && isSameType<Y, Ts...>();
-        }
+        };
+
+        template <typename... Ts>
+        constexpr bool is_same_type_v = is_same_type<Ts...>::value;
     }
 
     ///////////////////////////////////////////////////////////////////
@@ -539,10 +550,10 @@ namespace rocwmma
         // TODO: When HIP_vector_type becomes constexpr replace with non_native_vector type.
 
         // Ensure that all the arguments are the same type
-        static_assert(detail::isSameType<std::decay_t<Ts>...>(),
+        static_assert(detail::is_same_type_v<std::decay_t<Ts>...>,
                       "Vector arguments must all be the same type");
 
-        using DataT = decltype(detail::getFirstType<std::decay_t<Ts>...>());
+        using DataT = typename detail::first_type_t<std::decay_t<Ts>...>;
         return non_native_vector_base<DataT, sizeof...(Ts)>{std::forward<Ts>(ts)...};
     }
 
@@ -619,7 +630,7 @@ namespace rocwmma
         ROCWMMA_HOST_DEVICE constexpr static inline decltype(auto)
             vector_reduce_impl(VecT&& v, index_sequence<Is...>) noexcept
         {
-            return reduceOp_impl<BinOp>(get<Is>(v)...);
+            return reduceOp_impl<BinOp>(get<Is>(std::forward<VecT>(v))...);
         }
 
         // Use with operations that have 1 operands
