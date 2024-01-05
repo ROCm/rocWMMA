@@ -39,6 +39,47 @@ namespace rocwmma
 
     namespace detail
     {
+        template <uint32_t N>
+        using Number = detail::integral_constant<int32_t, N>;
+
+        // Can be used to build any vector class of <DataT, VecSize>
+        // Either VecT or non_native_vector_vase.
+        // Class acts as a static for_each style generator:
+        // Incoming functor F will be called with each index + args in sequence.
+        // Results of functor calls are used to construct a new vector.
+        template <template <typename, uint32_t> class VecT, typename DataT, uint32_t VecSize>
+        struct vector_generator
+        {
+            __host__ __device__ constexpr vector_generator() {}
+
+            // F signature: F(Number<Iter>, args...)
+            template <class F, typename... ArgsT>
+            __host__ __device__ constexpr auto operator()(F f, ArgsT&&... args) const
+            {
+                // Build the number sequence to be expanded below.
+                return operator()(f, detail::Seq<VecSize>{}, std::forward<ArgsT>(args)...);
+            }
+
+        private:
+            template <class F, uint32_t... Indices, typename... ArgsT>
+            __host__ __device__ constexpr auto
+                operator()(F f, detail::SeqT<Indices...>, ArgsT&&... args) const
+            {
+                // Execute incoming functor f with each index, as well as forwarded args.
+                // The resulting vector is constructed with the results of each functor call.
+                return VecT<DataT, VecSize>{
+                    (f(Number<Indices>{}, std::forward<ArgsT>(args)...))...};
+            }
+        };
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    struct vector_generator : public detail::vector_generator<VecT, DataT, VecSize>
+    {
+    };
+
+    namespace detail
+    {
         template <typename DataT, uint32_t VecSize, uint32_t... Idx>
         ROCWMMA_DEVICE constexpr static inline auto extractEven(VecT<DataT, VecSize> const& v,
                                                                 detail::SeqT<Idx...>)
@@ -117,9 +158,28 @@ namespace rocwmma
     } // namespace detail
 
     template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto extractEven(VecT<DataT, VecSize> const& v)
+    ROCWMMA_HOST constexpr static inline auto extractEvenTEST(VecT<DataT, VecSize> const& v)
     {
-        return detail::extractEven(v, detail::Seq<VecSize / 2u>{});
+        auto evens = [](auto number, auto v) {
+            constexpr auto Index = std::decay_t<decltype(number)>::value;
+            std::cout << "My number: " << Index << std::endl;
+            std::cout << "My index: " << Index * 2 << std::endl;
+            std::cout << "My value: " << get<Index * 2>(v) << std::endl;
+            return get<Index * 2>(v);
+        };
+        return vector_generator<DataT, VecSize / 2u>()(evens, v);
+        // return detail::extractEven(v, detail::Seq<VecSize / 2u>{});
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_HOST_DEVICE constexpr static inline auto extractEven(VecT<DataT, VecSize> const& v)
+    {
+        auto evens = [](auto number, auto v) {
+            constexpr auto Index = std::decay_t<decltype(number)>::value;
+            return get<Index * 2>(v);
+        };
+        return vector_generator<DataT, VecSize / 2u>()(evens, v);
+        // return detail::extractEven(v, detail::Seq<VecSize / 2u>{});
     }
 
     template <typename DataT, uint32_t VecSize>
