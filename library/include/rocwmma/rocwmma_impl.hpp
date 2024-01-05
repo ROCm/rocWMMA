@@ -52,6 +52,7 @@
 #include "internal/utils.hpp"
 #include "internal/vector.hpp"
 #include "internal/vector_iterator.hpp"
+#include "internal/vector_util.hpp"
 #include "internal/wmma.hpp"
 
 namespace rocwmma

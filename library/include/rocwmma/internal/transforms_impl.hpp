@@ -33,6 +33,7 @@
 #include "pack_util.hpp"
 #include "permute.hpp"
 #include "utils.hpp"
+#include "vector_util.hpp"
 
 namespace rocwmma
 {
@@ -516,9 +517,9 @@ namespace rocwmma
 
             // Step 6 : Unpack and re-order.
             auto c0 = PackUtil::template paddedUnpack<VecSize>(concat(lo0, hi0));
-            c0      = concat(extractEven(c0), extractOdd(c0));
+            c0      = reorderEvenOdd(c0); //concat(extractEven(c0), extractOdd(c0));
             auto c1 = PackUtil::template paddedUnpack<VecSize>(concat(lo1, hi1));
-            c1      = concat(extractEven(c1), extractOdd(c1));
+            c1      = reorderEvenOdd(c1); //concat(extractEven(c1), extractOdd(c1));
 
             return concat(c0, c1);
         }
