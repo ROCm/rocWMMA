@@ -103,13 +103,17 @@ namespace rocwmma
                           typename DataT>
                 ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1)
                 {
-                    reinterpret_cast<int32_t&>(src0) = __builtin_amdgcn_update_dpp(
-                        reinterpret_cast<int32_t const&>(src1), // fill value 'prev'
-                        reinterpret_cast<int32_t const&>(src0), // Src value
-                        DppCtrl::opCtrl(), // DPP control code
-                        WriteRowMask, // Mask for affected rows
-                        WriteBankMask, // Mask for affected banks
-                        BoundCtrl); // Fill in 0 on invalid indices
+#pragma unroll
+                    for(int i = 0; i < sizeof(DataT) / sizeof(uint32_t); i++)
+                    {
+                        *(reinterpret_cast<uint32_t*>(&src0) + i) = __builtin_amdgcn_update_dpp(
+                            *(reinterpret_cast<uint32_t const*>(&src1) + i), // fill value 'prev'
+                            *(reinterpret_cast<uint32_t const*>(&src0) + i), // Src value
+                            DppCtrl::opCtrl(), // DPP control code
+                            WriteRowMask, // Mask for affected rows
+                            WriteBankMask, // Mask for affected banks
+                            BoundCtrl); // Fill in 0 on invalid indices
+                    }
                     return src0;
                 }
             };
