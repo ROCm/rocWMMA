@@ -99,6 +99,7 @@ namespace rocwmma
         using Zip4    = Driver<BlendImpl::Ops::Zip4>;
         using Zip8    = Driver<BlendImpl::Ops::Zip8>;
         using Zip16   = Driver<BlendImpl::Ops::Zip16>;
+        using Zip32   = Driver<BlendImpl::Ops::Zip32>;
 
         // Unpack functions
         using UnpackByteLo   = Driver<BlendImpl::Ops::UnpackByteLo>;
@@ -106,6 +107,12 @@ namespace rocwmma
         using UnpackWordLo   = Driver<BlendImpl::Ops::UnpackWordLo>;
         using UnpackWordHi   = Driver<BlendImpl::Ops::UnpackWordHi>;
         using UnpackByteLoHi = Driver<BlendImpl::Ops::UnpackByteLoHi>;
+
+        // Extract functions
+        using ExtractByteEven = Driver<BlendImpl::Ops::ExtractByteEven>;
+        using ExtractByteOdd  = Driver<BlendImpl::Ops::ExtractByteOdd>;
+        using ExtractWordEven = Driver<BlendImpl::Ops::ExtractWordEven>;
+        using ExtractWordOdd  = Driver<BlendImpl::Ops::ExtractWordOdd>;
 
     } // namespace Blend
 

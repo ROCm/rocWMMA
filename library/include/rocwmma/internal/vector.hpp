@@ -441,6 +441,12 @@ namespace rocwmma
         }
     };
 
+    template <typename VecT>
+    ROCWMMA_HOST_DEVICE constexpr inline auto vector_size(VecT const& v)
+    {
+        return VecTraits<VecT>::size();
+    }
+
     namespace detail
     {
         template <typename... Ts>

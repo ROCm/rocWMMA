@@ -56,9 +56,9 @@ namespace rocwmma
             static_assert((PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_BLOCK_BCAST)
                               || (PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_SHUFFLE)
                               || (PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_GATHER)
-                              || (PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_SCATTER),
+                              || (PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_SCATTER)
+                              || (PermuteOp::opId() == CrossLaneOps::Properties::OP_ID_ROTATE),
                           "PermuteOp is unsupported");
-
             template <typename DataT>
             ROCWMMA_DEVICE static inline auto exec(DataT const& src)
             {
