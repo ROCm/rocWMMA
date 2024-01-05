@@ -132,7 +132,8 @@ namespace rocwmma
         auto lo    = Dpp::template RotateR16<4, 0xF, 0xA>::exec(odds, evens);
         auto hi    = Dpp::template RotateR16<12, 0xF, 0x5>::exec(evens, odds);
 
-        return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
+        return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo),
+                      PackUtil::template paddedUnpack<VecSize / 2u>(hi));
     }
 
     template <typename DataT, uint32_t VecSize>
@@ -146,7 +147,8 @@ namespace rocwmma
         auto lo    = Dpp::template RotateR16<8, 0xF, 0xC>::exec(odds, evens);
         auto hi    = Dpp::template RotateR16<8, 0xF, 0x3>::exec(evens, odds);
 
-        return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
+        return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo),
+                      PackUtil::template paddedUnpack<VecSize / 2u>(hi));
     }
 
     template <typename DataT, uint32_t VecSize>
@@ -206,7 +208,12 @@ namespace rocwmma
     template <typename DataT>
     ROCWMMA_DEVICE static inline auto aos_soa_16xk_b32(VecT<DataT, 4> const& v)
     {
-        return 0;
+        using PackUtil = PackUtil<DataT>;
+
+        auto result = unpackLoHi4(v);
+        result      = unpackLoHi8(result);
+        return PackUtil::template paddedUnpack<4>(
+            Permute::Gather16<4, 0>::exec(PackUtil::paddedPack(result)));
     }
 
     template <typename DataT>

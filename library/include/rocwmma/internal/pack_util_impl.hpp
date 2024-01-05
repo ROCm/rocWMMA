@@ -29,6 +29,7 @@
 #include "pack_util.hpp"
 #include "types.hpp"
 #include "utils.hpp"
+#include "vector_util.hpp"
 
 namespace rocwmma
 {
@@ -365,7 +366,7 @@ namespace rocwmma
         // Duplicate the inputs for padding
         else if constexpr((VecSize * 2u) == Traits::PackRatio)
         {
-            return packHelper(concat(v, v));
+            return VecT<PackedT, 1>(packHelper(concat(v, v)));
         }
         // Pad single element data to b32
         else if constexpr(VecSize == 1u)
@@ -387,7 +388,7 @@ namespace rocwmma
         // Take lower half of vector
         else if constexpr((UnpaddedSize * 2u) == Traits::PackRatio)
         {
-            return extractLo(v);
+            return extractLo(unpackHelper(v));
         }
         // Pad single element data to b32
         else if constexpr(UnpaddedSize == 1u)
