@@ -262,6 +262,11 @@ namespace rocwmma
             using ExtractWordEven = UnpackWordLo;
             using ExtractWordOdd  = UnpackWordHi;
 
+            using ExtractByteEvenOdd = PermByte<0u, 2u, 5u, 7u>;
+            using ExtractByteOddEven = PermByte<1u, 3u, 4u, 6u>;
+            using ExtractWordEvenOdd = PermWord<0u, 3u>;
+            using ExtractWordOddEven = PermWord<1u, 2u>;
+
         } // namespace Ops
 
     } // namespace BlendImpl
