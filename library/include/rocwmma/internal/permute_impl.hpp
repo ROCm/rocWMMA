@@ -83,10 +83,14 @@ namespace rocwmma
                 template <typename InputT>
                 ROCWMMA_DEVICE static inline InputT exec(InputT input, uint32_t laneId)
                 {
-                    // NOTE: final address is laneId * 4
-                    reinterpret_cast<uint32_t&>(input)
-                        = __builtin_amdgcn_ds_permute((PermuteCtrl::threadCtrl(laneId) << 2),
-                                                      reinterpret_cast<uint32_t const&>(input));
+#pragma unroll
+                    for(int i = 0; i < sizeof(input) / sizeof(uint32_t); i++)
+                    {
+                        // NOTE: final address is laneId * 4
+                        *(reinterpret_cast<uint32_t*>(&input) + i) = __builtin_amdgcn_ds_permute(
+                            (PermuteCtrl::threadCtrl(laneId) << 2),
+                            *(reinterpret_cast<uint32_t const*>(&input) + i));
+                    }
                     return input;
                 }
             };
@@ -324,13 +328,13 @@ namespace rocwmma
             using Gather16 = OpsBase::Gather<OP_GROUP_SIZE_16, VW, ElementShift>;
 
             template<uint32_t VW, uint32_t ElementShift>
-            using ScatterWave = OpsBase::Gather<OP_GROUP_SIZE_WARP, VW, ElementShift>;
+            using ScatterWave = OpsBase::Scatter<OP_GROUP_SIZE_WARP, VW, ElementShift>;
 
             template<uint32_t VW, uint32_t ElementShift>
-            using Scatter32 = OpsBase::Gather<OP_GROUP_SIZE_32, VW, ElementShift>;
+            using Scatter32 = OpsBase::Scatter<OP_GROUP_SIZE_32, VW, ElementShift>;
 
             template<uint32_t VW, uint32_t ElementShift>
-            using Scatter16 = OpsBase::Gather<OP_GROUP_SIZE_16, VW, ElementShift>;
+            using Scatter16 = OpsBase::Scatter<OP_GROUP_SIZE_16, VW, ElementShift>;
 
 
             template<uint32_t Distance>

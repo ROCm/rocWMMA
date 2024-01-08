@@ -587,7 +587,13 @@ namespace rocwmma
     template <typename DataT>
     ROCWMMA_DEVICE static inline auto soa_aos_16xk_b32(VecT<DataT, 4> const& v)
     {
-        return 0;
+        using PackUtil = PackUtil<DataT>;
+
+        auto result = PackUtil::template paddedUnpack<4>(
+            Permute::Scatter16<4, 0>::exec(PackUtil::paddedPack(v)));
+        result = unpackLoHi4(result);
+        result = unpackLoHi8(result);
+        return result;
     }
 
     template <typename DataT>
