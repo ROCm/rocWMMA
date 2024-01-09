@@ -118,7 +118,8 @@ namespace rocwmma
         auto lo    = Blend::Zip2::exec(evens, Dpp::RotateR16<2>::exec(odds));
         auto hi    = Blend::Zip2::exec(Dpp::RotateR16<14>::exec(evens), odds);
 
-        return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
+        return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo),
+                      PackUtil::template paddedUnpack<VecSize / 2u>(hi));
     }
 
     template <typename DataT, uint32_t VecSize>
@@ -164,7 +165,8 @@ namespace rocwmma
         lo          = Blend::Zip16::exec(lo, rot_hi);
         hi          = Blend::Zip16::exec(rot_lo, hi);
 
-        return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
+        return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo),
+                      PackUtil::template paddedUnpack<VecSize / 2u>(hi));
     }
 
     // TODO: Wave64 only?
@@ -183,7 +185,8 @@ namespace rocwmma
         lo          = Blend::Zip32::exec(lo, rot_hi);
         hi          = Blend::Zip32::exec(rot_lo, hi);
 
-        return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
+        return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo),
+                      PackUtil::template paddedUnpack<VecSize / 2u>(hi));
     }
 
     template <typename DataT>
@@ -255,7 +258,12 @@ namespace rocwmma
     template <typename DataT>
     ROCWMMA_DEVICE static inline auto aos_soa_32xk_b32(VecT<DataT, 4> const& v)
     {
-        return 0;
+        using PackUtil = PackUtil<DataT>;
+
+        auto result = unpackLoHi8(v);
+        result      = unpackLoHi16(result);
+        return PackUtil::template paddedUnpack<4>(
+            Permute::Gather32<4, 0>::exec(PackUtil::paddedPack(result)));
     }
 
     template <typename DataT>
@@ -611,7 +619,13 @@ namespace rocwmma
     template <typename DataT>
     ROCWMMA_DEVICE static inline auto soa_aos_32xk_b32(VecT<DataT, 4> const& v)
     {
-        return 0;
+        using PackUtil = PackUtil<DataT>;
+
+        auto result = PackUtil::template paddedUnpack<4>(
+            Permute::Scatter32<4, 0>::exec(PackUtil::paddedPack(v)));
+        result = unpackLoHi8(result);
+        result = unpackLoHi16(result);
+        return result;
     }
 
     template <typename DataT>

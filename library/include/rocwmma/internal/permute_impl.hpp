@@ -68,10 +68,14 @@ namespace rocwmma
                 template <typename InputT>
                 ROCWMMA_DEVICE static inline InputT exec(InputT input, uint32_t laneId)
                 {
-                    // NOTE: final address is laneId * 4
-                    reinterpret_cast<uint32_t&>(input)
-                        = __builtin_amdgcn_ds_bpermute((BPermuteCtrl::threadCtrl(laneId) << 2),
-                                                       reinterpret_cast<uint32_t const&>(input));
+#pragma unroll
+                    for(int i = 0; i < sizeof(input) / sizeof(uint32_t); i++)
+                    {
+                        // NOTE: final address is laneId * 4
+                        *(reinterpret_cast<uint32_t*>(&input) + i) = __builtin_amdgcn_ds_bpermute(
+                            (BPermuteCtrl::threadCtrl(laneId) << 2),
+                            *(reinterpret_cast<uint32_t const*>(&input) + i));
+                    }
                     return input;
                 }
             };
