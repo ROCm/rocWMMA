@@ -41,6 +41,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+#Set Clang C++ Version
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fclang-abi-compat=17")
+
 # Top level configs
 if( CMAKE_PROJECT_NAME STREQUAL "rocwmma" )
   option( ROCWMMA_BUILD_TESTS "Build rocWMMA tests" ON )
