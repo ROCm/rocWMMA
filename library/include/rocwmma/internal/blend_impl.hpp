@@ -109,12 +109,10 @@ namespace rocwmma
                 template <typename DataT>
                 ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1)
                 {
-                    static_assert(sizeof(DataT) == sizeof(uint32_t), "Inputs must be 32 bit");
+                    static_assert(sizeof(DataT) % sizeof(uint32_t) == 0,
+                                  "Inputs must be a multiple of 32 bit");
                     uint32_t const mask = MaskCtrl::maskCtrl();
-                    reinterpret_cast<uint32_t&>(src0)
-                        = (reinterpret_cast<uint32_t&>(src1) & mask)
-                          | (reinterpret_cast<uint32_t&>(src0) & ~mask);
-                    return src0;
+                    return mask ? src1 : src0;
                 }
             };
 
@@ -157,20 +155,13 @@ namespace rocwmma
             template <uint32_t GroupSize>
             struct BlendElements
             {
-            private:
-                enum Traits : uint32_t
-                {
-                    MASK_BASE = LsbMask<32>::value
-                };
-
             public:
-                constexpr static uint32_t maskCtrl()
+                constexpr static bool maskCtrl()
                 {
-                    // Just like a zipper, alternate mask between src0 (0x000000000)
-                    // and src1 (0xFFFFFFFF) based on threadIdx.x.
-                    // GroupSize of N means that N elements are used from src0, followed
-                    // by N elements from src1, and so on.
-                    return ((threadIdx.x >> Log2<GroupSize>::value) & 0x1) * MASK_BASE;
+                    // Just like a zipper, if threadIdx.x in [0, GroupSize - 1], return 0,
+                    // if threadIdx.x in [GroupSize, 2 * GroupSize - 1], return 1
+                    // and so on.
+                    return (threadIdx.x >> Log2<GroupSize>::value) & 0x1;
                 }
             };
 

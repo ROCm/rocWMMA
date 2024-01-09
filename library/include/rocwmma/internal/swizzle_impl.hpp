@@ -68,8 +68,15 @@ namespace rocwmma
                 template <typename DataT>
                 ROCWMMA_DEVICE static inline DataT exec(DataT input)
                 {
-                    reinterpret_cast<int32_t&>(input) = __builtin_amdgcn_ds_swizzle(
-                        reinterpret_cast<int32_t const&>(input), SwizzleCtrl::opCtrl());
+                    constexpr size_t VecSize = sizeof(DataT) / sizeof(uint32_t);
+                    auto             swizzle = [](auto&& idx, auto&& v0) {
+                        constexpr auto i = std::decay_t<decltype(idx)>::value;
+                        *(reinterpret_cast<uint32_t*>(&v0) + i) = __builtin_amdgcn_ds_swizzle(
+                            *(reinterpret_cast<uint32_t const*>(&v0) + i), SwizzleCtrl::opCtrl());
+                        return 0; // discard return value
+                    };
+
+                    vector_generator<uint32_t, VecSize>()(swizzle, input);
                     return input;
                 }
             };

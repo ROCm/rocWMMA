@@ -68,10 +68,16 @@ namespace rocwmma
                 template <typename InputT>
                 ROCWMMA_DEVICE static inline InputT exec(InputT input, uint32_t laneId)
                 {
-                    // NOTE: final address is laneId * 4
-                    reinterpret_cast<uint32_t&>(input)
-                        = __builtin_amdgcn_ds_bpermute((BPermuteCtrl::threadCtrl(laneId) << 2),
-                                                       reinterpret_cast<uint32_t const&>(input));
+                    constexpr size_t VecSize = sizeof(InputT) / sizeof(uint32_t);
+                    auto             permute = [laneId](auto&& idx, auto&& v0) {
+                        constexpr auto i = std::decay_t<decltype(idx)>::value;
+                        *(reinterpret_cast<uint32_t*>(&v0) + i) = __builtin_amdgcn_ds_bpermute(
+                            (BPermuteCtrl::threadCtrl(laneId) << 2),
+                            *(reinterpret_cast<uint32_t const*>(&v0) + i));
+                        return 0; // discard return value
+                    };
+
+                    vector_generator<uint32_t, VecSize>()(permute, input);
                     return input;
                 }
             };
@@ -83,14 +89,16 @@ namespace rocwmma
                 template <typename InputT>
                 ROCWMMA_DEVICE static inline InputT exec(InputT input, uint32_t laneId)
                 {
-#pragma unroll
-                    for(int i = 0; i < sizeof(input) / sizeof(uint32_t); i++)
-                    {
-                        // NOTE: final address is laneId * 4
-                        *(reinterpret_cast<uint32_t*>(&input) + i) = __builtin_amdgcn_ds_permute(
+                    constexpr size_t VecSize = sizeof(InputT) / sizeof(uint32_t);
+                    auto             permute = [laneId](auto&& idx, auto&& v0) {
+                        constexpr auto i = std::decay_t<decltype(idx)>::value;
+                        *(reinterpret_cast<uint32_t*>(&v0) + i) = __builtin_amdgcn_ds_permute(
                             (PermuteCtrl::threadCtrl(laneId) << 2),
-                            *(reinterpret_cast<uint32_t const*>(&input) + i));
-                    }
+                            *(reinterpret_cast<uint32_t const*>(&v0) + i));
+                        return 0; // discard return value
+                    };
+
+                    vector_generator<uint32_t, VecSize>()(permute, input);
                     return input;
                 }
             };

@@ -118,7 +118,8 @@ namespace rocwmma
         auto lo    = Blend::Zip2::exec(evens, Dpp::RotateR16<2>::exec(odds));
         auto hi    = Blend::Zip2::exec(Dpp::RotateR16<14>::exec(evens), odds);
 
-        return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
+        return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo),
+                      PackUtil::template paddedUnpack<VecSize / 2u>(hi));
     }
 
     template <typename DataT, uint32_t VecSize>
@@ -164,7 +165,8 @@ namespace rocwmma
         lo          = Blend::Zip16::exec(lo, rot_hi);
         hi          = Blend::Zip16::exec(rot_lo, hi);
 
-        return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
+        return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo),
+                      PackUtil::template paddedUnpack<VecSize / 2u>(hi));
     }
 
     // TODO: Wave64 only?
@@ -183,7 +185,8 @@ namespace rocwmma
         lo          = Blend::Zip32::exec(lo, rot_hi);
         hi          = Blend::Zip32::exec(rot_lo, hi);
 
-        return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
+        return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo),
+                      PackUtil::template paddedUnpack<VecSize / 2u>(hi));
     }
 
     template <typename DataT>
@@ -255,7 +258,26 @@ namespace rocwmma
     template <typename DataT>
     ROCWMMA_DEVICE static inline auto aos_soa_32xk_b32(VecT<DataT, 4> const& v)
     {
-        return 0;
+        using PackUtil = PackUtil<DataT>;
+
+        auto result = unpackLoHi8(v);
+
+        // modified unpackLohi16
+        {
+            auto lo     = PackUtil::paddedPack(extractEven(result));
+            auto hi     = PackUtil::paddedPack(extractOdd(result));
+            auto rot_hi = Swizzle::RotateR32<16>::exec(hi);
+            hi          = Blend::Zip16::exec(rot_hi, lo);
+            lo          = Blend::Zip16::exec(lo, rot_hi);
+            result      = concat(PackUtil::template paddedUnpack<2u>(lo),
+                            PackUtil::template paddedUnpack<2u>(hi));
+        }
+
+        auto hi = Permute::Gather32<4, 16>::exec(PackUtil::paddedPack(extractHi(result)));
+        auto lo = Permute::Gather32<4, 0>::exec(PackUtil::paddedPack(extractLo(result)));
+
+        return concat(PackUtil::template paddedUnpack<2u>(lo),
+                      PackUtil::template paddedUnpack<2u>(hi));
     }
 
     template <typename DataT>
@@ -569,7 +591,24 @@ namespace rocwmma
     template <typename DataT>
     ROCWMMA_DEVICE static inline auto soa_aos_32xk_b32(VecT<DataT, 4> const& v)
     {
-        return 0;
+        using PackUtil = PackUtil<DataT>;
+
+        auto hi     = (Permute::Scatter32<4, 16>::exec(PackUtil::paddedPack(extractHi(v))));
+        auto lo     = (Permute::Scatter32<4, 0>::exec(PackUtil::paddedPack(extractLo(v))));
+        auto result = concat(PackUtil::template paddedUnpack<2u>(lo),
+                             PackUtil::template paddedUnpack<2u>(hi));
+        result      = unpackLoHi8(result);
+        // modified unpackLohi16
+        {
+            auto lo        = PackUtil::paddedPack(extractEven(result));
+            auto hi        = PackUtil::paddedPack(extractOdd(result));
+            auto zipped_lo = Blend::Zip16::exec(lo, hi);
+            auto zipped_hi = Blend::Zip16::exec(hi, lo);
+            auto rot_hi    = Swizzle::RotateR32<16>::exec(zipped_hi);
+            result         = concat(PackUtil::template paddedUnpack<2u>(zipped_lo),
+                            PackUtil::template paddedUnpack<2u>(rot_hi));
+        }
+        return result;
     }
 
     template <typename DataT>
