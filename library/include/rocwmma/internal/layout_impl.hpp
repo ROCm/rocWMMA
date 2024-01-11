@@ -933,8 +933,7 @@ namespace rocwmma
                 ROCWMMA_DEVICE constexpr static inline auto strides()
                 {
                     auto t = Traits::OrthoLayout::strides();
-                    return make_vector(
-                        swap(std::get<0>(t)), swap(std::get<1>(t)), swap(std::get<2>(t)));
+                    return make_vector(swap(get<0>(t)), swap(get<1>(t)), swap(get<2>(t)));
                 }
 
                 ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
@@ -979,8 +978,7 @@ namespace rocwmma
                 ROCWMMA_DEVICE constexpr static inline auto strides()
                 {
                     auto t = Traits::OrthoLayout::strides();
-                    return make_vector(
-                        swap(std::get<0>(t)), swap(std::get<1>(t)), swap(std::get<2>(t)));
+                    return make_vector(swap(get<0>(t)), swap(get<1>(t)), swap(get<2>(t)));
                 }
 
                 ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT

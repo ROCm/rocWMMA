@@ -395,6 +395,7 @@ ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::b
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat16_t, 512);
 
 #include "type_traits.hpp"
+#include "utility/get.hpp"
 
 namespace rocwmma
 {
@@ -473,17 +474,17 @@ namespace rocwmma
     /// Note: HIP_vector_type<T, N> uses vector extensions.         ///
     /// Element-wise access of vectors in constexpr is forbidden.   ///
     ///////////////////////////////////////////////////////////////////
-    template <uint32_t Idx, typename DataT, uint32_t VecSize>
-    ROCWMMA_HOST_DEVICE constexpr inline DataT& get(HIP_vector_type<DataT, VecSize>& v)
-    {
-        return reinterpret_cast<DataT*>(&v.data)[Idx];
-    }
+    // template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    // ROCWMMA_HOST_DEVICE constexpr inline DataT& get(HIP_vector_type<DataT, VecSize>& v)
+    // {
+    //     return reinterpret_cast<DataT*>(&v.data)[Idx];
+    // }
 
-    template <uint32_t Idx, typename DataT, uint32_t VecSize>
-    ROCWMMA_HOST_DEVICE constexpr inline DataT get(HIP_vector_type<DataT, VecSize> const& v)
-    {
-        return v.data[Idx];
-    }
+    // template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    // ROCWMMA_HOST_DEVICE constexpr inline DataT get(HIP_vector_type<DataT, VecSize> const& v)
+    // {
+    //     return v.data[Idx];
+    // }
 
     template <typename DataT>
     ROCWMMA_HOST_DEVICE constexpr inline auto swap(HIP_vector_type<DataT, 2> const& v)
@@ -512,19 +513,19 @@ namespace rocwmma
     ///////////////////////////////////////////////////////////////////
     ///     non_native_vector_base<T, N> utility overrides          ///
     ///////////////////////////////////////////////////////////////////
-    template <uint32_t Idx, typename DataT, uint32_t VecSize>
-    ROCWMMA_HOST_DEVICE constexpr static inline DataT&
-        get(non_native_vector_base<DataT, VecSize>& v)
-    {
-        return v[Idx];
-    }
+    // template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    // ROCWMMA_HOST_DEVICE constexpr static inline DataT&
+    //     get(non_native_vector_base<DataT, VecSize>& v)
+    // {
+    //     return v[Idx];
+    // }
 
-    template <uint32_t Idx, typename DataT, uint32_t VecSize>
-    ROCWMMA_HOST_DEVICE constexpr static inline DataT
-        get(non_native_vector_base<DataT, VecSize> const& v)
-    {
-        return v[Idx];
-    }
+    // template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    // ROCWMMA_HOST_DEVICE constexpr static inline DataT
+    //     get(non_native_vector_base<DataT, VecSize> const& v)
+    // {
+    //     return v[Idx];
+    // }
 
     namespace detail
     {
