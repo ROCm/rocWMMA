@@ -517,57 +517,15 @@ namespace rocwmma
 
             // Step 6 : Unpack and re-order.
             auto c0 = PackUtil::template paddedUnpack<VecSize>(concat(lo0, hi0));
-            c0      = reorderEvenOdd(c0); //concat(extractEven(c0), extractOdd(c0));
+            //c0      = reorderEvenOdd(c0);
+            c0      = concat(extractEven(c0), extractOdd(c0));
             auto c1 = PackUtil::template paddedUnpack<VecSize>(concat(lo1, hi1));
-            c1      = reorderEvenOdd(c1); //concat(extractEven(c1), extractOdd(c1));
+            //c1      = reorderEvenOdd(c1);
+            c1 = concat(extractEven(c1), extractOdd(c1));
 
             return concat(c0, c1);
         }
     };
-
-    template <uint32_t BlockDim, uint32_t VectorWidth, typename DataT, uint32_t ElementCount>
-    ROCWMMA_DEVICE static inline auto aos_soa_b32(VecT<DataT, ElementCount> const& v)
-    {
-        static_assert(ElementCount / VectorWidth >= 1,
-                      "Must have enough elements for at least one iteration of vector width");
-        static_assert(ElementCount % VectorWidth == 0,
-                      "ElementCount must be a multiple vector width");
-
-        using OutputT  = VecT<DataT, ElementCount>;
-        using AOS_Func = OutputT (*)(VecT<DataT, VectorWidth> const&);
-
-        AOS_Func f = [](VecT<DataT, VectorWidth> const& v) { return v; };
-
-        if constexpr(BlockDim == 16)
-        {
-            f = aos_soa_16xk_b32;
-        }
-        else if constexpr(BlockDim == 32)
-        {
-            f = aos_soa_32xk_b32;
-        }
-        else if constexpr(BlockDim == 64)
-        {
-            f = aos_soa_64xk_b32;
-        }
-        else if constexpr(BlockDim == 128)
-        {
-            f = aos_soa_64xk_b32;
-        }
-
-        auto result = OutputT();
-        auto itIn   = makeVectorIterator<VectorWidth>(v).begin();
-        auto itOut  = makeVectorIterator<VectorWidth>(result).begin();
-
-        for(auto i = 0; i < itIn.range(); i++)
-        {
-            *itOut = f(*itIn);
-            itOut++;
-            itIn++;
-        }
-
-        return result;
-    }
 
     // SOA -> AOS
     // Transform from ortho VW to inline VW
