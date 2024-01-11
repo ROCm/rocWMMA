@@ -94,15 +94,21 @@ namespace rocwmma
     {
         bool err = false;
 
+        auto v   = generateSeqVec<DataT, VecSize>();
+        auto res = extractEven(v);
+
+        // Handle the general case
         if constexpr(VecSize > 1)
         {
-            auto v   = generateSeqVec<DataT, VecSize>();
-            auto res = extractEven(v);
-
             for(uint32_t i = 0; i < VecSize / 2; i++)
             {
                 err |= (get(res, i) != static_cast<DataT>(i * 2));
             }
+        }
+        // Handle case where VecSize == 1
+        else
+        {
+            err |= (v != res);
         }
 
         return err;
@@ -113,15 +119,21 @@ namespace rocwmma
     {
         bool err = false;
 
+        auto v   = generateSeqVec<DataT, VecSize>();
+        auto res = extractOdd(v);
+
+        // Handle general case
         if constexpr(VecSize > 1)
         {
-            auto v   = generateSeqVec<DataT, VecSize>();
-            auto res = extractOdd(v);
-
             for(uint32_t i = 0; i < VecSize / 2; i++)
             {
                 err |= (get(res, i) != static_cast<DataT>(i * 2 + 1));
             }
+        }
+        // Handle case where VecSize == 1
+        else
+        {
+            err |= (v != res);
         }
 
         return err;
@@ -134,31 +146,110 @@ namespace rocwmma
         using PackTraits = typename PackUtil::Traits;
         bool err         = false;
 
-        if constexpr(VecSize)
+        auto v   = generateSeqVec<DataT, VecSize>();
+        auto res = reorderEvenOdd(v);
+
+        // Handle general case
+        if constexpr(VecSize > 1)
         {
-            // Special case: Sub-dword data sizes
-            // Optimize data-reorder with cross-lane ops.
-            constexpr auto ElementSize   = sizeof(DataT);
-            constexpr auto PackedVecSize = std::max(VecSize / PackTraits::PackRatio, 1u);
-
-            auto v   = generateSeqVec<DataT, VecSize>();
-            auto p   = PackUtil::paddedPack(v);
-            auto res = PackUtil::template paddedUnpack<VecSize>(p);
-
-            static_assert(std::is_same_v<decltype(res), VecT<DataT, VecSize>>, "Nopes");
-
-            //for(uint32_t i = 0; i < VecSize; i++)
-            //{
-            // if(i < VecSize / 2)
-            // {
-            //     err |= (get(res, i) != static_cast<DataT>(i * 2));
-            // }
-            // else
-            // {
-            //     err |= (get(res, i) != static_cast<DataT>(VecSize / 2 + i * 2 + 1));
-            // }
-            //}
+            for(uint32_t i = 0; i < VecSize; i++)
+            {
+                if(i < VecSize / 2)
+                {
+                    err |= (get(res, i) != static_cast<DataT>(i * 2));
+                }
+                else
+                {
+                    err |= (get(res, i) != static_cast<DataT>((i - VecSize / 2) * 2 + 1));
+                }
+            }
         }
+        // Handle case where VecSize == 1
+        else
+        {
+            err |= (v != res);
+        }
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool reorderOddEvenTest()
+    {
+        using PackUtil   = PackUtil<DataT>;
+        using PackTraits = typename PackUtil::Traits;
+        bool err         = false;
+
+        auto v   = generateSeqVec<DataT, VecSize>();
+        auto res = reorderOddEven(v);
+
+        // Handle general case
+        if constexpr(VecSize > 1)
+        {
+            for(uint32_t i = 0; i < VecSize; i++)
+            {
+                if(i < VecSize / 2)
+                {
+                    err |= (get(res, i) != static_cast<DataT>(i * 2 + 1));
+                }
+                else
+                {
+                    err |= (get(res, i) != static_cast<DataT>((i - VecSize / 2) * 2));
+                }
+            }
+        }
+        // Handle case where VecSize == 1
+        else
+        {
+            err |= (v != res);
+        }
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool zipTest()
+    {
+        using PackUtil   = PackUtil<DataT>;
+        using PackTraits = typename PackUtil::Traits;
+        bool err         = false;
+
+        auto v0  = generateSeqVec<DataT, VecSize>();
+        auto v1  = generateSeqVec<DataT, VecSize>() + DataT{VecSize};
+        auto res = zip(v0, v1);
+
+        for(uint32_t i = 0; i < VecSize; i++)
+        {
+            if(i % 2u == 0)
+            {
+                err |= (get(res, i) != static_cast<DataT>(i));
+            }
+            else
+            {
+                err |= (get(res, i) != static_cast<DataT>(i + VecSize));
+            }
+        }
+
+        // if (err)
+        // {
+        //     if constexpr (std::is_integral_v<DataT>)
+        //     {
+        //         if(threadIdx.x == 0)
+        //         {
+        //             printf("dataSize: %d\n", (int)sizeof(DataT));
+        //             printf("v\n");
+        //             for(uint32_t i = 0; i < VecSize; i++)
+        //             {
+        //                 printf("i[%d] = %d\n", i, get(v, i));
+        //             }
+        //             printf("RES\n");
+        //             for(uint32_t i = 0; i < VecSize; i++)
+        //             {
+        //                 printf("i[%d] = %d\n", i, get(res, i));
+        //             }
+        //         }
+        //     }
+        // }
 
         return err;
     }
@@ -183,6 +274,8 @@ namespace rocwmma
         err = err ? err : extractEvenTest<DataT, VecSize>();
         err = err ? err : extractOddTest<DataT, VecSize>();
         err = err ? err : reorderEvenOddTest<DataT, VecSize>();
+        err = err ? err : reorderOddEvenTest<DataT, VecSize>();
+        err = err ? err : zipTest<DataT, VecSize>();
 
         // Reduce error count
         atomicAdd(&result, (int32_t)err);
