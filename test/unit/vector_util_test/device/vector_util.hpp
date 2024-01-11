@@ -40,12 +40,12 @@ namespace rocwmma
         return v.data[idx];
     }
 
-    template <typename DataT, uint32_t VecSize>
+    template <typename DataT, uint32_t VecSize, uint32_t Start = 0>
     ROCWMMA_DEVICE static inline auto generateSeqVec()
     {
         auto buildSeq = [](auto&& idx) {
             constexpr auto Index = std::decay_t<decltype(idx)>::value;
-            return static_cast<DataT>(Index);
+            return static_cast<DataT>(Index) + static_cast<DataT>(Start);
         };
 
         return vector_generator<DataT, VecSize>()(buildSeq);
@@ -208,6 +208,68 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool extractLoTest()
+    {
+        bool err = false;
+
+        auto v   = generateSeqVec<DataT, VecSize>();
+        auto res = extractLo(v);
+
+        if constexpr(VecSize > 1)
+        {
+            for(uint32_t i = 0; i < VecSize / 2; i++)
+            {
+                err |= (get(res, i) != static_cast<DataT>(i));
+            }
+        }
+        else
+        {
+            err |= (v != res);
+        }
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool extractHiTest()
+    {
+        bool err = false;
+
+        auto v   = generateSeqVec<DataT, VecSize>();
+        auto res = extractHi(v);
+
+        if constexpr(VecSize > 1)
+        {
+            for(uint32_t i = 0; i < VecSize / 2; i++)
+            {
+                err |= (get(res, i) != static_cast<DataT>(i + VecSize / 2));
+            }
+        }
+        else
+        {
+            err |= (v != res);
+        }
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool concatTest()
+    {
+        bool err = false;
+
+        auto v   = generateSeqVec<DataT, VecSize>();
+        auto res = concat(v, v);
+
+        for(uint32_t i = 0; i < VecSize * 2; i++)
+        {
+            err |= (get(res, i) != static_cast<DataT>(i % VecSize));
+        }
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline bool zipTest()
     {
         using PackUtil   = PackUtil<DataT>;
@@ -215,41 +277,49 @@ namespace rocwmma
         bool err         = false;
 
         auto v0  = generateSeqVec<DataT, VecSize>();
-        auto v1  = generateSeqVec<DataT, VecSize>() + DataT{VecSize};
+        auto v1  = generateSeqVec<DataT, VecSize, VecSize>();
         auto res = zip(v0, v1);
 
         for(uint32_t i = 0; i < VecSize; i++)
         {
-            if(i % 2u == 0)
-            {
-                err |= (get(res, i) != static_cast<DataT>(i));
-            }
-            else
-            {
-                err |= (get(res, i) != static_cast<DataT>(i + VecSize));
-            }
+            err |= (get(res, i) != static_cast<DataT>(i + VecSize * (i & 1)));
         }
 
-        // if (err)
-        // {
-        //     if constexpr (std::is_integral_v<DataT>)
-        //     {
-        //         if(threadIdx.x == 0)
-        //         {
-        //             printf("dataSize: %d\n", (int)sizeof(DataT));
-        //             printf("v\n");
-        //             for(uint32_t i = 0; i < VecSize; i++)
-        //             {
-        //                 printf("i[%d] = %d\n", i, get(v, i));
-        //             }
-        //             printf("RES\n");
-        //             for(uint32_t i = 0; i < VecSize; i++)
-        //             {
-        //                 printf("i[%d] = %d\n", i, get(res, i));
-        //             }
-        //         }
-        //     }
-        // }
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool unpackLoTest()
+    {
+        bool err = false;
+
+        auto v0  = generateSeqVec<DataT, VecSize>();
+        auto v1  = generateSeqVec<DataT, VecSize, VecSize>();
+        auto res = unpackLo(v0, v1);
+
+        // 0, VecSize , 1, VecSize + 1, ...
+        for(uint32_t i = 0; i < VecSize; i++)
+        {
+            err |= (get(res, i) != static_cast<DataT>(i / 2 + VecSize * (i & 1)));
+        }
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool unpackHiTest()
+    {
+        bool err = false;
+
+        auto v0  = generateSeqVec<DataT, VecSize>();
+        auto v1  = generateSeqVec<DataT, VecSize, VecSize>();
+        auto res = unpackHi(v0, v1);
+
+        // VecSize / 2, VecSize / 2 + VecSize , VecSize / 2 + 1, VecSize / 2 + VecSize + 1, ...
+        for(uint32_t i = 0; i < VecSize; i++)
+        {
+            err |= (get(res, i) != static_cast<DataT>(VecSize / 2 + i / 2 + VecSize * (i & 1)));
+        }
 
         return err;
     }

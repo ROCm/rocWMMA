@@ -27,6 +27,7 @@
 #define ROCWMMA_BLEND_IMPL_HPP
 
 #include "blend.hpp"
+#include "utils.hpp"
 
 namespace rocwmma
 {
