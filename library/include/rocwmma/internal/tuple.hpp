@@ -101,7 +101,7 @@ namespace rocwmma
         template <typename VecT, std::size_t... Indices>
         constexpr static auto copy_impl(VecT&& t, index_sequence<Indices...>&&)
         {
-            return make_vector(std::get<Indices>(std::forward<VecT>(t))...);
+            return make_vector(get<Indices>(std::forward<VecT>(t))...);
         }
     }
 
@@ -122,13 +122,13 @@ namespace rocwmma
     template <typename VecT>
     constexpr static decltype(auto) get_first(VecT&& t)
     {
-        return std::get<0>(std::forward<VecT>(t));
+        return get<0>(std::forward<VecT>(t));
     }
 
     template <typename VecT>
     constexpr static decltype(auto) get_last(VecT&& t)
     {
-        return std::get<VecTraits<std::decay_t<VecT>>::size() - 1u>(std::forward<VecT>(t));
+        return get<VecTraits<std::decay_t<VecT>>::size() - 1u>(std::forward<VecT>(t));
     }
 
     namespace detail
@@ -136,8 +136,7 @@ namespace rocwmma
         template <typename VecT, std::size_t... Indices>
         constexpr static decltype(auto) reverse_impl(VecT&& t, index_sequence<Indices...>)
         {
-            return make_vector(
-                std::get<sizeof...(Indices) - 1 - Indices>(std::forward<VecT>(t))...);
+            return make_vector(get<sizeof...(Indices) - 1 - Indices>(std::forward<VecT>(t))...);
         }
     }
 
@@ -165,8 +164,8 @@ namespace rocwmma
             };
 
             auto mult = typename VecTraits<std::decay_t<Vec0>>::DataT{1};
-            return (flatten(std::get<Indices>(std::forward<Vec0>(coord)),
-                            std::get<Indices>(std::forward<Vec1>(dims)),
+            return (flatten(get<Indices>(std::forward<Vec0>(coord)),
+                            get<Indices>(std::forward<Vec1>(dims)),
                             std::forward<decltype(mult)&>(mult))
                     + ...);
         }
@@ -198,8 +197,8 @@ namespace rocwmma
             };
 
             auto mult = typename VecTraits<std::decay_t<Vec0>>::DataT{1};
-            return (flatten(std::get<sizeof...(Indices) - 1 - Indices>(std::forward<Vec0>(coord)),
-                            std::get<sizeof...(Indices) - 1 - Indices>(std::forward<Vec1>(dims)),
+            return (flatten(get<sizeof...(Indices) - 1 - Indices>(std::forward<Vec0>(coord)),
+                            get<sizeof...(Indices) - 1 - Indices>(std::forward<Vec1>(dims)),
                             std::forward<decltype(mult)&>(mult))
                     + ...);
         }
@@ -228,7 +227,7 @@ namespace rocwmma
 
             auto div = std::decay_t<Coord1d>{1};
             return make_vector(inflate(std::forward<Coord1d>(flatCoord),
-                                       std::get<Indices>(std::forward<VecT>(dims)),
+                                       get<Indices>(std::forward<VecT>(dims)),
                                        std::forward<decltype(div)&>(div),
                                        Indices == sizeof...(Indices) - 1)...);
         }
@@ -256,12 +255,11 @@ namespace rocwmma
             };
 
             auto div = std::decay_t<Coord1d>{1};
-            return reverse(
-                make_vector(inflate(std::forward<Coord1d>(flatCoord),
-                                    std::get<VecTraits<std::decay_t<VecT>>::size() - 1 - Indices>(
-                                        std::forward<VecT>(dims)),
-                                    std::forward<decltype(div)&>(div),
-                                    Indices == sizeof...(Indices) - 1)...));
+            return reverse(make_vector(inflate(
+                std::forward<Coord1d>(flatCoord),
+                get<VecTraits<std::decay_t<VecT>>::size() - 1 - Indices>(std::forward<VecT>(dims)),
+                std::forward<decltype(div)&>(div),
+                Indices == sizeof...(Indices) - 1)...));
         }
     }
 
@@ -286,8 +284,8 @@ namespace rocwmma
 
             auto inflate = [](auto&& stride, auto&& dim) { return stride * dim; };
 
-            return (inflate(std::get<Indices>(std::forward<Vec0>(strides)),
-                            std::get<Indices>(std::forward<Vec1>(strideSpace)))
+            return (inflate(get<Indices>(std::forward<Vec0>(strides)),
+                            get<Indices>(std::forward<Vec1>(strideSpace)))
                     + ...);
         }
     }
@@ -307,7 +305,7 @@ namespace rocwmma
     auto& print(std::ostream& os, T&& t, std::index_sequence<I...>&&)
     {
         os << "(";
-        (..., (os << (I == 0 ? "" : ", ") << std::get<I>(std::forward<T>(t))));
+        (..., (os << (I == 0 ? "" : ", ") << get<I>(std::forward<T>(t))));
         return os << ")\n";
     }
 

@@ -27,6 +27,8 @@
 #define ROCWMMA_UTILS_HPP
 
 #include "types.hpp"
+
+#include "utility/get.hpp"
 #include "vector.hpp"
 
 namespace rocwmma
@@ -222,7 +224,7 @@ namespace std
     template <typename F, typename Tuple, size_t... I>
     auto apply_impl(F fn, Tuple t, std::index_sequence<I...>)
     {
-        return fn(std::get<I>(t)...);
+        return fn(get<I>(t)...);
     }
     template <typename F, typename Tuple>
     auto apply(F fn, Tuple t)

@@ -76,8 +76,8 @@ namespace rocwmma
             static_assert(VecTraits<std::decay_t<StrideSpace>>::size()
                               == VecTraits<std::decay_t<Strides2d>>::size(),
                           "Mismatched size");
-            auto strideOffset = DataLayout::fromMatrixCoord(std::get<Depth>(strides2d), ldm);
-            auto strideCount  = std::get<Depth>(strideSpace);
+            auto strideOffset = DataLayout::fromMatrixCoord(get<Depth>(strides2d), ldm);
+            auto strideCount  = get<Depth>(strideSpace);
 
             // Last depth layer will invoke the load
             if constexpr(Depth == (VecTraits<std::decay_t<StrideSpace>>::size() - 1u))
