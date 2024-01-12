@@ -86,9 +86,9 @@ namespace rocwmma
     //! Alternates selecting even elements from the first vector and odd elements from the second vector.
     //! Analogous to a zipper.
     //! E.g.
-    //! v0     = [0, 1]
-    //! v1     = [2, 3]
-    //! result = [0, 3]
+    //! v0     = [0, 1, 2, 3]
+    //! v1     = [4, 5, 6, 7]
+    //! result = [0, 5, 2, 7]
     /*!
       \param v0 Vector from which even elements are alternately selected
       \param v1 Vector from which odd elements are alternately selected
@@ -99,9 +99,9 @@ namespace rocwmma
 
     //! Alternates selecting the first (lo) half of elements from each vector
     //! E.g.
-    //! v0     = [0, 1]
-    //! v1     = [2, 3]
-    //! result = [0, 2]
+    //! v0     = [0, 1, 2, 3]
+    //! v1     = [4, 5, 6, 7]
+    //! result = [0, 4, 1, 5]
     /*!
       \param v0 Vector from which lo elements are alternately selected
       \param v1 Vector from which lo elements are alternately selected
@@ -112,9 +112,9 @@ namespace rocwmma
 
     //! Alternates selecting the second (hi) half of elements from each vector
     //! E.g.
-    //! v0     = [0, 1]
-    //! v1     = [2, 3]
-    //! result = [1, 3]
+    //! v0     = [0, 1, 2, 3]
+    //! v1     = [4, 5, 6, 7]
+    //! result = [2, 6, 3, 7]
     /*!
       \param v0 Vector from which hi elements are alternately selected
       \param v1 Vector from which hi elements are alternately selected
