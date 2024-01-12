@@ -27,365 +27,103 @@
 #ifndef ROCWMMA_VECTOR_UTIL_HPP
 #define ROCWMMA_VECTOR_UTIL_HPP
 
-#include "blend.hpp"
-#include "pack_util.hpp"
 #include "types.hpp"
 #include "vector.hpp"
 
 namespace rocwmma
 {
-    namespace detail
-    {
-        template <uint32_t N>
-        using Number = detail::integral_constant<int32_t, N>;
-
-        // Can be used to build any vector class of <DataT, VecSize>
-        // Either VecT or non_native_vector_vase.
-        // Class acts as a static for_each style generator:
-        // Incoming functor F will be called with each index + args in sequence.
-        // Results of functor calls are used to construct a new vector.
-        template <template <typename, uint32_t> class VecT, typename DataT, uint32_t VecSize>
-        struct vector_generator
-        {
-            __host__ __device__ constexpr vector_generator() {}
-
-            // F signature: F(Number<Iter>, args...)
-            template <class F, typename... ArgsT>
-            __host__ __device__ constexpr auto operator()(F f, ArgsT&&... args) const
-            {
-                // Build the number sequence to be expanded below.
-                return operator()(f, detail::Seq<VecSize>{}, std::forward<ArgsT>(args)...);
-            }
-
-        private:
-            template <class F, uint32_t... Indices, typename... ArgsT>
-            __host__ __device__ constexpr auto
-                operator()(F f, detail::SeqT<Indices...>, ArgsT&&... args) const
-            {
-                // Execute incoming functor f with each index, as well as forwarded args.
-                // The resulting vector is constructed with the results of each functor call.
-                return VecT<DataT, VecSize>{
-                    (f(Number<Indices>{}, std::forward<ArgsT>(args)...))...};
-            }
-        };
-    }
-
+    //! Extracts the first (lo) half of elements from a given vector
+    /*!
+      \param v Vector to extract the lo elements from.
+    */
     template <typename DataT, uint32_t VecSize>
-    struct vector_generator : public detail::vector_generator<VecT, DataT, VecSize>
-    {
-    };
+    ROCWMMA_DEVICE constexpr static inline auto extractLo(VecT<DataT, VecSize> const& v);
 
-    // template <typename DataT, uint32_t VecSize>
-    // ROCWMMA_HOST constexpr static inline auto extractEvenTEST(VecT<DataT, VecSize> const& v)
-    // {
-    //     auto evens = [](auto number, auto v) {
-    //         constexpr auto Index = std::decay_t<decltype(number)>::value;
-    //         std::cout << "My number: " << Index << std::endl;
-    //         std::cout << "My index: " << Index * 2 << std::endl;
-    //         std::cout << "My value: " << get<Index * 2>(v) << std::endl;
-    //         return get<Index * 2>(v);
-    //     };
-    //     return vector_generator<DataT, VecSize / 2u>()(evens, v);
-    //     // return detail::extractEven(v, detail::Seq<VecSize / 2u>{});
-    // }
-
+    //! Extracts the second (hi) half of elements from a given vector
+    /*!
+      \param v Vector to extract the hi elements from.
+    */
     template <typename DataT, uint32_t VecSize>
-    ROCWMMA_HOST_DEVICE constexpr static inline auto extractEven(VecT<DataT, VecSize> const& v)
-    {
-        using PackUtil   = PackUtil<DataT>;
-        using PackTraits = typename PackUtil::Traits;
+    ROCWMMA_DEVICE constexpr static inline auto extractHi(VecT<DataT, VecSize> const& v);
 
-        // Special case: Sub-dword data sizes with minimum 2 packed vectors
-        // Optimize data-reorder with cross-lane ops.
-        constexpr auto ElementSize   = sizeof(DataT);
-        constexpr auto PackedVecSize = VecSize / PackTraits::PackRatio;
-        if constexpr(ElementSize < 4u && PackedVecSize >= 2u)
-        {
-            auto evens = [](auto&& idx, auto&& v) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
-                return (ElementSize == 2u) ? Blend::ExtractWordEven::exec(get<Index * 2u>(v),
-                                                                          get<Index * 2u + 1u>(v))
-                                           : Blend::ExtractByteEven::exec(get<Index * 2u>(v),
-                                                                          get<Index * 2u + 1u>(v));
-            };
-
-            // Pack, extract and unpack
-            using PackedT = typename PackTraits::PackedT;
-            auto packed   = PackUtil::paddedPack(v);
-            auto result   = vector_generator<PackedT, PackedVecSize / 2u>()(evens, packed);
-            return PackUtil::template paddedUnpack<VecSize / 2u>(result);
-        }
-        else
-        {
-            auto evens = [](auto&& idx, auto&& v) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
-                return get<Index * 2>(v);
-            };
-
-            return vector_generator<DataT, VecSize / 2u>()(evens, v);
-        }
-    }
-
+    //! Extracts the the even elements elements from a given vector
+    /*!
+      \param v Vector to extract the even elements from.
+    */
     template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto extractOdd(VecT<DataT, VecSize> const& v)
-    {
-        using PackUtil   = PackUtil<DataT>;
-        using PackTraits = typename PackUtil::Traits;
+    ROCWMMA_HOST_DEVICE constexpr static inline auto extractEven(VecT<DataT, VecSize> const& v);
 
-        // Special case: Sub-dword data sizes with minimum 2 packed vectors
-        // Optimize data-reorder with cross-lane ops.
-        constexpr auto ElementSize   = sizeof(DataT);
-        constexpr auto PackedVecSize = VecSize / PackTraits::PackRatio;
-        if constexpr(ElementSize < 4u && PackedVecSize >= 2u)
-        {
-            auto odds = [](auto&& idx, auto&& v) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
-                return (ElementSize == 2u) ? Blend::ExtractWordOdd::exec(get<Index * 2u>(v),
-                                                                         get<Index * 2u + 1u>(v))
-                                           : Blend::ExtractByteOdd::exec(get<Index * 2u>(v),
-                                                                         get<Index * 2u + 1u>(v));
-            };
-
-            // Pack, extract and unpack
-            using PackedT = typename PackTraits::PackedT;
-            auto packed   = PackUtil::paddedPack(v);
-            auto result   = vector_generator<PackedT, PackedVecSize / 2u>()(odds, packed);
-            return PackUtil::template paddedUnpack<VecSize / 2u>(result);
-        }
-        else
-        {
-            auto odds = [](auto&& idx, auto&& v) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
-                return get<Index * 2 + 1>(v);
-            };
-
-            return vector_generator<DataT, VecSize / 2u>()(odds, v);
-        }
-    }
-
+    //! Extracts the the odd elements elements from a given vector
+    /*!
+      \param v Vector to extract the odd elements from.
+    */
     template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto reorderEvenOdd(VecT<DataT, VecSize> const& v)
-    {
-        using PackUtil   = PackUtil<DataT>;
-        using PackTraits = typename PackUtil::Traits;
+    ROCWMMA_DEVICE constexpr static inline auto extractOdd(VecT<DataT, VecSize> const& v);
 
-        // Special case: Sub-dword data sizes
-        // Optimize data-reorder with cross-lane ops.
-        constexpr auto ElementSize   = sizeof(DataT);
-        constexpr auto PackedVecSize = std::max(VecSize / PackTraits::PackRatio, 1u);
-        if constexpr(ElementSize < 4u)
-        {
-            auto evenOdds = [](auto&& idx, auto&& v) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
-                return (ElementSize == 2u)
-                           ? Blend::ExtractWordEvenOdd::exec(get<Index>(v), get<Index>(v))
-                           : Blend::ExtractByteEvenOdd::exec(get<Index>(v), get<Index>(v));
-            };
-
-            // Pack, extract and unpack
-            using PackedT = typename PackTraits::PackedT;
-            auto packed   = PackUtil::paddedPack(v);
-            auto result   = vector_generator<PackedT, PackedVecSize>()(evenOdds, packed);
-            return PackUtil::template paddedUnpack<VecSize>(result);
-        }
-        else
-        {
-            auto evenOdds = [](auto&& idx, auto&& v) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
-                return (Index < VecSize / 2u) ? get<Index * 2>(v)
-                                              : get<(Index - VecSize / 2u) * 2 + 1>(v);
-            };
-
-            return vector_generator<DataT, VecSize>()(evenOdds, v);
-        }
-    }
-
+    //! Re-orders vector elements such that even elements are concatenated with odd elements.
+    /*!
+      \param v Vector to reorder elements from.
+    */
     template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto reorderOddEven(VecT<DataT, VecSize> const& v)
-    {
-        using PackUtil   = PackUtil<DataT>;
-        using PackTraits = typename PackUtil::Traits;
+    ROCWMMA_DEVICE constexpr static inline auto reorderEvenOdd(VecT<DataT, VecSize> const& v);
 
-        // Special case: Sub-dword data sizes
-        // Optimize data-reorder with cross-lane ops.
-        constexpr auto ElementSize   = sizeof(DataT);
-        constexpr auto PackedVecSize = std::max(VecSize / PackTraits::PackRatio, 1u);
-        if constexpr(ElementSize < 4u)
-        {
-            auto oddEvens = [](auto&& idx, auto&& v) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
-                return (ElementSize == 2u)
-                           ? Blend::ExtractWordOddEven::exec(get<Index>(v), get<Index>(v))
-                           : Blend::ExtractByteOddEven::exec(get<Index>(v), get<Index>(v));
-            };
-
-            // Pack, extract and unpack
-            using PackedT = typename PackTraits::PackedT;
-            auto packed   = PackUtil::paddedPack(v);
-            auto result   = vector_generator<PackedT, PackedVecSize>()(oddEvens, packed);
-            return PackUtil::template paddedUnpack<VecSize>(result);
-        }
-        else
-        {
-            auto oddEvens = [](auto&& idx, auto&& v) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
-                return (Index < VecSize / 2u) ? get<Index * 2 + 1>(v)
-                                              : get<(Index - VecSize / 2u) * 2>(v);
-            };
-
-            return vector_generator<DataT, VecSize>()(oddEvens, v);
-        }
-    }
-
+    //! Re-orders vector elements such that odd elements are concatenated with even elements.
+    /*!
+      \param v Vector to reorder elements from.
+    */
     template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto extractLo(VecT<DataT, VecSize> const& v)
-    {
-        auto lo = [](auto&& idx, auto&& v) {
-            constexpr auto Index = std::decay_t<decltype(idx)>::value;
-            return get<Index>(v);
-        };
+    ROCWMMA_DEVICE constexpr static inline auto reorderOddEven(VecT<DataT, VecSize> const& v);
 
-        return vector_generator<DataT, VecSize / 2u>()(lo, v);
-    }
-
-    template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto extractHi(VecT<DataT, VecSize> const& v)
-    {
-        auto hi = [](auto&& idx, auto&& v) {
-            constexpr auto Index = std::decay_t<decltype(idx)>::value;
-            return get<Index + VecSize / 2u>(v);
-        };
-
-        return vector_generator<DataT, VecSize / 2u>()(hi, v);
-    }
-
+    //! Concatenates the contents of two vectors together in order.
+    /*!
+      \param v0 First vector to concatenate
+      \param v1 Second vector to concatenate
+    */
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE constexpr static inline auto concat(VecT<DataT, VecSize> const& v0,
-                                                       VecT<DataT, VecSize> const& v1)
-    {
-        auto concat = [](auto&& idx, auto&& v0, auto&& v1) {
-            constexpr auto Index = std::decay_t<decltype(idx)>::value;
-            return (Index < VecSize) ? get<Index>(v0) : get<Index - VecSize>(v1);
-        };
+                                                       VecT<DataT, VecSize> const& v1);
 
-        return vector_generator<DataT, VecSize * 2u>()(concat, v0, v1);
-    }
-
+    //! Alternates selecting even elements from the first vector and odd elements from the second vector.
+    //! Analogous to a zipper.
+    //! E.g.
+    //! v0     = [0, 1, 2, 3]
+    //! v1     = [4, 5, 6, 7]
+    //! result = [0, 5, 2, 7]
+    /*!
+      \param v0 Vector from which even elements are alternately selected
+      \param v1 Vector from which odd elements are alternately selected
+    */
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE constexpr static inline auto zip(VecT<DataT, VecSize> const& v0,
-                                                    VecT<DataT, VecSize> const& v1)
-    {
-        using PackUtil   = PackUtil<DataT>;
-        using PackTraits = typename PackUtil::Traits;
+                                                    VecT<DataT, VecSize> const& v1);
 
-        // Special case: Sub-dword data sizes
-        // Optimize data-reorder with cross-lane ops.
-        constexpr auto ElementSize   = sizeof(DataT);
-        constexpr auto PackedVecSize = std::max(VecSize / PackTraits::PackRatio, 1u);
-        if constexpr(ElementSize < 4u)
-        {
-            auto zip = [](auto&& idx, auto&& v0, auto&& v1) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
-                return (ElementSize == 2u) ? Blend::ZipWord::exec(get<Index>(v0), get<Index>(v1))
-                                           : Blend::ZipByte::exec(get<Index>(v0), get<Index>(v1));
-            };
-
-            // Pack, extract and unpack
-            using PackedT = typename PackTraits::PackedT;
-            auto packed0  = PackUtil::paddedPack(v0);
-            auto packed1  = PackUtil::paddedPack(v1);
-            auto result   = vector_generator<PackedT, PackedVecSize>()(zip, packed0, packed1);
-            return PackUtil::template paddedUnpack<VecSize>(result);
-        }
-        else
-        {
-            auto zip = [](auto&& idx, auto&& v0, auto&& v1) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
-                return (Index % 2u == 0u) ? get<Index>(v0) : get<Index>(v1);
-            };
-
-            return vector_generator<DataT, VecSize>()(zip, v0, v1);
-        }
-    }
-
+    //! Alternates selecting the first (lo) half of elements from each vector
+    //! E.g.
+    //! v0     = [0, 1, 2, 3]
+    //! v1     = [4, 5, 6, 7]
+    //! result = [0, 4, 1, 5]
+    /*!
+      \param v0 Vector from which lo elements are alternately selected
+      \param v1 Vector from which lo elements are alternately selected
+    */
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE constexpr static inline auto unpackLo(VecT<DataT, VecSize> const& v0,
-                                                         VecT<DataT, VecSize> const& v1)
-    {
-        using PackUtil   = PackUtil<DataT>;
-        using PackTraits = typename PackUtil::Traits;
+                                                         VecT<DataT, VecSize> const& v1);
 
-        // Special case: Sub-dword data sizes
-        // Optimize data-reorder with cross-lane ops.
-        constexpr auto ElementSize   = sizeof(DataT);
-        constexpr auto PackedVecSize = std::max(VecSize / PackTraits::PackRatio, 1u);
-        if constexpr(ElementSize < 4u)
-        {
-            auto unpackLo = [](auto&& idx, auto&& v0, auto&& v1) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
-                return (ElementSize == 2u)
-                           ? Blend::UnpackWordLo::exec(get<Index>(v0), get<Index>(v1))
-                           : Blend::UnpackByteLo::exec(get<Index>(v0), get<Index>(v1));
-            };
-
-            // Pack, extract and unpack
-            using PackedT = typename PackTraits::PackedT;
-            auto packed0  = PackUtil::paddedPack(v0);
-            auto packed1  = PackUtil::paddedPack(v1);
-            auto result   = vector_generator<PackedT, PackedVecSize>()(unpackLo, packed0, packed1);
-            return PackUtil::template paddedUnpack<VecSize>(result);
-        }
-        else
-        {
-            auto unpackLo = [](auto&& idx, auto&& v0, auto&& v1) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
-                return (Index % 2u == 0u) ? get<Index / 2u>(v0) : get<Index / 2u>(v1);
-            };
-
-            return vector_generator<DataT, VecSize>()(unpackLo, v0, v1);
-        }
-    }
-
+    //! Alternates selecting the second (hi) half of elements from each vector
+    //! E.g.
+    //! v0     = [0, 1, 2, 3]
+    //! v1     = [4, 5, 6, 7]
+    //! result = [2, 6, 3, 7]
+    /*!
+      \param v0 Vector from which hi elements are alternately selected
+      \param v1 Vector from which hi elements are alternately selected
+    */
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE constexpr static inline auto unpackHi(VecT<DataT, VecSize> const& v0,
-                                                         VecT<DataT, VecSize> const& v1)
-    {
-        using PackUtil   = PackUtil<DataT>;
-        using PackTraits = typename PackUtil::Traits;
-
-        // Special case: Sub-dword data sizes
-        // Optimize data-reorder with cross-lane ops.
-        constexpr auto ElementSize   = sizeof(DataT);
-        constexpr auto PackedVecSize = std::max(VecSize / PackTraits::PackRatio, 1u);
-        if constexpr(ElementSize < 4u)
-        {
-            auto unpackHi = [](auto&& idx, auto&& v0, auto&& v1) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
-                return (ElementSize == 2u)
-                           ? Blend::UnpackWordHi::exec(get<Index>(v0), get<Index>(v1))
-                           : Blend::UnpackByteHi::exec(get<Index>(v0), get<Index>(v1));
-            };
-
-            // Pack, extract and unpack
-            using PackedT = typename PackTraits::PackedT;
-            auto packed0  = PackUtil::paddedPack(v0);
-            auto packed1  = PackUtil::paddedPack(v1);
-            auto result   = vector_generator<PackedT, PackedVecSize>()(unpackHi, packed0, packed1);
-            return PackUtil::template paddedUnpack<VecSize>(result);
-        }
-        else
-        {
-            auto unpackHi = [](auto&& idx, auto&& v0, auto&& v1) {
-                constexpr auto startIdx = VecSize / 2u;
-                constexpr auto Index    = std::decay_t<decltype(idx)>::value;
-                return (Index % 2u == 0u) ? get<startIdx + Index / 2u>(v0)
-                                          : get<startIdx + Index / 2u>(v1);
-            };
-
-            return vector_generator<DataT, VecSize>()(unpackHi, v0, v1);
-        }
-    }
-
+                                                         VecT<DataT, VecSize> const& v1);
 } // namespace rocwmma
+
+#include "vector_util_impl.hpp"
 
 #endif // ROCWMMA_VECTOR_UTIL_HPP
