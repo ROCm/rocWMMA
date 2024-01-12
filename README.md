@@ -65,7 +65,7 @@ To build our documentation locally, use the following commands.
 ```bash
 cd docs
 
-pip3 install -r .sphinx/requirements.txt
+pip3 install -r sphinx/requirements.txt
 
 python3 -m sphinx -T -E -b html -d _build/doctrees -D language=en . _build/html
 ```
@@ -769,7 +769,7 @@ The HIP runtime compilation (hipRTC) environment allows simultaneous compilation
 running of device code on AMD GPUs. The rocWMMA library is compatible with hipRTC, so you can
 leverage it for runtime-generated kernels. A simple GEMM sample is included to demonstrate
 compatibility. For more information, refer to the
-[HIP API reference](https://rocm.docs.amd.com/projects/HIP/en/latest/.doxygen/docBin/html/index.html).
+[HIP API reference](https://rocm.docs.amd.com/projects/HIP/en/latest/doxygen/html/index.html).
 
 ```important
 The `rocwmma::bfloat16_t` data type is not currently supported in hipRTC.
