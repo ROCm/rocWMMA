@@ -320,7 +320,38 @@ namespace rocwmma
     template <typename DataT>
     ROCWMMA_DEVICE static inline auto aos_soa_64xk_b32(VecT<DataT, 4> const& v)
     {
-        return 0;
+        using PackUtil = PackUtil<DataT>;
+
+        // modified unpackLohi16
+        auto packed_data = PackUtil::paddedPack(concat(extractEven(v), extractOdd(v)));
+
+        packed_data = Swizzle::RotateR32<16>::exec(packed_data);
+
+        auto unpacked_data = PackUtil::template paddedUnpack<4>(packed_data);
+        auto lo            = PackUtil::paddedPack(extractLo(unpacked_data));
+        auto hi            = PackUtil::paddedPack(extractHi(unpacked_data));
+        auto rot_lo        = Swizzle::RotateR32<16>::exec(lo);
+        auto rot_hi        = Swizzle::RotateR32<16>::exec(hi);
+        auto zip_lo        = Blend::Zip16::exec(rot_lo, hi);
+        auto zip_hi        = Blend::Zip16::exec(lo, rot_hi);
+        unpacked_data      = concat(PackUtil::template paddedUnpack<2u>(zip_lo),
+                               PackUtil::template paddedUnpack<2u>(zip_hi));
+
+        // modified unpackLohi32
+        lo = PackUtil::paddedPack(extractEven(unpacked_data));
+        hi = PackUtil::paddedPack(extractOdd(unpacked_data));
+
+        hi = Permute::RotateWaveR<32>::exec(hi);
+
+        zip_lo = Blend::Zip32::exec(lo, hi);
+        zip_hi = Blend::Zip32::exec(hi, lo);
+
+        // Gather
+        lo = Permute::GatherWave<4, 0>::exec(zip_lo);
+        hi = Permute::GatherWave<4, 32>::exec(zip_hi);
+
+        return concat(PackUtil::template paddedUnpack<2u>(lo),
+                      PackUtil::template paddedUnpack<2u>(hi));
     }
 
     template <typename DataT>
@@ -626,7 +657,43 @@ namespace rocwmma
     template <typename DataT>
     ROCWMMA_DEVICE static inline auto soa_aos_64xk_b32(VecT<DataT, 4> const& v)
     {
-        return 0;
+        using PackUtil = PackUtil<DataT>;
+
+        // Scatter
+        auto lo            = Permute::ScatterWave<4, 0>::exec(PackUtil::paddedPack(extractLo(v)));
+        auto hi            = Permute::ScatterWave<4, 32>::exec(PackUtil::paddedPack(extractHi(v)));
+        auto unpacked_data = concat(PackUtil::template paddedUnpack<2>(lo),
+                                    PackUtil::template paddedUnpack<2>(hi));
+
+        // modified unpackLohi16
+        auto packed_data
+            = PackUtil::paddedPack(concat(extractEven(unpacked_data), extractOdd(unpacked_data)));
+
+        packed_data = Swizzle::RotateR32<16>::exec(packed_data);
+
+        unpacked_data = PackUtil::template paddedUnpack<4>(packed_data);
+        lo            = PackUtil::paddedPack(extractLo(unpacked_data));
+        hi            = PackUtil::paddedPack(extractHi(unpacked_data));
+        auto rot_lo   = Swizzle::RotateR32<16>::exec(lo);
+        auto rot_hi   = Swizzle::RotateR32<16>::exec(hi);
+        auto zip_lo   = Blend::Zip16::exec(rot_lo, hi);
+        auto zip_hi   = Blend::Zip16::exec(lo, rot_hi);
+        unpacked_data = concat(PackUtil::template paddedUnpack<2u>(zip_lo),
+                               PackUtil::template paddedUnpack<2u>(zip_hi));
+
+        // modified unpackLohi32
+        lo = PackUtil::paddedPack(extractEven(unpacked_data));
+        hi = PackUtil::paddedPack(extractOdd(unpacked_data));
+
+        zip_lo = Blend::Zip32::exec(lo, hi);
+        zip_hi = Blend::Zip32::exec(hi, lo);
+
+        zip_hi = Permute::RotateWaveR<32>::exec(zip_hi);
+
+        unpacked_data = concat(PackUtil::template paddedUnpack<2u>(zip_lo),
+                               PackUtil::template paddedUnpack<2u>(zip_hi));
+
+        return unpacked_data;
     }
 
     template <typename DataT>
