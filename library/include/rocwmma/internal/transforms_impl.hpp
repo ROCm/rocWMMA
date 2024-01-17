@@ -762,7 +762,78 @@ namespace rocwmma
         {
             using PackUtil = PackUtil<DataT>;
 
-            return 0;
+            auto vFlipRotate90 = [](auto&& v) {
+                // Extract odds, evens
+                auto packed_data = PackUtil::paddedPack(concat(extractEven(v), extractOdd(v)));
+
+                // rotate 32,16
+                packed_data = Swizzle::RotateR32<16>::exec(packed_data);
+
+                auto unpacked_data = PackUtil::template paddedUnpack<4>(packed_data);
+                auto lo            = PackUtil::paddedPack(extractLo(unpacked_data));
+                auto hi            = PackUtil::paddedPack(extractHi(unpacked_data));
+                auto rot_lo        = Swizzle::RotateR32<16>::exec(lo);
+                auto rot_hi        = Swizzle::RotateR32<16>::exec(hi);
+                auto zip_lo        = Blend::Zip16::exec(rot_lo, hi);
+                auto zip_hi        = Blend::Zip16::exec(lo, rot_hi);
+                unpacked_data      = concat(PackUtil::template paddedUnpack<2u>(zip_lo),
+                                       PackUtil::template paddedUnpack<2u>(zip_hi));
+                return unpacked_data;
+            };
+
+            auto vFlipHiZip16 = [](auto&& v) {
+                // Extract odds, evens
+                auto lo = PackUtil::paddedPack(extractEven(v));
+                auto hi = PackUtil::paddedPack(extractOdd(v));
+
+                hi = Permute::RotateWaveR<32>::exec(hi);
+
+                auto zip_lo = Blend::Zip32::exec(lo, hi);
+                auto zip_hi = Blend::Zip32::exec(hi, lo);
+
+                // Gather
+                lo = Permute::GatherWave<4, 0>::exec(zip_lo);
+                hi = Permute::GatherWave<4, 32>::exec(zip_hi);
+
+                auto unpack_data = concat(PackUtil::template paddedUnpack<2u>(lo),
+                                          PackUtil::template paddedUnpack<2u>(hi));
+                return unpack_data;
+            };
+
+            auto v_lo = extractLo(v);
+            auto v_hi = extractHi(v);
+            auto v0   = extractLo(v_lo);
+            auto v1   = extractHi(v_lo);
+            auto v2   = extractLo(v_hi);
+            auto v3   = extractHi(v_hi);
+
+            auto unpacked_data0 = vFlipRotate90(v0);
+            auto unpacked_data1 = vFlipRotate90(v1);
+            auto unpacked_data2 = vFlipRotate90(v2);
+            auto unpacked_data3 = vFlipRotate90(v3);
+
+            auto unpacked_rotate_data0
+                = concat(extractLo(unpacked_data0), extractLo(unpacked_data1));
+            auto unpacked_rotate_data1
+                = concat(extractHi(unpacked_data0), extractHi(unpacked_data1));
+            auto unpacked_rotate_data2
+                = concat(extractLo(unpacked_data2), extractLo(unpacked_data3));
+            auto unpacked_rotate_data3
+                = concat(extractHi(unpacked_data2), extractHi(unpacked_data3));
+
+            unpacked_data0 = vFlipHiZip16(unpacked_rotate_data0);
+            unpacked_data1 = vFlipHiZip16(unpacked_rotate_data1);
+            unpacked_data2 = vFlipHiZip16(unpacked_rotate_data2);
+            unpacked_data3 = vFlipHiZip16(unpacked_rotate_data3);
+
+            unpacked_rotate_data0 = concat(extractLo(unpacked_data0), extractLo(unpacked_data2));
+            unpacked_rotate_data1 = concat(extractLo(unpacked_data1), extractLo(unpacked_data3));
+            unpacked_rotate_data2 = concat(extractHi(unpacked_data0), extractHi(unpacked_data2));
+            unpacked_rotate_data3 = concat(extractHi(unpacked_data1), extractHi(unpacked_data3));
+
+            auto unpacked_data = concat(concat(unpacked_rotate_data0, unpacked_rotate_data1),
+                                        concat(unpacked_rotate_data2, unpacked_rotate_data3));
+            return unpacked_data;
         }
     };
 
@@ -934,7 +1005,77 @@ namespace rocwmma
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
         {
-            return 0;
+            using PackUtil = PackUtil<DataT>;
+            auto step1     = [](auto&& v) {
+                // Scatter
+                auto lo = Permute::ScatterWave<4, 0>::exec(PackUtil::paddedPack(extractLo(v)));
+                auto hi = Permute::ScatterWave<4, 32>::exec(PackUtil::paddedPack(extractHi(v)));
+                // lo, hi are packed
+                return std::make_pair(lo, hi);
+            };
+
+            auto step2 = [](auto&& lo, auto&& hi) {
+                // lo, hi are packed
+                auto zip_lo = Blend::Zip32::exec(lo, hi);
+                auto zip_hi = Blend::Zip32::exec(hi, lo);
+
+                zip_hi = Permute::RotateWaveR<32>::exec(zip_hi);
+                auto v = concat(PackUtil::template paddedUnpack<2>(zip_lo),
+                                PackUtil::template paddedUnpack<2>(zip_hi));
+
+                return concat(extractEven(v), extractOdd(v));
+            };
+
+            auto last_step = [](auto&& v) {
+                auto lo     = PackUtil::paddedPack(extractLo(v));
+                auto hi     = PackUtil::paddedPack(extractHi(v));
+                auto rot_lo = Swizzle::RotateR32<16>::exec(lo);
+                auto zip_lo = Blend::Zip16::exec(rot_lo, hi);
+                auto zip_hi = Blend::Zip16::exec(hi, rot_lo);
+                zip_hi      = Swizzle::RotateR32<16>::exec(zip_hi);
+
+                auto unpack_data = concat(PackUtil::template paddedUnpack<2>(zip_hi),
+                                          PackUtil::template paddedUnpack<2>(zip_lo));
+
+                return concat(extractEven(unpack_data), extractOdd(unpack_data));
+            };
+
+            auto v_lo = extractLo(v);
+            auto v_hi = extractHi(v);
+            auto v0   = extractLo(v_lo);
+            auto v1   = extractHi(v_lo);
+            auto v2   = extractLo(v_hi);
+            auto v3   = extractHi(v_hi);
+
+            auto unpacked_rotate_data0 = concat(extractLo(v0), extractLo(v2));
+            auto unpacked_rotate_data1 = concat(extractLo(v1), extractLo(v3));
+            auto unpacked_rotate_data2 = concat(extractHi(v0), extractHi(v2));
+            auto unpacked_rotate_data3 = concat(extractHi(v1), extractHi(v3));
+
+            auto [lo0, hi0] = step1(unpacked_rotate_data0);
+            auto [lo1, hi1] = step1(unpacked_rotate_data1);
+            auto [lo2, hi2] = step1(unpacked_rotate_data2);
+            auto [lo3, hi3] = step1(unpacked_rotate_data3);
+
+            auto step2_v0 = step2(lo0, hi0);
+            auto step2_v1 = step2(lo1, hi1);
+            auto step2_v2 = step2(lo2, hi2);
+            auto step2_v3 = step2(lo3, hi3);
+            // auto unpacked_data = concat(concat(step2_v0, step2_v1), concat(step2_v2, step2_v3));
+
+            unpacked_rotate_data0 = concat(extractLo(step2_v0), extractLo(step2_v1));
+            unpacked_rotate_data1 = concat(extractHi(step2_v0), extractHi(step2_v1));
+            unpacked_rotate_data2 = concat(extractLo(step2_v2), extractLo(step2_v3));
+            unpacked_rotate_data3 = concat(extractHi(step2_v2), extractHi(step2_v3));
+
+            auto unpacked_data0 = last_step(unpacked_rotate_data0);
+            auto unpacked_data1 = last_step(unpacked_rotate_data1);
+            auto unpacked_data2 = last_step(unpacked_rotate_data2);
+            auto unpacked_data3 = last_step(unpacked_rotate_data3);
+
+            auto unpacked_data = concat(concat(unpacked_data0, unpacked_data1),
+                                        concat(unpacked_data2, unpacked_data3));
+            return unpacked_data;
         }
     };
 
