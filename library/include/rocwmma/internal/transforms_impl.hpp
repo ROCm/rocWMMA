@@ -189,6 +189,84 @@ namespace rocwmma
                       PackUtil::template paddedUnpack<VecSize / 2u>(hi));
     }
 
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE constexpr static inline auto aos_soa_wave_b32_vw4(VecT<DataT, VecSize> const& v)
+    {
+        using PackUtil = PackUtil<DataT>;
+
+        // Step 1 : UnpackLohi16
+        auto packed_data = PackUtil::paddedPack(concat(extractEven(v), extractOdd(v)));
+
+        packed_data = Swizzle::RotateR32<16>::exec(packed_data);
+
+        auto unpacked_data = PackUtil::template paddedUnpack<4>(packed_data);
+        auto lo            = PackUtil::paddedPack(extractLo(unpacked_data));
+        auto hi            = PackUtil::paddedPack(extractHi(unpacked_data));
+        auto rot_lo        = Swizzle::RotateR32<16>::exec(lo);
+        auto rot_hi        = Swizzle::RotateR32<16>::exec(hi);
+        auto zip_lo        = Blend::Zip16::exec(rot_lo, hi);
+        auto zip_hi        = Blend::Zip16::exec(lo, rot_hi);
+        unpacked_data      = concat(PackUtil::template paddedUnpack<2u>(zip_lo),
+                               PackUtil::template paddedUnpack<2u>(zip_hi));
+
+        // Step 2 : UnpackLohi32
+        lo = PackUtil::paddedPack(extractEven(unpacked_data));
+        hi = PackUtil::paddedPack(extractOdd(unpacked_data));
+
+        hi = Permute::RotateWaveR<32>::exec(hi);
+
+        zip_lo = Blend::Zip32::exec(lo, hi);
+        zip_hi = Blend::Zip32::exec(hi, lo);
+
+        // Step 3 : Gather
+        lo = Permute::GatherWave<4, 0>::exec(zip_lo);
+        hi = Permute::GatherWave<4, 32>::exec(zip_hi);
+
+        return concat(PackUtil::template paddedUnpack<2u>(lo),
+                      PackUtil::template paddedUnpack<2u>(hi));
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE constexpr static inline auto soa_aos_wave_b32_vw4(VecT<DataT, VecSize> const& v)
+    {
+        using PackUtil = PackUtil<DataT>;
+
+        // Step 1 : Scatter
+        auto lo            = Permute::ScatterWave<4, 0>::exec(PackUtil::paddedPack(extractLo(v)));
+        auto hi            = Permute::ScatterWave<4, 32>::exec(PackUtil::paddedPack(extractHi(v)));
+        auto unpacked_data = concat(PackUtil::template paddedUnpack<2u>(lo),
+                                    PackUtil::template paddedUnpack<2u>(hi));
+
+        // Step 2 : UnpackLoHi16
+
+        unpacked_data = PackUtil::template paddedUnpack<4>(Swizzle::RotateR32<16>::exec(
+            PackUtil::paddedPack(concat(extractEven(unpacked_data), extractOdd(unpacked_data)))));
+
+        lo          = PackUtil::paddedPack(extractLo(unpacked_data));
+        hi          = PackUtil::paddedPack(extractHi(unpacked_data));
+        auto rot_lo = Swizzle::RotateR32<16>::exec(lo);
+        auto zip_lo = Blend::Zip16::exec(rot_lo, hi);
+        auto zip_hi = Blend::Zip16::exec(hi, rot_lo);
+        zip_hi      = Swizzle::RotateR32<16>::exec(zip_hi);
+
+        unpacked_data = concat(PackUtil::template paddedUnpack<2>(zip_lo),
+                               PackUtil::template paddedUnpack<2>(zip_hi));
+
+        // Step 3 : UnpackLoHi32
+        lo = PackUtil::paddedPack(extractEven(unpacked_data));
+        hi = PackUtil::paddedPack(extractOdd(unpacked_data));
+
+        zip_lo = Blend::Zip32::exec(lo, hi);
+        zip_hi = Blend::Zip32::exec(hi, lo);
+
+        auto rot_hi = Permute::RotateWaveR<32>::exec(zip_hi);
+
+        unpacked_data = concat(PackUtil::template paddedUnpack<2u>(zip_lo),
+                               PackUtil::template paddedUnpack<2u>(rot_hi));
+
+        return unpacked_data;
+    };
+
     template <typename DataT>
     ROCWMMA_DEVICE static inline auto aos_soa_16xk_b32(VecT<DataT, 8> const& v)
     {
@@ -211,12 +289,7 @@ namespace rocwmma
     template <typename DataT>
     ROCWMMA_DEVICE static inline auto aos_soa_16xk_b32(VecT<DataT, 4> const& v)
     {
-        using PackUtil = PackUtil<DataT>;
-
-        auto result = unpackLoHi4(v);
-        result      = unpackLoHi8(result);
-        return PackUtil::template paddedUnpack<4>(
-            Permute::Gather16<4, 0>::exec(PackUtil::paddedPack(result)));
+        return 0;
     }
 
     template <typename DataT>
@@ -258,26 +331,7 @@ namespace rocwmma
     template <typename DataT>
     ROCWMMA_DEVICE static inline auto aos_soa_32xk_b32(VecT<DataT, 4> const& v)
     {
-        using PackUtil = PackUtil<DataT>;
-
-        auto result = unpackLoHi8(v);
-
-        // modified unpackLohi16
-        {
-            auto lo     = PackUtil::paddedPack(extractEven(result));
-            auto hi     = PackUtil::paddedPack(extractOdd(result));
-            auto rot_hi = Swizzle::RotateR32<16>::exec(hi);
-            hi          = Blend::Zip16::exec(rot_hi, lo);
-            lo          = Blend::Zip16::exec(lo, rot_hi);
-            result      = concat(PackUtil::template paddedUnpack<2u>(lo),
-                            PackUtil::template paddedUnpack<2u>(hi));
-        }
-
-        auto hi = Permute::Gather32<4, 16>::exec(PackUtil::paddedPack(extractHi(result)));
-        auto lo = Permute::Gather32<4, 0>::exec(PackUtil::paddedPack(extractLo(result)));
-
-        return concat(PackUtil::template paddedUnpack<2u>(lo),
-                      PackUtil::template paddedUnpack<2u>(hi));
+        return 0;
     }
 
     template <typename DataT>
@@ -320,38 +374,7 @@ namespace rocwmma
     template <typename DataT>
     ROCWMMA_DEVICE static inline auto aos_soa_64xk_b32(VecT<DataT, 4> const& v)
     {
-        using PackUtil = PackUtil<DataT>;
-
-        // modified unpackLohi16
-        auto packed_data = PackUtil::paddedPack(concat(extractEven(v), extractOdd(v)));
-
-        packed_data = Swizzle::RotateR32<16>::exec(packed_data);
-
-        auto unpacked_data = PackUtil::template paddedUnpack<4>(packed_data);
-        auto lo            = PackUtil::paddedPack(extractLo(unpacked_data));
-        auto hi            = PackUtil::paddedPack(extractHi(unpacked_data));
-        auto rot_lo        = Swizzle::RotateR32<16>::exec(lo);
-        auto rot_hi        = Swizzle::RotateR32<16>::exec(hi);
-        auto zip_lo        = Blend::Zip16::exec(rot_lo, hi);
-        auto zip_hi        = Blend::Zip16::exec(lo, rot_hi);
-        unpacked_data      = concat(PackUtil::template paddedUnpack<2u>(zip_lo),
-                               PackUtil::template paddedUnpack<2u>(zip_hi));
-
-        // modified unpackLohi32
-        lo = PackUtil::paddedPack(extractEven(unpacked_data));
-        hi = PackUtil::paddedPack(extractOdd(unpacked_data));
-
-        hi = Permute::RotateWaveR<32>::exec(hi);
-
-        zip_lo = Blend::Zip32::exec(lo, hi);
-        zip_hi = Blend::Zip32::exec(hi, lo);
-
-        // Gather
-        lo = Permute::GatherWave<4, 0>::exec(zip_lo);
-        hi = Permute::GatherWave<4, 32>::exec(zip_hi);
-
-        return concat(PackUtil::template paddedUnpack<2u>(lo),
-                      PackUtil::template paddedUnpack<2u>(hi));
+        return 0;
     }
 
     template <typename DataT>
@@ -367,8 +390,7 @@ namespace rocwmma
     }
 
     template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_128xk_b32(VecT<DataT, 4> const& v0,
-                                                        VecT<DataT, 4> const& v1)
+    ROCWMMA_DEVICE static inline auto aos_soa_128xk_b32(VecT<DataT, 4> const& v)
     {
         return 0;
     }
@@ -602,10 +624,17 @@ namespace rocwmma
         {
             using PackUtil = PackUtil<DataT>;
 
-            auto result = unpackLoHi4(v);
-            result      = unpackLoHi8(result);
-            return PackUtil::template paddedUnpack<4>(
-                Permute::Gather16<4, 0>::exec(PackUtil::paddedPack(result)));
+            // Step 1 : UnpackLoHi4
+            auto unpacked_data = unpackLoHi4(v);
+
+            // Step 2 : UnpackLoHi8
+            unpacked_data = unpackLoHi8(unpacked_data);
+
+            // Step 3 : Gather
+            unpacked_data = PackUtil::template paddedUnpack<4>(
+                Permute::Gather16<4, 0>::exec(PackUtil::paddedPack(unpacked_data)));
+
+            return unpacked_data;
         }
     };
 
@@ -620,24 +649,25 @@ namespace rocwmma
         {
             using PackUtil = PackUtil<DataT>;
 
-            auto result = unpackLoHi8(v);
+            // Step 1 : UnpackLoHi8
+            auto unpacked_data = unpackLoHi8(v);
 
-            // modified unpackLohi16
-            {
-                auto lo     = PackUtil::paddedPack(extractEven(result));
-                auto hi     = PackUtil::paddedPack(extractOdd(result));
-                auto rot_hi = Swizzle::RotateR32<16>::exec(hi);
-                hi          = Blend::Zip16::exec(rot_hi, lo);
-                lo          = Blend::Zip16::exec(lo, rot_hi);
-                result      = concat(PackUtil::template paddedUnpack<2u>(lo),
-                                PackUtil::template paddedUnpack<2u>(hi));
-            }
+            // Step 2 : UnpackLoHi16
+            auto lo       = PackUtil::paddedPack(extractEven(unpacked_data));
+            auto hi       = PackUtil::paddedPack(extractOdd(unpacked_data));
+            auto rot_hi   = Swizzle::RotateR32<16>::exec(hi);
+            hi            = Blend::Zip16::exec(rot_hi, lo);
+            lo            = Blend::Zip16::exec(lo, rot_hi);
+            unpacked_data = concat(PackUtil::template paddedUnpack<2u>(lo),
+                                   PackUtil::template paddedUnpack<2u>(hi));
 
-            auto hi = Permute::Gather32<4, 16>::exec(PackUtil::paddedPack(extractHi(result)));
-            auto lo = Permute::Gather32<4, 0>::exec(PackUtil::paddedPack(extractLo(result)));
+            // Step 3 : Gather
+            hi = Permute::Gather32<4, 16>::exec(PackUtil::paddedPack(extractHi(unpacked_data)));
+            lo = Permute::Gather32<4, 0>::exec(PackUtil::paddedPack(extractLo(unpacked_data)));
+            unpacked_data = concat(PackUtil::template paddedUnpack<2u>(lo),
+                                   PackUtil::template paddedUnpack<2u>(hi));
 
-            return concat(PackUtil::template paddedUnpack<2u>(lo),
-                          PackUtil::template paddedUnpack<2u>(hi));
+            return unpacked_data;
         }
     };
 
@@ -650,38 +680,8 @@ namespace rocwmma
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
         {
-            using PackUtil = PackUtil<DataT>;
-
-            // modified unpackLohi16
-            auto packed_data = PackUtil::paddedPack(concat(extractEven(v), extractOdd(v)));
-
-            packed_data = Swizzle::RotateR32<16>::exec(packed_data);
-
-            auto unpacked_data = PackUtil::template paddedUnpack<4>(packed_data);
-            auto lo            = PackUtil::paddedPack(extractLo(unpacked_data));
-            auto hi            = PackUtil::paddedPack(extractHi(unpacked_data));
-            auto rot_lo        = Swizzle::RotateR32<16>::exec(lo);
-            auto rot_hi        = Swizzle::RotateR32<16>::exec(hi);
-            auto zip_lo        = Blend::Zip16::exec(rot_lo, hi);
-            auto zip_hi        = Blend::Zip16::exec(lo, rot_hi);
-            unpacked_data      = concat(PackUtil::template paddedUnpack<2u>(zip_lo),
-                                   PackUtil::template paddedUnpack<2u>(zip_hi));
-
-            // modified unpackLohi32
-            lo = PackUtil::paddedPack(extractEven(unpacked_data));
-            hi = PackUtil::paddedPack(extractOdd(unpacked_data));
-
-            hi = Permute::RotateWaveR<32>::exec(hi);
-
-            zip_lo = Blend::Zip32::exec(lo, hi);
-            zip_hi = Blend::Zip32::exec(hi, lo);
-
-            // Gather
-            lo = Permute::GatherWave<4, 0>::exec(zip_lo);
-            hi = Permute::GatherWave<4, 32>::exec(zip_hi);
-
-            return concat(PackUtil::template paddedUnpack<2u>(lo),
-                          PackUtil::template paddedUnpack<2u>(hi));
+            auto unpacked_data = aos_soa_wave_b32_vw4(v);
+            return unpacked_data;
         }
     };
 
@@ -696,58 +696,20 @@ namespace rocwmma
         {
             using PackUtil = PackUtil<DataT>;
 
-            auto vFlipRotate90 = [](auto&& v) {
-                // Extract odds, evens
-                auto packed_data = PackUtil::paddedPack(concat(extractEven(v), extractOdd(v)));
+            auto v0 = aos_soa_wave_b32_vw4(extractLo(v));
+            auto v1 = aos_soa_wave_b32_vw4(extractHi(v));
 
-                // rotate 32,16
-                packed_data = Swizzle::RotateR32<16>::exec(packed_data);
+            // Re-pack banks
+            auto repack_data = VecT<DataT, VecSize>{v0.data[0],
+                                                    v0.data[2],
+                                                    v1.data[0],
+                                                    v1.data[2],
+                                                    v0.data[1],
+                                                    v0.data[3],
+                                                    v1.data[1],
+                                                    v1.data[3]};
 
-                auto unpacked_data = PackUtil::template paddedUnpack<4>(packed_data);
-                auto lo            = PackUtil::paddedPack(extractLo(unpacked_data));
-                auto hi            = PackUtil::paddedPack(extractHi(unpacked_data));
-                auto rot_lo        = Swizzle::RotateR32<16>::exec(lo);
-                auto rot_hi        = Swizzle::RotateR32<16>::exec(hi);
-                auto zip_lo        = Blend::Zip16::exec(rot_lo, hi);
-                auto zip_hi        = Blend::Zip16::exec(lo, rot_hi);
-                unpacked_data      = concat(PackUtil::template paddedUnpack<2u>(zip_lo),
-                                       PackUtil::template paddedUnpack<2u>(zip_hi));
-                return unpacked_data;
-            };
-
-            auto vFlipHiZip16 = [](auto&& v) {
-                // Extract odds, evens
-                auto lo = PackUtil::paddedPack(extractEven(v));
-                auto hi = PackUtil::paddedPack(extractOdd(v));
-
-                hi = Permute::RotateWaveR<32>::exec(hi);
-
-                auto zip_lo = Blend::Zip32::exec(lo, hi);
-                auto zip_hi = Blend::Zip32::exec(hi, lo);
-
-                // Gather
-                lo = Permute::GatherWave<4, 0>::exec(zip_lo);
-                hi = Permute::GatherWave<4, 32>::exec(zip_hi);
-
-                auto unpack_data = concat(PackUtil::template paddedUnpack<2u>(lo),
-                                          PackUtil::template paddedUnpack<2u>(hi));
-                return concat(extractEven(unpack_data), extractOdd(unpack_data));
-            };
-
-            auto v0 = extractLo(v);
-            auto v1 = extractHi(v);
-
-            auto unpacked_data0 = vFlipRotate90(v0);
-            auto unpacked_data1 = vFlipRotate90(v1);
-
-            auto unpacked_rotate_data0
-                = concat(extractLo(unpacked_data0), extractLo(unpacked_data1));
-            auto unpacked_rotate_data1
-                = concat(extractHi(unpacked_data0), extractHi(unpacked_data1));
-
-            unpacked_data0 = vFlipHiZip16(unpacked_rotate_data0);
-            unpacked_data1 = vFlipHiZip16(unpacked_rotate_data1);
-            return concat(unpacked_data0, unpacked_data1);
+            return repack_data;
         }
     };
 
@@ -762,44 +724,6 @@ namespace rocwmma
         {
             using PackUtil = PackUtil<DataT>;
 
-            auto vFlipRotate90 = [](auto&& v) {
-                // Extract odds, evens
-                auto packed_data = PackUtil::paddedPack(concat(extractEven(v), extractOdd(v)));
-
-                // rotate 32,16
-                packed_data = Swizzle::RotateR32<16>::exec(packed_data);
-
-                auto unpacked_data = PackUtil::template paddedUnpack<4>(packed_data);
-                auto lo            = PackUtil::paddedPack(extractLo(unpacked_data));
-                auto hi            = PackUtil::paddedPack(extractHi(unpacked_data));
-                auto rot_lo        = Swizzle::RotateR32<16>::exec(lo);
-                auto rot_hi        = Swizzle::RotateR32<16>::exec(hi);
-                auto zip_lo        = Blend::Zip16::exec(rot_lo, hi);
-                auto zip_hi        = Blend::Zip16::exec(lo, rot_hi);
-                unpacked_data      = concat(PackUtil::template paddedUnpack<2u>(zip_lo),
-                                       PackUtil::template paddedUnpack<2u>(zip_hi));
-                return unpacked_data;
-            };
-
-            auto vFlipHiZip16 = [](auto&& v) {
-                // Extract odds, evens
-                auto lo = PackUtil::paddedPack(extractEven(v));
-                auto hi = PackUtil::paddedPack(extractOdd(v));
-
-                hi = Permute::RotateWaveR<32>::exec(hi);
-
-                auto zip_lo = Blend::Zip32::exec(lo, hi);
-                auto zip_hi = Blend::Zip32::exec(hi, lo);
-
-                // Gather
-                lo = Permute::GatherWave<4, 0>::exec(zip_lo);
-                hi = Permute::GatherWave<4, 32>::exec(zip_hi);
-
-                auto unpack_data = concat(PackUtil::template paddedUnpack<2u>(lo),
-                                          PackUtil::template paddedUnpack<2u>(hi));
-                return unpack_data;
-            };
-
             auto v_lo = extractLo(v);
             auto v_hi = extractHi(v);
             auto v0   = extractLo(v_lo);
@@ -807,33 +731,31 @@ namespace rocwmma
             auto v2   = extractLo(v_hi);
             auto v3   = extractHi(v_hi);
 
-            auto unpacked_data0 = vFlipRotate90(v0);
-            auto unpacked_data1 = vFlipRotate90(v1);
-            auto unpacked_data2 = vFlipRotate90(v2);
-            auto unpacked_data3 = vFlipRotate90(v3);
+            // Step 1 - 3 : Applied on VW width banks
+            auto unpacked_data0 = aos_soa_wave_b32_vw4(v0);
+            auto unpacked_data1 = aos_soa_wave_b32_vw4(v1);
+            auto unpacked_data2 = aos_soa_wave_b32_vw4(v2);
+            auto unpacked_data3 = aos_soa_wave_b32_vw4(v3);
 
-            auto unpacked_rotate_data0
-                = concat(extractLo(unpacked_data0), extractLo(unpacked_data1));
-            auto unpacked_rotate_data1
-                = concat(extractHi(unpacked_data0), extractHi(unpacked_data1));
-            auto unpacked_rotate_data2
-                = concat(extractLo(unpacked_data2), extractLo(unpacked_data3));
-            auto unpacked_rotate_data3
-                = concat(extractHi(unpacked_data2), extractHi(unpacked_data3));
+            // Step 4 : Re-pack banks
+            auto repack_data = VecT<DataT, VecSize>{unpacked_data0.data[0],
+                                                    unpacked_data1.data[0],
+                                                    unpacked_data2.data[0],
+                                                    unpacked_data3.data[0],
+                                                    unpacked_data0.data[1],
+                                                    unpacked_data1.data[1],
+                                                    unpacked_data2.data[1],
+                                                    unpacked_data3.data[1],
+                                                    unpacked_data0.data[2],
+                                                    unpacked_data1.data[2],
+                                                    unpacked_data2.data[2],
+                                                    unpacked_data3.data[2],
+                                                    unpacked_data0.data[3],
+                                                    unpacked_data1.data[3],
+                                                    unpacked_data2.data[3],
+                                                    unpacked_data3.data[3]};
 
-            unpacked_data0 = vFlipHiZip16(unpacked_rotate_data0);
-            unpacked_data1 = vFlipHiZip16(unpacked_rotate_data1);
-            unpacked_data2 = vFlipHiZip16(unpacked_rotate_data2);
-            unpacked_data3 = vFlipHiZip16(unpacked_rotate_data3);
-
-            unpacked_rotate_data0 = concat(extractLo(unpacked_data0), extractLo(unpacked_data2));
-            unpacked_rotate_data1 = concat(extractLo(unpacked_data1), extractLo(unpacked_data3));
-            unpacked_rotate_data2 = concat(extractHi(unpacked_data0), extractHi(unpacked_data2));
-            unpacked_rotate_data3 = concat(extractHi(unpacked_data1), extractHi(unpacked_data3));
-
-            auto unpacked_data = concat(concat(unpacked_rotate_data0, unpacked_rotate_data1),
-                                        concat(unpacked_rotate_data2, unpacked_rotate_data3));
-            return unpacked_data;
+            return repack_data;
         }
     };
 
@@ -848,11 +770,17 @@ namespace rocwmma
         {
             using PackUtil = PackUtil<DataT>;
 
-            auto result = PackUtil::template paddedUnpack<4>(
+            // Step 1 : Scatter
+            auto unpacked_data = PackUtil::template paddedUnpack<4>(
                 Permute::Scatter16<4, 0>::exec(PackUtil::paddedPack(v)));
-            result = unpackLoHi4(result);
-            result = unpackLoHi8(result);
-            return result;
+
+            // Step 2 : UnpackLoHi4
+            unpacked_data = unpackLoHi4(unpacked_data);
+
+            // Step 3 : UnpackLoHi8
+            unpacked_data = unpackLoHi8(unpacked_data);
+
+            return unpacked_data;
         }
     };
 
@@ -867,22 +795,25 @@ namespace rocwmma
         {
             using PackUtil = PackUtil<DataT>;
 
-            auto hi     = (Permute::Scatter32<4, 16>::exec(PackUtil::paddedPack(extractHi(v))));
-            auto lo     = (Permute::Scatter32<4, 0>::exec(PackUtil::paddedPack(extractLo(v))));
-            auto result = concat(PackUtil::template paddedUnpack<2u>(lo),
-                                 PackUtil::template paddedUnpack<2u>(hi));
-            result      = unpackLoHi8(result);
-            // modified unpackLohi16
-            {
-                auto lo        = PackUtil::paddedPack(extractEven(result));
-                auto hi        = PackUtil::paddedPack(extractOdd(result));
-                auto zipped_lo = Blend::Zip16::exec(lo, hi);
-                auto zipped_hi = Blend::Zip16::exec(hi, lo);
-                auto rot_hi    = Swizzle::RotateR32<16>::exec(zipped_hi);
-                result         = concat(PackUtil::template paddedUnpack<2u>(zipped_lo),
-                                PackUtil::template paddedUnpack<2u>(rot_hi));
-            }
-            return result;
+            // Step 1 : Scatter
+            auto hi = (Permute::Scatter32<4, 16>::exec(PackUtil::paddedPack(extractHi(v))));
+            auto lo = (Permute::Scatter32<4, 0>::exec(PackUtil::paddedPack(extractLo(v))));
+            auto unpacked_data = concat(PackUtil::template paddedUnpack<2u>(lo),
+                                        PackUtil::template paddedUnpack<2u>(hi));
+
+            // Step 2 : UnpackLoHi8
+            unpacked_data = unpackLoHi8(unpacked_data);
+
+            // Step 3 : UnpackLoHi16
+            lo             = PackUtil::paddedPack(extractEven(unpacked_data));
+            hi             = PackUtil::paddedPack(extractOdd(unpacked_data));
+            auto zipped_lo = Blend::Zip16::exec(lo, hi);
+            auto zipped_hi = Blend::Zip16::exec(hi, lo);
+            auto rot_hi    = Swizzle::RotateR32<16>::exec(zipped_hi);
+            unpacked_data  = concat(PackUtil::template paddedUnpack<2u>(zipped_lo),
+                                   PackUtil::template paddedUnpack<2u>(rot_hi));
+
+            return unpacked_data;
         }
     };
 
@@ -895,42 +826,7 @@ namespace rocwmma
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
         {
-            using PackUtil = PackUtil<DataT>;
-
-            // Scatter
-            auto lo = Permute::ScatterWave<4, 0>::exec(PackUtil::paddedPack(extractLo(v)));
-            auto hi = Permute::ScatterWave<4, 32>::exec(PackUtil::paddedPack(extractHi(v)));
-            auto unpacked_data = concat(PackUtil::template paddedUnpack<2>(lo),
-                                        PackUtil::template paddedUnpack<2>(hi));
-
-            // modified unpackLohi16
-            auto packed_data = PackUtil::paddedPack(
-                concat(extractEven(unpacked_data), extractOdd(unpacked_data)));
-
-            packed_data = Swizzle::RotateR32<16>::exec(packed_data);
-
-            unpacked_data = PackUtil::template paddedUnpack<4>(packed_data);
-            lo            = PackUtil::paddedPack(extractLo(unpacked_data));
-            hi            = PackUtil::paddedPack(extractHi(unpacked_data));
-            auto rot_lo   = Swizzle::RotateR32<16>::exec(lo);
-            auto rot_hi   = Swizzle::RotateR32<16>::exec(hi);
-            auto zip_lo   = Blend::Zip16::exec(rot_lo, hi);
-            auto zip_hi   = Blend::Zip16::exec(lo, rot_hi);
-            unpacked_data = concat(PackUtil::template paddedUnpack<2u>(zip_lo),
-                                   PackUtil::template paddedUnpack<2u>(zip_hi));
-
-            // modified unpackLohi32
-            lo = PackUtil::paddedPack(extractEven(unpacked_data));
-            hi = PackUtil::paddedPack(extractOdd(unpacked_data));
-
-            zip_lo = Blend::Zip32::exec(lo, hi);
-            zip_hi = Blend::Zip32::exec(hi, lo);
-
-            zip_hi = Permute::RotateWaveR<32>::exec(zip_hi);
-
-            unpacked_data = concat(PackUtil::template paddedUnpack<2u>(zip_lo),
-                                   PackUtil::template paddedUnpack<2u>(zip_hi));
-
+            auto unpacked_data = soa_aos_wave_b32_vw4(v);
             return unpacked_data;
         }
     };
@@ -944,54 +840,14 @@ namespace rocwmma
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
         {
-            using PackUtil = PackUtil<DataT>;
-            auto step1     = [](auto&& v) {
-                // Scatter
-                auto lo = Permute::ScatterWave<4, 0>::exec(PackUtil::paddedPack(extractEven(v)));
-                auto hi = Permute::ScatterWave<4, 32>::exec(PackUtil::paddedPack(extractOdd(v)));
-                // lo, hi are packed
-                return std::make_pair(lo, hi);
-            };
+            // Step 1 :  RE-PACK Banks
+            auto v0 = VecT<DataT, VecSize / 2>{v.data[0], v.data[4], v.data[1], v.data[5]};
+            auto v1 = VecT<DataT, VecSize / 2>{v.data[2], v.data[6], v.data[3], v.data[7]};
 
-            auto step2 = [](auto&& lo, auto&& hi) {
-                // lo, hi are packed
-                auto zip_lo = Blend::Zip32::exec(lo, hi);
-                auto zip_hi = Blend::Zip32::exec(hi, lo);
+            // Step 2 - 4 :  Applied on VW width banks
+            auto unpacked_data0 = soa_aos_wave_b32_vw4(v0);
+            auto unpacked_data1 = soa_aos_wave_b32_vw4(v1);
 
-                zip_hi = Permute::RotateWaveR<32>::exec(zip_hi);
-                auto v = concat(PackUtil::template paddedUnpack<2>(zip_lo),
-                                PackUtil::template paddedUnpack<2>(zip_hi));
-
-                return concat(extractEven(v), extractOdd(v));
-            };
-
-            auto last_step = [](auto&& v) {
-                auto lo     = PackUtil::paddedPack(extractLo(v));
-                auto hi     = PackUtil::paddedPack(extractHi(v));
-                auto rot_lo = Swizzle::RotateR32<16>::exec(lo);
-                auto zip_lo = Blend::Zip16::exec(rot_lo, hi);
-                auto zip_hi = Blend::Zip16::exec(hi, rot_lo);
-                zip_hi      = Swizzle::RotateR32<16>::exec(zip_hi);
-
-                auto unpack_data = concat(PackUtil::template paddedUnpack<2>(zip_hi),
-                                          PackUtil::template paddedUnpack<2>(zip_lo));
-
-                return concat(extractEven(unpack_data), extractOdd(unpack_data));
-            };
-
-            auto v0         = extractLo(v);
-            auto v1         = extractHi(v);
-            auto [lo0, hi0] = step1(v0);
-            auto [lo1, hi1] = step1(v1);
-
-            auto step2_v0 = step2(lo0, hi0);
-            auto step2_v1 = step2(lo1, hi1);
-
-            auto unpacked_rotate_data0 = concat(extractLo(step2_v0), extractLo(step2_v1));
-            auto unpacked_rotate_data1 = concat(extractHi(step2_v0), extractHi(step2_v1));
-
-            auto unpacked_data0 = last_step(unpacked_rotate_data0);
-            auto unpacked_data1 = last_step(unpacked_rotate_data1);
             return concat(unpacked_data0, unpacked_data1);
         }
     };
@@ -1005,73 +861,17 @@ namespace rocwmma
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
         {
-            using PackUtil = PackUtil<DataT>;
-            auto step1     = [](auto&& v) {
-                // Scatter
-                auto lo = Permute::ScatterWave<4, 0>::exec(PackUtil::paddedPack(extractLo(v)));
-                auto hi = Permute::ScatterWave<4, 32>::exec(PackUtil::paddedPack(extractHi(v)));
-                // lo, hi are packed
-                return std::make_pair(lo, hi);
-            };
+            // Step 1 :  RE-PACK Banks
+            auto v0 = VecT<DataT, VecSize / 4>{v.data[0], v.data[4], v.data[8], v.data[12]};
+            auto v1 = VecT<DataT, VecSize / 4>{v.data[1], v.data[5], v.data[9], v.data[13]};
+            auto v2 = VecT<DataT, VecSize / 4>{v.data[2], v.data[6], v.data[10], v.data[14]};
+            auto v3 = VecT<DataT, VecSize / 4>{v.data[3], v.data[7], v.data[11], v.data[15]};
 
-            auto step2 = [](auto&& lo, auto&& hi) {
-                // lo, hi are packed
-                auto zip_lo = Blend::Zip32::exec(lo, hi);
-                auto zip_hi = Blend::Zip32::exec(hi, lo);
-
-                zip_hi = Permute::RotateWaveR<32>::exec(zip_hi);
-                auto v = concat(PackUtil::template paddedUnpack<2>(zip_lo),
-                                PackUtil::template paddedUnpack<2>(zip_hi));
-
-                return concat(extractEven(v), extractOdd(v));
-            };
-
-            auto last_step = [](auto&& v) {
-                auto lo     = PackUtil::paddedPack(extractLo(v));
-                auto hi     = PackUtil::paddedPack(extractHi(v));
-                auto rot_lo = Swizzle::RotateR32<16>::exec(lo);
-                auto zip_lo = Blend::Zip16::exec(rot_lo, hi);
-                auto zip_hi = Blend::Zip16::exec(hi, rot_lo);
-                zip_hi      = Swizzle::RotateR32<16>::exec(zip_hi);
-
-                auto unpack_data = concat(PackUtil::template paddedUnpack<2>(zip_hi),
-                                          PackUtil::template paddedUnpack<2>(zip_lo));
-
-                return concat(extractEven(unpack_data), extractOdd(unpack_data));
-            };
-
-            auto v_lo = extractLo(v);
-            auto v_hi = extractHi(v);
-            auto v0   = extractLo(v_lo);
-            auto v1   = extractHi(v_lo);
-            auto v2   = extractLo(v_hi);
-            auto v3   = extractHi(v_hi);
-
-            auto unpacked_rotate_data0 = concat(extractLo(v0), extractLo(v2));
-            auto unpacked_rotate_data1 = concat(extractLo(v1), extractLo(v3));
-            auto unpacked_rotate_data2 = concat(extractHi(v0), extractHi(v2));
-            auto unpacked_rotate_data3 = concat(extractHi(v1), extractHi(v3));
-
-            auto [lo0, hi0] = step1(unpacked_rotate_data0);
-            auto [lo1, hi1] = step1(unpacked_rotate_data1);
-            auto [lo2, hi2] = step1(unpacked_rotate_data2);
-            auto [lo3, hi3] = step1(unpacked_rotate_data3);
-
-            auto step2_v0 = step2(lo0, hi0);
-            auto step2_v1 = step2(lo1, hi1);
-            auto step2_v2 = step2(lo2, hi2);
-            auto step2_v3 = step2(lo3, hi3);
-            // auto unpacked_data = concat(concat(step2_v0, step2_v1), concat(step2_v2, step2_v3));
-
-            unpacked_rotate_data0 = concat(extractLo(step2_v0), extractLo(step2_v1));
-            unpacked_rotate_data1 = concat(extractHi(step2_v0), extractHi(step2_v1));
-            unpacked_rotate_data2 = concat(extractLo(step2_v2), extractLo(step2_v3));
-            unpacked_rotate_data3 = concat(extractHi(step2_v2), extractHi(step2_v3));
-
-            auto unpacked_data0 = last_step(unpacked_rotate_data0);
-            auto unpacked_data1 = last_step(unpacked_rotate_data1);
-            auto unpacked_data2 = last_step(unpacked_rotate_data2);
-            auto unpacked_data3 = last_step(unpacked_rotate_data3);
+            // Step 2 - 4 :  Applied on VW width banks
+            auto unpacked_data0 = soa_aos_wave_b32_vw4(v0);
+            auto unpacked_data1 = soa_aos_wave_b32_vw4(v1);
+            auto unpacked_data2 = soa_aos_wave_b32_vw4(v2);
+            auto unpacked_data3 = soa_aos_wave_b32_vw4(v3);
 
             auto unpacked_data = concat(concat(unpacked_data0, unpacked_data1),
                                         concat(unpacked_data2, unpacked_data3));
