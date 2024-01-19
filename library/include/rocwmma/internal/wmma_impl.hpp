@@ -137,7 +137,7 @@ namespace rocwmma
             : public amdgcn_wmma<float16_t, float16_t, 16, 16>
         {
         };
-        
+
 #endif // !ROCWMMA_NO_HALF
 
         template <>
@@ -315,7 +315,7 @@ namespace rocwmma
             {
                 typename Traits::DRegsT result;
                 result.data = {__builtin_amdgcn_wmma_f16_16x16x16_f16_w32_gfx12(
-                    regsA.data, regsB.data, regsC.data, Traits::AccumBits)};
+                    regsA.data, regsB.data, regsC.data)};
                 return result;
             }
         };
@@ -335,7 +335,6 @@ namespace rocwmma
         };
 
 #endif // !ROCWMMA_NO_HALF
-
 
         template <>
         struct amdgcn_wmma<bfloat16_t, float32_t, 16, 16>
@@ -394,7 +393,7 @@ namespace rocwmma
             {
                 typename Traits::DRegsT result;
                 result.data = {__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32_gfx12(
-                    regsA.data, regsB.data, regsC.data, Traits::AccumBits)};
+                    regsA.data, regsB.data, regsC.data)};
                 return result;
             }
         };
