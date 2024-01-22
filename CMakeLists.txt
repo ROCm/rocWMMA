@@ -42,7 +42,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 #Set Clang C++ Version
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fclang-abi-compat=17")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --driver-mode=g++ -Xclang -fallow-half-arguments-and-returns -D__HIP_HCC_COMPAT_MODE__=1 -Wno-format-nonliteral -parallel-jobs=4 -fclang-abi-compat=17")
 
 # Top level configs
 if( CMAKE_PROJECT_NAME STREQUAL "rocwmma" )
