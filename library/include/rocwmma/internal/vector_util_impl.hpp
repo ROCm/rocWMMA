@@ -369,7 +369,10 @@ namespace rocwmma
         // Optimize data-reorder with cross-lane ops.
         constexpr auto ElementSize   = sizeof(DataT);
         constexpr auto PackedVecSize = std::max(VecSize / PackTraits::PackRatio, 1u);
-        if constexpr(ElementSize < 4u)
+
+        // The optimization should only be applied on a pair of register. So v0 and v1
+        // should not be larger than a register
+        if constexpr(ElementSize < 4u && PackedVecSize <= 1)
         {
             auto unpackLo = [](auto&& idx, auto&& v0, auto&& v1) {
                 constexpr auto Index = std::decay_t<decltype(idx)>::value;
@@ -407,7 +410,10 @@ namespace rocwmma
         // Optimize data-reorder with cross-lane ops.
         constexpr auto ElementSize   = sizeof(DataT);
         constexpr auto PackedVecSize = std::max(VecSize / PackTraits::PackRatio, 1u);
-        if constexpr(ElementSize < 4u)
+
+        // The optimization should only be applied on a pair of register. So v0 and v1
+        // should not be larger than a register
+        if constexpr(ElementSize < 4u && PackedVecSize <= 1)
         {
             auto unpackHi = [](auto&& idx, auto&& v0, auto&& v1) {
                 constexpr auto Index = std::decay_t<decltype(idx)>::value;

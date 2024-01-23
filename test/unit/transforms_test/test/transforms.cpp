@@ -67,7 +67,7 @@ namespace rocwmma
         {
             auto warpSize = HipDevice::instance()->warpSize();
             // clang-format off
-            return { {warpSize, 1} };
+            return { {warpSize, 1}, {warpSize * 2, 1}, {warpSize * 4, 1}};
             // clang-format on
         }
 

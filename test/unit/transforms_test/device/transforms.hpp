@@ -36,6 +36,14 @@ static constexpr uint32_t SUCCESS_VALUE = 0u;
 
 namespace rocwmma
 {
+    namespace detail
+    {
+        ROCWMMA_DEVICE static inline auto threadId()
+        {
+            return (threadIdx.z * (blockDim.x * blockDim.y)) + (threadIdx.y * blockDim.x)
+                   + threadIdx.x;
+        }
+    }
     template <typename DataT, uint32_t VW, uint32_t K>
     struct AosVec;
 
@@ -49,10 +57,8 @@ namespace rocwmma
         {
             constexpr uint32_t VW = 4;
             using VecType         = VecT<DataT, VW>;
-            VecType v             = {(uint8_t)threadIdx.x * VW,
-                                     (uint8_t)threadIdx.x * VW + 1,
-                                     (uint8_t)threadIdx.x * VW + 2,
-                                     (uint8_t)threadIdx.x * VW + 3};
+            auto    threadId      = (uint8_t)detail::threadId();
+            VecType v = {threadId * VW, threadId * VW + 1, threadId * VW + 2, threadId * VW + 3};
             return v;
         }
     };
@@ -64,10 +70,8 @@ namespace rocwmma
         {
             constexpr uint32_t VW = 4;
             using VecType         = VecT<DataT, VW>;
-            VecType v             = {(uint8_t)threadIdx.x * VW,
-                                     (uint8_t)threadIdx.x * VW + 1,
-                                     (uint8_t)threadIdx.x * VW + 2,
-                                     (uint8_t)threadIdx.x * VW + 3};
+            auto    threadId      = (uint8_t)detail::threadId();
+            VecType v = {threadId * VW, threadId * VW + 1, threadId * VW + 2, threadId * VW + 3};
             return v;
         }
     };
@@ -78,10 +82,8 @@ namespace rocwmma
         {
             constexpr uint32_t VW = 4;
             using VecType         = VecT<DataT, VW>;
-            VecType v             = {(uint8_t)threadIdx.x * VW,
-                                     (uint8_t)threadIdx.x * VW + 1,
-                                     (uint8_t)threadIdx.x * VW + 2,
-                                     (uint8_t)threadIdx.x * VW + 3};
+            auto    threadId      = (uint8_t)detail::threadId();
+            VecType v = {threadId * VW, threadId * VW + 1, threadId * VW + 2, threadId * VW + 3};
             return v;
         }
     };
@@ -93,15 +95,16 @@ namespace rocwmma
             constexpr uint32_t VW        = 4;
             constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
 
-            using VecType = VecT<DataT, VW * 2>;
-            VecType v     = {(uint8_t)threadIdx.x * VW,
-                             (uint8_t)threadIdx.x * VW + 1,
-                             (uint8_t)threadIdx.x * VW + 2,
-                             (uint8_t)threadIdx.x * VW + 3,
-                             (uint8_t)threadIdx.x * VW + VW * WAVE_SIZE,
-                             (uint8_t)threadIdx.x * VW + 1 + VW * WAVE_SIZE,
-                             (uint8_t)threadIdx.x * VW + 2 + VW * WAVE_SIZE,
-                             (uint8_t)threadIdx.x * VW + 3 + VW * WAVE_SIZE};
+            using VecType    = VecT<DataT, VW * 2>;
+            auto    threadId = (uint8_t)detail::threadId();
+            VecType v        = {threadId * VW,
+                                threadId * VW + 1,
+                                threadId * VW + 2,
+                                threadId * VW + 3,
+                                threadId * VW + VW * WAVE_SIZE,
+                                threadId * VW + 1 + VW * WAVE_SIZE,
+                                threadId * VW + 2 + VW * WAVE_SIZE,
+                                threadId * VW + 3 + VW * WAVE_SIZE};
             return v;
         }
     };
@@ -113,23 +116,24 @@ namespace rocwmma
             constexpr uint32_t VW        = 4;
             constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
 
-            using VecType = VecT<DataT, VW * 4>;
-            VecType v     = {(uint8_t)threadIdx.x * VW,
-                             (uint8_t)threadIdx.x * VW + 1,
-                             (uint8_t)threadIdx.x * VW + 2,
-                             (uint8_t)threadIdx.x * VW + 3,
-                             (uint8_t)threadIdx.x * VW + VW * WAVE_SIZE,
-                             (uint8_t)threadIdx.x * VW + 1 + VW * WAVE_SIZE,
-                             (uint8_t)threadIdx.x * VW + 2 + VW * WAVE_SIZE,
-                             (uint8_t)threadIdx.x * VW + 3 + VW * WAVE_SIZE,
-                             (uint8_t)threadIdx.x * VW + VW * WAVE_SIZE * 2,
-                             (uint8_t)threadIdx.x * VW + 1 + VW * WAVE_SIZE * 2,
-                             (uint8_t)threadIdx.x * VW + 2 + VW * WAVE_SIZE * 2,
-                             (uint8_t)threadIdx.x * VW + 3 + VW * WAVE_SIZE * 2,
-                             (uint8_t)threadIdx.x * VW + VW * WAVE_SIZE * 3,
-                             (uint8_t)threadIdx.x * VW + 1 + VW * WAVE_SIZE * 3,
-                             (uint8_t)threadIdx.x * VW + 2 + VW * WAVE_SIZE * 3,
-                             (uint8_t)threadIdx.x * VW + 3 + VW * WAVE_SIZE * 3};
+            using VecType    = VecT<DataT, VW * 4>;
+            auto    threadId = (uint8_t)detail::threadId();
+            VecType v        = {threadId * VW,
+                                threadId * VW + 1,
+                                threadId * VW + 2,
+                                threadId * VW + 3,
+                                threadId * VW + VW * WAVE_SIZE,
+                                threadId * VW + 1 + VW * WAVE_SIZE,
+                                threadId * VW + 2 + VW * WAVE_SIZE,
+                                threadId * VW + 3 + VW * WAVE_SIZE,
+                                threadId * VW + VW * WAVE_SIZE * 2,
+                                threadId * VW + 1 + VW * WAVE_SIZE * 2,
+                                threadId * VW + 2 + VW * WAVE_SIZE * 2,
+                                threadId * VW + 3 + VW * WAVE_SIZE * 2,
+                                threadId * VW + VW * WAVE_SIZE * 3,
+                                threadId * VW + 1 + VW * WAVE_SIZE * 3,
+                                threadId * VW + 2 + VW * WAVE_SIZE * 3,
+                                threadId * VW + 3 + VW * WAVE_SIZE * 3};
             return v;
         }
     };
@@ -144,10 +148,11 @@ namespace rocwmma
             constexpr uint32_t K         = 16;
             constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
             using VecType                = VecT<DataT, VW>;
-            VecType v = {(uint8_t)threadIdx.x / K * K * 4 + ((uint8_t)threadIdx.x % K),
-                         (uint8_t)threadIdx.x / K * K * 4 + K + ((uint8_t)threadIdx.x % K),
-                         (uint8_t)threadIdx.x / K * K * 4 + K * 2 + ((uint8_t)threadIdx.x % K),
-                         (uint8_t)threadIdx.x / K * K * 4 + K * 3 + ((uint8_t)threadIdx.x % K)};
+            auto    threadId             = (uint8_t)detail::threadId();
+            VecType v                    = {threadId / K * K * 4 + threadId % K,
+                                            threadId / K * K * 4 + K + threadId % K,
+                                            threadId / K * K * 4 + K * 2 + threadId % K,
+                                            threadId / K * K * 4 + K * 3 + threadId % K};
             return v;
         }
     };
@@ -161,10 +166,11 @@ namespace rocwmma
             constexpr uint32_t K         = 32;
             constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
             using VecType                = VecT<DataT, VW>;
-            VecType v = {(uint8_t)threadIdx.x / K * K * 4 + ((uint8_t)threadIdx.x % K),
-                         (uint8_t)threadIdx.x / K * K * 4 + K + ((uint8_t)threadIdx.x % K),
-                         (uint8_t)threadIdx.x / K * K * 4 + K * 2 + ((uint8_t)threadIdx.x % K),
-                         (uint8_t)threadIdx.x / K * K * 4 + K * 3 + ((uint8_t)threadIdx.x % K)};
+            auto    threadId             = (uint8_t)detail::threadId();
+            VecType v                    = {threadId / K * K * 4 + threadId % K,
+                                            threadId / K * K * 4 + K + threadId % K,
+                                            threadId / K * K * 4 + K * 2 + threadId % K,
+                                            threadId / K * K * 4 + K * 3 + threadId % K};
             return v;
         }
     };
@@ -178,10 +184,8 @@ namespace rocwmma
             constexpr uint32_t K         = 64;
             constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
             using VecType                = VecT<DataT, VW>;
-            VecType v                    = {(uint8_t)threadIdx.x,
-                                            (uint8_t)threadIdx.x + K,
-                                            (uint8_t)threadIdx.x + K * 2,
-                                            (uint8_t)threadIdx.x + K * 3};
+            auto    threadId             = (uint8_t)detail::threadId();
+            VecType v = {threadId, threadId + K, threadId + K * 2, threadId + K * 3};
             return v;
         }
     };
@@ -195,14 +199,15 @@ namespace rocwmma
             constexpr uint32_t K         = 128;
             constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
             using VecType                = VecT<DataT, VW * 2>;
-            VecType v                    = {(uint8_t)threadIdx.x,
-                                            (uint8_t)threadIdx.x + K,
-                                            (uint8_t)threadIdx.x + K * 2,
-                                            (uint8_t)threadIdx.x + K * 3,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE + K,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE + K * 2,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE + K * 3};
+            auto    threadId             = (uint8_t)detail::threadId();
+            VecType v                    = {threadId,
+                                            threadId + K,
+                                            threadId + K * 2,
+                                            threadId + K * 3,
+                                            threadId + WAVE_SIZE,
+                                            threadId + WAVE_SIZE + K,
+                                            threadId + WAVE_SIZE + K * 2,
+                                            threadId + WAVE_SIZE + K * 3};
             return v;
         }
     };
@@ -216,22 +221,23 @@ namespace rocwmma
             constexpr uint32_t K         = 256;
             constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
             using VecType                = VecT<DataT, VW * 4>;
-            VecType v                    = {(uint8_t)threadIdx.x,
-                                            (uint8_t)threadIdx.x + K,
-                                            (uint8_t)threadIdx.x + K * 2,
-                                            (uint8_t)threadIdx.x + K * 3,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE + K,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE + K * 2,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE + K * 3,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE * 2,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE * 2 + K,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE * 2 + K * 2,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE * 2 + K * 3,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE * 3,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE * 3 + K,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE * 3 + K * 2,
-                                            (uint8_t)threadIdx.x + WAVE_SIZE * 3 + K * 3};
+            auto    threadId             = (uint8_t)detail::threadId();
+            VecType v                    = {threadId,
+                                            threadId + K,
+                                            threadId + K * 2,
+                                            threadId + K * 3,
+                                            threadId + WAVE_SIZE,
+                                            threadId + WAVE_SIZE + K,
+                                            threadId + WAVE_SIZE + K * 2,
+                                            threadId + WAVE_SIZE + K * 3,
+                                            threadId + WAVE_SIZE * 2,
+                                            threadId + WAVE_SIZE * 2 + K,
+                                            threadId + WAVE_SIZE * 2 + K * 2,
+                                            threadId + WAVE_SIZE * 2 + K * 3,
+                                            threadId + WAVE_SIZE * 3,
+                                            threadId + WAVE_SIZE * 3 + K,
+                                            threadId + WAVE_SIZE * 3 + K * 2,
+                                            threadId + WAVE_SIZE * 3 + K * 3};
             return v;
         }
     };

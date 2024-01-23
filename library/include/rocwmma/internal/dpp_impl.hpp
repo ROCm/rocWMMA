@@ -104,21 +104,23 @@ namespace rocwmma
                           typename DataT>
                 ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1)
                 {
+                    static_assert(sizeof(DataT) >= sizeof(uint32_t)
+                                      && sizeof(DataT) % sizeof(uint32_t) == 0,
+                                  "The minimum unit of the DPP operation should be 32 bits");
                     constexpr size_t VecSize = sizeof(DataT) / sizeof(uint32_t);
                     auto             dpp     = [](auto&& idx, auto&& v0, auto&& v1) {
                         constexpr auto i = std::decay_t<decltype(idx)>::value;
-                        *(reinterpret_cast<uint32_t*>(&v0) + i) = __builtin_amdgcn_update_dpp(
-                            *(reinterpret_cast<uint32_t const*>(&v1) + i), // fill value 'prev'
-                            *(reinterpret_cast<uint32_t const*>(&v0) + i), // Src value
+                        return __builtin_amdgcn_update_dpp(
+                            reinterpret_cast<uint32_t const*>(&v1)[i], // fill value 'prev'
+                            reinterpret_cast<uint32_t const*>(&v0)[i], // Src value
                             DppCtrl::opCtrl(), // DPP control code
                             WriteRowMask, // Mask for affected rows
                             WriteBankMask, // Mask for affected banks
                             BoundCtrl); // Fill in 0 on invalid indices
-                        return 0; // discard return value
                     };
 
-                    vector_generator<uint32_t, VecSize>()(dpp, src0, src1);
-                    return src0;
+                    auto dpp_result = vector_generator<uint32_t, VecSize>()(dpp, src0, src1);
+                    return *(reinterpret_cast<DataT*>(&dpp_result));
                 }
             };
 
