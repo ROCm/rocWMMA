@@ -232,158 +232,6 @@ namespace rocwmma
         return unpacked_data;
     };
 
-    template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_16xk_b32(VecT<DataT, 8> const& v)
-    {
-        using PackUtil = PackUtil<DataT>;
-
-        // Step 1 : Unpack groups of 2
-        auto result = unpackLoHi2(v);
-
-        // Step 2 : Unpack groups of 4
-        result = unpackLoHi4(result);
-
-        // Step 3 : Unpack groups of 8
-        result = unpackLoHi8(result);
-
-        // Step 4 : Gather
-        return PackUtil::template paddedUnpack<8>(
-            Permute::Gather16<8, 0>::exec(PackUtil::paddedPack(result)));
-    }
-
-    template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_16xk_b32(VecT<DataT, 4> const& v)
-    {
-        return 0;
-    }
-
-    template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_16xk_b32(VecT<DataT, 2> const& v)
-    {
-        return 0;
-    }
-
-    template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_32xk_b32(VecT<DataT, 8> const& v)
-    {
-        using PackUtil = PackUtil<DataT>;
-
-        // Step 1 : Unpack groups of 4
-        auto result = unpackLoHi4(v);
-
-        // Step 2 : Unpack groups of 8
-        result = unpackLoHi8(result);
-
-        // Step 3 : Unpack groups of 16
-        // In order to save some operations, we can
-        // rotate the odds components only and make up the
-        // offset later in gather.
-        auto evens = PackUtil::paddedPack(extractEven(result));
-        auto odds  = PackUtil::paddedPack(extractOdd(result));
-
-        auto rot = Swizzle::RotateR32<16>::exec(odds);
-        auto lo  = Blend::Zip16::exec(evens, rot);
-        auto hi  = Blend::Zip16::exec(rot, evens);
-
-        // Step 4 : Gather
-        // Note the offset of 16 in hi
-        lo = Permute::Gather32<8, 0>::exec(lo);
-        hi = Permute::Gather32<8, 16>::exec(hi);
-
-        return PackUtil::template paddedUnpack<8>(concat(lo, hi));
-    }
-
-    template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_32xk_b32(VecT<DataT, 4> const& v)
-    {
-        return 0;
-    }
-
-    template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_32xk_b32(VecT<DataT, 2> const& v)
-    {
-        return 0;
-    }
-
-    template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_64xk_b32(VecT<DataT, 8> const& v)
-    {
-        using PackUtil = PackUtil<DataT>;
-
-        // Step 1 : Unpack groups of 8
-        auto result = unpackLoHi8(v);
-
-        // Step 2 : Unpack groups of 16
-        result = unpackLoHi16(result);
-
-        // Step 3 : Unpack groups of 32
-        // In order to save some operations, we can
-        // rotate the odds components only and make up the
-        // offset later in gather.
-        auto lo = PackUtil::paddedPack(extractEven(result));
-        auto hi = PackUtil::paddedPack(extractOdd(result));
-
-        // TODO: label as rotateR64 for consistency?
-        auto rot_hi = Permute::RotateWaveR<32>::exec(hi);
-        hi          = Blend::Zip32::exec(rot_hi, lo);
-        lo          = Blend::Zip32::exec(lo, rot_hi);
-
-        // Step 4 : Gather
-        // Note the offset of 32 in hi
-        lo = Permute::GatherWave<8, 0>::exec(lo);
-        hi = Permute::GatherWave<8, 32>::exec(hi);
-
-        return PackUtil::template paddedUnpack<8>(concat(lo, hi));
-    }
-
-    template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_64xk_b32(VecT<DataT, 4> const& v)
-    {
-        return 0;
-    }
-
-    template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_64xk_b32(VecT<DataT, 2> const& v)
-    {
-        return 0;
-    }
-
-    template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_128xk_b32(VecT<DataT, 8> const& v)
-    {
-        return 0;
-    }
-
-    template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_128xk_b32(VecT<DataT, 4> const& v)
-    {
-        return 0;
-    }
-
-    template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_128xk_b32(VecT<DataT, 2> const& v)
-    {
-        return 0;
-    }
-
-    template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_256xk_b32(VecT<DataT, 8> const& v)
-    {
-        return 0;
-    }
-
-    template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_256xk_b32(VecT<DataT, 4> const& v)
-    {
-        return 0;
-    }
-
-    template <typename DataT>
-    ROCWMMA_DEVICE static inline auto aos_soa_256xk_b32(VecT<DataT, 2> const& v)
-    {
-        return 0;
-    }
-
     template <uint32_t BlockDim, uint32_t VectorWidth>
     struct AosToSoa;
 
@@ -502,7 +350,6 @@ namespace rocwmma
         {
             using PackUtil = PackUtil<DataT>;
 
-            // Data comes in as AOS format:
             // There are TWO sets of VW = 8 registers (because this case BlockDim / 64 = 2):
             // 1. Vecs 0-7
             // 2. Vecs 8-15
@@ -521,60 +368,84 @@ namespace rocwmma
             //       ... |   ... |   ... |   ...   |  ...  |
             //        63 |__1016_|__1017_|___...___|__1023_|
 
-            // For each batch of VW registers
-            auto v0 = extractLo(v);
-            auto v1 = extractHi(v);
+            // Extract each batch of registers and put them through the 64 size
+            auto result_b0 = AosToSoa<64, 8>::exec(extractLo(v));
+            auto result_b1 = AosToSoa<64, 8>::exec(extractHi(v));
 
-            // Step 1 : Unpack groups of 8
-            auto r0 = unpackLoHi8(v0);
-            auto r1 = unpackLoHi8(v1);
+            // Re-pack banks
+            auto repacked_b0 = concat(extractEven(result_b0), extractEven(result_b1));
+            auto repacked_b1 = concat(extractOdd(result_b0), extractOdd(result_b1));
+            return concat(repacked_b0, repacked_b1);
+        }
+    };
 
-            // Step 2 : isolate data for upper 64 dim from lower 64 dim
-            v0 = concat(extractLo(r0), extractLo(r1));
-            v1 = concat(extractHi(r0), extractHi(r1));
+    template <>
+    struct AosToSoa<256, 8>
+    {
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = 32;
 
-            // Continue from here as if r0 and r1 are independent 64 dim.
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            using PackUtil = PackUtil<DataT>;
 
-            // Step 3 : Unpack groups of 16
-            v0 = unpackLoHi16(v0);
-            v1 = unpackLoHi16(v1);
+            // There are FOUR sets of VW = 8 registers (because this case BlockDim / 64 = 2):
+            // 1. Vecs 0-7
+            // 2. Vecs 8-15
+            // 3. Vecs 16-23
+            // 4. Vecs 24-31
+            //
+            // Register/ |          VW = 8                 |
+            //     Tidx  |___0___|___1___|___...___|___7___|
+            //         0 |   0   |   1   |   ...   |   7   |
+            //         1 |   8   |   9   |   ...   |   15  |
+            //       ... |   ... |   ... |   ...   |  ...  |
+            //        63 |__504__|__505__|___...___|__511__|
+            //
+            // Register/ |          VW = 8                 |
+            //     Tidx  |___8___|___9___|___...___|___15__|
+            //         0 |  512  |  513  |   ...   |  519  |
+            //         1 |  520  |  521  |   ...   |  527  |
+            //       ... |   ... |   ... |   ...   |  ...  |
+            //        63 |__1016_|__1017_|___...___|__1023_|
+            //
+            // Register/ |          VW = 8                    |
+            //     Tidx  |___16___|___17___|___...___|___23___|
+            //         0 |  1024  |  1025  |   ...   |  1031  |
+            //         1 |  1032  |  1033  |   ...   |  1039  |
+            //       ... |   .... |   .... |   ...   |  ....  |
+            //        63 |__1528__|__1529__|___...___|__1535__|
+            //
+            // Register/ |          VW = 8                    |
+            //     Tidx  |___24___|___25___|___...___|___31___|
+            //         0 |  1536  |  1537  |   ...   |  1543  |
+            //         1 |  1544  |  1545  |   ...   |  1551  |
+            //       ... |   ...  |   ...  |   ...   |  ...   |
+            //        63 |__2040__|__2041__|___...___|__2047 _|
 
-            // Step 4 : Unpack groups of 32
-            // In order to save some operations, we can
-            // rotate the odds components only and make up the
-            // offset later in gather.
-            auto lo0 = PackUtil::paddedPack(extractEven(v0));
-            auto hi0 = PackUtil::paddedPack(extractOdd(v0));
+            // Extract each batch of registers and put them through the 64 size
+            auto lo0 = extractLo(v);
+            auto hi0 = extractHi(v);
 
-            auto lo1 = PackUtil::paddedPack(extractEven(v1));
-            auto hi1 = PackUtil::paddedPack(extractOdd(v1));
+            auto result_b0 = AosToSoa<64, 8>::exec(extractLo(lo0));
+            auto result_b1 = AosToSoa<64, 8>::exec(extractHi(lo0));
+            auto result_b2 = AosToSoa<64, 8>::exec(extractLo(hi0));
+            auto result_b3 = AosToSoa<64, 8>::exec(extractHi(hi0));
 
-            // TODO: label as rotateR64 for consistency?
-            auto rot_hi0 = Permute::RotateWaveR<32>::exec(hi0);
-            hi0          = Blend::Zip32::exec(rot_hi0, lo0);
-            lo0          = Blend::Zip32::exec(lo0, rot_hi0);
+            // Re-pack banks
+            return VecT<DataT, VecSize>{
+                get<0>(result_b0), get<4>(result_b0), get<0>(result_b1), get<4>(result_b1),
+                get<0>(result_b2), get<4>(result_b2), get<0>(result_b3), get<4>(result_b3),
 
-            auto rot_hi1 = Permute::RotateWaveR<32>::exec(hi1);
-            hi1          = Blend::Zip32::exec(rot_hi1, lo1);
-            lo1          = Blend::Zip32::exec(lo1, rot_hi1);
+                get<1>(result_b0), get<5>(result_b0), get<1>(result_b1), get<5>(result_b1),
+                get<1>(result_b2), get<5>(result_b2), get<1>(result_b3), get<5>(result_b3),
 
-            // Step 5 : Gather
-            // Note the offset of 32 in hi
-            lo0 = Permute::GatherWave<VW, 0>::exec(lo0);
-            hi0 = Permute::GatherWave<VW, 32>::exec(hi0);
+                get<2>(result_b0), get<6>(result_b0), get<2>(result_b1), get<6>(result_b1),
+                get<2>(result_b2), get<6>(result_b2), get<2>(result_b3), get<6>(result_b3),
 
-            lo1 = Permute::GatherWave<VW, 0>::exec(lo1);
-            hi1 = Permute::GatherWave<VW, 32>::exec(hi1);
-
-            // Step 6 : Unpack and re-order.
-            auto c0 = PackUtil::template paddedUnpack<VecSize>(concat(lo0, hi0));
-            //c0      = reorderEvenOdd(c0);
-            c0      = concat(extractEven(c0), extractOdd(c0));
-            auto c1 = PackUtil::template paddedUnpack<VecSize>(concat(lo1, hi1));
-            //c1      = reorderEvenOdd(c1);
-            c1 = concat(extractEven(c1), extractOdd(c1));
-
-            return concat(c0, c1);
+                get<3>(result_b0), get<7>(result_b0), get<3>(result_b1), get<7>(result_b1),
+                get<3>(result_b2), get<7>(result_b2), get<3>(result_b3), get<7>(result_b3)};
         }
     };
 
