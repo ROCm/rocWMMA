@@ -345,7 +345,12 @@ namespace rocwmma
         err = err ? err : extractOddTest<DataT, VecSize>();
         err = err ? err : reorderEvenOddTest<DataT, VecSize>();
         err = err ? err : reorderOddEvenTest<DataT, VecSize>();
+        err = err ? err : extractLoTest<DataT, VecSize>();
+        err = err ? err : extractHiTest<DataT, VecSize>();
+        err = err ? err : concatTest<DataT, VecSize>();
         err = err ? err : zipTest<DataT, VecSize>();
+        err = err ? err : unpackLoTest<DataT, VecSize>();
+        err = err ? err : unpackHiTest<DataT, VecSize>();
 
         // Reduce error count
         atomicAdd(&result, (int32_t)err);

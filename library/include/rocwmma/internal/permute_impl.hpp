@@ -68,11 +68,19 @@ namespace rocwmma
                 template <typename InputT>
                 ROCWMMA_DEVICE static inline InputT exec(InputT input, uint32_t laneId)
                 {
-                    // NOTE: final address is laneId * 4
-                    reinterpret_cast<uint32_t&>(input)
-                        = __builtin_amdgcn_ds_bpermute((BPermuteCtrl::threadCtrl(laneId) << 2),
-                                                       reinterpret_cast<uint32_t const&>(input));
-                    return input;
+                    static_assert(sizeof(InputT) >= sizeof(uint32_t)
+                                      && sizeof(InputT) % sizeof(uint32_t) == 0,
+                                  "The minimum unit of the Permute  operation should be 32 bits");
+                    constexpr size_t VecSize = sizeof(InputT) / sizeof(uint32_t);
+                    auto             permute = [laneId](auto&& idx, auto&& v0) {
+                        constexpr auto i = std::decay_t<decltype(idx)>::value;
+                        return __builtin_amdgcn_ds_bpermute(
+                            (BPermuteCtrl::threadCtrl(laneId) << 2),
+                            reinterpret_cast<uint32_t const*>(&v0)[i]);
+                    };
+
+                    auto permute_input = vector_generator<uint32_t, VecSize>()(permute, input);
+                    return *(reinterpret_cast<InputT*>(&permute_input));
                 }
             };
 
@@ -83,11 +91,19 @@ namespace rocwmma
                 template <typename InputT>
                 ROCWMMA_DEVICE static inline InputT exec(InputT input, uint32_t laneId)
                 {
-                    // NOTE: final address is laneId * 4
-                    reinterpret_cast<uint32_t&>(input)
-                        = __builtin_amdgcn_ds_permute((PermuteCtrl::threadCtrl(laneId) << 2),
-                                                      reinterpret_cast<uint32_t const&>(input));
-                    return input;
+                    static_assert(sizeof(InputT) >= sizeof(uint32_t)
+                                      && sizeof(InputT) % sizeof(uint32_t) == 0,
+                                  "The minimum unit of the Permute  operation should be 32 bits");
+                    constexpr size_t VecSize = sizeof(InputT) / sizeof(uint32_t);
+                    auto             permute = [laneId](auto&& idx, auto&& v0) {
+                        constexpr auto i = std::decay_t<decltype(idx)>::value;
+                        return __builtin_amdgcn_ds_permute(
+                            (PermuteCtrl::threadCtrl(laneId) << 2),
+                            reinterpret_cast<uint32_t const*>(&v0)[i]);
+                    };
+
+                    auto permute_input = vector_generator<uint32_t, VecSize>()(permute, input);
+                    return *(reinterpret_cast<InputT*>(&permute_input));
                 }
             };
 
@@ -324,13 +340,13 @@ namespace rocwmma
             using Gather16 = OpsBase::Gather<OP_GROUP_SIZE_16, VW, ElementShift>;
 
             template<uint32_t VW, uint32_t ElementShift>
-            using ScatterWave = OpsBase::Gather<OP_GROUP_SIZE_WARP, VW, ElementShift>;
+            using ScatterWave = OpsBase::Scatter<OP_GROUP_SIZE_WARP, VW, ElementShift>;
 
             template<uint32_t VW, uint32_t ElementShift>
-            using Scatter32 = OpsBase::Gather<OP_GROUP_SIZE_32, VW, ElementShift>;
+            using Scatter32 = OpsBase::Scatter<OP_GROUP_SIZE_32, VW, ElementShift>;
 
             template<uint32_t VW, uint32_t ElementShift>
-            using Scatter16 = OpsBase::Gather<OP_GROUP_SIZE_16, VW, ElementShift>;
+            using Scatter16 = OpsBase::Scatter<OP_GROUP_SIZE_16, VW, ElementShift>;
 
 
             template<uint32_t Distance>
