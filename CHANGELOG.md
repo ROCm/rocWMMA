@@ -3,7 +3,25 @@
 Documentation for rocWMMA is available at
 [https://rocm.docs.amd.com/projects/rocWMMA/en/latest](https://rocm.docs.amd.com/projects/rocWMMA/en/latest).
 
-## (Unreleased) rocWMMA 1.3.0 for ROCm 6.0.0
+## (Unreleased) rocWMMA 1.4.0 for ROCm 6.1.0
+
+### Additions
+
+* Added bf16 support for hipRTC sample
+
+### Changes
+
+* Changed Clang C++ version to C++17
+* Updated rocwmma_coop API
+* Linked rocWMMA to hiprtc
+
+### Fixes
+
+* Fixed compile/runtime arch checks
+* Built all test in large code model
+* Removed inefficient branching in layout loop unrolling
+
+## rocWMMA 1.3.0 for ROCm 6.0.0
 
 ### Additions
 
