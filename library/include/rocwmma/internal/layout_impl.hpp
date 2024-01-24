@@ -59,12 +59,12 @@ namespace rocwmma
             /// Helper to ensure layout types are consistent (same)
             ///
             template <typename LhsDataLayout, typename RhsDataLayout>
-            struct ConsistencyCheck : public std::false_type
+            struct ConsistencyCheck : public false_type
             {
             };
 
             template <typename DataLayout>
-            struct ConsistencyCheck<DataLayout, DataLayout> : public std::true_type
+            struct ConsistencyCheck<DataLayout, DataLayout> : public true_type
             {
             };
 
@@ -72,12 +72,12 @@ namespace rocwmma
             /// Helper to check if layout types are orthogonal
             ///
             template <typename LhsDataLayout, typename RhsDataLayout>
-            struct OrthogonalCheck : public std::true_type
+            struct OrthogonalCheck : public true_type
             {
             };
 
             template <typename DataLayout>
-            struct OrthogonalCheck<DataLayout, DataLayout> : public std::false_type
+            struct OrthogonalCheck<DataLayout, DataLayout> : public false_type
             {
             };
 
@@ -208,13 +208,13 @@ namespace rocwmma
             /// Check for consistency in element ordering between two layouts
             ///
             template <typename LhsMatrixLayout, typename RhsMatrixLayout>
-            struct ConsistencyCheck : public std::false_type
+            struct ConsistencyCheck : public false_type
             {
             };
 
             // Same type is compatible
             template <typename MatrixLayout>
-            struct ConsistencyCheck<MatrixLayout, MatrixLayout> : public std::true_type
+            struct ConsistencyCheck<MatrixLayout, MatrixLayout> : public true_type
             {
             };
 
@@ -229,7 +229,7 @@ namespace rocwmma
                 MatrixLayout::ColNT<BlockDim, BlockK, DataT, col_major, 1, MaxVectorWidth>,
                 MatrixLayout::
                     ColNT<BlockDim, BlockK, DataT, row_major, RhsVectorWidth, MaxVectorWidth>>
-                : public std::true_type
+                : public true_type
             {
             };
 
@@ -242,7 +242,7 @@ namespace rocwmma
                 MatrixLayout::
                     ColNT<BlockDim, BlockK, DataT, row_major, LhsVectorWidth, MaxVectorWidth>,
                 MatrixLayout::ColNT<BlockDim, BlockK, DataT, col_major, 1, MaxVectorWidth>>
-                : public std::true_type
+                : public true_type
             {
             };
 
@@ -255,7 +255,7 @@ namespace rocwmma
                 MatrixLayout::
                     RowNT<BlockDim, BlockK, DataT, col_major, LhsVectorWidth, MaxVectorWidth>,
                 MatrixLayout::RowNT<BlockDim, BlockK, DataT, row_major, 1, MaxVectorWidth>>
-                : public std::true_type
+                : public true_type
             {
             };
 
@@ -268,7 +268,7 @@ namespace rocwmma
                 MatrixLayout::RowNT<BlockDim, BlockK, DataT, row_major, 1, MaxVectorWidth>,
                 MatrixLayout::
                     RowNT<BlockDim, BlockK, DataT, col_major, RhsVectorWidth, MaxVectorWidth>>
-                : public std::true_type
+                : public true_type
             {
             };
 
@@ -286,7 +286,7 @@ namespace rocwmma
                     Col<BlockDim, BlockK, DataT, DataLayout, LhsVectorWidth, MaxVectorWidth>,
                 MatrixLayout::
                     Col<BlockDim, BlockK, DataT, DataLayout, RhsVectorWidth, MaxVectorWidth>>
-                : public std::true_type
+                : public true_type
             {
             };
 
@@ -302,7 +302,7 @@ namespace rocwmma
                     Row<BlockDim, BlockK, DataT, DataLayout, LhsVectorWidth, MaxVectorWidth>,
                 MatrixLayout::
                     Row<BlockDim, BlockK, DataT, DataLayout, RhsVectorWidth, MaxVectorWidth>>
-                : public std::true_type
+                : public true_type
             {
             };
 
@@ -311,13 +311,13 @@ namespace rocwmma
             ///
 
             template <typename LhsMatrixLayout, typename RhsMatrixLayout>
-            struct OrthogonalCheck : public std::false_type
+            struct OrthogonalCheck : public false_type
             {
             };
 
             // Same type is not orthogonal
             template <typename MatrixLayout>
-            struct OrthogonalCheck<MatrixLayout, MatrixLayout> : public std::false_type
+            struct OrthogonalCheck<MatrixLayout, MatrixLayout> : public false_type
             {
             };
 
@@ -325,7 +325,7 @@ namespace rocwmma
             struct OrthogonalCheck<
                 MatrixLayout::ColNT<BlockDim, BlockK, DataT, col_major, 1, MaxVectorWidth>,
                 MatrixLayout::RowNT<BlockDim, BlockK, DataT, row_major, 1, MaxVectorWidth>>
-                : public std::true_type
+                : public true_type
             {
             };
 
@@ -340,7 +340,7 @@ namespace rocwmma
                     ColNT<BlockDim, BlockK, DataT, row_major, LhsVectorWidth, MaxVectorWidth>,
                 MatrixLayout::
                     RowNT<BlockDim, BlockK, DataT, col_major, RhsVectorWidth, MaxVectorWidth>>
-                : public std::true_type
+                : public true_type
             {
             };
 
@@ -348,7 +348,7 @@ namespace rocwmma
             struct OrthogonalCheck<
                 MatrixLayout::RowNT<BlockDim, BlockK, DataT, row_major, 1, MaxVectorWidth>,
                 MatrixLayout::ColNT<BlockDim, BlockK, DataT, col_major, 1, MaxVectorWidth>>
-                : public std::true_type
+                : public true_type
             {
             };
 
@@ -363,7 +363,7 @@ namespace rocwmma
                     RowNT<BlockDim, BlockK, DataT, col_major, LhsVectorWidth, MaxVectorWidth>,
                 MatrixLayout::
                     ColNT<BlockDim, BlockK, DataT, row_major, RhsVectorWidth, MaxVectorWidth>>
-                : public std::true_type
+                : public true_type
             {
             };
 
@@ -382,7 +382,7 @@ namespace rocwmma
                                   DataT,
                                   typename DataLayout::template OrthogonalLayout_t<LhsDataLayout>,
                                   RhsVectorWidth,
-                                  MaxVectorWidth>> : public std::true_type
+                                  MaxVectorWidth>> : public true_type
             {
             };
 
@@ -401,7 +401,7 @@ namespace rocwmma
                                   DataT,
                                   typename DataLayout::template OrthogonalLayout_t<LhsDataLayout>,
                                   RhsVectorWidth,
-                                  MaxVectorWidth>> : public std::true_type
+                                  MaxVectorWidth>> : public true_type
             {
             };
 
@@ -416,7 +416,7 @@ namespace rocwmma
                     Col<BlockDim, BlockK, DataT, col_major, LhsVectorWidth, MaxVectorWidth>,
                 MatrixLayout::
                     Row<BlockDim, BlockK, DataT, row_major, RhsVectorWidth, MaxVectorWidth>>
-                : public std::true_type
+                : public true_type
             {
             };
 
@@ -505,7 +505,7 @@ namespace rocwmma
                         WaveSize = IOTraits::ThreadsPerIO,
 
                         // Number of BlockDim columns gathered per cycle of MaxVW
-                        MaxKPerIO = WaveSize * MaxVectorWidth / std::min(BlockDim, WaveSize),
+                        MaxKPerIO = WaveSize * MaxVectorWidth / min(BlockDim, WaveSize),
 
                         BlockDimStride_X = WaveSize,
                         BlockDimStride_Y = 0u,
@@ -520,7 +520,7 @@ namespace rocwmma
                         LargeDim = BlockDim >= WaveSize,
 
                         // Number of segments in BlockDim direction
-                        BlockDimSegs = std::max(BlockDim / BlockDimStride_X, 1u),
+                        BlockDimSegs = max(BlockDim / BlockDimStride_X, 1u),
 
                         // Number of segments in the BlockK direction
                         BlockKSegs = BlockK / BlockKStride_Y,
@@ -742,7 +742,7 @@ namespace rocwmma
                         MaxElementsPerIO = WaveSize * MaxVectorWidth,
 
                         // Number of BlockDim columns gathered per cycle of MaxVW
-                        MaxKPerIO = std::max(1u, MaxElementsPerIO / BlockDim),
+                        MaxKPerIO = max(1u, MaxElementsPerIO / BlockDim),
 
                         VWStride_X = VectorWidth,
                         VWStride_Y = 0u,
@@ -757,13 +757,13 @@ namespace rocwmma
                         LargeDim = BlockDim >= MaxElementsPerIO,
 
                         // Number of segments in BlockDim direction
-                        BlockDimSegs = std::max(1u, BlockDim / BlockDimStride_X),
+                        BlockDimSegs = max(1u, BlockDim / BlockDimStride_X),
 
                         // Number of segments in the BlockK direction
-                        BlockKSegs = std::max(1u, BlockK / BlockKStride_Y),
+                        BlockKSegs = max(1u, BlockK / BlockKStride_Y),
 
                         // Number of segments in the MaxVW direction
-                        VWSegs = std::max(1u, MaxVectorWidth / VWStride_X),
+                        VWSegs = max(1u, MaxVectorWidth / VWStride_X),
 
                         // Log2 Values
                         Log2BlockDim         = Log2<BlockDim>::value,
