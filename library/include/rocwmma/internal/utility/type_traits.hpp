@@ -72,7 +72,7 @@ namespace rocwmma
     using detail::is_same_v;
     using detail::is_integral;
     using detail::is_integral_v;
-    using detail::is_arithmetic
+    using detail::is_arithmetic;
     using detail::is_arithmetic_v;
     using detail::is_floating_point;
     using detail::is_floating_point_v;

@@ -27,13 +27,13 @@
 #ifndef ROCWMMA_UTILITY_FORWARD_IMPL_HPP
 #define ROCWMMA_UTILITY_FORWARD_IMPL_HPP
 
-#include "../type_traits.hpp"
+#include "type_traits.hpp"
 
 namespace rocwmma
 {
     namespace detail
     {
-        
+
         template <typename T>
         ROCWMMA_HOST_DEVICE constexpr T&& forward(typename remove_reference<T>::type& t) noexcept
         {
