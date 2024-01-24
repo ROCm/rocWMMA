@@ -24,27 +24,47 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_UTILITY_GET_HPP
-#define ROCWMMA_UTILITY_GET_HPP
+#ifndef ROCWMMA_FORWARD_UTILITY_HPP
+#define ROCWMMA_FORWARD_UTILITY_HPP
 
-#include "get_impl.hpp"
-
+#include "../type_traits.hpp"
 namespace rocwmma
 {
-    // get overloads
-    using detail::get;
+    namespace detail
+    {
+        template <typename T>
+        ROCWMMA_HOST_DEVICE constexpr T&& forward(typename remove_reference<T>::type& t) noexcept
+        {
+            return static_cast<T&&>(t);
+        }
+
+        template <typename T>
+        ROCWMMA_HOST_DEVICE constexpr T&& forward(typename remove_reference<T>::type&& t) noexcept
+        {
+            static_assert(!is_lvalue_reference<T>::value,
+                          "template argument substituting T is an lvalue reference type");
+            return static_cast<T&&>(t);
+        }
+    }
 }
 
-#if !defined(__HIPCC_RTC__)
-
-#include <tuple>
+#if defined(__HIPCC_RTC__) || defined(__clang__)
 namespace rocwmma
 {
-    // Use STL
-    using std::get;
+    // Use custom rocwmma forward implementation for cases where STL is not available
+    using detail::forward;
 
 } // namespace rocwmma
 
-#endif // !defined(__HIPCC_RTC__)
+#else
 
-#endif // ROCWMMA_UTILITY_GET_HPP
+#include <utility>
+namespace rocwmma
+{
+    // Use STL implementation otherwise
+    using std::forward;
+}
+
+#endif // __HIPCC_RTC__
+
+#endif // ROCWMMA_FORWARD_UTILITY_HPP
