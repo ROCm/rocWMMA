@@ -255,7 +255,7 @@ namespace rocwmma
 
         // NOTE: Assumes that there is NO padding...
         using PackedVecT   = VecT<PackedT, VecSize / Traits::PackRatio>;
-        using UnpackedVecT = std::decay_t<decltype(v)>;
+        using UnpackedVecT = decay_t<decltype(v)>;
         return *reinterpret_cast<PackedVecT*>(&(const_cast<UnpackedVecT&>(v)));
     }
 
@@ -265,7 +265,7 @@ namespace rocwmma
         PackUtil<DataT>::unpackHelper(VecT<PackedT, VecSize> const& v)
     {
         // NOTE: Assumes that there is NO padding...
-        using PackedVecT   = std::decay_t<decltype(v)>;
+        using PackedVecT   = decay_t<decltype(v)>;
         using UnpackedVecT = VecT<UnpackedT, VecSize * Traits::PackRatio>;
         return *reinterpret_cast<UnpackedVecT*>(&(const_cast<PackedVecT&>(v)));
     }

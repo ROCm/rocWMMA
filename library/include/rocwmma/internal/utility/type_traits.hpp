@@ -78,6 +78,11 @@ namespace rocwmma
     using detail::is_floating_point_v;
     using detail::is_signed;
     using detail::is_signed_v;
+    using detail::is_convertible;
+    using detail::is_convertible_v;
+
+    using detail::max;
+    using detail::min;
     
 } // namespace rocwmma
 
@@ -131,6 +136,11 @@ namespace rocwmma
     using std::is_floating_point_v;
     using std::is_signed;
     using std::is_signed_v;
+    using std::is_convertible;
+    using std::is_convertible_v;
+
+    using std::max;
+    using std::min;
     
 } // namespace rocwmma
 

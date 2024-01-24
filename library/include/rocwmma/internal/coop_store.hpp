@@ -64,7 +64,7 @@ namespace rocwmma
 
         // Outer loop = index 0,
         // Inner loop = index N-1
-        template <std::size_t Depth = 0,
+        template <size_t Depth = 0,
                   typename Iterator,
                   typename StrideSpace,
                   typename Strides2d>
@@ -74,14 +74,14 @@ namespace rocwmma
                                                        StrideSpace&& strideCounts,
                                                        Strides2d&&   strides2d)
         {
-            static_assert(VecTraits<std::decay_t<StrideSpace>>::size()
-                              == VecTraits<std::decay_t<Strides2d>>::size(),
+            static_assert(VecTraits<decay_t<StrideSpace>>::size()
+                              == VecTraits<decay_t<Strides2d>>::size(),
                           "Mismatched size");
             auto strideOffset = DataLayout::fromMatrixCoord(get<Depth>(strides2d), ldm);
             auto strideCount  = get<Depth>(strideCounts);
 
             // Last depth layer will invoke the load
-            if constexpr(Depth == (VecTraits<std::decay_t<StrideSpace>>::size() - 1u))
+            if constexpr(Depth == (VecTraits<decay_t<StrideSpace>>::size() - 1u))
             {
 #pragma unroll
                 for(int i = 0; i < strideCount; i++)
@@ -136,7 +136,7 @@ namespace rocwmma
             }
 
             // Split the reduced stride space.
-            auto workItemsPerWave = std::max(totalWorkItems / maxWaves, 1u);
+            auto workItemsPerWave = max(totalWorkItems / maxWaves, 1u);
             auto strideSpaceS     = inflate_coord_left(workItemsPerWave - 1u, strideSpaceR) + 1u;
 
             // Add back in the VW dimension, for the full stride
@@ -190,7 +190,7 @@ namespace rocwmma
             }
 
             // Split the reduced stride space.
-            constexpr auto workItemsPerWave = std::max(totalWorkItems / maxWaves, 1u);
+            constexpr auto workItemsPerWave = max(totalWorkItems / maxWaves, 1u);
             constexpr auto strideSpaceS
                 = inflate_coord_left(workItemsPerWave - 1u, strideSpaceR) + 1u;
 

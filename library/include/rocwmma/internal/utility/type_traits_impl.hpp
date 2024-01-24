@@ -433,6 +433,13 @@ namespace rocwmma
         template <class T, class U>
         inline constexpr bool is_same_v = is_same<T, U>::value;
 
+        // is_convertible
+        template <class T1, class T2> struct is_convertible
+        : public true_or_false_type<__is_convertible_to(T1, T2)> {};
+
+        template <class T, class U>
+        inline constexpr bool is_convertible_v = is_convertible<T, U>::value;
+
         // decay selectors
         template <typename Up,
                 bool IsArray    = is_array<Up>::value,
