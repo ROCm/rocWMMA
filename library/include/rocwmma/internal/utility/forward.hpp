@@ -45,7 +45,7 @@ namespace rocwmma
 {
     // Use STL
     using std::forward;
-    
+
 } // namespace rocwmma
 
 #endif // defined(__HIPCC_RTC__) || defined(__clang__)

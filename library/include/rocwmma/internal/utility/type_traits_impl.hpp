@@ -27,9 +27,6 @@
 #ifndef ROCWMMA_UTILITY_TYPE_TRAITS_IMPL_HPP
 #define ROCWMMA_UTILITY_TYPE_TRAITS_IMPL_HPP
 
-
-#if defined(__HIPCC_RTC__)
-
 namespace rocwmma
 {
     namespace detail
@@ -96,66 +93,66 @@ namespace rocwmma
         
         // Logical ops
         template <typename... Bs>
-        struct or;
+        struct logical_or;
 
         template <>
-        struct or<> : public false_type
+        struct logical_or<> : public false_type
         {
         };
 
         template <typename T>
-        struct or<T> : public T
+        struct logical_or<T> : public T
         {
         };
 
         template <typename B1, typename B2>
-        struct or<B1, B2> : public conditional_t<B1::value, B1, B2>
+        struct logical_or<B1, B2> : public conditional_t<B1::value, B1, B2>
         {
         };
 
         template <typename B1, typename B2, typename B3, typename... Bs>
-        struct or<B1, B2, B3, Bs...>
-        : public conditional_t<B1::value, B1, or<B2, B3, Bs...>>
+        struct logical_or<B1, B2, B3, Bs...>
+        : public conditional_t<B1::value, B1, logical_or<B2, B3, Bs...>>
         {
         };
 
         template<typename... Bs>
-        using or_t = typename or<Bs...>::type;
+        using logical_or_t = typename logical_or<Bs...>::type;
 
         template <typename...>
-        struct and;
+        struct logical_and;
 
         template <>
-        struct and<> : public true_type
+        struct logical_and<> : public true_type
         {
         };
 
         template <typename B1>
-        struct and<B1> : public B1
+        struct logical_and<B1> : public B1
         {
         };
 
         template <typename B1, typename B2>
-        struct and<B1, B2> : public conditional_t<B1::value, B2, B1>
+        struct logical_and<B1, B2> : public conditional_t<B1::value, B2, B1>
         {
         };
 
         template <typename B1, typename B2, typename B3, typename... Bs>
-        struct and<B1, B2, B3, Bs...>
-            : public conditional_t<B1::value, and<B2, B3, Bs...>, _B1>
+        struct logical_and<B1, B2, B3, Bs...>
+            : public conditional_t<B1::value, logical_and<B2, B3, Bs...>, B1>
         {
         };
 
-        template<typename Bs...>
-        using and_t = typename and<Bs...>::type;
+        template<typename... Bs>
+        using logical_and_t = typename logical_and<Bs...>::type;
 
         template <typename B>
-        struct not : public bool_constant<!bool(B::value)>
+        struct logical_not : public bool_constant<!bool(B::value)>
         {
         };
 
         template<typename B>
-        using not_t = typename not<B>::type;
+        using logical_not_t = typename logical_not<B>::type;
 
         // remove_reference
         template <typename T>
@@ -244,7 +241,13 @@ namespace rocwmma
         using remove_extent_t = typename remove_extent<T>::type;
 
         // add_pointer
-        template <typename T, bool = or<is_referenceable<T>, is_void<T>>::value>
+        template <typename T>
+        struct is_referenceable;
+
+        template <typename T>
+        struct is_void;
+
+        template <typename T, bool = logical_or<is_referenceable<T>, is_void<T>>::value>
         struct add_pointer_helper
         {
             using type = T;
@@ -304,7 +307,7 @@ namespace rocwmma
         };
 
         template <typename T>
-        struct is_void : public is_void_helper<remove_cv_y<T>>::type
+        struct is_void : public is_void_helper<remove_cv_t<T>>::type
         {
         };
 
@@ -313,7 +316,7 @@ namespace rocwmma
 
         // is_reference
         template <typename T>
-        struct is_reference : public or_t<is_lvalue_reference<T>, is_rvalue_reference<T>>
+        struct is_reference : public logical_or_t<is_lvalue_reference<T>, is_rvalue_reference<T>>
         {
         };
 
@@ -331,7 +334,7 @@ namespace rocwmma
 
         // is_object
         template <typename T>
-        struct is_object : public not_t<or<is_function<T>, is_reference<T>, is_void<T>>>
+        struct is_object : public logical_not_t<logical_or<is_function<T>, is_reference<T>, is_void<T>>>
         {
         };
 
@@ -340,7 +343,7 @@ namespace rocwmma
 
         // __is_referenceable
         template <typename T>
-        struct is_referenceable : public or_t<is_object<T>, is_reference<T>>{};
+        struct is_referenceable : public logical_or_t<is_object<T>, is_reference<T>>{};
 
         template <typename T>
         inline constexpr bool is_referenceable_v = is_referenceable<T>::value;
@@ -351,7 +354,7 @@ namespace rocwmma
         {
         };
 
-        template <typename T, std::size_t _Size>
+        template <typename T, size_t _Size>
         struct is_array<T[_Size]> : public true_type
         {
         };
@@ -464,7 +467,7 @@ namespace rocwmma
             using remove_type = remove_reference_t<T>;
 
         public:
-            using type = decay_selector_t<__remove_type>;
+            using type = decay_selector_t<remove_type>;
         };
 
         template <typename T>
@@ -479,6 +482,6 @@ namespace rocwmma
 
     } // namespace detail
 
-} // namespace std
+} // namespace rocwmma
 
 #endif // ROCWMMA_UTILITY_TYPE_TRAITS_IMPL_HPP
