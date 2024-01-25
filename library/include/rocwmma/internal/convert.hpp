@@ -27,6 +27,7 @@
 #define ROCWMMA_CONVERT_HPP
 
 #include "types.hpp"
+#include "utility/forward.hpp"
 
 namespace rocwmma
 {
@@ -58,7 +59,7 @@ namespace rocwmma
             template <typename IncomingT>
             ROCWMMA_DEVICE static inline auto exec(IncomingT&& regsIn) -> IncomingT&&
             {
-                return std::forward<IncomingT>(regsIn);
+                return forward<IncomingT>(regsIn);
             }
         };
 

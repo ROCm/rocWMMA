@@ -66,16 +66,16 @@ namespace rocwmma
                               uint32_t waveCount)
     {
 
-        using FragT  = typename std::decay_t<decltype(frag)>;
+        using FragT  = decay_t<decltype(frag)>;
         using Loader = typename GetCoopIOConfig_t<FragT>::Loader;
 
         // Sanity checks
-        static_assert(!std::is_same<DataLayout, void>::value,
+        static_assert(!is_same<DataLayout, void>::value,
                       "Must provide layout information. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
         static_assert(
-            std::is_same<typename FragT::Traits::AccessT, typename Loader::Traits::OutputT>::value,
+            is_same<typename FragT::Traits::AccessT, typename Loader::Traits::OutputT>::value,
             "Fragment access and coop load output types do not match");
 
         // Load and implicit pack
@@ -95,7 +95,7 @@ namespace rocwmma
                               const DataT*                                                  data,
                               uint32_t                                                      ldm)
     {
-        using FragT       = typename std::decay_t<decltype(frag)>;
+        using FragT       = decay_t<decltype(frag)>;
         using MappingUtil = GetMappingUtil_t<FragT>;
 
         // Default: all waves participate in 'row major' order
@@ -138,16 +138,16 @@ namespace rocwmma
                               uint32_t                                                      ldm,
                               uint32_t waveIndex)
     {
-        using FragT  = typename std::decay_t<decltype(frag)>;
+        using FragT  = decay_t<decltype(frag)>;
         using Loader = typename GetCoopIOConfig_t<FragT, WaveCount>::Loader;
 
         // Sanity checks
-        static_assert(!std::is_same<DataLayout, void>::value,
+        static_assert(!is_same<DataLayout, void>::value,
                       "Must provide layout information. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
         static_assert(
-            std::is_same<typename FragT::Traits::AccessT, typename Loader::Traits::OutputT>::value,
+            is_same<typename FragT::Traits::AccessT, typename Loader::Traits::OutputT>::value,
             "Fragment access and coop load output types do not match");
 
         // Load and implicit pack
@@ -187,16 +187,16 @@ namespace rocwmma
         uint32_t                                                            waveIndex,
         uint32_t                                                            waveCount)
     {
-        using FragT  = typename std::decay_t<decltype(frag)>;
+        using FragT  = decay_t<decltype(frag)>;
         using Storer = typename GetCoopIOConfig_t<FragT>::Storer;
 
         // Sanity checks
-        static_assert(!std::is_same<DataLayout, void>::value,
+        static_assert(!is_same<DataLayout, void>::value,
                       "Must provide data layout. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
         static_assert(
-            std::is_same<typename FragT::Traits::AccessT, typename Storer::Traits::InputT>::value,
+            is_same<typename FragT::Traits::AccessT, typename Storer::Traits::InputT>::value,
             "Fragment access and coop store input types do not match");
 
         // Implicit unpack and store
@@ -216,7 +216,7 @@ namespace rocwmma
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
         uint32_t                                                            ldm)
     {
-        using FragT       = typename std::decay<decltype(frag)>::type;
+        using FragT       = decay_t<decltype(frag)>;
         using MappingUtil = GetMappingUtil_t<FragT>;
 
         // Default: all waves participate in 'row major' order
@@ -262,16 +262,16 @@ namespace rocwmma
         uint32_t                                                            waveIndex)
     {
 
-        using FragT  = typename std::decay_t<decltype(frag)>;
+        using FragT  = decay_t<decltype(frag)>;
         using Storer = typename GetCoopIOConfig_t<FragT, WaveCount>::Storer;
 
         // Sanity checks
-        static_assert(!std::is_same<DataLayout, void>::value,
+        static_assert(!is_same<DataLayout, void>::value,
                       "Must provide data layout. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
         static_assert(
-            std::is_same<typename FragT::Traits::AccessT, typename Storer::Traits::InputT>::value,
+            is_same<typename FragT::Traits::AccessT, typename Storer::Traits::InputT>::value,
             "Fragment access and coop stor input types do not match");
 
         // Implicit unpack and store

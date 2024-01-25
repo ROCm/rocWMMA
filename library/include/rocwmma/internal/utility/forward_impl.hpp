@@ -24,27 +24,32 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_UTILITY_GET_HPP
-#define ROCWMMA_UTILITY_GET_HPP
+#ifndef ROCWMMA_UTILITY_FORWARD_IMPL_HPP
+#define ROCWMMA_UTILITY_FORWARD_IMPL_HPP
 
-#include "get_impl.hpp"
+#include "type_traits.hpp"
 
 namespace rocwmma
 {
-    // get overloads
-    using detail::get;
-}
+    namespace detail
+    {
 
-#if !defined(__HIPCC_RTC__)
+        template <typename T>
+        ROCWMMA_HOST_DEVICE constexpr T&& forward(typename remove_reference<T>::type& t) noexcept
+        {
+            return static_cast<T&&>(t);
+        }
 
-#include <tuple>
-namespace rocwmma
-{
-    // Use STL
-    using std::get;
+        template <typename T>
+        ROCWMMA_HOST_DEVICE constexpr T&& forward(typename remove_reference<T>::type&& t) noexcept
+        {
+            static_assert(!is_lvalue_reference<T>::value,
+                          "template argument substituting T is an lvalue reference type");
+            return static_cast<T&&>(t);
+        }
+
+    } // namespace detail
 
 } // namespace rocwmma
 
-#endif // !defined(__HIPCC_RTC__)
-
-#endif // ROCWMMA_UTILITY_GET_HPP
+#endif // ROCWMMA_UTILITY_FORWARD_IMPL_HPP

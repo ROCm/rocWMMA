@@ -30,9 +30,14 @@
 // #include "types.hpp"
 // #include "types_ext.hpp"
 #if !defined(__HIPCC_RTC__)
+
 #include <hip/hip_fp16.h>
 #include <hip/hip_vector_types.h>
+
 #endif
+
+#include "utility/type_traits.hpp"
+#include "utility/forward.hpp"
 
 /**
  * rocWMMA vectors are implemented as HIP_vector_type<T, N> objects, which will ultimately
@@ -148,12 +153,12 @@ namespace rocwmma
         inline VecT& operator=(VecT&&) = default;
 
         template <typename U                                                           = T,
-                  typename std::enable_if<(std::is_same<U, T>{}) && (Rank > 1)>::type* = nullptr>
+                  typename enable_if<(is_same<U, T>{}) && (Rank > 1)>::type* = nullptr>
         ROCWMMA_HOST_DEVICE explicit constexpr non_native_vector_base(T x_) noexcept;
 
         template <typename... Ts,
                   typename U                                              = T,
-                  typename std::enable_if<(sizeof...(Ts) == Rank)>::type* = nullptr>
+                  typename enable_if<(sizeof...(Ts) == Rank)>::type* = nullptr>
         ROCWMMA_HOST_DEVICE constexpr non_native_vector_base(Ts... args) noexcept;
 
         ROCWMMA_HOST_DEVICE
@@ -186,28 +191,28 @@ namespace rocwmma
         ROCWMMA_HOST_DEVICE
         constexpr inline VecT operator/(const VecT& x_) noexcept;
 
-        template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
+        template <typename U = T, typename enable_if<is_integral<U>{}>::type* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT& operator%=(const VecT& x_) noexcept;
 
-        template <typename U = T, typename std::enable_if<std::is_signed<U>{}>::type* = nullptr>
+        template <typename U = T, typename enable_if<is_signed<U>{}>::type* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT operator-() const noexcept;
 
-        template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
+        template <typename U = T, typename enable_if<is_integral<U>{}>::type* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT& operator&=(const VecT& x_) noexcept;
 
-        template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
+        template <typename U = T, typename enable_if<is_integral<U>{}>::type* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT& operator|=(const VecT& x_) noexcept;
 
-        template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
+        template <typename U = T, typename enable_if<is_integral<U>{}>::type* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT operator~() const noexcept;
 
-        template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
+        template <typename U = T, typename enable_if<is_integral<U>{}>::type* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT& operator^=(const VecT& x_) noexcept;
 
-        template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
+        template <typename U = T, typename enable_if<is_integral<U>{}>::type* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT& operator>>=(const VecT& x_) noexcept;
 
-        template <typename U = T, typename std::enable_if<std::is_integral<U>{}>::type* = nullptr>
+        template <typename U = T, typename enable_if<is_integral<U>{}>::type* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT& operator<<=(const VecT& x_) noexcept;
 
         ROCWMMA_HOST_DEVICE
@@ -454,13 +459,13 @@ namespace rocwmma
         struct is_same_type;
 
         template <typename T>
-        struct is_same_type<T> : std::true_type
+        struct is_same_type<T> : true_type
         {
         };
 
         template <typename T, typename U, typename... Ts>
         struct is_same_type<T, U, Ts...>
-            : std::conditional_t<std::is_same<T, U>{}, is_same_type<U, Ts...>, std::false_type>
+            : conditional_t<is_same<T, U>{}, is_same_type<U, Ts...>, false_type>
         {
         };
 
@@ -506,7 +511,7 @@ namespace rocwmma
     template <typename F, typename DataT, uint32_t Rank>
     constexpr decltype(auto) apply(F fn, HIP_vector_type<DataT, Rank>& v)
     {
-        constexpr std::size_t size = VecTraits<std::decay_t<decltype(v)>>::size();
+        constexpr size_t size = VecTraits<decay_t<decltype(v)>>::size();
         return detail::apply_impl(fn, v, detail::make_index_sequence<size>());
     }
 
@@ -541,7 +546,7 @@ namespace rocwmma
     template <typename F, typename DataT, uint32_t Rank>
     constexpr decltype(auto) apply(F fn, non_native_vector_base<DataT, Rank> const& v)
     {
-        constexpr std::size_t size = VecTraits<std::decay_t<decltype(v)>>::size();
+        constexpr size_t size = VecTraits<decay_t<decltype(v)>>::size();
         return detail::apply_impl(fn, v, detail::make_index_sequence<size>());
     }
 
@@ -551,11 +556,11 @@ namespace rocwmma
         // TODO: When HIP_vector_type becomes constexpr replace with non_native_vector type.
 
         // Ensure that all the arguments are the same type
-        static_assert(detail::is_same_type_v<std::decay_t<Ts>...>,
+        static_assert(detail::is_same_type_v<decay_t<Ts>...>,
                       "Vector arguments must all be the same type");
 
-        using DataT = typename detail::first_type_t<std::decay_t<Ts>...>;
-        return non_native_vector_base<DataT, sizeof...(Ts)>{std::forward<Ts>(ts)...};
+        using DataT = typename detail::first_type_t<decay_t<Ts>...>;
+        return non_native_vector_base<DataT, sizeof...(Ts)>{forward<Ts>(ts)...};
     }
 
     namespace detail
@@ -580,12 +585,12 @@ namespace rocwmma
     template <typename Lhs, typename Rhs>
     constexpr decltype(auto) vector_cat(Lhs&& lhs, Rhs&& rhs)
     {
-        constexpr std::size_t Size0 = VecTraits<std::decay_t<decltype(lhs)>>::size();
-        constexpr std::size_t Size1 = VecTraits<std::decay_t<decltype(rhs)>>::size();
+        constexpr size_t Size0 = VecTraits<decay_t<decltype(lhs)>>::size();
+        constexpr size_t Size1 = VecTraits<decay_t<decltype(rhs)>>::size();
 
-        return detail::vector_cat_impl(std::forward<Lhs>(lhs),
+        return detail::vector_cat_impl(forward<Lhs>(lhs),
                                        detail::make_index_sequence<Size0>(),
-                                       std::forward<Rhs>(rhs),
+                                       forward<Rhs>(rhs),
                                        detail::make_index_sequence<Size1>());
     }
 
@@ -612,14 +617,14 @@ namespace rocwmma
     namespace detail
     {
         template <class BinOp, typename T, typename... Ts>
-        ROCWMMA_HOST_DEVICE constexpr static inline std::decay_t<T>
+        ROCWMMA_HOST_DEVICE constexpr static inline decay_t<T>
             reduceOp_impl(T&& t, Ts&&... ts) noexcept
         {
-            using CastT = std::decay_t<T>;
+            using CastT = decay_t<T>;
             if constexpr(sizeof...(Ts) >= 1)
             {
                 return BinOp::exec(static_cast<CastT>(t),
-                                   reduceOp_impl<BinOp>(std::forward<Ts>(ts)...));
+                                   reduceOp_impl<BinOp>(forward<Ts>(ts)...));
             }
             else
             {
@@ -631,7 +636,7 @@ namespace rocwmma
         ROCWMMA_HOST_DEVICE constexpr static inline decltype(auto)
             vector_reduce_impl(VecT&& v, index_sequence<Is...>) noexcept
         {
-            return reduceOp_impl<BinOp>(get<Is>(std::forward<VecT>(v))...);
+            return reduceOp_impl<BinOp>(get<Is>(forward<VecT>(v))...);
         }
 
         // Use with operations that have 1 operands
@@ -640,8 +645,8 @@ namespace rocwmma
             vector_reduce(VecT&& lhs) noexcept
         {
             return vector_reduce_impl<BinOp>(
-                std::forward<VecT>(lhs),
-                detail::make_index_sequence<VecTraits<std::decay_t<VecT>>::size()>{});
+                forward<VecT>(lhs),
+                detail::make_index_sequence<VecTraits<decay_t<VecT>>::size()>{});
         }
     }
 
@@ -649,7 +654,7 @@ namespace rocwmma
     ROCWMMA_HOST_DEVICE constexpr static inline decltype(auto)
         vector_reduce_and(VecT&& lhs) noexcept
     {
-        return detail::vector_reduce<detail::BitwiseOp::And>(std::forward<VecT>(lhs));
+        return detail::vector_reduce<detail::BitwiseOp::And>(forward<VecT>(lhs));
     }
 
 } // namespace rocwmma

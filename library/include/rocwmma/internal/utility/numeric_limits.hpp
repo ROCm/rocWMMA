@@ -24,27 +24,30 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_UTILITY_GET_HPP
-#define ROCWMMA_UTILITY_GET_HPP
+#ifndef ROCWMMA_UTILITY_NUMERIC_LIMITS_HPP
+#define ROCWMMA_UTILITY_NUMERIC_LIMITS_HPP
 
-#include "get_impl.hpp"
 
+#if defined(__HIPCC_RTC__)
+
+#include "numeric_limits_impl.hpp"
 namespace rocwmma
 {
-    // get overloads
-    using detail::get;
-}
-
-#if !defined(__HIPCC_RTC__)
-
-#include <tuple>
-namespace rocwmma
-{
-    // Use STL
-    using std::get;
+    // Use drop-in replacement
+    using detail::numeric_limits;
 
 } // namespace rocwmma
 
-#endif // !defined(__HIPCC_RTC__)
+#else
 
-#endif // ROCWMMA_UTILITY_GET_HPP
+#include <limits>
+namespace rocwmma
+{
+    // Use STL
+    using std::numeric_limits;
+
+} // namespace rocwmma
+
+#endif // defined(__HIPCC_RTC__)
+
+#endif // ROCWMMA_UTILITY_NUMERIC_LIMITS_HPP
