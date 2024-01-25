@@ -105,7 +105,7 @@ namespace rocwmma
 
         template <uint32_t TBlockX, uint32_t TBlockY>
         template <bool IsConst /* = (TBlockX > 0u && TBlockY > 0u) */,
-                  typename std::enable_if_t<IsConst>* /* = nullptr */>
+                  enable_if_t<IsConst>* /* = nullptr */>
         ROCWMMA_DEVICE constexpr inline auto WaveSpace<TBlockX, TBlockY>::workgroupDim()
             -> WorkgroupDimT
         {
@@ -114,7 +114,7 @@ namespace rocwmma
 
         template <uint32_t TBlockX, uint32_t TBlockY>
         template <bool IsConst /* = (TBlockX > 0u && TBlockY > 0u) */,
-                  typename std::enable_if_t<!IsConst>* /* = nullptr */>
+                  enable_if_t<!IsConst>* /* = nullptr */>
         ROCWMMA_DEVICE inline auto WaveSpace<TBlockX, TBlockY>::workgroupDim() -> WorkgroupDimT
         {
             return waveCount(make_coord2d(blockDim.x, blockDim.y));
@@ -251,7 +251,7 @@ namespace rocwmma
     ROCWMMA_DEVICE inline auto MappingUtil<BlockHeight, BlockWidth, DataT, DataLayout>::matrixCoord(
         BlockCoordT const& blockCoord) -> MatrixCoordT
     {
-        return MatrixSpace::fromBlockCoord(std::forward<BlockCoordT const>(blockCoord));
+        return MatrixSpace::fromBlockCoord(forward<BlockCoordT const>(blockCoord));
     }
 
     template <uint32_t BlockHeight, uint32_t BlockWidth, typename DataT, typename DataLayout>
@@ -259,7 +259,7 @@ namespace rocwmma
         MappingUtil<BlockHeight, BlockWidth, DataT, DataLayout>::dataOffset(
             MatrixCoordT const& matrixCoord, uint32_t ldm)
     {
-        return DataSpace::fromMatrixCoord(std::forward<MatrixCoordT const>(matrixCoord), ldm);
+        return DataSpace::fromMatrixCoord(forward<MatrixCoordT const>(matrixCoord), ldm);
     }
 
     template <uint32_t BlockHeight, uint32_t BlockWidth, typename DataT, typename DataLayout>
@@ -268,7 +268,7 @@ namespace rocwmma
             DataT const* baseAddr, MatrixCoordT const& matrixCoord, uint32_t ldm)
     {
         return baseAddr
-               + DataSpace::fromMatrixCoord(std::forward<MatrixCoordT const>(matrixCoord), ldm);
+               + DataSpace::fromMatrixCoord(forward<MatrixCoordT const>(matrixCoord), ldm);
     }
 
     template <uint32_t BlockHeight, uint32_t BlockWidth, typename DataT, typename DataLayout>
@@ -276,7 +276,7 @@ namespace rocwmma
         DataT* baseAddr, MatrixCoordT const& matrixCoord, uint32_t ldm)
     {
         return baseAddr
-               + DataSpace::fromMatrixCoord(std::forward<MatrixCoordT const>(matrixCoord), ldm);
+               + DataSpace::fromMatrixCoord(forward<MatrixCoordT const>(matrixCoord), ldm);
     }
 
 } // namespace rocwmma

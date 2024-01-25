@@ -132,7 +132,7 @@ namespace rocwmma
         {
             MaxVW = detail::MaxVWSelector<matrix_a, BlockDim, KDim, DataT, DataLayoutT, WaveCount>::
                 Result,
-            VW = std::is_same<DataLayoutT, row_major>::value ? MaxVW : 1u
+            VW = is_same<DataLayoutT, row_major>::value ? MaxVW : 1u
         };
 
         // Layout mapping for 1d / 2d
@@ -140,7 +140,7 @@ namespace rocwmma
         using MatrixLayout
             = MatrixLayout::template ColNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
 
-        static_assert(!(std::is_same_v<DataLayoutT, col_major> && VW > 1),
+        static_assert(!(is_same_v<DataLayoutT, col_major> && VW > 1),
                       "matrix_a in col_major currently does not support VW > 1");
     };
 
@@ -156,7 +156,7 @@ namespace rocwmma
         {
             MaxVW = detail::MaxVWSelector<matrix_b, BlockDim, KDim, DataT, DataLayoutT, WaveCount>::
                 Result,
-            VW = std::is_same<DataLayoutT, col_major>::value ? MaxVW : 1u
+            VW = is_same<DataLayoutT, col_major>::value ? MaxVW : 1u
         };
 
         // Layout mapping for 1d / 2d
@@ -164,7 +164,7 @@ namespace rocwmma
         using MatrixLayout
             = MatrixLayout::template RowNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
 
-        static_assert(!(std::is_same_v<DataLayoutT, row_major> && VW > 1),
+        static_assert(!(is_same_v<DataLayoutT, row_major> && VW > 1),
                       "matrix_b in row_major currently does not support VW > 1");
     };
 
@@ -178,8 +178,8 @@ namespace rocwmma
         // Vector size properties
         enum : uint32_t
         {
-            MaxVW = (std::is_same<DataT, float64_t>::value || ROCWMMA_ARCH_GFX11) ? 1u : 4u,
-            VW    = std::is_same<DataLayoutT, col_major>::value ? MaxVW : 1u
+            MaxVW = (is_same<DataT, float64_t>::value || ROCWMMA_ARCH_GFX11) ? 1u : 4u,
+            VW    = is_same<DataLayoutT, col_major>::value ? MaxVW : 1u
         };
 
         // Layout mapping for 1d / 2d
@@ -187,7 +187,7 @@ namespace rocwmma
         using MatrixLayout
             = MatrixLayout::template RowNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
 
-        static_assert(!(std::is_same<DataLayoutT, row_major>::value && VW > 1),
+        static_assert(!(is_same<DataLayoutT, row_major>::value && VW > 1),
                       "accumulator in row_major currently does not support VW > 1");
     };
 

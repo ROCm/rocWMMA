@@ -24,27 +24,34 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_UTILITY_GET_HPP
-#define ROCWMMA_UTILITY_GET_HPP
-
-#include "get_impl.hpp"
+#ifndef ROCWMMA_UTILITY_NUMERIC_LIMITS_IMPL_HPP
+#define ROCWMMA_UTILITY_NUMERIC_LIMITS_IMPL_HPP
 
 namespace rocwmma
 {
-    // get overloads
-    using detail::get;
-}
+    namespace detail
+    {
+        // Currently does not have implementation as there is no current
+        // library needs for regular arithmetic types.
+        // Specializations do exist for f8, bf8 and xf32 types where they
+        // are currently defined.
+        template <typename T>
+        class numeric_limits
+        {
+        public:
+            ROCWMMA_HOST_DEVICE static constexpr T min() noexcept;
+            ROCWMMA_HOST_DEVICE static constexpr T lowest() noexcept;
+            ROCWMMA_HOST_DEVICE static constexpr T max() noexcept;
+            ROCWMMA_HOST_DEVICE static constexpr T epsilon() noexcept;
+            ROCWMMA_HOST_DEVICE static constexpr T round_error() noexcept;
+            ROCWMMA_HOST_DEVICE static constexpr T infinity() noexcept;
+            ROCWMMA_HOST_DEVICE static constexpr T quiet_NaN() noexcept;
+            ROCWMMA_HOST_DEVICE static constexpr T signaling_NaN() noexcept;
+            ROCWMMA_HOST_DEVICE static constexpr T denorm_min() noexcept;
+        };
 
-#if !defined(__HIPCC_RTC__)
-
-#include <tuple>
-namespace rocwmma
-{
-    // Use STL
-    using std::get;
+    } // namespace detail
 
 } // namespace rocwmma
 
-#endif // !defined(__HIPCC_RTC__)
-
-#endif // ROCWMMA_UTILITY_GET_HPP
+#endif // ROCWMMA_UTILITY_NUMERIC_LIMITS_IMPL_HPP

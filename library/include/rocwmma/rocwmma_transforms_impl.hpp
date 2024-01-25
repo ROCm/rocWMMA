@@ -35,7 +35,7 @@ namespace rocwmma
         ///
         template <typename LhsFrag, typename RhsFrag>
         struct ConsistencyCheck
-            : public std::conditional_t<
+            : public conditional_t<
                   MatrixLayout::detail::ConsistencyCheck<
                       typename GetIOConfig_t<LhsFrag>::IOLayout::MatrixLayout,
                       typename GetIOConfig_t<RhsFrag>::IOLayout::MatrixLayout>::value
@@ -45,14 +45,14 @@ namespace rocwmma
                       && MatrixLayout::detail::ConsistencyCheck<
                           typename GetCoopIOConfig_t<LhsFrag, 4u>::IOLayout::MatrixLayout,
                           typename GetCoopIOConfig_t<RhsFrag, 4u>::IOLayout::MatrixLayout>::value,
-                  std::true_type,
-                  std::false_type>
+                  true_type,
+                  false_type>
         {
         };
 
         template <typename LhsFrag, typename RhsFrag>
         struct OrthogonalCheck
-            : public std::conditional_t<
+            : public conditional_t<
                   MatrixLayout::detail::OrthogonalCheck<
                       typename GetIOConfig_t<LhsFrag>::IOLayout::MatrixLayout,
                       typename GetIOConfig_t<RhsFrag>::IOLayout::MatrixLayout>::value
@@ -62,8 +62,8 @@ namespace rocwmma
                       && MatrixLayout::detail::OrthogonalCheck<
                           typename GetCoopIOConfig_t<LhsFrag, 4u>::IOLayout::MatrixLayout,
                           typename GetCoopIOConfig_t<RhsFrag, 4u>::IOLayout::MatrixLayout>::value,
-                  std::true_type,
-                  std::false_type>
+                  true_type,
+                  false_type>
         {
         };
 
@@ -213,15 +213,15 @@ namespace rocwmma
     template <typename FragT>
     ROCWMMA_DEVICE static inline decltype(auto) applyTranspose(FragT&& frag)
     {
-        return detail::template ApplyTranspose<std::decay_t<FragT>>::exec(
-            std::forward<FragT>(frag));
+        return detail::template ApplyTranspose<decay_t<FragT>>::exec(
+            forward<FragT>(frag));
     }
 
     template <typename DataLayoutT, typename FragT>
     ROCWMMA_DEVICE static inline decltype(auto) applyDataLayout(FragT&& frag)
     {
-        return detail::template ApplyDataLayout<std::decay_t<FragT>, DataLayoutT>::exec(
-            std::forward<FragT>(frag));
+        return detail::template ApplyDataLayout<decay_t<FragT>, DataLayoutT>::exec(
+            forward<FragT>(frag));
     }
 
 } // namespace rocwmma

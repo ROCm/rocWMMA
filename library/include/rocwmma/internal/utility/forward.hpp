@@ -24,46 +24,29 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_FORWARD_UTILITY_HPP
-#define ROCWMMA_FORWARD_UTILITY_HPP
+#ifndef ROCWMMA_UTILITY_FORWARD_HPP
+#define ROCWMMA_UTILITY_FORWARD_HPP
 
-#if !defined(__HIPCC_RTC__)
-#include <utility>
-#endif
-
-#include "../type_traits.hpp"
-namespace rocwmma
-{
-    namespace detail
-    {
-        template <typename T>
-        ROCWMMA_HOST_DEVICE constexpr T&&
-            forward(typename std::remove_reference<T>::type& t) noexcept
-        {
-            return static_cast<T&&>(t);
-        }
-
-        template <typename T>
-        ROCWMMA_HOST_DEVICE constexpr T&&
-            forward(typename std::remove_reference<T>::type&& t) noexcept
-        {
-            static_assert(!std::is_lvalue_reference<T>::value,
-                          "template argument substituting T is an lvalue reference type");
-            return static_cast<T&&>(t);
-        }
-    }
-}
-
-namespace rocwmma
-{
 #if defined(__HIPCC_RTC__) || defined(__clang__)
-    // Use custom rocwmma forward implementation for cases where STL is not available
+
+#include "forward_impl.hpp"
+namespace rocwmma
+{
+    // Use drop-in replacement
     using detail::forward;
 
-#else
-    // Use STL implementation otherwise
-    using std::forward;
-#endif // __HIPCC_RTC__
 } // namespace rocwmma
 
-#endif // ROCWMMA_FORWARD_UTILITY_HPP
+#else
+
+#include <utility>
+namespace rocwmma
+{
+    // Use STL
+    using std::forward;
+
+} // namespace rocwmma
+
+#endif // defined(__HIPCC_RTC__) || defined(__clang__)
+
+#endif // ROCWMMA_UTILITY_FORWARD_HPP
