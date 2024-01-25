@@ -106,14 +106,38 @@ namespace rocwmma
         struct Driver
         {
         private:
+            template <typename DataT,
+                      std::enable_if_t<sizeof(DataT) == sizeof(uint64_t), bool> = true>
+            ROCWMMA_DEVICE static inline auto dpp(DataT&& v0, DataT&& v1)
+            {
+                constexpr uint32_t B32VecSize = 2;
+                using B32VecT                 = VecT<uint32_t, B32VecSize>;
+
+                auto op = [](auto&& idx, auto&& v0, auto&& v1) {
+                    constexpr auto i = std::decay_t<decltype(idx)>::value;
+                    return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(v0.data[i],
+                                                                                        v1.data[i]);
+                };
+
+                auto dpp_result = vector_generator<uint32_t, B32VecSize>()(
+                    op, reinterpret_cast<B32VecT const&>(v0), reinterpret_cast<B32VecT const&>(v1));
+                return reinterpret_cast<DataT&>(dpp_result);
+            }
+
+            template <typename DataT,
+                      std::enable_if_t<sizeof(DataT) < sizeof(uint64_t), bool> = false>
+            ROCWMMA_DEVICE static inline auto dpp(DataT&& v0, DataT&& v1)
+            {
+                return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(
+                    std::forward<DataT>(v0), std::forward<DataT>(v1));
+            }
+
             template <typename DataT, uint32_t VecSize, uint32_t... Idx>
             ROCWMMA_DEVICE static inline auto forEach(VecT<DataT, VecSize> const& src,
                                                       detail::SeqT<Idx...>)
             {
                 static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{
-                    DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(get<Idx>(src),
-                                                                                 get<Idx>(src))...};
+                return VecT<DataT, VecSize>{dpp(get<Idx>(src), get<Idx>(src))...};
             }
 
             template <typename DataT, uint32_t VecSize, uint32_t... Idx>
@@ -122,9 +146,7 @@ namespace rocwmma
             {
                 static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
                 static_assert(sizeof(DataT) == sizeof(uint32_t), "Scalar must be 32b");
-                return VecT<DataT, VecSize>{
-                    DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(get<Idx>(src0),
-                                                                                 src1)...};
+                return VecT<DataT, VecSize>{dpp(get<Idx>(src0), src1)...};
             }
 
             template <typename DataT, uint32_t VecSize, uint32_t... Idx>
@@ -133,9 +155,7 @@ namespace rocwmma
                                                       detail::SeqT<Idx...>)
             {
                 static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{
-                    DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(
-                        get<Idx>(src0), get<Idx>(src1))...};
+                return VecT<DataT, VecSize>{dpp(get<Idx>(src0), get<Idx>(src1))...};
             }
 
         public:
@@ -155,7 +175,7 @@ namespace rocwmma
             template <typename DataT>
             ROCWMMA_DEVICE static inline auto exec(DataT const& src0, DataT const& src1)
             {
-                return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(src0, src1);
+                return dpp(src0, src1);
             }
 
             // Self as prev

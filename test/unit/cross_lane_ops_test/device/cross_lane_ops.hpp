@@ -44,16 +44,17 @@ namespace rocwmma
                                DataT        param1,
                                DataT        param2)
     {
-        // Each thread operates on 32b data
-        uint32_t*       write32Out = reinterpret_cast<uint32_t*>(out);
-        uint32_t const* read32In   = reinterpret_cast<uint32_t const*>(in);
-        uint32_t        prev       = static_cast<uint32_t>(param1);
+        using PackedT = typename PackTraits<DataT>::PackedT;
+        // Each thread operates on 32b or 64b data
+        PackedT*       writeOut = reinterpret_cast<PackedT*>(out);
+        PackedT const* readIn   = reinterpret_cast<PackedT const*>(in);
+        PackedT        prev     = static_cast<PackedT>(param1);
 
         // Get offset into 1D array where all threads are neighbours.
         auto dataOffset = blockIdx.x * blockDim.x + threadIdx.x;
-        write32Out[dataOffset]
+        writeOut[dataOffset]
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
-                read32In[dataOffset], prev);
+                readIn[dataOffset], prev);
     }
 
     template <typename DataT, typename CrossLaneOp>
@@ -65,13 +66,14 @@ namespace rocwmma
                                    DataT        param1,
                                    DataT        param2)
     {
-        // Each thread operates on 32b data
-        uint32_t*       write32Out = reinterpret_cast<uint32_t*>(out);
-        uint32_t const* read32In   = reinterpret_cast<uint32_t const*>(in);
+        using PackedT = typename PackTraits<DataT>::PackedT;
+        // Each thread operates on 32b or 64b data
+        PackedT*       writeOut = reinterpret_cast<PackedT*>(out);
+        PackedT const* readIn   = reinterpret_cast<PackedT const*>(in);
 
         // Get offset into 1D array where all threads are neighbours.
-        auto dataOffset        = blockIdx.x * blockDim.x + threadIdx.x;
-        write32Out[dataOffset] = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(read32In[dataOffset]);
+        auto dataOffset      = blockIdx.x * blockDim.x + threadIdx.x;
+        writeOut[dataOffset] = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(readIn[dataOffset]);
     }
 
     template <typename DataT, typename CrossLaneOp>
@@ -83,13 +85,14 @@ namespace rocwmma
                                    DataT        param1,
                                    DataT        param2)
     {
-        // Each thread operates on 32b data
-        uint32_t*       write32Out = reinterpret_cast<uint32_t*>(out);
-        uint32_t const* read32In   = reinterpret_cast<uint32_t const*>(in);
+        using PackedT = typename PackTraits<DataT>::PackedT;
+        // Each thread operates on 32b or 64b data
+        PackedT*       writeOut = reinterpret_cast<PackedT*>(out);
+        PackedT const* readIn   = reinterpret_cast<PackedT const*>(in);
 
         // Get offset into 1D array where all threads are neighbours.
-        auto dataOffset        = blockIdx.x * blockDim.x + threadIdx.x;
-        write32Out[dataOffset] = rocwmma::Permute::Driver<CrossLaneOp>::exec(read32In[dataOffset]);
+        auto dataOffset      = blockIdx.x * blockDim.x + threadIdx.x;
+        writeOut[dataOffset] = rocwmma::Permute::Driver<CrossLaneOp>::exec(readIn[dataOffset]);
     }
 
     template <typename DataT, typename CrossLaneOp>
@@ -101,15 +104,19 @@ namespace rocwmma
                                  DataT        param1,
                                  DataT        param2)
     {
-        // Each thread operates on 32b data
-        // Kernel uses out as src0 and in as src1, writing back to out
-        uint32_t*       write32Out = reinterpret_cast<uint32_t*>(out);
-        uint32_t const* read32In   = reinterpret_cast<uint32_t const*>(in);
+        if constexpr(sizeof(DataT) < sizeof(uint64_t)
+                     || CrossLaneOp::opId() != CrossLaneOps::Properties::OP_ID_PERM_BYTE)
+        {
+            using PackedT = typename PackTraits<DataT>::PackedT;
+            // Each thread operates on 32b or 64b data
+            PackedT*       writeOut = reinterpret_cast<PackedT*>(out);
+            PackedT const* readIn   = reinterpret_cast<PackedT const*>(in);
 
-        // Get offset into 1D array where all threads are neighbours.
-        auto dataOffset        = blockIdx.x * blockDim.x + threadIdx.x;
-        write32Out[dataOffset] = rocwmma::Blend::Driver<CrossLaneOp>::exec(write32Out[dataOffset],
-                                                                           read32In[dataOffset]);
+            // Get offset into 1D array where all threads are neighbours.
+            auto dataOffset      = blockIdx.x * blockDim.x + threadIdx.x;
+            writeOut[dataOffset] = rocwmma::Blend::Driver<CrossLaneOp>::exec(writeOut[dataOffset],
+                                                                             readIn[dataOffset]);
+        }
     }
 
 } // namespace rocwmma

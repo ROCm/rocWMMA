@@ -39,12 +39,36 @@ namespace rocwmma
         struct Driver
         {
         private:
+            template <typename DataT,
+                      std::enable_if_t<sizeof(DataT) == sizeof(uint64_t), bool> = true>
+            ROCWMMA_DEVICE static inline auto permute(DataT&& v, uint32_t laneId)
+            {
+                constexpr uint32_t B32VecSize = 2;
+                using B32VecT                 = VecT<uint32_t, B32VecSize>;
+
+                auto op = [](auto&& idx, auto&& v, uint32_t laneId) {
+                    constexpr auto i = std::decay_t<decltype(idx)>::value;
+                    return PermuteOp::exec(v.data[i], laneId);
+                };
+
+                auto permute_result = vector_generator<uint32_t, B32VecSize>()(
+                    op, reinterpret_cast<B32VecT const&>(v), laneId);
+                return reinterpret_cast<DataT&>(permute_result);
+            }
+
+            template <typename DataT,
+                      std::enable_if_t<sizeof(DataT) < sizeof(uint64_t), bool> = false>
+            ROCWMMA_DEVICE static inline auto permute(DataT&& v, uint32_t laneId)
+            {
+                return PermuteOp::exec(std::forward<DataT>(v), laneId);
+            }
+
             template <typename DataT, uint32_t VecSize, uint32_t... Idx>
             ROCWMMA_DEVICE static inline auto
                 forEach(VecT<DataT, VecSize> const& src, uint32_t laneId, detail::SeqT<Idx...>)
             {
                 static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{PermuteOp::exec(get<Idx>(src), laneId)...};
+                return VecT<DataT, VecSize>{permute(get<Idx>(src), laneId)...};
             }
 
         public:
@@ -62,7 +86,7 @@ namespace rocwmma
             template <typename DataT>
             ROCWMMA_DEVICE static inline auto exec(DataT const& src)
             {
-                return PermuteOp::exec(src, detail::WaveSpace<>::localLaneId());
+                return permute(src, detail::WaveSpace<>::localLaneId());
             }
 
             template <typename DataT, uint32_t VecSize>

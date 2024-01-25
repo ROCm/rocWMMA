@@ -70,12 +70,36 @@ namespace rocwmma
         struct Driver
         {
         private:
+            template <typename DataT,
+                      std::enable_if_t<sizeof(DataT) == sizeof(uint64_t), bool> = true>
+            ROCWMMA_DEVICE static inline auto swizzle(DataT&& v)
+            {
+                constexpr uint32_t B32VecSize = 2;
+                using B32VecT                 = VecT<uint32_t, B32VecSize>;
+
+                auto op = [](auto&& idx, auto&& v) {
+                    constexpr auto i = std::decay_t<decltype(idx)>::value;
+                    return SwizzleOp::exec(v.data[i]);
+                };
+
+                auto swizzle_result = vector_generator<uint32_t, B32VecSize>()(
+                    op, reinterpret_cast<B32VecT const&>(v));
+                return reinterpret_cast<DataT&>(swizzle_result);
+            }
+
+            template <typename DataT,
+                      std::enable_if_t<sizeof(DataT) < sizeof(uint64_t), bool> = false>
+            ROCWMMA_DEVICE static inline auto swizzle(DataT&& v)
+            {
+                return SwizzleOp::exec(std::forward<DataT>(v));
+            }
+
             template <typename DataT, uint32_t VecSize, uint32_t... Idx>
             ROCWMMA_DEVICE static inline auto forEach(VecT<DataT, VecSize> const& src,
                                                       detail::SeqT<Idx...>)
             {
                 static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{SwizzleOp::exec(get<Idx>(src))...};
+                return VecT<DataT, VecSize>{swizzle(get<Idx>(src))...};
             }
 
         public:
@@ -93,7 +117,7 @@ namespace rocwmma
             template <typename DataT>
             ROCWMMA_DEVICE static inline auto exec(DataT const& src)
             {
-                return SwizzleOp::exec(src);
+                return swizzle(src);
             }
 
             template <typename DataT, uint32_t VecSize>
