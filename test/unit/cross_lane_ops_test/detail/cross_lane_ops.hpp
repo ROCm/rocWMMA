@@ -30,6 +30,7 @@
 #include "device/cross_lane_ops.hpp"
 #include "reference.hpp"
 #include "unit_kernel_base.hpp"
+#include <rocwmma/internal/pack_util.hpp>
 
 namespace rocwmma
 {
@@ -56,11 +57,10 @@ namespace rocwmma
         dim3 gridDim() const final
         {
             // Need to address the input array as 32b elements per thread.
-            auto x
-                = dim3(static_cast<uint32_t>(roundf(static_cast<float32_t>(sizeof(DataT))
-                                                    / static_cast<float32_t>(sizeof(uint32_t))
-                                                    * static_cast<float32_t>(Base::mM * Base::mN)))
-                       / Base::mTBlockX);
+            auto x = dim3(static_cast<uint32_t>(
+                              roundf(static_cast<float32_t>(Base::mM * Base::mN)
+                                     / static_cast<float32_t>(PackTraits<DataT>::PackRatio)))
+                          / Base::mTBlockX);
 
             return x;
         }
@@ -107,8 +107,13 @@ namespace rocwmma
                 = !(isGfx11 && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
                     && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_WFALL_BCAST));
 
+            // blend bytes can only be applied on two 32 bits src0 and src1
+            bool blendBytesNotIn64Bits
+                = (CrossLaneOp::opId() != CrossLaneOps::Properties::OP_ID_PERM_BYTE)
+                  || sizeof(DataT) < sizeof(uint64_t);
+
             return Base::checkDevice() && dppBCast16Check && dppWaveShiftCheck && dppWaveRotateCheck
-                   && dppWaterfallBCastCheck;
+                   && dppWaterfallBCastCheck && blendBytesNotIn64Bits;
         }
 
         std::ostream& printHeader(std::ostream& stream = std::cout) const final
