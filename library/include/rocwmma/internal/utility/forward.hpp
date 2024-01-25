@@ -27,7 +27,6 @@
 #ifndef ROCWMMA_UTILITY_FORWARD_HPP
 #define ROCWMMA_UTILITY_FORWARD_HPP
 
-
 #if defined(__HIPCC_RTC__) || defined(__clang__)
 
 #include "forward_impl.hpp"
