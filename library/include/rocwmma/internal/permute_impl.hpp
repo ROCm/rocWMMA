@@ -91,19 +91,12 @@ namespace rocwmma
                 template <typename InputT>
                 ROCWMMA_DEVICE static inline InputT exec(InputT input, uint32_t laneId)
                 {
-                    static_assert(sizeof(InputT) >= sizeof(uint32_t)
-                                      && sizeof(InputT) % sizeof(uint32_t) == 0,
-                                  "The minimum unit of the Permute  operation should be 32 bits");
-                    constexpr size_t VecSize = sizeof(InputT) / sizeof(uint32_t);
-                    auto             permute = [laneId](auto&& idx, auto&& v0) {
-                        constexpr auto i = std::decay_t<decltype(idx)>::value;
-                        return __builtin_amdgcn_ds_permute(
-                            (PermuteCtrl::threadCtrl(laneId) << 2),
-                            reinterpret_cast<uint32_t const*>(&v0)[i]);
-                    };
-
-                    auto permute_input = vector_generator<uint32_t, VecSize>()(permute, input);
-                    return *(reinterpret_cast<InputT*>(&permute_input));
+                    static_assert(sizeof(InputT) == sizeof(uint32_t),
+                                  "The unit of the Permute  operation should be 32 bits");
+                    reinterpret_cast<uint32_t&>(input)
+                        = __builtin_amdgcn_ds_permute((PermuteCtrl::threadCtrl(laneId) << 2),
+                                                      reinterpret_cast<uint32_t const&>(input));
+                    return input;
                 }
             };
 

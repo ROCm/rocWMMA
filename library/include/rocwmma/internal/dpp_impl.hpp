@@ -104,23 +104,16 @@ namespace rocwmma
                           typename DataT>
                 ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1)
                 {
-                    static_assert(sizeof(DataT) >= sizeof(uint32_t)
-                                      && sizeof(DataT) % sizeof(uint32_t) == 0,
-                                  "The minimum unit of the DPP operation should be 32 bits");
-                    constexpr size_t VecSize = sizeof(DataT) / sizeof(uint32_t);
-                    auto             dpp     = [](auto&& idx, auto&& v0, auto&& v1) {
-                        constexpr auto i = std::decay_t<decltype(idx)>::value;
-                        return __builtin_amdgcn_update_dpp(
-                            reinterpret_cast<uint32_t const*>(&v1)[i], // fill value 'prev'
-                            reinterpret_cast<uint32_t const*>(&v0)[i], // Src value
-                            DppCtrl::opCtrl(), // DPP control code
-                            WriteRowMask, // Mask for affected rows
-                            WriteBankMask, // Mask for affected banks
-                            BoundCtrl); // Fill in 0 on invalid indices
-                    };
-
-                    auto dpp_result = vector_generator<uint32_t, VecSize>()(dpp, src0, src1);
-                    return *(reinterpret_cast<DataT*>(&dpp_result));
+                    static_assert(sizeof(DataT) == sizeof(uint32_t),
+                                  "The unit of the DPP operation should be 32 bits");
+                    reinterpret_cast<int32_t&>(src0) = __builtin_amdgcn_update_dpp(
+                        reinterpret_cast<int32_t const&>(src1), // fill value 'prev'
+                        reinterpret_cast<int32_t const&>(src0), // Src value
+                        DppCtrl::opCtrl(), // DPP control code
+                        WriteRowMask, // Mask for affected rows
+                        WriteBankMask, // Mask for affected banks
+                        BoundCtrl); // Fill in 0 on invalid indices
+                    return src0;
                 }
             };
 
