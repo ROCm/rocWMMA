@@ -105,8 +105,8 @@ namespace rocwmma
     {
         auto absDiff = std::fabs(__half2float(x) - __half2float(y));
         auto absAdd  = std::fabs(__half2float(x) + __half2float(y));
-        return absDiff <= __half2float(std::numeric_limits<hfloat16_t>::epsilon()) * absAdd * 2.0f
-               || absDiff < __half2float(std::numeric_limits<hfloat16_t>::min());
+        return absDiff <= __half2float(numeric_limits<hfloat16_t>::epsilon()) * absAdd * 2.0f
+               || absDiff < __half2float(numeric_limits<hfloat16_t>::min());
     }
 
     ROCWMMA_HALF_OP_ATTR inline bool operator!=(const hfloat16_t& x, const hfloat16_t& y)

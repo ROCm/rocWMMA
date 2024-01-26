@@ -124,38 +124,22 @@ namespace rocwmma
     } // namespace detail
 } // namespace rocwmma
 
-///////////////////////////////////////////////////////////
-/////////////  std replacements for hipRTC  ///////////////
-///////////////////////////////////////////////////////////
-#if defined(__HIPCC_RTC__)
-namespace std
-{
-    template <typename T>
-    class numeric_limits
-    {
-    public:
-        ROCWMMA_HOST_DEVICE static constexpr T min() noexcept;
-        ROCWMMA_HOST_DEVICE static constexpr T lowest() noexcept;
-        ROCWMMA_HOST_DEVICE static constexpr T max() noexcept;
-        ROCWMMA_HOST_DEVICE static constexpr T epsilon() noexcept;
-        ROCWMMA_HOST_DEVICE static constexpr T round_error() noexcept;
-        ROCWMMA_HOST_DEVICE static constexpr T infinity() noexcept;
-        ROCWMMA_HOST_DEVICE static constexpr T quiet_NaN() noexcept;
-        ROCWMMA_HOST_DEVICE static constexpr T signaling_NaN() noexcept;
-        ROCWMMA_HOST_DEVICE static constexpr T denorm_min() noexcept;
-    };
+#include "utility/numeric_limits.hpp"
 
-} // namespace std
+#if defined(__HIPCC_RTC__)
+#define NUMERIC_LIMITS_NAMESPACE rocwmma::detail
+#else
+#define NUMERIC_LIMITS_NAMESPACE std
 #endif
 
-namespace std
+namespace NUMERIC_LIMITS_NAMESPACE
 {
 #if defined(__HIPCC_RTC__)
     using uint16_t = rocwmma::uint16_t;
 #endif
 
     ///////////////////////////////////////////////////////////
-    ///////////  std::numeric_limits<float8_t>  //////////////
+    ///////////  numeric_limits<rocwmma::float8_t>  //////////////
     ///////////////////////////////////////////////////////////
     // @cond
     template <>
@@ -215,7 +199,7 @@ namespace std
     }
 
     ///////////////////////////////////////////////////////////
-    ///////////  std::numeric_limits<bfloat8_t>  //////////////
+    ///////////  numeric_limits<bfloat8_t>  //////////////
     ///////////////////////////////////////////////////////////
 
     template <>
@@ -275,7 +259,7 @@ namespace std
     }
 
     ///////////////////////////////////////////////////////////
-    ///////////  std::numeric_limits<float16_t>  //////////////
+    ///////////  numeric_limits<float16_t>  //////////////
     ///////////////////////////////////////////////////////////
 
     template <>
@@ -335,7 +319,7 @@ namespace std
     }
 
     ///////////////////////////////////////////////////////////
-    ///////////  std::numeric_limits<hfloat16_t>  /////////////
+    ///////////  numeric_limits<hfloat16_t>  /////////////
     ///////////////////////////////////////////////////////////
 #if !ROCWMMA_NO_HALF
     template <>
@@ -397,7 +381,7 @@ namespace std
 #endif // !ROCWMMA_NO_HALF
 
     ///////////////////////////////////////////////////////////
-    ///////////  std::numeric_limits<bfloat16_t>  /////////////
+    ///////////  numeric_limits<bfloat16_t>  /////////////
     ///////////////////////////////////////////////////////////
 
     template <>
@@ -457,7 +441,7 @@ namespace std
     }
 
     ///////////////////////////////////////////////////////////
-    ///////////  std::numeric_limits<xfloat32_t>  //////////////
+    ///////////  numeric_limits<xfloat32_t>  //////////////
     ///////////////////////////////////////////////////////////
 
     template <>
@@ -517,28 +501,27 @@ namespace std
     }
     // @endcond
 
-} // namespace std
+} // namespace rocwmma
 
 namespace rocwmma
 {
 #if !defined(__HIPCC_RTC__)
     template <typename T, typename std::enable_if_t<std::is_integral<T>::value, int> = 0>
-    constexpr auto maxExactInteger() -> decltype(std::numeric_limits<T>::max())
+    constexpr auto maxExactInteger() -> decltype(numeric_limits<T>::max())
     {
-        return std::numeric_limits<T>::max();
+        return numeric_limits<T>::max();
     }
 
     template <typename T,
-              typename std::enable_if_t<std::is_floating_point<T>::value
-                                            && std::numeric_limits<T>::digits,
-                                        int>
+              typename std::
+                  enable_if_t<std::is_floating_point<T>::value && numeric_limits<T>::digits, int>
               = 0>
     constexpr auto maxExactInteger() ->
         typename std::conditional_t<std::is_same<T, float64_t>::value, int64_t, int32_t>
     {
         using RetT =
             typename std::conditional_t<std::is_same<T, float64_t>::value, int64_t, int32_t>;
-        return ((RetT)1 << std::numeric_limits<T>::digits);
+        return ((RetT)1 << numeric_limits<T>::digits);
     }
 
     template <typename T,
@@ -562,7 +545,8 @@ namespace rocwmma
         return ((int32_t)1 << 8);
     }
 
-    template <typename T, typename std::enable_if_t<std::is_same<T, float8_t>::value, int> = 0>
+    template <typename T,
+              typename std::enable_if_t<std::is_same<T, rocwmma::float8_t>::value, int> = 0>
     constexpr auto maxExactInteger() -> int32_t
     {
         // f8 mantissa is 3 bits
