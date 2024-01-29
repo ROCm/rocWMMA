@@ -34,11 +34,11 @@
 using uint8_t  = __hip_internal::uint8_t;
 using uint16_t = __hip_internal::uint16_t;
 
-namespace std
-{
-    template <bool B, class T, class F>
-    struct conditional;
-}
+// namespace std
+// {
+//     template <bool B, class T, class F>
+//     struct conditional;
+// }
 
 #endif
 
@@ -771,7 +771,7 @@ inline ROCWMMA_HOST_DEVICE bool operator!=(rocwmma_bf8 a, rocwmma_bf8 b)
 template <typename T,
           typename Ta,
           bool stochastic_rounding,
-          typename std::enable_if<std::is_same<T, Ta>{}, int>::type = 0>
+          typename rocwmma::enable_if<rocwmma::is_same<T, Ta>{}, int>::type = 0>
 inline ROCWMMA_HOST_DEVICE T explicit_downcast(Ta a)
 {
     // same type, no conversion
@@ -779,20 +779,20 @@ inline ROCWMMA_HOST_DEVICE T explicit_downcast(Ta a)
 }
 
 // Use h/w intrinsic and optimized version when __gfx940__
-template <
-    typename T,
-    typename Ta,
-    bool stochastic_rounding,
-    typename std::enable_if<(!(std::is_same<T, Ta>{})
-                             && (std::is_same<T, rocwmma_f8>{} || std::is_same<T, rocwmma_bf8>{})),
-                            int>::type
-    = 0>
+template <typename T,
+          typename Ta,
+          bool stochastic_rounding,
+          typename rocwmma::enable_if<(!(rocwmma::is_same<T, Ta>{})
+                                       && (rocwmma::is_same<T, rocwmma_f8>{}
+                                           || rocwmma::is_same<T, rocwmma_bf8>{})),
+                                      int>::type
+          = 0>
 inline ROCWMMA_HOST_DEVICE T explicit_downcast(Ta a, uint32_t rng)
 {
 #if ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
     // NOTE: we are directly calling cast_to_f8_from_f32 instead of constructor to optimize away one runtime branch
     T val;
-    if(std::is_same<T, rocwmma_f8>::value)
+    if(rocwmma::is_same<T, rocwmma_f8>::value)
     {
         val.data = rocwmma_f8::cast_to_f8_from_f32<stochastic_rounding>(float(a), rng);
     }
@@ -811,14 +811,14 @@ inline ROCWMMA_HOST_DEVICE T explicit_downcast(Ta a, uint32_t rng)
 
 // NOTE NOTE: The above code is good if we don't consider HIP-GEMM code and only consider the quantization
 // However, if we need HIP-GEMM for fall-back, we would need explicit_cast handles Tacc=f32 to To=f16/bf16 conversion
-template <
-    typename T,
-    typename Ta,
-    bool stochastic_rounding,
-    typename std::enable_if<(!(std::is_same<T, Ta>{})
-                             && !(std::is_same<T, rocwmma_f8>{} || std::is_same<T, rocwmma_bf8>{})),
-                            int>::type
-    = 0>
+template <typename T,
+          typename Ta,
+          bool stochastic_rounding,
+          typename rocwmma::enable_if<(!(rocwmma::is_same<T, Ta>{})
+                                       && !(rocwmma::is_same<T, rocwmma_f8>{}
+                                            || rocwmma::is_same<T, rocwmma_bf8>{})),
+                                      int>::type
+          = 0>
 inline ROCWMMA_HOST_DEVICE T explicit_downcast(Ta a, uint32_t rng)
 {
     // the return type is not a F8 types, no SR for those types
