@@ -33,14 +33,12 @@
 
 #endif // !defined(__HIPCC_RTC__)
 
-#include "utils.hpp"
 #include "utility/forward.hpp"
+#include "utility/sequence.hpp"
+#include "utils.hpp"
 
 namespace rocwmma
 {
-    using detail::index_sequence;
-    using detail::make_index_sequence;
-
     template <typename VecT, unsigned int Rank, typename U>
     ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<VecT, Rank>
         operator+(non_native_vector_base<VecT, Rank> const& x, U y) noexcept
@@ -256,11 +254,11 @@ namespace rocwmma
             };
 
             auto div = decay_t<Coord1d>{1};
-            return reverse(make_vector(inflate(
-                forward<Coord1d>(flatCoord),
-                get<VecTraits<decay_t<VecT>>::size() - 1 - Indices>(forward<VecT>(dims)),
-                forward<decltype(div)&>(div),
-                Indices == sizeof...(Indices) - 1)...));
+            return reverse(make_vector(
+                inflate(forward<Coord1d>(flatCoord),
+                        get<VecTraits<decay_t<VecT>>::size() - 1 - Indices>(forward<VecT>(dims)),
+                        forward<decltype(div)&>(div),
+                        Indices == sizeof...(Indices) - 1)...));
         }
     }
 
