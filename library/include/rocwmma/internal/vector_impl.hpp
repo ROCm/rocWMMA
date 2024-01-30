@@ -27,6 +27,7 @@
 #ifndef ROCWMMA_VECTOR_IMPL_HPP
 #define ROCWMMA_VECTOR_IMPL_HPP
 
+#include "utility/sequence.hpp"
 #include "vector.hpp"
 
 namespace rocwmma
@@ -69,8 +70,7 @@ namespace rocwmma
             };
             struct Mod
             {
-                template <typename TT,
-                          typename enable_if<is_integral<TT>{}>::type* = nullptr>
+                template <typename TT, typename enable_if<is_integral<TT>{}>::type* = nullptr>
                 ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs, TT rhs)
                 {
                     return lhs % rhs;
@@ -78,8 +78,7 @@ namespace rocwmma
             };
             struct Minus
             {
-                template <typename TT,
-                          typename enable_if<is_signed<TT>{}>::type* = nullptr>
+                template <typename TT, typename enable_if<is_signed<TT>{}>::type* = nullptr>
                 ROCWMMA_HOST_DEVICE constexpr static inline auto exec(TT lhs)
                 {
                     return -lhs;
@@ -92,8 +91,7 @@ namespace rocwmma
         {
             struct And
             {
-                template <typename TT,
-                          typename enable_if<is_integral<TT>{}>::type* = nullptr>
+                template <typename TT, typename enable_if<is_integral<TT>{}>::type* = nullptr>
                 ROCWMMA_HOST_DEVICE constexpr static inline TT exec(TT lhs, TT rhs)
                 {
                     return lhs & rhs;
@@ -102,8 +100,7 @@ namespace rocwmma
 
             struct Or
             {
-                template <typename TT,
-                          typename enable_if<is_integral<TT>{}>::type* = nullptr>
+                template <typename TT, typename enable_if<is_integral<TT>{}>::type* = nullptr>
                 ROCWMMA_HOST_DEVICE constexpr static inline TT exec(TT lhs, TT rhs)
                 {
                     return lhs | rhs;
@@ -112,8 +109,7 @@ namespace rocwmma
 
             struct Not
             {
-                template <typename TT,
-                          typename enable_if<is_integral<TT>{}>::type* = nullptr>
+                template <typename TT, typename enable_if<is_integral<TT>{}>::type* = nullptr>
                 ROCWMMA_HOST_DEVICE constexpr static inline TT exec(TT lhs)
                 {
                     return ~lhs;
@@ -122,8 +118,7 @@ namespace rocwmma
 
             struct Xor
             {
-                template <typename TT,
-                          typename enable_if<is_integral<TT>{}>::type* = nullptr>
+                template <typename TT, typename enable_if<is_integral<TT>{}>::type* = nullptr>
                 ROCWMMA_HOST_DEVICE constexpr static inline TT exec(TT lhs, TT rhs)
                 {
                     return lhs ^ rhs;
@@ -132,8 +127,7 @@ namespace rocwmma
 
             struct ShiftR
             {
-                template <typename TT,
-                          typename enable_if<is_integral<TT>{}>::type* = nullptr>
+                template <typename TT, typename enable_if<is_integral<TT>{}>::type* = nullptr>
                 ROCWMMA_HOST_DEVICE constexpr static inline TT exec(TT lhs, TT rhs)
                 {
                     return lhs >> rhs;
@@ -142,8 +136,7 @@ namespace rocwmma
 
             struct ShiftL
             {
-                template <typename TT,
-                          typename enable_if<is_integral<TT>{}>::type* = nullptr>
+                template <typename TT, typename enable_if<is_integral<TT>{}>::type* = nullptr>
                 ROCWMMA_HOST_DEVICE constexpr static inline TT exec(TT lhs, TT rhs)
                 {
                     return lhs >> rhs;
@@ -243,66 +236,6 @@ namespace rocwmma
             };
 
         } // namespace RelationalOp
-
-        template <typename Int, Int... Ints>
-        struct integer_sequence
-        {
-            using value_type = Int;
-            constexpr integer_sequence() {}
-            static constexpr size_t size() noexcept
-            {
-                return sizeof...(Ints);
-            }
-        };
-
-        template <size_t... Indices>
-        using index_sequence = integer_sequence<size_t, Indices...>;
-
-        namespace
-        {
-            // Merge two integer sequences, adding an offset to the right-hand side.
-            template <typename Offset, typename Lhs, typename Rhs>
-            struct merge;
-
-            template <typename Int, Int Offset, Int... Lhs, Int... Rhs>
-            struct merge<integral_constant<Int, Offset>,
-                         integer_sequence<Int, Lhs...>,
-                         integer_sequence<Int, Rhs...>>
-            {
-                using type = integer_sequence<Int, Lhs..., (Offset + Rhs)...>;
-            };
-
-            template <typename Int, typename N>
-            struct log_make_sequence
-            {
-                using L    = integral_constant<Int, N::value / 2>;
-                using R    = integral_constant<Int, N::value - L::value>;
-                using type = typename merge<L,
-                                            typename log_make_sequence<Int, L>::type,
-                                            typename log_make_sequence<Int, R>::type>::type;
-            };
-
-            // An empty sequence.
-            template <typename Int>
-            struct log_make_sequence<Int, integral_constant<Int, 0>>
-            {
-                using type = integer_sequence<Int>;
-            };
-
-            // A single-element sequence.
-            template <typename Int>
-            struct log_make_sequence<Int, integral_constant<Int, 1>>
-            {
-                using type = integer_sequence<Int, 0>;
-            };
-        }
-
-        template <typename Int, Int N>
-        using make_integer_sequence =
-            typename log_make_sequence<Int, integral_constant<Int, N>>::type;
-
-        template <size_t N>
-        using make_index_sequence = make_integer_sequence<size_t, N>;
 
         // Helpers for expression expansion, specific to non_native_vector_base
         template <uint32_t... ns>
@@ -644,44 +577,43 @@ namespace rocwmma
 /// OR native vector extension. The latter doesn't have the required built-in broadcast.     ///
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define ROCWMMA_REGISTER_HIP_VECTOR_BASE(TYPE, RANK, STORAGE_IMPL)                             \
-    template <>                                                                                \
-    struct HIP_vector_base<TYPE, RANK>                                                         \
-    {                                                                                          \
-        STORAGE_IMPL(TYPE, RANK);                                                              \
-                                                                                               \
-        using value_type = TYPE;                                                               \
-                                                                                               \
-        ROCWMMA_HOST_DEVICE                                                                    \
-        HIP_vector_base() = default;                                                           \
-        template <typename... ArgsT,                                                           \
-                  typename U                                                 = TYPE,           \
-                  rocwmma::enable_if_t<(sizeof...(ArgsT) == RANK)>* = nullptr>        \
-        ROCWMMA_HOST_DEVICE constexpr HIP_vector_base(ArgsT... args) noexcept                  \
-            : data{args...}                                                                    \
-        {                                                                                      \
-        }                                                                                      \
-                                                                                               \
-        template <                                                                             \
-            typename U                                                              = TYPE,    \
-            rocwmma::enable_if_t<(rocwmma::is_same<U, TYPE>{}) && (RANK > 1)>* = nullptr> \
-        ROCWMMA_HOST_DEVICE constexpr explicit HIP_vector_base(TYPE val) noexcept              \
-            : HIP_vector_base(rocwmma::detail::template bCast<HIP_vector_base>(                \
-                val, rocwmma::detail::Seq<RANK>{}))                                            \
-        {                                                                                      \
-        }                                                                                      \
-                                                                                               \
-        ROCWMMA_HOST_DEVICE                                                                    \
-        constexpr HIP_vector_base(const HIP_vector_base&) = default;                           \
-                                                                                               \
-        ROCWMMA_HOST_DEVICE                                                                    \
-        constexpr HIP_vector_base(HIP_vector_base&&) = default;                                \
-                                                                                               \
-        ROCWMMA_HOST_DEVICE                                                                    \
-        ~HIP_vector_base() = default;                                                          \
-                                                                                               \
-        ROCWMMA_HOST_DEVICE                                                                    \
-        HIP_vector_base& operator=(const HIP_vector_base& x_) noexcept = default;              \
+#define ROCWMMA_REGISTER_HIP_VECTOR_BASE(TYPE, RANK, STORAGE_IMPL)                              \
+    template <>                                                                                 \
+    struct HIP_vector_base<TYPE, RANK>                                                          \
+    {                                                                                           \
+        STORAGE_IMPL(TYPE, RANK);                                                               \
+                                                                                                \
+        using value_type = TYPE;                                                                \
+                                                                                                \
+        ROCWMMA_HOST_DEVICE                                                                     \
+        HIP_vector_base() = default;                                                            \
+        template <typename... ArgsT,                                                            \
+                  typename U                                        = TYPE,                     \
+                  rocwmma::enable_if_t<(sizeof...(ArgsT) == RANK)>* = nullptr>                  \
+        ROCWMMA_HOST_DEVICE constexpr HIP_vector_base(ArgsT... args) noexcept                   \
+            : data{args...}                                                                     \
+        {                                                                                       \
+        }                                                                                       \
+                                                                                                \
+        template <typename U                                                         = TYPE,    \
+                  rocwmma::enable_if_t<(rocwmma::is_same<U, TYPE>{}) && (RANK > 1)>* = nullptr> \
+        ROCWMMA_HOST_DEVICE constexpr explicit HIP_vector_base(TYPE val) noexcept               \
+            : HIP_vector_base(rocwmma::detail::template bCast<HIP_vector_base>(                 \
+                val, rocwmma::detail::Seq<RANK>{}))                                             \
+        {                                                                                       \
+        }                                                                                       \
+                                                                                                \
+        ROCWMMA_HOST_DEVICE                                                                     \
+        constexpr HIP_vector_base(const HIP_vector_base&) = default;                            \
+                                                                                                \
+        ROCWMMA_HOST_DEVICE                                                                     \
+        constexpr HIP_vector_base(HIP_vector_base&&) = default;                                 \
+                                                                                                \
+        ROCWMMA_HOST_DEVICE                                                                     \
+        ~HIP_vector_base() = default;                                                           \
+                                                                                                \
+        ROCWMMA_HOST_DEVICE                                                                     \
+        HIP_vector_base& operator=(const HIP_vector_base& x_) noexcept = default;               \
     };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
