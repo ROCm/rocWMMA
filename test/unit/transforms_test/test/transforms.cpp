@@ -87,18 +87,18 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class TransfromsTest : public rocwmma::UnitTest
+class TransformsTest : public rocwmma::UnitTest
 {
 };
 
-TEST_P(TransfromsTest, RunKernel)
+TEST_P(TransformsTest, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(
     KernelTests,
-    TransfromsTest,
+    TransformsTest,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
                        ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
