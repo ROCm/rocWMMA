@@ -123,7 +123,8 @@ namespace rocwmma
             template <typename DataT, uint32_t VecSize>
             ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src)
             {
-#if ROCWMMA_ARCH_GFX1102
+// #if ROCWMMA_ARCH_GFX1102
+#if 0
                 VecT<DataT, VecSize> result;
                 auto const           itR = makeVectorIterator(src).begin();
                 auto                 itW = makeVectorIterator(result).begin();
