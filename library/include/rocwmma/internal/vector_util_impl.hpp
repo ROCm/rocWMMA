@@ -36,7 +36,7 @@ namespace rocwmma
     namespace detail
     {
         template <uint32_t N>
-        using Number = detail::integral_constant<int32_t, N>;
+        using Number = integral_constant<int32_t, N>;
 
         // Can be used to build any vector class of <DataT, VecSize>
         // Either VecT or non_native_vector_vase.
