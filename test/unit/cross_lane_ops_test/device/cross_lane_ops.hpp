@@ -104,6 +104,8 @@ namespace rocwmma
                                  DataT        param1,
                                  DataT        param2)
     {
+        // f64 is not supported by cross-lane permute_byte
+        // f64 is supported by cross-lane permute_element
         if constexpr(sizeof(DataT) < sizeof(uint64_t)
                      || CrossLaneOp::opId() != CrossLaneOps::Properties::OP_ID_PERM_BYTE)
         {

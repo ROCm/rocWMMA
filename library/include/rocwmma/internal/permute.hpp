@@ -43,7 +43,7 @@ namespace rocwmma
                       std::enable_if_t<sizeof(DataT) == sizeof(uint64_t), bool> = true>
             ROCWMMA_DEVICE static inline auto permute(DataT&& v, uint32_t laneId)
             {
-                constexpr uint32_t B32VecSize = 2;
+                constexpr uint32_t B32VecSize = sizeof(DataT) / sizeof(uint32_t);
                 using B32VecT                 = VecT<uint32_t, B32VecSize>;
 
                 auto op = [](auto&& idx, auto&& v, uint32_t laneId) {
@@ -57,7 +57,7 @@ namespace rocwmma
             }
 
             template <typename DataT,
-                      std::enable_if_t<sizeof(DataT) < sizeof(uint64_t), bool> = false>
+                      std::enable_if_t<sizeof(DataT) != sizeof(uint64_t), bool> = false>
             ROCWMMA_DEVICE static inline auto permute(DataT&& v, uint32_t laneId)
             {
                 return PermuteOp::exec(std::forward<DataT>(v), laneId);

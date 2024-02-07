@@ -74,7 +74,7 @@ namespace rocwmma
                       std::enable_if_t<sizeof(DataT) == sizeof(uint64_t), bool> = true>
             ROCWMMA_DEVICE static inline auto swizzle(DataT&& v)
             {
-                constexpr uint32_t B32VecSize = 2;
+                constexpr uint32_t B32VecSize = sizeof(DataT) / sizeof(uint32_t);
                 using B32VecT                 = VecT<uint32_t, B32VecSize>;
 
                 auto op = [](auto&& idx, auto&& v) {
@@ -88,7 +88,7 @@ namespace rocwmma
             }
 
             template <typename DataT,
-                      std::enable_if_t<sizeof(DataT) < sizeof(uint64_t), bool> = false>
+                      std::enable_if_t<sizeof(DataT) != sizeof(uint64_t), bool> = false>
             ROCWMMA_DEVICE static inline auto swizzle(DataT&& v)
             {
                 return SwizzleOp::exec(std::forward<DataT>(v));
