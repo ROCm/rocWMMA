@@ -304,8 +304,9 @@ namespace rocwmma
     template <>
     struct AosToSoa<64, 8>
     {
+#if ROCWMMA_WAVE64_MODE
         constexpr static uint32_t VW      = 8;
-        constexpr static uint32_t VecSize = 8;
+        constexpr static uint32_t VecSize = VW * (64 / Constants::AMDGCN_WAVE_SIZE);
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
@@ -337,13 +338,55 @@ namespace rocwmma
 
             return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
         }
+#elif ROCWMMA_WAVE32_MODE
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = VW * (64 / Constants::AMDGCN_WAVE_SIZE);
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            auto v0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractLo(v));
+            auto v1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractHi(v));
+
+            // Re-pack banks
+            auto repack_data = VecT<DataT, VecSize>{
+                v0.data[0],
+                v0.data[2],
+                v0.data[4],
+                v0.data[6],
+                v1.data[0],
+                v1.data[2],
+                v1.data[4],
+                v1.data[6],
+                v0.data[1],
+                v0.data[3],
+                v0.data[5],
+                v0.data[7],
+                v1.data[1],
+                v1.data[3],
+                v1.data[5],
+                v1.data[7],
+            };
+
+            return repack_data;
+        }
+#else // host code                                                              \
+        // This host code should not be called since it is marked as ROCWMMA_DEVICE \
+        // This code snippet exists since hipcc complains about the mismatched function
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, 1> const& v)
+        {
+            return v;
+        }
+#endif
     };
 
     template <>
     struct AosToSoa<128, 8>
     {
+#if ROCWMMA_WAVE64_MODE
         constexpr static uint32_t VW      = 8;
-        constexpr static uint32_t VecSize = 16;
+        constexpr static uint32_t VecSize = VW * (128 / Constants::AMDGCN_WAVE_SIZE);
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
@@ -447,6 +490,128 @@ namespace rocwmma
                 get<3>(result_b0), get<7>(result_b0), get<3>(result_b1), get<7>(result_b1),
                 get<3>(result_b2), get<7>(result_b2), get<3>(result_b3), get<7>(result_b3)};
         }
+#elif ROCWMMA_WAVE32_MODE
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = VW * (128 / Constants::AMDGCN_WAVE_SIZE);
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            auto lo = extractLo(v);
+            auto hi = extractHi(v);
+            auto v0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractLo(lo));
+            auto v1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractHi(lo));
+            auto v2 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractLo(hi));
+            auto v3 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractHi(hi));
+
+            // Re-pack banks
+            auto repack_data = VecT<DataT, VecSize>{
+                v0.data[0], v0.data[4], v1.data[0], v1.data[4], v2.data[0], v2.data[4], v3.data[0],
+                v3.data[4], v0.data[1], v0.data[5], v1.data[1], v1.data[5], v2.data[1], v2.data[5],
+                v3.data[1], v3.data[5], v0.data[2], v0.data[6], v1.data[2], v1.data[6], v2.data[2],
+                v2.data[6], v3.data[2], v3.data[6], v0.data[3], v0.data[7], v1.data[3], v1.data[7],
+                v2.data[3], v2.data[7], v3.data[3], v3.data[7],
+            };
+
+            return repack_data;
+        }
+#else // host code                                                              \
+        // This host code should not be called since it is marked as ROCWMMA_DEVICE \
+        // This code snippet exists since hipcc complains about the mismatched function
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, 1> const& v)
+        {
+            return v;
+        }
+#endif
+    };
+
+    template <>
+    struct AosToSoa<256, 8>
+    {
+#if ROCWMMA_WAVE64_MODE
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = VW * (256 / Constants::AMDGCN_WAVE_SIZE);
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            auto lo = extractLo(v);
+            auto hi = extractHi(v);
+            auto v0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractLo(lo));
+            auto v1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractHi(lo));
+            auto v2 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractLo(hi));
+            auto v3 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractHi(hi));
+
+            // Re-pack banks
+            auto repack_data = VecT<DataT, VecSize>{
+                v0.data[0], v0.data[4], v1.data[0], v1.data[4], v2.data[0], v2.data[4], v3.data[0],
+                v3.data[4], v0.data[1], v0.data[5], v1.data[1], v1.data[5], v2.data[1], v2.data[5],
+                v3.data[1], v3.data[5], v0.data[2], v0.data[6], v1.data[2], v1.data[6], v2.data[2],
+                v2.data[6], v3.data[2], v3.data[6], v0.data[3], v0.data[7], v1.data[3], v1.data[7],
+                v2.data[3], v2.data[7], v3.data[3], v3.data[7],
+            };
+            return repack_data;
+        }
+#elif ROCWMMA_WAVE32_MODE
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = VW * (256 / Constants::AMDGCN_WAVE_SIZE);
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            auto lo             = extractLo(v);
+            auto hi             = extractHi(v);
+            auto v0             = extractLo(lo);
+            auto v1             = extractHi(lo);
+            auto v2             = extractLo(hi);
+            auto v3             = extractHi(hi);
+            auto unpacked_data0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractLo(v0));
+            auto unpacked_data1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractHi(v0));
+            auto unpacked_data2 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractLo(v1));
+            auto unpacked_data3 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractHi(v1));
+            auto unpacked_data4 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractLo(v2));
+            auto unpacked_data5 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractHi(v2));
+            auto unpacked_data6 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractLo(v3));
+            auto unpacked_data7 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractHi(v3));
+
+            // Re-pack banks
+            auto repack_data = VecT<DataT, VecSize>{
+                unpacked_data0.data[0], unpacked_data1.data[0], unpacked_data2.data[0],
+                unpacked_data3.data[0], unpacked_data4.data[0], unpacked_data5.data[0],
+                unpacked_data6.data[0], unpacked_data7.data[0], unpacked_data0.data[1],
+                unpacked_data1.data[1], unpacked_data2.data[1], unpacked_data3.data[1],
+                unpacked_data4.data[1], unpacked_data5.data[1], unpacked_data6.data[1],
+                unpacked_data7.data[1], unpacked_data0.data[2], unpacked_data1.data[2],
+                unpacked_data2.data[2], unpacked_data3.data[2], unpacked_data4.data[2],
+                unpacked_data5.data[2], unpacked_data6.data[2], unpacked_data7.data[2],
+                unpacked_data0.data[3], unpacked_data1.data[3], unpacked_data2.data[3],
+                unpacked_data3.data[3], unpacked_data4.data[3], unpacked_data5.data[3],
+                unpacked_data6.data[3], unpacked_data7.data[3], unpacked_data0.data[4],
+                unpacked_data1.data[4], unpacked_data2.data[4], unpacked_data3.data[4],
+                unpacked_data4.data[4], unpacked_data5.data[4], unpacked_data6.data[4],
+                unpacked_data7.data[4], unpacked_data0.data[5], unpacked_data1.data[5],
+                unpacked_data2.data[5], unpacked_data3.data[5], unpacked_data4.data[5],
+                unpacked_data5.data[5], unpacked_data6.data[5], unpacked_data7.data[5],
+                unpacked_data0.data[6], unpacked_data1.data[6], unpacked_data2.data[6],
+                unpacked_data3.data[6], unpacked_data4.data[6], unpacked_data5.data[6],
+                unpacked_data6.data[6], unpacked_data7.data[6], unpacked_data0.data[7],
+                unpacked_data1.data[7], unpacked_data2.data[7], unpacked_data3.data[7],
+                unpacked_data4.data[7], unpacked_data5.data[7], unpacked_data6.data[7],
+                unpacked_data7.data[7],
+            };
+
+            return repack_data;
+        }
+#else // host code                                                              \
+        // This host code should not be called since it is marked as ROCWMMA_DEVICE \
+        // This code snippet exists since hipcc complains about the mismatched function
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, 1> const& v)
+        {
+            return v;
+        }
+#endif
     };
 
     template <>
@@ -561,8 +726,8 @@ namespace rocwmma
             return repack_data;
         }
 #else // host code                                                              \
-    // This host code should not be called since it is marked as ROCWMMA_DEVICE \
-    // This code snippet exists since hipcc complains about the mismatched function
+        // This host code should not be called since it is marked as ROCWMMA_DEVICE \
+        // This code snippet exists since hipcc complains about the mismatched function
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, 1> const& v)
         {
@@ -636,8 +801,8 @@ namespace rocwmma
             return repack_data;
         }
 #else // host code                                                              \
-    // This host code should not be called since it is marked as ROCWMMA_DEVICE \
-    // This code snippet exists since hipcc complains about the mismatched function
+        // This host code should not be called since it is marked as ROCWMMA_DEVICE \
+        // This code snippet exists since hipcc complains about the mismatched function
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, 1> const& v)
         {
@@ -730,8 +895,8 @@ namespace rocwmma
             return repack_data;
         }
 #else // host code                                                              \
-    // This host code should not be called since it is marked as ROCWMMA_DEVICE \
-    // This code snippet exists since hipcc complains about the mismatched function
+        // This host code should not be called since it is marked as ROCWMMA_DEVICE \
+        // This code snippet exists since hipcc complains about the mismatched function
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, 1> const& v)
         {
@@ -864,8 +1029,8 @@ namespace rocwmma
             return concat(unpacked_data0, unpacked_data1);
         }
 #else // host code                                                              \
-    // This host code should not be called since it is marked as ROCWMMA_DEVICE \
-    // This code snippet exists since hipcc complains about the mismatched function
+        // This host code should not be called since it is marked as ROCWMMA_DEVICE \
+        // This code snippet exists since hipcc complains about the mismatched function
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, 1> const& v)
         {
@@ -918,8 +1083,8 @@ namespace rocwmma
             return unpacked_data;
         }
 #else // host code                                                              \
-    // This host code should not be called since it is marked as ROCWMMA_DEVICE \
-    // This code snippet exists since hipcc complains about the mismatched function
+        // This host code should not be called since it is marked as ROCWMMA_DEVICE \
+        // This code snippet exists since hipcc complains about the mismatched function
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, 1> const& v)
         {
@@ -988,8 +1153,8 @@ namespace rocwmma
             return unpacked_data;
         }
 #else // host code                                                              \
-    // This host code should not be called since it is marked as ROCWMMA_DEVICE \
-    // This code snippet exists since hipcc complains about the mismatched function
+        // This host code should not be called since it is marked as ROCWMMA_DEVICE \
+        // This code snippet exists since hipcc complains about the mismatched function
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, 1> const& v)
         {

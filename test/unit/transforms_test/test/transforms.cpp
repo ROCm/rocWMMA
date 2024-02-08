@@ -34,6 +34,7 @@
 namespace rocwmma
 {
 
+    template <typename GeneratorImpl, typename VWs>
     struct TestParams : public UnitTestParams
     {
         using Base = UnitTestParams;
@@ -45,10 +46,6 @@ namespace rocwmma
             float32_t,
             float64_t>;
 
-        // Vector Width.
-        // using VWs = std::tuple<I<2>, I<4>, I<8>>;
-        using VWs = std::tuple<I<4>>;
-
         // size of K dimension
         using K = std::tuple<I<16>, I<32>, I<64>, I<128>, I<256>>;
 
@@ -56,7 +53,6 @@ namespace rocwmma
 
         // Assemble the kernel generator
         // Kernel: VectorUtil
-        using GeneratorImpl   = TransformsGenerator;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -84,23 +80,44 @@ namespace rocwmma
         }
     };
 
+    using AossoaTestParams = TestParams<AossoaGenerator, std::tuple<I<4>, I<8>>>;
+    using SoaaosTestParams = TestParams<SoaaosGenerator, std::tuple<I<4>>>;
+
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class TransformsTest : public rocwmma::UnitTest
+class AossoaTest : public rocwmma::UnitTest
 {
 };
 
-TEST_P(TransformsTest, RunKernel)
+TEST_P(AossoaTest, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(
     KernelTests,
-    TransformsTest,
-    ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
-                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
-                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
-                       ::testing::ValuesIn(rocwmma::TestParams::param1s()),
-                       ::testing::ValuesIn(rocwmma::TestParams::param2s())));
+    AossoaTest,
+    ::testing::Combine(::testing::ValuesIn(rocwmma::AossoaTestParams::kernels()),
+                       ::testing::ValuesIn(rocwmma::AossoaTestParams::threadBlocks()),
+                       ::testing::ValuesIn(rocwmma::AossoaTestParams::problemSizes()),
+                       ::testing::ValuesIn(rocwmma::AossoaTestParams::param1s()),
+                       ::testing::ValuesIn(rocwmma::AossoaTestParams::param2s())));
+
+class SoaaosTest : public rocwmma::UnitTest
+{
+};
+
+TEST_P(SoaaosTest, RunKernel)
+{
+    this->RunKernel();
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    KernelTests,
+    SoaaosTest,
+    ::testing::Combine(::testing::ValuesIn(rocwmma::SoaaosTestParams::kernels()),
+                       ::testing::ValuesIn(rocwmma::SoaaosTestParams::threadBlocks()),
+                       ::testing::ValuesIn(rocwmma::SoaaosTestParams::problemSizes()),
+                       ::testing::ValuesIn(rocwmma::SoaaosTestParams::param1s()),
+                       ::testing::ValuesIn(rocwmma::SoaaosTestParams::param2s())));

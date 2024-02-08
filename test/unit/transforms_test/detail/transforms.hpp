@@ -35,7 +35,7 @@ namespace rocwmma
 
     // Wrapper into the actual device function
     template <uint32_t K, uint32_t VW, typename DataT>
-    struct TransformsKernel final
+    struct TransformsKernel
         : public UnitKernelBase<1,
                                 1,
                                 DataT,
@@ -45,8 +45,8 @@ namespace rocwmma
         using Base = UnitKernelBase<1, 1, DataT, col_major>;
 
     public:
-        TransformsKernel()        = default;
-        ~TransformsKernel() final = default;
+        TransformsKernel()  = default;
+        ~TransformsKernel() = default;
 
         void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
         {
@@ -69,11 +69,6 @@ namespace rocwmma
             Base::mValidationResult = (dataInstance->hostOut().get()[0] == DataT(SUCCESS_VALUE));
         }
 
-        typename Base::KernelFunc kernelImpl() const final
-        {
-            return typename Base::KernelFunc(transformsTest<DataT, VW, K>);
-        }
-
         std::ostream& printHeader(std::ostream& stream = std::cout) const override
         {
             return stream << "WSize, DataT, VW, K" << std::endl;
@@ -88,7 +83,28 @@ namespace rocwmma
         }
     };
 
+    template <uint32_t K, uint32_t VW, typename DataT>
+    struct AossoaKernel final : public TransformsKernel<K, VW, DataT>
+    {
+        using Base = UnitKernelBase<1, 1, DataT, col_major>;
+        typename Base::KernelFunc kernelImpl() const override final
+        {
+            return typename Base::KernelFunc(aossoaTest<DataT, VW, K>);
+        }
+    };
+
+    template <uint32_t K, uint32_t VW, typename DataT>
+    struct SoaaosKernel final : public TransformsKernel<K, VW, DataT>
+    {
+        using Base = UnitKernelBase<1, 1, DataT, col_major>;
+        typename Base::KernelFunc kernelImpl() const override final
+        {
+            return typename Base::KernelFunc(soaaosTest<DataT, VW, K>);
+        }
+    };
+
     // This is the GeneratorImpl class
+    template <template <uint32_t K, uint32_t VW, typename DataT> typename Func>
     struct TransformsGenerator
     {
         // Indices to test parameters
@@ -106,14 +122,16 @@ namespace rocwmma
         {
             // Map GTest params to Kernel params
             using TestParamsT = std::tuple<Ts...>;
-            using KernelT     = TransformsKernel<std::tuple_element_t<K, TestParamsT>::value, // K
-                                             std::tuple_element_t<VW, TestParamsT>::value, // VW
-                                             std::tuple_element_t<DataT, TestParamsT> // DataT
-                                             >;
+            using KernelT     = Func<std::tuple_element_t<K, TestParamsT>::value, // K
+                                 std::tuple_element_t<VW, TestParamsT>::value, // VW
+                                 std::tuple_element_t<DataT, TestParamsT> // DataT
+                                 >;
 
             return std::make_shared<KernelT>();
         }
     };
+    using AossoaGenerator = TransformsGenerator<AossoaKernel>;
+    using SoaaosGenerator = TransformsGenerator<SoaaosKernel>;
 
 } // namespace rocwmma
 
