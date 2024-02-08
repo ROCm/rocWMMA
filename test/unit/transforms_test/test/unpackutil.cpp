@@ -53,7 +53,6 @@ namespace rocwmma
 
         // Assemble the kernel generator
         // Kernel: VectorUtil
-        // using GeneratorImpl   = UnpackLo2Generator;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
