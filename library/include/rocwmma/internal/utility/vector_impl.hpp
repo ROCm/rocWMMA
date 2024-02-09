@@ -27,7 +27,7 @@
 #ifndef ROCWMMA_UTILITY_VECTOR_IMPL_HPP
 #define ROCWMMA_UTILITY_VECTOR_IMPL_HPP
 
-#include "../type_traits"
+#include "type_traits.hpp"
 #include "get.hpp"
 
 namespace rocwmma

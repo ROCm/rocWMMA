@@ -269,7 +269,7 @@ namespace rocwmma
 
         // NOTE: Assumes that there is NO padding...
         using PackedVecT   = VecT<PackedT, VecSize / Traits::PackRatio>;
-        using UnpackedVecT = std::decay_t<decltype(v)>;
+        using UnpackedVecT = decay_t<decltype(v)>;
         return reinterpret_cast<PackedVecT const&>(v);
     }
 
@@ -278,7 +278,7 @@ namespace rocwmma
     ROCWMMA_DEVICE /*static*/ inline auto&
         PackUtil<DataT>::unpackHelper(VecT<PackedT, VecSize> const& v)
     {
-        if constexpr(std::is_same_v<PackedT, UnpackedT>)
+        if constexpr(is_same_v<PackedT, UnpackedT>)
         {
             static_assert(Traits::PackRatio == 1, "Input vector must be packed");
         }

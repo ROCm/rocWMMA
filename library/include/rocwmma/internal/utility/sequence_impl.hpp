@@ -27,7 +27,8 @@
 #ifndef ROCWMMA_UTILITY_SEQUENCE_IMPL_HPP
 #define ROCWMMA_UTILITY_SEQUENCE_IMPL_HPP
 
-#include "sequence_impl.hpp"
+#include "type_traits.hpp"
+
 namespace rocwmma
 {
     namespace detail
