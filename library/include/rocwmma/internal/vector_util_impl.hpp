@@ -55,7 +55,7 @@ namespace rocwmma
             ROCWMMA_HOST_DEVICE constexpr auto operator()(F f, ArgsT&&... args) const
             {
                 // Build the number sequence to be expanded below.
-                return operator()(f, detail::Seq<VecSize>{}, std::forward<ArgsT>(args)...);
+                return operator()(f, detail::Seq<VecSize>{}, forward<ArgsT>(args)...);
             }
 
         private:
@@ -66,7 +66,7 @@ namespace rocwmma
                 // Execute incoming functor f with each index, as well as forwarded args.
                 // The resulting vector is constructed with the results of each functor call.
                 return VecT<DataT, VecSize>{
-                    (f(Number<Indices>{}, std::forward<ArgsT>(args)...))...};
+                    (f(Number<Indices>{}, forward<ArgsT>(args)...))...};
             }
         };
     }
@@ -81,7 +81,7 @@ namespace rocwmma
                                                        VecT<DataT, VecSize> const& v1)
     {
         auto concat = [](auto&& idx, auto&& v0, auto&& v1) {
-            constexpr auto Index = std::decay_t<decltype(idx)>::value;
+            constexpr auto Index = decay_t<decltype(idx)>::value;
             return (Index < VecSize) ? get<Index>(v0) : get<Index - VecSize>(v1);
         };
 
@@ -94,7 +94,7 @@ namespace rocwmma
         if constexpr(VecSize > 1)
         {
             auto lo = [](auto&& idx, auto&& v) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                constexpr auto Index = decay_t<decltype(idx)>::value;
                 return get<Index>(v);
             };
 
@@ -113,7 +113,7 @@ namespace rocwmma
         if constexpr(VecSize > 1)
         {
             auto hi = [](auto&& idx, auto&& v) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                constexpr auto Index = decay_t<decltype(idx)>::value;
                 return get<Index + VecSize / 2u>(v);
             };
 
@@ -144,7 +144,7 @@ namespace rocwmma
         if constexpr(ElementSize < 4u && PackedVecSize >= 2u)
         {
             auto evens = [](auto&& idx, auto&& v) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                constexpr auto Index = decay_t<decltype(idx)>::value;
                 return (ElementSize == 2u) ? Blend::ExtractWordEven::exec(get<Index * 2u>(v),
                                                                           get<Index * 2u + 1u>(v))
                                            : Blend::ExtractByteEven::exec(get<Index * 2u>(v),
@@ -163,7 +163,7 @@ namespace rocwmma
         else if constexpr(VecSize > 1)
         {
             auto evens = [](auto&& idx, auto&& v) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                constexpr auto Index = decay_t<decltype(idx)>::value;
                 return get<Index * 2>(v);
             };
 
@@ -189,7 +189,7 @@ namespace rocwmma
         if constexpr(ElementSize < 4u && PackedVecSize >= 2u)
         {
             auto odds = [](auto&& idx, auto&& v) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                constexpr auto Index = decay_t<decltype(idx)>::value;
                 return (ElementSize == 2u) ? Blend::ExtractWordOdd::exec(get<Index * 2u>(v),
                                                                          get<Index * 2u + 1u>(v))
                                            : Blend::ExtractByteOdd::exec(get<Index * 2u>(v),
@@ -208,7 +208,7 @@ namespace rocwmma
         else if constexpr(VecSize > 1)
         {
             auto odds = [](auto&& idx, auto&& v) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                constexpr auto Index = decay_t<decltype(idx)>::value;
                 return get<Index * 2 + 1>(v);
             };
 
@@ -234,7 +234,7 @@ namespace rocwmma
         if constexpr(ElementSize < 4u && PackedVecSize == 1)
         {
             auto evenOdds = [](auto&& idx, auto&& v) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                constexpr auto Index = decay_t<decltype(idx)>::value;
                 return (ElementSize == 2u)
                            ? Blend::ExtractWordEvenOdd::exec(get<Index>(v), get<Index>(v))
                            : Blend::ExtractByteEvenOdd::exec(get<Index>(v), get<Index>(v));
@@ -276,7 +276,7 @@ namespace rocwmma
             if constexpr(PackedVecSize == 1)
             {
                 auto oddEvens = [](auto&& idx, auto&& v) {
-                    constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                    constexpr auto Index = decay_t<decltype(idx)>::value;
                     return (ElementSize == 2u)
                                ? Blend::ExtractWordOddEven::exec(get<Index>(v), get<Index>(v))
                                : Blend::ExtractByteOddEven::exec(get<Index>(v), get<Index>(v));
@@ -294,7 +294,7 @@ namespace rocwmma
                     // Manually swap bytes
                     using SwapBytes = Blend::Driver<BlendImpl::Ops::PermByte<1u, 0u, 3u, 2u>>;
 
-                    constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                    constexpr auto Index = decay_t<decltype(idx)>::value;
                     return SwapBytes::exec(get<Index>(v), get<Index>(v));
                 };
 
@@ -331,11 +331,11 @@ namespace rocwmma
         // Special case: Sub-dword data sizes
         // Optimize data-reorder with cross-lane ops.
         constexpr auto ElementSize   = sizeof(DataT);
-        constexpr auto PackedVecSize = std::max(VecSize / PackTraits::PackRatio, 1u);
+        constexpr auto PackedVecSize = max(VecSize / PackTraits::PackRatio, 1u);
         if constexpr(ElementSize < 4u)
         {
             auto zip = [](auto&& idx, auto&& v0, auto&& v1) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                constexpr auto Index = decay_t<decltype(idx)>::value;
                 return (ElementSize == 2u) ? Blend::ZipWord::exec(get<Index>(v0), get<Index>(v1))
                                            : Blend::ZipByte::exec(get<Index>(v0), get<Index>(v1));
             };
@@ -350,7 +350,7 @@ namespace rocwmma
         else
         {
             auto zip = [](auto&& idx, auto&& v0, auto&& v1) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                constexpr auto Index = decay_t<decltype(idx)>::value;
                 return (Index % 2u == 0u) ? get<Index>(v0) : get<Index>(v1);
             };
 
@@ -368,11 +368,11 @@ namespace rocwmma
         // Special case: Sub-dword data sizes
         // Optimize data-reorder with cross-lane ops.
         constexpr auto ElementSize   = sizeof(DataT);
-        constexpr auto PackedVecSize = std::max(VecSize / PackTraits::PackRatio, 1u);
+        constexpr auto PackedVecSize = max(VecSize / PackTraits::PackRatio, 1u);
         if constexpr(ElementSize < 4u)
         {
             auto unpackLo = [](auto&& idx, auto&& v0, auto&& v1) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                constexpr auto Index = decay_t<decltype(idx)>::value;
                 return (ElementSize == 2u)
                            ? Blend::UnpackWordLo::exec(get<Index>(v0), get<Index>(v1))
                            : Blend::UnpackByteLo::exec(get<Index>(v0), get<Index>(v1));
@@ -388,7 +388,7 @@ namespace rocwmma
         else
         {
             auto unpackLo = [](auto&& idx, auto&& v0, auto&& v1) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                constexpr auto Index = decay_t<decltype(idx)>::value;
                 return (Index % 2u == 0u) ? get<Index / 2u>(v0) : get<Index / 2u>(v1);
             };
 
@@ -406,11 +406,11 @@ namespace rocwmma
         // Special case: Sub-dword data sizes
         // Optimize data-reorder with cross-lane ops.
         constexpr auto ElementSize   = sizeof(DataT);
-        constexpr auto PackedVecSize = std::max(VecSize / PackTraits::PackRatio, 1u);
+        constexpr auto PackedVecSize = max(VecSize / PackTraits::PackRatio, 1u);
         if constexpr(ElementSize < 4u)
         {
             auto unpackHi = [](auto&& idx, auto&& v0, auto&& v1) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                constexpr auto Index = decay_t<decltype(idx)>::value;
                 return (ElementSize == 2u)
                            ? Blend::UnpackWordHi::exec(get<Index>(v0), get<Index>(v1))
                            : Blend::UnpackByteHi::exec(get<Index>(v0), get<Index>(v1));
@@ -427,7 +427,7 @@ namespace rocwmma
         {
             auto unpackHi = [](auto&& idx, auto&& v0, auto&& v1) {
                 constexpr auto startIdx = VecSize / 2u;
-                constexpr auto Index    = std::decay_t<decltype(idx)>::value;
+                constexpr auto Index    = decay_t<decltype(idx)>::value;
                 return (Index % 2u == 0u) ? get<startIdx + Index / 2u>(v0)
                                           : get<startIdx + Index / 2u>(v1);
             };
