@@ -34,12 +34,6 @@
 using uint8_t  = __hip_internal::uint8_t;
 using uint16_t = __hip_internal::uint16_t;
 
-// namespace std
-// {
-//     template <bool B, class T, class F>
-//     struct conditional;
-// }
-
 #endif
 
 // We are clipping in down conversion by default
