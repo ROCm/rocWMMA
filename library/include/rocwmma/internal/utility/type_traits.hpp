@@ -27,63 +27,62 @@
 #ifndef ROCWMMA_UTILITY_TYPE_TRAITS_HPP
 #define ROCWMMA_UTILITY_TYPE_TRAITS_HPP
 
-
 #if defined(__HIPCC_RTC__)
 
 #include "type_traits_impl.hpp"
 namespace rocwmma
 {
     // Use drop-in replacement
-    using detail::integral_constant;
-    using detail::bool_constant;
-    using detail::true_type;
-    using detail::false_type;
-    using detail::conditional;
-    using detail::conditional_t;
-    using detail::remove_reference;
-    using detail::remove_reference_t;
-    using detail::remove_const;
-    using detail::remove_const_t;
-    using detail::remove_volatile;
-    using detail::remove_volatile_t;
-    using detail::remove_cv;
-    using detail::remove_cv_t;
-    using detail::remove_extent;
-    using detail::remove_extent_t;
     using detail::add_pointer;
     using detail::add_pointer_t;
+    using detail::bool_constant;
+    using detail::conditional;
+    using detail::conditional_t;
     using detail::decay;
     using detail::decay_t;
     using detail::enable_if;
     using detail::enable_if_t;
-    using detail::is_lvalue_reference;
-    using detail::is_lvalue_reference_v;
-    using detail::is_rvalue_reference;
-    using detail::is_rvalue_reference_v;
-    using detail::is_void;
-    using detail::is_void_v;
-    using detail::is_reference;
-    using detail::is_reference_v;
-    using detail::is_function;
-    using detail::is_function_v;
-    using detail::is_array;
-    using detail::is_array_v;
-    using detail::is_same;
-    using detail::is_same_v;
-    using detail::is_integral;
-    using detail::is_integral_v;
+    using detail::false_type;
+    using detail::integral_constant;
     using detail::is_arithmetic;
     using detail::is_arithmetic_v;
-    using detail::is_floating_point;
-    using detail::is_floating_point_v;
-    using detail::is_signed;
-    using detail::is_signed_v;
+    using detail::is_array;
+    using detail::is_array_v;
     using detail::is_convertible;
     using detail::is_convertible_v;
+    using detail::is_floating_point;
+    using detail::is_floating_point_v;
+    using detail::is_function;
+    using detail::is_function_v;
+    using detail::is_integral;
+    using detail::is_integral_v;
+    using detail::is_lvalue_reference;
+    using detail::is_lvalue_reference_v;
+    using detail::is_reference;
+    using detail::is_reference_v;
+    using detail::is_rvalue_reference;
+    using detail::is_rvalue_reference_v;
+    using detail::is_same;
+    using detail::is_same_v;
+    using detail::is_signed;
+    using detail::is_signed_v;
+    using detail::is_void;
+    using detail::is_void_v;
+    using detail::remove_const;
+    using detail::remove_const_t;
+    using detail::remove_cv;
+    using detail::remove_cv_t;
+    using detail::remove_extent;
+    using detail::remove_extent_t;
+    using detail::remove_reference;
+    using detail::remove_reference_t;
+    using detail::remove_volatile;
+    using detail::remove_volatile_t;
+    using detail::true_type;
 
     using detail::max;
     using detail::min;
-    
+
 } // namespace rocwmma
 
 #else
@@ -92,56 +91,56 @@ namespace rocwmma
 namespace rocwmma
 {
     // std implementations
-    using std::integral_constant;
-    using std::bool_constant;
-    using std::true_type;
-    using std::false_type;
-    using std::conditional;
-    using std::conditional_t;
-    using std::remove_reference;
-    using std::remove_reference_t;
-    using std::remove_const;
-    using std::remove_const_t;
-    using std::remove_volatile;
-    using std::remove_volatile_t;
-    using std::remove_cv;
-    using std::remove_cv_t;
-    using std::remove_extent;
-    using std::remove_extent_t;
     using std::add_pointer;
     using std::add_pointer_t;
+    using std::bool_constant;
+    using std::conditional;
+    using std::conditional_t;
     using std::decay;
     using std::decay_t;
     using std::enable_if;
     using std::enable_if_t;
-    using std::is_lvalue_reference;
-    using std::is_lvalue_reference_v;
-    using std::is_rvalue_reference;
-    using std::is_rvalue_reference_v;
-    using std::is_void;
-    using std::is_void_v;
-    using std::is_reference;
-    using std::is_reference_v;
-    using std::is_function;
-    using std::is_function_v;
-    using std::is_array;
-    using std::is_array_v;
-    using std::is_same;
-    using std::is_same_v;
-    using std::is_integral;
-    using std::is_integral_v;
+    using std::false_type;
+    using std::integral_constant;
     using std::is_arithmetic;
     using std::is_arithmetic_v;
-    using std::is_floating_point;
-    using std::is_floating_point_v;
-    using std::is_signed;
-    using std::is_signed_v;
+    using std::is_array;
+    using std::is_array_v;
     using std::is_convertible;
     using std::is_convertible_v;
+    using std::is_floating_point;
+    using std::is_floating_point_v;
+    using std::is_function;
+    using std::is_function_v;
+    using std::is_integral;
+    using std::is_integral_v;
+    using std::is_lvalue_reference;
+    using std::is_lvalue_reference_v;
+    using std::is_reference;
+    using std::is_reference_v;
+    using std::is_rvalue_reference;
+    using std::is_rvalue_reference_v;
+    using std::is_same;
+    using std::is_same_v;
+    using std::is_signed;
+    using std::is_signed_v;
+    using std::is_void;
+    using std::is_void_v;
+    using std::remove_const;
+    using std::remove_const_t;
+    using std::remove_cv;
+    using std::remove_cv_t;
+    using std::remove_extent;
+    using std::remove_extent_t;
+    using std::remove_reference;
+    using std::remove_reference_t;
+    using std::remove_volatile;
+    using std::remove_volatile_t;
+    using std::true_type;
 
     using std::max;
     using std::min;
-    
+
 } // namespace rocwmma
 
 #endif // defined(__HIPCC_RTC__) || defined(__clang__)

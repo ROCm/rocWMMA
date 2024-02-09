@@ -27,7 +27,6 @@
 #ifndef ROCWMMA_UTILITY_NUMERIC_LIMITS_HPP
 #define ROCWMMA_UTILITY_NUMERIC_LIMITS_HPP
 
-
 #if defined(__HIPCC_RTC__)
 
 #include "numeric_limits_impl.hpp"
