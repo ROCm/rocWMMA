@@ -127,6 +127,11 @@ namespace rocwmma
             return blockX * VW / 2;
         }
 
+        bool checkSizes() const override
+        {
+            return true;
+        }
+
         typename Base::KernelFunc kernelImpl() const final
         {
             return typename Base::KernelFunc(unpackLo2Test<DataT, VW>);
@@ -152,6 +157,11 @@ namespace rocwmma
         {
             auto blockX = static_cast<uint32_t>(this->blockDim().x);
             return blockX * VW / 2;
+        }
+
+        bool checkSizes() const override
+        {
+            return true;
         }
 
         typename Base::KernelFunc kernelImpl() const final
@@ -181,6 +191,11 @@ namespace rocwmma
             return blockX * VW / 2;
         }
 
+        bool checkSizes() const override
+        {
+            return true;
+        }
+
         typename Base::KernelFunc kernelImpl() const final
         {
             return typename Base::KernelFunc(unpackLo8Test<DataT, VW>);
@@ -206,6 +221,11 @@ namespace rocwmma
         {
             auto blockX = static_cast<uint32_t>(this->blockDim().x);
             return blockX * VW / 2;
+        }
+
+        bool checkSizes() const override
+        {
+            return true;
         }
 
         typename Base::KernelFunc kernelImpl() const final
@@ -235,6 +255,11 @@ namespace rocwmma
             return blockX * VW / 2;
         }
 
+        bool checkSizes() const override
+        {
+            return true;
+        }
+
         typename Base::KernelFunc kernelImpl() const final
         {
             return typename Base::KernelFunc(unpackHi4Test<DataT, VW>);
@@ -260,6 +285,11 @@ namespace rocwmma
         {
             auto blockX = static_cast<uint32_t>(this->blockDim().x);
             return blockX * VW / 2;
+        }
+
+        bool checkSizes() const override
+        {
+            return true;
         }
 
         typename Base::KernelFunc kernelImpl() const final
@@ -289,6 +319,11 @@ namespace rocwmma
             return blockX * VW;
         }
 
+        bool checkSizes() const override
+        {
+            return true;
+        }
+
         typename Base::KernelFunc kernelImpl() const final
         {
             return typename Base::KernelFunc(unpackLoHi2Test<DataT, VW>);
@@ -316,6 +351,11 @@ namespace rocwmma
             return blockX * VW;
         }
 
+        bool checkSizes() const override
+        {
+            return true;
+        }
+
         typename Base::KernelFunc kernelImpl() const final
         {
             return typename Base::KernelFunc(unpackLoHi4Test<DataT, VW>);
@@ -341,6 +381,11 @@ namespace rocwmma
         {
             auto blockX = static_cast<uint32_t>(this->blockDim().x);
             return blockX * VW;
+        }
+
+        bool checkSizes() const override
+        {
+            return true;
         }
 
         typename Base::KernelFunc kernelImpl() const final
@@ -371,6 +416,11 @@ namespace rocwmma
             return blockX * VW;
         }
 
+        bool checkSizes() const override
+        {
+            return true;
+        }
+
         typename Base::KernelFunc kernelImpl() const final
         {
             return typename Base::KernelFunc(unpackLoHi16Test<DataT, VW>);
@@ -395,7 +445,7 @@ namespace rocwmma
 
         bool checkSizes() const override
         {
-            return Base::DeviceInfo::instance()->warpSize() > 32 && Base::checkDevice();
+            return Base::DeviceInfo::instance()->warpSize() > 32;
         }
 
         uint32_t resultSize() const override
