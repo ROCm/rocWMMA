@@ -73,6 +73,7 @@ namespace rocwmma
         {
             return stream << "WSize, DataT, VW, K" << std::endl;
         }
+
         std::ostream& printKernel(std::ostream& stream = std::cout) const override
         {
             using DeviceInfo = HipDevice;
@@ -87,6 +88,12 @@ namespace rocwmma
     struct AossoaKernel final : public TransformsKernel<K, VW, DataT>
     {
         using Base = UnitKernelBase<1, 1, DataT, col_major>;
+
+        bool checkSizes() const override
+        {
+            return true;
+        }
+
         typename Base::KernelFunc kernelImpl() const override final
         {
             return typename Base::KernelFunc(aossoaTest<DataT, VW, K>);
@@ -97,6 +104,12 @@ namespace rocwmma
     struct SoaaosKernel final : public TransformsKernel<K, VW, DataT>
     {
         using Base = UnitKernelBase<1, 1, DataT, col_major>;
+
+        bool checkSizes() const override
+        {
+            return true;
+        }
+
         typename Base::KernelFunc kernelImpl() const override final
         {
             return typename Base::KernelFunc(soaaosTest<DataT, VW, K>);
