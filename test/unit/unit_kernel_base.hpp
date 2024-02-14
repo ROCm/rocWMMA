@@ -95,6 +95,7 @@ namespace rocwmma
         // Using Hip device backend
         using DeviceInfo = HipDevice;
 
+    public:
         // Interface to device kernel
         using KernelFunc = void (*)(uint32_t, // M
                                     uint32_t, // N

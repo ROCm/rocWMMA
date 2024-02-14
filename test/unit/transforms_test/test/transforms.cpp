@@ -30,6 +30,7 @@
 #include "detail/transforms.hpp"
 #include "kernel_generator.hpp"
 #include "unit_test.hpp"
+#include "unit_test_macros.hpp"
 
 namespace rocwmma
 {
@@ -39,12 +40,7 @@ namespace rocwmma
     {
         using Base = UnitTestParams;
 
-        // Types: Base IOC + double
-        using Types = std::tuple<
-            int8_t, // use int8_t since float8_t will be skipped by default on some platform
-            float16_t,
-            float32_t,
-            float64_t>;
+        using Types = typename Base::TestAllSizeTypes;
 
         // size of K dimension
         using K = std::tuple<I<16>, I<32>, I<64>, I<128>, I<256>>;
@@ -85,39 +81,5 @@ namespace rocwmma
 
 } // namespace rocwmma
 
-// Test suite for unique parameterization
-class AossoaTest : public rocwmma::UnitTest
-{
-};
-
-TEST_P(AossoaTest, RunKernel)
-{
-    this->RunKernel();
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    KernelTests,
-    AossoaTest,
-    ::testing::Combine(::testing::ValuesIn(rocwmma::AossoaTestParams::kernels()),
-                       ::testing::ValuesIn(rocwmma::AossoaTestParams::threadBlocks()),
-                       ::testing::ValuesIn(rocwmma::AossoaTestParams::problemSizes()),
-                       ::testing::ValuesIn(rocwmma::AossoaTestParams::param1s()),
-                       ::testing::ValuesIn(rocwmma::AossoaTestParams::param2s())));
-
-class SoaaosTest : public rocwmma::UnitTest
-{
-};
-
-TEST_P(SoaaosTest, RunKernel)
-{
-    this->RunKernel();
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    KernelTests,
-    SoaaosTest,
-    ::testing::Combine(::testing::ValuesIn(rocwmma::SoaaosTestParams::kernels()),
-                       ::testing::ValuesIn(rocwmma::SoaaosTestParams::threadBlocks()),
-                       ::testing::ValuesIn(rocwmma::SoaaosTestParams::problemSizes()),
-                       ::testing::ValuesIn(rocwmma::SoaaosTestParams::param1s()),
-                       ::testing::ValuesIn(rocwmma::SoaaosTestParams::param2s())));
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(AossoaTest, AossoaTestParams)
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(SoaaosTest, SoaaosTestParams)
