@@ -32,21 +32,28 @@
 
 namespace rocwmma
 {
+    template <typename DataT>
+    using TransformsKernelBase
+        = UnitKernelBase<1,
+                         1,
+                         DataT,
+                         col_major>; // BlockM, BlockN, DataLayout are redundant for this test
 
     // Wrapper into the actual device function
     template <uint32_t K, uint32_t VW, typename DataT>
-    struct TransformsKernel
-        : public UnitKernelBase<1,
-                                1,
-                                DataT,
-                                col_major> // BlockM, BlockN, DataLayout are redundant for this test
+    struct TransformsKernel : public TransformsKernelBase<DataT>
     {
-    private:
-        using Base = UnitKernelBase<1, 1, DataT, col_major>;
+    protected:
+        using Base = TransformsKernelBase<DataT>;
 
     public:
         TransformsKernel()  = default;
         ~TransformsKernel() = default;
+
+        bool checkSizes() const override
+        {
+            return true;
+        }
 
         void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
         {
@@ -85,32 +92,26 @@ namespace rocwmma
     };
 
     template <uint32_t K, uint32_t VW, typename DataT>
-    struct AossoaKernel final : public TransformsKernel<K, VW, DataT>
+    struct AossoaKernel : public TransformsKernel<K, VW, DataT>
     {
-        using Base = UnitKernelBase<1, 1, DataT, col_major>;
+    protected:
+        using Base = TransformsKernelBase<DataT>;
 
-        bool checkSizes() const override
-        {
-            return true;
-        }
-
-        typename Base::KernelFunc kernelImpl() const override final
+    public:
+        typename Base::KernelFunc kernelImpl() const override
         {
             return typename Base::KernelFunc(aossoaTest<DataT, VW, K>);
         }
     };
 
     template <uint32_t K, uint32_t VW, typename DataT>
-    struct SoaaosKernel final : public TransformsKernel<K, VW, DataT>
+    struct SoaaosKernel : public TransformsKernel<K, VW, DataT>
     {
-        using Base = UnitKernelBase<1, 1, DataT, col_major>;
+    protected:
+        using Base = TransformsKernelBase<DataT>;
 
-        bool checkSizes() const override
-        {
-            return true;
-        }
-
-        typename Base::KernelFunc kernelImpl() const override final
+    public:
+        typename Base::KernelFunc kernelImpl() const override
         {
             return typename Base::KernelFunc(soaaosTest<DataT, VW, K>);
         }
