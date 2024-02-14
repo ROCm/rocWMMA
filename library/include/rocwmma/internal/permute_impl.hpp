@@ -63,39 +63,56 @@ namespace rocwmma
         {
             // bpermute: for the current thread, read from laneId
             template <class BPermuteCtrl>
-            struct amdgcn_ds_bpermute
+            struct amdgcn_ds_bpermute : BPermuteCtrl
             {
-                template <typename InputT>
-                ROCWMMA_DEVICE static inline InputT exec(InputT input, uint32_t laneId)
+                // Feed the current lane id to the threadId modifier
+                template <typename DataT>
+                ROCWMMA_DEVICE static inline DataT exec(DataT input)
                 {
-                    static_assert(sizeof(InputT) >= sizeof(uint32_t)
-                                      && sizeof(InputT) % sizeof(uint32_t) == 0,
-                                  "The minimum unit of the Permute  operation should be 32 bits");
-                    constexpr size_t VecSize = sizeof(InputT) / sizeof(uint32_t);
-                    auto             permute = [laneId](auto&& idx, auto&& v0) {
-                        constexpr auto i = std::decay_t<decltype(idx)>::value;
-                        return __builtin_amdgcn_ds_bpermute(
-                            (BPermuteCtrl::threadCtrl(laneId) << 2),
-                            reinterpret_cast<uint32_t const*>(&v0)[i]);
-                    };
+                    static_assert(sizeof(DataT) == sizeof(uint32_t), "Inputs must be 32 bit");
 
-                    auto permute_input = vector_generator<uint32_t, VecSize>()(permute, input);
-                    return *(reinterpret_cast<InputT*>(&permute_input));
+                    reinterpret_cast<uint32_t&>(input) = __builtin_amdgcn_ds_bpermute(
+                        BPermuteCtrl::threadCtrl(detail::WaveSpace<>::localLaneId()),
+                        reinterpret_cast<uint32_t const&>(input));
+                    return input;
+                }
+
+                // This function takes an override to support pre-calculated threadCtrl
+                template <typename DataT>
+                ROCWMMA_DEVICE static inline DataT exec(DataT input, uint32_t threadCtrl)
+                {
+                    static_assert(sizeof(DataT) == sizeof(uint32_t), "Inputs must be 32 bit");
+
+                    reinterpret_cast<uint32_t&>(input) = __builtin_amdgcn_ds_bpermute(
+                        threadCtrl, reinterpret_cast<uint32_t const&>(input));
+                    return input;
                 }
             };
 
             // permute: for the current thread, push my value to laneId
             template <class PermuteCtrl>
-            struct amdgcn_ds_permute
+            struct amdgcn_ds_permute : PermuteCtrl
             {
-                template <typename InputT>
-                ROCWMMA_DEVICE static inline InputT exec(InputT input, uint32_t laneId)
+                // Feed the current lane id to the threadId modifier
+                template <typename DataT>
+                ROCWMMA_DEVICE static inline DataT exec(DataT input)
                 {
-                    static_assert(sizeof(InputT) == sizeof(uint32_t),
-                                  "The unit of the Permute  operation should be 32 bits");
-                    reinterpret_cast<uint32_t&>(input)
-                        = __builtin_amdgcn_ds_permute((PermuteCtrl::threadCtrl(laneId) << 2),
-                                                      reinterpret_cast<uint32_t const&>(input));
+                    static_assert(sizeof(DataT) == sizeof(uint32_t), "Inputs must be 32 bit");
+
+                    reinterpret_cast<uint32_t&>(input) = __builtin_amdgcn_ds_permute(
+                        PermuteCtrl::threadCtrl(detail::WaveSpace<>::localLaneId()),
+                        reinterpret_cast<uint32_t const&>(input));
+                    return input;
+                }
+
+                // This function takes an override to support pre-calculated threadCtrl
+                template <typename DataT>
+                ROCWMMA_DEVICE static inline DataT exec(DataT input, uint32_t threadCtrl)
+                {
+                    static_assert(sizeof(DataT) == sizeof(uint32_t), "Inputs must be 32 bit");
+
+                    reinterpret_cast<uint32_t&>(input) = __builtin_amdgcn_ds_permute(
+                        threadCtrl, reinterpret_cast<uint32_t const&>(input));
                     return input;
                 }
             };
@@ -104,10 +121,21 @@ namespace rocwmma
 
         namespace Ctrl
         {
+            struct CtrlBase
+            {
+            protected:
+                ROCWMMA_DEVICE static inline uint32_t threadCtrl(uint32_t threadId)
+                {
+                    // NOTE: final address is laneId * 4
+                    return threadId << 2;
+                }
+            };
+
             template <uint32_t BlockIdx, uint32_t BlockSize>
-            struct BPermuteBlockBCast
+            struct BPermuteBlockBCast : CtrlBase
             {
             private:
+                using Base = CtrlBase;
                 enum Traits : uint32_t
                 {
                     BLOCK_OFFSET = BlockIdx * BlockSize,
@@ -119,14 +147,15 @@ namespace rocwmma
                 {
                     // Make sure that the threadId is within range
                     auto tIdx = threadId % BlockSize;
-                    return Traits::BLOCK_OFFSET + tIdx;
+                    return Base::threadCtrl(Traits::BLOCK_OFFSET + tIdx);
                 }
             };
 
             template <uint32_t BlockSize, uint32_t VW, uint32_t ElementShift>
-            struct Interleave
+            struct Interleave : CtrlBase
             {
             private:
+                using Base = CtrlBase;
                 enum Traits : uint32_t
                 {
                     MASK_0 = LsbMask<Log2<BlockSize>::value>::value,
@@ -148,14 +177,15 @@ namespace rocwmma
                           & Traits::MASK_0;
                     const uint32_t offset1 = (threadId >> Log2<VW>::value) & Traits::MASK_1;
                     const uint32_t offset2 = threadId & Traits::MASK_2;
-                    return offset0 + offset1 + offset2;
+                    return Base::threadCtrl(offset0 + offset1 + offset2);
                 }
             };
 
             template <uint32_t GroupSize, uint32_t Distance>
-            struct Rotate
+            struct Rotate : CtrlBase
             {
             private:
+                using Base = CtrlBase;
                 enum Traits : uint32_t
                 {
                     MASK_0 = LsbMask<Log2<GroupSize>::value>::value,
@@ -171,36 +201,7 @@ namespace rocwmma
                     // const uint32_t offset1 = (threadId / GroupSize) * GroupSize
                     const uint32_t offset0 = (threadId + Distance) & Traits::MASK_0;
                     const uint32_t offset1 = threadId & Traits::MASK_1;
-                    return offset0 + offset1;
-                }
-            };
-
-            template <uint32_t GroupSize, uint32_t BlockSize, uint32_t DupCount, uint32_t Offset>
-            struct DuplicateBlocks
-            {
-            private:
-                enum Traits : uint32_t
-                {
-                    MASK_0 = LsbMask<Log2<BlockSize>::value>::value,
-                    MASK_1 = LsbMask<Log2<GroupSize>::value - Log2<DupCount>::value>::value,
-                    MASK_2 = ~LsbMask<Log2<GroupSize>::value>::value,
-                };
-
-            public:
-                // Calculate the read element based on thread position.
-                ROCWMMA_HOST_DEVICE static inline uint32_t threadCtrl(uint32_t threadId)
-                {
-                    // For reference in readibility:
-                    // const uint32_t offset0 = (threadId % BlockSize)
-                    // const uint32_t offset1 = ((threadId / DupCount / BlockSize ) * BlockSize) % (GroupSize / DupCount)
-                    // const uinti32_t offset2 = (threadId / GroupSize) * GroupSize
-                    // constexpr uint32_t offset3 = Offset * BlockSize
-                    const uint32_t offset0 = (threadId & Traits::MASK_0);
-                    const uint32_t offset1
-                        = (threadId >> Log2<DupCount>::value) & ~(~Traits::MASK_0 ^ Traits::MASK_1);
-                    const uint32_t     offset2 = (threadId & Traits::MASK_2);
-                    constexpr uint32_t offset3 = Offset << Log2<BlockSize>::value;
-                    return offset0 + offset1 + offset2 + offset3;
+                    return CtrlBase::threadCtrl(offset0 + offset1);
                 }
             };
 
@@ -347,16 +348,6 @@ namespace rocwmma
 
             template<uint32_t Distance>
             using RotateWaveR = OpsBase::RotateR<Distance, OP_GROUP_SIZE_WARP>;
-
-
-            // template<uint32_t BlockSize>
-            // struct DupLoBlockWave : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_WARP, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_duplicate_blocks<Properties::OP_GROUP_SIZE_WARP, BlockSize, 2u, 0u>{};
-
-            // template<uint32_t BlockSize>
-            // struct DupHiBlockWave : OpBase<Properties::OP_ID_SHUFFLE, Properties::OP_GROUP_SIZE_WARP, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_duplicate_blocks<Properties::OP_GROUP_SIZE_WARP, BlockSize, 2u, Properties::OP_GROUP_SIZE_WARP / BlockSize / 2u>{};
-
-            // template<uint32_t GroupSize, uint32_t BlockSize, uint32_t DupCount, uint32_t Shift>
-            // struct DupTest : OpBase<Properties::OP_ID_SHUFFLE, GroupSize, OP_IMPL_BPERM, OP_CTRL>, detail::amdgcn_duplicate_blocks<GroupSize, BlockSize, DupCount, Shift>{};
 
             // clang-format on
         } // namespace Ops

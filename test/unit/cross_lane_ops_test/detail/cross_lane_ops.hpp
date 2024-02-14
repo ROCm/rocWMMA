@@ -107,13 +107,8 @@ namespace rocwmma
                 = !(isGfx11 && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
                     && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_WFALL_BCAST));
 
-            // blend bytes can only be applied on two 32 bits src0 and src1
-            bool blendBytesNotIn64Bits
-                = (CrossLaneOp::opId() != CrossLaneOps::Properties::OP_ID_PERM_BYTE)
-                  || sizeof(DataT) < sizeof(uint64_t);
-
             return Base::checkDevice() && dppBCast16Check && dppWaveShiftCheck && dppWaveRotateCheck
-                   && dppWaterfallBCastCheck && blendBytesNotIn64Bits;
+                   && dppWaterfallBCastCheck;
         }
 
         std::ostream& printHeader(std::ostream& stream = std::cout) const final

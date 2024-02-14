@@ -27,7 +27,6 @@
 #ifndef ROCWMMA_VECTOR_UTIL_IMPL_HPP
 #define ROCWMMA_VECTOR_UTIL_IMPL_HPP
 
-#include "blend.hpp"
 #include "types.hpp"
 #include "vector.hpp"
 
@@ -127,6 +126,7 @@ namespace rocwmma
 
 } // namespace rocwmma
 
+#include "blend.hpp"
 #include "pack_util.hpp"
 
 namespace rocwmma

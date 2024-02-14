@@ -75,6 +75,8 @@ namespace rocwmma
         // 16 has support for double types
         using TestTypes16 = typename Concat<TestTypesIOC, TestTypeDouble>::Result;
 
+        using TestAllSizeTypes = typename std::tuple<int8_t, float16_t, float32_t, float64_t>;
+
         // Variances for particular BlockM, BlockN
         using TestBlockSizes16 = std::tuple<std::tuple<I<16>, I<16>>,
                                             std::tuple<I<16>, I<32>>,

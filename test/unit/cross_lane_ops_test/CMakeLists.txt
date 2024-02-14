@@ -29,7 +29,7 @@ set(ROCWMMA_TEST_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${ROCWMMA_TEST_INCLUDE
 
 set(CrossLaneOpsTestSources ${UnitCommonSources}
 
-                           ### DPP
+                           # DPP
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/dpp_bcast_2.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/dpp_bcast_4.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/dpp_bcast_16.cpp
@@ -60,7 +60,7 @@ set(CrossLaneOpsTestSources ${UnitCommonSources}
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/dpp_wfall_bcast_16.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/dpp_wfall_bcast_32.cpp
 
-                           ### Swizzle
+                           # Swizzle
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/swizzle_bcast_2.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/swizzle_bcast_4.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/swizzle_bcast_8.cpp
@@ -93,14 +93,14 @@ set(CrossLaneOpsTestSources ${UnitCommonSources}
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/swizzle_swap_8.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/swizzle_swap_16.cpp
 
-                           ### Permute
+                           # Permute
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/permute_block_bcast_2.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/permute_block_bcast_4.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/permute_block_bcast_8.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/permute_block_bcast_16.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/permute_block_bcast_32.cpp
 
-                           ### Blend
+                           # Blend
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/blend_unpack_byte_hi_lo.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/blend_unpack_byte_hi.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/blend_unpack_byte_lo.cpp
