@@ -39,7 +39,7 @@ namespace rocwmma
         using Base = UnitTestParams;
 
         // Types: Base IOC + double
-        using Types = typename Base::TestTypes16;
+        using Types = typename Base::TestAllSizeTypes;
 
         using DppOps = std::tuple<DppImpl::Ops::Shuffle4<0u, 2u, 3u, 1u>,
                                   DppImpl::Ops::Shuffle4<2u, 1u, 2u, 3u>>;

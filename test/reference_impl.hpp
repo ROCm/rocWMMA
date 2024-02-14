@@ -326,40 +326,49 @@ namespace rocwmma
                     auto const writeOffset = groupOffset + k;
                     auto const readOffset  = groupOffset + k;
 
-                    auto ele0 = *(uint32_t*)&src0[baseOffset + readOffset];
-                    auto ele1 = *(uint32_t*)&src1[baseOffset + readOffset];
+                    auto    blendSrc0   = *(PackedT*)&src0[baseOffset + readOffset];
+                    auto    blendSrc1   = *(PackedT*)&src1[baseOffset + readOffset];
+                    PackedT blendResult = 0;
 
-                    // 0 <= Select < 4  element 0
-                    // 4 <= Select < 8  element 1
-                    uint32_t bytes0 = ((Select0 < 4u) ? ele0 : ele1);
-                    uint32_t bytes1 = ((Select1 < 4u) ? ele0 : ele1);
-                    uint32_t bytes2 = ((Select2 < 4u) ? ele0 : ele1);
-                    uint32_t bytes3 = ((Select3 < 4u) ? ele0 : ele1);
+                    for(int index = 0; index < sizeof(PackedT) / sizeof(uint32_t); index++)
+                    {
+                        uint32_t ele0 = ((uint32_t*)&blendSrc0)[index];
+                        uint32_t ele1 = ((uint32_t*)&blendSrc1)[index];
+                        // 0 <= Select < 4  element 0
+                        // 4 <= Select < 8  element 1
+                        // TODO uint32_t => DataT
+                        uint32_t bytes0 = ((Select0 < 4u) ? ele0 : ele1);
+                        uint32_t bytes1 = ((Select1 < 4u) ? ele0 : ele1);
+                        uint32_t bytes2 = ((Select2 < 4u) ? ele0 : ele1);
+                        uint32_t bytes3 = ((Select3 < 4u) ? ele0 : ele1);
 
-                    // Byte mask and bit shifts needed
-                    uint32_t byteMask  = 0xFF;
-                    uint32_t bitShift0 = Select0 % 4u * 8;
-                    uint32_t bitShift1 = Select1 % 4u * 8;
-                    uint32_t bitShift2 = Select2 % 4u * 8;
-                    uint32_t bitShift3 = Select3 % 4u * 8;
+                        // Byte mask and bit shifts needed
+                        uint32_t byteMask  = 0xFF;
+                        uint32_t bitShift0 = Select0 % 4u * 8;
+                        uint32_t bitShift1 = Select1 % 4u * 8;
+                        uint32_t bitShift2 = Select2 % 4u * 8;
+                        uint32_t bitShift3 = Select3 % 4u * 8;
 
-                    // Shift byte mask to selected byte, and copy this selected byte into position
-                    uint32_t result = 0x0;
-                    result |= (((byteMask << bitShift0) & bytes0) >> bitShift0);
-                    result |= (((byteMask << bitShift1) & bytes1) >> bitShift1 << 8u);
-                    result |= (((byteMask << bitShift2) & bytes2) >> bitShift2 << 16u);
-                    result |= (((byteMask << bitShift3) & bytes3) >> bitShift3 << 24u);
+                        // Shift byte mask to selected byte, and copy this selected byte into position
+                        uint32_t result = 0x0;
+                        result |= (((byteMask << bitShift0) & bytes0) >> bitShift0);
+                        result |= (((byteMask << bitShift1) & bytes1) >> bitShift1 << 8u);
+                        result |= (((byteMask << bitShift2) & bytes2) >> bitShift2 << 16u);
+                        result |= (((byteMask << bitShift3) & bytes3) >> bitShift3 << 24u);
+
+                        ((uint32_t*)&blendResult)[index] = result;
+                    }
 
                     // Check the row / bank masking
                     if(((0x1 << (writeOffset % waveSize / 16u)) & RowMask)
                        && ((0x1 << (writeOffset % 16u / 4u)) & BankMask))
                     {
-                        *(uint32_t*)&dataOut[baseOffset + writeOffset] = result;
+                        *(PackedT*)&dataOut[baseOffset + writeOffset] = blendResult;
                     }
                     // BoundCtrl does not affect shuffle 4 as the indices are & with 0x3
                     else
                     {
-                        *(uint32_t*)&dataOut[baseOffset + writeOffset] = fillVal;
+                        *(PackedT*)&dataOut[baseOffset + writeOffset] = fillVal;
                     }
                 }
             }

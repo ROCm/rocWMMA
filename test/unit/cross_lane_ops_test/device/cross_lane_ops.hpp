@@ -104,19 +104,15 @@ namespace rocwmma
                                  DataT        param1,
                                  DataT        param2)
     {
-        if constexpr(sizeof(DataT) < sizeof(uint64_t)
-                     || CrossLaneOp::opId() != CrossLaneOps::Properties::OP_ID_PERM_BYTE)
-        {
-            using PackedT = typename PackTraits<DataT>::PackedT;
-            // Each thread operates on 32b or 64b data
-            PackedT*       writeOut = reinterpret_cast<PackedT*>(out);
-            PackedT const* readIn   = reinterpret_cast<PackedT const*>(in);
+        using PackedT = typename PackTraits<DataT>::PackedT;
+        // Each thread operates on 32b or 64b data
+        PackedT*       writeOut = reinterpret_cast<PackedT*>(out);
+        PackedT const* readIn   = reinterpret_cast<PackedT const*>(in);
 
-            // Get offset into 1D array where all threads are neighbours.
-            auto dataOffset      = blockIdx.x * blockDim.x + threadIdx.x;
-            writeOut[dataOffset] = rocwmma::Blend::Driver<CrossLaneOp>::exec(writeOut[dataOffset],
-                                                                             readIn[dataOffset]);
-        }
+        // Get offset into 1D array where all threads are neighbours.
+        auto dataOffset = blockIdx.x * blockDim.x + threadIdx.x;
+        writeOut[dataOffset]
+            = rocwmma::Blend::Driver<CrossLaneOp>::exec(writeOut[dataOffset], readIn[dataOffset]);
     }
 
 } // namespace rocwmma

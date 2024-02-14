@@ -63,14 +63,6 @@ namespace rocwmma
                 return PermuteOp::exec(std::forward<DataT>(v), laneId);
             }
 
-            template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-            ROCWMMA_DEVICE static inline auto
-                forEach(VecT<DataT, VecSize> const& src, uint32_t laneId, detail::SeqT<Idx...>)
-            {
-                static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{permute(get<Idx>(src), laneId)...};
-            }
-
         public:
             // Sanity checks
             static_assert((PermuteOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_PERMUTE)
@@ -86,34 +78,51 @@ namespace rocwmma
             template <typename DataT>
             ROCWMMA_DEVICE static inline auto exec(DataT const& src)
             {
-                return permute(src, detail::WaveSpace<>::localLaneId());
+                // Vectorize to B32.
+                // This way we can support B64+ types
+                using B32VecT = VecT<uint32_t, sizeof(DataT) / sizeof(uint32_t)>;
+
+                // Ensure that we can vectorize to B32
+                static_assert(sizeof(DataT) % sizeof(uint32_t) == 0,
+                              "DataT size must be a multiple of B32");
+                static_assert(sizeof(B32VecT) == sizeof(DataT), "Unable to vectorize DataT");
+
+                // Forward to vectorized function
+                auto result = exec(reinterpret_cast<B32VecT const&>(src));
+
+                // Restore result to input type
+                return reinterpret_cast<DataT&>(result);
             }
 
             template <typename DataT, uint32_t VecSize>
             ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src)
             {
-// TODO: Investigate static unroll validation
-#if ROCWMMA_ARCH_GFX1102
-                VecT<DataT, VecSize> result;
-                auto                 itW = makeVectorIterator(result).begin();
-                auto const           itR = makeVectorIterator(src).begin();
+                // Reinterpret vector as B32 so we can support B64+ elements.
+                constexpr uint32_t B32VecSize = sizeof(DataT) / sizeof(uint32_t) * VecSize;
+                using B32VecT                 = VecT<uint32_t, B32VecSize>;
+                using InputVecT               = VecT<DataT, VecSize>;
 
-                static_assert(decltype(itR)::range() == VecSize,
-                              "VecSize inconsistent with iterator range");
-                static_assert(decltype(itW)::range() == VecSize,
-                              "VecSize inconsistent with iterator range");
+                // Ensure that we can vectorize to B32
+                static_assert(sizeof(InputVecT) % sizeof(uint32_t) == 0,
+                              "VecT size must be a multiple of B32");
+                static_assert(sizeof(B32VecT) == sizeof(InputVecT),
+                              "Unable to vectorize src0 to B32");
 
-#pragma unroll
-                for(uint32_t i = 0; i < VecSize; ++i, itR++, itW++)
-                {
-                    get<0>(*itW) = exec(get<0>(*itR));
-                }
+                auto op = [](auto&& idx, auto&& v0, auto&& opCtrl) {
+                    // Pair up the b32 vector elements with the appropriate b32 scalar elements.
+                    constexpr auto i = decay_t<decltype(idx)>::value;
+                    return PermuteOp::exec(get<i>(v0), opCtrl);
+                };
 
-                return result;
-#else
+                // Give the current threadId to the threadCtrl modifier.
+                // Then static unroll with cached modifier.
+                auto result = vector_generator<uint32_t, B32VecSize>()(
+                    op,
+                    reinterpret_cast<B32VecT const&>(src),
+                    PermuteOp::threadCtrl(detail::WaveSpace<>::localLaneId()));
 
-                return forEach(src, detail::WaveSpace<>::localLaneId(), detail::Seq<VecSize>{});
-#endif // ROCWMMA_ARCH_GFX1102
+                // Restore result to input type
+                return reinterpret_cast<InputVecT&>(result);
             }
         };
 
