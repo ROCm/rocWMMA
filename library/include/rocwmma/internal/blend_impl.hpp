@@ -70,7 +70,7 @@ namespace rocwmma
             * @arg src1 is the 'upper' reference
             */
             template <class OpCtrl>
-            struct amdgcn_perm
+            struct amdgcn_perm : OpCtrl
             {
                 template <typename DataT>
                 ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1)
@@ -88,6 +88,24 @@ namespace rocwmma
                                                 OpCtrl::opCtrl());
                     return src0;
                 }
+
+                // This function takes an opCtrl override to support pre-calculated opCtrl re-use
+                template <typename DataT>
+                ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1, uint32_t opCtrl)
+                {
+                    static_assert(sizeof(DataT) == sizeof(uint32_t), "Inputs must be 32 bit");
+
+                    // NOTE: src0 and src1 are flipped here due to spec's select
+                    // concatenation of i[3:0] = src1 and i[7:4] = src0 .
+                    // amdgcn_blend_byte does the inverse of this to make
+                    // the rocWMMA interface more intuitive, with src0 as the lower
+                    // 4 bytes and src1 in the upper 4 bytes.
+                    reinterpret_cast<uint32_t&>(src0)
+                        = __builtin_amdgcn_perm(reinterpret_cast<uint32_t&>(src1),
+                                                reinterpret_cast<uint32_t&>(src0),
+                                                opCtrl);
+                    return src0;
+                }
             };
 
             /*! \class amdgcn_blend
@@ -103,16 +121,33 @@ namespace rocwmma
             * @arg src0 is the 'lower' source (e.g. mask = 0)
             * @arg src1 is the 'upper' source (e.g. mask = 1)
             */
-            template <class MaskCtrl>
-            struct amdgcn_blend
+            template <class OpCtrl>
+            struct amdgcn_blend : OpCtrl
             {
                 template <typename DataT>
                 ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1)
                 {
                     static_assert(sizeof(DataT) % sizeof(uint32_t) == 0,
                                   "Inputs must be a multiple of 32 bit");
-                    uint32_t const mask = MaskCtrl::maskCtrl();
-                    return mask ? src1 : src0;
+                    uint32_t const maskCtrl = OpCtrl::opCtrl();
+                    return maskCtrl ? src1 : src0;
+                    // reinterpret_cast<uint32_t&>(src0)
+                    //     = (reinterpret_cast<uint32_t&>(src1) & maskCtrl)
+                    //       | (reinterpret_cast<uint32_t&>(src0) & ~maskCtrl);
+                    // return src0;
+                }
+
+                // This function takes an opCtrl override to support pre-calculated opCtrl re-use
+                template <typename DataT>
+                ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1, uint32_t maskCtrl)
+                {
+                    static_assert(sizeof(DataT) == sizeof(uint32_t), "Inputs must be 32 bit");
+                    // TODO:: WHY?
+                    // reinterpret_cast<uint32_t&>(src0)
+                    //     = (reinterpret_cast<uint32_t&>(src1) & maskCtrl)
+                    //       | (reinterpret_cast<uint32_t&>(src0) & ~maskCtrl);
+                    // return src0;
+                    return maskCtrl ? src1 : src0;
                 }
             };
 
@@ -156,7 +191,7 @@ namespace rocwmma
             struct BlendElements
             {
             public:
-                constexpr static bool maskCtrl()
+                constexpr static bool opCtrl()
                 {
                     // Just like a zipper, if threadIdx.x in [0, GroupSize - 1], return 0,
                     // if threadIdx.x in [GroupSize, 2 * GroupSize - 1], return 1
