@@ -33,18 +33,6 @@ namespace rocwmma
 {
     namespace detail
     {
-
-#if defined(__HIPCC_RTC__)
-
-        // Drop-in generic replacement for std
-        template <uint32_t Idx, typename DataT>
-        ROCWMMA_HOST_DEVICE constexpr auto get(DataT&& obj)
-        {
-            return reinterpret_cast<DataT*>(obj)[Idx];
-        }
-
-#endif // defined(__HIPCC_RTC__)
-
         // HIP_vector_type overloads
         template <uint32_t Idx, typename DataT, uint32_t VecSize>
         ROCWMMA_HOST_DEVICE constexpr inline DataT get(HIP_vector_type<DataT, VecSize>&& v)
