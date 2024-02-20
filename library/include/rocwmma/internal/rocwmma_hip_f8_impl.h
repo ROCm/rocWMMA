@@ -27,8 +27,12 @@
 #ifndef ROCWMMA_HIP_FP8_IMPL_H
 #define ROCWMMA_HIP_FP8_IMPL_H
 
+#include "utility/type_traits.hpp"
+
 namespace rocwmma_hip_f8_impl
 {
+    using rocwmma::is_same;
+    using rocwmma::conditional;
 
     ROCWMMA_HOST inline int clz(uint32_t x)
     {
@@ -42,8 +46,8 @@ namespace rocwmma_hip_f8_impl
     template <int wm, int we, typename T, bool negative_zero_nan, bool clip>
     ROCWMMA_HOST_DEVICE uint8_t cast_to_f8(T _x, bool stoch, uint32_t rng)
     {
-        constexpr bool is_half  = std::is_same<T, _Float16>::value;
-        constexpr bool is_float = std::is_same<T, float>::value;
+        constexpr bool is_half  = is_same<T, _Float16>::value;
+        constexpr bool is_float = is_same<T, float>::value;
         static_assert(wm + we == 7, "wm+we==7");
         static_assert(is_half || is_float, "Only half and float can be cast to f8");
 
@@ -239,8 +243,8 @@ namespace rocwmma_hip_f8_impl
     template <int wm, int we, typename T, bool negative_zero_nan>
     ROCWMMA_HOST_DEVICE T cast_from_f8(uint8_t x)
     {
-        constexpr bool is_half  = std::is_same<T, _Float16>::value;
-        constexpr bool is_float = std::is_same<T, float>::value;
+        constexpr bool is_half  = is_same<T, _Float16>::value;
+        constexpr bool is_float = is_same<T, float>::value;
         static_assert(is_half || is_float, "only half and float are supported");
 
         constexpr int weo = is_half ? 5 : 8;
@@ -296,7 +300,7 @@ namespace rocwmma_hip_f8_impl
                 return (mantissa == 0) ? (sign ? fNegInf : fInf) : fNaN;
             }
         }
-        typename std::conditional<sizeof(T) == 2, uint16_t, uint32_t>::type retval;
+        typename conditional<sizeof(T) == 2, uint16_t, uint32_t>::type retval;
         if(we == 5 && is_half && !negative_zero_nan)
         {
             retval = x << 8;

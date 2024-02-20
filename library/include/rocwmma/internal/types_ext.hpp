@@ -48,11 +48,11 @@ namespace rocwmma
     ////////////////////////////////////////////////////////////////////////
     template <typename Outgoing,
               typename Incoming,
-              typename std::enable_if_t<!std::is_same_v<Incoming, Outgoing>, int> = 0>
+              enable_if_t<!is_same_v<Incoming, Outgoing>, int> = 0>
     __host__ __device__ inline Outgoing convert(const Incoming& value)
     {
 #if !ROCWMMA_NO_HALF
-        if constexpr(std::is_same_v<Outgoing, hfloat16_t>)
+        if constexpr(is_same_v<Outgoing, hfloat16_t>)
         {
 
 #if defined(__HIP_NO_HALF_CONVERSIONS__)
@@ -62,7 +62,7 @@ namespace rocwmma
             return static_cast<hfloat16_t>(value);
 #endif // defined(__HIP_NO_HALF_CONVERSIONS__)
         }
-        else if constexpr(std::is_same_v<Incoming, hfloat16_t>)
+        else if constexpr(is_same_v<Incoming, hfloat16_t>)
         {
 
 #if defined(__HIP_NO_HALF_CONVERSIONS__)
@@ -81,7 +81,7 @@ namespace rocwmma
 
     template <typename Outgoing,
               typename Incoming,
-              typename std::enable_if_t<std::is_same_v<Incoming, Outgoing>, int> = 0>
+              enable_if_t<is_same_v<Incoming, Outgoing>, int> = 0>
     __host__ __device__ inline Outgoing const& convert(const Incoming& value)
     {
         return value;
@@ -105,8 +105,8 @@ namespace rocwmma
     {
         auto absDiff = std::fabs(__half2float(x) - __half2float(y));
         auto absAdd  = std::fabs(__half2float(x) + __half2float(y));
-        return absDiff <= __half2float(std::numeric_limits<hfloat16_t>::epsilon()) * absAdd * 2.0f
-               || absDiff < __half2float(std::numeric_limits<hfloat16_t>::min());
+        return absDiff <= __half2float(numeric_limits<hfloat16_t>::epsilon()) * absAdd * 2.0f
+               || absDiff < __half2float(numeric_limits<hfloat16_t>::min());
     }
 
     ROCWMMA_HALF_OP_ATTR inline bool operator!=(const hfloat16_t& x, const hfloat16_t& y)
