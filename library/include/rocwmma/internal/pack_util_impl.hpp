@@ -29,6 +29,7 @@
 #include "pack_util.hpp"
 #include "types.hpp"
 #include "utils.hpp"
+#include "vector_util.hpp"
 
 namespace rocwmma
 {
@@ -102,6 +103,18 @@ namespace rocwmma
 
         using UnpackedT = int32_t;
         using PackedT   = int32_t;
+    };
+
+    template <>
+    struct PackTraits<int64_t>
+    {
+        enum : uint32_t
+        {
+            PackRatio = 1 // No pack
+        };
+
+        using UnpackedT = int64_t;
+        using PackedT   = int64_t;
     };
 
     template <>
@@ -251,12 +264,13 @@ namespace rocwmma
     ROCWMMA_DEVICE /*static*/ inline auto&
         PackUtil<DataT>::packHelper(VecT<UnpackedT, VecSize> const& v)
     {
-        static_assert(VecSize % Traits::PackRatio == 0, "Use paddedPack32 instead.");
+        static_assert(VecSize % Traits::PackRatio == 0,
+                      "Cannot pack partial b32 vector. Use paddedPack instead.");
 
         // NOTE: Assumes that there is NO padding...
         using PackedVecT   = VecT<PackedT, VecSize / Traits::PackRatio>;
-        using UnpackedVecT = std::decay_t<decltype(v)>;
-        return *reinterpret_cast<PackedVecT*>(&(const_cast<UnpackedVecT&>(v)));
+        using UnpackedVecT = decay_t<decltype(v)>;
+        return reinterpret_cast<PackedVecT const&>(v);
     }
 
     template <typename DataT>
@@ -264,10 +278,16 @@ namespace rocwmma
     ROCWMMA_DEVICE /*static*/ inline auto&
         PackUtil<DataT>::unpackHelper(VecT<PackedT, VecSize> const& v)
     {
+        if constexpr(is_same_v<PackedT, UnpackedT>)
+        {
+            static_assert(Traits::PackRatio == 1, "Input vector must be packed");
+        }
+
         // NOTE: Assumes that there is NO padding...
-        using PackedVecT   = std::decay_t<decltype(v)>;
+        using PackedVecT   = decay_t<decltype(v)>;
         using UnpackedVecT = VecT<UnpackedT, VecSize * Traits::PackRatio>;
-        return *reinterpret_cast<UnpackedVecT*>(&(const_cast<PackedVecT&>(v)));
+
+        return reinterpret_cast<UnpackedVecT const&>(v);
     }
 
     template <typename DataT>
@@ -353,7 +373,8 @@ namespace rocwmma
         // Duplicate the inputs for padding
         else if constexpr((VecSize * 2u) == Traits::PackRatio)
         {
-            return packHelper(concat(v, v));
+            // Make sure to return by value here as concat produces rval
+            return VecT<PackedT, 1u>(packHelper(concat(v, v)));
         }
         // Pad single element data to b32
         else if constexpr(VecSize == 1u)
@@ -375,7 +396,7 @@ namespace rocwmma
         // Take lower half of vector
         else if constexpr((UnpaddedSize * 2u) == Traits::PackRatio)
         {
-            return extractLo(v);
+            return extractLo(unpackHelper(v));
         }
         // Pad single element data to b32
         else if constexpr(UnpaddedSize == 1u)

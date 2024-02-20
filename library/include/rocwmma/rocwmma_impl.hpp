@@ -52,6 +52,7 @@
 #include "internal/utils.hpp"
 #include "internal/vector.hpp"
 #include "internal/vector_iterator.hpp"
+#include "internal/vector_util.hpp"
 #include "internal/wmma.hpp"
 
 namespace rocwmma
@@ -214,11 +215,11 @@ namespace rocwmma
         fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
                       DataT                                                         value)
     {
-        using FragT       = typename std::decay_t<decltype(frag)>;
+        using FragT       = decay_t<decltype(frag)>;
         using Broadcaster = typename GetIOConfig_t<FragT>::Broadcaster;
 
         // Sanity check
-        static_assert(std::is_same<typename Broadcaster::Traits::BroadcastT,
+        static_assert(is_same<typename Broadcaster::Traits::BroadcastT,
                                    typename FragT::Traits::AccessT>::value,
                       "Broadcast input and fragment access types do not match");
 
@@ -236,16 +237,16 @@ namespace rocwmma
                          const DataT*                                                  data,
                          uint32_t                                                      ldm)
     {
-        using FragT  = typename std::decay_t<decltype(frag)>;
+        using FragT  = decay_t<decltype(frag)>;
         using Loader = typename GetIOConfig_t<FragT>::Loader;
 
         // Sanity checks
-        static_assert(!std::is_same<DataLayout, void>::value,
+        static_assert(!is_same<DataLayout, void>::value,
                       "Must provide layout information. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
         static_assert(
-            std::is_same<typename FragT::Traits::AccessT, typename Loader::Traits::OutputT>::value,
+            is_same<typename FragT::Traits::AccessT, typename Loader::Traits::OutputT>::value,
             "Fragment access and load output types do not match");
 
         // Load then implicit pack
@@ -283,16 +284,16 @@ namespace rocwmma
                           fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
                           uint32_t                                                            ldm)
     {
-        using FragT  = typename std::decay_t<decltype(frag)>;
+        using FragT  = decay_t<decltype(frag)>;
         using Storer = typename GetIOConfig_t<FragT>::Storer;
 
         // Sanity check
-        static_assert(!std::is_same<DataLayout, void>::value,
+        static_assert(!is_same<DataLayout, void>::value,
                       "Must provide data layout. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
         static_assert(
-            std::is_same<typename FragT::Traits::AccessT, typename Storer::Traits::InputT>::value,
+            is_same<typename FragT::Traits::AccessT, typename Storer::Traits::InputT>::value,
             "Fragment access and store input types do not match");
 
         // Implicit unpack and then store
@@ -335,13 +336,13 @@ namespace rocwmma
                  fragment<matrix_b, BlockM, BlockN, BlockK, InputT, LayoutB> const&      b,
                  fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutC> const& c)
     {
-        using FragA = typename std::decay_t<decltype(a)>;
-        using FragB = typename std::decay_t<decltype(b)>;
+        using FragA = decay_t<decltype(a)>;
+        using FragB = decay_t<decltype(b)>;
 
         // Sanity check
         // static_assert(detail::MfmaCheck<FragA, FragB>::value,
         //              "A and B fragment layouts must be orthogonal");
-        using MMA = typename std::conditional_t<ROCWMMA_ARCH_GFX9,
+        using MMA = conditional_t<ROCWMMA_ARCH_GFX9,
                                                 Mfma<InputT, ComputeT, BlockM, BlockN, BlockK>,
                                                 Wmma<InputT, ComputeT, BlockM, BlockN, BlockK>>;
 

@@ -33,13 +33,13 @@ namespace rocwmma
 {
 
 #if !ROCWMMA_TESTS_NO_HALF
-    __device__ inline bool is_same(half a, half b)
+    __device__ inline bool is_equal(half a, half b)
     {
         return __heq(a, b);
     }
 #endif // !ROCWMMA_NO_HALF
 
-    __device__ inline bool is_same(float a, float b)
+    __device__ inline bool is_equal(float a, float b)
     {
         return a == b;
     }
@@ -77,7 +77,7 @@ namespace rocwmma
         size_t end      = (num_elm * (tid + 1)) / nthreads;
         for(size_t i = start; i < end; i++)
         {
-            if(!is_same(a[i], b[i]))
+            if(!is_equal(a[i], b[i]))
             {
                 float a_    = (float)a[i];
                 float b_    = (float)b[i];

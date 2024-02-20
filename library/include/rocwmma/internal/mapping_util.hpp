@@ -27,7 +27,7 @@
 #define ROCWMMA_MAPPING_UTIL_HPP
 
 #include "types.hpp"
-
+#include "utility/type_traits.hpp"
 namespace rocwmma
 {
     // Fwd declaration
@@ -59,11 +59,11 @@ namespace rocwmma
 
             // Size of workgroup, normalized to wave count.
             template <bool IsConst                        = (TBlockX > 0u && TBlockY > 0u),
-                      typename std::enable_if_t<IsConst>* = nullptr>
+                      enable_if_t<IsConst>* = nullptr>
             ROCWMMA_DEVICE constexpr static inline WorkgroupDimT workgroupDim();
 
             template <bool IsConst                         = (TBlockX > 0u && TBlockY > 0u),
-                      typename std::enable_if_t<!IsConst>* = nullptr>
+                      enable_if_t<!IsConst>* = nullptr>
             ROCWMMA_DEVICE static inline WorkgroupDimT workgroupDim();
         };
 
@@ -93,8 +93,8 @@ namespace rocwmma
 
             enum : uint32_t
             {
-                MajorIndex = std::is_same<DataOrientation, row_major>::value ? 0 : 1,
-                MinorIndex = std::is_same<DataOrientation, row_major>::value ? 1 : 0
+                MajorIndex = is_same<DataOrientation, row_major>::value ? 0 : 1,
+                MinorIndex = is_same<DataOrientation, row_major>::value ? 1 : 0
             };
 
             // Determine the leading dimension of a matrix.
