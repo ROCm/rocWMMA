@@ -26,6 +26,7 @@
 #ifndef ROCWMMA_LAYOUT_HPP
 #define ROCWMMA_LAYOUT_HPP
 
+#include "utility/type_traits.hpp"
 #include "layout_impl.hpp"
 
 namespace rocwmma
@@ -188,8 +189,8 @@ namespace rocwmma
                   typename DataLayout,
                   uint32_t VectorWidth,
                   uint32_t MaxVectorWidth>
-        struct ColNT : public std::conditional_t<
-                           std::is_same<DataLayout, col_major>::value,
+        struct ColNT : public conditional_t<
+                           is_same<DataLayout, col_major>::value,
                            detail::ColOrthoVW<BlockDim, BlockK, DataT, 1, MaxVectorWidth>,
                            detail::ColOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>
         {
@@ -202,11 +203,11 @@ namespace rocwmma
                 // elements in both row_major or col_major data layouts.
                 // This layout cannot support for VW > 1 in col_major data layout otherwise the
                 // ordering is broken.
-                static_assert(!(std::is_same_v<DataLayout, col_major> && VectorWidth > 1),
+                static_assert(!(is_same_v<DataLayout, col_major> && VectorWidth > 1),
                               "ColNT in col_major does not support VectorWidth > 1");
 
                 // Must ensure that MaxVectorWidth fits inside the leading dimension
-                static_assert(std::is_same_v<DataLayout, row_major> && (MaxVectorWidth <= BlockK),
+                static_assert(is_same_v<DataLayout, row_major> && (MaxVectorWidth <= BlockK),
                     "MaxVectorWidth is larger than BlockK dimension. Try reducing MaxVectorWidth");
             };
         };
@@ -315,8 +316,8 @@ namespace rocwmma
                   typename DataLayout,
                   uint32_t VectorWidth,
                   uint32_t MaxVectorWidth>
-        struct RowNT : public std::conditional_t<
-                           std::is_same<DataLayout, col_major>::value,
+        struct RowNT : public conditional_t<
+                           is_same<DataLayout, col_major>::value,
                            detail::RowOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
                            detail::RowOrthoVW<BlockDim, BlockK, DataT, 1, MaxVectorWidth>>
         {
@@ -329,11 +330,11 @@ namespace rocwmma
                 // elements in both in row_major or col_major data layouts.
                 // This layout cannot support for VW > 1 in row_major data layout otherwise the
                 // ordering is broken.
-                static_assert(!(std::is_same_v<DataLayout, row_major> && VectorWidth > 1),
+                static_assert(!(is_same_v<DataLayout, row_major> && VectorWidth > 1),
                               "RowNT in row_major does not support VectorWidth > 1");
 
                 // Must ensure that MaxVectorWidth fits inside the leading dimension
-                static_assert(std::is_same_v<DataLayout, col_major> && (MaxVectorWidth <= BlockK),
+                static_assert(is_same_v<DataLayout, col_major> && (MaxVectorWidth <= BlockK),
                     "MaxVectorWidth is larger than BlockK dimension. Try reducing MaxVectorWidth");
             };
         };
@@ -498,8 +499,8 @@ namespace rocwmma
                   typename DataLayout,
                   uint32_t VectorWidth,
                   uint32_t MaxVectorWidth = VectorWidth>
-        struct Col : public std::conditional_t<
-                         std::is_same<DataLayout, col_major>::value,
+        struct Col : public conditional_t<
+                         is_same<DataLayout, col_major>::value,
                          detail::ColInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
                          detail::ColOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>
         {
@@ -664,8 +665,8 @@ namespace rocwmma
                   typename DataLayout,
                   uint32_t VectorWidth,
                   uint32_t MaxVectorWidth = VectorWidth>
-        struct Row : public std::conditional_t<
-                         std::is_same<DataLayout, row_major>::value,
+        struct Row : public conditional_t<
+                         is_same<DataLayout, row_major>::value,
                          detail::RowInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
                          detail::RowOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>
         {

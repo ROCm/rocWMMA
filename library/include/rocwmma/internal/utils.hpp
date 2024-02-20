@@ -27,6 +27,8 @@
 #define ROCWMMA_UTILS_HPP
 
 #include "types.hpp"
+
+#include "utility/get.hpp"
 #include "vector.hpp"
 
 namespace rocwmma
@@ -36,137 +38,6 @@ namespace rocwmma
     ///                                                             ///
     /// Note: performs static unroll                                ///
     ///////////////////////////////////////////////////////////////////
-
-    namespace detail
-    {
-        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-        ROCWMMA_DEVICE constexpr static inline auto extractEven(VecT<DataT, VecSize> const& v,
-                                                                detail::SeqT<Idx...>)
-        {
-            static_assert(sizeof...(Idx) == VecSize / 2u,
-                          "Index count must be half the vector size");
-            return VecT<DataT, VecSize / 2u>{get<Idx * 2>(v)...};
-        }
-
-        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-        ROCWMMA_DEVICE constexpr static inline auto extractOdd(VecT<DataT, VecSize> const& v,
-                                                               detail::SeqT<Idx...>)
-        {
-            static_assert(sizeof...(Idx) == VecSize / 2u,
-                          "Index count must be half the vector size");
-            return VecT<DataT, VecSize / 2u>{get<Idx * 2 + 1>(v)...};
-        }
-
-        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-        ROCWMMA_DEVICE constexpr static inline auto extractLo(VecT<DataT, VecSize> const& v,
-                                                              detail::SeqT<Idx...>)
-        {
-            static_assert(sizeof...(Idx) == VecSize / 2u,
-                          "Index count must be half the vector size");
-            return VecT<DataT, VecSize / 2u>{get<Idx>(v)...};
-        }
-
-        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-        ROCWMMA_DEVICE constexpr static inline auto extractHi(VecT<DataT, VecSize> const& v,
-                                                              detail::SeqT<Idx...>)
-        {
-            static_assert(sizeof...(Idx) == VecSize / 2u,
-                          "Index count must be half the vector size");
-            return VecT<DataT, VecSize / 2u>{get<VecSize / 2 + Idx>(v)...};
-        }
-
-        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-        ROCWMMA_DEVICE constexpr static inline auto concat(VecT<DataT, VecSize> const& v0,
-                                                           VecT<DataT, VecSize> const& v1,
-                                                           detail::SeqT<Idx...>)
-        {
-            static_assert(sizeof...(Idx) == VecSize, "Index count must equal the vector size");
-            return VecT<DataT, VecSize * 2u>{get<Idx>(v0)..., get<Idx>(v1)...};
-        }
-
-        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-        ROCWMMA_DEVICE constexpr static inline auto zip(VecT<DataT, VecSize> const& v0,
-                                                        VecT<DataT, VecSize> const& v1,
-                                                        detail::SeqT<Idx...>)
-        {
-            static_assert(sizeof...(Idx) == VecSize, "Index count must equal the vector size");
-            return VecT<DataT, VecSize>{((Idx % 2 == 0) ? get<Idx>(v0) : get<Idx>(v1))...};
-        }
-
-        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-        ROCWMMA_DEVICE constexpr static inline auto unpackLo(VecT<DataT, VecSize> const& v0,
-                                                             VecT<DataT, VecSize> const& v1,
-                                                             detail::SeqT<Idx...>)
-        {
-            static_assert(sizeof...(Idx) == VecSize, "Index count must equal the vector size");
-            return VecT<DataT, VecSize>{
-                ((Idx % 2 == 0) ? get<Idx / 2u>(v0) : get<Idx / 2u>(v1))...};
-        }
-
-        template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-        ROCWMMA_DEVICE constexpr static inline auto unpackHi(VecT<DataT, VecSize> const& v0,
-                                                             VecT<DataT, VecSize> const& v1,
-                                                             detail::SeqT<Idx...>)
-        {
-            constexpr auto startIdx = VecSize / 2u;
-            static_assert(sizeof...(Idx) == VecSize, "Index count must equal the vector size");
-            return VecT<DataT, VecSize>{
-                ((Idx % 2 == 0) ? get<startIdx + Idx / 2u>(v0) : get<startIdx + Idx / 2u>(v1))...};
-        }
-
-    } // namespace detail
-
-    template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto extractEven(VecT<DataT, VecSize> const& v)
-    {
-        return detail::extractEven(v, detail::Seq<VecSize / 2u>{});
-    }
-
-    template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto extractLo(VecT<DataT, VecSize> const& v)
-    {
-        return detail::extractLo(v, detail::Seq<VecSize / 2u>{});
-    }
-
-    template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto extractHi(VecT<DataT, VecSize> const& v)
-    {
-        return detail::extractHi(v, detail::Seq<VecSize / 2u>{});
-    }
-
-    template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto extractOdd(VecT<DataT, VecSize> const& v)
-    {
-        return detail::extractOdd(v, detail::Seq<VecSize / 2u>{});
-    }
-
-    template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto concat(VecT<DataT, VecSize> const& v0,
-                                                       VecT<DataT, VecSize> const& v1)
-    {
-        return detail::concat(v0, v1, detail::Seq<VecSize>{});
-    }
-
-    template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto zip(VecT<DataT, VecSize> const& v0,
-                                                    VecT<DataT, VecSize> const& v1)
-    {
-        return detail::zip(v0, v1, detail::Seq<VecSize>{});
-    }
-
-    template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto unpackLo(VecT<DataT, VecSize> const& v0,
-                                                         VecT<DataT, VecSize> const& v1)
-    {
-        return detail::unpackLo(v0, v1, detail::Seq<VecSize>{});
-    }
-
-    template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE constexpr static inline auto unpackHi(VecT<DataT, VecSize> const& v0,
-                                                         VecT<DataT, VecSize> const& v1)
-    {
-        return detail::unpackHi(v0, v1, detail::Seq<VecSize>{});
-    }
 
     // Unary swap only considered in 2d vectors.
     template <typename DataT>
@@ -222,7 +93,7 @@ namespace std
     template <typename F, typename Tuple, size_t... I>
     auto apply_impl(F fn, Tuple t, std::index_sequence<I...>)
     {
-        return fn(std::get<I>(t)...);
+        return fn(get<I>(t)...);
     }
     template <typename F, typename Tuple>
     auto apply(F fn, Tuple t)
@@ -296,9 +167,9 @@ namespace rocwmma
 {
     // Computes ceil(numerator/divisor) for integer types.
     template <typename intT1,
-              class = typename std::enable_if<std::is_integral<intT1>::value>::type,
+              class = typename enable_if<is_integral<intT1>::value>::type,
               typename intT2,
-              class = typename std::enable_if<std::is_integral<intT2>::value>::type>
+              class = typename enable_if<is_integral<intT2>::value>::type>
     static constexpr intT1 ceilDiv(const intT1 numerator, const intT2 divisor)
     {
         return (numerator + divisor - 1) / divisor;
