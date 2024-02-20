@@ -868,6 +868,185 @@ namespace rocwmma
 #endif
 
     template <>
+    struct AosToSoa<16, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 2;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            return v;
+        }
+    };
+
+    template <>
+    struct AosToSoa<32, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 2;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            return v;
+        }
+    };
+
+    template <>
+    struct AosToSoa<64, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 2;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            return v;
+        }
+    };
+
+    template <>
+    struct AosToSoa<128, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 4;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            return v;
+        }
+    };
+
+    template <>
+    struct AosToSoa<256, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 8;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            return v;
+        }
+    };
+
+    template <>
+    struct SoaToAos<16, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 2;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            using PackUtil = PackUtil<DataT>;
+
+            // Step 1 : Scatter
+            auto unpacked_data = PackUtil::template paddedUnpack<2>(
+                Permute::Scatter16<2, 0>::exec(PackUtil::paddedPack(v)));
+
+            // Step 3 : UnpackLoHi8
+            unpacked_data = unpackLoHi8(unpacked_data);
+
+            return unpacked_data;
+        }
+    };
+
+    template <>
+    struct SoaToAos<32, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 2;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            using PackUtil = PackUtil<DataT>;
+
+            // Step 1 : Scatter
+            auto unpacked_data = PackUtil::template paddedUnpack<2>(
+                Permute::Scatter32<2, 0>::exec(PackUtil::paddedPack(v)));
+
+            // Step 3 : UnpackLoHi16
+            unpacked_data = unpackLoHi16(unpacked_data);
+
+            return unpacked_data;
+        }
+    };
+
+    template <>
+    struct SoaToAos<64, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 2;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            using PackUtil = PackUtil<DataT>;
+
+            // Step 1 : Scatter
+            auto unpacked_data = PackUtil::template paddedUnpack<2>(
+                Permute::ScatterWave<2, 0>::exec(PackUtil::paddedPack(v)));
+
+            // Step 3 : UnpackLoHi32
+            unpacked_data = unpackLoHi32(unpacked_data);
+
+            return unpacked_data;
+        };
+    };
+
+    template <>
+    struct SoaToAos<128, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 4;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            // Step 1 :  RE-PACK Banks
+            auto v0 = unpackLo(extractLo(v), extractHi(v));
+            auto v1 = unpackHi(extractLo(v), extractHi(v));
+
+            // Step 2 - 4 :  Applied on VW width banks
+            auto unpacked_data0 = SoaToAos<64, 2>::exec(v0);
+            auto unpacked_data1 = SoaToAos<64, 2>::exec(v1);
+
+            return concat(unpacked_data0, unpacked_data1);
+        }
+    };
+
+    template <>
+    struct SoaToAos<256, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 8;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            // Step 1 :  RE-PACK Banks
+            auto v0 = VecT<DataT, VecSize / 4>{v.data[0], v.data[2]};
+            auto v1 = VecT<DataT, VecSize / 4>{v.data[4], v.data[6]};
+            auto v2 = VecT<DataT, VecSize / 4>{v.data[1], v.data[3]};
+            auto v3 = VecT<DataT, VecSize / 4>{v.data[5], v.data[7]};
+
+            // Step 2 - 4 :  Applied on VW width banks
+            auto unpacked_data0 = SoaToAos<64, 2>::exec(v0);
+            auto unpacked_data1 = SoaToAos<64, 2>::exec(v1);
+            auto unpacked_data2 = SoaToAos<64, 2>::exec(v2);
+            auto unpacked_data3 = SoaToAos<64, 2>::exec(v3);
+
+            auto unpacked_data = concat(concat(unpacked_data0, unpacked_data1),
+                                        concat(unpacked_data2, unpacked_data3));
+            return unpacked_data;
+        }
+    };
+
+    template <>
     struct SoaToAos<16, 4>
     {
         constexpr static uint32_t VW      = 4;

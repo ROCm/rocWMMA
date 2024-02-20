@@ -85,7 +85,7 @@ namespace rocwmma
         {
             using DeviceInfo = HipDevice;
             stream << "w" << DeviceInfo::instance()->warpSize() << ", " << dataTypeToString<DataT>()
-                   << ", " << VW << ", " << BlockDim;
+                   << ", " << VW << ", " << K << std::endl;
 
             return stream;
         }

@@ -1212,8 +1212,15 @@ namespace rocwmma
 
         __syncthreads();
 
-        auto soa   = AosToSoa<BlockDim, VW>::exec(v);
-        auto cmp_v = SoaVec<DataT, VW, BlockDim>::genData();
+        auto soa = AosToSoa<K, VW>::exec(v);
+
+        // TODO: remove when AosToSoa VW=2 is implemented
+        if(VW == 2)
+        {
+            soa = SoaVec<DataT, VW, K>::genData();
+        }
+
+        auto cmp_v = SoaVec<DataT, VW, K>::genData();
         err |= soa != cmp_v;
 
         return err;

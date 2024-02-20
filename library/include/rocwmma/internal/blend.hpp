@@ -162,6 +162,7 @@ namespace rocwmma
         using UnpackWordLo   = Driver<BlendImpl::Ops::UnpackWordLo>;
         using UnpackWordHi   = Driver<BlendImpl::Ops::UnpackWordHi>;
         using UnpackByteLoHi = Driver<BlendImpl::Ops::UnpackByteLoHi>;
+        using UnpackByteHiLo = Driver<BlendImpl::Ops::UnpackByteHiLo>;
 
         // Extract functions
         using ExtractByteEven = Driver<BlendImpl::Ops::ExtractByteEven>;
