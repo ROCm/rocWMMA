@@ -93,7 +93,8 @@ namespace rocwmma
                             || deviceArch == Base::DeviceInfo::GFX1101
                             || deviceArch == Base::DeviceInfo::GFX1102);
 
-            bool isGfx12 = (deviceArch == Base::DeviceInfo::GFX1201);
+            bool isGfx12 = (deviceArch == Base::DeviceInfo::GFX1200)
+                           || (deviceArch == Base::DeviceInfo::GFX1201);
 
             bool dppWaveShiftCheck
                 = !((isGfx11 || isGfx12)

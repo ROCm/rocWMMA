@@ -58,6 +58,8 @@
 #define ROCWMMA_ARCH_GFX1101 __gfx1101__
 #elif defined(__gfx1102__)
 #define ROCWMMA_ARCH_GFX1102 __gfx1102__
+#elif defined(__gfx1200__)
+#define ROCWMMA_ARCH_GFX1200 __gfx1200__
 #elif defined(__gfx1201__)
 #define ROCWMMA_ARCH_GFX1201 __gfx1201__
 #else
@@ -87,6 +89,9 @@
 #endif
 #if !defined(ROCWMMA_ARCH_GFX1102)
 #define ROCWMMA_ARCH_GFX1102 0
+#endif
+#if !defined(ROCWMMA_ARCH_GFX1200)
+#define ROCWMMA_ARCH_GFX1200 0
 #endif
 #if !defined(ROCWMMA_ARCH_GFX1201)
 #define ROCWMMA_ARCH_GFX1201 0
@@ -119,7 +124,7 @@
 #define ROCWMMA_BLOCK_DIM_16_SUPPORTED 1
 #endif
 
-#if ROCWMMA_ARCH_GFX1201
+#if ROCWMMA_ARCH_GFX1200 || ROCWMMA_ARCH_GFX1201
 #define ROCWMMA_ARCH_GFX12 1
 #define ROCWMMA_WAVE32_MODE 1
 #define ROCWMMA_BLOCK_DIM_16_SUPPORTED 1

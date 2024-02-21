@@ -71,7 +71,7 @@ namespace rocwmma
             using LoadT = VecT<DataT, VectorWidth>;
 
             // Intrinsic type
-            using LoadIT = decltype(__builtin_amdgcn_global_load_tr_b128_v8f16(nullptr));
+            using LoadIT = decltype(__builtin_amdgcn_global_load_tr_v8f16(nullptr));
 
             static_assert(VectorWidth > 0u, "Vector width must be greater than 0");
             static_assert(sizeof(DataT[VectorWidth]) == sizeof(LoadT), "Cannot vectorize input");
@@ -84,7 +84,7 @@ namespace rocwmma
                 {
                     LoadIT in;
                     LoadT  out;
-                } v{__builtin_amdgcn_global_load_tr_b128_v8f16((LoadIT* const)(dataPtr + offset))};
+                } v{__builtin_amdgcn_global_load_tr_v8f16((LoadIT* const)(dataPtr + offset))};
                 data = v.out;
             }
         };
@@ -102,7 +102,7 @@ namespace rocwmma
             using LoadT = VecT<DataT, VectorWidth>;
 
             // Intrinsic type
-            using LoadIT = decltype(__builtin_amdgcn_global_load_tr_b128_v8i16(nullptr));
+            using LoadIT = decltype(__builtin_amdgcn_global_load_tr_v8i16(nullptr));
 
             static_assert(VectorWidth > 0, "Vector width must be greater than 0");
             static_assert(sizeof(DataT[VectorWidth]) == sizeof(LoadT), "Cannot vectorize input");
@@ -115,7 +115,7 @@ namespace rocwmma
                 {
                     LoadIT in;
                     LoadT  out;
-                } v{__builtin_amdgcn_global_load_tr_b128_v8i16((LoadIT* const)(dataPtr + offset))};
+                } v{__builtin_amdgcn_global_load_tr_v8i16((LoadIT* const)(dataPtr + offset))};
                 data = v.out;
             }
         };
@@ -133,7 +133,7 @@ namespace rocwmma
             using LoadT = VecT<DataT, VectorWidth>;
 
             // Intrinsic type
-            using LoadIT = decltype(__builtin_amdgcn_global_load_tr_b64_v2i32(nullptr));
+            using LoadIT = decltype(__builtin_amdgcn_global_load_tr_b4_v2i32(nullptr));
 
             static_assert(VectorWidth > 0, "Vector width must be greater than 0");
             static_assert(sizeof(DataT[VectorWidth]) == sizeof(LoadT), "Cannot vectorize input");
@@ -146,7 +146,7 @@ namespace rocwmma
                 {
                     LoadIT in;
                     LoadT  out;
-                } v{__builtin_amdgcn_global_load_tr_b64_v2i32((LoadIT* const)(dataPtr + offset))};
+                } v{__builtin_amdgcn_global_load_tr_b4_v2i32((LoadIT* const)(dataPtr + offset))};
                 data = v.out;
             }
         };
@@ -164,7 +164,7 @@ namespace rocwmma
             using LoadT = VecT<DataT, VectorWidth>;
 
             // Intrinsic type
-            using LoadIT = decltype(__builtin_amdgcn_global_load_tr_b64_v2i32(nullptr));
+            using LoadIT = decltype(__builtin_amdgcn_global_load_tr_b4_v2i32(nullptr));
 
             static_assert(VectorWidth > 0, "Vector width must be greater than 0");
             static_assert(sizeof(DataT[VectorWidth]) == sizeof(LoadT), "Cannot vectorize input");
@@ -177,7 +177,7 @@ namespace rocwmma
                 {
                     LoadIT in;
                     LoadT  out;
-                } v{__builtin_amdgcn_global_load_tr_b64_v2i32((LoadIT* const)(dataPtr + offset))};
+                } v{__builtin_amdgcn_global_load_tr_b4_v2i32((LoadIT* const)(dataPtr + offset))};
                 data = v.out;
             }
         };
@@ -195,7 +195,7 @@ namespace rocwmma
             using LoadT = VecT<DataT, VectorWidth>;
 
             // Intrinsic type
-            using LoadIT = decltype(__builtin_amdgcn_global_load_tr_b64_v2i32(nullptr));
+            using LoadIT = decltype(__builtin_amdgcn_global_load_tr_b4_v2i32(nullptr));
 
             static_assert(VectorWidth > 0, "Vector width must be greater than 0");
             static_assert(sizeof(DataT[VectorWidth]) == sizeof(LoadT), "Cannot vectorize input");
@@ -208,7 +208,7 @@ namespace rocwmma
                 {
                     LoadIT in;
                     LoadT  out;
-                } v{__builtin_amdgcn_global_load_tr_b64_v2i32((LoadIT* const)(dataPtr + offset))};
+                } v{__builtin_amdgcn_global_load_tr_b4_v2i32((LoadIT* const)(dataPtr + offset))};
                 data = v.out;
             }
         };

@@ -54,6 +54,7 @@ namespace rocwmma
             GFX1100          = Constants::AMDGCN_ARCH_ID_GFX1100,
             GFX1101          = Constants::AMDGCN_ARCH_ID_GFX1101,
             GFX1102          = Constants::AMDGCN_ARCH_ID_GFX1102,
+            GFX1200          = Constants::AMDGCN_ARCH_ID_GFX1200,
             GFX1201          = Constants::AMDGCN_ARCH_ID_GFX1201,
             UNSUPPORTED_ARCH = Constants::AMDGCN_ARCH_ID_NONE,
         };

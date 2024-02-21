@@ -526,7 +526,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
                                                           ComputeT       alpha,
                                                           ComputeT       beta)
 {
-    if constexpr(ROCWMMA_ARCH_GFX9 || ROCWMMA_ARCH_GFX11 || ROCWMMA_ARCH_GFX12)
+    if constexpr(!ROCWMMA_ARCH_HOST)
     {
         ///
         /// 2D matrix coordinate setup
