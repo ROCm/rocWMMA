@@ -420,13 +420,48 @@ namespace rocwmma
             auto repacked_b1 = concat(extractOdd(result_b0), extractOdd(result_b1));
             return concat(repacked_b0, repacked_b1);
         }
+#elif ROCWMMA_WAVE32_MODE
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = VW * (128 / Constants::AMDGCN_WAVE_SIZE);
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            auto lo = extractLo(v);
+            auto hi = extractHi(v);
+            auto v0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractLo(lo));
+            auto v1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractHi(lo));
+            auto v2 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractLo(hi));
+            auto v3 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractHi(hi));
+
+            // Re-pack banks
+            auto repack_data = VecT<DataT, VecSize>{
+                v0.data[0], v0.data[4], v1.data[0], v1.data[4], v2.data[0], v2.data[4], v3.data[0],
+                v3.data[4], v0.data[1], v0.data[5], v1.data[1], v1.data[5], v2.data[1], v2.data[5],
+                v3.data[1], v3.data[5], v0.data[2], v0.data[6], v1.data[2], v1.data[6], v2.data[2],
+                v2.data[6], v3.data[2], v3.data[6], v0.data[3], v0.data[7], v1.data[3], v1.data[7],
+                v2.data[3], v2.data[7], v3.data[3], v3.data[7],
+            };
+
+            return repack_data;
+        }
+#else // host code                                                              \
+        // This host code should not be called since it is marked as ROCWMMA_DEVICE \
+        // This code snippet exists since hipcc complains about the mismatched function
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, 1> const& v)
+        {
+            return v;
+        }
+#endif
     };
 
     template <>
     struct AosToSoa<256, 8>
     {
+#if ROCWMMA_WAVE64_MODE
         constexpr static uint32_t VW      = 8;
-        constexpr static uint32_t VecSize = 32;
+        constexpr static uint32_t VecSize = VW * (256 / Constants::AMDGCN_WAVE_SIZE);
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
@@ -489,69 +524,6 @@ namespace rocwmma
 
                 get<3>(result_b0), get<7>(result_b0), get<3>(result_b1), get<7>(result_b1),
                 get<3>(result_b2), get<7>(result_b2), get<3>(result_b3), get<7>(result_b3)};
-        }
-#elif ROCWMMA_WAVE32_MODE
-        constexpr static uint32_t VW      = 8;
-        constexpr static uint32_t VecSize = VW * (128 / Constants::AMDGCN_WAVE_SIZE);
-
-        template <typename DataT>
-        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
-        {
-            auto lo = extractLo(v);
-            auto hi = extractHi(v);
-            auto v0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractLo(lo));
-            auto v1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractHi(lo));
-            auto v2 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractLo(hi));
-            auto v3 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractHi(hi));
-
-            // Re-pack banks
-            auto repack_data = VecT<DataT, VecSize>{
-                v0.data[0], v0.data[4], v1.data[0], v1.data[4], v2.data[0], v2.data[4], v3.data[0],
-                v3.data[4], v0.data[1], v0.data[5], v1.data[1], v1.data[5], v2.data[1], v2.data[5],
-                v3.data[1], v3.data[5], v0.data[2], v0.data[6], v1.data[2], v1.data[6], v2.data[2],
-                v2.data[6], v3.data[2], v3.data[6], v0.data[3], v0.data[7], v1.data[3], v1.data[7],
-                v2.data[3], v2.data[7], v3.data[3], v3.data[7],
-            };
-
-            return repack_data;
-        }
-#else // host code                                                              \
-        // This host code should not be called since it is marked as ROCWMMA_DEVICE \
-        // This code snippet exists since hipcc complains about the mismatched function
-        template <typename DataT>
-        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, 1> const& v)
-        {
-            return v;
-        }
-#endif
-    };
-
-    template <>
-    struct AosToSoa<256, 8>
-    {
-#if ROCWMMA_WAVE64_MODE
-        constexpr static uint32_t VW      = 8;
-        constexpr static uint32_t VecSize = VW * (256 / Constants::AMDGCN_WAVE_SIZE);
-
-        template <typename DataT>
-        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
-        {
-            auto lo = extractLo(v);
-            auto hi = extractHi(v);
-            auto v0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractLo(lo));
-            auto v1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractHi(lo));
-            auto v2 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractLo(hi));
-            auto v3 = AosToSoa<Constants::AMDGCN_WAVE_SIZE, VW>::exec(extractHi(hi));
-
-            // Re-pack banks
-            auto repack_data = VecT<DataT, VecSize>{
-                v0.data[0], v0.data[4], v1.data[0], v1.data[4], v2.data[0], v2.data[4], v3.data[0],
-                v3.data[4], v0.data[1], v0.data[5], v1.data[1], v1.data[5], v2.data[1], v2.data[5],
-                v3.data[1], v3.data[5], v0.data[2], v0.data[6], v1.data[2], v1.data[6], v2.data[2],
-                v2.data[6], v3.data[2], v3.data[6], v0.data[3], v0.data[7], v1.data[3], v1.data[7],
-                v2.data[3], v2.data[7], v3.data[3], v3.data[7],
-            };
-            return repack_data;
         }
 #elif ROCWMMA_WAVE32_MODE
         constexpr static uint32_t VW      = 8;
