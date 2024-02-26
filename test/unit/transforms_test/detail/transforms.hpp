@@ -40,7 +40,7 @@ namespace rocwmma
                          col_major>; // BlockM, BlockN, DataLayout are redundant for this test
 
     // Wrapper into the actual device function
-    template <uint32_t K, uint32_t VW, typename DataT>
+    template <uint32_t BlockDim, uint32_t VW, typename DataT>
     struct TransformsKernel : public TransformsKernelBase<DataT>
     {
     protected:
@@ -78,21 +78,21 @@ namespace rocwmma
 
         std::ostream& printHeader(std::ostream& stream = std::cout) const override
         {
-            return stream << "WSize, DataT, VW, K" << std::endl;
+            return stream << "WSize, DataT, VW, BlockDim" << std::endl;
         }
 
         std::ostream& printKernel(std::ostream& stream = std::cout) const override
         {
             using DeviceInfo = HipDevice;
             stream << "w" << DeviceInfo::instance()->warpSize() << ", " << dataTypeToString<DataT>()
-                   << ", " << VW << ", " << K;
+                   << ", " << VW << ", " << BlockDim;
 
             return stream;
         }
     };
 
-    template <uint32_t K, uint32_t VW, typename DataT>
-    struct AossoaKernel : public TransformsKernel<K, VW, DataT>
+    template <uint32_t BlockDim, uint32_t VW, typename DataT>
+    struct AossoaKernel : public TransformsKernel<BlockDim, VW, DataT>
     {
     protected:
         using Base = TransformsKernelBase<DataT>;
@@ -100,12 +100,12 @@ namespace rocwmma
     public:
         typename Base::KernelFunc kernelImpl() const override
         {
-            return typename Base::KernelFunc(aossoaTest<DataT, VW, K>);
+            return typename Base::KernelFunc(aossoaTest<DataT, VW, BlockDim>);
         }
     };
 
-    template <uint32_t K, uint32_t VW, typename DataT>
-    struct SoaaosKernel : public TransformsKernel<K, VW, DataT>
+    template <uint32_t BlockDim, uint32_t VW, typename DataT>
+    struct SoaaosKernel : public TransformsKernel<BlockDim, VW, DataT>
     {
     protected:
         using Base = TransformsKernelBase<DataT>;
@@ -113,20 +113,20 @@ namespace rocwmma
     public:
         typename Base::KernelFunc kernelImpl() const override
         {
-            return typename Base::KernelFunc(soaaosTest<DataT, VW, K>);
+            return typename Base::KernelFunc(soaaosTest<DataT, VW, BlockDim>);
         }
     };
 
     // This is the GeneratorImpl class
-    template <template <uint32_t K, uint32_t VW, typename DataT> typename Func>
+    template <template <uint32_t BlockDim, uint32_t VW, typename DataT> typename Func>
     struct TransformsGenerator
     {
         // Indices to test parameters
         enum : uint32_t
         {
-            K     = 0,
-            VW    = 1,
-            DataT = 2,
+            BlockDim = 0,
+            VW       = 1,
+            DataT    = 2,
         };
 
         using ResultT = std::shared_ptr<KernelI>;
@@ -136,7 +136,7 @@ namespace rocwmma
         {
             // Map GTest params to Kernel params
             using TestParamsT = std::tuple<Ts...>;
-            using KernelT     = Func<std::tuple_element_t<K, TestParamsT>::value, // K
+            using KernelT     = Func<std::tuple_element_t<BlockDim, TestParamsT>::value, // BlockDim
                                  std::tuple_element_t<VW, TestParamsT>::value, // VW
                                  std::tuple_element_t<DataT, TestParamsT> // DataT
                                  >;
