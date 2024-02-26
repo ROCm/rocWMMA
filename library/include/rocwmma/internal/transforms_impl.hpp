@@ -1296,6 +1296,185 @@ namespace rocwmma
     };
 #endif
 
+    template <>
+    struct SoaToAos<16, 8>
+    {
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = 8;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            using PackUtil = PackUtil<DataT>;
+
+            // Step 1 : Scatter
+            auto unpacked_data = PackUtil::template paddedUnpack<8>(
+                Permute::Scatter16<8, 0>::exec(PackUtil::paddedPack(v)));
+
+            // Step 2 : UnpackLoHi2
+            unpacked_data = unpackLoHi2(unpacked_data);
+
+            // Step 3 : UnpackLoHi4
+            unpacked_data = unpackLoHi4(unpacked_data);
+
+            // Step 4 : UnpackLoHi8
+            unpacked_data = unpackLoHi8(unpacked_data);
+
+            return unpacked_data;
+        }
+    };
+
+    template <>
+    struct SoaToAos<32, 8>
+    {
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = 8;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            using PackUtil = PackUtil<DataT>;
+
+            // Step 1 : Scatter
+            auto hi = (Permute::Scatter32<8, 16>::exec(PackUtil::paddedPack(extractHi(v))));
+            auto lo = (Permute::Scatter32<8, 0>::exec(PackUtil::paddedPack(extractLo(v))));
+            auto unpacked_data = concat(PackUtil::template paddedUnpack<4>(lo),
+                                        PackUtil::template paddedUnpack<4>(hi));
+
+            // Step 2 : UnpackLoHi4
+            unpacked_data = unpackLoHi4(unpacked_data);
+
+            // Step 3 : UnpackLoHi8
+            unpacked_data = unpackLoHi8(unpacked_data);
+
+            // Step 4 : UnpackLoHi16 with half rotation
+            lo = PackUtil::paddedPack(extractEven(unpacked_data));
+            hi = PackUtil::paddedPack(extractOdd(unpacked_data));
+
+            auto lo_final = Dpp::Driver<DppImpl::Ops::MaskMove, 0x5, 0xF>::exec(lo, hi);
+            hi            = Dpp::Driver<DppImpl::Ops::MaskMove, 0x5, 0xF>::exec(hi, lo);
+
+            hi = Swizzle::RotateR32<16>::exec(hi);
+
+            return concat(PackUtil::template paddedUnpack<4u>(lo_final),
+                          PackUtil::template paddedUnpack<4u>(hi));
+        }
+    };
+
+    template <>
+    struct SoaToAos<64, 8>
+    {
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = 8;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            using PackUtil = PackUtil<DataT>;
+
+            // Step 1 : Scatter
+            auto hi = (Permute::ScatterWave<8, 32>::exec(PackUtil::paddedPack(extractHi(v))));
+            auto lo = (Permute::ScatterWave<8, 0>::exec(PackUtil::paddedPack(extractLo(v))));
+            auto unpacked_data = concat(PackUtil::template paddedUnpack<4>(lo),
+                                        PackUtil::template paddedUnpack<4>(hi));
+
+            // Step 2 : UnpackLoHi8
+            unpacked_data = unpackLoHi8(unpacked_data);
+
+            // Step 3 : unpackLoHi16
+            unpacked_data = unpackLoHi16(unpacked_data);
+
+            // Step 4 : UnpackLoHi32 with half rotation
+            lo = PackUtil::paddedPack(extractEven(unpacked_data));
+            hi = PackUtil::paddedPack(extractOdd(unpacked_data));
+
+            auto lo_final = Dpp::Driver<DppImpl::Ops::MaskMove, 0x3, 0xF>::exec(lo, hi);
+            hi            = Dpp::Driver<DppImpl::Ops::MaskMove, 0x3, 0xF>::exec(hi, lo);
+
+            hi = Permute::RotateWaveR<32>::exec(hi);
+
+            return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo_final),
+                          PackUtil::template paddedUnpack<VecSize / 2u>(hi));
+        };
+    };
+
+    template <>
+    struct SoaToAos<128, 8>
+    {
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = 16;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            // Step 1 :  RE-PACK Banks
+            auto v0 = unpackLo(extractLo(v), extractHi(v));
+            auto v1 = unpackHi(extractLo(v), extractHi(v));
+
+            // Step 2 - 4 :  Applied on VW width banks
+            auto unpacked_data0 = SoaToAos<64, 8>::exec(v0);
+            auto unpacked_data1 = SoaToAos<64, 8>::exec(v1);
+
+            return concat(unpacked_data0, unpacked_data1);
+        }
+    };
+
+    template <>
+    struct SoaToAos<256, 8>
+    {
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = 32;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            // Step 1 :  RE-PACK Banks
+            auto v0 = VecT<DataT, VW>{v.data[0],
+                                      v.data[8],
+                                      v.data[16],
+                                      v.data[24],
+                                      v.data[1],
+                                      v.data[9],
+                                      v.data[17],
+                                      v.data[25]};
+            auto v1 = VecT<DataT, VW>{v.data[2],
+                                      v.data[10],
+                                      v.data[18],
+                                      v.data[26],
+                                      v.data[3],
+                                      v.data[11],
+                                      v.data[19],
+                                      v.data[27]};
+            auto v2 = VecT<DataT, VW>{v.data[4],
+                                      v.data[12],
+                                      v.data[20],
+                                      v.data[28],
+                                      v.data[5],
+                                      v.data[13],
+                                      v.data[21],
+                                      v.data[29]};
+            auto v3 = VecT<DataT, VW>{v.data[6],
+                                      v.data[14],
+                                      v.data[22],
+                                      v.data[30],
+                                      v.data[7],
+                                      v.data[15],
+                                      v.data[23],
+                                      v.data[31]};
+
+            // Step 2 - 4 :  Applied on VW width banks
+            auto unpacked_data0 = SoaToAos<64, 8>::exec(v0);
+            auto unpacked_data1 = SoaToAos<64, 8>::exec(v1);
+            auto unpacked_data2 = SoaToAos<64, 8>::exec(v2);
+            auto unpacked_data3 = SoaToAos<64, 8>::exec(v3);
+
+            auto unpacked_data = concat(concat(unpacked_data0, unpacked_data1),
+                                        concat(unpacked_data2, unpacked_data3));
+
+            return unpacked_data;
+        }
+    };
+
     // SOA -> AOS
     // Transform from ortho VW to inline VW
     template <typename DataT>
