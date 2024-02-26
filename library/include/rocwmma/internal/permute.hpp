@@ -38,31 +38,6 @@ namespace rocwmma
         template <typename PermuteOp>
         struct Driver
         {
-        private:
-            template <typename DataT,
-                      std::enable_if_t<sizeof(DataT) == sizeof(uint64_t), bool> = true>
-            ROCWMMA_DEVICE static inline auto permute(DataT&& v, uint32_t laneId)
-            {
-                constexpr uint32_t B32VecSize = 2;
-                using B32VecT                 = VecT<uint32_t, B32VecSize>;
-
-                auto op = [](auto&& idx, auto&& v, uint32_t laneId) {
-                    constexpr auto i = std::decay_t<decltype(idx)>::value;
-                    return PermuteOp::exec(v.data[i], laneId);
-                };
-
-                auto permute_result = vector_generator<uint32_t, B32VecSize>()(
-                    op, reinterpret_cast<B32VecT const&>(v), laneId);
-                return reinterpret_cast<DataT&>(permute_result);
-            }
-
-            template <typename DataT,
-                      std::enable_if_t<sizeof(DataT) < sizeof(uint64_t), bool> = false>
-            ROCWMMA_DEVICE static inline auto permute(DataT&& v, uint32_t laneId)
-            {
-                return PermuteOp::exec(std::forward<DataT>(v), laneId);
-            }
-
         public:
             // Sanity checks
             static_assert((PermuteOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_PERMUTE)
