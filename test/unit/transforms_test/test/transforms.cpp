@@ -42,10 +42,10 @@ namespace rocwmma
 
         using Types = typename Base::TestAllSizeTypes;
 
-        // size of K dimension
-        using K = std::tuple<I<16>, I<32>, I<64>, I<128>, I<256>>;
+        // size of BlockDim dimension
+        using BlockDim = std::tuple<I<16>, I<32>, I<64>, I<128>, I<256>>;
 
-        using KernelParams = typename CombineLists<K, VWs, Types>::Result;
+        using KernelParams = typename CombineLists<BlockDim, VWs, Types>::Result;
 
         // Assemble the kernel generator
         // Kernel: VectorUtil
