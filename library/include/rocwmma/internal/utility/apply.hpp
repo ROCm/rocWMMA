@@ -27,88 +27,24 @@
 #ifndef ROCWMMA_UTILITY_APPLY_HPP
 #define ROCWMMA_UTILITY_APPLY_HPP
 
-#include "../types.hpp"
+#include "apply_impl.hpp"
 
 namespace rocwmma
 {
-    // Use custom rocwmma apply implementation for cases where STL is not available
-#ifndef __HIPCC_RTC__
+    // apply overloads
+    using detail::apply;
+}
+
+#if !defined(__HIPCC_RTC__)
+
+#include <tuple>
+namespace rocwmma
+{
+    // Use STL
     using std::apply;
-#endif // __HIPCC_RTC__
-
-    namespace detail
-    {
-        template <typename F, typename DataT, uint32_t Rank, size_t... I>
-        ROCWMMA_HOST_DEVICE constexpr decltype(auto)
-            apply_impl(F fn, HIP_vector_type<DataT, Rank>& v, detail::index_sequence<I...>)
-        {
-            return fn(get<I>(v)...);
-        }
-
-        template <typename F, typename DataT, uint32_t Rank, size_t... I>
-        ROCWMMA_HOST_DEVICE constexpr decltype(auto)
-            apply_impl(F fn, HIP_vector_type<DataT, Rank> const& v, detail::index_sequence<I...>)
-        {
-            return fn(get<I>(v)...);
-        }
-
-        template <typename F, typename DataT, uint32_t Rank, size_t... I>
-        ROCWMMA_HOST_DEVICE constexpr decltype(auto)
-            apply_impl(F fn, non_native_vector_base<DataT, Rank> & v, detail::index_sequence<I...>)
-        {
-            return fn(get<I>(v)...);
-        }
-
-        template <typename F, typename DataT, uint32_t Rank, size_t... I>
-        ROCWMMA_HOST_DEVICE constexpr decltype(auto)
-            apply_impl(F fn, non_native_vector_base<DataT, Rank> const& v, detail::index_sequence<I...>)
-        {
-            return fn(get<I>(v)...);
-        }
-    } // namespace detail
-
-    template <typename F, typename DataT, uint32_t Rank>
-    ROCWMMA_HOST_DEVICE constexpr decltype(auto) apply(F fn, HIP_vector_type<DataT, Rank>& v)
-    {
-        constexpr std::size_t size = VecTraits<std::decay_t<decltype(v)>>::size();
-        return detail::apply_impl(fn, v, detail::make_index_sequence<size>());
-    }
-
-    template <typename F, typename DataT, uint32_t Rank>
-    ROCWMMA_HOST_DEVICE constexpr decltype(auto) apply(F fn, HIP_vector_type<DataT, Rank> const& v)
-    {
-        constexpr std::size_t size = VecTraits<std::decay_t<decltype(v)>>::size();
-        return detail::apply_impl(fn, v, detail::make_index_sequence<size>());
-    }
-
-    template <typename F, typename DataT, uint32_t Rank>
-    ROCWMMA_HOST_DEVICE constexpr decltype(auto) apply(F fn, HIP_vector_type<DataT, Rank>&& v)
-    {
-        constexpr std::size_t size = VecTraits<std::decay_t<decltype(v)>>::size();
-        return detail::apply_impl(fn, v, detail::make_index_sequence<size>());
-    }
-
-    template <typename F, typename DataT, uint32_t Rank>
-    ROCWMMA_HOST_DEVICE constexpr decltype(auto) apply(F fn, non_native_vector_base<DataT, Rank>& v)
-    {
-        constexpr std::size_t size = VecTraits<std::decay_t<decltype(v)>>::size();
-        return detail::apply_impl(fn, v, detail::make_index_sequence<size>());
-    }
-
-    template <typename F, typename DataT, uint32_t Rank>
-    ROCWMMA_HOST_DEVICE constexpr decltype(auto) apply(F fn, non_native_vector_base<DataT, Rank> const& v)
-    {
-        constexpr std::size_t size = VecTraits<std::decay_t<decltype(v)>>::size();
-        return detail::apply_impl(fn, v, detail::make_index_sequence<size>());
-    }
-
-    template <typename F, typename DataT, uint32_t Rank>
-    ROCWMMA_HOST_DEVICE constexpr decltype(auto) apply(F fn, non_native_vector_base<DataT, Rank>&& v)
-    {
-        constexpr std::size_t size = VecTraits<std::decay_t<decltype(v)>>::size();
-        return detail::apply_impl(fn, v, detail::make_index_sequence<size>());
-    }
 
 } // namespace rocwmma
+
+#endif // !defined(__HIPCC_RTC__)
 
 #endif // ROCWMMA_UTILITY_APPLY_HPP
