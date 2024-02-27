@@ -76,43 +76,6 @@ namespace rocwmma
         return HIP_vector_type<DataT, 2>{get<1>(v), get<0>(v)};
     }
 
-    // temporary apply impl
-    namespace detail
-    {
-        template <typename F, typename DataT, uint32_t Rank, size_t... I>
-        constexpr decltype(auto)
-            apply_impl(F fn, HIP_vector_type<DataT, Rank> const& v, index_sequence<I...>)
-        {
-            return fn(get<I>(v)...);
-        }
-
-    } // namespace detail
-
-    template <typename F, typename DataT, uint32_t Rank>
-    constexpr decltype(auto) apply(F fn, HIP_vector_type<DataT, Rank>& v)
-    {
-        constexpr size_t size = VecTraits<decay_t<decltype(v)>>::size();
-        return detail::apply_impl(fn, v, detail::make_index_sequence<size>());
-    }
-
-    namespace detail
-    {
-        template <typename F, typename DataT, uint32_t Rank, size_t... I>
-        constexpr decltype(auto)
-            apply_impl(F fn, non_native_vector_base<DataT, Rank> const& v, index_sequence<I...>)
-        {
-            return fn(get<I>(v)...);
-        }
-
-    } // namespace detail
-
-    template <typename F, typename DataT, uint32_t Rank>
-    constexpr decltype(auto) apply(F fn, non_native_vector_base<DataT, Rank> const& v)
-    {
-        constexpr size_t size = VecTraits<decay_t<decltype(v)>>::size();
-        return detail::apply_impl(fn, v, detail::make_index_sequence<size>());
-    }
-
     template <typename... Ts>
     ROCWMMA_HOST_DEVICE constexpr decltype(auto) make_vector(Ts&&... ts)
     {
