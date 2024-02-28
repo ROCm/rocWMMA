@@ -38,7 +38,6 @@ namespace rocwmma
         template <typename PermuteOp>
         struct Driver
         {
-        public:
             // Sanity checks
             static_assert((PermuteOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_PERMUTE)
                               || (PermuteOp::opImpl()

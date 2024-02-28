@@ -134,6 +134,7 @@ namespace rocwmma
             template <uint32_t BlockIdx, uint32_t BlockSize>
             struct BPermuteBlockBCast : CtrlBase
             {
+
             private:
                 using Base = CtrlBase;
                 enum Traits : uint32_t
@@ -206,6 +207,7 @@ namespace rocwmma
             };
 
         } // namespace Ctrl
+
         namespace OpsBase
         {
             template <uint32_t OpId, uint32_t SubGroupSize>
