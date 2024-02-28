@@ -105,30 +105,6 @@ namespace rocwmma
                   bool     BoundCtrl     = false>
         struct Driver
         {
-        private:
-            template <typename DataT>
-            ROCWMMA_DEVICE static inline auto dppElement(DataT&& v0, DataT&& v1)
-            {
-                // This way we can support B64+ types
-                constexpr uint32_t B32VecSize = sizeof(DataT) / sizeof(uint32_t);
-                using B32VecT                 = VecT<uint32_t, B32VecSize>;
-
-                // Ensure that we can vectorize to B32
-                static_assert(sizeof(DataT) % sizeof(uint32_t) == 0,
-                              "DataT size must be a multiple of B32");
-                static_assert(sizeof(B32VecT) == sizeof(DataT), "Unable to vectorize DataT");
-
-                auto op = [](auto&& idx, auto&& v0, auto&& v1) {
-                    constexpr auto i = decay_t<decltype(idx)>::value;
-                    return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(v0.data[i],
-                                                                                        v1.data[i]);
-                };
-
-                auto dpp_result = vector_generator<uint32_t, B32VecSize>()(
-                    op, reinterpret_cast<B32VecT const&>(v0), reinterpret_cast<B32VecT const&>(v1));
-                return reinterpret_cast<DataT&>(dpp_result);
-            }
-
         public:
             // Sanity checks
             static_assert(DppOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP,
@@ -195,8 +171,6 @@ namespace rocwmma
                         v0.data[i], v1InB32Vec.data[i % v1InB32VecSize]);
                 };
 
-                // Give the current threadId to the threadCtrl modifier.
-                // Then static unroll with cached modifier.
                 auto result = vector_generator<uint32_t, B32VecSize>()(
                     op, reinterpret_cast<B32VecT const&>(src0), src1);
                 return reinterpret_cast<InputVecT&>(result);
@@ -225,8 +199,6 @@ namespace rocwmma
                                                                                         v1.data[i]);
                 };
 
-                // Give the current threadId to the threadCtrl modifier.
-                // Then static unroll with cached modifier.
                 auto result = vector_generator<uint32_t, B32VecSize>()(
                     op,
                     reinterpret_cast<B32VecT const&>(src0),

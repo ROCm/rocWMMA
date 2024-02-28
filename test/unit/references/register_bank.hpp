@@ -38,7 +38,7 @@ namespace rocwmma
         namespace references
         {
             template <class T>
-            class Memory2DArray
+            class RegisterBank
             {
             private:
                 std::vector<std::vector<T>> array;
@@ -46,9 +46,9 @@ namespace rocwmma
                 int                         width;
 
             public:
-                Memory2DArray<T>(int height, int width);
-                Memory2DArray<T>(std::vector<std::vector<T>> const& array);
-                Memory2DArray<T>();
+                RegisterBank<T>(int height, int width);
+                RegisterBank<T>(std::vector<std::vector<T>> const& array);
+                RegisterBank<T>();
 
                 int  getHeight() const;
                 int  getWidth() const;
@@ -60,7 +60,7 @@ namespace rocwmma
                 void gatherOddEven();
                 void rotateR(int group, int distance, std::pair<int, int> range);
                 void zipLoHi(int group);
-                void concatHorizon(Memory2DArray const& m);
+                void concatHorizon(RegisterBank const& m);
 
                 void unpackLo2();
                 void unpackLo4();
@@ -80,7 +80,7 @@ namespace rocwmma
             };
 
             template <class T>
-            Memory2DArray<T>::Memory2DArray(int height, int width)
+            RegisterBank<T>::RegisterBank(int height, int width)
             {
                 this->height = height;
                 this->width  = width;
@@ -88,7 +88,7 @@ namespace rocwmma
             }
 
             template <class T>
-            Memory2DArray<T>::Memory2DArray(std::vector<std::vector<T>> const& array)
+            RegisterBank<T>::RegisterBank(std::vector<std::vector<T>> const& array)
             {
                 this->height = array.size();
                 this->width  = array.size() > 0 ? array[0].size() : 0;
@@ -96,26 +96,26 @@ namespace rocwmma
             }
 
             template <class T>
-            Memory2DArray<T>::Memory2DArray()
+            RegisterBank<T>::RegisterBank()
             {
                 height = 0;
                 width  = 0;
             }
 
             template <class T>
-            int Memory2DArray<T>::getHeight() const
+            int RegisterBank<T>::getHeight() const
             {
                 return height;
             }
 
             template <class T>
-            int Memory2DArray<T>::getWidth() const
+            int RegisterBank<T>::getWidth() const
             {
                 return width;
             }
 
             template <class T>
-            T Memory2DArray<T>::get(int h, int w) const
+            T RegisterBank<T>::get(int h, int w) const
             {
                 if(!(h >= 0 && h < height && w >= 0 && w < width))
                     throw std::invalid_argument("Index out of bounds.");
@@ -124,7 +124,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::print() const
+            void RegisterBank<T>::print() const
             {
                 printf("matrix\n");
                 for(auto&& row : array)
@@ -138,7 +138,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::setData(T const* data)
+            void RegisterBank<T>::setData(T const* data)
             {
                 size_t offset = 0;
                 for(auto&& row : array)
@@ -149,7 +149,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::copyTo(T* data) const
+            void RegisterBank<T>::copyTo(T* data) const
             {
                 size_t offset = 0;
                 for(auto&& row : array)
@@ -160,7 +160,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::gatherOddEven()
+            void RegisterBank<T>::gatherOddEven()
             {
                 for(auto& row : array)
                 {
@@ -181,7 +181,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::rotateR(int group, int distance, std::pair<int, int> range)
+            void RegisterBank<T>::rotateR(int group, int distance, std::pair<int, int> range)
             {
                 assert(array.size() % group == 0 && distance <= group);
                 decltype(array) temp(array);
@@ -201,7 +201,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::zipLoHi(int group)
+            void RegisterBank<T>::zipLoHi(int group)
             {
                 bool selectLo = true;
                 for(int i = 0; i < height; i++)
@@ -216,7 +216,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::concatHorizon(Memory2DArray const& m)
+            void RegisterBank<T>::concatHorizon(RegisterBank const& m)
             {
                 assert(height == m.getHeight());
                 for(int i = 0; i < height; i++)
@@ -228,7 +228,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::unpackLo2()
+            void RegisterBank<T>::unpackLo2()
             {
                 gatherOddEven();
                 rotateR(16, 2, {width / 2, width});
@@ -236,7 +236,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::unpackLo4()
+            void RegisterBank<T>::unpackLo4()
             {
                 gatherOddEven();
                 rotateR(16, 4, {width / 2, width});
@@ -244,7 +244,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::unpackLo8()
+            void RegisterBank<T>::unpackLo8()
             {
                 gatherOddEven();
                 rotateR(16, 8, {width / 2, width});
@@ -252,7 +252,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::unpackLo16()
+            void RegisterBank<T>::unpackLo16()
             {
                 gatherOddEven();
                 rotateR(32, 16, {width / 2, width});
@@ -260,7 +260,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::unpackLo32()
+            void RegisterBank<T>::unpackLo32()
             {
                 gatherOddEven();
                 rotateR(64, 32, {width / 2, width});
@@ -268,7 +268,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::unpackHi2()
+            void RegisterBank<T>::unpackHi2()
             {
                 gatherOddEven();
                 rotateR(16, 14, {0, width / 2});
@@ -276,7 +276,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::unpackHi4()
+            void RegisterBank<T>::unpackHi4()
             {
                 gatherOddEven();
                 rotateR(16, 12, {0, width / 2});
@@ -284,7 +284,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::unpackHi8()
+            void RegisterBank<T>::unpackHi8()
             {
                 gatherOddEven();
                 rotateR(16, 8, {0, width / 2});
@@ -292,7 +292,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::unpackHi16()
+            void RegisterBank<T>::unpackHi16()
             {
                 gatherOddEven();
                 rotateR(32, 16, {0, width / 2});
@@ -300,7 +300,7 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::unpackHi32()
+            void RegisterBank<T>::unpackHi32()
             {
                 gatherOddEven();
                 rotateR(64, 32, {0, width / 2});
@@ -308,10 +308,10 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::unpackLoHi2()
+            void RegisterBank<T>::unpackLoHi2()
             {
-                Memory2DArray<T> lo(array);
-                Memory2DArray<T> hi(array);
+                RegisterBank<T> lo(array);
+                RegisterBank<T> hi(array);
                 lo.unpackLo2();
                 hi.unpackHi2();
                 lo.concatHorizon(hi);
@@ -319,10 +319,10 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::unpackLoHi4()
+            void RegisterBank<T>::unpackLoHi4()
             {
-                Memory2DArray<T> lo(array);
-                Memory2DArray<T> hi(array);
+                RegisterBank<T> lo(array);
+                RegisterBank<T> hi(array);
                 lo.unpackLo4();
                 hi.unpackHi4();
                 lo.concatHorizon(hi);
@@ -330,10 +330,10 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::unpackLoHi8()
+            void RegisterBank<T>::unpackLoHi8()
             {
-                Memory2DArray<T> lo(array);
-                Memory2DArray<T> hi(array);
+                RegisterBank<T> lo(array);
+                RegisterBank<T> hi(array);
                 lo.unpackLo8();
                 hi.unpackHi8();
                 lo.concatHorizon(hi);
@@ -341,10 +341,10 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::unpackLoHi16()
+            void RegisterBank<T>::unpackLoHi16()
             {
-                Memory2DArray<T> lo(array);
-                Memory2DArray<T> hi(array);
+                RegisterBank<T> lo(array);
+                RegisterBank<T> hi(array);
                 lo.unpackLo16();
                 hi.unpackHi16();
                 lo.concatHorizon(hi);
@@ -352,10 +352,10 @@ namespace rocwmma
             }
 
             template <class T>
-            void Memory2DArray<T>::unpackLoHi32()
+            void RegisterBank<T>::unpackLoHi32()
             {
-                Memory2DArray<T> lo(array);
-                Memory2DArray<T> hi(array);
+                RegisterBank<T> lo(array);
+                RegisterBank<T> hi(array);
                 lo.unpackLo32();
                 hi.unpackHi32();
                 lo.concatHorizon(hi);

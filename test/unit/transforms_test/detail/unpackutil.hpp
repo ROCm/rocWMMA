@@ -28,7 +28,7 @@
 #define ROCWMMA_DETAIL_TRANSFORMS_TEST_HPP
 
 #include "device/unpackutil.hpp"
-#include "references/memory_2darray.hpp"
+#include "references/register_bank.hpp"
 #include "unit_kernel_base.hpp"
 #include <numeric>
 
@@ -53,8 +53,8 @@ namespace rocwmma
     protected:
         using Base = UnpackKernelBase<DataT>;
 
-        virtual void manipulateMemory2DArrayOnCpu(test::references::Memory2DArray<DataT>& m) = 0;
-        virtual uint32_t resultSize() const                                                  = 0;
+        virtual void     manipulateRegisterBankOnCpu(test::references::RegisterBank<DataT>& m) = 0;
+        virtual uint32_t resultSize() const                                                    = 0;
 
     public:
         UnpackKernel()  = default;
@@ -86,9 +86,9 @@ namespace rocwmma
             auto               resultSize = this->resultSize();
             std::vector<DataT> expectedData(resultSize);
 
-            test::references::Memory2DArray<DataT> m(blockX, VW);
+            test::references::RegisterBank<DataT> m(blockX, VW);
             m.setData(dataInstance->hostIn().get());
-            manipulateMemory2DArrayOnCpu(m);
+            manipulateRegisterBankOnCpu(m);
             m.copyTo(expectedData.data());
 
             // Cache current kernel result from device
@@ -124,7 +124,7 @@ namespace rocwmma
         UnpackLo2Kernel()        = default;
         ~UnpackLo2Kernel() final = default;
 
-        void manipulateMemory2DArrayOnCpu(test::references::Memory2DArray<DataT>& m) override
+        void manipulateRegisterBankOnCpu(test::references::RegisterBank<DataT>& m) override
         {
             m.unpackLo2();
         }
@@ -151,7 +151,7 @@ namespace rocwmma
         UnpackLo4Kernel()        = default;
         ~UnpackLo4Kernel() final = default;
 
-        void manipulateMemory2DArrayOnCpu(test::references::Memory2DArray<DataT>& m) override
+        void manipulateRegisterBankOnCpu(test::references::RegisterBank<DataT>& m) override
         {
             m.unpackLo4();
         }
@@ -178,7 +178,7 @@ namespace rocwmma
         UnpackLo8Kernel()        = default;
         ~UnpackLo8Kernel() final = default;
 
-        void manipulateMemory2DArrayOnCpu(test::references::Memory2DArray<DataT>& m) override
+        void manipulateRegisterBankOnCpu(test::references::RegisterBank<DataT>& m) override
         {
             m.unpackLo8();
         }
@@ -205,7 +205,7 @@ namespace rocwmma
         UnpackHi2Kernel()        = default;
         ~UnpackHi2Kernel() final = default;
 
-        void manipulateMemory2DArrayOnCpu(test::references::Memory2DArray<DataT>& m) override
+        void manipulateRegisterBankOnCpu(test::references::RegisterBank<DataT>& m) override
         {
             m.unpackHi2();
         }
@@ -232,7 +232,7 @@ namespace rocwmma
         UnpackHi4Kernel()        = default;
         ~UnpackHi4Kernel() final = default;
 
-        void manipulateMemory2DArrayOnCpu(test::references::Memory2DArray<DataT>& m) override
+        void manipulateRegisterBankOnCpu(test::references::RegisterBank<DataT>& m) override
         {
             m.unpackHi4();
         }
@@ -259,7 +259,7 @@ namespace rocwmma
         UnpackHi8Kernel()        = default;
         ~UnpackHi8Kernel() final = default;
 
-        void manipulateMemory2DArrayOnCpu(test::references::Memory2DArray<DataT>& m) override
+        void manipulateRegisterBankOnCpu(test::references::RegisterBank<DataT>& m) override
         {
             m.unpackHi8();
         }
@@ -286,7 +286,7 @@ namespace rocwmma
         UnpackLoHi2Kernel()        = default;
         ~UnpackLoHi2Kernel() final = default;
 
-        void manipulateMemory2DArrayOnCpu(test::references::Memory2DArray<DataT>& m) override
+        void manipulateRegisterBankOnCpu(test::references::RegisterBank<DataT>& m) override
         {
             m.unpackLoHi2();
         }
@@ -313,7 +313,7 @@ namespace rocwmma
         UnpackLoHi4Kernel()        = default;
         ~UnpackLoHi4Kernel() final = default;
 
-        void manipulateMemory2DArrayOnCpu(test::references::Memory2DArray<DataT>& m) override
+        void manipulateRegisterBankOnCpu(test::references::RegisterBank<DataT>& m) override
         {
             m.unpackLoHi4();
         }
@@ -340,7 +340,7 @@ namespace rocwmma
         UnpackLoHi8Kernel()        = default;
         ~UnpackLoHi8Kernel() final = default;
 
-        void manipulateMemory2DArrayOnCpu(test::references::Memory2DArray<DataT>& m) override
+        void manipulateRegisterBankOnCpu(test::references::RegisterBank<DataT>& m) override
         {
             m.unpackLoHi8();
         }
@@ -367,7 +367,7 @@ namespace rocwmma
         UnpackLoHi16Kernel()        = default;
         ~UnpackLoHi16Kernel() final = default;
 
-        void manipulateMemory2DArrayOnCpu(test::references::Memory2DArray<DataT>& m) override
+        void manipulateRegisterBankOnCpu(test::references::RegisterBank<DataT>& m) override
         {
             m.unpackLoHi16();
             // m.print();
@@ -395,7 +395,7 @@ namespace rocwmma
         UnpackLoHi32Kernel()        = default;
         ~UnpackLoHi32Kernel() final = default;
 
-        void manipulateMemory2DArrayOnCpu(test::references::Memory2DArray<DataT>& m) override
+        void manipulateRegisterBankOnCpu(test::references::RegisterBank<DataT>& m) override
         {
             m.unpackLoHi32();
             // m.print();
