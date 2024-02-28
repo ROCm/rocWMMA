@@ -27,67 +27,47 @@
 #include <tuple>
 #include <type_traits>
 
-#include "detail/cross_lane_ops.hpp"
+#include "detail/unpackutil.hpp"
 #include "kernel_generator.hpp"
 #include "unit_test.hpp"
+#include "unit_test_macros.hpp"
 
 namespace rocwmma
 {
 
+    template <typename GeneratorImpl>
     struct TestParams : public UnitTestParams
     {
         using Base = UnitTestParams;
 
-        // Types: Base IOC + double
         using Types = typename Base::TestAllSizeTypes;
 
-        using DppOps = std::tuple<DppImpl::Ops::ShiftR16<1>, DppImpl::Ops::ShiftR16<13>>;
+        // Vector Width.
+        using VWs = std::tuple<I<2>, I<4>, I<8>>;
 
-        // Test random assortment of banks and rows
-        using WriteRowMasks  = std::tuple<I<0xF>, I<0x5>, I<0xA>>;
-        using WriteBankMasks = std::tuple<I<0xF>, I<0x7>, I<0x3>>;
-        using BoundCtrls     = std::tuple<I<false>, I<true>>;
-
-        using KernelParams =
-            typename CombineLists<Types, DppOps, WriteRowMasks, WriteBankMasks, BoundCtrls>::Result;
+        using KernelParams = typename CombineLists<VWs, Types>::Result;
 
         // Assemble the kernel generator
-        // Kernel: VectorIterator
-        using GeneratorImpl   = DppOpsGenerator;
+        // Kernel: VectorUtil
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
         static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
                       "Kernels from this generator do not match testing interface");
 
-        // Must be TBlockY must be 1.
         static inline std::vector<ThreadBlockT> threadBlocks()
         {
             auto warpSize = HipDevice::instance()->warpSize();
             // clang-format off
-            return {
-                        {warpSize, 1},
-                        {warpSize * 2, 1},
-                        {warpSize * 4, 1}
-                    };
+            return { {warpSize, 1}, {warpSize * 2, 1}, {warpSize * 4, 1}};
+            // clang-format on
         }
 
         static inline std::vector<ProblemSizeT> problemSizes()
         {
             // clang-format off
-            return {
-                        // {64, 1}
-                        {64, 64},
-                        {128, 128},
-                        {256, 256}
-                    };
+            return { {1, 1} };
             // clang-format on
-        }
-
-        // 'prev' values
-        static inline std::vector<Param1T> param1s()
-        {
-            return {5.0};
         }
 
         static inline typename KernelGenerator::ResultT kernels()
@@ -96,23 +76,27 @@ namespace rocwmma
         }
     };
 
+    using UnpackLo2TestParams    = TestParams<UnpackLo2Generator>;
+    using UnpackLo4TestParams    = TestParams<UnpackLo4Generator>;
+    using UnpackLo8TestParams    = TestParams<UnpackLo8Generator>;
+    using UnpackHi2TestParams    = TestParams<UnpackHi2Generator>;
+    using UnpackHi4TestParams    = TestParams<UnpackHi4Generator>;
+    using UnpackHi8TestParams    = TestParams<UnpackHi8Generator>;
+    using UnpackLoHi2TestParams  = TestParams<UnpackLoHi2Generator>;
+    using UnpackLoHi4TestParams  = TestParams<UnpackLoHi4Generator>;
+    using UnpackLoHi8TestParams  = TestParams<UnpackLoHi8Generator>;
+    using UnpackLoHi16TestParams = TestParams<UnpackLoHi16Generator>;
+    using UnpackLoHi32TestParams = TestParams<UnpackLoHi32Generator>;
 } // namespace rocwmma
 
-// Test suite for unique parameterization
-class DppShiftR16Test : public rocwmma::UnitTest
-{
-};
-
-TEST_P(DppShiftR16Test, RunKernel)
-{
-    this->RunKernel();
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    CrossLaneOpTests,
-    DppShiftR16Test,
-    ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
-                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
-                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
-                       ::testing::ValuesIn(rocwmma::TestParams::param1s()),
-                       ::testing::ValuesIn(rocwmma::TestParams::param2s())));
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackLo2Test, UnpackLo2TestParams)
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackLo4Test, UnpackLo4TestParams)
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackLo8Test, UnpackLo8TestParams)
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackHi2Test, UnpackHi2TestParams)
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackHi4Test, UnpackHi4TestParams)
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackHi8Test, UnpackHi8TestParams)
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackLoHi2Test, UnpackLoHi2TestParams)
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackLoHi4Test, UnpackLoHi4TestParams)
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackLoHi8Test, UnpackLoHi8TestParams)
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackLoHi16Test, UnpackLoHi16TestParams)
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackLoHi32Test, UnpackLoHi32TestParams)

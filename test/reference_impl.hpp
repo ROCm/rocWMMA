@@ -28,6 +28,7 @@
 
 #include "hip_device.hpp"
 #include "reference.hpp"
+#include <rocwmma/internal/pack_util.hpp>
 
 namespace rocwmma
 {
@@ -177,15 +178,16 @@ namespace rocwmma
         delete[] acc;
     }
 
-    template <uint32_t ElementIdx,
+    template <typename PackedT,
+              uint32_t ElementIdx,
               uint32_t GroupSize,
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
               bool     BoundCtrl /* = false */>
-    void cross_lane_bcast_CPU(uint32_t*       dataOut,
-                              uint32_t const* dataIn,
-                              uint32_t        elementCount,
-                              uint32_t        fillVal /* = 0u */)
+    void cross_lane_bcast_CPU(PackedT*       dataOut,
+                              PackedT const* dataIn,
+                              uint32_t       elementCount,
+                              uint32_t       fillVal /* = 0u */)
     {
         auto waveSize = HipDevice::instance()->warpSize();
         auto groupSize
@@ -231,15 +233,16 @@ namespace rocwmma
         }
     }
 
-    template <uint32_t BlockIdx,
+    template <typename PackedT,
+              uint32_t BlockIdx,
               uint32_t BlockSize,
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
               bool     BoundCtrl /* = false */>
-    void cross_lane_block_bcast_CPU(uint32_t*       dataOut,
-                                    uint32_t const* dataIn,
-                                    uint32_t        elementCount,
-                                    uint32_t        fillVal /* = 0u */)
+    void cross_lane_block_bcast_CPU(PackedT*       dataOut,
+                                    PackedT const* dataIn,
+                                    uint32_t       elementCount,
+                                    uint32_t       fillVal /* = 0u */)
     {
         auto waveSize = HipDevice::instance()->warpSize();
         auto groupSize
@@ -284,7 +287,8 @@ namespace rocwmma
         }
     }
 
-    template <uint32_t Select0,
+    template <typename PackedT,
+              uint32_t Select0,
               uint32_t Select1,
               uint32_t Select2,
               uint32_t Select3,
@@ -292,11 +296,11 @@ namespace rocwmma
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
               bool     BoundCtrl /* = false */>
-    void cross_lane_byte_blend_CPU(uint32_t*       dataOut,
-                                   uint32_t const* src0,
-                                   uint32_t const* src1,
-                                   uint32_t        elementCount,
-                                   uint32_t        fillVal /* = 0u */)
+    void cross_lane_byte_blend_CPU(PackedT*       dataOut,
+                                   PackedT const* src0,
+                                   PackedT const* src1,
+                                   uint32_t       elementCount,
+                                   uint32_t       fillVal /* = 0u */)
     {
         auto waveSize = HipDevice::instance()->warpSize();
         auto groupSize
@@ -322,54 +326,64 @@ namespace rocwmma
                     auto const writeOffset = groupOffset + k;
                     auto const readOffset  = groupOffset + k;
 
-                    auto ele0 = src0[baseOffset + readOffset];
-                    auto ele1 = src1[baseOffset + readOffset];
+                    auto    blendSrc0   = *(PackedT*)&src0[baseOffset + readOffset];
+                    auto    blendSrc1   = *(PackedT*)&src1[baseOffset + readOffset];
+                    PackedT blendResult = 0;
 
-                    // 0 <= Select < 4  element 0
-                    // 4 <= Select < 8  element 1
-                    uint32_t bytes0 = ((Select0 < 4u) ? ele0 : ele1);
-                    uint32_t bytes1 = ((Select1 < 4u) ? ele0 : ele1);
-                    uint32_t bytes2 = ((Select2 < 4u) ? ele0 : ele1);
-                    uint32_t bytes3 = ((Select3 < 4u) ? ele0 : ele1);
+                    for(int index = 0; index < sizeof(PackedT) / sizeof(uint32_t); index++)
+                    {
+                        uint32_t ele0 = ((uint32_t*)&blendSrc0)[index];
+                        uint32_t ele1 = ((uint32_t*)&blendSrc1)[index];
+                        // 0 <= Select < 4  element 0
+                        // 4 <= Select < 8  element 1
+                        // TODO uint32_t => DataT
+                        uint32_t bytes0 = ((Select0 < 4u) ? ele0 : ele1);
+                        uint32_t bytes1 = ((Select1 < 4u) ? ele0 : ele1);
+                        uint32_t bytes2 = ((Select2 < 4u) ? ele0 : ele1);
+                        uint32_t bytes3 = ((Select3 < 4u) ? ele0 : ele1);
 
-                    // Byte mask and bit shifts needed
-                    uint32_t byteMask  = 0xFF;
-                    uint32_t bitShift0 = Select0 % 4u * 8;
-                    uint32_t bitShift1 = Select1 % 4u * 8;
-                    uint32_t bitShift2 = Select2 % 4u * 8;
-                    uint32_t bitShift3 = Select3 % 4u * 8;
+                        // Byte mask and bit shifts needed
+                        uint32_t byteMask  = 0xFF;
+                        uint32_t bitShift0 = Select0 % 4u * 8;
+                        uint32_t bitShift1 = Select1 % 4u * 8;
+                        uint32_t bitShift2 = Select2 % 4u * 8;
+                        uint32_t bitShift3 = Select3 % 4u * 8;
 
-                    // Shift byte mask to selected byte, and copy this selected byte into position
-                    uint32_t result = 0x0;
-                    result |= (((byteMask << bitShift0) & bytes0) >> bitShift0);
-                    result |= (((byteMask << bitShift1) & bytes1) >> bitShift1 << 8u);
-                    result |= (((byteMask << bitShift2) & bytes2) >> bitShift2 << 16u);
-                    result |= (((byteMask << bitShift3) & bytes3) >> bitShift3 << 24u);
+                        // Shift byte mask to selected byte, and copy this selected byte into position
+                        uint32_t result = 0x0;
+                        result |= (((byteMask << bitShift0) & bytes0) >> bitShift0);
+                        result |= (((byteMask << bitShift1) & bytes1) >> bitShift1 << 8u);
+                        result |= (((byteMask << bitShift2) & bytes2) >> bitShift2 << 16u);
+                        result |= (((byteMask << bitShift3) & bytes3) >> bitShift3 << 24u);
+
+                        ((uint32_t*)&blendResult)[index] = result;
+                    }
 
                     // Check the row / bank masking
                     if(((0x1 << (writeOffset % waveSize / 16u)) & RowMask)
                        && ((0x1 << (writeOffset % 16u / 4u)) & BankMask))
                     {
-                        dataOut[baseOffset + writeOffset] = result;
+                        *(PackedT*)&dataOut[baseOffset + writeOffset] = blendResult;
                     }
                     // BoundCtrl does not affect shuffle 4 as the indices are & with 0x3
                     else
                     {
-                        dataOut[baseOffset + writeOffset] = fillVal;
+                        *(PackedT*)&dataOut[baseOffset + writeOffset] = fillVal;
                     }
                 }
             }
         }
     }
 
-    template <uint32_t GroupSize,
+    template <typename PackedT,
+              uint32_t GroupSize,
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
               bool     BoundCtrl /* = false */>
-    void cross_lane_wfall_bcast_CPU(uint32_t*       dataOut,
-                                    uint32_t const* dataIn,
-                                    uint32_t        elementCount,
-                                    uint32_t        fillVal /* = 0u */)
+    void cross_lane_wfall_bcast_CPU(PackedT*       dataOut,
+                                    PackedT const* dataIn,
+                                    uint32_t       elementCount,
+                                    uint32_t       fillVal /* = 0u */)
     {
         auto waveSize = HipDevice::instance()->warpSize();
         auto groupSize
@@ -417,14 +431,15 @@ namespace rocwmma
         }
     }
 
-    template <uint32_t GroupSize,
+    template <typename PackedT,
+              uint32_t GroupSize,
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
               bool     BoundCtrl /* = false */>
-    void cross_lane_reverse_CPU(uint32_t*       dataOut,
-                                uint32_t const* dataIn,
-                                uint32_t        elementCount,
-                                uint32_t        fillVal /* = 0u */)
+    void cross_lane_reverse_CPU(PackedT*       dataOut,
+                                PackedT const* dataIn,
+                                uint32_t       elementCount,
+                                uint32_t       fillVal /* = 0u */)
     {
         auto waveSize = HipDevice::instance()->warpSize();
         auto groupSize
@@ -464,16 +479,17 @@ namespace rocwmma
         }
     }
 
-    template <uint32_t RotateDir,
+    template <typename PackedT,
+              uint32_t RotateDir,
               uint32_t RotateDist,
               uint32_t GroupSize,
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
               bool     BoundCtrl /* = false */>
-    void cross_lane_rotate_CPU(uint32_t*       dataOut,
-                               uint32_t const* dataIn,
-                               uint32_t        elementCount,
-                               uint32_t        fillVal /* = 0u */)
+    void cross_lane_rotate_CPU(PackedT*       dataOut,
+                               PackedT const* dataIn,
+                               uint32_t       elementCount,
+                               uint32_t       fillVal /* = 0u */)
     {
         auto waveSize = HipDevice::instance()->warpSize();
         auto groupSize
@@ -515,16 +531,17 @@ namespace rocwmma
         }
     }
 
-    template <uint32_t ShiftDir,
+    template <typename PackedT,
+              uint32_t ShiftDir,
               uint32_t ShiftDist,
               uint32_t GroupSize,
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
               bool     BoundCtrl /* = false */>
-    void cross_lane_shift_CPU(uint32_t*       dataOut,
-                              uint32_t const* dataIn,
-                              uint32_t        elementCount,
-                              uint32_t        fillVal /* = 0u */)
+    void cross_lane_shift_CPU(PackedT*       dataOut,
+                              PackedT const* dataIn,
+                              uint32_t       elementCount,
+                              uint32_t       fillVal /* = 0u */)
     {
         auto waveSize = HipDevice::instance()->warpSize();
         auto groupSize
@@ -575,7 +592,8 @@ namespace rocwmma
         }
     }
 
-    template <uint32_t Select0,
+    template <typename PackedT,
+              uint32_t Select0,
               uint32_t Select1,
               uint32_t Select2,
               uint32_t Select3,
@@ -583,10 +601,10 @@ namespace rocwmma
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
               bool     BoundCtrl /* = false */>
-    void cross_lane_shuffle_CPU(uint32_t*       dataOut,
-                                uint32_t const* dataIn,
-                                uint32_t        elementCount,
-                                uint32_t        fillVal /* = 0u */)
+    void cross_lane_shuffle_CPU(PackedT*       dataOut,
+                                PackedT const* dataIn,
+                                uint32_t       elementCount,
+                                uint32_t       fillVal /* = 0u */)
     {
         auto waveSize = HipDevice::instance()->warpSize();
         auto groupSize
@@ -645,14 +663,15 @@ namespace rocwmma
         }
     }
 
-    template <uint32_t GroupSize,
+    template <typename PackedT,
+              uint32_t GroupSize,
               uint32_t RowMask /* = 0xF */,
               uint32_t BankMask /* = 0xF */,
               bool     BoundCtrl /* = false */>
-    void cross_lane_swap_CPU(uint32_t*       dataOut,
-                             uint32_t const* dataIn,
-                             uint32_t        elementCount,
-                             uint32_t        fillVal /* = 0u */)
+    void cross_lane_swap_CPU(PackedT*       dataOut,
+                             PackedT const* dataIn,
+                             uint32_t       elementCount,
+                             uint32_t       fillVal /* = 0u */)
     {
         auto waveSize = HipDevice::instance()->warpSize();
         auto groupSize
@@ -704,9 +723,10 @@ namespace rocwmma
                                      uint32_t     elementCount,
                                      DataT        fillVal = DataT(0))
     {
+        using PackedT = typename PackTraits<DataT>::PackedT;
         // Interface to device kernel
-        using RefFunc = void (*)(uint32_t*, // dataOut
-                                 uint32_t const*, // dataIn
+        using RefFunc = void (*)(PackedT*, // dataOut
+                                 PackedT const*, // dataIn
                                  uint32_t, // elementCount
                                  uint32_t); // fillVal
 
@@ -715,7 +735,8 @@ namespace rocwmma
         // Select reference function
         if constexpr(CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_BCAST)
         {
-            dispatcher = cross_lane_bcast_CPU<CrossLaneOp::elementIdx(),
+            dispatcher = cross_lane_bcast_CPU<PackedT,
+                                              CrossLaneOp::elementIdx(),
                                               CrossLaneOp::groupSize(),
                                               RowMask,
                                               BankMask,
@@ -724,7 +745,8 @@ namespace rocwmma
         else if constexpr(CrossLaneOp::opId()
                           == rocwmma::CrossLaneOps::Properties::OP_ID_BLOCK_BCAST)
         {
-            dispatcher = cross_lane_block_bcast_CPU<CrossLaneOp::elementIdx(),
+            dispatcher = cross_lane_block_bcast_CPU<PackedT,
+                                                    CrossLaneOp::elementIdx(),
                                                     CrossLaneOp::groupSize(),
                                                     RowMask,
                                                     BankMask,
@@ -732,25 +754,33 @@ namespace rocwmma
         }
         else if constexpr(CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_REVERSE)
         {
-            dispatcher
-                = cross_lane_reverse_CPU<CrossLaneOp::groupSize(), RowMask, BankMask, BoundCtrl>;
+            dispatcher = cross_lane_reverse_CPU<PackedT,
+                                                CrossLaneOp::groupSize(),
+                                                RowMask,
+                                                BankMask,
+                                                BoundCtrl>;
         }
         else if constexpr(CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_SWAP)
         {
-            dispatcher
-                = cross_lane_swap_CPU<CrossLaneOp::groupSize(), RowMask, BankMask, BoundCtrl>;
+            dispatcher = cross_lane_swap_CPU<PackedT,
+                                             CrossLaneOp::groupSize(),
+                                             RowMask,
+                                             BankMask,
+                                             BoundCtrl>;
         }
         else if constexpr(CrossLaneOp::opId()
                           == rocwmma::CrossLaneOps::Properties::OP_ID_WFALL_BCAST)
         {
-            dispatcher = cross_lane_wfall_bcast_CPU<CrossLaneOp::groupSize(),
+            dispatcher = cross_lane_wfall_bcast_CPU<PackedT,
+                                                    CrossLaneOp::groupSize(),
                                                     RowMask,
                                                     BankMask,
                                                     BoundCtrl>;
         }
         else if constexpr(CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_ROTATE)
         {
-            dispatcher = cross_lane_rotate_CPU<CrossLaneOp::opDir(),
+            dispatcher = cross_lane_rotate_CPU<PackedT,
+                                               CrossLaneOp::opDir(),
                                                CrossLaneOp::opDist(),
                                                CrossLaneOp::groupSize(),
                                                RowMask,
@@ -759,7 +789,8 @@ namespace rocwmma
         }
         else if constexpr(CrossLaneOp::opId() == rocwmma::CrossLaneOps::Properties::OP_ID_SHIFT)
         {
-            dispatcher = cross_lane_shift_CPU<CrossLaneOp::opDir(),
+            dispatcher = cross_lane_shift_CPU<PackedT,
+                                              CrossLaneOp::opDir(),
                                               CrossLaneOp::opDist(),
                                               CrossLaneOp::groupSize(),
                                               RowMask,
@@ -770,7 +801,8 @@ namespace rocwmma
         {
             if constexpr(CrossLaneOp::groupSize() == 4u)
             {
-                dispatcher = cross_lane_shuffle_CPU<CrossLaneOp::select0(),
+                dispatcher = cross_lane_shuffle_CPU<PackedT,
+                                                    CrossLaneOp::select0(),
                                                     CrossLaneOp::select1(),
                                                     CrossLaneOp::select2(),
                                                     CrossLaneOp::select3(),
@@ -781,7 +813,8 @@ namespace rocwmma
             }
             else if constexpr(CrossLaneOp::groupSize() == 2u)
             {
-                dispatcher = cross_lane_shuffle_CPU<CrossLaneOp::select0(),
+                dispatcher = cross_lane_shuffle_CPU<PackedT,
+                                                    CrossLaneOp::select0(),
                                                     CrossLaneOp::select1(),
                                                     CrossLaneOp::select0() + 2u,
                                                     CrossLaneOp::select1() + 2u,
@@ -794,19 +827,16 @@ namespace rocwmma
 
         // Determine function params
         // Must scale in 32b chunks
-        uint32_t*       write32Out = reinterpret_cast<uint32_t*>(dataOut);
-        uint32_t const* read32In   = reinterpret_cast<uint32_t const*>(dataIn);
-        uint32_t        fillVal32  = static_cast<uint32_t>(fillVal);
-        elementCount               = static_cast<uint32_t>(
-            roundf(static_cast<float32_t>(sizeof(DataT)) / static_cast<float32_t>(sizeof(uint32_t))
-                   * static_cast<float32_t>(elementCount)));
+        PackedT*       writeOut = reinterpret_cast<PackedT*>(dataOut);
+        PackedT const* readIn   = reinterpret_cast<PackedT const*>(dataIn);
+        elementCount            = elementCount / PackTraits<DataT>::PackRatio;
 
         // From here forth is in 32b land...
 
         // Finally, run the reference function
         if(dispatcher != nullptr)
         {
-            dispatcher(write32Out, read32In, elementCount, fillVal32);
+            dispatcher(writeOut, readIn, elementCount, static_cast<uint32_t>(fillVal));
         }
     }
 
@@ -823,10 +853,11 @@ namespace rocwmma
                                      uint32_t     elementCount,
                                      DataT        fillVal = DataT(0))
     {
+        using PackedT = typename PackTraits<DataT>::PackedT;
         // Interface to cpu reference kernel
-        using RefFunc = void (*)(uint32_t*, // dataOut
-                                 uint32_t const*, // dataIn0
-                                 uint32_t const*, // dataIn1
+        using RefFunc = void (*)(PackedT*, // dataOut
+                                 PackedT const*, // dataIn0
+                                 PackedT const*, // dataIn1
                                  uint32_t, // elementCount
                                  uint32_t); // fillVal
 
@@ -837,7 +868,8 @@ namespace rocwmma
         {
             if constexpr(CrossLaneOp::groupSize() == 1u)
             {
-                dispatcher = cross_lane_byte_blend_CPU<CrossLaneOp::select0(),
+                dispatcher = cross_lane_byte_blend_CPU<PackedT,
+                                                       CrossLaneOp::select0(),
                                                        CrossLaneOp::select1(),
                                                        CrossLaneOp::select2(),
                                                        CrossLaneOp::select3(),
@@ -850,20 +882,17 @@ namespace rocwmma
 
         // Determine function params
         // Must scale in 32b chunks
-        uint32_t*       write32Out = reinterpret_cast<uint32_t*>(dataOut);
-        uint32_t const* src032In   = reinterpret_cast<uint32_t const*>(dataIn0);
-        uint32_t const* src132In   = reinterpret_cast<uint32_t const*>(dataIn1);
-        uint32_t        fillVal32  = static_cast<uint32_t>(fillVal);
-        elementCount               = static_cast<uint32_t>(
-            roundf(static_cast<float32_t>(sizeof(DataT)) / static_cast<float32_t>(sizeof(uint32_t))
-                   * static_cast<float32_t>(elementCount)));
+        PackedT*       writeOut = reinterpret_cast<PackedT*>(dataOut);
+        PackedT const* src0In   = reinterpret_cast<PackedT const*>(dataIn0);
+        PackedT const* src1In   = reinterpret_cast<PackedT const*>(dataIn1);
+        elementCount            = elementCount / PackTraits<DataT>::PackRatio;
 
         // From here forth is in 32b land...
 
         // Finally, run the reference function
         if(dispatcher != nullptr)
         {
-            dispatcher(write32Out, src032In, src132In, elementCount, fillVal32);
+            dispatcher(writeOut, src0In, src1In, elementCount, static_cast<uint32_t>(fillVal));
         }
     }
 

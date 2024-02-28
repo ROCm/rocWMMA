@@ -131,10 +131,6 @@ namespace rocwmma
                                   "Inputs must be a multiple of 32 bit");
                     uint32_t const maskCtrl = OpCtrl::opCtrl();
                     return maskCtrl ? src1 : src0;
-                    // reinterpret_cast<uint32_t&>(src0)
-                    //     = (reinterpret_cast<uint32_t&>(src1) & maskCtrl)
-                    //       | (reinterpret_cast<uint32_t&>(src0) & ~maskCtrl);
-                    // return src0;
                 }
 
                 // This function takes an opCtrl override to support pre-calculated opCtrl re-use

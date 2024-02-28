@@ -30,33 +30,25 @@
 #include "detail/transforms.hpp"
 #include "kernel_generator.hpp"
 #include "unit_test.hpp"
+#include "unit_test_macros.hpp"
 
 namespace rocwmma
 {
 
+    template <typename GeneratorImpl, typename VWs>
     struct TestParams : public UnitTestParams
     {
         using Base = UnitTestParams;
 
-        // Types: Base IOC + double
-        using Types = std::tuple<
-            int8_t, // use int8_t since float8_t will be skipped by default on some platform
-            float16_t,
-            float32_t,
-            float64_t>;
+        using Types = typename Base::TestAllSizeTypes;
 
-        // Vector Width.
-        // using VWs = std::tuple<I<2>, I<4>, I<8>>;
-        using VWs = std::tuple<I<4>>;
+        // size of BlockDim dimension
+        using BlockDim = std::tuple<I<16>, I<32>, I<64>, I<128>, I<256>>;
 
-        // size of K dimension
-        using K = std::tuple<I<16>, I<32>, I<64>, I<128>, I<256>>;
-
-        using KernelParams = typename CombineLists<K, VWs, Types>::Result;
+        using KernelParams = typename CombineLists<BlockDim, VWs, Types>::Result;
 
         // Assemble the kernel generator
         // Kernel: VectorUtil
-        using GeneratorImpl   = TransformsGenerator;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -84,23 +76,10 @@ namespace rocwmma
         }
     };
 
+    using AossoaTestParams = TestParams<AossoaGenerator, std::tuple<I<4>, I<8>>>;
+    using SoaaosTestParams = TestParams<SoaaosGenerator, std::tuple<I<4>>>;
+
 } // namespace rocwmma
 
-// Test suite for unique parameterization
-class TransfromsTest : public rocwmma::UnitTest
-{
-};
-
-TEST_P(TransfromsTest, RunKernel)
-{
-    this->RunKernel();
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    KernelTests,
-    TransfromsTest,
-    ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
-                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
-                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
-                       ::testing::ValuesIn(rocwmma::TestParams::param1s()),
-                       ::testing::ValuesIn(rocwmma::TestParams::param2s())));
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(AossoaTest, AossoaTestParams)
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(SoaaosTest, SoaaosTestParams)

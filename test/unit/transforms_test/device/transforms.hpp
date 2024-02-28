@@ -44,21 +44,353 @@ namespace rocwmma
                    + threadIdx.x;
         }
     }
-    template <typename DataT, uint32_t VW, uint32_t K>
+    template <typename DataT, uint32_t VW, uint32_t BlockDim>
     struct AosVec;
 
-    template <typename DataT, uint32_t VW, uint32_t K>
+    template <typename DataT, uint32_t VW, uint32_t BlockDim>
     struct SoaVec;
+
+    template <typename DataT>
+    struct AosVec<DataT, 8, 16>
+    {
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            constexpr uint32_t VW       = 8;
+            constexpr uint32_t BlockDim = 16;
+            using VecType               = VecT<DataT, VW>;
+            auto           threadId     = (uint8_t)detail::threadId();
+            const uint32_t waveOffset   = threadId / BlockDim * VW * BlockDim;
+            auto           start        = (threadId % BlockDim) * VW + waveOffset;
+            VecType        v            = {
+                start, start + 1, start + 2, start + 3, start + 4, start + 5, start + 6, start + 7};
+            return v;
+        }
+    };
+
+    template <typename DataT>
+    struct AosVec<DataT, 8, 32>
+    {
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            constexpr uint32_t VW       = 8;
+            constexpr uint32_t BlockDim = 32;
+            using VecType               = VecT<DataT, VW>;
+            auto           threadId     = (uint8_t)detail::threadId();
+            const uint32_t waveOffset   = threadId / BlockDim * VW * BlockDim;
+            auto           start        = (threadId % BlockDim) * VW + waveOffset;
+            VecType        v            = {
+                start, start + 1, start + 2, start + 3, start + 4, start + 5, start + 6, start + 7};
+            return v;
+        }
+    };
+
+    template <typename DataT>
+    struct AosVec<DataT, 8, 64>
+    {
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            constexpr uint32_t VW       = 8;
+            constexpr uint32_t BlockDim = 64;
+            auto               threadId = (uint8_t)detail::threadId();
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                constexpr uint32_t VecSize   = VW * BlockDim / Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) * VW + waveOffset;
+                VecType        v          = {start,
+                                             start + 1,
+                                             start + 2,
+                                             start + 3,
+                                             start + 4,
+                                             start + 5,
+                                             start + 6,
+                                             start + 7};
+                return v;
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                constexpr uint32_t VecSize   = VW * 64 / Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) * VW + waveOffset;
+                VecType        v          = {
+                    start,
+                    start + 1,
+                    start + 2,
+                    start + 3,
+                    start + 4,
+                    start + 5,
+                    start + 6,
+                    start + 7,
+                    start + VW * WAVE_SIZE,
+                    start + 1 + VW * WAVE_SIZE,
+                    start + 2 + VW * WAVE_SIZE,
+                    start + 3 + VW * WAVE_SIZE,
+                    start + 4 + VW * WAVE_SIZE,
+                    start + 5 + VW * WAVE_SIZE,
+                    start + 6 + VW * WAVE_SIZE,
+                    start + 7 + VW * WAVE_SIZE,
+                };
+                return v;
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                using VecType = VecT<DataT, 1>;
+                return VecType();
+            }
+        }
+    };
+
+    template <typename DataT>
+    struct AosVec<DataT, 8, 128>
+    {
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            constexpr uint32_t VW       = 8;
+            constexpr uint32_t BlockDim = 128;
+            auto               threadId = (uint8_t)detail::threadId();
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                constexpr uint32_t VecSize   = VW * 128 / Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) * VW + waveOffset;
+                VecType        v          = {
+                    start,
+                    start + 1,
+                    start + 2,
+                    start + 3,
+                    start + 4,
+                    start + 5,
+                    start + 6,
+                    start + 7,
+                    start + VW * WAVE_SIZE,
+                    start + 1 + VW * WAVE_SIZE,
+                    start + 2 + VW * WAVE_SIZE,
+                    start + 3 + VW * WAVE_SIZE,
+                    start + 4 + VW * WAVE_SIZE,
+                    start + 5 + VW * WAVE_SIZE,
+                    start + 6 + VW * WAVE_SIZE,
+                    start + 7 + VW * WAVE_SIZE,
+                };
+                return v;
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                constexpr uint32_t VecSize   = VW * 128 / Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) * VW + waveOffset;
+                VecType        v          = {
+                    start,
+                    start + 1,
+                    start + 2,
+                    start + 3,
+                    start + 4,
+                    start + 5,
+                    start + 6,
+                    start + 7,
+                    start + VW * WAVE_SIZE,
+                    start + 1 + VW * WAVE_SIZE,
+                    start + 2 + VW * WAVE_SIZE,
+                    start + 3 + VW * WAVE_SIZE,
+                    start + 4 + VW * WAVE_SIZE,
+                    start + 5 + VW * WAVE_SIZE,
+                    start + 6 + VW * WAVE_SIZE,
+                    start + 7 + VW * WAVE_SIZE,
+                    start + VW * WAVE_SIZE * 2,
+                    start + 1 + VW * WAVE_SIZE * 2,
+                    start + 2 + VW * WAVE_SIZE * 2,
+                    start + 3 + VW * WAVE_SIZE * 2,
+                    start + 4 + VW * WAVE_SIZE * 2,
+                    start + 5 + VW * WAVE_SIZE * 2,
+                    start + 6 + VW * WAVE_SIZE * 2,
+                    start + 7 + VW * WAVE_SIZE * 2,
+                    start + VW * WAVE_SIZE * 3,
+                    start + 1 + VW * WAVE_SIZE * 3,
+                    start + 2 + VW * WAVE_SIZE * 3,
+                    start + 3 + VW * WAVE_SIZE * 3,
+                    start + 4 + VW * WAVE_SIZE * 3,
+                    start + 5 + VW * WAVE_SIZE * 3,
+                    start + 6 + VW * WAVE_SIZE * 3,
+                    start + 7 + VW * WAVE_SIZE * 3,
+                };
+                return v;
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                using VecType = VecT<DataT, 1>;
+                return VecType();
+            }
+        }
+    };
+
+    template <typename DataT>
+    struct AosVec<DataT, 8, 256>
+    {
+        ROCWMMA_DEVICE static inline auto genData()
+        {
+            constexpr uint32_t VW       = 8;
+            constexpr uint32_t BlockDim = 256;
+            auto               threadId = (uint8_t)detail::threadId();
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                constexpr uint32_t VecSize   = VW * 256 / Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) * VW + waveOffset;
+                VecType        v          = {
+                    start,
+                    start + 1,
+                    start + 2,
+                    start + 3,
+                    start + 4,
+                    start + 5,
+                    start + 6,
+                    start + 7,
+                    start + VW * WAVE_SIZE,
+                    start + 1 + VW * WAVE_SIZE,
+                    start + 2 + VW * WAVE_SIZE,
+                    start + 3 + VW * WAVE_SIZE,
+                    start + 4 + VW * WAVE_SIZE,
+                    start + 5 + VW * WAVE_SIZE,
+                    start + 6 + VW * WAVE_SIZE,
+                    start + 7 + VW * WAVE_SIZE,
+                    start + VW * WAVE_SIZE * 2,
+                    start + 1 + VW * WAVE_SIZE * 2,
+                    start + 2 + VW * WAVE_SIZE * 2,
+                    start + 3 + VW * WAVE_SIZE * 2,
+                    start + 4 + VW * WAVE_SIZE * 2,
+                    start + 5 + VW * WAVE_SIZE * 2,
+                    start + 6 + VW * WAVE_SIZE * 2,
+                    start + 7 + VW * WAVE_SIZE * 2,
+                    start + VW * WAVE_SIZE * 3,
+                    start + 1 + VW * WAVE_SIZE * 3,
+                    start + 2 + VW * WAVE_SIZE * 3,
+                    start + 3 + VW * WAVE_SIZE * 3,
+                    start + 4 + VW * WAVE_SIZE * 3,
+                    start + 5 + VW * WAVE_SIZE * 3,
+                    start + 6 + VW * WAVE_SIZE * 3,
+                    start + 7 + VW * WAVE_SIZE * 3,
+                };
+                return v;
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                constexpr uint32_t VecSize   = VW * 256 / Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) * VW + waveOffset;
+                VecType        v          = {
+                    start,
+                    start + 1,
+                    start + 2,
+                    start + 3,
+                    start + 4,
+                    start + 5,
+                    start + 6,
+                    start + 7,
+                    start + VW * WAVE_SIZE,
+                    start + 1 + VW * WAVE_SIZE,
+                    start + 2 + VW * WAVE_SIZE,
+                    start + 3 + VW * WAVE_SIZE,
+                    start + 4 + VW * WAVE_SIZE,
+                    start + 5 + VW * WAVE_SIZE,
+                    start + 6 + VW * WAVE_SIZE,
+                    start + 7 + VW * WAVE_SIZE,
+                    start + VW * WAVE_SIZE * 2,
+                    start + 1 + VW * WAVE_SIZE * 2,
+                    start + 2 + VW * WAVE_SIZE * 2,
+                    start + 3 + VW * WAVE_SIZE * 2,
+                    start + 4 + VW * WAVE_SIZE * 2,
+                    start + 5 + VW * WAVE_SIZE * 2,
+                    start + 6 + VW * WAVE_SIZE * 2,
+                    start + 7 + VW * WAVE_SIZE * 2,
+                    start + VW * WAVE_SIZE * 3,
+                    start + 1 + VW * WAVE_SIZE * 3,
+                    start + 2 + VW * WAVE_SIZE * 3,
+                    start + 3 + VW * WAVE_SIZE * 3,
+                    start + 4 + VW * WAVE_SIZE * 3,
+                    start + 5 + VW * WAVE_SIZE * 3,
+                    start + 6 + VW * WAVE_SIZE * 3,
+                    start + 7 + VW * WAVE_SIZE * 3,
+                    start + VW * WAVE_SIZE * 4,
+                    start + 1 + VW * WAVE_SIZE * 4,
+                    start + 2 + VW * WAVE_SIZE * 4,
+                    start + 3 + VW * WAVE_SIZE * 4,
+                    start + 4 + VW * WAVE_SIZE * 4,
+                    start + 5 + VW * WAVE_SIZE * 4,
+                    start + 6 + VW * WAVE_SIZE * 4,
+                    start + 7 + VW * WAVE_SIZE * 4,
+                    start + VW * WAVE_SIZE * 5,
+                    start + 1 + VW * WAVE_SIZE * 5,
+                    start + 2 + VW * WAVE_SIZE * 5,
+                    start + 3 + VW * WAVE_SIZE * 5,
+                    start + 4 + VW * WAVE_SIZE * 5,
+                    start + 5 + VW * WAVE_SIZE * 5,
+                    start + 6 + VW * WAVE_SIZE * 5,
+                    start + 7 + VW * WAVE_SIZE * 5,
+                    start + VW * WAVE_SIZE * 6,
+                    start + 1 + VW * WAVE_SIZE * 6,
+                    start + 2 + VW * WAVE_SIZE * 6,
+                    start + 3 + VW * WAVE_SIZE * 6,
+                    start + 4 + VW * WAVE_SIZE * 6,
+                    start + 5 + VW * WAVE_SIZE * 6,
+                    start + 6 + VW * WAVE_SIZE * 6,
+                    start + 7 + VW * WAVE_SIZE * 6,
+                    start + VW * WAVE_SIZE * 7,
+                    start + 1 + VW * WAVE_SIZE * 7,
+                    start + 2 + VW * WAVE_SIZE * 7,
+                    start + 3 + VW * WAVE_SIZE * 7,
+                    start + 4 + VW * WAVE_SIZE * 7,
+                    start + 5 + VW * WAVE_SIZE * 7,
+                    start + 6 + VW * WAVE_SIZE * 7,
+                    start + 7 + VW * WAVE_SIZE * 7,
+                };
+                return v;
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                using VecType = VecT<DataT, 1>;
+                return VecType();
+            }
+        }
+    };
 
     template <typename DataT>
     struct AosVec<DataT, 4, 16>
     {
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
-            constexpr uint32_t VW = 4;
-            using VecType         = VecT<DataT, VW>;
-            auto    threadId      = (uint8_t)detail::threadId();
-            VecType v = {threadId * VW, threadId * VW + 1, threadId * VW + 2, threadId * VW + 3};
+            constexpr uint32_t VW       = 4;
+            constexpr uint32_t BlockDim = 16;
+            using VecType               = VecT<DataT, VW>;
+            auto           threadId     = (uint8_t)detail::threadId();
+            const uint32_t waveOffset   = threadId / BlockDim * VW * BlockDim;
+            auto           start        = (threadId % BlockDim) * VW + waveOffset;
+            VecType        v            = {start, start + 1, start + 2, start + 3};
             return v;
         }
     };
@@ -68,91 +400,575 @@ namespace rocwmma
     {
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
-            constexpr uint32_t VW = 4;
-            using VecType         = VecT<DataT, VW>;
-            auto    threadId      = (uint8_t)detail::threadId();
-            VecType v = {threadId * VW, threadId * VW + 1, threadId * VW + 2, threadId * VW + 3};
+            constexpr uint32_t VW       = 4;
+            constexpr uint32_t BlockDim = 32;
+            using VecType               = VecT<DataT, VW>;
+            auto           threadId     = (uint8_t)detail::threadId();
+            const uint32_t waveOffset   = threadId / BlockDim * VW * BlockDim;
+            auto           start        = (threadId % BlockDim) * VW + waveOffset;
+            VecType        v            = {start, start + 1, start + 2, start + 3};
             return v;
         }
     };
+
     template <typename DataT>
     struct AosVec<DataT, 4, 64>
     {
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
-            constexpr uint32_t VW = 4;
-            using VecType         = VecT<DataT, VW>;
-            auto    threadId      = (uint8_t)detail::threadId();
-            VecType v = {threadId * VW, threadId * VW + 1, threadId * VW + 2, threadId * VW + 3};
-            return v;
+            constexpr uint32_t VW       = 4;
+            constexpr uint32_t BlockDim = 64;
+            auto               threadId = (uint8_t)detail::threadId();
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                constexpr uint32_t VecSize   = VW * BlockDim / Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) * VW + waveOffset;
+                VecType        v          = {start, start + 1, start + 2, start + 3};
+                return v;
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                constexpr uint32_t VecSize   = VW * 64 / Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) * VW + waveOffset;
+                VecType        v          = {start,
+                                             start + 1,
+                                             start + 2,
+                                             start + 3,
+                                             start + VW * WAVE_SIZE,
+                                             start + 1 + VW * WAVE_SIZE,
+                                             start + 2 + VW * WAVE_SIZE,
+                                             start + 3 + VW * WAVE_SIZE};
+                return v;
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                using VecType = VecT<DataT, 1>;
+                return VecType();
+            }
         }
     };
+
     template <typename DataT>
     struct AosVec<DataT, 4, 128>
     {
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
-            constexpr uint32_t VW        = 4;
-            constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+            constexpr uint32_t VW       = 4;
+            constexpr uint32_t BlockDim = 128;
+            auto               threadId = (uint8_t)detail::threadId();
 
-            using VecType    = VecT<DataT, VW * 2>;
-            auto    threadId = (uint8_t)detail::threadId();
-            VecType v        = {threadId * VW,
-                                threadId * VW + 1,
-                                threadId * VW + 2,
-                                threadId * VW + 3,
-                                threadId * VW + VW * WAVE_SIZE,
-                                threadId * VW + 1 + VW * WAVE_SIZE,
-                                threadId * VW + 2 + VW * WAVE_SIZE,
-                                threadId * VW + 3 + VW * WAVE_SIZE};
-            return v;
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                constexpr uint32_t VecSize   = VW * 128 / Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) * VW + waveOffset;
+                VecType        v          = {start,
+                                             start + 1,
+                                             start + 2,
+                                             start + 3,
+                                             start + VW * WAVE_SIZE,
+                                             start + 1 + VW * WAVE_SIZE,
+                                             start + 2 + VW * WAVE_SIZE,
+                                             start + 3 + VW * WAVE_SIZE};
+                return v;
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                constexpr uint32_t VecSize   = VW * 128 / Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) * VW + waveOffset;
+                VecType        v          = {start,
+                                             start + 1,
+                                             start + 2,
+                                             start + 3,
+                                             start + VW * WAVE_SIZE,
+                                             start + 1 + VW * WAVE_SIZE,
+                                             start + 2 + VW * WAVE_SIZE,
+                                             start + 3 + VW * WAVE_SIZE,
+                                             start + VW * WAVE_SIZE * 2,
+                                             start + 1 + VW * WAVE_SIZE * 2,
+                                             start + 2 + VW * WAVE_SIZE * 2,
+                                             start + 3 + VW * WAVE_SIZE * 2,
+                                             start + VW * WAVE_SIZE * 3,
+                                             start + 1 + VW * WAVE_SIZE * 3,
+                                             start + 2 + VW * WAVE_SIZE * 3,
+                                             start + 3 + VW * WAVE_SIZE * 3};
+                return v;
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                using VecType = VecT<DataT, 1>;
+                return VecType();
+            }
         }
     };
+
     template <typename DataT>
     struct AosVec<DataT, 4, 256>
     {
         ROCWMMA_DEVICE static inline auto genData()
         {
-            constexpr uint32_t VW        = 4;
-            constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+            constexpr uint32_t VW       = 4;
+            constexpr uint32_t BlockDim = 256;
+            auto               threadId = (uint8_t)detail::threadId();
 
-            using VecType    = VecT<DataT, VW * 4>;
-            auto    threadId = (uint8_t)detail::threadId();
-            VecType v        = {threadId * VW,
-                                threadId * VW + 1,
-                                threadId * VW + 2,
-                                threadId * VW + 3,
-                                threadId * VW + VW * WAVE_SIZE,
-                                threadId * VW + 1 + VW * WAVE_SIZE,
-                                threadId * VW + 2 + VW * WAVE_SIZE,
-                                threadId * VW + 3 + VW * WAVE_SIZE,
-                                threadId * VW + VW * WAVE_SIZE * 2,
-                                threadId * VW + 1 + VW * WAVE_SIZE * 2,
-                                threadId * VW + 2 + VW * WAVE_SIZE * 2,
-                                threadId * VW + 3 + VW * WAVE_SIZE * 2,
-                                threadId * VW + VW * WAVE_SIZE * 3,
-                                threadId * VW + 1 + VW * WAVE_SIZE * 3,
-                                threadId * VW + 2 + VW * WAVE_SIZE * 3,
-                                threadId * VW + 3 + VW * WAVE_SIZE * 3};
-            return v;
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                constexpr uint32_t VecSize   = VW * 256 / Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) * VW + waveOffset;
+                VecType        v          = {start,
+                                             start + 1,
+                                             start + 2,
+                                             start + 3,
+                                             start + VW * WAVE_SIZE,
+                                             start + 1 + VW * WAVE_SIZE,
+                                             start + 2 + VW * WAVE_SIZE,
+                                             start + 3 + VW * WAVE_SIZE,
+                                             start + VW * WAVE_SIZE * 2,
+                                             start + 1 + VW * WAVE_SIZE * 2,
+                                             start + 2 + VW * WAVE_SIZE * 2,
+                                             start + 3 + VW * WAVE_SIZE * 2,
+                                             start + VW * WAVE_SIZE * 3,
+                                             start + 1 + VW * WAVE_SIZE * 3,
+                                             start + 2 + VW * WAVE_SIZE * 3,
+                                             start + 3 + VW * WAVE_SIZE * 3};
+                return v;
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                constexpr uint32_t VecSize   = VW * 256 / Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) * VW + waveOffset;
+                VecType        v          = {
+                    start,
+                    start + 1,
+                    start + 2,
+                    start + 3,
+                    start + VW * WAVE_SIZE,
+                    start + 1 + VW * WAVE_SIZE,
+                    start + 2 + VW * WAVE_SIZE,
+                    start + 3 + VW * WAVE_SIZE,
+                    start + VW * WAVE_SIZE * 2,
+                    start + 1 + VW * WAVE_SIZE * 2,
+                    start + 2 + VW * WAVE_SIZE * 2,
+                    start + 3 + VW * WAVE_SIZE * 2,
+                    start + VW * WAVE_SIZE * 3,
+                    start + 1 + VW * WAVE_SIZE * 3,
+                    start + 2 + VW * WAVE_SIZE * 3,
+                    start + 3 + VW * WAVE_SIZE * 3,
+                    start + VW * WAVE_SIZE * 4,
+                    start + 1 + VW * WAVE_SIZE * 4,
+                    start + 2 + VW * WAVE_SIZE * 4,
+                    start + 3 + VW * WAVE_SIZE * 4,
+                    start + VW * WAVE_SIZE * 5,
+                    start + 1 + VW * WAVE_SIZE * 5,
+                    start + 2 + VW * WAVE_SIZE * 5,
+                    start + 3 + VW * WAVE_SIZE * 5,
+                    start + VW * WAVE_SIZE * 6,
+                    start + 1 + VW * WAVE_SIZE * 6,
+                    start + 2 + VW * WAVE_SIZE * 6,
+                    start + 3 + VW * WAVE_SIZE * 6,
+                    start + VW * WAVE_SIZE * 7,
+                    start + 1 + VW * WAVE_SIZE * 7,
+                    start + 2 + VW * WAVE_SIZE * 7,
+                    start + 3 + VW * WAVE_SIZE * 7,
+                };
+                return v;
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                using VecType = VecT<DataT, 1>;
+                return VecType();
+            }
         }
     };
 
     // SoaVec
     template <typename DataT>
+    struct SoaVec<DataT, 8, 16>
+    {
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            constexpr uint32_t VW       = 8;
+            constexpr uint32_t BlockDim = 16;
+            using VecType               = VecT<DataT, VW>;
+            auto           threadId     = (uint8_t)detail::threadId();
+            const uint32_t waveOffset   = threadId / BlockDim * VW * BlockDim;
+            auto           start        = (threadId % BlockDim) % BlockDim + waveOffset;
+            VecType        v            = {
+                start,
+                BlockDim + start,
+                BlockDim * 2 + start,
+                BlockDim * 3 + start,
+                BlockDim * 4 + start,
+                BlockDim * 5 + start,
+                BlockDim * 6 + start,
+                BlockDim * 7 + start,
+            };
+            return v;
+        }
+    };
+
+    template <typename DataT>
+    struct SoaVec<DataT, 8, 32>
+    {
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            constexpr uint32_t VW       = 8;
+            constexpr uint32_t BlockDim = 32;
+            using VecType               = VecT<DataT, VW>;
+            auto           threadId     = (uint8_t)detail::threadId();
+            const uint32_t waveOffset   = threadId / BlockDim * VW * BlockDim;
+            auto           start        = (threadId % BlockDim) % BlockDim + waveOffset;
+            VecType        v            = {start,
+                                           BlockDim + start,
+                                           BlockDim * 2 + start,
+                                           BlockDim * 3 + start,
+                                           BlockDim * 4 + start,
+                                           BlockDim * 5 + start,
+                                           BlockDim * 6 + start,
+                                           BlockDim * 7 + start};
+            return v;
+        }
+    };
+
+    template <typename DataT>
+    struct SoaVec<DataT, 8, 64>
+    {
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            constexpr uint32_t VW       = 8;
+            constexpr uint32_t BlockDim = 64;
+            auto               threadId = (uint8_t)detail::threadId();
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t VecSize   = VW * BlockDim / Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
+                VecType        v          = {
+                    start,
+                    BlockDim + start,
+                    BlockDim * 2 + start,
+                    BlockDim * 3 + start,
+                    BlockDim * 4 + start,
+                    BlockDim * 5 + start,
+                    BlockDim * 6 + start,
+                    BlockDim * 7 + start,
+                };
+                return v;
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t VecSize   = VW * BlockDim / Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
+                VecType        v          = {
+                    start,
+                    BlockDim + start,
+                    BlockDim * 2 + start,
+                    BlockDim * 3 + start,
+                    BlockDim * 4 + start,
+                    BlockDim * 5 + start,
+                    BlockDim * 6 + start,
+                    BlockDim * 7 + start,
+                    WAVE_SIZE + start,
+                    WAVE_SIZE + BlockDim + start,
+                    WAVE_SIZE + BlockDim * 2 + start,
+                    WAVE_SIZE + BlockDim * 3 + start,
+                    WAVE_SIZE + BlockDim * 4 + start,
+                    WAVE_SIZE + BlockDim * 5 + start,
+                    WAVE_SIZE + BlockDim * 6 + start,
+                    WAVE_SIZE + BlockDim * 7 + start,
+                };
+                return v;
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                using VecType = VecT<DataT, 1>;
+                return VecType();
+            }
+        }
+    };
+
+    template <typename DataT>
+    struct SoaVec<DataT, 8, 128>
+    {
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            constexpr uint32_t VW       = 8;
+            constexpr uint32_t BlockDim = 128;
+            auto               threadId = (uint8_t)detail::threadId();
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t VecSize   = VW * BlockDim / Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
+                VecType        v          = {
+                    start,
+                    BlockDim + start,
+                    BlockDim * 2 + start,
+                    BlockDim * 3 + start,
+                    BlockDim * 4 + start,
+                    BlockDim * 5 + start,
+                    BlockDim * 6 + start,
+                    BlockDim * 7 + start,
+                    WAVE_SIZE + start,
+                    WAVE_SIZE + BlockDim + start,
+                    WAVE_SIZE + BlockDim * 2 + start,
+                    WAVE_SIZE + BlockDim * 3 + start,
+                    WAVE_SIZE + BlockDim * 4 + start,
+                    WAVE_SIZE + BlockDim * 5 + start,
+                    WAVE_SIZE + BlockDim * 6 + start,
+                    WAVE_SIZE + BlockDim * 7 + start,
+                };
+                return v;
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t VecSize   = VW * BlockDim / Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
+                VecType        v          = {
+                    start,
+                    BlockDim + start,
+                    BlockDim * 2 + start,
+                    BlockDim * 3 + start,
+                    BlockDim * 4 + start,
+                    BlockDim * 5 + start,
+                    BlockDim * 6 + start,
+                    BlockDim * 7 + start,
+                    WAVE_SIZE + start,
+                    WAVE_SIZE + BlockDim + start,
+                    WAVE_SIZE + BlockDim * 2 + start,
+                    WAVE_SIZE + BlockDim * 3 + start,
+                    WAVE_SIZE + BlockDim * 4 + start,
+                    WAVE_SIZE + BlockDim * 5 + start,
+                    WAVE_SIZE + BlockDim * 6 + start,
+                    WAVE_SIZE + BlockDim * 7 + start,
+                    WAVE_SIZE * 2 + start,
+                    WAVE_SIZE * 2 + BlockDim + start,
+                    WAVE_SIZE * 2 + BlockDim * 2 + start,
+                    WAVE_SIZE * 2 + BlockDim * 3 + start,
+                    WAVE_SIZE * 2 + BlockDim * 4 + start,
+                    WAVE_SIZE * 2 + BlockDim * 5 + start,
+                    WAVE_SIZE * 2 + BlockDim * 6 + start,
+                    WAVE_SIZE * 2 + BlockDim * 7 + start,
+                    WAVE_SIZE * 3 + start,
+                    WAVE_SIZE * 3 + BlockDim + start,
+                    WAVE_SIZE * 3 + BlockDim * 2 + start,
+                    WAVE_SIZE * 3 + BlockDim * 3 + start,
+                    WAVE_SIZE * 3 + BlockDim * 4 + start,
+                    WAVE_SIZE * 3 + BlockDim * 5 + start,
+                    WAVE_SIZE * 3 + BlockDim * 6 + start,
+                    WAVE_SIZE * 3 + BlockDim * 7 + start,
+                };
+                return v;
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                using VecType = VecT<DataT, 1>;
+                return VecType();
+            }
+        }
+    };
+
+    template <typename DataT>
+    struct SoaVec<DataT, 8, 256>
+    {
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            constexpr uint32_t VW       = 8;
+            constexpr uint32_t BlockDim = 256;
+            auto               threadId = (uint8_t)detail::threadId();
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t VecSize   = VW * BlockDim / Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
+                VecType        v          = {
+                    start,
+                    BlockDim + start,
+                    BlockDim * 2 + start,
+                    BlockDim * 3 + start,
+                    BlockDim * 4 + start,
+                    BlockDim * 5 + start,
+                    BlockDim * 6 + start,
+                    BlockDim * 7 + start,
+                    WAVE_SIZE + start,
+                    WAVE_SIZE + BlockDim + start,
+                    WAVE_SIZE + BlockDim * 2 + start,
+                    WAVE_SIZE + BlockDim * 3 + start,
+                    WAVE_SIZE + BlockDim * 4 + start,
+                    WAVE_SIZE + BlockDim * 5 + start,
+                    WAVE_SIZE + BlockDim * 6 + start,
+                    WAVE_SIZE + BlockDim * 7 + start,
+                    WAVE_SIZE * 2 + start,
+                    WAVE_SIZE * 2 + BlockDim + start,
+                    WAVE_SIZE * 2 + BlockDim * 2 + start,
+                    WAVE_SIZE * 2 + BlockDim * 3 + start,
+                    WAVE_SIZE * 2 + BlockDim * 4 + start,
+                    WAVE_SIZE * 2 + BlockDim * 5 + start,
+                    WAVE_SIZE * 2 + BlockDim * 6 + start,
+                    WAVE_SIZE * 2 + BlockDim * 7 + start,
+                    WAVE_SIZE * 3 + start,
+                    WAVE_SIZE * 3 + BlockDim + start,
+                    WAVE_SIZE * 3 + BlockDim * 2 + start,
+                    WAVE_SIZE * 3 + BlockDim * 3 + start,
+                    WAVE_SIZE * 3 + BlockDim * 4 + start,
+                    WAVE_SIZE * 3 + BlockDim * 5 + start,
+                    WAVE_SIZE * 3 + BlockDim * 6 + start,
+                    WAVE_SIZE * 3 + BlockDim * 7 + start,
+                };
+                return v;
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t VecSize   = VW * BlockDim / Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
+                VecType        v          = {
+                    start,
+                    BlockDim + start,
+                    BlockDim * 2 + start,
+                    BlockDim * 3 + start,
+                    BlockDim * 4 + start,
+                    BlockDim * 5 + start,
+                    BlockDim * 6 + start,
+                    BlockDim * 7 + start,
+                    WAVE_SIZE + start,
+                    WAVE_SIZE + BlockDim + start,
+                    WAVE_SIZE + BlockDim * 2 + start,
+                    WAVE_SIZE + BlockDim * 3 + start,
+                    WAVE_SIZE + BlockDim * 4 + start,
+                    WAVE_SIZE + BlockDim * 5 + start,
+                    WAVE_SIZE + BlockDim * 6 + start,
+                    WAVE_SIZE + BlockDim * 7 + start,
+                    WAVE_SIZE * 2 + start,
+                    WAVE_SIZE * 2 + BlockDim + start,
+                    WAVE_SIZE * 2 + BlockDim * 2 + start,
+                    WAVE_SIZE * 2 + BlockDim * 3 + start,
+                    WAVE_SIZE * 2 + BlockDim * 4 + start,
+                    WAVE_SIZE * 2 + BlockDim * 5 + start,
+                    WAVE_SIZE * 2 + BlockDim * 6 + start,
+                    WAVE_SIZE * 2 + BlockDim * 7 + start,
+                    WAVE_SIZE * 3 + start,
+                    WAVE_SIZE * 3 + BlockDim + start,
+                    WAVE_SIZE * 3 + BlockDim * 2 + start,
+                    WAVE_SIZE * 3 + BlockDim * 3 + start,
+                    WAVE_SIZE * 3 + BlockDim * 4 + start,
+                    WAVE_SIZE * 3 + BlockDim * 5 + start,
+                    WAVE_SIZE * 3 + BlockDim * 6 + start,
+                    WAVE_SIZE * 3 + BlockDim * 7 + start,
+                    WAVE_SIZE * 4 + start,
+                    WAVE_SIZE * 4 + BlockDim + start,
+                    WAVE_SIZE * 4 + BlockDim * 2 + start,
+                    WAVE_SIZE * 4 + BlockDim * 3 + start,
+                    WAVE_SIZE * 4 + BlockDim * 4 + start,
+                    WAVE_SIZE * 4 + BlockDim * 5 + start,
+                    WAVE_SIZE * 4 + BlockDim * 6 + start,
+                    WAVE_SIZE * 4 + BlockDim * 7 + start,
+                    WAVE_SIZE * 5 + start,
+                    WAVE_SIZE * 5 + BlockDim + start,
+                    WAVE_SIZE * 5 + BlockDim * 2 + start,
+                    WAVE_SIZE * 5 + BlockDim * 3 + start,
+                    WAVE_SIZE * 5 + BlockDim * 4 + start,
+                    WAVE_SIZE * 5 + BlockDim * 5 + start,
+                    WAVE_SIZE * 5 + BlockDim * 6 + start,
+                    WAVE_SIZE * 5 + BlockDim * 7 + start,
+                    WAVE_SIZE * 6 + start,
+                    WAVE_SIZE * 6 + BlockDim + start,
+                    WAVE_SIZE * 6 + BlockDim * 2 + start,
+                    WAVE_SIZE * 6 + BlockDim * 3 + start,
+                    WAVE_SIZE * 6 + BlockDim * 4 + start,
+                    WAVE_SIZE * 6 + BlockDim * 5 + start,
+                    WAVE_SIZE * 6 + BlockDim * 6 + start,
+                    WAVE_SIZE * 6 + BlockDim * 7 + start,
+                    WAVE_SIZE * 7 + start,
+                    WAVE_SIZE * 7 + BlockDim + start,
+                    WAVE_SIZE * 7 + BlockDim * 2 + start,
+                    WAVE_SIZE * 7 + BlockDim * 3 + start,
+                    WAVE_SIZE * 7 + BlockDim * 4 + start,
+                    WAVE_SIZE * 7 + BlockDim * 5 + start,
+                    WAVE_SIZE * 7 + BlockDim * 6 + start,
+                    WAVE_SIZE * 7 + BlockDim * 7 + start,
+                };
+                return v;
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                using VecType = VecT<DataT, 1>;
+                return VecType();
+            }
+        }
+    };
+
+    template <typename DataT>
     struct SoaVec<DataT, 4, 16>
     {
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
-            constexpr uint32_t VW        = 4;
-            constexpr uint32_t K         = 16;
-            constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
-            using VecType                = VecT<DataT, VW>;
-            auto    threadId             = (uint8_t)detail::threadId();
-            VecType v                    = {threadId / K * K * 4 + threadId % K,
-                                            threadId / K * K * 4 + K + threadId % K,
-                                            threadId / K * K * 4 + K * 2 + threadId % K,
-                                            threadId / K * K * 4 + K * 3 + threadId % K};
+            constexpr uint32_t VW       = 4;
+            constexpr uint32_t BlockDim = 16;
+            using VecType               = VecT<DataT, VW>;
+            auto           threadId     = (uint8_t)detail::threadId();
+            const uint32_t waveOffset   = threadId / BlockDim * VW * BlockDim;
+            auto           start        = (threadId % BlockDim) % BlockDim + waveOffset;
+            VecType v = {start, BlockDim + start, BlockDim * 2 + start, BlockDim * 3 + start};
             return v;
         }
     };
@@ -162,15 +978,13 @@ namespace rocwmma
     {
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
-            constexpr uint32_t VW        = 4;
-            constexpr uint32_t K         = 32;
-            constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
-            using VecType                = VecT<DataT, VW>;
-            auto    threadId             = (uint8_t)detail::threadId();
-            VecType v                    = {threadId / K * K * 4 + threadId % K,
-                                            threadId / K * K * 4 + K + threadId % K,
-                                            threadId / K * K * 4 + K * 2 + threadId % K,
-                                            threadId / K * K * 4 + K * 3 + threadId % K};
+            constexpr uint32_t VW       = 4;
+            constexpr uint32_t BlockDim = 32;
+            using VecType               = VecT<DataT, VW>;
+            auto           threadId     = (uint8_t)detail::threadId();
+            const uint32_t waveOffset   = threadId / BlockDim * VW * BlockDim;
+            auto           start        = (threadId % BlockDim) % BlockDim + waveOffset;
+            VecType v = {start, BlockDim + start, BlockDim * 2 + start, BlockDim * 3 + start};
             return v;
         }
     };
@@ -180,13 +994,53 @@ namespace rocwmma
     {
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
-            constexpr uint32_t VW        = 4;
-            constexpr uint32_t K         = 64;
-            constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
-            using VecType                = VecT<DataT, VW>;
-            auto    threadId             = (uint8_t)detail::threadId();
-            VecType v = {threadId, threadId + K, threadId + K * 2, threadId + K * 3};
-            return v;
+            constexpr uint32_t VW       = 4;
+            constexpr uint32_t BlockDim = 64;
+            auto               threadId = (uint8_t)detail::threadId();
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t VecSize   = VW * BlockDim / Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
+                VecType        v          = {
+                    start,
+                    BlockDim + start,
+                    BlockDim * 2 + start,
+                    BlockDim * 3 + start,
+                };
+                return v;
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t VecSize   = VW * BlockDim / Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
+                VecType        v          = {
+                    start,
+                    BlockDim + start,
+                    BlockDim * 2 + start,
+                    BlockDim * 3 + start,
+                    WAVE_SIZE + start,
+                    WAVE_SIZE + BlockDim + start,
+                    WAVE_SIZE + BlockDim * 2 + start,
+                    WAVE_SIZE + BlockDim * 3 + start,
+                };
+                return v;
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                using VecType = VecT<DataT, 1>;
+                return VecType();
+            }
         }
     };
 
@@ -195,20 +1049,65 @@ namespace rocwmma
     {
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
-            constexpr uint32_t VW        = 4;
-            constexpr uint32_t K         = 128;
-            constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
-            using VecType                = VecT<DataT, VW * 2>;
-            auto    threadId             = (uint8_t)detail::threadId();
-            VecType v                    = {threadId,
-                                            threadId + K,
-                                            threadId + K * 2,
-                                            threadId + K * 3,
-                                            threadId + WAVE_SIZE,
-                                            threadId + WAVE_SIZE + K,
-                                            threadId + WAVE_SIZE + K * 2,
-                                            threadId + WAVE_SIZE + K * 3};
-            return v;
+            constexpr uint32_t VW       = 4;
+            constexpr uint32_t BlockDim = 128;
+            auto               threadId = (uint8_t)detail::threadId();
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t VecSize   = VW * BlockDim / Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
+                VecType        v          = {
+                    start,
+                    BlockDim + start,
+                    BlockDim * 2 + start,
+                    BlockDim * 3 + start,
+                    WAVE_SIZE + start,
+                    WAVE_SIZE + BlockDim + start,
+                    WAVE_SIZE + BlockDim * 2 + start,
+                    WAVE_SIZE + BlockDim * 3 + start,
+                };
+                return v;
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t VecSize   = VW * BlockDim / Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
+                VecType        v          = {
+                    start,
+                    BlockDim + start,
+                    BlockDim * 2 + start,
+                    BlockDim * 3 + start,
+                    WAVE_SIZE + start,
+                    WAVE_SIZE + BlockDim + start,
+                    WAVE_SIZE + BlockDim * 2 + start,
+                    WAVE_SIZE + BlockDim * 3 + start,
+                    WAVE_SIZE * 2 + start,
+                    WAVE_SIZE * 2 + BlockDim + start,
+                    WAVE_SIZE * 2 + BlockDim * 2 + start,
+                    WAVE_SIZE * 2 + BlockDim * 3 + start,
+                    WAVE_SIZE * 3 + start,
+                    WAVE_SIZE * 3 + BlockDim + start,
+                    WAVE_SIZE * 3 + BlockDim * 2 + start,
+                    WAVE_SIZE * 3 + BlockDim * 3 + start,
+                };
+                return v;
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                using VecType = VecT<DataT, 1>;
+                return VecType();
+            }
         }
     };
 
@@ -217,73 +1116,134 @@ namespace rocwmma
     {
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
-            constexpr uint32_t VW        = 4;
-            constexpr uint32_t K         = 256;
-            constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
-            using VecType                = VecT<DataT, VW * 4>;
-            auto    threadId             = (uint8_t)detail::threadId();
-            VecType v                    = {threadId,
-                                            threadId + K,
-                                            threadId + K * 2,
-                                            threadId + K * 3,
-                                            threadId + WAVE_SIZE,
-                                            threadId + WAVE_SIZE + K,
-                                            threadId + WAVE_SIZE + K * 2,
-                                            threadId + WAVE_SIZE + K * 3,
-                                            threadId + WAVE_SIZE * 2,
-                                            threadId + WAVE_SIZE * 2 + K,
-                                            threadId + WAVE_SIZE * 2 + K * 2,
-                                            threadId + WAVE_SIZE * 2 + K * 3,
-                                            threadId + WAVE_SIZE * 3,
-                                            threadId + WAVE_SIZE * 3 + K,
-                                            threadId + WAVE_SIZE * 3 + K * 2,
-                                            threadId + WAVE_SIZE * 3 + K * 3};
-            return v;
+            constexpr uint32_t VW       = 4;
+            constexpr uint32_t BlockDim = 256;
+            auto               threadId = (uint8_t)detail::threadId();
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t VecSize   = VW * BlockDim / Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
+                VecType        v          = {
+                    start,
+                    BlockDim + start,
+                    BlockDim * 2 + start,
+                    BlockDim * 3 + start,
+                    WAVE_SIZE + start,
+                    WAVE_SIZE + BlockDim + start,
+                    WAVE_SIZE + BlockDim * 2 + start,
+                    WAVE_SIZE + BlockDim * 3 + start,
+                    WAVE_SIZE * 2 + start,
+                    WAVE_SIZE * 2 + BlockDim + start,
+                    WAVE_SIZE * 2 + BlockDim * 2 + start,
+                    WAVE_SIZE * 2 + BlockDim * 3 + start,
+                    WAVE_SIZE * 3 + start,
+                    WAVE_SIZE * 3 + BlockDim + start,
+                    WAVE_SIZE * 3 + BlockDim * 2 + start,
+                    WAVE_SIZE * 3 + BlockDim * 3 + start,
+                };
+                return v;
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+                constexpr uint32_t VecSize   = VW * BlockDim / Constants::AMDGCN_WAVE_SIZE;
+
+                using VecType             = VecT<DataT, VecSize>;
+                const uint32_t waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+                auto           start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
+                VecType        v          = {
+                    start,
+                    BlockDim + start,
+                    BlockDim * 2 + start,
+                    BlockDim * 3 + start,
+                    WAVE_SIZE + start,
+                    WAVE_SIZE + BlockDim + start,
+                    WAVE_SIZE + BlockDim * 2 + start,
+                    WAVE_SIZE + BlockDim * 3 + start,
+                    WAVE_SIZE * 2 + start,
+                    WAVE_SIZE * 2 + BlockDim + start,
+                    WAVE_SIZE * 2 + BlockDim * 2 + start,
+                    WAVE_SIZE * 2 + BlockDim * 3 + start,
+                    WAVE_SIZE * 3 + start,
+                    WAVE_SIZE * 3 + BlockDim + start,
+                    WAVE_SIZE * 3 + BlockDim * 2 + start,
+                    WAVE_SIZE * 3 + BlockDim * 3 + start,
+                    WAVE_SIZE * 4 + start,
+                    WAVE_SIZE * 4 + BlockDim + start,
+                    WAVE_SIZE * 4 + BlockDim * 2 + start,
+                    WAVE_SIZE * 4 + BlockDim * 3 + start,
+                    WAVE_SIZE * 5 + start,
+                    WAVE_SIZE * 5 + BlockDim + start,
+                    WAVE_SIZE * 5 + BlockDim * 2 + start,
+                    WAVE_SIZE * 5 + BlockDim * 3 + start,
+                    WAVE_SIZE * 6 + start,
+                    WAVE_SIZE * 6 + BlockDim + start,
+                    WAVE_SIZE * 6 + BlockDim * 2 + start,
+                    WAVE_SIZE * 6 + BlockDim * 3 + start,
+                    WAVE_SIZE * 7 + start,
+                    WAVE_SIZE * 7 + BlockDim + start,
+                    WAVE_SIZE * 7 + BlockDim * 2 + start,
+                    WAVE_SIZE * 7 + BlockDim * 3 + start,
+                };
+                return v;
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                using VecType = VecT<DataT, 1>;
+                return VecType();
+            }
         }
     };
 
-    template <typename DataT, uint32_t VW, uint32_t K>
+    template <typename DataT, uint32_t VW, uint32_t BlockDim>
     ROCWMMA_DEVICE static inline bool aos_soa_b32()
     {
         bool err = false;
 
         const uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
-        auto           v         = AosVec<DataT, VW, K>::genData();
+        auto           v         = AosVec<DataT, VW, BlockDim>::genData();
+
         __syncthreads();
 
-        auto soa = AosToSoa<K, VW>::exec(v);
-
-        auto cmp_v = SoaVec<DataT, VW, K>::genData();
+        auto soa   = AosToSoa<BlockDim, VW>::exec(v);
+        auto cmp_v = SoaVec<DataT, VW, BlockDim>::genData();
         err |= soa != cmp_v;
 
         return err;
     }
 
-    template <typename DataT, uint32_t VW, uint32_t K>
+    template <typename DataT, uint32_t VW, uint32_t BlockDim>
     ROCWMMA_DEVICE static inline bool soa_aos_b32()
     {
         bool err = false;
 
         const uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
-        auto           v         = SoaVec<DataT, VW, K>::genData();
+        auto           v         = SoaVec<DataT, VW, BlockDim>::genData();
         __syncthreads();
 
-        auto aos = SoaToAos<K, VW>::exec(v);
+        auto aos = SoaToAos<BlockDim, VW>::exec(v);
 
-        auto cmp_v = AosVec<DataT, VW, K>::genData();
+        auto cmp_v = AosVec<DataT, VW, BlockDim>::genData();
         err |= aos != cmp_v;
 
         return err;
     }
 
-    template <typename DataT, uint32_t VW, uint32_t K>
-    ROCWMMA_KERNEL void transformsTest(uint32_t     m,
-                                       uint32_t     n,
-                                       DataT const* in,
-                                       DataT*       out,
-                                       uint32_t     ld,
-                                       DataT        param1,
-                                       DataT        param2)
+    template <typename DataT, uint32_t VW, uint32_t BlockDim>
+    ROCWMMA_KERNEL void aossoaTest(uint32_t     m,
+                                   uint32_t     n,
+                                   DataT const* in,
+                                   DataT*       out,
+                                   uint32_t     ld,
+                                   DataT        param1,
+                                   DataT        param2)
     {
         __shared__ int32_t result;
         result = 0;
@@ -292,8 +1252,39 @@ namespace rocwmma
         bool err = false;
 
         // Add tests here
-        err = err ? err : aos_soa_b32<DataT, VW, K>();
-        err = err ? err : soa_aos_b32<DataT, VW, K>();
+        err = err ? err : aos_soa_b32<DataT, VW, BlockDim>();
+
+        // Reduce error count
+        atomicAdd(&result, (int32_t)err);
+
+        // Wait for all threads
+        synchronize_workgroup();
+
+        // Just need one thread to update output
+        if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0 && blockIdx.x == 0
+           && blockIdx.y == 0 && blockIdx.z == 0)
+        {
+            out[0] = static_cast<DataT>(result == 0 ? SUCCESS_VALUE : ERROR_VALUE);
+        }
+    }
+
+    template <typename DataT, uint32_t VW, uint32_t BlockDim>
+    ROCWMMA_KERNEL void soaaosTest(uint32_t     m,
+                                   uint32_t     n,
+                                   DataT const* in,
+                                   DataT*       out,
+                                   uint32_t     ld,
+                                   DataT        param1,
+                                   DataT        param2)
+    {
+        __shared__ int32_t result;
+        result = 0;
+        synchronize_workgroup();
+
+        bool err = false;
+
+        // Add tests here
+        err = err ? err : soa_aos_b32<DataT, VW, BlockDim>();
 
         // Reduce error count
         atomicAdd(&result, (int32_t)err);
