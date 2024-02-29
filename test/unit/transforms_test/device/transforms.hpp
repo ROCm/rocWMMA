@@ -686,7 +686,7 @@ namespace rocwmma
         ROCWMMA_DEVICE static inline auto genData()
         {
             constexpr uint32_t VW        = 2;
-            constexpr uint32_t BlockDim  = 128;
+            constexpr uint32_t BlockDim  = 256;
             constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
             constexpr uint32_t VecSize   = VW * 256 / WAVE_SIZE;
 

@@ -410,7 +410,7 @@ namespace rocwmma
         // Optimize data-reorder with cross-lane ops.
         constexpr auto ElementSize   = sizeof(DataT);
         constexpr auto PackedVecSize = VecSize / PackTraits::PackRatio;
-        // printf("PackedVecSize = %d\n", PackedVecSize);
+
         // The optimization should only be applied on a pair of register. So v0 and v1
         // should not be larger than a register
         if constexpr(ElementSize < 2u && PackedVecSize == 0)
