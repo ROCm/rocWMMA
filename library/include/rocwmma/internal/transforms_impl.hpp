@@ -868,71 +868,6 @@ namespace rocwmma
 #endif
 
     template <>
-    struct AosToSoa<16, 2>
-    {
-        constexpr static uint32_t VW      = 2;
-        constexpr static uint32_t VecSize = 2;
-
-        template <typename DataT>
-        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
-        {
-            return v;
-        }
-    };
-
-    template <>
-    struct AosToSoa<32, 2>
-    {
-        constexpr static uint32_t VW      = 2;
-        constexpr static uint32_t VecSize = 2;
-
-        template <typename DataT>
-        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
-        {
-            return v;
-        }
-    };
-
-    template <>
-    struct AosToSoa<64, 2>
-    {
-        constexpr static uint32_t VW      = 2;
-        constexpr static uint32_t VecSize = 2;
-
-        template <typename DataT>
-        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
-        {
-            return v;
-        }
-    };
-
-    template <>
-    struct AosToSoa<128, 2>
-    {
-        constexpr static uint32_t VW      = 2;
-        constexpr static uint32_t VecSize = 4;
-
-        template <typename DataT>
-        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
-        {
-            return v;
-        }
-    };
-
-    template <>
-    struct AosToSoa<256, 2>
-    {
-        constexpr static uint32_t VW      = 2;
-        constexpr static uint32_t VecSize = 8;
-
-        template <typename DataT>
-        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
-        {
-            return v;
-        }
-    };
-
-    template <>
     struct SoaToAos<16, 2>
     {
         constexpr static uint32_t VW      = 2;
@@ -947,7 +882,7 @@ namespace rocwmma
             auto unpacked_data = PackUtil::template paddedUnpack<2>(
                 Permute::Scatter16<2, 0>::exec(PackUtil::paddedPack(v)));
 
-            // Step 3 : UnpackLoHi8
+            // Step 2 : UnpackLoHi8
             unpacked_data = unpackLoHi8(unpacked_data);
 
             return unpacked_data;
@@ -969,7 +904,7 @@ namespace rocwmma
             auto unpacked_data = PackUtil::template paddedUnpack<2>(
                 Permute::Scatter32<2, 0>::exec(PackUtil::paddedPack(v)));
 
-            // Step 3 : UnpackLoHi16
+            // Step 2 : UnpackLoHi16
             unpacked_data = unpackLoHi16(unpacked_data);
 
             return unpacked_data;
@@ -991,7 +926,7 @@ namespace rocwmma
             auto unpacked_data = PackUtil::template paddedUnpack<2>(
                 Permute::ScatterWave<2, 0>::exec(PackUtil::paddedPack(v)));
 
-            // Step 3 : UnpackLoHi32
+            // Step 2 : UnpackLoHi32
             unpacked_data = unpackLoHi32(unpacked_data);
 
             return unpacked_data;

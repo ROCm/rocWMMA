@@ -274,12 +274,12 @@ namespace rocwmma
             using Zip32   = Zip<OP_GROUP_SIZE_32>;
 
             // Blend sub-dword elements in regular ordered patterns
-            using UnpackByteLo   = PermByte<0u, 4u, 1u, 5u>;
-            using UnpackByteHi   = PermByte<2u, 6u, 3u, 7u>;
-            using UnpackWordLo   = PermWord<0u, 2u>;
-            using UnpackWordHi   = PermWord<1u, 3u>;
-            using UnpackByteLoHi = PermByte<0u, 6u, 1u, 7u>;
-            using UnpackByteHiLo = PermByte<3u, 7u, 3u, 7u>;
+            using UnpackByteLo     = PermByte<0u, 4u, 1u, 5u>;
+            using UnpackByteHi     = PermByte<2u, 6u, 3u, 7u>;
+            using UnpackWordLo     = PermWord<0u, 2u>;
+            using UnpackWordHi     = PermWord<1u, 3u>;
+            using UnpackByteLoHi   = PermByte<0u, 6u, 1u, 7u>;
+            using UnpackByte3BCast = PermByte<3u, 7u, 3u, 7u>;
 
             using ExtractByteEven = PermByte<0u, 2u, 4u, 6u>;
             using ExtractByteOdd  = PermByte<1u, 3u, 5u, 7u>;

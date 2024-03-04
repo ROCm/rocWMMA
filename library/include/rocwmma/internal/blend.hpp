@@ -157,12 +157,12 @@ namespace rocwmma
         using Zip32   = Driver<BlendImpl::Ops::Zip32>;
 
         // Unpack functions
-        using UnpackByteLo   = Driver<BlendImpl::Ops::UnpackByteLo>;
-        using UnpackByteHi   = Driver<BlendImpl::Ops::UnpackByteHi>;
-        using UnpackWordLo   = Driver<BlendImpl::Ops::UnpackWordLo>;
-        using UnpackWordHi   = Driver<BlendImpl::Ops::UnpackWordHi>;
-        using UnpackByteLoHi = Driver<BlendImpl::Ops::UnpackByteLoHi>;
-        using UnpackByteHiLo = Driver<BlendImpl::Ops::UnpackByteHiLo>;
+        using UnpackByteLo     = Driver<BlendImpl::Ops::UnpackByteLo>;
+        using UnpackByteHi     = Driver<BlendImpl::Ops::UnpackByteHi>;
+        using UnpackWordLo     = Driver<BlendImpl::Ops::UnpackWordLo>;
+        using UnpackWordHi     = Driver<BlendImpl::Ops::UnpackWordHi>;
+        using UnpackByteLoHi   = Driver<BlendImpl::Ops::UnpackByteLoHi>;
+        using UnpackByte3BCast = Driver<BlendImpl::Ops::UnpackByte3BCast>;
 
         // Extract functions
         using ExtractByteEven = Driver<BlendImpl::Ops::ExtractByteEven>;
