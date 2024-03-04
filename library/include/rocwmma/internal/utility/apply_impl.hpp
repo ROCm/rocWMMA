@@ -34,32 +34,11 @@ namespace rocwmma
 {
     namespace detail
     {
-        template <typename F, typename DataT, uint32_t Rank, size_t... I>
+        template <typename F, typename VecT, size_t... I>
         ROCWMMA_HOST_DEVICE constexpr decltype(auto)
-            apply_impl(F fn, HIP_vector_type<DataT, Rank>& v, detail::index_sequence<I...>)
+            apply_impl(F fn, VecT&& v, detail::index_sequence<I...>)
         {
-            return fn(get<I>(v)...);
-        }
-
-        template <typename F, typename DataT, uint32_t Rank, size_t... I>
-        ROCWMMA_HOST_DEVICE constexpr decltype(auto)
-            apply_impl(F fn, HIP_vector_type<DataT, Rank> const& v, detail::index_sequence<I...>)
-        {
-            return fn(get<I>(v)...);
-        }
-
-        template <typename F, typename DataT, uint32_t Rank, size_t... I>
-        ROCWMMA_HOST_DEVICE constexpr decltype(auto)
-            apply_impl(F fn, non_native_vector_base<DataT, Rank> & v, detail::index_sequence<I...>)
-        {
-            return fn(get<I>(v)...);
-        }
-
-        template <typename F, typename DataT, uint32_t Rank, size_t... I>
-        ROCWMMA_HOST_DEVICE constexpr decltype(auto)
-            apply_impl(F fn, non_native_vector_base<DataT, Rank> const& v, detail::index_sequence<I...>)
-        {
-            return fn(get<I>(v)...);
+            return fn(get<I>(forward<VecT>(v))...);
         }
 
         template <typename F, typename DataT, uint32_t Rank>
