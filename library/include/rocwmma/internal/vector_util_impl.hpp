@@ -409,25 +409,42 @@ namespace rocwmma
         // Special case: Sub-dword data sizes
         // Optimize data-reorder with cross-lane ops.
         constexpr auto ElementSize   = sizeof(DataT);
-        constexpr auto PackedVecSize = std::max(VecSize / PackTraits::PackRatio, 1u);
+        constexpr auto PackedVecSize = VecSize / PackTraits::PackRatio;
 
         // The optimization should only be applied on a pair of register. So v0 and v1
         // should not be larger than a register
         if constexpr(ElementSize < 4u && PackedVecSize <= 1)
         {
-            auto unpackHi = [](auto&& idx, auto&& v0, auto&& v1) {
-                constexpr auto Index = std::decay_t<decltype(idx)>::value;
-                return (ElementSize == 2u)
-                           ? Blend::UnpackWordHi::exec(get<Index>(v0), get<Index>(v1))
-                           : Blend::UnpackByteHi::exec(get<Index>(v0), get<Index>(v1));
-            };
+            if constexpr(ElementSize < 2u && PackedVecSize == 0)
+            {
+                auto unpackHi = [](auto&& idx, auto&& v0, auto&& v1) {
+                    constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                    return Blend::UnpackByte3BCast::exec(get<Index>(v0), get<Index>(v1));
+                };
 
-            // Pack, extract and unpack
-            using PackedT = typename PackTraits::PackedT;
-            auto packed0  = PackUtil::paddedPack(v0);
-            auto packed1  = PackUtil::paddedPack(v1);
-            auto result   = vector_generator<PackedT, PackedVecSize>()(unpackHi, packed0, packed1);
-            return PackUtil::template paddedUnpack<VecSize>(result);
+                // Pack, extract and unpack
+                using PackedT = typename PackTraits::PackedT;
+                auto packed0  = PackUtil::paddedPack(v0);
+                auto packed1  = PackUtil::paddedPack(v1);
+                auto result   = vector_generator<PackedT, 1u>()(unpackHi, packed0, packed1);
+                return PackUtil::template paddedUnpack<VecSize>(result);
+            }
+            else
+            {
+                auto unpackHi = [](auto&& idx, auto&& v0, auto&& v1) {
+                    constexpr auto Index = std::decay_t<decltype(idx)>::value;
+                    return (ElementSize == 2u)
+                               ? Blend::UnpackWordHi::exec(get<Index>(v0), get<Index>(v1))
+                               : Blend::UnpackByteHi::exec(get<Index>(v0), get<Index>(v1));
+                };
+
+                // Pack, extract and unpack
+                using PackedT = typename PackTraits::PackedT;
+                auto packed0  = PackUtil::paddedPack(v0);
+                auto packed1  = PackUtil::paddedPack(v1);
+                auto result   = vector_generator<PackedT, 1u>()(unpackHi, packed0, packed1);
+                return PackUtil::template paddedUnpack<VecSize>(result);
+            }
         }
         else
         {

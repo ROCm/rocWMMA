@@ -60,6 +60,7 @@ namespace rocwmma
             auto warpSize = HipDevice::instance()->warpSize();
             // clang-format off
             return { {warpSize, 1}, {warpSize * 2, 1}, {warpSize * 4, 1}};
+            // return { {warpSize, 1} };
             // clang-format on
         }
 
@@ -77,7 +78,7 @@ namespace rocwmma
     };
 
     using AossoaTestParams = TestParams<AossoaGenerator, std::tuple<I<4>, I<8>>>;
-    using SoaaosTestParams = TestParams<SoaaosGenerator, std::tuple<I<4>>>;
+    using SoaaosTestParams = TestParams<SoaaosGenerator, std::tuple<I<2>, I<4>, I<8>>>;
 
 } // namespace rocwmma
 
