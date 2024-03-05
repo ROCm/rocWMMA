@@ -29,6 +29,7 @@
 #include "types.hpp"
 
 #include "utility/get.hpp"
+#include "utility/apply.hpp"
 #include "vector.hpp"
 
 namespace rocwmma
@@ -74,37 +75,7 @@ namespace rocwmma
     }
 } // namespace rocwmma
 
-///////////////////////////////////////////////////////////
-////////  std::apply fold expressions (<= C++14)  /////////
-///////////////////////////////////////////////////////////
-
-namespace std
-{
-    // TODO: Remove after utils refactor
-    using rocwmma::apply;
-    using rocwmma::get;
-}
-
 #if !defined(__HIPCC_RTC__)
-namespace std
-{
-
-#if !(__cplusplus >= 201703L)
-    template <typename F, typename Tuple, size_t... I>
-    auto apply_impl(F fn, Tuple t, std::index_sequence<I...>)
-    {
-        return fn(get<I>(t)...);
-    }
-    template <typename F, typename Tuple>
-    auto apply(F fn, Tuple t)
-    {
-        const std::size_t size = std::tuple_size<Tuple>::value;
-        return apply_impl(fn, t, std::make_index_sequence<size>());
-    }
-#endif
-
-} // namespace std
-
 ///////////////////////////////////////////////////////////
 /////////////  std::pair<T, T> extensions  ////////////////
 ///////////////////////////////////////////////////////////
