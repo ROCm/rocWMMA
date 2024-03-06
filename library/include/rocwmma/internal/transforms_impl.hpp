@@ -868,6 +868,122 @@ namespace rocwmma
 #endif
 
     template <>
+    struct AosToSoa<16, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = VW;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            using PackUtil = PackUtil<DataT>;
+
+            // Step 1 : UnpackLoHi8
+            auto unpacked_data = unpackLoHi8(v);
+
+            // Step 2 : Gather
+            unpacked_data = PackUtil::template paddedUnpack<2>(
+                Permute::Gather16<2, 0>::exec(PackUtil::paddedPack(unpacked_data)));
+
+            return unpacked_data;
+        }
+    };
+
+    template <>
+    struct AosToSoa<32, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = VW;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            using PackUtil = PackUtil<DataT>;
+
+            // Step 1 : UnpackLoHi16
+            auto unpacked_data = unpackLoHi16(v);
+
+            // Step 2 : Gather
+            unpacked_data = PackUtil::template paddedUnpack<2>(
+                Permute::Gather32<2, 0>::exec(PackUtil::paddedPack(unpacked_data)));
+
+            return unpacked_data;
+        }
+    };
+
+    template <>
+    struct AosToSoa<64, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = VW;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            using PackUtil = PackUtil<DataT>;
+
+            // Step 1 : UnpackLoHi32
+            auto unpacked_data = unpackLoHi32(v);
+
+            // Step 2 : Gather
+            unpacked_data = PackUtil::template paddedUnpack<2>(
+                Permute::GatherWave<2, 0>::exec(PackUtil::paddedPack(unpacked_data)));
+
+            return unpacked_data;
+        }
+    };
+
+    template <>
+    struct AosToSoa<128, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 4;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            auto v0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_64, 2>::exec(extractLo(v));
+            auto v1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_64, 2>::exec(extractHi(v));
+
+            // Re-pack banks
+            auto repack_data = VecT<DataT, VecSize>{v0.data[0],
+                                                    v1.data[0],
+                                                    v0.data[1],
+                                                    v1.data[1]};
+
+            return repack_data;
+        }
+    };
+
+    template <>
+    struct AosToSoa<256, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 8;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            using PackUtil = PackUtil<DataT>;
+
+            auto lo0 = extractLo(v);
+            auto hi0 = extractHi(v);
+
+            // Applied on VW width banks
+            auto result_b0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_64, 2>::exec(extractLo(lo0));
+            auto result_b1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_64, 2>::exec(extractHi(lo0));
+            auto result_b2 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_64, 2>::exec(extractLo(hi0));
+            auto result_b3 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_64, 2>::exec(extractHi(hi0));
+
+            // Re-pack banks
+            return VecT<DataT, VecSize>{get<0>(result_b0), get<0>(result_b2),
+                                        get<1>(result_b0), get<1>(result_b2),
+                                        get<0>(result_b1), get<0>(result_b3),
+                                        get<1>(result_b1), get<1>(result_b3)};
+        }
+    };
+
+    template <>
     struct SoaToAos<16, 2>
     {
         constexpr static uint32_t VW      = 2;
