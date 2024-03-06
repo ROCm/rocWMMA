@@ -1400,12 +1400,7 @@ namespace rocwmma
 
         __syncthreads();
 
-        // TODO: remove conditional when AosToSoa VW=2 is implemented
-        auto soa = SoaVec<DataT, VW, BlockDim>::genData();
-        if(VW == 4 || VW == 8)
-        {
-            soa = AosToSoa<BlockDim, VW>::exec(v);
-        }
+        auto soa = AosToSoa<BlockDim, VW>::exec(v);
 
         auto cmp_v = SoaVec<DataT, VW, BlockDim>::genData();
         err |= soa != cmp_v;
