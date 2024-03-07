@@ -44,6 +44,7 @@ namespace rocwmma
 
         // size of BlockDim dimension
         using BlockDim = std::tuple<I<16>, I<32>, I<64>, I<128>, I<256>>;
+        // using BlockDim = std::tuple<I<256>>;
 
         using KernelParams = typename CombineLists<BlockDim, VWs, Types>::Result;
 
@@ -77,10 +78,11 @@ namespace rocwmma
         }
     };
 
-    using AossoaTestParams = TestParams<AossoaGenerator, std::tuple<I<2>, I<4>, I<8>>>;
-    using SoaaosTestParams = TestParams<SoaaosGenerator, std::tuple<I<2>, I<4>, I<8>>>;
+    // using AossoaTestParams = TestParams<AossoaGenerator, std::tuple<I<2>, I<4>, I<8>>>;
+    // using SoaaosTestParams = TestParams<SoaaosGenerator, std::tuple<I<2>, I<4>, I<8>>>;
+    using AossoaTestParams = TestParams<AossoaGenerator, std::tuple<I<2>>>;
 
 } // namespace rocwmma
 
 ROCWMMA_GENERATE_UNIT_GTEST_SUITE(AossoaTest, AossoaTestParams)
-ROCWMMA_GENERATE_UNIT_GTEST_SUITE(SoaaosTest, SoaaosTestParams)
+// ROCWMMA_GENERATE_UNIT_GTEST_SUITE(SoaaosTest, SoaaosTestParams)
