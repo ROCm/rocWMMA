@@ -29,35 +29,40 @@ include( CMakeDependentOption )
 cmake_dependent_option( ROCWMMA_BUILD_VALIDATION_TESTS "Build validation tests" ON "ROCWMMA_BUILD_TESTS" OFF )
 cmake_dependent_option( ROCWMMA_BUILD_BENCHMARK_TESTS "Build benchmarking tests" OFF "ROCWMMA_BUILD_TESTS" OFF )
 cmake_dependent_option( ROCWMMA_BUILD_EXTENDED_TESTS "Build extended test parameter coverage" OFF "ROCWMMA_BUILD_TESTS" OFF )
+cmake_dependent_option( ROCWMMA_USE_SYSTEM_GOOGLETEST "Use system Google Test library instead of downloading and building it" OFF "ROCWMMA_BUILD_TESTS" OFF )
 
 add_compile_options(-mcmodel=large)
 add_link_options(-mcmodel=large)
 
 # Test/benchmark requires additional dependencies
-include( FetchContent )
+if(ROCWMMA_USE_SYSTEM_GOOGLETEST)
+  find_package(GTest 1.12.1 REQUIRED)
+else()
+  include( FetchContent )
 
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG release-1.12.1
-)
-FetchContent_GetProperties(googletest)
-if(NOT googletest_POPULATED)
+  FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG release-1.12.1
+  )
+  FetchContent_GetProperties(googletest)
+  if(NOT googletest_POPULATED)
 
-  # Fetch the content using default details
-  FetchContent_Populate(googletest)
-  # Save the shared libs setting, then force to static libs
-  set(BUILD_SHARED_LIBS_OLD ${BUILD_SHARED_LIBS})
-  set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "Build SHARED libraries" FORCE)
+    # Fetch the content using default details
+    FetchContent_Populate(googletest)
+    # Save the shared libs setting, then force to static libs
+    set(BUILD_SHARED_LIBS_OLD ${BUILD_SHARED_LIBS})
+    set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "Build SHARED libraries" FORCE)
 
-  # Turn off gtest installation
-  set(INSTALL_GTEST OFF)
+    # Turn off gtest installation
+    set(INSTALL_GTEST OFF)
 
-  # Add gtest targets as static libs
-  add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
+    # Add gtest targets as static libs
+    add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
 
-  # Restore shared libs setting
-  set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_OLD} CACHE INTERNAL "Build SHARED libraries" FORCE)
+    # Restore shared libs setting
+    set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_OLD} CACHE INTERNAL "Build SHARED libraries" FORCE)
+  endif()
 endif()
 
 set(ROCWMMA_TEST_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
