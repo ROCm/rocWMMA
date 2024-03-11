@@ -27,8 +27,8 @@
 # Include path for current test files
 set(ROCWMMA_TEST_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${ROCWMMA_TEST_INCLUDE_DIRS})
 
-set(TransformsTestSources ${UnitCommonSources}
-                          ${CMAKE_CURRENT_SOURCE_DIR}/test/transforms.cpp
+set(UnpackUtilTestSources ${UnitCommonSources}
+                          ${CMAKE_CURRENT_SOURCE_DIR}/test/unpackutil.cpp
                        )
 
-add_rocwmma_unit_test(transforms_test ${TransformsTestSources})
+add_rocwmma_unit_test(unpack_util_test ${UnpackUtilTestSources})
