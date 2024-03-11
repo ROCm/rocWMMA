@@ -1174,26 +1174,14 @@ namespace rocwmma
                                         PackUtil::template paddedUnpack<VW / 2>(hi));
 
             // Step 2 : UnpackLoHi16
-            unpacked_data = PackUtil::template paddedUnpack<4>(
-                Swizzle::RotateR32<16>::exec(PackUtil::paddedPack(
-                    concat(extractEven(unpacked_data), extractOdd(unpacked_data)))));
-
-            lo          = PackUtil::paddedPack(extractLo(unpacked_data));
-            hi          = PackUtil::paddedPack(extractHi(unpacked_data));
-            auto rot_lo = Swizzle::RotateR32<16>::exec(lo);
-            auto zip_lo = Blend::Zip16::exec(rot_lo, hi);
-            auto zip_hi = Blend::Zip16::exec(hi, rot_lo);
-            zip_hi      = Swizzle::RotateR32<16>::exec(zip_hi);
-
-            unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(zip_lo),
-                                   PackUtil::template paddedUnpack<VW / 2>(zip_hi));
+            unpacked_data = unpackLoHi16(unpacked_data);
 
             // Step 3 : UnpackLoHi32 (half-rotate offset)
             lo = PackUtil::paddedPack(extractEven(unpacked_data));
             hi = PackUtil::paddedPack(extractOdd(unpacked_data));
 
-            zip_lo = Blend::Zip32::exec(lo, hi);
-            zip_hi = Blend::Zip32::exec(hi, lo);
+            auto zip_lo = Blend::Zip32::exec(lo, hi);
+            auto zip_hi = Blend::Zip32::exec(hi, lo);
 
             auto rot_hi = Permute::RotateWaveR<32>::exec(zip_hi);
 
