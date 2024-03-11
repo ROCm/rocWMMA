@@ -44,7 +44,6 @@ namespace rocwmma
 
         // size of BlockDim dimension
         using BlockDim = std::tuple<I<16>, I<32>, I<64>, I<128>, I<256>>;
-        // using BlockDim = std::tuple<I<256>>;
 
         using KernelParams = typename CombineLists<BlockDim, VWs, Types>::Result;
 
