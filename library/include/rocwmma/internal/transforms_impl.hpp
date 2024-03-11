@@ -911,6 +911,7 @@ namespace rocwmma
         }
     };
 
+#if ROCWMMA_WAVE64_MODE
     template <>
     struct AosToSoa<64, 2>
     {
@@ -932,18 +933,19 @@ namespace rocwmma
             return unpacked_data;
         }
     };
-
+#elif ROCWMMA_WAVE32_MODE
     template <>
-    struct AosToSoa<128, 2>
+    struct AosToSoa<64, 2>
     {
-        constexpr static uint32_t VW      = 2;
-        constexpr static uint32_t VecSize = 4;
-
-        template <typename DataT>
+        template <typename DataT, uint32_t VecSize>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
         {
-            auto v0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_64, 2>::exec(extractLo(v));
-            auto v1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_64, 2>::exec(extractHi(v));
+            constexpr uint32_t VW = 2;
+            static_assert(VecSize == VW * (64 / Constants::AMDGCN_WAVE_SIZE_32),
+                          "VecSize must be specific number");
+
+            auto v0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(v));
+            auto v1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(v));
 
             // Re-pack banks
             auto repack_data = VecT<DataT, VecSize>{v0.data[0],
@@ -954,7 +956,70 @@ namespace rocwmma
             return repack_data;
         }
     };
+#endif
 
+#if ROCWMMA_WAVE64_MODE
+    template <>
+    struct AosToSoa<128, 2>
+    {
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 4;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            auto v0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_64, VW>::exec(extractLo(v));
+            auto v1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_64, VW>::exec(extractHi(v));
+
+            // Re-pack banks
+            auto repack_data = VecT<DataT, VecSize>{v0.data[0],
+                                                    v1.data[0],
+                                                    v0.data[1],
+                                                    v1.data[1]};
+
+            return repack_data;
+        }
+    };
+#elif ROCWMMA_WAVE32_MODE
+    template <>
+    struct AosToSoa<128, 2>
+    {
+        template <typename DataT, uint32_t VecSize>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            constexpr uint32_t VW = 2;
+            static_assert(VecSize == VW * (128 / Constants::AMDGCN_WAVE_SIZE_32),
+                          "VecSize must be specific number");
+            // Re-pack banks
+            auto v_lo = extractLo(v);
+            auto v_hi = extractHi(v);
+            auto v0   = extractLo(v_lo);
+            auto v1   = extractHi(v_lo);
+            auto v2   = extractLo(v_hi);
+            auto v3   = extractHi(v_hi);
+
+            // Step 1 - 3 : Applied on VW width banks
+            auto unpacked_data0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v0);
+            auto unpacked_data1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v1);
+            auto unpacked_data2 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v2);
+            auto unpacked_data3 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v3);
+
+            // Re-pack banks
+            auto repack_data = VecT<DataT, VecSize>{unpacked_data0.data[0],
+                                                    unpacked_data2.data[0],
+                                                    unpacked_data0.data[1],
+                                                    unpacked_data2.data[1],
+                                                    unpacked_data1.data[0],
+                                                    unpacked_data3.data[0],
+                                                    unpacked_data1.data[1],
+                                                    unpacked_data3.data[1]};
+
+            return repack_data;
+        }
+    };
+#endif
+
+#if ROCWMMA_WAVE64_MODE
     template <>
     struct AosToSoa<256, 2>
     {
@@ -982,7 +1047,56 @@ namespace rocwmma
                                         get<1>(result_b1), get<1>(result_b3)};
         }
     };
+#elif ROCWMMA_WAVE32_MODE
+    template <>
+    struct AosToSoa<256, 2>
+    {
+        template <typename DataT, uint32_t VecSize>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            constexpr uint32_t VW = 2;
+            static_assert(VecSize == VW * (256 / Constants::AMDGCN_WAVE_SIZE_32),
+                          "VecSize must be specific number");
+            // Step 4 : Re-pack banks
+            auto v_lo = extractLo(v);
+            auto v_hi = extractHi(v);
+            auto v0   = extractLo(v_lo);
+            auto v1   = extractHi(v_lo);
+            auto v2   = extractLo(v_hi);
+            auto v3   = extractHi(v_hi);
 
+            // Step 1 - 3 : Applied on VW width banks
+            auto unpacked_data0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(v0));
+            auto unpacked_data1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(v0));
+            auto unpacked_data2 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(v1));
+            auto unpacked_data3 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(v1));
+            auto unpacked_data4 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(v2));
+            auto unpacked_data5 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(v2));
+            auto unpacked_data6 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(v3));
+            auto unpacked_data7 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(v3));
+
+            // Re-pack banks
+            auto repack_data = VecT<DataT, VecSize>{unpacked_data0.data[0],
+                                                    unpacked_data4.data[0],
+                                                    unpacked_data0.data[1],
+                                                    unpacked_data4.data[1],
+                                                    unpacked_data1.data[0],
+                                                    unpacked_data5.data[0],
+                                                    unpacked_data1.data[1],
+                                                    unpacked_data5.data[1],
+                                                    unpacked_data2.data[0],
+                                                    unpacked_data6.data[0],
+                                                    unpacked_data2.data[1],
+                                                    unpacked_data6.data[1],
+                                                    unpacked_data3.data[0],
+                                                    unpacked_data7.data[0],
+                                                    unpacked_data3.data[1],
+                                                    unpacked_data7.data[1],};
+
+            return repack_data;
+        }
+    };
+#endif
     template <>
     struct SoaToAos<16, 2>
     {
@@ -1027,6 +1141,7 @@ namespace rocwmma
         }
     };
 
+#if ROCWMMA_WAVE64_MODE
     template <>
     struct SoaToAos<64, 2>
     {
@@ -1048,7 +1163,30 @@ namespace rocwmma
             return unpacked_data;
         };
     };
+#elif ROCWMMA_WAVE32_MODE
+    template <>
+    struct SoaToAos<64, 2>
+    {
+        template <typename DataT, uint32_t VecSize>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            constexpr uint32_t VW = 2;
+            static_assert(VecSize == VW * (64 / Constants::AMDGCN_WAVE_SIZE_32),
+                          "VecSize must be specific number");
+            // Step 1 :  RE-PACK Banks
+            auto v0 = unpackLo(extractLo(v), extractHi(v));
+            auto v1 = unpackHi(extractLo(v), extractHi(v));
 
+            // Step 2 - 4 :  Applied on VW width banks
+            auto unpacked_data0 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v0);
+            auto unpacked_data1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v1);
+
+            return concat(unpacked_data0, unpacked_data1);
+        };
+    };
+#endif
+
+#if ROCWMMA_WAVE64_MODE
     template <>
     struct SoaToAos<128, 2>
     {
@@ -1069,7 +1207,36 @@ namespace rocwmma
             return concat(unpacked_data0, unpacked_data1);
         }
     };
+#elif ROCWMMA_WAVE32_MODE
+    template <>
+    struct SoaToAos<128, 2>
+    {
+        template <typename DataT, uint32_t VecSize>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            constexpr uint32_t VW = 2;
+            static_assert(VecSize == VW * (128 / Constants::AMDGCN_WAVE_SIZE_32),
+                          "VecSize must be specific number");
+            // Step 1 :  RE-PACK Banks
+            auto v0 = VecT<DataT, VW>{v.data[0], v.data[2]};
+            auto v1 = VecT<DataT, VW>{v.data[4], v.data[6]};
+            auto v2 = VecT<DataT, VW>{v.data[1], v.data[3]};
+            auto v3 = VecT<DataT, VW>{v.data[5], v.data[7]};
 
+            // Step 2 - 4 :  Applied on VW width banks
+            auto unpacked_data0 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v0);
+            auto unpacked_data1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v1);
+            auto unpacked_data2 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v2);
+            auto unpacked_data3 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v3);
+
+            auto unpacked_data = concat(concat(unpacked_data0, unpacked_data1),
+                                        concat(unpacked_data2, unpacked_data3));
+            return unpacked_data;
+        };
+    };
+#endif
+
+#if ROCWMMA_WAVE64_MODE
     template <>
     struct SoaToAos<256, 2>
     {
@@ -1096,6 +1263,44 @@ namespace rocwmma
             return unpacked_data;
         }
     };
+#elif ROCWMMA_WAVE32_MODE
+    template <>
+    struct SoaToAos<256, 2>
+    {
+        template <typename DataT, uint32_t VecSize>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            constexpr uint32_t VW = 2;
+            static_assert(VecSize == VW * (256 / Constants::AMDGCN_WAVE_SIZE_32),
+                          "VecSize must be specific number");
+            // Step 1 :  RE-PACK Banks
+            auto v0 = VecT<DataT, VW>{v.data[0], v.data[2]};
+            auto v1 = VecT<DataT, VW>{v.data[4], v.data[6]};
+            auto v2 = VecT<DataT, VW>{v.data[8], v.data[10]};
+            auto v3 = VecT<DataT, VW>{v.data[12], v.data[14]};
+            auto v4 = VecT<DataT, VW>{v.data[1], v.data[3]};
+            auto v5 = VecT<DataT, VW>{v.data[5], v.data[7]};
+            auto v6 = VecT<DataT, VW>{v.data[9], v.data[11]};
+            auto v7 = VecT<DataT, VW>{v.data[13], v.data[15]};
+
+            // Step 2 - 4 :  Applied on VW width banks
+            auto unpacked_data0 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v0);
+            auto unpacked_data1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v1);
+            auto unpacked_data2 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v2);
+            auto unpacked_data3 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v3);
+            auto unpacked_data4 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v4);
+            auto unpacked_data5 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v5);
+            auto unpacked_data6 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v6);
+            auto unpacked_data7 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v7);
+
+            auto unpacked_data = concat(concat(concat(unpacked_data0, unpacked_data1),
+                                               concat(unpacked_data2, unpacked_data3)),
+                                        concat(concat(unpacked_data4, unpacked_data5),
+                                               concat(unpacked_data6, unpacked_data7)));
+            return unpacked_data;
+        };
+    };
+#endif
 
     template <>
     struct SoaToAos<16, 4>
@@ -1412,6 +1617,7 @@ namespace rocwmma
         }
     };
 
+#if ROCWMMA_WAVE64_MODE
     template <>
     struct SoaToAos<64, 8>
     {
@@ -1448,7 +1654,31 @@ namespace rocwmma
                           PackUtil::template paddedUnpack<VecSize / 2u>(hi));
         };
     };
+#elif ROCWMMA_WAVE32_MODE
+    template <>
+    struct SoaToAos<64, 8>
+    {
+        template <typename DataT, uint32_t VecSize>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            constexpr uint32_t VW = 8;
+            static_assert(VecSize == VW * (64 / Constants::AMDGCN_WAVE_SIZE_32),
+                          "VecSize must be specific number");
 
+            // Step 1 :  RE-PACK Banks
+            auto v0 = unpackLo(extractLo(v), extractHi(v));
+            auto v1 = unpackHi(extractLo(v), extractHi(v));
+
+            // Step 2 - 4 :  Applied on VW width banks
+            auto unpacked_data0 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v0);
+            auto unpacked_data1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v1);
+
+            return concat(unpacked_data0, unpacked_data1);
+        };
+    };
+#endif
+
+#if ROCWMMA_WAVE64_MODE
     template <>
     struct SoaToAos<128, 8>
     {
@@ -1469,7 +1699,65 @@ namespace rocwmma
             return concat(unpacked_data0, unpacked_data1);
         }
     };
+#elif ROCWMMA_WAVE32_MODE
+    template <>
+    struct SoaToAos<128, 8>
+    {
+        template <typename DataT, uint32_t VecSize>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            constexpr uint32_t VW = 8;
+            static_assert(VecSize == VW * (128 / Constants::AMDGCN_WAVE_SIZE_32),
+                          "VecSize must be specific number");
+            
+            // Step 1 :  RE-PACK Banks
+            auto v0 = VecT<DataT, VW>{v.data[0],
+                                      v.data[8],
+                                      v.data[16],
+                                      v.data[24],
+                                      v.data[1],
+                                      v.data[9],
+                                      v.data[17],
+                                      v.data[25]};
+            auto v1 = VecT<DataT, VW>{v.data[2],
+                                      v.data[10],
+                                      v.data[18],
+                                      v.data[26],
+                                      v.data[3],
+                                      v.data[11],
+                                      v.data[19],
+                                      v.data[27]};
+            auto v2 = VecT<DataT, VW>{v.data[4],
+                                      v.data[12],
+                                      v.data[20],
+                                      v.data[28],
+                                      v.data[5],
+                                      v.data[13],
+                                      v.data[21],
+                                      v.data[29]};
+            auto v3 = VecT<DataT, VW>{v.data[6],
+                                      v.data[14],
+                                      v.data[22],
+                                      v.data[30],
+                                      v.data[7],
+                                      v.data[15],
+                                      v.data[23],
+                                      v.data[31]};
 
+            // Step 2 - 4 :  Applied on VW width banks
+            auto unpacked_data0 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v0);
+            auto unpacked_data1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v1);
+            auto unpacked_data2 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v2);
+            auto unpacked_data3 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v3);
+
+            auto unpacked_data = concat(concat(unpacked_data0, unpacked_data1),
+                                        concat(unpacked_data2, unpacked_data3));
+            return unpacked_data;
+        };
+    };
+#endif
+
+#if ROCWMMA_WAVE64_MODE
     template <>
     struct SoaToAos<256, 8>
     {
@@ -1525,6 +1813,100 @@ namespace rocwmma
             return unpacked_data;
         }
     };
+#elif ROCWMMA_WAVE32_MODE
+    template <>
+    struct SoaToAos<256, 8>
+    {
+        template <typename DataT, uint32_t VecSize>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            constexpr uint32_t VW = 8;
+            static_assert(VecSize == VW * (256 / Constants::AMDGCN_WAVE_SIZE_32),
+                          "VecSize must be specific number");
+            
+            // Step 1 :  RE-PACK Banks
+            auto v0 = VecT<DataT, VW>{v.data[0],
+                                      v.data[8],
+                                      v.data[16],
+                                      v.data[24],
+                                      v.data[32],
+                                      v.data[40],
+                                      v.data[48],
+                                      v.data[56]};
+            auto v1 = VecT<DataT, VW>{v.data[1],
+                                      v.data[9],
+                                      v.data[17],
+                                      v.data[25],
+                                      v.data[33],
+                                      v.data[41],
+                                      v.data[49],
+                                      v.data[57]};
+            auto v2 = VecT<DataT, VW>{v.data[2],
+                                      v.data[10],
+                                      v.data[18],
+                                      v.data[26],
+                                      v.data[34],
+                                      v.data[42],
+                                      v.data[50],
+                                      v.data[58]};                          
+            auto v3 = VecT<DataT, VW>{v.data[3],
+                                      v.data[11],
+                                      v.data[19],
+                                      v.data[27],
+                                      v.data[35],
+                                      v.data[43],
+                                      v.data[51],
+                                      v.data[59]};
+            auto v4 = VecT<DataT, VW>{v.data[4],
+                                      v.data[12],
+                                      v.data[20],
+                                      v.data[28],
+                                      v.data[36],
+                                      v.data[44],
+                                      v.data[52],
+                                      v.data[60]};
+            auto v5 = VecT<DataT, VW>{v.data[5],
+                                      v.data[13],
+                                      v.data[21],
+                                      v.data[29],
+                                      v.data[37],
+                                      v.data[45],
+                                      v.data[53],
+                                      v.data[61]};
+            auto v6 = VecT<DataT, VW>{v.data[6],
+                                      v.data[14],
+                                      v.data[22],
+                                      v.data[30],
+                                      v.data[38],
+                                      v.data[46],
+                                      v.data[54],
+                                      v.data[62]};
+            auto v7 = VecT<DataT, VW>{v.data[7],
+                                      v.data[15],
+                                      v.data[23],
+                                      v.data[31],
+                                      v.data[39],
+                                      v.data[47],
+                                      v.data[55],
+                                      v.data[63]};
+            // Step 2 - 4 :  Applied on VW width banks
+            auto unpacked_data0 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v0);
+            auto unpacked_data1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v1);
+            auto unpacked_data2 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v2);
+            auto unpacked_data3 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v3);
+            auto unpacked_data4 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v4);
+            auto unpacked_data5 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v5);
+            auto unpacked_data6 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v6);
+            auto unpacked_data7 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(v7);
+
+            auto unpacked_data = concat(concat(concat(unpacked_data0, unpacked_data1),
+                                               concat(unpacked_data2, unpacked_data3)),
+                                        concat(concat(unpacked_data4, unpacked_data5),
+                                               concat(unpacked_data6, unpacked_data7)));
+            return unpacked_data;
+        };
+    };
+#endif
 
     // SOA -> AOS
     // Transform from ortho VW to inline VW
