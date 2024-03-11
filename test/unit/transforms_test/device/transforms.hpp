@@ -55,7 +55,7 @@ namespace rocwmma
     {
         static constexpr uint32_t VW       = 8;
         static constexpr uint32_t BlockDim = 16;
-        using VecType = VecT<DataT, VW>;
+        using VecType                      = VecT<DataT, VW>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -72,7 +72,7 @@ namespace rocwmma
                 start + 5,
                 start + 6,
                 start + 7,
-                };
+            };
         }
     };
 
@@ -81,7 +81,7 @@ namespace rocwmma
     {
         static constexpr uint32_t VW       = 8;
         static constexpr uint32_t BlockDim = 32;
-        using VecType = VecT<DataT, VW>;
+        using VecType                      = VecT<DataT, VW>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -89,7 +89,7 @@ namespace rocwmma
             auto const waveOffset = threadId / BlockDim * VW * BlockDim;
             auto const start      = (threadId % BlockDim) * VW + waveOffset;
 
-            return VecType {
+            return VecType{
                 start,
                 start + 1,
                 start + 2,
@@ -98,37 +98,37 @@ namespace rocwmma
                 start + 5,
                 start + 6,
                 start + 7,
-                };
+            };
         }
     };
 
     template <typename DataT>
     struct AosVec<DataT, 8, 64>
     {
-        static constexpr uint32_t VW       = 8;
-        static constexpr uint32_t BlockDim = 64;
+        static constexpr uint32_t VW        = 8;
+        static constexpr uint32_t BlockDim  = 64;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType            = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
             auto const threadId   = (uint8_t)detail::threadId();
             auto const waveOffset = (threadId * VW / WAVE_SIZE) * BlockDim;
-            auto const start     = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
+            auto const start      = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
 
             if constexpr(ROCWMMA_WAVE64_MODE)
             {
                 return VecType{
                     start,
-                                 start + 1,
-                                 start + 2,
-                                 start + 3,
-                                 start + 4,
-                                 start + 5,
-                                 start + 6,
-                                 start + 7,
-                                 };
+                    start + 1,
+                    start + 2,
+                    start + 3,
+                    start + 4,
+                    start + 5,
+                    start + 6,
+                    start + 7,
+                };
             }
             else if constexpr(ROCWMMA_WAVE32_MODE)
             {
@@ -163,17 +163,17 @@ namespace rocwmma
     template <typename DataT>
     struct AosVec<DataT, 8, 128>
     {
-        static constexpr uint32_t VW       = 8;
-        static constexpr uint32_t BlockDim = 128;
+        static constexpr uint32_t VW        = 8;
+        static constexpr uint32_t BlockDim  = 128;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
             auto const threadId   = (uint8_t)detail::threadId();
             auto const waveOffset = (threadId * VW / WAVE_SIZE) * BlockDim;
-            auto const start     = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
+            auto const start      = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
 
             if constexpr(ROCWMMA_WAVE64_MODE)
             {
@@ -245,17 +245,17 @@ namespace rocwmma
     template <typename DataT>
     struct AosVec<DataT, 8, 256>
     {
-        static constexpr uint32_t VW       = 8;
-        static constexpr uint32_t BlockDim = 256;
+        static constexpr uint32_t VW        = 8;
+        static constexpr uint32_t BlockDim  = 256;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE static inline auto genData()
         {
             auto const threadId   = (uint8_t)detail::threadId();
             auto const waveOffset = (threadId * VW / WAVE_SIZE) * BlockDim;
-            auto const start     = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
+            auto const start      = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
 
             if constexpr(ROCWMMA_WAVE64_MODE)
             {
@@ -377,7 +377,7 @@ namespace rocwmma
     {
         static constexpr uint32_t VW       = 4;
         static constexpr uint32_t BlockDim = 16;
-        using VecType = VecT<DataT, VW>;
+        using VecType                      = VecT<DataT, VW>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -389,7 +389,7 @@ namespace rocwmma
                 start + 1,
                 start + 2,
                 start + 3,
-                };
+            };
         }
     };
 
@@ -398,7 +398,7 @@ namespace rocwmma
     {
         static constexpr uint32_t VW       = 4;
         static constexpr uint32_t BlockDim = 32;
-        using VecType = VecT<DataT, VW>;
+        using VecType                      = VecT<DataT, VW>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -411,25 +411,25 @@ namespace rocwmma
                 start + 1,
                 start + 2,
                 start + 3,
-                };
+            };
         }
     };
 
     template <typename DataT>
     struct AosVec<DataT, 4, 64>
     {
-        static constexpr uint32_t VW       = 4;
-        static constexpr uint32_t BlockDim = 64;
+        static constexpr uint32_t VW        = 4;
+        static constexpr uint32_t BlockDim  = 64;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
             auto const threadId   = (uint8_t)detail::threadId();
             auto const waveOffset = (threadId * VW / WAVE_SIZE) * BlockDim;
-            auto const start = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
-         
+            auto const start      = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
+
             if constexpr(ROCWMMA_WAVE64_MODE)
             {
                 return VecType{
@@ -437,20 +437,20 @@ namespace rocwmma
                     start + 1,
                     start + 2,
                     start + 3,
-                    };
+                };
             }
             else if constexpr(ROCWMMA_WAVE32_MODE)
-            {                
-                return VecType {
+            {
+                return VecType{
                     start,
-                                            start + 1,
-                                            start + 2,
-                                            start + 3,
-                                            start + WAVE_SIZE * 1,
-                                            start + WAVE_SIZE * 1 + 1,
-                                            start + WAVE_SIZE * 1 + 2,
-                                            start + WAVE_SIZE * 1 + 3,
-                                            };
+                    start + 1,
+                    start + 2,
+                    start + 3,
+                    start + WAVE_SIZE * 1,
+                    start + WAVE_SIZE * 1 + 1,
+                    start + WAVE_SIZE * 1 + 2,
+                    start + WAVE_SIZE * 1 + 3,
+                };
             }
             else
             {
@@ -464,30 +464,30 @@ namespace rocwmma
     template <typename DataT>
     struct AosVec<DataT, 4, 128>
     {
-        static constexpr uint32_t VW       = 4;
-        static constexpr uint32_t BlockDim = 128;
+        static constexpr uint32_t VW        = 4;
+        static constexpr uint32_t BlockDim  = 128;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
             auto const threadId   = (uint8_t)detail::threadId();
             auto const waveOffset = (threadId * VW / WAVE_SIZE) * BlockDim;
-            auto const start     = threadId % (WAVE_SIZE / VW) * VW + waveOffset;            
+            auto const start      = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
 
             if constexpr(ROCWMMA_WAVE64_MODE)
             {
                 return VecType{
                     start,
-                                            start + 1,
-                                            start + 2,
-                                            start + 3,
-                                            start + WAVE_SIZE * 1,
-                                            start + WAVE_SIZE * 1 + 1,
-                                            start + WAVE_SIZE * 1 + 2,
-                                            start + WAVE_SIZE * 1 + 3,
-                                            };
+                    start + 1,
+                    start + 2,
+                    start + 3,
+                    start + WAVE_SIZE * 1,
+                    start + WAVE_SIZE * 1 + 1,
+                    start + WAVE_SIZE * 1 + 2,
+                    start + WAVE_SIZE * 1 + 3,
+                };
             }
             else if constexpr(ROCWMMA_WAVE32_MODE)
             {
@@ -522,18 +522,18 @@ namespace rocwmma
     template <typename DataT>
     struct AosVec<DataT, 4, 256>
     {
-        static constexpr uint32_t VW       = 4;
-        static constexpr uint32_t BlockDim = 256;
+        static constexpr uint32_t VW        = 4;
+        static constexpr uint32_t BlockDim  = 256;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE static inline auto genData()
         {
             auto const threadId   = (uint8_t)detail::threadId();
             auto const waveOffset = (threadId * VW / WAVE_SIZE) * BlockDim;
-            auto const start     = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
-         
+            auto const start      = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
+
             if constexpr(ROCWMMA_WAVE64_MODE)
             {
                 return VecType{
@@ -606,7 +606,7 @@ namespace rocwmma
     {
         static constexpr uint32_t VW       = 2;
         static constexpr uint32_t BlockDim = 16;
-        using VecType = VecT<DataT, VW>;
+        using VecType                      = VecT<DataT, VW>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -617,7 +617,7 @@ namespace rocwmma
             return VecType{
                 start,
                 start + 1,
-                 };
+            };
         }
     };
 
@@ -626,7 +626,7 @@ namespace rocwmma
     {
         static constexpr uint32_t VW       = 2;
         static constexpr uint32_t BlockDim = 32;
-        using VecType = VecT<DataT, VW>;
+        using VecType                      = VecT<DataT, VW>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -637,17 +637,17 @@ namespace rocwmma
             return VecType{
                 start,
                 start + 1,
-                };
+            };
         }
     };
     template <typename DataT>
     struct AosVec<DataT, 2, 64>
     {
-        static constexpr uint32_t VW       = 2;
-        static constexpr uint32_t BlockDim = 64;
+        static constexpr uint32_t VW        = 2;
+        static constexpr uint32_t BlockDim  = 64;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -660,16 +660,16 @@ namespace rocwmma
                 return VecType{
                     start,
                     start + 1,
-                     };
+                };
             }
             else if constexpr(ROCWMMA_WAVE32_MODE)
             {
                 return VecType{
-                     start,
-                     start + 1,
-                     start + WAVE_SIZE * 1,
-                     start + WAVE_SIZE * 1 + 1,
-                     };
+                    start,
+                    start + 1,
+                    start + WAVE_SIZE * 1,
+                    start + WAVE_SIZE * 1 + 1,
+                };
             }
             else
             {
@@ -682,25 +682,25 @@ namespace rocwmma
     template <typename DataT>
     struct AosVec<DataT, 2, 128>
     {
-        static constexpr uint32_t VW       = 2;
-        static constexpr uint32_t BlockDim = 128;
+        static constexpr uint32_t VW        = 2;
+        static constexpr uint32_t BlockDim  = 128;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
             auto const threadId   = (uint8_t)detail::threadId();
             auto const waveOffset = (threadId * VW / WAVE_SIZE) * BlockDim;
-            auto const start     = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
+            auto const start      = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
 
             if constexpr(ROCWMMA_WAVE64_MODE)
             {
                 return VecType{
-                start,
-                start + 1,
-                start + WAVE_SIZE * 1,
-                start + WAVE_SIZE * 1 + 1,
+                    start,
+                    start + 1,
+                    start + WAVE_SIZE * 1,
+                    start + WAVE_SIZE * 1 + 1,
                 };
             }
             else if constexpr(ROCWMMA_WAVE32_MODE)
@@ -727,50 +727,50 @@ namespace rocwmma
     template <typename DataT>
     struct AosVec<DataT, 2, 256>
     {
-        static constexpr uint32_t VW       = 2;
-        static constexpr uint32_t BlockDim = 256;
+        static constexpr uint32_t VW        = 2;
+        static constexpr uint32_t BlockDim  = 256;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE static inline auto genData()
         {
             auto const threadId   = (uint8_t)detail::threadId();
             auto const waveOffset = (threadId * VW / WAVE_SIZE) * BlockDim;
-            auto const start     = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
+            auto const start      = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
 
             if constexpr(ROCWMMA_WAVE64_MODE)
             {
                 return VecType{
-                start,
-                start + 1,
-                start + WAVE_SIZE * 1,
-                start + WAVE_SIZE * 1 + 1,
-                start + WAVE_SIZE * 2,
-                start + WAVE_SIZE * 2 + 1,
-                start + WAVE_SIZE * 3,
-                start + WAVE_SIZE * 3 + 1,
+                    start,
+                    start + 1,
+                    start + WAVE_SIZE * 1,
+                    start + WAVE_SIZE * 1 + 1,
+                    start + WAVE_SIZE * 2,
+                    start + WAVE_SIZE * 2 + 1,
+                    start + WAVE_SIZE * 3,
+                    start + WAVE_SIZE * 3 + 1,
                 };
             }
             else if constexpr(ROCWMMA_WAVE32_MODE)
             {
                 return VecType{
-                        start,
-                                 start + 1,
-                                 start + WAVE_SIZE * 1,
-                                 start + WAVE_SIZE * 1 + 1,
-                                 start + WAVE_SIZE * 2,
-                                 start + WAVE_SIZE * 2 + 1,
-                                 start + WAVE_SIZE * 3,
-                                 start + WAVE_SIZE * 3 + 1,
-                                 start + WAVE_SIZE * 4,
-                                 start + WAVE_SIZE * 4 + 1,
-                                 start + WAVE_SIZE * 5,
-                                 start + WAVE_SIZE * 5 + 1,
-                                 start + WAVE_SIZE * 6,
-                                 start + WAVE_SIZE * 6 + 1,
-                                 start + WAVE_SIZE * 7,
-                                 start + WAVE_SIZE * 7 + 1,
+                    start,
+                    start + 1,
+                    start + WAVE_SIZE * 1,
+                    start + WAVE_SIZE * 1 + 1,
+                    start + WAVE_SIZE * 2,
+                    start + WAVE_SIZE * 2 + 1,
+                    start + WAVE_SIZE * 3,
+                    start + WAVE_SIZE * 3 + 1,
+                    start + WAVE_SIZE * 4,
+                    start + WAVE_SIZE * 4 + 1,
+                    start + WAVE_SIZE * 5,
+                    start + WAVE_SIZE * 5 + 1,
+                    start + WAVE_SIZE * 6,
+                    start + WAVE_SIZE * 6 + 1,
+                    start + WAVE_SIZE * 7,
+                    start + WAVE_SIZE * 7 + 1,
                 };
             }
             else
@@ -788,14 +788,14 @@ namespace rocwmma
     {
         static constexpr uint32_t VW       = 8;
         static constexpr uint32_t BlockDim = 16;
-        using VecType = VecT<DataT, VW>;
+        using VecType                      = VecT<DataT, VW>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
             auto const threadId   = (uint8_t)detail::threadId();
             auto const waveOffset = threadId / BlockDim * VW * BlockDim;
             auto const start      = (threadId % BlockDim) % BlockDim + waveOffset;
-            
+
             return VecType{
                 start,
                 BlockDim + start,
@@ -814,7 +814,7 @@ namespace rocwmma
     {
         static constexpr uint32_t VW       = 8;
         static constexpr uint32_t BlockDim = 32;
-        using VecType = VecT<DataT, VW>;
+        using VecType                      = VecT<DataT, VW>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -822,26 +822,27 @@ namespace rocwmma
             auto const waveOffset = threadId / BlockDim * VW * BlockDim;
             auto const start      = (threadId % BlockDim) % BlockDim + waveOffset;
 
-            return VecType{start,
-                             BlockDim + start,
-                             BlockDim * 2 + start,
-                             BlockDim * 3 + start,
-                             BlockDim * 4 + start,
-                             BlockDim * 5 + start,
-                             BlockDim * 6 + start,
-                             BlockDim * 7 + start,
-                             };
+            return VecType{
+                start,
+                BlockDim + start,
+                BlockDim * 2 + start,
+                BlockDim * 3 + start,
+                BlockDim * 4 + start,
+                BlockDim * 5 + start,
+                BlockDim * 6 + start,
+                BlockDim * 7 + start,
+            };
         }
     };
 
     template <typename DataT>
     struct SoaVec<DataT, 8, 64>
     {
-        static constexpr uint32_t VW       = 8;
-        static constexpr uint32_t BlockDim = 64;
+        static constexpr uint32_t VW        = 8;
+        static constexpr uint32_t BlockDim  = 64;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -895,11 +896,11 @@ namespace rocwmma
     template <typename DataT>
     struct SoaVec<DataT, 8, 128>
     {
-        static constexpr uint32_t VW       = 8;
-        static constexpr uint32_t BlockDim = 128;
+        static constexpr uint32_t VW        = 8;
+        static constexpr uint32_t BlockDim  = 128;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -977,14 +978,14 @@ namespace rocwmma
     template <typename DataT>
     struct SoaVec<DataT, 8, 256>
     {
-        static constexpr uint32_t VW       = 8;
-        static constexpr uint32_t BlockDim = 256;
+        static constexpr uint32_t VW        = 8;
+        static constexpr uint32_t BlockDim  = 256;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
-        {            
+        {
             auto const threadId   = (uint8_t)detail::threadId();
             auto const waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
             auto const start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
@@ -1109,20 +1110,20 @@ namespace rocwmma
     {
         static constexpr uint32_t VW       = 4;
         static constexpr uint32_t BlockDim = 16;
-        using VecType = VecT<DataT, VW>;
+        using VecType                      = VecT<DataT, VW>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
             auto const threadId   = (uint8_t)detail::threadId();
             auto const waveOffset = threadId / BlockDim * VW * BlockDim;
             auto const start      = (threadId % BlockDim) % BlockDim + waveOffset;
-            
+
             return VecType{
                 start,
                 BlockDim + start,
                 BlockDim * 2 + start,
                 BlockDim * 3 + start,
-                };
+            };
         }
     };
 
@@ -1131,31 +1132,31 @@ namespace rocwmma
     {
         static constexpr uint32_t VW       = 4;
         static constexpr uint32_t BlockDim = 32;
-        using VecType = VecT<DataT, VW>;
+        using VecType                      = VecT<DataT, VW>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
             auto const threadId   = (uint8_t)detail::threadId();
             auto const waveOffset = threadId / BlockDim * VW * BlockDim;
             auto const start      = (threadId % BlockDim) % BlockDim + waveOffset;
-            
+
             return VecType{
                 start,
                 BlockDim + start,
                 BlockDim * 2 + start,
                 BlockDim * 3 + start,
-                };
+            };
         }
     };
 
     template <typename DataT>
     struct SoaVec<DataT, 4, 64>
     {
-        static constexpr uint32_t VW       = 4;
-        static constexpr uint32_t BlockDim = 64;
+        static constexpr uint32_t VW        = 4;
+        static constexpr uint32_t BlockDim  = 64;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -1170,7 +1171,7 @@ namespace rocwmma
                     BlockDim + start,
                     BlockDim * 2 + start,
                     BlockDim * 3 + start,
-                    };
+                };
             }
             else if constexpr(ROCWMMA_WAVE32_MODE)
             {
@@ -1183,7 +1184,7 @@ namespace rocwmma
                     WAVE_SIZE + BlockDim + start,
                     WAVE_SIZE + BlockDim * 2 + start,
                     WAVE_SIZE + BlockDim * 3 + start,
-                    };
+                };
             }
             else
             {
@@ -1197,12 +1198,11 @@ namespace rocwmma
     template <typename DataT>
     struct SoaVec<DataT, 4, 128>
     {
-
-        static constexpr uint32_t VW       = 4;
-        static constexpr uint32_t BlockDim = 128;
+        static constexpr uint32_t VW        = 4;
+        static constexpr uint32_t BlockDim  = 128;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -1211,7 +1211,7 @@ namespace rocwmma
             auto const start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
 
             if constexpr(ROCWMMA_WAVE64_MODE)
-            {                
+            {
                 return VecType{
                     start,
                     BlockDim + start,
@@ -1256,11 +1256,11 @@ namespace rocwmma
     template <typename DataT>
     struct SoaVec<DataT, 4, 256>
     {
-        static constexpr uint32_t VW       = 4;
-        static constexpr uint32_t BlockDim = 256;
+        static constexpr uint32_t VW        = 4;
+        static constexpr uint32_t BlockDim  = 256;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -1340,18 +1340,18 @@ namespace rocwmma
     {
         static constexpr uint32_t VW       = 2;
         static constexpr uint32_t BlockDim = 16;
-        using VecType = VecT<DataT, VW>;
+        using VecType                      = VecT<DataT, VW>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
             auto const threadId   = (uint8_t)detail::threadId();
             auto const waveOffset = threadId / BlockDim * VW * BlockDim;
             auto const start      = (threadId % BlockDim) % BlockDim + waveOffset;
-            
+
             return VecType{
                 start,
-                 BlockDim + start,
-                 };
+                BlockDim + start,
+            };
         }
     };
 
@@ -1360,29 +1360,29 @@ namespace rocwmma
     {
         static constexpr uint32_t VW       = 2;
         static constexpr uint32_t BlockDim = 32;
-        using VecType = VecT<DataT, VW>;
+        using VecType                      = VecT<DataT, VW>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
             auto const threadId   = (uint8_t)detail::threadId();
             auto const waveOffset = threadId / BlockDim * VW * BlockDim;
             auto const start      = (threadId % BlockDim) % BlockDim + waveOffset;
-            
+
             return VecType{
                 start,
                 BlockDim + start,
-                };
+            };
         }
     };
 
     template <typename DataT>
     struct SoaVec<DataT, 2, 64>
     {
-        static constexpr uint32_t VW       = 2;
-        static constexpr uint32_t BlockDim = 64;
+        static constexpr uint32_t VW        = 2;
+        static constexpr uint32_t BlockDim  = 64;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -1395,16 +1395,16 @@ namespace rocwmma
                 return VecType{
                     start,
                     BlockDim + start,
-                     };
+                };
             }
             else if constexpr(ROCWMMA_WAVE32_MODE)
-            {                
+            {
                 return VecType{
                     start,
                     BlockDim + start,
                     WAVE_SIZE + start,
                     WAVE_SIZE + BlockDim + start,
-                    };
+                };
             }
             else
             {
@@ -1418,11 +1418,11 @@ namespace rocwmma
     template <typename DataT>
     struct SoaVec<DataT, 2, 128>
     {
-        static constexpr uint32_t VW       = 2;
-        static constexpr uint32_t BlockDim = 128;
+        static constexpr uint32_t VW        = 2;
+        static constexpr uint32_t BlockDim  = 128;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -1431,13 +1431,13 @@ namespace rocwmma
             auto const start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
 
             if constexpr(ROCWMMA_WAVE64_MODE)
-            {                
+            {
                 return VecType{
                     start,
                     BlockDim + start,
                     WAVE_SIZE + start,
                     WAVE_SIZE + BlockDim + start,
-                    };
+                };
             }
             else if constexpr(ROCWMMA_WAVE32_MODE)
             {
@@ -1464,11 +1464,11 @@ namespace rocwmma
     template <typename DataT>
     struct SoaVec<DataT, 2, 256>
     {
-        static constexpr uint32_t VW       = 2;
-        static constexpr uint32_t BlockDim = 256;
+        static constexpr uint32_t VW        = 2;
+        static constexpr uint32_t BlockDim  = 256;
         static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
         static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
-        using VecType = VecT<DataT, VecSize>;
+        using VecType                       = VecT<DataT, VecSize>;
 
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
@@ -1478,38 +1478,38 @@ namespace rocwmma
 
             if constexpr(ROCWMMA_WAVE64_MODE)
             {
-                
+
                 return VecType{
                     start,
-                                 BlockDim + start,
-                                 WAVE_SIZE + start,
-                                 WAVE_SIZE + BlockDim + start,
-                                 WAVE_SIZE * 2 + start,
-                                 WAVE_SIZE * 2 + BlockDim + start,
-                                 WAVE_SIZE * 3 + start,
-                                 WAVE_SIZE * 3 + BlockDim + start,
-                                 };
+                    BlockDim + start,
+                    WAVE_SIZE + start,
+                    WAVE_SIZE + BlockDim + start,
+                    WAVE_SIZE * 2 + start,
+                    WAVE_SIZE * 2 + BlockDim + start,
+                    WAVE_SIZE * 3 + start,
+                    WAVE_SIZE * 3 + BlockDim + start,
+                };
             }
             else if constexpr(ROCWMMA_WAVE32_MODE)
             {
                 return VecType{
                     start,
-                                 BlockDim + start,
-                                 WAVE_SIZE + start,
-                                 WAVE_SIZE + BlockDim + start,
-                                 WAVE_SIZE * 2 + start,
-                                 WAVE_SIZE * 2 + BlockDim + start,
-                                 WAVE_SIZE * 3 + start,
-                                 WAVE_SIZE * 3 + BlockDim + start,
-                                 WAVE_SIZE * 4 + start,
-                                 WAVE_SIZE * 4 + BlockDim + start,
-                                 WAVE_SIZE * 5 + start,
-                                 WAVE_SIZE * 5 + BlockDim + start,
-                                 WAVE_SIZE * 6 + start,
-                                 WAVE_SIZE * 6 + BlockDim + start,
-                                 WAVE_SIZE * 7 + start,
-                                 WAVE_SIZE * 7 + BlockDim + start,
-                                 };
+                    BlockDim + start,
+                    WAVE_SIZE + start,
+                    WAVE_SIZE + BlockDim + start,
+                    WAVE_SIZE * 2 + start,
+                    WAVE_SIZE * 2 + BlockDim + start,
+                    WAVE_SIZE * 3 + start,
+                    WAVE_SIZE * 3 + BlockDim + start,
+                    WAVE_SIZE * 4 + start,
+                    WAVE_SIZE * 4 + BlockDim + start,
+                    WAVE_SIZE * 5 + start,
+                    WAVE_SIZE * 5 + BlockDim + start,
+                    WAVE_SIZE * 6 + start,
+                    WAVE_SIZE * 6 + BlockDim + start,
+                    WAVE_SIZE * 7 + start,
+                    WAVE_SIZE * 7 + BlockDim + start,
+                };
             }
             else
             {
