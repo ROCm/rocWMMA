@@ -873,8 +873,8 @@ namespace rocwmma
     template <>
     struct AosToSoa<256, 2>
     {
-        constexpr static uint32_t VW = 2;
-        constexpr static VecSize     = 16;
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 16;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
@@ -1116,14 +1116,14 @@ namespace rocwmma
             auto hi1 = extractHi(hi);
 
             // Subdivide work to each batch of WAVE_SIZE
-            auto v0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(lo0));
-            auto v1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(lo0));
-            auto v2 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(lo1));
-            auto v3 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(lo1));
-            auto v4 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(hi0));
-            auto v5 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(hi0));
-            auto v6 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(hi1));
-            auto v7 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(hi1));
+            auto v0 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(lo0));
+            auto v1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(lo0));
+            auto v2 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(lo1));
+            auto v3 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(lo1));
+            auto v4 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(hi0));
+            auto v5 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(hi0));
+            auto v6 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(hi1));
+            auto v7 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(hi1));
 
             return concat(concat(concat(v0, v1), concat(v2, v3)),
                           concat(concat(v4, v5), concat(v6, v7)));
@@ -1530,14 +1530,14 @@ namespace rocwmma
             auto hi1 = extractHi(hi);
 
             // Subdivide work to each batch of WAVE_SIZE
-            auto v0 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(lo0));
-            auto v1 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(lo0));
-            auto v2 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(lo1));
-            auto v3 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(lo1));
-            auto v4 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(hi0));
-            auto v5 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(hi0));
-            auto v6 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(hi1));
-            auto v7 = AosToSoa<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(hi1));
+            auto v0 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(lo0));
+            auto v1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(lo0));
+            auto v2 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(lo1));
+            auto v3 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(lo1));
+            auto v4 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(hi0));
+            auto v5 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(hi0));
+            auto v6 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(hi1));
+            auto v7 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(hi1));
 
             return concat(concat(concat(v0, v1), concat(v2, v3)),
                           concat(concat(v4, v5), concat(v6, v7)));

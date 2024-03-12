@@ -652,8 +652,8 @@ namespace rocwmma
         ROCWMMA_DEVICE constexpr static inline auto genData()
         {
             auto const threadId   = (uint8_t)detail::threadId();
-            auto const waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
-            auto const start      = (threadId % WAVE_SIZE) * VW + waveOffset;
+            auto const waveOffset = (threadId * VW / WAVE_SIZE) * BlockDim;
+            auto const start      = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
 
             if constexpr(ROCWMMA_WAVE64_MODE)
             {
