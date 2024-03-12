@@ -904,10 +904,10 @@ namespace rocwmma
 #endif
 
     template <>
-    struct SoaToAos<16, 2>
+    struct SoaToAos<16, 8>
     {
-        constexpr static uint32_t VW      = 2;
-        constexpr static uint32_t VecSize = 2;
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = 8;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
@@ -915,10 +915,16 @@ namespace rocwmma
             using PackUtil = PackUtil<DataT>;
 
             // Step 1 : Scatter
-            auto unpacked_data = PackUtil::template paddedUnpack<2>(
-                Permute::Scatter16<2, 0>::exec(PackUtil::paddedPack(v)));
+            auto unpacked_data = PackUtil::template paddedUnpack<8>(
+                Permute::Scatter16<8, 0>::exec(PackUtil::paddedPack(v)));
 
-            // Step 2 : UnpackLoHi8
+            // Step 2 : UnpackLoHi2
+            unpacked_data = unpackLoHi2(unpacked_data);
+
+            // Step 3 : UnpackLoHi4
+            unpacked_data = unpackLoHi4(unpacked_data);
+
+            // Step 4 : UnpackLoHi8
             unpacked_data = unpackLoHi8(unpacked_data);
 
             return unpacked_data;
@@ -926,58 +932,88 @@ namespace rocwmma
     };
 
     template <>
-    struct SoaToAos<32, 2>
+    struct SoaToAos<32, 8>
     {
-        constexpr static uint32_t VW      = 2;
-        constexpr static uint32_t VecSize = 2;
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = 8;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
         {
             using PackUtil = PackUtil<DataT>;
 
-            // Step 1 : Scatter
-            auto unpacked_data = PackUtil::template paddedUnpack<2>(
-                Permute::Scatter32<2, 0>::exec(PackUtil::paddedPack(v)));
+            // Step 1 : Scatter (half-rotate offset)
+            auto hi = (Permute::Scatter32<8, 16>::exec(PackUtil::paddedPack(extractHi(v))));
+            auto lo = (Permute::Scatter32<8, 0>::exec(PackUtil::paddedPack(extractLo(v))));
+            auto unpacked_data = concat(PackUtil::template paddedUnpack<4>(lo),
+                                        PackUtil::template paddedUnpack<4>(hi));
 
-            // Step 2 : UnpackLoHi16
-            unpacked_data = unpackLoHi16(unpacked_data);
+            // Step 2 : UnpackLoHi4
+            unpacked_data = unpackLoHi4(unpacked_data);
 
-            return unpacked_data;
+            // Step 3 : UnpackLoHi8
+            unpacked_data = unpackLoHi8(unpacked_data);
+
+            // Step 4 : UnpackLoHi16 (half-rotate offset)
+            lo = PackUtil::paddedPack(extractEven(unpacked_data));
+            hi = PackUtil::paddedPack(extractOdd(unpacked_data));
+
+            auto lo_final = Dpp::Driver<DppImpl::Ops::MaskMove, 0x5, 0xF>::exec(lo, hi);
+            hi            = Dpp::Driver<DppImpl::Ops::MaskMove, 0x5, 0xF>::exec(hi, lo);
+
+            hi = Swizzle::RotateR32<16>::exec(hi);
+
+            return concat(PackUtil::template paddedUnpack<4u>(lo_final),
+                          PackUtil::template paddedUnpack<4u>(hi));
         }
     };
 
 #if ROCWMMA_WAVE64_MODE
 
     template <>
-    struct SoaToAos<64, 2>
+    struct SoaToAos<64, 8>
     {
-        constexpr static uint32_t VW      = 2;
-        constexpr static uint32_t VecSize = 2;
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = 8;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
         {
             using PackUtil = PackUtil<DataT>;
 
-            // Step 1 : Scatter
-            auto unpacked_data = PackUtil::template paddedUnpack<2>(
-                Permute::ScatterWave<2, 0>::exec(PackUtil::paddedPack(v)));
+            // Step 1 : Scatter (half-rotate offset)
+            auto hi = (Permute::ScatterWave<8, 32>::exec(PackUtil::paddedPack(extractHi(v))));
+            auto lo = (Permute::ScatterWave<8, 0>::exec(PackUtil::paddedPack(extractLo(v))));
+            auto unpacked_data = concat(PackUtil::template paddedUnpack<4>(lo),
+                                        PackUtil::template paddedUnpack<4>(hi));
 
-            // Step 2 : UnpackLoHi32
-            unpacked_data = unpackLoHi32(unpacked_data);
+            // Step 2 : UnpackLoHi8
+            unpacked_data = unpackLoHi8(unpacked_data);
 
-            return unpacked_data;
+            // Step 3 : unpackLoHi16
+            unpacked_data = unpackLoHi16(unpacked_data);
+
+            // Step 4 : UnpackLoHi32 (half-rotate offset)
+            lo = PackUtil::paddedPack(extractEven(unpacked_data));
+            hi = PackUtil::paddedPack(extractOdd(unpacked_data));
+
+            auto lo_final = Dpp::Driver<DppImpl::Ops::MaskMove, 0x3, 0xF>::exec(lo, hi);
+            hi            = Dpp::Driver<DppImpl::Ops::MaskMove, 0x3, 0xF>::exec(hi, lo);
+
+            hi = Permute::RotateWaveR<32>::exec(hi);
+
+            return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo_final),
+                          PackUtil::template paddedUnpack<VecSize / 2u>(hi));
         };
     };
 
 #elif ROCWMMA_WAVE32_MODE
 
     template <>
-    struct SoaToAos<64, 2>
+    struct SoaToAos<64, 8>
     {
-        constexpr static uint32_t VW      = 2;
-        constexpr static uint32_t VecSize = 4;
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = 16;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
@@ -995,10 +1031,10 @@ namespace rocwmma
 #if ROCWMMA_WAVE64_MODE
 
     template <>
-    struct SoaToAos<128, 2>
+    struct SoaToAos<128, 8>
     {
-        constexpr static uint32_t VW      = 2;
-        constexpr static uint32_t VecSize = 4;
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = 16;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
@@ -1014,10 +1050,10 @@ namespace rocwmma
 #elif ROCWMMA_WAVE32_MODE
 
     template <>
-    struct SoaToAos<128, 2>
+    struct SoaToAos<128, 8>
     {
-        constexpr static uint32_t VW      = 2;
-        constexpr static uint32_t VecSize = 8;
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = 32;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
@@ -1040,10 +1076,10 @@ namespace rocwmma
 #if ROCWMMA_WAVE64_MODE
 
     template <>
-    struct SoaToAos<256, 2>
+    struct SoaToAos<256, 8>
     {
-        constexpr static uint32_t VW      = 2;
-        constexpr static uint32_t VecSize = 8;
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = 32;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
@@ -1064,10 +1100,10 @@ namespace rocwmma
 #elif ROCWMMA_WAVE32_MODE
 
     template <>
-    struct SoaToAos<256, 2>
+    struct SoaToAos<256, 8>
     {
-        constexpr static uint32_t VW      = 2;
-        constexpr static uint32_t VecSize = 16;
+        constexpr static uint32_t VW      = 8;
+        constexpr static uint32_t VecSize = 64;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
@@ -1314,13 +1350,14 @@ namespace rocwmma
                           concat(concat(v4, v5), concat(v6, v7)));
         }
     };
+
 #endif
 
     template <>
-    struct SoaToAos<16, 8>
+    struct SoaToAos<16, 2>
     {
-        constexpr static uint32_t VW      = 8;
-        constexpr static uint32_t VecSize = 8;
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 2;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
@@ -1328,16 +1365,10 @@ namespace rocwmma
             using PackUtil = PackUtil<DataT>;
 
             // Step 1 : Scatter
-            auto unpacked_data = PackUtil::template paddedUnpack<8>(
-                Permute::Scatter16<8, 0>::exec(PackUtil::paddedPack(v)));
+            auto unpacked_data = PackUtil::template paddedUnpack<2>(
+                Permute::Scatter16<2, 0>::exec(PackUtil::paddedPack(v)));
 
-            // Step 2 : UnpackLoHi2
-            unpacked_data = unpackLoHi2(unpacked_data);
-
-            // Step 3 : UnpackLoHi4
-            unpacked_data = unpackLoHi4(unpacked_data);
-
-            // Step 4 : UnpackLoHi8
+            // Step 2 : UnpackLoHi8
             unpacked_data = unpackLoHi8(unpacked_data);
 
             return unpacked_data;
@@ -1345,88 +1376,58 @@ namespace rocwmma
     };
 
     template <>
-    struct SoaToAos<32, 8>
+    struct SoaToAos<32, 2>
     {
-        constexpr static uint32_t VW      = 8;
-        constexpr static uint32_t VecSize = 8;
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 2;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
         {
             using PackUtil = PackUtil<DataT>;
 
-            // Step 1 : Scatter (half-rotate offset)
-            auto hi = (Permute::Scatter32<8, 16>::exec(PackUtil::paddedPack(extractHi(v))));
-            auto lo = (Permute::Scatter32<8, 0>::exec(PackUtil::paddedPack(extractLo(v))));
-            auto unpacked_data = concat(PackUtil::template paddedUnpack<4>(lo),
-                                        PackUtil::template paddedUnpack<4>(hi));
+            // Step 1 : Scatter
+            auto unpacked_data = PackUtil::template paddedUnpack<2>(
+                Permute::Scatter32<2, 0>::exec(PackUtil::paddedPack(v)));
 
-            // Step 2 : UnpackLoHi4
-            unpacked_data = unpackLoHi4(unpacked_data);
+            // Step 2 : UnpackLoHi16
+            unpacked_data = unpackLoHi16(unpacked_data);
 
-            // Step 3 : UnpackLoHi8
-            unpacked_data = unpackLoHi8(unpacked_data);
-
-            // Step 4 : UnpackLoHi16 (half-rotate offset)
-            lo = PackUtil::paddedPack(extractEven(unpacked_data));
-            hi = PackUtil::paddedPack(extractOdd(unpacked_data));
-
-            auto lo_final = Dpp::Driver<DppImpl::Ops::MaskMove, 0x5, 0xF>::exec(lo, hi);
-            hi            = Dpp::Driver<DppImpl::Ops::MaskMove, 0x5, 0xF>::exec(hi, lo);
-
-            hi = Swizzle::RotateR32<16>::exec(hi);
-
-            return concat(PackUtil::template paddedUnpack<4u>(lo_final),
-                          PackUtil::template paddedUnpack<4u>(hi));
+            return unpacked_data;
         }
     };
 
 #if ROCWMMA_WAVE64_MODE
 
     template <>
-    struct SoaToAos<64, 8>
+    struct SoaToAos<64, 2>
     {
-        constexpr static uint32_t VW      = 8;
-        constexpr static uint32_t VecSize = 8;
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 2;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
         {
             using PackUtil = PackUtil<DataT>;
 
-            // Step 1 : Scatter (half-rotate offset)
-            auto hi = (Permute::ScatterWave<8, 32>::exec(PackUtil::paddedPack(extractHi(v))));
-            auto lo = (Permute::ScatterWave<8, 0>::exec(PackUtil::paddedPack(extractLo(v))));
-            auto unpacked_data = concat(PackUtil::template paddedUnpack<4>(lo),
-                                        PackUtil::template paddedUnpack<4>(hi));
+            // Step 1 : Scatter
+            auto unpacked_data = PackUtil::template paddedUnpack<2>(
+                Permute::ScatterWave<2, 0>::exec(PackUtil::paddedPack(v)));
 
-            // Step 2 : UnpackLoHi8
-            unpacked_data = unpackLoHi8(unpacked_data);
+            // Step 2 : UnpackLoHi32
+            unpacked_data = unpackLoHi32(unpacked_data);
 
-            // Step 3 : unpackLoHi16
-            unpacked_data = unpackLoHi16(unpacked_data);
-
-            // Step 4 : UnpackLoHi32 (half-rotate offset)
-            lo = PackUtil::paddedPack(extractEven(unpacked_data));
-            hi = PackUtil::paddedPack(extractOdd(unpacked_data));
-
-            auto lo_final = Dpp::Driver<DppImpl::Ops::MaskMove, 0x3, 0xF>::exec(lo, hi);
-            hi            = Dpp::Driver<DppImpl::Ops::MaskMove, 0x3, 0xF>::exec(hi, lo);
-
-            hi = Permute::RotateWaveR<32>::exec(hi);
-
-            return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo_final),
-                          PackUtil::template paddedUnpack<VecSize / 2u>(hi));
+            return unpacked_data;
         };
     };
 
 #elif ROCWMMA_WAVE32_MODE
 
     template <>
-    struct SoaToAos<64, 8>
+    struct SoaToAos<64, 2>
     {
-        constexpr static uint32_t VW      = 8;
-        constexpr static uint32_t VecSize = 16;
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 4;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
@@ -1444,10 +1445,10 @@ namespace rocwmma
 #if ROCWMMA_WAVE64_MODE
 
     template <>
-    struct SoaToAos<128, 8>
+    struct SoaToAos<128, 2>
     {
-        constexpr static uint32_t VW      = 8;
-        constexpr static uint32_t VecSize = 16;
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 4;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
@@ -1463,10 +1464,10 @@ namespace rocwmma
 #elif ROCWMMA_WAVE32_MODE
 
     template <>
-    struct SoaToAos<128, 8>
+    struct SoaToAos<128, 2>
     {
-        constexpr static uint32_t VW      = 8;
-        constexpr static uint32_t VecSize = 32;
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 8;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
@@ -1489,10 +1490,10 @@ namespace rocwmma
 #if ROCWMMA_WAVE64_MODE
 
     template <>
-    struct SoaToAos<256, 8>
+    struct SoaToAos<256, 2>
     {
-        constexpr static uint32_t VW      = 8;
-        constexpr static uint32_t VecSize = 32;
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 8;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
@@ -1513,10 +1514,10 @@ namespace rocwmma
 #elif ROCWMMA_WAVE32_MODE
 
     template <>
-    struct SoaToAos<256, 8>
+    struct SoaToAos<256, 2>
     {
-        constexpr static uint32_t VW      = 8;
-        constexpr static uint32_t VecSize = 64;
+        constexpr static uint32_t VW      = 2;
+        constexpr static uint32_t VecSize = 16;
 
         template <typename DataT>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
