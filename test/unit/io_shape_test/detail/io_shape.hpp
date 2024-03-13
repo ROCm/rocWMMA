@@ -81,9 +81,9 @@ namespace rocwmma
                       : MaxVW;
 
             using RowNT
-                = MatrixLayout::template RowNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
+                = LayoutProfile::template RowNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
             using ColNT
-                = MatrixLayout::template ColNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
+                = LayoutProfile::template ColNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
 
             using MatrixLayout =
                 typename std::conditional_t<std::is_same<MatrixT, matrix_a>::value, ColNT, RowNT>;

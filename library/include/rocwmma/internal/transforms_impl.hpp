@@ -2050,6 +2050,31 @@ namespace rocwmma
 
 #endif
 
+    template <template <uint32_t, uint32_t> class Op, uint32_t BlockDim, uint32_t MaxVW>
+    struct Driver
+    {
+        using Func = Op<BlockDim, MaxVW>;
+
+        template <typename DataT, uint32_t VecSize>
+        ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            auto it = makeVectorIterator<Func::VecSize>(v).begin();
+
+#pragma unroll
+            for(uint32_t i = 0; i < decltype(it)::range(); i++)
+            {
+                *it = Func::exec(*it);
+                it++;
+            }
+        }
+    };
+
+    template <uint32_t BlockDim, uint32_t MaxVW>
+    using IAosToSoa = Driver<AosToSoa, BlockDim, MaxVW>;
+
+    template <uint32_t BlockDim, uint32_t MaxVW>
+    using ISoaToAos = Driver<SoaToAos, BlockDim, MaxVW>;
+
 } // namespace rocwmma
 
 #endif // ROCWMMA_TRANSFORMS_IMPL_HPP
