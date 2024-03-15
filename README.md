@@ -335,29 +335,9 @@ Each contributing wave handles partial operation data, so split parameters shoul
 subsequent operations. For example, cooperatively moving data from global to shared memory should
 use the same split parameters for the global load and subsequent local store.
 
-## Contributing to the code
+## Contributing to the rocWMMA Library
 
-1. Create and track a rocWMMA fork.
-2. Clone your fork:
-
-    ```bash
-    git clone -b develop https://github.com/<your_fork>/rocWMMA.git .
-    .githooks/install
-    git checkout -b <new_branch>
-    ...
-    git add <new_work>
-    git commit -m "What was changed"
-    git push origin <new_branch>
-    ...
-    ```
-
-3. Create a pull request to the ROCmSoftwarePlatform/rocWMMA develop branch.
-4. Await CI and approval feedback.
-5. Once approved, merge.
-
-```note
-You must install GitHooks because there are triggers for Clang formatting in commits.
-```
+Please follow the [rocWMMA Contribution Guide](https://github.com/ROCm/rocWMMA/CONTRIBUTING.md).
 
 ## Build with CMake
 
