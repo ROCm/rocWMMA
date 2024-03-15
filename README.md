@@ -375,6 +375,7 @@ You must install GitHooks because there are triggers for Clang formatting in com
 |ROCWMMA_BUILD_EXTENDED_TESTS|Build extended testing coverage |OFF (requires ROCWMMA_BUILD_TESTS=ON)|
 |ROCWMMA_VALIDATE_WITH_ROCBLAS|Use rocBLAS for validation tests|ON (requires ROCWMMA_BUILD_VALIDATION_TESTS=ON)|
 |ROCWMMA_BENCHMARK_WITH_ROCBLAS|Include rocBLAS benchmarking data|OFF (requires ROCWMMA_BUILD_BENCHMARK_TESTS=ON)|
+|ROCWMMA_USE_SYSTEM_GOOGLETEST|Use system Google Test library instead of downloading and building it|OFF (requires ROCWMMA_BUILD_TESTS=ON)|
 
 ### Example configurations
 
