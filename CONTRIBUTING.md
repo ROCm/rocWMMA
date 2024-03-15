@@ -6,22 +6,22 @@
 
 # Contributing to rocWMMA #
 
-We welcome contributions to rocWMMA.  Please follow these details to help ensure your contributions will be successfully accepted.
+External contributions and feedback are welcome for rocWMMA. Please see the following details to help maximize the likelihood your contributions will be accepted.
 
 ## Issue Discussion ##
 
 Please use the [GitHub Issues](https://github.com/ROCm/rocWMMA/issues) tab to notify us of issues.
 
-* Use your best judgement for issue creation. If your issue is already listed, upvote the issue and
+* Use your best judgement for issue creation. If your issue is already listed, upvote the existing issue and
   comment or post to provide additional details, such as how you reproduced this issue.
 * If you're not sure if your issue is the same, err on the side of caution and file your issue.
-  You can add a comment to include the issue number (and link) for the similar issue. If we evaluate
+  You can add a comment to include the issue number (and link) for the similar/related issue. If we evaluate
   your issue as being the same as the existing issue, we'll close the duplicate.
 * If your issue doesn't exist, use the issue template to file a new issue.
     * When filing an issue, be sure to provide as much information as possible, including script output so
       we can collect information about your configuration. This helps reduce the time required to
       reproduce your issue.
-    * Check your issue regularly, as we may require additional information to successfully reproduce the
+    * Check on updates to your issue regularly, as we may require additional information to successfully reproduce the
       issue.
 * You may also open an issue to ask questions to the maintainers about whether a proposed change
   meets the acceptance criteria, or to discuss an idea pertaining to the library.
@@ -47,9 +47,11 @@ New issues should use the following templates:
 
 ## Acceptance Criteria ##
 
-The goal of rocWMMA is to provide a C++ API for accelerating matrix multiply accumulate (MMA) operations utilizing AMD GPU hardware.
-Contributors that wish to help optimize and expand the capabilities of rocWMMA in furtherance of this goal should adhere to the following
-guidelines for all features and fixes. Detailed coding style and pull request guidelines are covered later sections.
+The goal of rocWMMA is to provide a C++ API for facilitating block-wise decomposition of matrix multiply accumulate (MMA) workflows while
+leveraging specialized AMD GPU hardware. rocWMMA also facilitates migration of nvcuda::wmma users to AMD's HIP environment on AMD GPUs and
+provides a level of equivalent functionality. Contributors that wish to help optimize and expand the capabilities of rocWMMA in pursuit
+of this goal should adhere to the following guidelines for all features and fixes. Detailed coding style and pull request guidelines are
+covered later sections.
 
 Contributors wishing to submit new features for rocWMMA should follow the guidelines outlined below:
 
@@ -91,12 +93,13 @@ but we recognize that the content is lengthy. Below we list our primary concerns
 - Library code should use C++17.
 - Our minimum supported compiler is hipcc 4.4.
 - Avoid CamelCase.
-    * This rule applies specifically to publicly visible APIs, but is also encouraged (not mandated) for internal code
+    * This rule applies specifically to publicly visible APIs, but is also encouraged (not mandated) for internal code.
+    * If you are unsure, inspect surrounding code for consistency and don't be afraid to pose questions for clarification on the PRs.
 
 ### Philosophy ###
 
 -  [P.2](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rp-Cplusplus)
-   Write in ISO Standard C++14 (especially to support Windows, Linux and
+   Write in ISO Standard C++17 (especially to support Windows, Linux and
    MacOS platforms)
 -  [P.5](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rp-compile-time)
    Prefer compile-time checking to run-time checking
@@ -116,15 +119,15 @@ but we recognize that the content is lengthy. Below we list our primary concerns
    Use ``#include`` guards for all ``.hpp`` files
 -  [SF.21](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rs-unnamed)
    Don't use an unnamed (anonymous) ``namespace`` in a header
--  [SL.10](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rsl-arrays)
-   Prefer using ``std::array`` or ``std::vector`` instead of a C array
+-  [SL.10](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rsl-arrays)*
+   Prefer using ``std::array`` or ``std::vector`` instead of a C array.
 -  [C.9](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rc-private)
    Minimize the exposure of class members
 -  [F.3](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rf-single)
    Keep functions short and simple
--  [F.21](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rf-out-multi)
+-  [F.21](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rf-out-multi)*
    To return multiple 'out' values, prefer returning a ``std::tuple``
--  [R.1](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rr-raii)
+-  [R.1](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rr-raii)*
    Manage resources automatically using RAII (this includes
    ``std::unique_ptr`` & ``std::shared_ptr``)
 -  [ES.11](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Res-auto)
@@ -138,18 +141,21 @@ but we recognize that the content is lengthy. Below we list our primary concerns
 -  [I.2](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Ri-global)
    Avoid global variables
 
+| *std functions are not recommended for any ``rocwmma/internal`` code to maintain hipRTC compatibility. |
+|--------------------------------------------------------------------------------------------------------|
+
 ## Pull Request Guidelines ##
 Our code contribution guidelines closely follows the model of [GitHub Pull-Requests](https://help.github.com/articles/using-pull-requests).
 The rocWMMA repository follows a workflow which dictates a ``/master`` branch where releases are cut, and a ``/develop`` branch which serves as
 an integration branch for new code.
 
-No changes are allowed to be directly committed to the develop branch of the rocWMMA repository. All authors are required to develop their
-change sets on a separate branch and then create a pull request to merge their changes into the develop branch. When you create a pull
-request, you should target the **develop** branch for integration.
+No changes are allowed to be directly committed to the develop branch of the rocWMMA repository. All authors are required to develop their change
+sets on a separate branch (preferably in your own fork), and then create a pull request targeting the develop branch of the upstream repository.
+When you create a pull request, you should target the **develop** branch for integration.
 
 The typical workflow for creating a rocWMMA pull request is as follows:
 
-1. Create and track a rocWMMA fork.
+1. Create and track a rocWMMA fork, if you haven't already done so.
 2. Clone your fork:
 
     ```bash
@@ -167,9 +173,8 @@ The typical workflow for creating a rocWMMA pull request is as follows:
 4. Await CI and approval feedback.
 5. Once approved, merge.
 
-**Note**
-You must install GitHooks because there are triggers for Clang formatting in commits. Instructions for formatting
-rocWMMA are included in [Formatting](#formatting).
+| You must install GitHooks every time you clone a rocWMMA repository to ensure automated triggers for Clang formatting are executed upon making commits. Instructions for formatting rocWMMA are included in [Formatting](#formatting). |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 
 ### Deliverables ###
 
@@ -177,7 +182,8 @@ rocWMMA has a set of required deliverables for every pull request that are as fo
 
 1. **Test Integration**:
     - All new functionality introduced to rocWMMA must be accompanied by unit tests. Unit tests should integrate within the existing
-    googletest framework and must have good code coverage. Existing unit tests should be used as a guide and are found in ``test/unit``.
+    googletest framework and must have good code coverage. Existing unit tests should be used as a guide and are found in ``test/unit``. Be sure to consider
+    rocWMMA's support matrix for datatypes, block sizes and architectures.
 
     - New features that aim to optimize rocWMMA must have benchmark and validation tests, and performance must approach the compute bound limit or
     memory bound limit. These tests should follow the same googletest framework laid out in the rocWMMA GEMM tests found in ``test/gemm``.
@@ -191,18 +197,22 @@ rocWMMA has a set of required deliverables for every pull request that are as fo
     - All features introduced to rocWMMA must maintain support for the following types:
         - **Supported Datatypes (gfx9)**
             - Native Data Types: int8, f16, f32, f64*
-            - Non-Native Data Types: h16, bf16
+            - Non-Native Data Types: h16 (__half), bf16, f8**, bf8**
 
         - **Supported Datatypes (gfx11)**
             - Native Data Types: int8, f16
             - Non-Native Data Types: h16, bf16
 
-        (*only on gfx90a, gfx940, gfx941 & gfx942)
+		| *Only on gfx90a, gfx940, gfx941 & gfx942. |
+		|-------------------------------------------|
+
+		| **Only on gfx940, gfx941 & gfx942. |
+		|------------------------------------|
 
     - Support for the other rocWMMA fragment parameters as described in ``library/include/rocwmma/rocwmma.hpp`` must also be maintained.
 
 4. **Licensing**:
-    - All code submitted to rocWMMA must be original, no AI generated code.
+    - All code submitted to rocWMMA must be original, no AI generated code is currently being accepted.
     - The code you are contributing is your own, and you have the right to license it.
     - No code found under other licenses is permitted.
     - Any submitted code will subsequently be covered under the MIT License.
@@ -265,5 +275,5 @@ rocWMMA C++ code is formatted using ``clang-format``.
 - Alternatively, githooks can be installed to format the code per-commit:
 
   ```
-  ./.githooks/install
+  <path_to_rocWMMA>/.githooks/install
   ```
