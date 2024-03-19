@@ -504,61 +504,37 @@ namespace rocwmma
                         // Number of threads per wave
                         WaveSize = IOTraits::ThreadsPerIO,
 
-                        // Number of BlockDim columns gathered per cycle of MaxVW
-                        MaxKPerIO = WaveSize * MaxVectorWidth / std::min(BlockDim, WaveSize),
-
-                        BlockDimStride_X = WaveSize,
+                        // Strides
+                        BlockDimStride_X = std::min(BlockDim, WaveSize),
                         BlockDimStride_Y = 0u,
 
                         BlockKStride_X = 0u,
-                        BlockKStride_Y = MaxKPerIO,
+                        BlockKStride_Y = WaveSize * MaxVectorWidth / BlockDimStride_X,
 
                         VWStride_X = 0u,
                         VWStride_Y = VectorWidth,
 
-                        // Flag for large BlockDim
-                        LargeDim = BlockDim >= WaveSize,
-
-                        // Number of segments in BlockDim direction
-                        BlockDimSegs = std::max(BlockDim / BlockDimStride_X, 1u),
-
-                        // Number of segments in the BlockK direction
-                        BlockKSegs = BlockK / BlockKStride_Y,
-
-                        // Number of segments in the MaxVW direction
-                        VWSegs = MaxVectorWidth / VWStride_Y,
-
-                        // Number of columns per wave (> 0 if !LargeDim)
-                        WaveSegs = WaveSize / BlockDim,
-
-                        // Log2 Values
-                        Log2BlockDim     = Log2<BlockDim>::value,
-                        Log2MaxKPerIO    = Log2<MaxKPerIO>::value,
-                        Log2MaxVW        = Log2<MaxVectorWidth>::value,
-                        Log2VW           = Log2<VectorWidth>::value,
-                        Log2WaveSize     = Log2<WaveSize>::value,
-                        Log2BlockDimSegs = Log2<BlockDimSegs>::value,
-                        Log2VWSegs       = Log2<VWSegs>::value,
-                        Log2WaveSegs     = Log2<WaveSegs>::value
+                        // Stride space
+                        BlockDimSegs = BlockDim / BlockDimStride_X,
+                        BlockKSegs   = BlockK / BlockKStride_Y,
+                        VWSegs       = MaxVectorWidth / VWStride_Y,
                     };
+
+                    static_assert(BlockDim >= (uint32_t)Traits::BlockDimStride_X,
+                                  "BlockDim must be larger than BlockDimStride_X");
+                    static_assert(BlockDim % (uint32_t)Traits::BlockDimStride_X == 0,
+                                  "BlockDim must be a multiple of BlockDimStride_X");
+                    static_assert(BlockK >= (uint32_t)Traits::BlockKStride_Y,
+                                  "BlockK must be larger than BlockKStride_Y");
+                    static_assert(BlockK % (uint32_t)Traits::BlockKStride_Y == 0,
+                                  "BlockK must be a multiple of BlockKStride_Y");
+                    static_assert(MaxVectorWidth >= (uint32_t)Traits::VWStride_Y,
+                                  "MaxVectorWidth must larger than VWStride_Y");
+                    static_assert(MaxVectorWidth % (uint32_t)Traits::VWStride_Y == 0,
+                                  "MaxVectorWidth must be a multiple of VWStride_Y");
 
                     using MatrixCoordT = Coord2d;
                 };
-
-                ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT baseOffset()
-                {
-                    // TODO: Use constexpr if on C++17
-                    if constexpr(Traits::LargeDim)
-                    {
-                        return make_coord2d(threadIdx.x % Traits::WaveSize, 0u);
-                    }
-                    else
-                    {
-                        return make_coord2d(threadIdx.x % BlockDim,
-                                            (threadIdx.x / BlockDim) * MaxVectorWidth
-                                                % Traits::MaxKPerIO);
-                    }
-                }
 
                 ROCWMMA_DEVICE constexpr static inline auto strideCounts()
                 {
@@ -577,78 +553,107 @@ namespace rocwmma
                         make_coord2d((uint32_t)Traits::VWStride_X, (uint32_t)Traits::VWStride_Y));
                 }
 
+                ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT baseOffset()
+                {
+                    if constexpr((uint32_t)Traits::BlockDimStride_X >= (uint32_t)Traits::WaveSize)
+                    {
+                        // Don't need initial offset calc in Y direction: all threads fit in neighbouring rows
+                        return make_coord2d(threadIdx.x % (uint32_t)Traits::BlockDimStride_X, 0u);
+                    }
+                    else
+                    {
+                        // Threads need to spread over the Y direction as well
+                        return make_coord2d(threadIdx.x % (uint32_t)Traits::BlockDimStride_X,
+                                            (threadIdx.x / (uint32_t)Traits::BlockDimStride_X)
+                                                * MaxVectorWidth
+                                                % (uint32_t)Traits::BlockKStride_Y);
+                    }
+                }
+
                 ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
                     incrementalOffset(uint32_t iteration)
                 {
-                    // TODO: Use constexpr if on C++ 17
-                    if(Traits::LargeDim)
+                    // Reference:
+                    // VWOffsetY = VWStride_Y - ((i+1) % VWSegs ? 0u : VWStride_Y * VWSegs);
+                    // Every set of VWSegs, we must iteratively reset the VWOffset back to 0, hence
+                    // the subtraction.
+                    // Optimization 1: if VWSegs == 1, there are no contributions from this stride
+                    // Optimization 2: if BlockKSegs == 1 and BlockDimSegs == 1, there are no "reset"
+                    // contributions from this stride
+                    int32_t VWOffsetY = 0;
+                    if constexpr((int32_t)Traits::VWSegs > 1)
                     {
-                        // incOffsetX:
-                        // Minor cycle (VWSegs): = (iteration + 1) % VWSegs ? 0 : Wave size
-                        // Major cycle (VWSegs * BlockDim):
-                        // = (iteration + 1) % (VWSegs * BlockDimSegs) ? 0 : -BlockDim
-                        constexpr int32_t IncXMinorStep = Traits::WaveSize;
-                        constexpr int32_t IncXMajorStep = -BlockDim;
-
-                        // incOffsetY:
-                        // Minor cycle (VWSegs): = (iteration + 1) % VWSegs ? VW : -MaxVW
-                        // Major cycle (VWSegs * BlockDim):
-                        // = (iteration + 1) % (VWSegs * BlockDimSegs) ? MinorCycle : VW
-                        constexpr int32_t IncYMinorStep = VectorWidth;
-                        constexpr int32_t IncYMajorStep = -MaxVectorWidth;
-
-                        // Bit masking for modulus operation
-                        constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
-                        constexpr int32_t TotalSegsModMask
-                            = LsbMask<Traits::Log2VWSegs + Traits::Log2BlockDimSegs>::value;
-
-                        // Any remainder bits detected, mask = 0x0
-                        // No remainder bits detected, mask = 0xFFFFFFFF
-                        int32_t minorStepMask
-                            = static_cast<bool>((iteration + 1) & VWSegsModMask) - 1;
-                        int32_t majorStepMask
-                            = static_cast<bool>((iteration + 1) & TotalSegsModMask) - 1;
-
-                        return make_coord2d(
-                            (IncXMinorStep & minorStepMask) + (majorStepMask & IncXMajorStep),
-                            IncYMinorStep + ((minorStepMask ^ majorStepMask) & IncYMajorStep));
+                        // Offset contribution
+                        VWOffsetY = (int32_t)Traits::VWStride_Y;
+                        if constexpr(((int32_t)Traits::BlockKSegs > 1)
+                                     || ((int32_t)Traits::BlockDimSegs > 1))
+                        {
+                            // "Reset" cycle
+                            VWOffsetY
+                                -= (((int32_t)iteration + 1) % (int32_t)Traits::VWSegs
+                                        ? 0
+                                        : (int32_t)Traits::VWStride_Y * (int32_t)Traits::VWSegs);
+                        }
                     }
-                    else
+
+                    // Reference:
+                    // BlockKOffsetY = ((i+1) % VWSegs ? 0u : BlockKStride_Y) -
+                    // ((i+1) % (VWSegs * BlockKSegs) ? 0u : BlockKSegs * BlockKStride_Y);
+                    // Every set of BlockKSegs, we must iteratively reset the BlockKOffsetY back to 0, hence
+                    // the subtraction.
+                    // Optimization 1: if BlockKSegs == 1, there are no contributions from this stride
+                    // Optimization 2: if BlockDimSegs == 1, there are no "reset" contributions from this stride
+                    int32_t BlockKOffsetY = 0;
+                    if constexpr((int32_t)Traits::BlockKSegs > 1)
                     {
-                        // incOffsetX: 0
-                        // incOffsetY:
-                        // Minor cycle (Every iteration): = VW
-                        // Major cycle (VWSegs): = (iteration + 1) % VWSegs ? 0 : MaxVW * (WaveSegs - 1)
-                        constexpr int32_t IncYMinorStep = VectorWidth;
-                        constexpr int32_t IncYMajorStep = MaxVectorWidth * (Traits::WaveSegs - 1);
-                        constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
-
-                        // Any remainder bits detected, mask = 0x0
-                        // No remainder bits detected, mask = 0xFFFFFFFF
-                        int32_t majorStepMask
-                            = static_cast<bool>((iteration + 1) & VWSegsModMask) - 1;
-
-                        return make_coord2d(0u, IncYMinorStep + (majorStepMask & IncYMajorStep));
+                        // Offset contribution
+                        BlockKOffsetY = (((int32_t)iteration + 1) % (int32_t)Traits::VWSegs
+                                             ? 0
+                                             : (int32_t)Traits::BlockKStride_Y);
+                        if constexpr((int32_t)Traits::BlockDimSegs > 1)
+                        {
+                            // "Reset" cycle
+                            BlockKOffsetY
+                                -= (((int32_t)iteration
+                                     + 1) % ((int32_t)Traits::VWSegs * (int32_t)Traits::BlockKSegs)
+                                        ? 0
+                                        : (int32_t)Traits::BlockKSegs
+                                              * (int32_t)Traits::BlockKStride_Y);
+                        }
                     }
+
+                    // Reference:
+                    // BlockDimOffsetX = ((i+1) % VWSegs * BlockKSegs) ? 0u : BlockDimStride_X);
+                    // Optimization 1: if BlockKSegs == 1, there are no contributions from this stride
+                    // Optimization 2: There are no "reset" contributions from this stride because it is the last dim
+                    int32_t BlockDimOffsetX = 0;
+                    if constexpr((int32_t)Traits::BlockDimSegs > 1)
+                    {
+                        // Offset contribution
+                        BlockDimOffsetX
+                            = (((int32_t)iteration + 1)
+                                       % ((int32_t)Traits::VWSegs * (int32_t)Traits::BlockKSegs)
+                                   ? 0
+                                   : (int32_t)Traits::BlockDimStride_X);
+                    }
+
+                    return make_coord2d(BlockDimOffsetX, VWOffsetY + BlockKOffsetY);
                 }
+
                 ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
                     cumulativeOffset(uint32_t iteration)
                 {
-                    // TODO: Use constexpr if on C++17
-                    if(Traits::LargeDim)
-                    {
-                        return make_coord2d(
-                            iteration / Traits::VWSegs % Traits::BlockDimSegs * Traits::WaveSize,
-                            iteration / (Traits::VWSegs * Traits::BlockDimSegs) * MaxVectorWidth
-                                + iteration % Traits::VWSegs * VectorWidth);
-                    }
-                    else
-                    {
-                        return make_coord2d(0u,
-                                            iteration / Traits::VWSegs
-                                                    * (MaxVectorWidth * Traits::WaveSegs)
-                                                + iteration % Traits::VWSegs * VectorWidth);
-                    }
+                    int32_t cumVWOffsetY = (int32_t)Traits::VWStride_Y
+                                           * ((int32_t)iteration % (int32_t)Traits::VWSegs);
+                    int32_t cumBlockKOffsetY = ((int32_t)iteration / (int32_t)Traits::VWSegs)
+                                               % (int32_t)Traits::BlockKSegs
+                                               * (int32_t)Traits::BlockKStride_Y;
+                    int32_t cumBlockDimOffsetX
+                        = ((int32_t)iteration
+                           / ((int32_t)Traits::VWSegs * (int32_t)Traits::BlockKSegs))
+                          * (int32_t)Traits::BlockDimStride_X;
+
+                    return make_coord2d(cumBlockDimOffsetX, cumVWOffsetY + cumBlockKOffsetY);
                 }
             };
 
@@ -664,48 +669,68 @@ namespace rocwmma
             * MaxVW = 2       VW = 1
             *
             * BlockDim Stride Count = 4, BlockDimStride = (64, 0)
-            * BlockK   Stride Count = 4, BlockKStride   = (0,  1)
+            * BlockK   Stride Count = 2, BlockKStride   = (0,  2)
             * VW       Stride Count = 2, VWStride       = (1,  0)
             *
             * Stride mapping (BlockDim, BlockK, VW)
             *  C_n = Matrix column
             *  i_n = cumulative iteration
             *
-            *  iteration offsets:
-            *  i0  = (0, 0)   i1  = (1, 0)  i2 = (0, 1) i3 = (1, 1)
-            *  i4  = (0, 2)   i5  = (1, 2)  i6 = (0, 3) i7 = (1, 3)
-            *  i8  = (0, 4)   i9  = (1, 4)  i10 = (0, 5) i11 = (1, 5)
-            *  i12 = (0, 6)  i13  = (1, 6)  i14 = (0, 7) i15 = (1, 7)
+            *  Cartesian iteration offsets (row, col):
+            *  i0  = (0,   0) i1  = (1,   0) i2  = (0,   2) i3  = (1,   2)
+            *  i4  = (64,  0) i5  = (65,  0) i6  = (64,  2) i7  = (65,  2)
+            *  i8  = (128, 0) i9  = (129, 0) i10 = (128, 2) i11 = (129, 2)
+            *  i12 = (192, 0) i13 = (193, 0) i14 = (192, 2) i15 = (192, 2)
+            *
+            *  Strides iteration offsets (BlockDim, BlockK, VW):
+            *  i0  = (0,0,0) i1  = (0,0,1)
+            *  i2  = (0,1,0) i3  = (0,1,1)
+            *  i4  = (1,0,0) i5  = (1,0,1)
+            *  i6  = (1,1,0) i7  = (1,1,1)
+            *  i8  = (2,0,0) i9  = (2,0,1)
+            *  i10 = (2,1,0) i11 = (2,1,1)
+            *  i12 = (3,0,0) i13 = (3,0,1)
+            *  i14 = (3,1,0) i15 = (3,1,1)
+            *
+            * Let's follow thread 0:
             *
             *   kDim --------->
             *
             *   BlockDim1
-            *   |                           |-- BlockK Stride = 4 --|
-            *   |                           i0(0,0,0)   i4(0,2,0)
+            *   |                           |-- BlockK Stride = 2 --|
+            *   |                           i0(0,0,0)   i2(0,1,0)
             *   |            _         _    v_____ _____v_____ _____
             *   v            |         |    |     |     |     |     |
             *                |  VW     1    |     |     |     |     |
             *       BlockDim |  Stride |    | C0  |  C1 |  C2 |  C3 |
             *        Stride  |         _    v     |     v     |     |
-            *               64              i1(0,0,1)   i5(0,2,1)   |
+            *               64              i1(0,0,1)   i3(0,1,1)   |
             *                |              |     |     |     |     |
             *                |              |     |     |     |     |
             *                |              | C0  |  C1 |  C2 |  C3 |
             *                _              |_____|_____|_____|_____|
-            *                               i8(1,0,0)   i12(1,2,0)
+            *                               i4(1,0,0)   i6(1,1,0)
             *                               v_____ _____v_____ _____
             *                               |     |     |     |     |
             *                               |     |     |     |     |
             *                               | C0  |  C1 |  C2 |  C3 |
             *                               v     |     v     |     |
-            *                               i9(1,0,1)   i13(1,2,1)  |
+            *                               i5(1,0,1)   i7(1,1,1)   |
             *                               |     |     |     |     |
             *                               |     |     |     |     |
             *                               | C0  |  C1 |  C2 |  C3 |
             *                               |_____|_____|_____|_____|
             *                               ...                     ...
             *                               ...                     ...
-            *                               ^(256, 0)               ^(BlockDim, BlockK)
+            *                               ...                     ...
+            *                               v     |     v     |     |
+            *                               i13(3,0,1)   i14(3,1,1)   |
+            *                               |     |     |     |     |
+            *                               |     |     |     |     |
+            *                               | C0  |  C1 |  C2 |  C3 |
+            *                               |_____|_____|_____|_____|
+            *
+            *                               ^(BlockDim, 0)          ^(BlockDim, BlockK)
             *
             * Register file (for all VectorWidths = [MaxVectorWidth, 1]):
             *
@@ -738,48 +763,35 @@ namespace rocwmma
                         // Number of threads per wave
                         WaveSize = IOTraits::ThreadsPerIO,
 
-                        // Number of elements per IO of MaxVW
-                        MaxElementsPerIO = WaveSize * MaxVectorWidth,
+                        // Strides
+                        BlockDimStride_X = std::min(BlockDim, WaveSize),
+                        BlockDimStride_Y = 0u,
 
-                        // Number of BlockDim columns gathered per cycle of MaxVW
-                        MaxKPerIO = std::max(1u, MaxElementsPerIO / BlockDim),
+                        BlockKStride_X = 0u,
+                        BlockKStride_Y = WaveSize * MaxVectorWidth / BlockDimStride_X,
 
                         VWStride_X = VectorWidth,
                         VWStride_Y = 0u,
 
-                        BlockDimStride_X = MaxElementsPerIO,
-                        BlockDimStride_Y = 0u,
-
-                        BlockKStride_X = 0u,
-                        BlockKStride_Y = MaxKPerIO,
-
-                        // Flag for large BlockDim
-                        LargeDim = BlockDim >= MaxElementsPerIO,
-
-                        // Number of segments in BlockDim direction
-                        BlockDimSegs = std::max(1u, BlockDim / BlockDimStride_X),
-
-                        // Number of segments in the BlockK direction
-                        BlockKSegs = std::max(1u, BlockK / BlockKStride_Y),
-
-                        // Number of segments in the MaxVW direction
-                        VWSegs = std::max(1u, MaxVectorWidth / VWStride_X),
-
-                        // Log2 Values
-                        Log2BlockDim         = Log2<BlockDim>::value,
-                        Log2MaxElementsPerIO = Log2<MaxElementsPerIO>::value,
-                        Log2MaxKPerIO        = Log2<MaxKPerIO>::value,
-                        Log2MaxVW            = Log2<MaxVectorWidth>::value,
-                        Log2VW               = Log2<VectorWidth>::value,
-                        Log2WaveSize         = Log2<WaveSize>::value,
-                        Log2BlockDimSegs     = Log2<BlockDimSegs>::value,
-                        Log2VWSegs           = Log2<VWSegs>::value,
+                        // Stride Space
+                        BlockDimSegs = BlockDim / BlockDimStride_X,
+                        BlockKSegs   = BlockK / BlockKStride_Y,
+                        VWSegs       = MaxVectorWidth / VWStride_X,
                     };
 
-                    static_assert(BlockK >= MaxVectorWidth,
-                                  "BlockK must be at least MaxVectorWidth");
-                    static_assert(BlockK % MaxVectorWidth == 0,
-                                  "BlockK must be a multiple of MaxVectorWidth");
+                    // Sanity checks for strides sizes
+                    static_assert(BlockDim >= (uint32_t)Traits::BlockDimStride_X,
+                                  "BlockDim must be larger than BlockDimStride_X");
+                    static_assert(BlockDim % (uint32_t)Traits::BlockDimStride_X == 0,
+                                  "BlockDim must be a multiple of BlockDimStride_X");
+                    static_assert(BlockK >= (uint32_t)Traits::BlockKStride_Y,
+                                  "BlockK must be larger than BlockKStride_Y");
+                    static_assert(BlockK % (uint32_t)Traits::BlockKStride_Y == 0,
+                                  "BlockK must be a multiple of BlockKStride_Y");
+                    static_assert(MaxVectorWidth >= (uint32_t)Traits::VWStride_X,
+                                  "MaxVectorWidth must larger than VWStride_X");
+                    static_assert(MaxVectorWidth % (uint32_t)Traits::VWStride_X == 0,
+                                  "MaxVectorWidth must be a multiple of VWStride_X");
 
                     using MatrixCoordT = Coord2d;
                 };
@@ -803,17 +815,19 @@ namespace rocwmma
 
                 ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT baseOffset()
                 {
-                    // TODO: Use constexpr if when C++ 17
-                    if(Traits::LargeDim)
+                    if constexpr(((uint32_t)Traits::BlockDimStride_X >= (uint32_t)Traits::WaveSize)
+                                 && (MaxVectorWidth == 1))
                     {
-                        return make_coord2d(threadIdx.x * MaxVectorWidth % Traits::MaxElementsPerIO,
-                                            0u);
+                        // Don't need initial offset calc in Y direction: all threads fit in neighbouring rows
+                        return make_coord2d(threadIdx.x % (uint32_t)Traits::BlockDimStride_X, 0u);
                     }
                     else
                     {
-                        return make_coord2d(threadIdx.x * MaxVectorWidth % BlockDim,
-                                            threadIdx.x * MaxVectorWidth / BlockDim
-                                                % Traits::MaxKPerIO);
+                        // Threads need to spread over the Y direction as well
+                        return make_coord2d(
+                            threadIdx.x * MaxVectorWidth % (uint32_t)Traits::BlockDimStride_X,
+                            threadIdx.x * MaxVectorWidth / (uint32_t)Traits::BlockDimStride_X
+                                % (uint32_t)Traits::BlockKStride_Y);
                     }
                 }
 
@@ -821,86 +835,88 @@ namespace rocwmma
                 ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
                     incrementalOffset(uint32_t iteration)
                 {
-                    // TODO: Use constexpr if when C++ 17
-                    if(Traits::LargeDim)
+                    // Reference:
+                    // VWOffsetX = VWStride_X - ((i+1) % VWSegs ? 0u : VWStride_X * VWSegs);
+                    // Every set of VWSegs, we must iteratively reset the VWOffset back to 0, hence
+                    // the subtraction.
+                    // Optimization 1: if VWSegs == 1, there are no contributions from this stride
+                    // Optimization 2: if BlockKSegs == 1 and BlockDimSegs == 1, there are no "reset"
+                    // contributions from this stride
+                    int32_t VWOffsetX = 0;
+                    if constexpr((int32_t)Traits::VWSegs > 1)
                     {
-                        constexpr int32_t IncX0MinorStep = VectorWidth;
-                        constexpr int32_t IncX0MajorStep = MaxVectorWidth;
-
-                        constexpr int32_t IncX1MinorStep = Traits::MaxElementsPerIO;
-                        constexpr int32_t IncX1MajorStep = BlockDim;
-
-                        constexpr int32_t IncYMinorStep = 0;
-                        constexpr int32_t IncYMajorStep = 1;
-
-                        constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
-                        constexpr int32_t TotalSegsModMask
-                            = LsbMask<Traits::Log2BlockDimSegs + Traits::Log2VWSegs>::value;
-
-                        // Any remainder bits detected, mask = 0x0
-                        // No remainder bits detected, mask = 0xFFFFFFFF
-                        int32_t VWSegsStepMask
-                            = static_cast<bool>((iteration + 1) & VWSegsModMask) - 1;
-                        int32_t TotalSegsStepMask
-                            = static_cast<bool>((iteration + 1) & TotalSegsModMask) - 1;
-
-                        return make_coord2d(IncX0MinorStep - (VWSegsStepMask & IncX0MajorStep)
-                                                + (VWSegsStepMask & IncX1MinorStep)
-                                                - (TotalSegsStepMask & IncX1MajorStep),
-                                            TotalSegsStepMask & IncYMajorStep);
+                        // Offset contribution
+                        VWOffsetX = (int32_t)Traits::VWStride_X;
+                        if constexpr(((int32_t)Traits::BlockKSegs > 1)
+                                     || ((int32_t)Traits::BlockDimSegs > 1))
+                        {
+                            // "Reset" cycle
+                            VWOffsetX
+                                -= (((int32_t)iteration + 1) % (int32_t)Traits::VWSegs
+                                        ? 0
+                                        : (int32_t)Traits::VWStride_X * (int32_t)Traits::VWSegs);
+                        }
                     }
-                    else
+
+                    // Reference:
+                    // BlockKOffsetY = ((i+1) % VWSegs ? 0u : BlockKStride_Y) -
+                    // ((i+1) % (VWSegs * BlockKSegs) ? 0u : BlockKSegs * BlockKStride_Y);
+                    // Every set of BlockKSegs, we must iteratively reset the BlockKOffsetY back to 0, hence
+                    // the subtraction.
+                    // Optimization 1: if BlockKSegs == 1, there are no contributions from this stride
+                    // Optimization 2: if BlockDimSegs == 1, there are no "reset" contributions from this stride
+                    int32_t BlockKOffsetY = 0;
+                    if constexpr((int32_t)Traits::BlockKSegs > 1)
                     {
-                        constexpr int32_t IncXMinorStep = VectorWidth;
-                        constexpr int32_t IncXMajorStep = MaxVectorWidth;
-                        constexpr int32_t IncYMinorStep = 0;
-                        constexpr int32_t IncYMajorStep = Traits::MaxKPerIO;
-                        constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
-
-                        // Any remainder bits detected, mask = 0x0
-                        // No remainder bits detected, mask = 0xFFFFFFFF
-                        int32_t majorStepMask
-                            = static_cast<bool>((iteration + 1) & VWSegsModMask) - 1;
-
-                        // Reference calculation:
-                        // Iterative offsetX = VW - ((iteration + 1) % (MaxVectorWidth / VectorWidth) == 0) * MaxVW
-                        // Iterative offsetY = ((iteration + 1) % (MaxVectorWidth / VectorWidth) == 0) * MaxKPerIO
-                        return make_coord2d(IncXMinorStep - (majorStepMask & IncXMajorStep),
-                                            majorStepMask & IncYMajorStep);
+                        // Offset contribution
+                        BlockKOffsetY = (((int32_t)iteration + 1) % (int32_t)Traits::VWSegs
+                                             ? 0
+                                             : (int32_t)Traits::BlockKStride_Y);
+                        if constexpr((int32_t)Traits::BlockDimSegs > 1)
+                        {
+                            // "Reset" cycle
+                            BlockKOffsetY
+                                -= (((int32_t)iteration
+                                     + 1) % ((int32_t)Traits::VWSegs * (int32_t)Traits::BlockKSegs)
+                                        ? 0
+                                        : (int32_t)Traits::BlockKSegs
+                                              * (int32_t)Traits::BlockKStride_Y);
+                        }
                     }
+
+                    // Reference:
+                    // BlockDimOffsetX = ((i+1) % VWSegs * BlockKSegs) ? 0u : BlockDimStride_X);
+                    // Optimization 1: if BlockKSegs == 1, there are no contributions from this stride
+                    // Optimization 2: There are no "reset" contributions from this stride because it is the last dim
+                    int32_t BlockDimOffsetX = 0;
+                    if constexpr((int32_t)Traits::BlockDimSegs > 1)
+                    {
+                        // Offset contribution
+                        BlockDimOffsetX
+                            = (((int32_t)iteration + 1)
+                                       % ((int32_t)Traits::VWSegs * (int32_t)Traits::BlockKSegs)
+                                   ? 0
+                                   : (int32_t)Traits::BlockDimStride_X);
+                    }
+
+                    return make_coord2d(VWOffsetX + BlockDimOffsetX, BlockKOffsetY);
                 }
 
                 // Cumulative iteration offset
                 ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
                     cumulativeOffset(uint32_t iteration)
                 {
-                    // TODO: Use constexpr if when C++ 17
-                    if(Traits::LargeDim)
-                    {
-                        constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
-                        constexpr int32_t BlockDimSegsModMask
-                            = LsbMask<Traits::Log2BlockDimSegs>::value;
+                    int32_t cumVWOffsetX = (int32_t)Traits::VWStride_X
+                                           * ((int32_t)iteration % (int32_t)Traits::VWSegs);
+                    int32_t cumBlockKOffsetY = ((int32_t)iteration / (int32_t)Traits::VWSegs)
+                                               % (int32_t)Traits::BlockKSegs
+                                               * (int32_t)Traits::BlockKStride_Y;
+                    int32_t cumBlockDimOffsetX
+                        = ((int32_t)iteration
+                           / ((int32_t)Traits::VWSegs * (int32_t)Traits::BlockKSegs))
+                          * (int32_t)Traits::BlockDimStride_X;
 
-                        // Cumulative offsetX = (iteration / VWSegs) % BlockDimSegs * MaxElementsPerIO +
-                        //                      (iteration % VWSegs) * VW,
-                        // Cumulative offsetY = iteration / TotalSegs;
-                        return make_coord2d(
-                            (iteration << (Traits::Log2MaxElementsPerIO - Traits::Log2VWSegs))
-                                & (BlockDimSegsModMask << Traits::Log2MaxElementsPerIO)
-                                          + (iteration & VWSegsModMask)
-                                      << Traits::Log2VW,
-                            iteration >> (Traits::Log2VWSegs + Traits::Log2BlockDimSegs));
-                    }
-                    else
-                    {
-                        constexpr int32_t VWSegsModMask = LsbMask<Traits::Log2VWSegs>::value;
-
-                        // Cumulative offsetX = (iteration % VWSegs) * VW
-                        // Cumulative offsetY = iteration / VWSegs * (MaxKPerIO)
-                        return make_coord2d((iteration & VWSegsModMask) << Traits::Log2VW,
-                                            iteration >> Traits::Log2VWSegs
-                                                             << Traits::Log2MaxKPerIO);
-                    }
+                    return make_coord2d(cumVWOffsetX + cumBlockDimOffsetX, cumBlockKOffsetY);
                 }
             };
 
