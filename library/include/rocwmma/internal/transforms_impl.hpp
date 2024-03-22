@@ -209,6 +209,9 @@ namespace rocwmma
     template <uint32_t BlockDim, uint32_t VectorWidth>
     struct AosToSoa
     {
+        constexpr static uint32_t VW      = VectorWidth;
+        constexpr static uint32_t VecSize = VW * (BlockDim / Constants::AMDGCN_WAVE_SIZE);
+
         template <typename DataT, uint32_t VecSize>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
         {
@@ -219,6 +222,9 @@ namespace rocwmma
     template <uint32_t BlockDim, uint32_t VectorWidth>
     struct SoaToAos
     {
+        constexpr static uint32_t VW      = VectorWidth;
+        constexpr static uint32_t VecSize = VW * (BlockDim / Constants::AMDGCN_WAVE_SIZE);
+
         template <typename DataT, uint32_t VecSize>
         ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
         {
@@ -2058,14 +2064,19 @@ namespace rocwmma
         template <typename DataT, uint32_t VecSize>
         ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& v)
         {
-            auto it = makeVectorIterator<Func::VecSize>(v).begin();
+            auto result = VecT<DataT, VecSize>{};
+
+            auto rIt = makeVectorIterator<Func::VecSize>(v).begin();
+            auto wIt = makeVectorIterator<Func::VecSize>(result).begin();
 
 #pragma unroll
-            for(uint32_t i = 0; i < decltype(it)::range(); i++)
+            for(uint32_t i = 0; i < decltype(rIt)::range(); i++)
             {
-                *it = Func::exec(*it);
-                it++;
+                *wIt = Func::exec(*rIt);
+                rIt++;
+                wIt++;
             }
+            return result;
         }
     };
 
