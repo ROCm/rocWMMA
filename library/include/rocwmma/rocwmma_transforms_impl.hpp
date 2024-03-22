@@ -26,6 +26,9 @@
 #ifndef ROCWMMA_TRANSFORMS_API_IMPL_HPP
 #define ROCWMMA_TRANSFORMS_API_IMPL_HPP
 
+#include "internal/transforms.hpp"
+#include "rocwmma_transforms.hpp"
+
 namespace rocwmma
 {
     namespace detail
@@ -186,6 +189,7 @@ namespace rocwmma
         {
             // Interface
             using Type = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>;
+            template <uint32_t WaveCount = 1>
             ROCWMMA_DEVICE constexpr static inline Type const& exec(Type const& frag)
             {
                 return frag;
@@ -220,7 +224,8 @@ namespace rocwmma
             using Type = FragOut;
 
             // Optimal case: input and output register layouts match
-            template <typename FragT,
+            template <uint32_t WaveCount = 1,
+                      typename FragT,
                       typename std::enable_if_t<
                           std::is_same_v<FragT, FragIn>
                               && std::is_same_v<RegisterLayoutIn, RegisterLayoutOut>,
@@ -232,7 +237,8 @@ namespace rocwmma
             }
 
             // Input and output register layouts do not match: must transform using AOS<->SOA
-            template <typename FragT,
+            template <uint32_t WaveCount = 1,
+                      typename FragT,
                       typename std::enable_if_t<
                           std::is_same_v<FragT, FragIn>
                               && !std::is_same_v<RegisterLayoutIn, RegisterLayoutOut>,
@@ -240,20 +246,23 @@ namespace rocwmma
                       = 0>
             ROCWMMA_DEVICE constexpr static inline auto exec(FragT const& frag)
             {
-                constexpr uint32_t BlockDim = IOConfigIn::IOShape::BlockDim;
-                constexpr uint32_t MaxVW    = IOConfigIn::IOLayout::MaxVW;
+                // TODO: Make sure to use coop configs to get the right MaxVW!!!
+                using IOConfigCoop           = GetCoopIOConfig_t<FragIn, WaveCount>;
+                constexpr uint32_t BlockDim  = IOConfigCoop::IOShape::BlockDim;
+                constexpr uint32_t MaxVW     = IOConfigCoop::IOLayout::MaxVW;
+                using RegisterLayoutIncoming = typename IOConfigCoop::IOLayout::RegisterLayout;
 
                 // Target layouts
-                using SoaLayout = RegisterLayout::template Aos<BlockDim, MaxVW>;
-                using AosLayout = RegisterLayout::template Soa<BlockDim, MaxVW>;
+                using AosLayout = RegisterLayout::template Aos<BlockDim, MaxVW>;
+                using SoaLayout = RegisterLayout::template Soa<BlockDim, MaxVW>;
 
                 auto result = FragOut{};
 
-                if constexpr(std::is_same_v<AosLayout, RegisterLayoutIn>)
+                if constexpr(std::is_same_v<AosLayout, RegisterLayoutIncoming>)
                 {
                     result.mAccess = IAosToSoa<BlockDim, MaxVW>::exec(frag.mAccess);
                 }
-                else if constexpr(std::is_same_v<SoaLayout, RegisterLayoutIn>)
+                else if constexpr(std::is_same_v<SoaLayout, RegisterLayoutIncoming>)
                 {
                     result.mAccess = ISoaToAos<BlockDim, MaxVW>::exec(frag.mAccess);
                 }
@@ -291,11 +300,11 @@ namespace rocwmma
             std::forward<FragT>(frag));
     }
 
-    template <typename DataLayoutT, typename FragT>
+    template <typename DataLayoutT, uint32_t WaveCount /*=1*/, typename FragT>
     ROCWMMA_DEVICE static inline decltype(auto) applyDataLayout(FragT&& frag)
     {
-        return detail::template ApplyDataLayout<std::decay_t<FragT>, DataLayoutT>::exec(
-            std::forward<FragT>(frag));
+        return detail::template ApplyDataLayout<std::decay_t<FragT>, DataLayoutT>::template exec<
+            WaveCount>(std::forward<FragT>(frag));
     }
 
 } // namespace rocwmma
