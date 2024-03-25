@@ -81,7 +81,7 @@ To check the ROCm version on an Ubuntu system, use:
 
     apt show rocm-libs -a
 
-On Centos, use
+On Centos, use:
 
 ::
 
