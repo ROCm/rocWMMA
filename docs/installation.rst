@@ -1,8 +1,15 @@
+.. meta::
+   :description: C++ library for accelerating mixed precision matrix multiply-accumulate operations
+    leveraging specialized GPU matrix cores on AMD's latest discrete GPUs
+   :keywords: rocWMMA, ROCm, library, API, tool
+
+.. _installation:
+
 ==============
 Installation
 ==============
 
-This document provides instructions for installing rocWMMA.
+This document provides instructions for installing and configuring the rocWMMA library.
 The quickest way to install is using prebuilt packages. Alternatively, there are instructions to build from source.
 
 -------------

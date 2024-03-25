@@ -1,3 +1,9 @@
+.. meta::
+   :description: C++ library for accelerating mixed precision matrix multiply-accumulate operations
+    leveraging specialized GPU matrix cores on AMD's latest discrete GPUs
+   :keywords: rocWMMA, ROCm, library, API, tool
+
+.. _programmers-guide:
 
 ===================
 Programmer's guide
