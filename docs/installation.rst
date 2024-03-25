@@ -16,7 +16,7 @@ The quickest way to install is using prebuilt packages. Alternatively, there are
 Prerequisites
 -------------
 
-A ROCm enabled platform, more information `here <https://github.com/ROCm/ROCm>`_.
+A ROCm enabled platform. More information `here <https://github.com/ROCm/ROCm>`_.
 
 -----------------------------
 Installing pre-built packages
@@ -49,18 +49,18 @@ Once rocWMMA is installed, you can see the ``rocwmma.hpp`` header file in the ``
 You must include only ``rocwmma.hpp`` in the user code to make calls into rocWMMA. Don't directly include other rocWMMA files that are found in ``/opt/rocm/include/internal``.
 
 -------------------------------
-Building and Installing rocWMMA
+Building and installing rocWMMA
 -------------------------------
 
 For most users building from source is not necessary, as rocWMMA can be used after installing the pre-built
 packages as described above. If still desired, here are the instructions to build rocWMMA from source:
 
-System Requirements
+System requirements
 ^^^^^^^^^^^^^^^^^^^
 As a general rule, 8GB of system memory is required for a full rocWMMA build. This value can be lower if rocWMMA is built without tests. This value may also increase in the future as more functions are added to rocWMMA.
 
 
-GPU Support
+GPU support
 ^^^^^^^^^^^
 AMD CDNA class GPU featuring matrix core support: `gfx908`, `gfx90a` as `gfx9`
 
@@ -107,7 +107,7 @@ You can choose to build any of the following:
 
 * library, tests, and assembly
 
-You only need (library) for calling hipTensor from your code.
+You only need (library) for calling rocWMMA from your code.
 The client contains the test samples and benchmark code.
 
 Below are the project options available to build rocWMMA library with or without clients.
@@ -203,7 +203,7 @@ The samples folder in ``<build_dir>`` contains executables as given in the table
 ================ ==============================================================================================================================
 Executable Name  Description
 ================ ==============================================================================================================================
-``simple_sgemm``      A simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for single-precision floating point types
+``simple_sgemm``      A simple General Matrix Multiply (GEMM) operation [D = alpha * (A x B) + beta * C] using rocWMMA API for single-precision floating point types
 ``simple_dgemm``      A simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for double-precision floating point types
 ``simple_hgemm``      A simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for half-precision floating point types
 

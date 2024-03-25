@@ -27,7 +27,7 @@ The rocWMMA code is split into four major parts:
 
 The ``library`` directory contains the following include files:
 
-- ``library/include/rocwmma/``: C++ include files for the hipTensor API. These files also contain Doxygen comments that document the API.
+- ``library/include/rocwmma/``: C++ include files for the rocWMMA API. These files also contain Doxygen comments that document the API.
 
 - ``library/include/internal``: Internal include files for:
 
@@ -50,7 +50,7 @@ The ``library`` directory contains the following include files:
 
 The ``samples`` directory contains the sample codes for the following use cases:
 
-- ``samples/hipRTC_gemm.cpp``: For calling simple GEMM algorithm demonstration without LDS memory usage and no transpose, from within the hipRTC environment
+- ``samples/hipRTC_gemm.cpp``: For calling simple General Matrix Multiply (GEMM) algorithm demonstration without LDS memory usage and no transpose, from within the hipRTC environment
 
 - ``samples/simple_sgemv.cpp``: For calling simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose for single-precision floating point types
 
@@ -62,20 +62,17 @@ The ``samples`` directory contains the sample codes for the following use cases:
 
 - ``samples/simple_hgemm.cpp``: For calling simple GEMM algorithm demonstration without LDS memory usage and no transpose for half-precision floating point types
 
-- ``samples/perf_sgemm.cpp``: For calling the best performing multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and
-optimized pipeline for single-precision floating point types
+- ``samples/perf_sgemm.cpp``: For calling the best performing multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and optimized pipeline for single-precision floating point types
 
-- ``samples/perf_dgemm.cpp``: For calling the best performing multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and
-optimized pipeline for double-precision floating point types
+- ``samples/perf_dgemm.cpp``: For calling the best performing multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and optimized pipeline for double-precision floating point types
 
-- ``samples/perf_hgemm.cpp``: For calling the best performant multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and
-optimized pipeline for half-precision floating point types
+- ``samples/perf_hgemm.cpp``: For calling the best performant multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and optimized pipeline for half-precision floating point types
 
 - ``samples/simple_dlrm.cpp``: For calling simple Deep Learning Recommendation Model (DLRM) for machine learning
 
 - ``samples/common.hpp``: Common code used by all the above rocWMMA samples files
 
-The `test` directory
+``test`` directory
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``test`` directory contains the test codes for testing the following functionalities:
