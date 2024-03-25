@@ -260,11 +260,11 @@ namespace rocwmma
 
                 if constexpr(std::is_same_v<AosLayout, RegisterLayoutIncoming>)
                 {
-                    result.mAccess = IAosToSoa<BlockDim, MaxVW>::exec(frag.mAccess);
+                    result.mAccess = Transforms::AosToSoa<BlockDim, MaxVW>::exec(frag.mAccess);
                 }
                 else if constexpr(std::is_same_v<SoaLayout, RegisterLayoutIncoming>)
                 {
-                    result.mAccess = ISoaToAos<BlockDim, MaxVW>::exec(frag.mAccess);
+                    result.mAccess = Transforms::SoaToAos<BlockDim, MaxVW>::exec(frag.mAccess);
                 }
 
                 return result;

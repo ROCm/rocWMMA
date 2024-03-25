@@ -2511,7 +2511,7 @@ namespace rocwmma
 
         __syncthreads();
 
-        auto soa = AosToSoa<BlockDim, VW>::exec(v);
+        auto soa = TransformsImpl::Ops::AosToSoa<BlockDim, VW>::exec(v);
 
         auto cmp_v = SoaVec<DataT, VW, BlockDim>::genData();
         err |= soa != cmp_v;
@@ -2528,7 +2528,7 @@ namespace rocwmma
         auto           v         = SoaVec<DataT, VW, BlockDim>::genData();
         __syncthreads();
 
-        auto aos = SoaToAos<BlockDim, VW>::exec(v);
+        auto aos = TransformsImpl::Ops::SoaToAos<BlockDim, VW>::exec(v);
 
         auto cmp_v = AosVec<DataT, VW, BlockDim>::genData();
         err |= aos != cmp_v;

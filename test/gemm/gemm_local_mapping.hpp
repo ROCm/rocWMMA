@@ -414,7 +414,7 @@ namespace rocwmma
                 formatLWFragA(typename GlobalMapping::GRFragA const& grFragA)
             {
                 return applyDataLayout<LayoutLds, 1>(
-                    reinterpret_cast<ApplyRegisterFile_t<typename GlobalMapping::GRFragA>&>(
+                    reinterpret_cast<ApplyRegisterFile_t<typename GlobalMapping::GRFragA> const&>(
                         grFragA));
             }
 
@@ -423,7 +423,7 @@ namespace rocwmma
                 formatLWFragB(typename GlobalMapping::GRFragB const& grFragB)
             {
                 return applyDataLayout<LayoutLds, 1>(
-                    reinterpret_cast<ApplyRegisterFile_t<typename GlobalMapping::GRFragB>&>(
+                    reinterpret_cast<ApplyRegisterFile_t<typename GlobalMapping::GRFragB> const&>(
                         grFragB));
             }
         };
