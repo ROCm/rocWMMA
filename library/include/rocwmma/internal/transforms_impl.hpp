@@ -278,13 +278,10 @@ namespace rocwmma
             result = unpackLoHi16(result);
 
             // Step 5 : Gather
-            auto lo = PackUtil::paddedPack(extractLo(result));
-            auto hi = PackUtil::paddedPack(extractHi(result));
+            auto packed = PackUtil::paddedPack(result);
+            packed = Permute::Gather32<VW, 0>::exec(packed);
 
-            lo = Permute::Gather32<VW, 0>::exec(lo);
-            hi = Permute::Gather32<VW, 0>::exec(hi);
-
-            return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
+            return PackUtil::template paddedUnpack<VecSize>(packed);
         }
     };
 
@@ -314,13 +311,10 @@ namespace rocwmma
             result = unpackLoHi32(result);
 
             // Step 5 : Gather
-            auto lo = PackUtil::paddedPack(extractLo(result));
-            auto hi = PackUtil::paddedPack(extractHi(result));
+            auto packed = PackUtil::paddedPack(result);
+            packed = Permute::GatherWave<VW, 0>::exec(packed);
 
-            lo = Permute::GatherWave<VW, 0>::exec(lo);
-            hi = Permute::GatherWave<VW, 0>::exec(hi);
-
-            return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
+            return PackUtil::template paddedUnpack<VecSize>(packed);
         }
     };
 
@@ -1234,11 +1228,9 @@ namespace rocwmma
             using PackUtil = PackUtil<DataT>;
 
             // Step 1 : Scatter
-            auto lo = (Permute::Scatter32<16, 0>::exec(PackUtil::paddedPack(extractLo(v))));
-            auto hi = (Permute::Scatter32<16, 0>::exec(PackUtil::paddedPack(extractHi(v))));
+            auto packed = Permute::Scatter32<16, 0>::exec(PackUtil::paddedPack(v));
 
-            auto unpacked_data = concat(PackUtil::template paddedUnpack<16>(lo),
-                                        PackUtil::template paddedUnpack<16>(hi));
+            auto unpacked_data = PackUtil::template paddedUnpack<16>(packed);
 
             // Step 2 : UnpackLoHi2
             unpacked_data = unpackLoHi2(unpacked_data);
@@ -1270,11 +1262,9 @@ namespace rocwmma
             using PackUtil = PackUtil<DataT>;
 
             // Step 1 : Scatter
-            auto lo = (Permute::ScatterWave<16, 0>::exec(PackUtil::paddedPack(extractLo(v))));
-            auto hi = (Permute::ScatterWave<16, 0>::exec(PackUtil::paddedPack(extractHi(v))));
+            auto packed = Permute::ScatterWave<16, 0>::exec(PackUtil::paddedPack(v));
 
-            auto unpacked_data = concat(PackUtil::template paddedUnpack<16>(lo),
-                                        PackUtil::template paddedUnpack<16>(hi));
+            auto unpacked_data = PackUtil::template paddedUnpack<16>(packed);
 
             // Step 2 : Unpack groups of 4
             unpacked_data = unpackLoHi4(unpacked_data);
