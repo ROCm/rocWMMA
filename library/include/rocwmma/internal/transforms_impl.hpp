@@ -1196,6 +1196,227 @@ namespace rocwmma
 
 #endif
 
+    // SoaToAos
+    template <>
+    struct SoaToAos<16, 16>
+    {
+        constexpr static uint32_t VW      = 16;
+        constexpr static uint32_t VecSize = 16;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            // Step 1 : UnpackLoHi1
+            auto unpacked_data = unpackLoHi1(v);
+
+            // Step 2 : UnpackLoHi2
+            unpacked_data = unpackLoHi2(unpacked_data);
+
+            // Step 3 : UnpackLoHi4
+            unpacked_data = unpackLoHi4(unpacked_data);
+
+            // Step 4 : UnpackLoHi8
+            unpacked_data = unpackLoHi8(unpacked_data);
+
+            return unpacked_data;
+        }
+    };
+
+    template <>
+    struct SoaToAos<32, 16>
+    {
+        constexpr static uint32_t VW      = 16;
+        constexpr static uint32_t VecSize = 16;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            using PackUtil = PackUtil<DataT>;
+
+            // Step 1 : Scatter
+            auto lo = (Permute::Scatter32<16, 0>::exec(PackUtil::paddedPack(extractLo(v))));
+            auto hi = (Permute::Scatter32<16, 0>::exec(PackUtil::paddedPack(extractHi(v))));
+
+            auto unpacked_data = concat(PackUtil::template paddedUnpack<16>(lo),
+                                        PackUtil::template paddedUnpack<16>(hi));
+
+            // Step 2 : UnpackLoHi2
+            unpacked_data = unpackLoHi2(unpacked_data);
+
+            // Step 3 : UnpackLoHi4
+            unpacked_data = unpackLoHi4(unpacked_data);
+
+            // Step 4 : UnpackLoHi8
+            unpacked_data = unpackLoHi8(unpacked_data);
+
+            // Step 4 : UnpackLoHi16
+            unpacked_data = unpackLoHi16(unpacked_data);
+
+            return unpacked_data;
+        }
+    };
+
+#if ROCWMMA_WAVE64_MODE
+
+    template <>
+    struct SoaToAos<64, 16>
+    {
+        constexpr static uint32_t VW      = 16;
+        constexpr static uint32_t VecSize = 16;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            using PackUtil = PackUtil<DataT>;
+
+            // Step 1 : Scatter
+            auto lo = (Permute::ScatterWave<16, 0>::exec(PackUtil::paddedPack(extractLo(v))));
+            auto hi = (Permute::ScatterWave<16, 0>::exec(PackUtil::paddedPack(extractHi(v))));
+
+            auto unpacked_data = concat(PackUtil::template paddedUnpack<16>(lo),
+                                        PackUtil::template paddedUnpack<16>(hi));
+
+            // Step 2 : Unpack groups of 4
+            unpacked_data = unpackLoHi4(unpacked_data);
+
+            // Step 3 : Unpack groups of 8
+            unpacked_data = unpackLoHi8(unpacked_data);
+
+            // Step 4 : Unpack groups of 16
+            unpacked_data = unpackLoHi16(unpacked_data);
+
+            // Step 5 : Unpack groups of 32
+            unpacked_data = unpackLoHi32(unpacked_data);
+
+            return unpacked_data;
+        };
+    };
+
+#elif ROCWMMA_WAVE32_MODE
+
+    template <>
+    struct SoaToAos<64, 16>
+    {
+        constexpr static uint32_t VW      = 16;
+        constexpr static uint32_t VecSize = 32;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            // Subdivide work to each batch of WAVE_SIZE
+            auto v0 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(v));
+            auto v1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(v));
+
+            return concat(v0, v1);
+        };
+    };
+
+#endif
+
+#if ROCWMMA_WAVE64_MODE
+
+    template <>
+    struct SoaToAos<128, 16>
+    {
+        constexpr static uint32_t VW      = 16;
+        constexpr static uint32_t VecSize = 32;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            // Subdivide work to each batch of WAVE_SIZE
+            auto v0 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_64, VW>::exec(extractLo(v));
+            auto v1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_64, VW>::exec(extractHi(v));
+
+            return concat(v0, v1);
+        }
+    };
+
+#elif ROCWMMA_WAVE32_MODE
+
+    template <>
+    struct SoaToAos<128, 16>
+    {
+        constexpr static uint32_t VW      = 16;
+        constexpr static uint32_t VecSize = 64;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            auto lo = extractLo(v);
+            auto hi = extractHi(v);
+
+            // Subdivide work to each batch of WAVE_SIZE
+            auto v0 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(lo));
+            auto v1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(lo));
+            auto v2 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(hi));
+            auto v3 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(hi));
+
+            return concat(concat(v0, v1), concat(v2, v3));
+        };
+    };
+
+#endif
+
+#if ROCWMMA_WAVE64_MODE
+
+    template <>
+    struct SoaToAos<256, 16>
+    {
+        constexpr static uint32_t VW      = 16;
+        constexpr static uint32_t VecSize = 64;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            auto lo = extractLo(v);
+            auto hi = extractHi(v);
+
+            // Subdivide work to each batch of WAVE_SIZE
+            auto v0 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_64, VW>::exec(extractLo(lo));
+            auto v1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_64, VW>::exec(extractHi(lo));
+            auto v2 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_64, VW>::exec(extractLo(hi));
+            auto v3 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_64, VW>::exec(extractHi(hi));
+
+            return concat(concat(v0, v1), concat(v2, v3));
+        }
+    };
+
+#elif ROCWMMA_WAVE32_MODE
+
+    template <>
+    struct SoaToAos<256, 16>
+    {
+        constexpr static uint32_t VW      = 16;
+        constexpr static uint32_t VecSize = 128;
+
+        template <typename DataT>
+        ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+        {
+            auto lo  = extractLo(v);
+            auto hi  = extractHi(v);
+            auto lo0 = extractLo(lo);
+            auto lo1 = extractHi(lo);
+            auto hi0 = extractLo(hi);
+            auto hi1 = extractHi(hi);
+
+            // Subdivide work to each batch of WAVE_SIZE
+            auto v0 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(lo0));
+            auto v1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(lo0));
+            auto v2 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(lo1));
+            auto v3 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(lo1));
+            auto v4 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(hi0));
+            auto v5 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(hi0));
+            auto v6 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractLo(hi1));
+            auto v7 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(hi1));
+
+            return concat(concat(concat(v0, v1), concat(v2, v3)),
+                          concat(concat(v4, v5), concat(v6, v7)));
+        };
+    };
+
+#endif
+
     template <>
     struct SoaToAos<16, 8>
     {
