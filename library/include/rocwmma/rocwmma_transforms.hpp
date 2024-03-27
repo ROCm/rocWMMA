@@ -46,7 +46,7 @@ namespace rocwmma
     template <typename FragT>
     ROCWMMA_DEVICE static inline decltype(auto) applyTranspose(FragT&& frag);
 
-    template <typename DataLayoutT, typename FragT>
+    template <typename DataLayoutT, uint32_t WaveCount = 1, typename FragT>
     ROCWMMA_DEVICE static inline decltype(auto) applyDataLayout(FragT&& frag);
 
 } // namespace rocwmma

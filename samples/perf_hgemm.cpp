@@ -348,7 +348,7 @@ ROCWMMA_DEVICE static inline void
 {
     // No transpose, but apply the lds data layout
     store_matrix_coop_sync<WaveCountA, SplitCountA>(
-        ldsAddr, applyDataLayout<DataLayoutLds>(grBuffA), ldsWidth, waveIndexA);
+        ldsAddr, applyDataLayout<DataLayoutLds, WaveCountA>(grBuffA), ldsWidth, waveIndexA);
 }
 
 // Local B writes in cooperative mode (macro tile)
@@ -358,7 +358,10 @@ ROCWMMA_DEVICE static inline void
 {
     // Transpose B and then apply lds data layout
     store_matrix_coop_sync<WaveCountB, SplitCountB>(
-        ldsAddr, applyDataLayout<DataLayoutLds>(applyTranspose(grBuffB)), ldsWidth, waveIndexB);
+        ldsAddr,
+        applyDataLayout<DataLayoutLds, WaveCountB>(applyTranspose(grBuffB)),
+        ldsWidth,
+        waveIndexB);
 }
 
 // Local A reads for warp tile gemm, non-cooperative
@@ -577,11 +580,11 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         constexpr auto warpCount = get<0>(warpDims) * get<1>(warpDims);
         constexpr auto splitCountA
             = std::min((uint32_t)GetCoopIOConfig_t<GRBuffA, warpCount>::IOTraits::IOCount,
-                    (uint32_t)GetCoopIOConfig_t<LWBuffA, warpCount>::IOTraits::IOCount);
+                       (uint32_t)GetCoopIOConfig_t<LWBuffA, warpCount>::IOTraits::IOCount);
 
         constexpr auto splitCountB
             = std::min((uint32_t)GetCoopIOConfig_t<GRBuffB, warpCount>::IOTraits::IOCount,
-                    (uint32_t)GetCoopIOConfig_t<LWBuffB, warpCount>::IOTraits::IOCount);
+                       (uint32_t)GetCoopIOConfig_t<LWBuffB, warpCount>::IOTraits::IOCount);
 
         // Scheduling warp order is analogous to row major priority.
         // E.g. Wg = (128, 2) = 2x2 warps
@@ -628,10 +631,10 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         // Local read offsets for mfma frags
         auto ldsReadOffsetA
             = ldsWriteOffsetA
-            + LWBuffAMap1d::fromMatrixCoord(make_coord2d(get<0>(localWarpOffset), 0u), ldsWidth);
+              + LWBuffAMap1d::fromMatrixCoord(make_coord2d(get<0>(localWarpOffset), 0u), ldsWidth);
         auto ldsReadOffsetB
             = ldsWriteOffsetB
-            + LWBuffBMap1d::fromMatrixCoord(make_coord2d(get<1>(localWarpOffset), 0u), ldsWidth);
+              + LWBuffBMap1d::fromMatrixCoord(make_coord2d(get<1>(localWarpOffset), 0u), ldsWidth);
 
         ///
         /// Write prefetch to local
@@ -823,7 +826,7 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, 
 
     // Uses 2 lds blocks for prefetch loop (A and B)
     int ldsusage
-        = 2u * sizeof(InputT) * (get<0>(macroTileSize) + get<1>(macroTileSize)) * ROCWMMA_K;
+        = 2u * sizeof(InputT) * (get<0>(macroTileSize) + get<1>(macroTileSize)) * hROCWMMA_K;
 
     ////
     auto rocwmmaKernel = [&]() {

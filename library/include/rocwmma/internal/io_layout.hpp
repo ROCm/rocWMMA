@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -114,66 +114,72 @@ namespace rocwmma
  */
     template <typename MatrixT,
               uint32_t BlockDim,
-              uint32_t KDim,
+              uint32_t BlockK,
               typename DataT,
               typename DataLayoutT,
               uint32_t WaveCount>
     struct IOLayout;
 
     template <uint32_t BlockDim,
-              uint32_t KDim,
+              uint32_t BlockK,
               typename DataT,
               typename DataLayoutT,
               uint32_t WaveCount>
-    struct IOLayout<matrix_a, BlockDim, KDim, DataT, DataLayoutT, WaveCount>
+    struct IOLayout<matrix_a, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>
     {
         // Vector size properties
         enum : uint32_t
         {
-            MaxVW = detail::MaxVWSelector<matrix_a, BlockDim, KDim, DataT, DataLayoutT, WaveCount>::
-                Result,
-            VW = std::is_same<DataLayoutT, row_major>::value ? MaxVW : 1u
+            MaxVW = detail::
+                MaxVWSelector<matrix_a, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>::Result,
+
+            VW = std::is_same<DataLayoutT, row_major>::value || BlockDim > 32 ? MaxVW : 1u
         };
 
-        // Layout mapping for 1d / 2d
-        using DataLayout = DataLayout::template Array1d<DataLayoutT>;
-        using MatrixLayout
-            = MatrixLayout::template ColNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
+        // Layout profile for 'matrix_a': ColNT for small frags, Col for large frags
+        using Profile = std::conditional_t<
+            BlockDim <= 32,
+            LayoutProfile::template ColNT<BlockDim, BlockK, DataT, DataLayoutT, VW, MaxVW>,
+            LayoutProfile::template Col<BlockDim, BlockK, DataT, DataLayoutT, VW, MaxVW>>;
 
-        static_assert(!(std::is_same_v<DataLayoutT, col_major> && VW > 1),
-                      "matrix_a in col_major currently does not support VW > 1");
+        using DataLayout     = typename Profile::DataLayout;
+        using MatrixLayout   = typename Profile::MatrixLayout;
+        using RegisterLayout = typename Profile::RegisterLayout;
     };
 
     template <uint32_t BlockDim,
-              uint32_t KDim,
+              uint32_t BlockK,
               typename DataT,
               typename DataLayoutT,
               uint32_t WaveCount>
-    struct IOLayout<matrix_b, BlockDim, KDim, DataT, DataLayoutT, WaveCount>
+    struct IOLayout<matrix_b, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>
     {
         // Vector size properties
         enum : uint32_t
         {
-            MaxVW = detail::MaxVWSelector<matrix_b, BlockDim, KDim, DataT, DataLayoutT, WaveCount>::
-                Result,
-            VW = std::is_same<DataLayoutT, col_major>::value ? MaxVW : 1u
+            MaxVW = detail::
+                MaxVWSelector<matrix_b, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>::Result,
+
+            VW = std::is_same<DataLayoutT, col_major>::value || BlockDim > 32 ? MaxVW : 1u
         };
 
-        // Layout mapping for 1d / 2d
-        using DataLayout = DataLayout::template Array1d<DataLayoutT>;
-        using MatrixLayout
-            = MatrixLayout::template RowNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
+        // Layout profile for 'matrix_b': RowNT for small frags, Row for large frags
+        using Profile = std::conditional_t<
+            BlockDim <= 32,
+            LayoutProfile::template RowNT<BlockDim, BlockK, DataT, DataLayoutT, VW, MaxVW>,
+            LayoutProfile::template Row<BlockDim, BlockK, DataT, DataLayoutT, VW, MaxVW>>;
 
-        static_assert(!(std::is_same_v<DataLayoutT, row_major> && VW > 1),
-                      "matrix_b in row_major currently does not support VW > 1");
+        using DataLayout     = typename Profile::DataLayout;
+        using MatrixLayout   = typename Profile::MatrixLayout;
+        using RegisterLayout = typename Profile::RegisterLayout;
     };
 
     template <uint32_t BlockDim,
-              uint32_t KDim,
+              uint32_t BlockK,
               typename DataT,
               typename DataLayoutT,
               uint32_t WaveCount>
-    struct IOLayout<accumulator, BlockDim, KDim, DataT, DataLayoutT, WaveCount>
+    struct IOLayout<accumulator, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>
     {
         // Vector size properties
         enum : uint32_t
@@ -182,17 +188,17 @@ namespace rocwmma
             VW    = std::is_same<DataLayoutT, col_major>::value ? MaxVW : 1u
         };
 
-        // Layout mapping for 1d / 2d
-        using DataLayout = DataLayout::template Array1d<DataLayoutT>;
-        using MatrixLayout
-            = MatrixLayout::template RowNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
+        // Layout profile for 'accumulator' set to RowNT
+        using Profile
+            = LayoutProfile::template RowNT<BlockDim, BlockK, DataT, DataLayoutT, VW, MaxVW>;
 
-        static_assert(!(std::is_same<DataLayoutT, row_major>::value && VW > 1),
-                      "accumulator in row_major currently does not support VW > 1");
+        using DataLayout     = typename Profile::DataLayout;
+        using MatrixLayout   = typename Profile::MatrixLayout;
+        using RegisterLayout = typename Profile::RegisterLayout;
     };
 
-    template <uint32_t BlockDim, uint32_t KDim, typename DataT, uint32_t WaveCount>
-    struct IOLayout<accumulator, BlockDim, KDim, DataT, void, WaveCount>
+    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t WaveCount>
+    struct IOLayout<accumulator, BlockDim, BlockK, DataT, void, WaveCount>
     {
         // No layout mapping without VW, MaxVW and DataLayoutT info
     };

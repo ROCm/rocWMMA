@@ -139,6 +139,21 @@ namespace rocwmma
 
             // Leading dimension of lds matrix
             __device__ constexpr static inline auto ldLds();
+
+            template <uint32_t WaveCount = 1>
+            __device__ constexpr static inline auto
+                formatLWFragA(typename GlobalMapping::GRFragA const& grFragA)
+            {
+                return rocwmma::template applyDataLayout<LayoutLds, WaveCount>(
+                    applyTranspose(grFragA));
+            }
+
+            template <uint32_t WaveCount = 1>
+            __device__ constexpr static inline auto
+                formatLWFragB(typename GlobalMapping::GRFragB const& grFragB)
+            {
+                return rocwmma::template applyDataLayout<LayoutLds, WaveCount>(grFragB);
+            }
         };
 
         template <typename GlobalMapping, typename LayoutLds>
@@ -254,6 +269,20 @@ namespace rocwmma
 
             // Leading dimension of shared memory usage
             __device__ constexpr static inline auto ldLds();
+
+            template <uint32_t WaveCount = 1>
+            __device__ constexpr static inline auto
+                formatLWFragA(typename GlobalMapping::GRFragA const& grFragA)
+            {
+                return applyDataLayout<LayoutLds, WaveCount>(grFragA);
+            }
+
+            template <uint32_t WaveCount = 1>
+            __device__ constexpr static inline auto
+                formatLWFragB(typename GlobalMapping::GRFragB const& grFragB)
+            {
+                return applyDataLayout<LayoutLds, WaveCount>(applyTranspose(grFragB));
+            }
         };
 
         template <typename GlobalMapping, typename LayoutLds>
@@ -379,6 +408,24 @@ namespace rocwmma
 
             // Leading dimension of lds matrix
             __device__ constexpr static inline auto ldLds();
+
+            template <uint32_t WaveCount = 1>
+            __device__ constexpr static inline auto
+                formatLWFragA(typename GlobalMapping::GRFragA const& grFragA)
+            {
+                return applyDataLayout<LayoutLds, 1>(
+                    reinterpret_cast<ApplyRegisterFile_t<typename GlobalMapping::GRFragA> const&>(
+                        grFragA));
+            }
+
+            template <uint32_t WaveCount = 1>
+            __device__ constexpr static inline auto
+                formatLWFragB(typename GlobalMapping::GRFragB const& grFragB)
+            {
+                return applyDataLayout<LayoutLds, 1>(
+                    reinterpret_cast<ApplyRegisterFile_t<typename GlobalMapping::GRFragB> const&>(
+                        grFragB));
+            }
         };
 
     } // namespace LocalMapping
