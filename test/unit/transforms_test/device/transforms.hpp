@@ -50,6 +50,497 @@ namespace rocwmma
     template <typename DataT, uint32_t VW, uint32_t BlockDim>
     struct SoaVec;
 
+    // AosVec
+    template <typename DataT>
+    struct AosVec<DataT, 16, 16>
+    {
+        static constexpr uint32_t VW       = 16;
+        static constexpr uint32_t BlockDim = 16;
+        using VecType                      = VecT<DataT, VW>;
+
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            auto const threadId   = (uint8_t)detail::threadId();
+            auto const waveOffset = threadId / BlockDim * VW * BlockDim;
+            auto const start      = (threadId % BlockDim) * VW + waveOffset;
+
+            return VecType{start,
+                           start + 1,
+                           start + 2,
+                           start + 3,
+                           start + 4,
+                           start + 5,
+                           start + 6,
+                           start + 7,
+                           start + 8,
+                           start + 9,
+                           start + 10,
+                           start + 11,
+                           start + 12,
+                           start + 13,
+                           start + 14,
+                           start + 15};
+        }
+    };
+
+    template <typename DataT>
+    struct AosVec<DataT, 16, 32>
+    {
+        static constexpr uint32_t VW       = 16;
+        static constexpr uint32_t BlockDim = 32;
+        using VecType                      = VecT<DataT, VW>;
+
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            auto const threadId   = (uint8_t)detail::threadId();
+            auto const waveOffset = threadId / BlockDim * VW * BlockDim;
+            auto const start      = (threadId % BlockDim) * VW + waveOffset;
+
+            return VecType{start,
+                           start + 1,
+                           start + 2,
+                           start + 3,
+                           start + 4,
+                           start + 5,
+                           start + 6,
+                           start + 7,
+                           start + 8,
+                           start + 9,
+                           start + 10,
+                           start + 11,
+                           start + 12,
+                           start + 13,
+                           start + 14,
+                           start + 15};
+        }
+    };
+
+    template <typename DataT>
+    struct AosVec<DataT, 16, 64>
+    {
+        static constexpr uint32_t VW        = 16;
+        static constexpr uint32_t BlockDim  = 64;
+        static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+        static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
+        using VecType                       = VecT<DataT, VecSize>;
+
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            auto const threadId   = (uint8_t)detail::threadId();
+            auto const waveOffset = (threadId * VW / WAVE_SIZE) * BlockDim;
+            auto const start      = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                return VecType{start,
+                               start + 1,
+                               start + 2,
+                               start + 3,
+                               start + 4,
+                               start + 5,
+                               start + 6,
+                               start + 7,
+                               start + 8,
+                               start + 9,
+                               start + 10,
+                               start + 11,
+                               start + 12,
+                               start + 13,
+                               start + 14,
+                               start + 15};
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                return VecType{start,
+                               start + 1,
+                               start + 2,
+                               start + 3,
+                               start + 4,
+                               start + 5,
+                               start + 6,
+                               start + 7,
+                               start + 8,
+                               start + 9,
+                               start + 10,
+                               start + 11,
+                               start + 12,
+                               start + 13,
+                               start + 14,
+                               start + 15,
+                               start + WAVE_SIZE,
+                               start + WAVE_SIZE + 1,
+                               start + WAVE_SIZE + 2,
+                               start + WAVE_SIZE + 3,
+                               start + WAVE_SIZE + 4,
+                               start + WAVE_SIZE + 5,
+                               start + WAVE_SIZE + 6,
+                               start + WAVE_SIZE + 7,
+                               start + WAVE_SIZE + 8,
+                               start + WAVE_SIZE + 9,
+                               start + WAVE_SIZE + 10,
+                               start + WAVE_SIZE + 11,
+                               start + WAVE_SIZE + 12,
+                               start + WAVE_SIZE + 13,
+                               start + WAVE_SIZE + 14,
+                               start + WAVE_SIZE + 15};
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                return VecType();
+            }
+        }
+    };
+
+    template <typename DataT>
+    struct AosVec<DataT, 16, 128>
+    {
+        static constexpr uint32_t VW        = 16;
+        static constexpr uint32_t BlockDim  = 128;
+        static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+        static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
+        using VecType                       = VecT<DataT, VecSize>;
+
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            auto const threadId   = (uint8_t)detail::threadId();
+            auto const waveOffset = (threadId * VW / WAVE_SIZE) * BlockDim;
+            auto const start      = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                return VecType{start,
+                               start + 1,
+                               start + 2,
+                               start + 3,
+                               start + 4,
+                               start + 5,
+                               start + 6,
+                               start + 7,
+                               start + 8,
+                               start + 9,
+                               start + 10,
+                               start + 11,
+                               start + 12,
+                               start + 13,
+                               start + 14,
+                               start + 15,
+                               start + WAVE_SIZE,
+                               start + WAVE_SIZE + 1,
+                               start + WAVE_SIZE + 2,
+                               start + WAVE_SIZE + 3,
+                               start + WAVE_SIZE + 4,
+                               start + WAVE_SIZE + 5,
+                               start + WAVE_SIZE + 6,
+                               start + WAVE_SIZE + 7,
+                               start + WAVE_SIZE + 8,
+                               start + WAVE_SIZE + 9,
+                               start + WAVE_SIZE + 10,
+                               start + WAVE_SIZE + 11,
+                               start + WAVE_SIZE + 12,
+                               start + WAVE_SIZE + 13,
+                               start + WAVE_SIZE + 14,
+                               start + WAVE_SIZE + 15};
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                return VecType{start,
+                               start + 1,
+                               start + 2,
+                               start + 3,
+                               start + 4,
+                               start + 5,
+                               start + 6,
+                               start + 7,
+                               start + 8,
+                               start + 9,
+                               start + 10,
+                               start + 11,
+                               start + 12,
+                               start + 13,
+                               start + 14,
+                               start + 15,
+                               start + WAVE_SIZE * 1,
+                               start + WAVE_SIZE * 1 + 1,
+                               start + WAVE_SIZE * 1 + 2,
+                               start + WAVE_SIZE * 1 + 3,
+                               start + WAVE_SIZE * 1 + 4,
+                               start + WAVE_SIZE * 1 + 5,
+                               start + WAVE_SIZE * 1 + 6,
+                               start + WAVE_SIZE * 1 + 7,
+                               start + WAVE_SIZE * 1 + 8,
+                               start + WAVE_SIZE * 1 + 9,
+                               start + WAVE_SIZE * 1 + 10,
+                               start + WAVE_SIZE * 1 + 11,
+                               start + WAVE_SIZE * 1 + 12,
+                               start + WAVE_SIZE * 1 + 13,
+                               start + WAVE_SIZE * 1 + 14,
+                               start + WAVE_SIZE * 1 + 15,
+                               start + WAVE_SIZE * 2,
+                               start + WAVE_SIZE * 2 + 1,
+                               start + WAVE_SIZE * 2 + 2,
+                               start + WAVE_SIZE * 2 + 3,
+                               start + WAVE_SIZE * 2 + 4,
+                               start + WAVE_SIZE * 2 + 5,
+                               start + WAVE_SIZE * 2 + 6,
+                               start + WAVE_SIZE * 2 + 7,
+                               start + WAVE_SIZE * 2 + 8,
+                               start + WAVE_SIZE * 2 + 9,
+                               start + WAVE_SIZE * 2 + 10,
+                               start + WAVE_SIZE * 2 + 11,
+                               start + WAVE_SIZE * 2 + 12,
+                               start + WAVE_SIZE * 2 + 13,
+                               start + WAVE_SIZE * 2 + 14,
+                               start + WAVE_SIZE * 2 + 15,
+                               start + WAVE_SIZE * 3,
+                               start + WAVE_SIZE * 3 + 1,
+                               start + WAVE_SIZE * 3 + 2,
+                               start + WAVE_SIZE * 3 + 3,
+                               start + WAVE_SIZE * 3 + 4,
+                               start + WAVE_SIZE * 3 + 5,
+                               start + WAVE_SIZE * 3 + 6,
+                               start + WAVE_SIZE * 3 + 7,
+                               start + WAVE_SIZE * 3 + 8,
+                               start + WAVE_SIZE * 3 + 9,
+                               start + WAVE_SIZE * 3 + 10,
+                               start + WAVE_SIZE * 3 + 11,
+                               start + WAVE_SIZE * 3 + 12,
+                               start + WAVE_SIZE * 3 + 13,
+                               start + WAVE_SIZE * 3 + 14,
+                               start + WAVE_SIZE * 3 + 15};
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                return VecType();
+            }
+        }
+    };
+
+    template <typename DataT>
+    struct AosVec<DataT, 16, 256>
+    {
+        static constexpr uint32_t VW        = 16;
+        static constexpr uint32_t BlockDim  = 256;
+        static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+        static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
+        using VecType                       = VecT<DataT, VecSize>;
+
+        ROCWMMA_DEVICE static inline auto genData()
+        {
+            auto const threadId   = (uint8_t)detail::threadId();
+            auto const waveOffset = (threadId * VW / WAVE_SIZE) * BlockDim;
+            auto const start      = threadId % (WAVE_SIZE / VW) * VW + waveOffset;
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                return VecType{start,
+                               start + 1,
+                               start + 2,
+                               start + 3,
+                               start + 4,
+                               start + 5,
+                               start + 6,
+                               start + 7,
+                               start + 8,
+                               start + 9,
+                               start + 10,
+                               start + 11,
+                               start + 12,
+                               start + 13,
+                               start + 14,
+                               start + 15,
+                               start + WAVE_SIZE * 1,
+                               start + WAVE_SIZE * 1 + 1,
+                               start + WAVE_SIZE * 1 + 2,
+                               start + WAVE_SIZE * 1 + 3,
+                               start + WAVE_SIZE * 1 + 4,
+                               start + WAVE_SIZE * 1 + 5,
+                               start + WAVE_SIZE * 1 + 6,
+                               start + WAVE_SIZE * 1 + 7,
+                               start + WAVE_SIZE * 1 + 8,
+                               start + WAVE_SIZE * 1 + 9,
+                               start + WAVE_SIZE * 1 + 10,
+                               start + WAVE_SIZE * 1 + 11,
+                               start + WAVE_SIZE * 1 + 12,
+                               start + WAVE_SIZE * 1 + 13,
+                               start + WAVE_SIZE * 1 + 14,
+                               start + WAVE_SIZE * 1 + 15,
+                               start + WAVE_SIZE * 2,
+                               start + WAVE_SIZE * 2 + 1,
+                               start + WAVE_SIZE * 2 + 2,
+                               start + WAVE_SIZE * 2 + 3,
+                               start + WAVE_SIZE * 2 + 4,
+                               start + WAVE_SIZE * 2 + 5,
+                               start + WAVE_SIZE * 2 + 6,
+                               start + WAVE_SIZE * 2 + 7,
+                               start + WAVE_SIZE * 2 + 8,
+                               start + WAVE_SIZE * 2 + 9,
+                               start + WAVE_SIZE * 2 + 10,
+                               start + WAVE_SIZE * 2 + 11,
+                               start + WAVE_SIZE * 2 + 12,
+                               start + WAVE_SIZE * 2 + 13,
+                               start + WAVE_SIZE * 2 + 14,
+                               start + WAVE_SIZE * 2 + 15,
+                               start + WAVE_SIZE * 3,
+                               start + WAVE_SIZE * 3 + 1,
+                               start + WAVE_SIZE * 3 + 2,
+                               start + WAVE_SIZE * 3 + 3,
+                               start + WAVE_SIZE * 3 + 4,
+                               start + WAVE_SIZE * 3 + 5,
+                               start + WAVE_SIZE * 3 + 6,
+                               start + WAVE_SIZE * 3 + 7,
+                               start + WAVE_SIZE * 3 + 8,
+                               start + WAVE_SIZE * 3 + 9,
+                               start + WAVE_SIZE * 3 + 10,
+                               start + WAVE_SIZE * 3 + 11,
+                               start + WAVE_SIZE * 3 + 12,
+                               start + WAVE_SIZE * 3 + 13,
+                               start + WAVE_SIZE * 3 + 14,
+                               start + WAVE_SIZE * 3 + 15};
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                return VecType{start,
+                               start + 1,
+                               start + 2,
+                               start + 3,
+                               start + 4,
+                               start + 5,
+                               start + 6,
+                               start + 7,
+                               start + 8,
+                               start + 9,
+                               start + 10,
+                               start + 11,
+                               start + 12,
+                               start + 13,
+                               start + 14,
+                               start + 15,
+                               start + WAVE_SIZE * 1,
+                               start + WAVE_SIZE * 1 + 1,
+                               start + WAVE_SIZE * 1 + 2,
+                               start + WAVE_SIZE * 1 + 3,
+                               start + WAVE_SIZE * 1 + 4,
+                               start + WAVE_SIZE * 1 + 5,
+                               start + WAVE_SIZE * 1 + 6,
+                               start + WAVE_SIZE * 1 + 7,
+                               start + WAVE_SIZE * 1 + 8,
+                               start + WAVE_SIZE * 1 + 9,
+                               start + WAVE_SIZE * 1 + 10,
+                               start + WAVE_SIZE * 1 + 11,
+                               start + WAVE_SIZE * 1 + 12,
+                               start + WAVE_SIZE * 1 + 13,
+                               start + WAVE_SIZE * 1 + 14,
+                               start + WAVE_SIZE * 1 + 15,
+                               start + WAVE_SIZE * 2,
+                               start + WAVE_SIZE * 2 + 1,
+                               start + WAVE_SIZE * 2 + 2,
+                               start + WAVE_SIZE * 2 + 3,
+                               start + WAVE_SIZE * 2 + 4,
+                               start + WAVE_SIZE * 2 + 5,
+                               start + WAVE_SIZE * 2 + 6,
+                               start + WAVE_SIZE * 2 + 7,
+                               start + WAVE_SIZE * 2 + 8,
+                               start + WAVE_SIZE * 2 + 9,
+                               start + WAVE_SIZE * 2 + 10,
+                               start + WAVE_SIZE * 2 + 11,
+                               start + WAVE_SIZE * 2 + 12,
+                               start + WAVE_SIZE * 2 + 13,
+                               start + WAVE_SIZE * 2 + 14,
+                               start + WAVE_SIZE * 2 + 15,
+                               start + WAVE_SIZE * 3,
+                               start + WAVE_SIZE * 3 + 1,
+                               start + WAVE_SIZE * 3 + 2,
+                               start + WAVE_SIZE * 3 + 3,
+                               start + WAVE_SIZE * 3 + 4,
+                               start + WAVE_SIZE * 3 + 5,
+                               start + WAVE_SIZE * 3 + 6,
+                               start + WAVE_SIZE * 3 + 7,
+                               start + WAVE_SIZE * 3 + 8,
+                               start + WAVE_SIZE * 3 + 9,
+                               start + WAVE_SIZE * 3 + 10,
+                               start + WAVE_SIZE * 3 + 11,
+                               start + WAVE_SIZE * 3 + 12,
+                               start + WAVE_SIZE * 3 + 13,
+                               start + WAVE_SIZE * 3 + 14,
+                               start + WAVE_SIZE * 3 + 15,
+                               start + WAVE_SIZE * 4,
+                               start + WAVE_SIZE * 4 + 1,
+                               start + WAVE_SIZE * 4 + 2,
+                               start + WAVE_SIZE * 4 + 3,
+                               start + WAVE_SIZE * 4 + 4,
+                               start + WAVE_SIZE * 4 + 5,
+                               start + WAVE_SIZE * 4 + 6,
+                               start + WAVE_SIZE * 4 + 7,
+                               start + WAVE_SIZE * 4 + 8,
+                               start + WAVE_SIZE * 4 + 9,
+                               start + WAVE_SIZE * 4 + 10,
+                               start + WAVE_SIZE * 4 + 11,
+                               start + WAVE_SIZE * 4 + 12,
+                               start + WAVE_SIZE * 4 + 13,
+                               start + WAVE_SIZE * 4 + 14,
+                               start + WAVE_SIZE * 4 + 15,
+                               start + WAVE_SIZE * 5,
+                               start + WAVE_SIZE * 5 + 1,
+                               start + WAVE_SIZE * 5 + 2,
+                               start + WAVE_SIZE * 5 + 3,
+                               start + WAVE_SIZE * 5 + 4,
+                               start + WAVE_SIZE * 5 + 5,
+                               start + WAVE_SIZE * 5 + 6,
+                               start + WAVE_SIZE * 5 + 7,
+                               start + WAVE_SIZE * 5 + 8,
+                               start + WAVE_SIZE * 5 + 9,
+                               start + WAVE_SIZE * 5 + 10,
+                               start + WAVE_SIZE * 5 + 11,
+                               start + WAVE_SIZE * 5 + 12,
+                               start + WAVE_SIZE * 5 + 13,
+                               start + WAVE_SIZE * 5 + 14,
+                               start + WAVE_SIZE * 5 + 15,
+                               start + WAVE_SIZE * 6,
+                               start + WAVE_SIZE * 6 + 1,
+                               start + WAVE_SIZE * 6 + 2,
+                               start + WAVE_SIZE * 6 + 3,
+                               start + WAVE_SIZE * 6 + 4,
+                               start + WAVE_SIZE * 6 + 5,
+                               start + WAVE_SIZE * 6 + 6,
+                               start + WAVE_SIZE * 6 + 7,
+                               start + WAVE_SIZE * 6 + 8,
+                               start + WAVE_SIZE * 6 + 9,
+                               start + WAVE_SIZE * 6 + 10,
+                               start + WAVE_SIZE * 6 + 11,
+                               start + WAVE_SIZE * 6 + 12,
+                               start + WAVE_SIZE * 6 + 13,
+                               start + WAVE_SIZE * 6 + 14,
+                               start + WAVE_SIZE * 6 + 15,
+                               start + WAVE_SIZE * 7,
+                               start + WAVE_SIZE * 7 + 1,
+                               start + WAVE_SIZE * 7 + 2,
+                               start + WAVE_SIZE * 7 + 3,
+                               start + WAVE_SIZE * 7 + 4,
+                               start + WAVE_SIZE * 7 + 5,
+                               start + WAVE_SIZE * 7 + 6,
+                               start + WAVE_SIZE * 7 + 7,
+                               start + WAVE_SIZE * 7 + 8,
+                               start + WAVE_SIZE * 7 + 9,
+                               start + WAVE_SIZE * 7 + 10,
+                               start + WAVE_SIZE * 7 + 11,
+                               start + WAVE_SIZE * 7 + 12,
+                               start + WAVE_SIZE * 7 + 13,
+                               start + WAVE_SIZE * 7 + 14,
+                               start + WAVE_SIZE * 7 + 15};
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                return VecType();
+            }
+        }
+    };
+
     template <typename DataT>
     struct AosVec<DataT, 8, 16>
     {
@@ -784,6 +1275,496 @@ namespace rocwmma
 
     // SoaVec
     template <typename DataT>
+    struct SoaVec<DataT, 16, 16>
+    {
+        static constexpr uint32_t VW       = 16;
+        static constexpr uint32_t BlockDim = 16;
+        using VecType                      = VecT<DataT, VW>;
+
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            auto const threadId   = (uint8_t)detail::threadId();
+            auto const waveOffset = threadId / BlockDim * VW * BlockDim;
+            auto const start      = (threadId % BlockDim) % BlockDim + waveOffset;
+
+            return VecType{start,
+                           BlockDim + start,
+                           BlockDim * 2 + start,
+                           BlockDim * 3 + start,
+                           BlockDim * 4 + start,
+                           BlockDim * 5 + start,
+                           BlockDim * 6 + start,
+                           BlockDim * 7 + start,
+                           BlockDim * 8 + start,
+                           BlockDim * 9 + start,
+                           BlockDim * 10 + start,
+                           BlockDim * 11 + start,
+                           BlockDim * 12 + start,
+                           BlockDim * 13 + start,
+                           BlockDim * 14 + start,
+                           BlockDim * 15 + start};
+        }
+    };
+
+    template <typename DataT>
+    struct SoaVec<DataT, 16, 32>
+    {
+        static constexpr uint32_t VW       = 16;
+        static constexpr uint32_t BlockDim = 32;
+        using VecType                      = VecT<DataT, VW>;
+
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            auto const threadId   = (uint8_t)detail::threadId();
+            auto const waveOffset = threadId / BlockDim * VW * BlockDim;
+            auto const start      = (threadId % BlockDim) % BlockDim + waveOffset;
+
+            return VecType{start,
+                           BlockDim + start,
+                           BlockDim * 2 + start,
+                           BlockDim * 3 + start,
+                           BlockDim * 4 + start,
+                           BlockDim * 5 + start,
+                           BlockDim * 6 + start,
+                           BlockDim * 7 + start,
+                           BlockDim * 8 + start,
+                           BlockDim * 9 + start,
+                           BlockDim * 10 + start,
+                           BlockDim * 11 + start,
+                           BlockDim * 12 + start,
+                           BlockDim * 13 + start,
+                           BlockDim * 14 + start,
+                           BlockDim * 15 + start};
+        }
+    };
+
+    template <typename DataT>
+    struct SoaVec<DataT, 16, 64>
+    {
+        static constexpr uint32_t VW        = 16;
+        static constexpr uint32_t BlockDim  = 64;
+        static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+        static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
+        using VecType                       = VecT<DataT, VecSize>;
+
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            auto const threadId   = (uint8_t)detail::threadId();
+            auto const waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+            auto const start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                return VecType{start,
+                               BlockDim + start,
+                               BlockDim * 2 + start,
+                               BlockDim * 3 + start,
+                               BlockDim * 4 + start,
+                               BlockDim * 5 + start,
+                               BlockDim * 6 + start,
+                               BlockDim * 7 + start,
+                               BlockDim * 8 + start,
+                               BlockDim * 9 + start,
+                               BlockDim * 10 + start,
+                               BlockDim * 11 + start,
+                               BlockDim * 12 + start,
+                               BlockDim * 13 + start,
+                               BlockDim * 14 + start,
+                               BlockDim * 15 + start};
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                return VecType{start,
+                               BlockDim + start,
+                               BlockDim * 2 + start,
+                               BlockDim * 3 + start,
+                               BlockDim * 4 + start,
+                               BlockDim * 5 + start,
+                               BlockDim * 6 + start,
+                               BlockDim * 7 + start,
+                               BlockDim * 8 + start,
+                               BlockDim * 9 + start,
+                               BlockDim * 10 + start,
+                               BlockDim * 11 + start,
+                               BlockDim * 12 + start,
+                               BlockDim * 13 + start,
+                               BlockDim * 14 + start,
+                               BlockDim * 15 + start,
+                               WAVE_SIZE + start,
+                               WAVE_SIZE + BlockDim + start,
+                               WAVE_SIZE + BlockDim * 2 + start,
+                               WAVE_SIZE + BlockDim * 3 + start,
+                               WAVE_SIZE + BlockDim * 4 + start,
+                               WAVE_SIZE + BlockDim * 5 + start,
+                               WAVE_SIZE + BlockDim * 6 + start,
+                               WAVE_SIZE + BlockDim * 7 + start,
+                               WAVE_SIZE + BlockDim * 8 + start,
+                               WAVE_SIZE + BlockDim * 9 + start,
+                               WAVE_SIZE + BlockDim * 10 + start,
+                               WAVE_SIZE + BlockDim * 11 + start,
+                               WAVE_SIZE + BlockDim * 12 + start,
+                               WAVE_SIZE + BlockDim * 13 + start,
+                               WAVE_SIZE + BlockDim * 14 + start,
+                               WAVE_SIZE + BlockDim * 15 + start};
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                return VecType();
+            }
+        }
+    };
+
+    template <typename DataT>
+    struct SoaVec<DataT, 16, 128>
+    {
+        static constexpr uint32_t VW        = 16;
+        static constexpr uint32_t BlockDim  = 128;
+        static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+        static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
+        using VecType                       = VecT<DataT, VecSize>;
+
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            auto const threadId   = (uint8_t)detail::threadId();
+            auto const waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+            auto const start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                return VecType{start,
+                               BlockDim + start,
+                               BlockDim * 2 + start,
+                               BlockDim * 3 + start,
+                               BlockDim * 4 + start,
+                               BlockDim * 5 + start,
+                               BlockDim * 6 + start,
+                               BlockDim * 7 + start,
+                               BlockDim * 8 + start,
+                               BlockDim * 9 + start,
+                               BlockDim * 10 + start,
+                               BlockDim * 11 + start,
+                               BlockDim * 12 + start,
+                               BlockDim * 13 + start,
+                               BlockDim * 14 + start,
+                               BlockDim * 15 + start,
+                               WAVE_SIZE + start,
+                               WAVE_SIZE + BlockDim + start,
+                               WAVE_SIZE + BlockDim * 2 + start,
+                               WAVE_SIZE + BlockDim * 3 + start,
+                               WAVE_SIZE + BlockDim * 4 + start,
+                               WAVE_SIZE + BlockDim * 5 + start,
+                               WAVE_SIZE + BlockDim * 6 + start,
+                               WAVE_SIZE + BlockDim * 7 + start,
+                               WAVE_SIZE + BlockDim * 8 + start,
+                               WAVE_SIZE + BlockDim * 9 + start,
+                               WAVE_SIZE + BlockDim * 10 + start,
+                               WAVE_SIZE + BlockDim * 11 + start,
+                               WAVE_SIZE + BlockDim * 12 + start,
+                               WAVE_SIZE + BlockDim * 13 + start,
+                               WAVE_SIZE + BlockDim * 14 + start,
+                               WAVE_SIZE + BlockDim * 15 + start};
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                return VecType{start,
+                               BlockDim + start,
+                               BlockDim * 2 + start,
+                               BlockDim * 3 + start,
+                               BlockDim * 4 + start,
+                               BlockDim * 5 + start,
+                               BlockDim * 6 + start,
+                               BlockDim * 7 + start,
+                               BlockDim * 8 + start,
+                               BlockDim * 9 + start,
+                               BlockDim * 10 + start,
+                               BlockDim * 11 + start,
+                               BlockDim * 12 + start,
+                               BlockDim * 13 + start,
+                               BlockDim * 14 + start,
+                               BlockDim * 15 + start,
+                               WAVE_SIZE * 1 + start,
+                               WAVE_SIZE * 1 + BlockDim + start,
+                               WAVE_SIZE * 1 + BlockDim * 2 + start,
+                               WAVE_SIZE * 1 + BlockDim * 3 + start,
+                               WAVE_SIZE * 1 + BlockDim * 4 + start,
+                               WAVE_SIZE * 1 + BlockDim * 5 + start,
+                               WAVE_SIZE * 1 + BlockDim * 6 + start,
+                               WAVE_SIZE * 1 + BlockDim * 7 + start,
+                               WAVE_SIZE * 1 + BlockDim * 8 + start,
+                               WAVE_SIZE * 1 + BlockDim * 9 + start,
+                               WAVE_SIZE * 1 + BlockDim * 10 + start,
+                               WAVE_SIZE * 1 + BlockDim * 11 + start,
+                               WAVE_SIZE * 1 + BlockDim * 12 + start,
+                               WAVE_SIZE * 1 + BlockDim * 13 + start,
+                               WAVE_SIZE * 1 + BlockDim * 14 + start,
+                               WAVE_SIZE * 1 + BlockDim * 15 + start,
+                               WAVE_SIZE * 2 + start,
+                               WAVE_SIZE * 2 + BlockDim + start,
+                               WAVE_SIZE * 2 + BlockDim * 2 + start,
+                               WAVE_SIZE * 2 + BlockDim * 3 + start,
+                               WAVE_SIZE * 2 + BlockDim * 4 + start,
+                               WAVE_SIZE * 2 + BlockDim * 5 + start,
+                               WAVE_SIZE * 2 + BlockDim * 6 + start,
+                               WAVE_SIZE * 2 + BlockDim * 7 + start,
+                               WAVE_SIZE * 2 + BlockDim * 8 + start,
+                               WAVE_SIZE * 2 + BlockDim * 9 + start,
+                               WAVE_SIZE * 2 + BlockDim * 10 + start,
+                               WAVE_SIZE * 2 + BlockDim * 11 + start,
+                               WAVE_SIZE * 2 + BlockDim * 12 + start,
+                               WAVE_SIZE * 2 + BlockDim * 13 + start,
+                               WAVE_SIZE * 2 + BlockDim * 14 + start,
+                               WAVE_SIZE * 2 + BlockDim * 15 + start,
+                               WAVE_SIZE * 3 + start,
+                               WAVE_SIZE * 3 + BlockDim + start,
+                               WAVE_SIZE * 3 + BlockDim * 2 + start,
+                               WAVE_SIZE * 3 + BlockDim * 3 + start,
+                               WAVE_SIZE * 3 + BlockDim * 4 + start,
+                               WAVE_SIZE * 3 + BlockDim * 5 + start,
+                               WAVE_SIZE * 3 + BlockDim * 6 + start,
+                               WAVE_SIZE * 3 + BlockDim * 7 + start,
+                               WAVE_SIZE * 3 + BlockDim * 8 + start,
+                               WAVE_SIZE * 3 + BlockDim * 9 + start,
+                               WAVE_SIZE * 3 + BlockDim * 10 + start,
+                               WAVE_SIZE * 3 + BlockDim * 11 + start,
+                               WAVE_SIZE * 3 + BlockDim * 12 + start,
+                               WAVE_SIZE * 3 + BlockDim * 13 + start,
+                               WAVE_SIZE * 3 + BlockDim * 14 + start,
+                               WAVE_SIZE * 3 + BlockDim * 15 + start};
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                return VecType();
+            }
+        }
+    };
+
+    template <typename DataT>
+    struct SoaVec<DataT, 16, 256>
+    {
+        static constexpr uint32_t VW        = 16;
+        static constexpr uint32_t BlockDim  = 256;
+        static constexpr uint32_t WAVE_SIZE = Constants::AMDGCN_WAVE_SIZE;
+        static constexpr uint32_t VecSize   = VW * BlockDim / WAVE_SIZE;
+        using VecType                       = VecT<DataT, VecSize>;
+
+        ROCWMMA_DEVICE constexpr static inline auto genData()
+        {
+            auto const threadId   = (uint8_t)detail::threadId();
+            auto const waveOffset = threadId / WAVE_SIZE * VW * BlockDim;
+            auto const start      = (threadId % WAVE_SIZE) % BlockDim + waveOffset;
+
+            if constexpr(ROCWMMA_WAVE64_MODE)
+            {
+                return VecType{start,
+                               BlockDim + start,
+                               BlockDim * 2 + start,
+                               BlockDim * 3 + start,
+                               BlockDim * 4 + start,
+                               BlockDim * 5 + start,
+                               BlockDim * 6 + start,
+                               BlockDim * 7 + start,
+                               BlockDim * 8 + start,
+                               BlockDim * 9 + start,
+                               BlockDim * 10 + start,
+                               BlockDim * 11 + start,
+                               BlockDim * 12 + start,
+                               BlockDim * 13 + start,
+                               BlockDim * 14 + start,
+                               BlockDim * 15 + start,
+                               WAVE_SIZE * 1 + start,
+                               WAVE_SIZE * 1 + BlockDim + start,
+                               WAVE_SIZE * 1 + BlockDim * 2 + start,
+                               WAVE_SIZE * 1 + BlockDim * 3 + start,
+                               WAVE_SIZE * 1 + BlockDim * 4 + start,
+                               WAVE_SIZE * 1 + BlockDim * 5 + start,
+                               WAVE_SIZE * 1 + BlockDim * 6 + start,
+                               WAVE_SIZE * 1 + BlockDim * 7 + start,
+                               WAVE_SIZE * 1 + BlockDim * 8 + start,
+                               WAVE_SIZE * 1 + BlockDim * 9 + start,
+                               WAVE_SIZE * 1 + BlockDim * 10 + start,
+                               WAVE_SIZE * 1 + BlockDim * 11 + start,
+                               WAVE_SIZE * 1 + BlockDim * 12 + start,
+                               WAVE_SIZE * 1 + BlockDim * 13 + start,
+                               WAVE_SIZE * 1 + BlockDim * 14 + start,
+                               WAVE_SIZE * 1 + BlockDim * 15 + start,
+                               WAVE_SIZE * 2 + start,
+                               WAVE_SIZE * 2 + BlockDim + start,
+                               WAVE_SIZE * 2 + BlockDim * 2 + start,
+                               WAVE_SIZE * 2 + BlockDim * 3 + start,
+                               WAVE_SIZE * 2 + BlockDim * 4 + start,
+                               WAVE_SIZE * 2 + BlockDim * 5 + start,
+                               WAVE_SIZE * 2 + BlockDim * 6 + start,
+                               WAVE_SIZE * 2 + BlockDim * 7 + start,
+                               WAVE_SIZE * 2 + BlockDim * 8 + start,
+                               WAVE_SIZE * 2 + BlockDim * 9 + start,
+                               WAVE_SIZE * 2 + BlockDim * 10 + start,
+                               WAVE_SIZE * 2 + BlockDim * 11 + start,
+                               WAVE_SIZE * 2 + BlockDim * 12 + start,
+                               WAVE_SIZE * 2 + BlockDim * 13 + start,
+                               WAVE_SIZE * 2 + BlockDim * 14 + start,
+                               WAVE_SIZE * 2 + BlockDim * 15 + start,
+                               WAVE_SIZE * 3 + start,
+                               WAVE_SIZE * 3 + BlockDim + start,
+                               WAVE_SIZE * 3 + BlockDim * 2 + start,
+                               WAVE_SIZE * 3 + BlockDim * 3 + start,
+                               WAVE_SIZE * 3 + BlockDim * 4 + start,
+                               WAVE_SIZE * 3 + BlockDim * 5 + start,
+                               WAVE_SIZE * 3 + BlockDim * 6 + start,
+                               WAVE_SIZE * 3 + BlockDim * 7 + start,
+                               WAVE_SIZE * 3 + BlockDim * 8 + start,
+                               WAVE_SIZE * 3 + BlockDim * 9 + start,
+                               WAVE_SIZE * 3 + BlockDim * 10 + start,
+                               WAVE_SIZE * 3 + BlockDim * 11 + start,
+                               WAVE_SIZE * 3 + BlockDim * 12 + start,
+                               WAVE_SIZE * 3 + BlockDim * 13 + start,
+                               WAVE_SIZE * 3 + BlockDim * 14 + start,
+                               WAVE_SIZE * 3 + BlockDim * 15 + start};
+            }
+            else if constexpr(ROCWMMA_WAVE32_MODE)
+            {
+                return VecType{start,
+                               BlockDim + start,
+                               BlockDim * 2 + start,
+                               BlockDim * 3 + start,
+                               BlockDim * 4 + start,
+                               BlockDim * 5 + start,
+                               BlockDim * 6 + start,
+                               BlockDim * 7 + start,
+                               BlockDim * 8 + start,
+                               BlockDim * 9 + start,
+                               BlockDim * 10 + start,
+                               BlockDim * 11 + start,
+                               BlockDim * 12 + start,
+                               BlockDim * 13 + start,
+                               BlockDim * 14 + start,
+                               BlockDim * 15 + start,
+                               WAVE_SIZE * 1 + start,
+                               WAVE_SIZE * 1 + BlockDim + start,
+                               WAVE_SIZE * 1 + BlockDim * 2 + start,
+                               WAVE_SIZE * 1 + BlockDim * 3 + start,
+                               WAVE_SIZE * 1 + BlockDim * 4 + start,
+                               WAVE_SIZE * 1 + BlockDim * 5 + start,
+                               WAVE_SIZE * 1 + BlockDim * 6 + start,
+                               WAVE_SIZE * 1 + BlockDim * 7 + start,
+                               WAVE_SIZE * 1 + BlockDim * 8 + start,
+                               WAVE_SIZE * 1 + BlockDim * 9 + start,
+                               WAVE_SIZE * 1 + BlockDim * 10 + start,
+                               WAVE_SIZE * 1 + BlockDim * 11 + start,
+                               WAVE_SIZE * 1 + BlockDim * 12 + start,
+                               WAVE_SIZE * 1 + BlockDim * 13 + start,
+                               WAVE_SIZE * 1 + BlockDim * 14 + start,
+                               WAVE_SIZE * 1 + BlockDim * 15 + start,
+                               WAVE_SIZE * 2 + start,
+                               WAVE_SIZE * 2 + BlockDim + start,
+                               WAVE_SIZE * 2 + BlockDim * 2 + start,
+                               WAVE_SIZE * 2 + BlockDim * 3 + start,
+                               WAVE_SIZE * 2 + BlockDim * 4 + start,
+                               WAVE_SIZE * 2 + BlockDim * 5 + start,
+                               WAVE_SIZE * 2 + BlockDim * 6 + start,
+                               WAVE_SIZE * 2 + BlockDim * 7 + start,
+                               WAVE_SIZE * 2 + BlockDim * 8 + start,
+                               WAVE_SIZE * 2 + BlockDim * 9 + start,
+                               WAVE_SIZE * 2 + BlockDim * 10 + start,
+                               WAVE_SIZE * 2 + BlockDim * 11 + start,
+                               WAVE_SIZE * 2 + BlockDim * 12 + start,
+                               WAVE_SIZE * 2 + BlockDim * 13 + start,
+                               WAVE_SIZE * 2 + BlockDim * 14 + start,
+                               WAVE_SIZE * 2 + BlockDim * 15 + start,
+                               WAVE_SIZE * 3 + start,
+                               WAVE_SIZE * 3 + BlockDim + start,
+                               WAVE_SIZE * 3 + BlockDim * 2 + start,
+                               WAVE_SIZE * 3 + BlockDim * 3 + start,
+                               WAVE_SIZE * 3 + BlockDim * 4 + start,
+                               WAVE_SIZE * 3 + BlockDim * 5 + start,
+                               WAVE_SIZE * 3 + BlockDim * 6 + start,
+                               WAVE_SIZE * 3 + BlockDim * 7 + start,
+                               WAVE_SIZE * 3 + BlockDim * 8 + start,
+                               WAVE_SIZE * 3 + BlockDim * 9 + start,
+                               WAVE_SIZE * 3 + BlockDim * 10 + start,
+                               WAVE_SIZE * 3 + BlockDim * 11 + start,
+                               WAVE_SIZE * 3 + BlockDim * 12 + start,
+                               WAVE_SIZE * 3 + BlockDim * 13 + start,
+                               WAVE_SIZE * 3 + BlockDim * 14 + start,
+                               WAVE_SIZE * 3 + BlockDim * 15 + start,
+                               WAVE_SIZE * 4 + start,
+                               WAVE_SIZE * 4 + BlockDim + start,
+                               WAVE_SIZE * 4 + BlockDim * 2 + start,
+                               WAVE_SIZE * 4 + BlockDim * 3 + start,
+                               WAVE_SIZE * 4 + BlockDim * 4 + start,
+                               WAVE_SIZE * 4 + BlockDim * 5 + start,
+                               WAVE_SIZE * 4 + BlockDim * 6 + start,
+                               WAVE_SIZE * 4 + BlockDim * 7 + start,
+                               WAVE_SIZE * 4 + BlockDim * 8 + start,
+                               WAVE_SIZE * 4 + BlockDim * 9 + start,
+                               WAVE_SIZE * 4 + BlockDim * 10 + start,
+                               WAVE_SIZE * 4 + BlockDim * 11 + start,
+                               WAVE_SIZE * 4 + BlockDim * 12 + start,
+                               WAVE_SIZE * 4 + BlockDim * 13 + start,
+                               WAVE_SIZE * 4 + BlockDim * 14 + start,
+                               WAVE_SIZE * 4 + BlockDim * 15 + start,
+                               WAVE_SIZE * 5 + start,
+                               WAVE_SIZE * 5 + BlockDim + start,
+                               WAVE_SIZE * 5 + BlockDim * 2 + start,
+                               WAVE_SIZE * 5 + BlockDim * 3 + start,
+                               WAVE_SIZE * 5 + BlockDim * 4 + start,
+                               WAVE_SIZE * 5 + BlockDim * 5 + start,
+                               WAVE_SIZE * 5 + BlockDim * 6 + start,
+                               WAVE_SIZE * 5 + BlockDim * 7 + start,
+                               WAVE_SIZE * 5 + BlockDim * 8 + start,
+                               WAVE_SIZE * 5 + BlockDim * 9 + start,
+                               WAVE_SIZE * 5 + BlockDim * 10 + start,
+                               WAVE_SIZE * 5 + BlockDim * 11 + start,
+                               WAVE_SIZE * 5 + BlockDim * 12 + start,
+                               WAVE_SIZE * 5 + BlockDim * 13 + start,
+                               WAVE_SIZE * 5 + BlockDim * 14 + start,
+                               WAVE_SIZE * 5 + BlockDim * 15 + start,
+                               WAVE_SIZE * 6 + start,
+                               WAVE_SIZE * 6 + BlockDim + start,
+                               WAVE_SIZE * 6 + BlockDim * 2 + start,
+                               WAVE_SIZE * 6 + BlockDim * 3 + start,
+                               WAVE_SIZE * 6 + BlockDim * 4 + start,
+                               WAVE_SIZE * 6 + BlockDim * 5 + start,
+                               WAVE_SIZE * 6 + BlockDim * 6 + start,
+                               WAVE_SIZE * 6 + BlockDim * 7 + start,
+                               WAVE_SIZE * 6 + BlockDim * 8 + start,
+                               WAVE_SIZE * 6 + BlockDim * 9 + start,
+                               WAVE_SIZE * 6 + BlockDim * 10 + start,
+                               WAVE_SIZE * 6 + BlockDim * 11 + start,
+                               WAVE_SIZE * 6 + BlockDim * 12 + start,
+                               WAVE_SIZE * 6 + BlockDim * 13 + start,
+                               WAVE_SIZE * 6 + BlockDim * 14 + start,
+                               WAVE_SIZE * 6 + BlockDim * 15 + start,
+                               WAVE_SIZE * 7 + start,
+                               WAVE_SIZE * 7 + BlockDim + start,
+                               WAVE_SIZE * 7 + BlockDim * 2 + start,
+                               WAVE_SIZE * 7 + BlockDim * 3 + start,
+                               WAVE_SIZE * 7 + BlockDim * 4 + start,
+                               WAVE_SIZE * 7 + BlockDim * 5 + start,
+                               WAVE_SIZE * 7 + BlockDim * 6 + start,
+                               WAVE_SIZE * 7 + BlockDim * 7 + start,
+                               WAVE_SIZE * 7 + BlockDim * 8 + start,
+                               WAVE_SIZE * 7 + BlockDim * 9 + start,
+                               WAVE_SIZE * 7 + BlockDim * 10 + start,
+                               WAVE_SIZE * 7 + BlockDim * 11 + start,
+                               WAVE_SIZE * 7 + BlockDim * 12 + start,
+                               WAVE_SIZE * 7 + BlockDim * 13 + start,
+                               WAVE_SIZE * 7 + BlockDim * 14 + start,
+                               WAVE_SIZE * 7 + BlockDim * 15 + start};
+            }
+            else
+            {
+                // This host code should not be called since it is marked as ROCWMMA_DEVICE
+                // This code snippet exists since hipcc complains about the mismatched function
+                return VecType();
+            }
+        }
+    };
+
+    template <typename DataT>
     struct SoaVec<DataT, 8, 16>
     {
         static constexpr uint32_t VW       = 8;
@@ -940,14 +1921,14 @@ namespace rocwmma
                     BlockDim * 5 + start,
                     BlockDim * 6 + start,
                     BlockDim * 7 + start,
-                    WAVE_SIZE + start,
-                    WAVE_SIZE + BlockDim + start,
-                    WAVE_SIZE + BlockDim * 2 + start,
-                    WAVE_SIZE + BlockDim * 3 + start,
-                    WAVE_SIZE + BlockDim * 4 + start,
-                    WAVE_SIZE + BlockDim * 5 + start,
-                    WAVE_SIZE + BlockDim * 6 + start,
-                    WAVE_SIZE + BlockDim * 7 + start,
+                    WAVE_SIZE * 1 + start,
+                    WAVE_SIZE * 1 + BlockDim + start,
+                    WAVE_SIZE * 1 + BlockDim * 2 + start,
+                    WAVE_SIZE * 1 + BlockDim * 3 + start,
+                    WAVE_SIZE * 1 + BlockDim * 4 + start,
+                    WAVE_SIZE * 1 + BlockDim * 5 + start,
+                    WAVE_SIZE * 1 + BlockDim * 6 + start,
+                    WAVE_SIZE * 1 + BlockDim * 7 + start,
                     WAVE_SIZE * 2 + start,
                     WAVE_SIZE * 2 + BlockDim + start,
                     WAVE_SIZE * 2 + BlockDim * 2 + start,
