@@ -32,7 +32,6 @@
 #include "vector.hpp"
 // clang-format on
 
-using std::decay_t;
 #include "vector_util.hpp"
 
 namespace rocwmma
