@@ -226,7 +226,9 @@ namespace rocwmma
             using CoopApiSelector
                 = detail::CoopApiSelector<CoopSchedulerA, CoopSchedulerB, splitCountA, splitCountB>;
             CoopApiSelector::localWriteCoopA(
-                ldsAddr, reinterpret_cast<LWFragA const&>(grFragA), ldlds);
+                ldsAddr,
+                LdsMapping::template formatLWFragA<CoopSchedulerA::waveCount()>(grFragA),
+                ldlds);
         }
 
         template <GemmDriverT>
@@ -249,7 +251,9 @@ namespace rocwmma
             using CoopApiSelector
                 = detail::CoopApiSelector<CoopSchedulerA, CoopSchedulerB, splitCountA, splitCountB>;
             CoopApiSelector::localWriteCoopB(
-                ldsAddr, reinterpret_cast<LWFragB const&>(grFragB), ldlds);
+                ldsAddr,
+                LdsMapping::template formatLWFragB<CoopSchedulerB::waveCount()>(grFragB),
+                ldlds);
         }
 
         template <GemmDriverT>
