@@ -44,7 +44,7 @@ namespace rocwmma
 /// IMPORTANT: __gfx908__ and similar macros are exclusively defined during the device
 ///            compiler pass, and all other macros rely on their definition.
 ///
-///            Device compiler pass: https://docs.amd.com/projects/HIP/en/latest/user_guide/hip_porting_guide.html#identifying-current-compilation-pass-host-or-device
+///            Device compiler pass: https://rocm.docs.amd.com/projects/HIP/en/latest/user_guide/hip_porting_guide.html#identifying-current-compilation-pass-host-or-device
 #if defined(__gfx908__)
 #define ROCWMMA_ARCH_GFX908 __gfx908__
 #elif defined(__gfx90a__)
