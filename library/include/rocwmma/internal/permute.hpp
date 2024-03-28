@@ -52,13 +52,14 @@ namespace rocwmma
             template <typename DataT>
             ROCWMMA_DEVICE static inline auto exec(DataT const& src)
             {
+                // Ensure that we can vectorize to B32
+                static_assert(sizeof(DataT) % sizeof(uint32_t) == 0,
+                              "DataT size must be a multiple of B32");
+
                 // Vectorize to B32.
                 // This way we can support B64+ types
                 using B32VecT = VecT<uint32_t, sizeof(DataT) / sizeof(uint32_t)>;
 
-                // Ensure that we can vectorize to B32
-                static_assert(sizeof(DataT) % sizeof(uint32_t) == 0,
-                              "DataT size must be a multiple of B32");
                 static_assert(sizeof(B32VecT) == sizeof(DataT), "Unable to vectorize DataT");
 
                 // Forward to vectorized function
@@ -73,6 +74,11 @@ namespace rocwmma
             {
                 // Reinterpret vector as B32 so we can support B64+ elements.
                 constexpr uint32_t B32VecSize = sizeof(DataT) / sizeof(uint32_t) * VecSize;
+
+                // Ensure that DataT is a multiple of B32
+                static_assert(B32VecSize >= 1,
+                              "DataT must be a multiple of B32");
+
                 using B32VecT                 = VecT<uint32_t, B32VecSize>;
                 using InputVecT               = VecT<DataT, VecSize>;
 

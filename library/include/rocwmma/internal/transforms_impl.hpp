@@ -553,23 +553,36 @@ namespace rocwmma
                     // Step 2 : Unpack groups of 8
                     result = unpackLoHi8(result);
 
-                    // Step 3 : Unpack groups of 16 (half-rotate offset)
-                    // In order to save some operations, we can
-                    // rotate the odds components only and make up the
-                    // offset later in gather.
-                    auto evens = PackUtil::paddedPack(extractEven(result));
-                    auto odds  = PackUtil::paddedPack(extractOdd(result));
+                    if constexpr (PackUtil::Traits::PackRatio >= VW)
+                    {
+                        // Step 3 : UnpackLoHi16
+                        // Small types more efficient to do full rotation.
+                        result = unpackLoHi16(result);
 
-                    auto rot = Swizzle::RotateR32<16>::exec(odds);
-                    auto lo  = Blend::Zip16::exec(evens, rot);
-                    auto hi  = Blend::Zip16::exec(rot, evens);
+                        // Step 4 : Gather
+                        auto packed_data = Permute::Gather32<VW, 0>::exec(PackUtil::paddedPack(result));
 
-                    // Step 4 : Gather (half-rotate offset)
-                    // Note the offset of 16 in hi
-                    lo = Permute::Gather32<VW, 0>::exec(lo);
-                    hi = Permute::Gather32<VW, 16>::exec(hi);
+                        return PackUtil::template paddedUnpack<VecSize>(packed_data);
+                    }
+                    else
+                    {
+                        // Step 3 : Unpack groups of 16 (half-rotate offset)
+                        // Larger types more efficient to rotate half block and
+                        // make up the offset in Gather
+                        auto evens = PackUtil::paddedPack(extractEven(result));
+                        auto odds  = PackUtil::paddedPack(extractOdd(result));
 
-                    return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
+                        auto rot = Swizzle::RotateR32<16>::exec(odds);
+                        auto lo  = Blend::Zip16::exec(evens, rot);
+                        auto hi  = Blend::Zip16::exec(rot, evens);
+
+                        // Step 4 : Gather (half-rotate offset)
+                        // Note the offset of 16 in hi
+                        lo = Permute::Gather32<VW, 0>::exec(lo);
+                        hi = Permute::Gather32<VW, 16>::exec(hi);
+
+                        return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
+                    }
                 }
             };
 
@@ -592,24 +605,38 @@ namespace rocwmma
                     // Step 2 : Unpack groups of 16
                     result = unpackLoHi16(result);
 
-                    // Step 3 : Unpack groups of 32 (half-rotate offset)
-                    // In order to save some operations, we can
-                    // rotate the odds components only and make up the
-                    // offset later in gather.
-                    auto lo = PackUtil::paddedPack(extractEven(result));
-                    auto hi = PackUtil::paddedPack(extractOdd(result));
+                    if constexpr (PackUtil::Traits::PackRatio >= VW)
+                    {
+                        // Step 2 : UnpackLoHi32
+                        // Small types more efficient to do full rotation.
+                        result = unpackLoHi32(result);
 
-                    // TODO: label as rotateR64 for consistency?
-                    auto rot_hi = Permute::RotateWaveR<32>::exec(hi);
-                    hi          = Blend::Zip32::exec(rot_hi, lo);
-                    lo          = Blend::Zip32::exec(lo, rot_hi);
+                        // Step 3 : Gather
+                        auto packed_data = Permute::GatherWave<VW, 0>::exec(PackUtil::paddedPack(result));
 
-                    // Step 4 : Gather (half-rotate offset)
-                    // Note the offset of 32 in hi
-                    lo = Permute::GatherWave<VW, 0>::exec(lo);
-                    hi = Permute::GatherWave<VW, 32>::exec(hi);
+                        return PackUtil::template paddedUnpack<VecSize>(packed_data);
+                    }
+                    else
+                    {
+                        // Step 3 : Unpack groups of 32 (half-rotate offset)
+                        // In order to save some operations, we can
+                        // rotate the odds components only and make up the
+                        // offset later in gather.
+                        auto lo = PackUtil::paddedPack(extractEven(result));
+                        auto hi = PackUtil::paddedPack(extractOdd(result));
 
-                    return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
+                        // TODO: label as rotateR64 for consistency?
+                        auto rot_hi = Permute::RotateWaveR<32>::exec(hi);
+                        hi          = Blend::Zip32::exec(rot_hi, lo);
+                        lo          = Blend::Zip32::exec(lo, rot_hi);
+
+                        // Step 4 : Gather (half-rotate offset)
+                        // Note the offset of 32 in hi
+                        lo = Permute::GatherWave<VW, 0>::exec(lo);
+                        hi = Permute::GatherWave<VW, 32>::exec(hi);
+
+                        return PackUtil::template paddedUnpack<VecSize>(concat(lo, hi));
+                    }
                 }
             };
 
@@ -834,24 +861,38 @@ namespace rocwmma
                     // Step 1 : UnpackLoHi8
                     auto unpacked_data = unpackLoHi8(v);
 
-                    // Step 2 : UnpackLoHi16 (half-rotate offset)
-                    auto lo       = PackUtil::paddedPack(extractEven(unpacked_data));
-                    auto hi       = PackUtil::paddedPack(extractOdd(unpacked_data));
-                    auto rot_hi   = Swizzle::RotateR32<16>::exec(hi);
-                    hi            = Blend::Zip16::exec(rot_hi, lo);
-                    lo            = Blend::Zip16::exec(lo, rot_hi);
-                    unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(lo),
-                                           PackUtil::template paddedUnpack<VW / 2>(hi));
+                    if constexpr (PackUtil::Traits::PackRatio >= VW)
+                    {
+                        // Step 2 : UnpackLoHi16
+                        // Small types more efficient to do full rotation.
+                        unpacked_data = unpackLoHi16(unpacked_data);
 
-                    // Step 3 : Gather (half-rotate offset)
-                    hi = Permute::Gather32<4, 16>::exec(
-                        PackUtil::paddedPack(extractHi(unpacked_data)));
-                    lo = Permute::Gather32<4, 0>::exec(
-                        PackUtil::paddedPack(extractLo(unpacked_data)));
-                    unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(lo),
-                                           PackUtil::template paddedUnpack<VW / 2>(hi));
+                        // Step 3 : Gather
+                        auto packed_data = Permute::Gather32<4, 0>::exec(PackUtil::paddedPack(unpacked_data));
 
-                    return unpacked_data;
+                        return PackUtil::template paddedUnpack<VW>(packed_data);
+                    }
+                    else
+                    {
+                        // Step 2 : UnpackLoHi16 (half-rotate offset)
+                        // Larger types more efficient to rotate half block and
+                        // make up the offset in Gather
+                        auto lo       = PackUtil::paddedPack(extractEven(unpacked_data));
+                        auto hi       = PackUtil::paddedPack(extractOdd(unpacked_data));
+                        auto rot_hi   = Swizzle::RotateR32<16>::exec(hi);
+                        hi            = Blend::Zip16::exec(rot_hi, lo);
+                        lo            = Blend::Zip16::exec(lo, rot_hi);
+                        unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(lo),
+                                            PackUtil::template paddedUnpack<VW / 2>(hi));
+
+                        // Step 3 : Gather (half-rotate offset)
+                        hi = Permute::Gather32<4, 16>::exec(PackUtil::paddedPack(extractHi(unpacked_data)));
+                        lo = Permute::Gather32<4, 0>::exec(PackUtil::paddedPack(extractLo(unpacked_data)));
+                        unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(lo),
+                                            PackUtil::template paddedUnpack<VW / 2>(hi));
+
+                        return unpacked_data;
+                    }
                 }
             };
 
@@ -871,21 +912,37 @@ namespace rocwmma
                     // Step 1 : UnpackLohi16
                     auto unpacked_data = unpackLoHi16(v);
 
-                    // Step 2 : UnpackLohi32 (half-rotate offset)
-                    auto lo = PackUtil::paddedPack(extractEven(unpacked_data));
-                    auto hi = PackUtil::paddedPack(extractOdd(unpacked_data));
+                    if constexpr(PackUtil::Traits::PackRatio >= VW)
+                    {
+                        // Small types more efficient to do full rotation.
+                        // Step 2 : UnpackLoHi32
+                        unpacked_data = unpackLoHi32(unpacked_data);
 
-                    hi = Permute::RotateWaveR<32>::exec(hi);
+                        // Step 3 : Gather
+                        auto packed_data = Permute::GatherWave<4, 0>::exec(PackUtil::paddedPack(unpacked_data));
 
-                    auto zip_lo = Blend::Zip32::exec(lo, hi);
-                    auto zip_hi = Blend::Zip32::exec(hi, lo);
+                        return PackUtil::template paddedUnpack<VW>(packed_data);
+                    }
+                    else
+                    {
+                        // Larger types more efficient to rotate half block and
+                        // make up the offset in Gather
+                        // Step 2 : UnpackLoHi32 (half-rotate offset)
+                        auto lo = PackUtil::paddedPack(extractEven(unpacked_data));
+                        auto hi = PackUtil::paddedPack(extractOdd(unpacked_data));
 
-                    // Step 3 : Gather (half-rotate offset)
-                    lo = Permute::GatherWave<4, 0>::exec(zip_lo);
-                    hi = Permute::GatherWave<4, 32>::exec(zip_hi);
+                        hi = Permute::RotateWaveR<32>::exec(hi);
 
-                    return concat(PackUtil::template paddedUnpack<VW / 2>(lo),
-                                  PackUtil::template paddedUnpack<VW / 2>(hi));
+                        auto zip_lo = Blend::Zip32::exec(lo, hi);
+                        auto zip_hi = Blend::Zip32::exec(hi, lo);
+
+                        // Step 3 : Gather (half-rotate offset)
+                        lo = Permute::GatherWave<4, 0>::exec(zip_lo);
+                        hi = Permute::GatherWave<4, 32>::exec(zip_hi);
+
+                        return concat(PackUtil::template paddedUnpack<VW / 2>(lo),
+                                    PackUtil::template paddedUnpack<VW / 2>(hi));
+                    }
                 }
             };
 
@@ -1462,29 +1519,48 @@ namespace rocwmma
                 {
                     using PackUtil = PackUtil<DataT>;
 
-                    // Step 1 : Scatter (half-rotate offset)
-                    auto hi = (Permute::Scatter32<8, 16>::exec(PackUtil::paddedPack(extractHi(v))));
-                    auto lo = (Permute::Scatter32<8, 0>::exec(PackUtil::paddedPack(extractLo(v))));
-                    auto unpacked_data = concat(PackUtil::template paddedUnpack<4>(lo),
-                                                PackUtil::template paddedUnpack<4>(hi));
+                    if constexpr (PackUtil::Traits::PackRatio >= VW)
+                    {
+                        // Small types more efficient to do full rotation.
+                        // Step 1 : Scatter
+                        auto packed_data = Permute::Scatter32<8, 0>::exec(PackUtil::paddedPack(v));
 
-                    // Step 2 : UnpackLoHi4
-                    unpacked_data = unpackLoHi4(unpacked_data);
+                        // Step 2 : UnpackLoHi4
+                        auto unpacked_data = unpackLoHi4(PackUtil::template paddedUnpack<VW>(packed_data));
 
-                    // Step 3 : UnpackLoHi8
-                    unpacked_data = unpackLoHi8(unpacked_data);
+                        // Step 3 : UnpackLoHi8
+                        unpacked_data = unpackLoHi8(unpacked_data);
 
-                    // Step 4 : UnpackLoHi16 (half-rotate offset)
-                    lo = PackUtil::paddedPack(extractEven(unpacked_data));
-                    hi = PackUtil::paddedPack(extractOdd(unpacked_data));
+                        // Step 4 : UnpackLoHi16
+                        unpacked_data = unpackLoHi16(unpacked_data);
+                        return unpacked_data;
+                    }
+                    else
+                    {
+                        // Step 1 : Scatter (half-rotate offset)
+                        auto hi = (Permute::Scatter32<8, 16>::exec(PackUtil::paddedPack(extractHi(v))));
+                        auto lo = (Permute::Scatter32<8, 0>::exec(PackUtil::paddedPack(extractLo(v))));
+                        auto unpacked_data = concat(PackUtil::template paddedUnpack<4>(lo),
+                                                    PackUtil::template paddedUnpack<4>(hi));
 
-                    auto lo_final = Dpp::Driver<DppImpl::Ops::MaskMove, 0x5, 0xF>::exec(lo, hi);
-                    hi            = Dpp::Driver<DppImpl::Ops::MaskMove, 0x5, 0xF>::exec(hi, lo);
+                        // Step 2 : UnpackLoHi4
+                        unpacked_data = unpackLoHi4(unpacked_data);
 
-                    hi = Swizzle::RotateR32<16>::exec(hi);
+                        // Step 3 : UnpackLoHi8
+                        unpacked_data = unpackLoHi8(unpacked_data);
 
-                    return concat(PackUtil::template paddedUnpack<4u>(lo_final),
-                                  PackUtil::template paddedUnpack<4u>(hi));
+                        // Step 4 : UnpackLoHi16 (half-rotate offset)
+                        lo = PackUtil::paddedPack(extractEven(unpacked_data));
+                        hi = PackUtil::paddedPack(extractOdd(unpacked_data));
+
+                        auto lo_final = Dpp::Driver<DppImpl::Ops::MaskMove, 0x5, 0xF>::exec(lo, hi);
+                        hi            = Dpp::Driver<DppImpl::Ops::MaskMove, 0x5, 0xF>::exec(hi, lo);
+
+                        hi = Swizzle::RotateR32<16>::exec(hi);
+
+                        return concat(PackUtil::template paddedUnpack<4u>(lo_final),
+                                    PackUtil::template paddedUnpack<4u>(hi));
+                    }
                 }
             };
 
@@ -1501,32 +1577,49 @@ namespace rocwmma
                 {
                     using PackUtil = PackUtil<DataT>;
 
-                    // Step 1 : Scatter (half-rotate offset)
-                    auto hi
-                        = (Permute::ScatterWave<8, 32>::exec(PackUtil::paddedPack(extractHi(v))));
-                    auto lo
-                        = (Permute::ScatterWave<8, 0>::exec(PackUtil::paddedPack(extractLo(v))));
-                    auto unpacked_data = concat(PackUtil::template paddedUnpack<4>(lo),
-                                                PackUtil::template paddedUnpack<4>(hi));
+                    if constexpr (PackUtil::Traits::PackRatio >= VW)
+                    {
+                        // Small types more efficient to do full rotation.
+                        // Step 1 : Scatter
+                        auto packed_data = Permute::ScatterWave<8, 0>::exec(PackUtil::paddedPack(v));
 
-                    // Step 2 : UnpackLoHi8
-                    unpacked_data = unpackLoHi8(unpacked_data);
+                        // Step 2 : UnpackLoHi8
+                        auto unpacked_data = unpackLoHi8(PackUtil::paddedUnPack<VW>(packed_data));
 
-                    // Step 3 : unpackLoHi16
-                    unpacked_data = unpackLoHi16(unpacked_data);
+                        // Step 3 : UnpackLoHi16
+                        unpacked_data = unpackLoHi16(unpacked_data);
 
-                    // Step 4 : UnpackLoHi32 (half-rotate offset)
-                    lo = PackUtil::paddedPack(extractEven(unpacked_data));
-                    hi = PackUtil::paddedPack(extractOdd(unpacked_data));
+                        // Step 4 : UnpackLoHi32
+                        unpacked_data = unpackLoHi32(unpacked_data);
+                        return unpacked_data;
+                    }
+                    else
+                    {
+                        // Step 1 : Scatter (half-rotate offset)
+                        auto hi = (Permute::ScatterWave<8, 32>::exec(PackUtil::paddedPack(extractHi(v))));
+                        auto lo = (Permute::ScatterWave<8, 0>::exec(PackUtil::paddedPack(extractLo(v))));
+                        auto unpacked_data = concat(PackUtil::template paddedUnpack<4>(lo),
+                                                    PackUtil::template paddedUnpack<4>(hi));
 
-                    auto lo_final = Dpp::Driver<DppImpl::Ops::MaskMove, 0x3, 0xF>::exec(lo, hi);
-                    hi            = Dpp::Driver<DppImpl::Ops::MaskMove, 0x3, 0xF>::exec(hi, lo);
+                        // Step 2 : UnpackLoHi8
+                        unpacked_data = unpackLoHi8(unpacked_data);
 
-                    hi = Permute::RotateWaveR<32>::exec(hi);
+                        // Step 3 : unpackLoHi16
+                        unpacked_data = unpackLoHi16(unpacked_data);
 
-                    return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo_final),
-                                  PackUtil::template paddedUnpack<VecSize / 2u>(hi));
-                };
+                        // Step 4 : UnpackLoHi32 (half-rotate offset)
+                        lo = PackUtil::paddedPack(extractEven(unpacked_data));
+                        hi = PackUtil::paddedPack(extractOdd(unpacked_data));
+
+                        auto lo_final = Dpp::Driver<DppImpl::Ops::MaskMove, 0x3, 0xF>::exec(lo, hi);
+                        hi            = Dpp::Driver<DppImpl::Ops::MaskMove, 0x3, 0xF>::exec(hi, lo);
+
+                        hi = Permute::RotateWaveR<32>::exec(hi);
+
+                        return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo_final),
+                                    PackUtil::template paddedUnpack<VecSize / 2u>(hi));
+                    }
+                }
             };
 
 #elif ROCWMMA_WAVE32_MODE
@@ -1690,25 +1783,41 @@ namespace rocwmma
                 {
                     using PackUtil = PackUtil<DataT>;
 
-                    // Step 1 : Scatter (half-rotate offset)
-                    auto hi = (Permute::Scatter32<4, 16>::exec(PackUtil::paddedPack(extractHi(v))));
-                    auto lo = (Permute::Scatter32<4, 0>::exec(PackUtil::paddedPack(extractLo(v))));
-                    auto unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(lo),
-                                                PackUtil::template paddedUnpack<VW / 2>(hi));
+                    if constexpr (PackUtil::Traits::PackRatio >= VW)
+                    {
+                        // Small types more efficient to do full rotation.
+                        // Step 1 : Scatter
+                        auto packed_data = Permute::Scatter32<4, 0>::exec(PackUtil::paddedPack(v));
 
-                    // Step 2 : UnpackLoHi8
-                    unpacked_data = unpackLoHi8(unpacked_data);
+                        // Step 2 : UnpackLoHi8
+                        auto unpacked_data = unpackLoHi8(PackUtil::template paddedUnpack<VW>(packed_data));
 
-                    // Step 3 : UnpackLoHi16 (half-rotate offset)
-                    lo             = PackUtil::paddedPack(extractEven(unpacked_data));
-                    hi             = PackUtil::paddedPack(extractOdd(unpacked_data));
-                    auto zipped_lo = Blend::Zip16::exec(lo, hi);
-                    auto zipped_hi = Blend::Zip16::exec(hi, lo);
-                    auto rot_hi    = Swizzle::RotateR32<16>::exec(zipped_hi);
-                    unpacked_data  = concat(PackUtil::template paddedUnpack<VW / 2>(zipped_lo),
-                                           PackUtil::template paddedUnpack<VW / 2>(rot_hi));
+                        // Step 3 : UnpackLoHi16
+                        unpacked_data = unpackLoHi16(unpacked_data);
+                        return unpacked_data;
+                    }
+                    else
+                    {
+                        // Step 1 : Scatter (half-rotate offset)
+                        auto hi = (Permute::Scatter32<4, 16>::exec(PackUtil::paddedPack(extractHi(v))));
+                        auto lo = (Permute::Scatter32<4, 0>::exec(PackUtil::paddedPack(extractLo(v))));
+                        auto unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(lo),
+                                                    PackUtil::template paddedUnpack<VW / 2>(hi));
 
-                    return unpacked_data;
+                        // Step 2 : UnpackLoHi8
+                        unpacked_data = unpackLoHi8(unpacked_data);
+
+                        // Step 3 : UnpackLoHi16 (half-rotate offset)
+                        lo             = PackUtil::paddedPack(extractEven(unpacked_data));
+                        hi             = PackUtil::paddedPack(extractOdd(unpacked_data));
+                        auto zipped_lo = Blend::Zip16::exec(lo, hi);
+                        auto zipped_hi = Blend::Zip16::exec(hi, lo);
+                        auto rot_hi    = Swizzle::RotateR32<16>::exec(zipped_hi);
+                        unpacked_data  = concat(PackUtil::template paddedUnpack<VW / 2>(zipped_lo),
+                                            PackUtil::template paddedUnpack<VW / 2>(rot_hi));
+
+                        return unpacked_data;
+                    }
                 }
             };
 
@@ -1725,28 +1834,44 @@ namespace rocwmma
                 {
                     using PackUtil = PackUtil<DataT>;
 
-                    // Step 1 : Scatter (half-rotate offset)
-                    auto lo = Permute::ScatterWave<4, 0>::exec(PackUtil::paddedPack(extractLo(v)));
-                    auto hi = Permute::ScatterWave<4, 32>::exec(PackUtil::paddedPack(extractHi(v)));
-                    auto unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(lo),
-                                                PackUtil::template paddedUnpack<VW / 2>(hi));
+                    if constexpr (PackUtil::Traits::PackRatio >= VW)
+                    {
+                        // Small types more efficient to do full rotation.
+                        // Step 1 : Scatter
+                        auto packed_data = Permute::ScatterWave<4, 0>::exec(PackUtil::paddedPack(v));
 
-                    // Step 2 : UnpackLoHi16
-                    unpacked_data = unpackLoHi16(unpacked_data);
+                        // Step 2 : UnpackLoHi16
+                        auto unpacked_data = unpackLoHi16(PackUtil::template paddedUnpack<VW>(packed_data));
 
-                    // Step 3 : UnpackLoHi32 (half-rotate offset)
-                    lo = PackUtil::paddedPack(extractEven(unpacked_data));
-                    hi = PackUtil::paddedPack(extractOdd(unpacked_data));
+                        // Step 3 : UnpackLoHi32
+                        unpacked_data = unpackLoHi32(unpacked_data);
+                        return unpacked_data;
+                    }
+                    else
+                    {
+                        // Step 1 : Scatter (half-rotate offset)
+                        auto lo = Permute::ScatterWave<4, 0>::exec(PackUtil::paddedPack(extractLo(v)));
+                        auto hi = Permute::ScatterWave<4, 32>::exec(PackUtil::paddedPack(extractHi(v)));
+                        auto unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(lo),
+                                                    PackUtil::template paddedUnpack<VW / 2>(hi));
 
-                    auto zip_lo = Blend::Zip32::exec(lo, hi);
-                    auto zip_hi = Blend::Zip32::exec(hi, lo);
+                        // Step 2 : UnpackLoHi16
+                        unpacked_data = unpackLoHi16(unpacked_data);
 
-                    auto rot_hi = Permute::RotateWaveR<32>::exec(zip_hi);
+                        // Step 3 : UnpackLoHi32 (half-rotate offset)
+                        lo = PackUtil::paddedPack(extractEven(unpacked_data));
+                        hi = PackUtil::paddedPack(extractOdd(unpacked_data));
 
-                    unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(zip_lo),
-                                           PackUtil::template paddedUnpack<VW / 2>(rot_hi));
+                        auto zip_lo = Blend::Zip32::exec(lo, hi);
+                        auto zip_hi = Blend::Zip32::exec(hi, lo);
 
-                    return unpacked_data;
+                        auto rot_hi = Permute::RotateWaveR<32>::exec(zip_hi);
+
+                        unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(zip_lo),
+                                            PackUtil::template paddedUnpack<VW / 2>(rot_hi));
+
+                        return unpacked_data;
+                    }
                 }
             };
 
