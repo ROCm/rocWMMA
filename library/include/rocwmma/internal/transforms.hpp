@@ -26,24 +26,45 @@
 #ifndef ROCWMMA_TRANSFORMS_HPP
 #define ROCWMMA_TRANSFORMS_HPP
 
+#include "transforms_impl.hpp"
 #include "vector.hpp"
 
 namespace rocwmma
 {
-    template <uint32_t BlockDim, uint32_t VW>
-    struct AosToSoa;
+    namespace Transforms
+    {
+        template <class Op>
+        struct Driver
+        {
+            using Func = Op;
 
-    template <uint32_t BlockDim, uint32_t VW>
-    struct SoaToAos;
+            template <typename DataT, uint32_t VecSize>
+            ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& v)
+            {
+                auto result = VecT<DataT, VecSize>{};
 
-    template <uint32_t BlockDim, uint32_t MaxVW, typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE static inline auto soa_to_aos(VecT<DataT, VecSize> const& v);
+                auto rIt = makeVectorIterator<Func::VecSize>(v).begin();
+                auto wIt = makeVectorIterator<Func::VecSize>(result).begin();
 
-    template <uint32_t BlockDim, uint32_t MaxVW, typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE static inline auto aos_to_soa(VecT<DataT, VecSize> const& v);
+#pragma unroll
+                for(uint32_t i = 0; i < decltype(rIt)::range(); i++)
+                {
+                    *wIt = Func::exec(*rIt);
+                    rIt++;
+                    wIt++;
+                }
+                return result;
+            }
+        };
+
+        template <uint32_t BlockDim, uint32_t MaxVW>
+        using AosToSoa = Driver<TransformsImpl::Ops::AosToSoa<BlockDim, MaxVW>>;
+      
+        template <uint32_t BlockDim, uint32_t MaxVW>
+        using SoaToAos = Driver<TransformsImpl::Ops::SoaToAos<BlockDim, MaxVW>>;
+      
+    } // namespace Transforms
 
 } // namespace rocwmma
-
-#include "transforms_impl.hpp"
 
 #endif // ROCWMMA_TRANSFORMS_HPP

@@ -85,6 +85,7 @@ namespace rocwmma
                 = LayoutProfile::template RowNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
             using ColNT
                 = LayoutProfile::template ColNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
+
             using Row = LayoutProfile::template Row<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
             using Col = LayoutProfile::template Col<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
 

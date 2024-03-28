@@ -77,8 +77,8 @@ namespace rocwmma
         }
     };
 
-    using AossoaTestParams = TestParams<AossoaGenerator, std::tuple<I<2>, I<4>, I<8>>>;
-    using SoaaosTestParams = TestParams<SoaaosGenerator, std::tuple<I<2>, I<4>, I<8>>>;
+    using AossoaTestParams = TestParams<AossoaGenerator, std::tuple<I<2>, I<4>, I<8>, I<16>>>;
+    using SoaaosTestParams = TestParams<SoaaosGenerator, std::tuple<I<2>, I<4>, I<8>, I<16>>>;
 
 } // namespace rocwmma
 
