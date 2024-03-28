@@ -59,8 +59,10 @@ namespace rocwmma
 
         template <uint32_t BlockDim, uint32_t MaxVW>
         using AosToSoa = Driver<TransformsImpl::Ops::AosToSoa<BlockDim, MaxVW>>;
+      
         template <uint32_t BlockDim, uint32_t MaxVW>
         using SoaToAos = Driver<TransformsImpl::Ops::SoaToAos<BlockDim, MaxVW>>;
+      
     } // namespace Transforms
 
 } // namespace rocwmma

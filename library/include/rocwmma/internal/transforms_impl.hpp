@@ -210,6 +210,7 @@ namespace rocwmma
     {
         namespace Ops
         {
+          
             template <uint32_t BlockDim, uint32_t VectorWidth>
             struct AosToSoa
             {
@@ -1352,7 +1353,7 @@ namespace rocwmma
                     unpacked_data = unpackLoHi32(unpacked_data);
 
                     return unpacked_data;
-                };
+                }
             };
 
 #elif ROCWMMA_WAVE32_MODE
@@ -1371,7 +1372,7 @@ namespace rocwmma
                     auto v1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(v));
 
                     return concat(v0, v1);
-                };
+                }
             };
 
 #endif
@@ -1416,7 +1417,7 @@ namespace rocwmma
                     auto v3 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(hi));
 
                     return concat(concat(v0, v1), concat(v2, v3));
-                };
+                }
             };
 
 #endif
@@ -1475,7 +1476,7 @@ namespace rocwmma
 
                     return concat(concat(concat(v0, v1), concat(v2, v3)),
                                   concat(concat(v4, v5), concat(v6, v7)));
-                };
+                }
             };
 
 #endif
@@ -1638,7 +1639,7 @@ namespace rocwmma
                     auto v1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(v));
 
                     return concat(v0, v1);
-                };
+                }
             };
 
 #endif
@@ -1683,7 +1684,7 @@ namespace rocwmma
                     auto v3 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(hi));
 
                     return concat(concat(v0, v1), concat(v2, v3));
-                };
+                }
             };
 
 #endif
@@ -1742,7 +1743,7 @@ namespace rocwmma
 
                     return concat(concat(concat(v0, v1), concat(v2, v3)),
                                   concat(concat(v4, v5), concat(v6, v7)));
-                };
+                }
             };
 
 #endif
@@ -2065,7 +2066,7 @@ namespace rocwmma
                     unpacked_data = unpackLoHi32(unpacked_data);
 
                     return unpacked_data;
-                };
+                }
             };
 
 #elif ROCWMMA_WAVE32_MODE
@@ -2084,7 +2085,7 @@ namespace rocwmma
                     auto v1 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(v));
 
                     return concat(v0, v1);
-                };
+                }
             };
 
 #endif
@@ -2129,7 +2130,7 @@ namespace rocwmma
                     auto v3 = SoaToAos<Constants::AMDGCN_WAVE_SIZE_32, VW>::exec(extractHi(hi));
 
                     return concat(concat(v0, v1), concat(v2, v3));
-                };
+                }
             };
 
 #endif
@@ -2188,11 +2189,14 @@ namespace rocwmma
 
                     return concat(concat(concat(v0, v1), concat(v2, v3)),
                                   concat(concat(v4, v5), concat(v6, v7)));
-                };
+                }
             };
 #endif
+          
         } // namespace Ops
+      
     } // namespace TransformsImpl
+  
 } // namespace rocwmma
 
 #endif // ROCWMMA_TRANSFORMS_IMPL_HPP
