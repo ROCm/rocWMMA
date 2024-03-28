@@ -224,19 +224,6 @@ namespace rocwmma
                 }
             };
 
-            template <uint32_t BlockDim, uint32_t VectorWidth>
-            struct SoaToAos
-            {
-                constexpr static uint32_t VW      = VectorWidth;
-                constexpr static uint32_t VecSize = VW * (BlockDim / Constants::AMDGCN_WAVE_SIZE);
-
-                template <typename DataT, uint32_t VecSize>
-                ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
-                {
-                    return v;
-                }
-            };
-
             template <>
             struct AosToSoa<16, 16>
             {
@@ -1263,6 +1250,19 @@ namespace rocwmma
             };
 
 #endif
+          
+            template <uint32_t BlockDim, uint32_t VectorWidth>
+            struct SoaToAos
+            {
+                constexpr static uint32_t VW      = VectorWidth;
+                constexpr static uint32_t VecSize = VW * (BlockDim / Constants::AMDGCN_WAVE_SIZE);
+
+                template <typename DataT, uint32_t VecSize>
+                ROCWMMA_DEVICE constexpr static inline auto exec(VecT<DataT, VecSize> const& v)
+                {
+                    return v;
+                }
+            };
 
             // SoaToAos
             template <>

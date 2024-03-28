@@ -27,6 +27,9 @@
 #define ROCWMMA_UTILS_HPP
 
 #include "types.hpp"
+
+#include "utility/get.hpp"
+#include "utility/apply.hpp"
 #include "vector.hpp"
 
 namespace rocwmma
@@ -72,37 +75,7 @@ namespace rocwmma
     }
 } // namespace rocwmma
 
-///////////////////////////////////////////////////////////
-////////  std::apply fold expressions (<= C++14)  /////////
-///////////////////////////////////////////////////////////
-
-namespace std
-{
-    // TODO: Remove after utils refactor
-    using rocwmma::apply;
-    using rocwmma::get;
-}
-
 #if !defined(__HIPCC_RTC__)
-namespace std
-{
-
-#if !(__cplusplus >= 201703L)
-    template <typename F, typename Tuple, size_t... I>
-    auto apply_impl(F fn, Tuple t, std::index_sequence<I...>)
-    {
-        return fn(std::get<I>(t)...);
-    }
-    template <typename F, typename Tuple>
-    auto apply(F fn, Tuple t)
-    {
-        const std::size_t size = std::tuple_size<Tuple>::value;
-        return apply_impl(fn, t, std::make_index_sequence<size>());
-    }
-#endif
-
-} // namespace std
-
 ///////////////////////////////////////////////////////////
 /////////////  std::pair<T, T> extensions  ////////////////
 ///////////////////////////////////////////////////////////
@@ -165,9 +138,9 @@ namespace rocwmma
 {
     // Computes ceil(numerator/divisor) for integer types.
     template <typename intT1,
-              class = typename std::enable_if<std::is_integral<intT1>::value>::type,
+              class = typename enable_if<is_integral<intT1>::value>::type,
               typename intT2,
-              class = typename std::enable_if<std::is_integral<intT2>::value>::type>
+              class = typename enable_if<is_integral<intT2>::value>::type>
     static constexpr intT1 ceilDiv(const intT1 numerator, const intT2 divisor)
     {
         return (numerator + divisor - 1) / divisor;

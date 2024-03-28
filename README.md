@@ -65,7 +65,7 @@ To build our documentation locally, use the following commands.
 ```bash
 cd docs
 
-pip3 install -r .sphinx/requirements.txt
+pip3 install -r sphinx/requirements.txt
 
 python3 -m sphinx -T -E -b html -d _build/doctrees -D language=en . _build/html
 ```
@@ -335,29 +335,9 @@ Each contributing wave handles partial operation data, so split parameters shoul
 subsequent operations. For example, cooperatively moving data from global to shared memory should
 use the same split parameters for the global load and subsequent local store.
 
-## Contributing to the code
+## Contributing to the rocWMMA Library
 
-1. Create and track a rocWMMA fork.
-2. Clone your fork:
-
-    ```bash
-    git clone -b develop https://github.com/<your_fork>/rocWMMA.git .
-    .githooks/install
-    git checkout -b <new_branch>
-    ...
-    git add <new_work>
-    git commit -m "What was changed"
-    git push origin <new_branch>
-    ...
-    ```
-
-3. Create a pull request to the ROCmSoftwarePlatform/rocWMMA develop branch.
-4. Await CI and approval feedback.
-5. Once approved, merge.
-
-```note
-You must install GitHooks because there are triggers for Clang formatting in commits.
-```
+Please follow the [rocWMMA Contribution Guide](https://github.com/ROCm/rocWMMA/CONTRIBUTING.md).
 
 ## Build with CMake
 
@@ -375,6 +355,7 @@ You must install GitHooks because there are triggers for Clang formatting in com
 |ROCWMMA_BUILD_EXTENDED_TESTS|Build extended testing coverage |OFF (requires ROCWMMA_BUILD_TESTS=ON)|
 |ROCWMMA_VALIDATE_WITH_ROCBLAS|Use rocBLAS for validation tests|ON (requires ROCWMMA_BUILD_VALIDATION_TESTS=ON)|
 |ROCWMMA_BENCHMARK_WITH_ROCBLAS|Include rocBLAS benchmarking data|OFF (requires ROCWMMA_BUILD_BENCHMARK_TESTS=ON)|
+|ROCWMMA_USE_SYSTEM_GOOGLETEST|Use system Google Test library instead of downloading and building it|OFF (requires ROCWMMA_BUILD_TESTS=ON)|
 
 ### Example configurations
 
@@ -769,7 +750,7 @@ The HIP runtime compilation (hipRTC) environment allows simultaneous compilation
 running of device code on AMD GPUs. The rocWMMA library is compatible with hipRTC, so you can
 leverage it for runtime-generated kernels. A simple GEMM sample is included to demonstrate
 compatibility. For more information, refer to the
-[HIP API reference](https://rocm.docs.amd.com/projects/HIP/en/latest/.doxygen/docBin/html/index.html).
+[HIP API reference](https://rocm.docs.amd.com/projects/HIP/en/latest/doxygen/html/index.html).
 
 ```important
 The `rocwmma::bfloat16_t` data type is not currently supported in hipRTC.

@@ -41,6 +41,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+#Set Clang C++ Version
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --driver-mode=g++ -Xclang -fallow-half-arguments-and-returns -D__HIP_HCC_COMPAT_MODE__=1 -Wno-format-nonliteral -parallel-jobs=4 -fclang-abi-compat=17")
+
 # Top level configs
 if( CMAKE_PROJECT_NAME STREQUAL "rocwmma" )
   option( ROCWMMA_BUILD_TESTS "Build rocWMMA tests" ON )
@@ -95,7 +98,7 @@ endif()
 message( VERBOSE "AMDGPU_TARGETS=${AMDGPU_TARGETS}")
 
 find_package( hip REQUIRED )
-find_package(hiprtc REQUIRED)
+find_package( hiprtc REQUIRED )
 find_package( OpenMP REQUIRED )
 
 find_path(ROCM_SMI_ROOT "include/rocm_smi/rocm_smi.h"
@@ -107,7 +110,7 @@ find_library(ROCM_SMI_LIBRARY rocm_smi64
     PATHS "${ROCM_SMI_ROOT}/lib")
 
 add_library(rocwmma INTERFACE)
-target_link_libraries(rocwmma INTERFACE hip::device hip::host hiprtc::hiprtc OpenMP::OpenMP_CXX ${ROCM_SMI_LIBRARY})
+target_link_libraries(rocwmma INTERFACE hip::device hip::host OpenMP::OpenMP_CXX ${ROCM_SMI_LIBRARY})
 
 rocm_install_targets(
   TARGETS rocwmma

@@ -121,8 +121,8 @@ namespace rocwmma
         {
             // Layouts
             using DataLayout   = DataLayout::template Array1d<DataLayoutT>;
-            using MatrixLayout = std::conditional_t<
-                std::is_same<DataLayoutT, col_major>::value,
+            using MatrixLayout = conditional_t<
+                is_same_v<DataLayoutT, col_major>,
                 MatrixLayout::ColOrthoVW<BlockDim, BlockK, DataT, 1, MaxVectorWidth>,
                 MatrixLayout::ColOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>;
             using RegisterLayout = RegisterLayout::template Soa<BlockDim, MaxVectorWidth>;
@@ -136,12 +136,12 @@ namespace rocwmma
             // elements in both row_major or col_major data layouts.
             // This layout cannot support for VW > 1 in col_major data layout otherwise the
             // ordering is broken.
-            static_assert(!(std::is_same_v<DataLayoutT, col_major> && VectorWidth > 1),
+            static_assert(!(is_same_v<DataLayoutT, col_major> && VectorWidth > 1),
                           "ColNT in col_major does not support VectorWidth > 1");
 
             // Must ensure that MaxVectorWidth fits inside the leading dimension
             static_assert(
-                !(std::is_same_v<DataLayoutT, row_major> && (MaxVectorWidth > BlockK)),
+                !(is_same_v<DataLayoutT, row_major> && (MaxVectorWidth > BlockK)),
                 "MaxVectorWidth is larger than BlockK dimension. Try reducing MaxVectorWidth");
         };
 
@@ -163,8 +163,8 @@ namespace rocwmma
         {
             // Layouts
             using DataLayout   = DataLayout::template Array1d<DataLayoutT>;
-            using MatrixLayout = std::conditional_t<
-                std::is_same<DataLayoutT, col_major>::value,
+            using MatrixLayout = conditional_t<
+                is_same_v<DataLayoutT, col_major>,
                 MatrixLayout::RowOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
                 MatrixLayout::RowOrthoVW<BlockDim, BlockK, DataT, 1, MaxVectorWidth>>;
             using RegisterLayout = RegisterLayout::template Soa<BlockDim, MaxVectorWidth>;
@@ -177,12 +177,12 @@ namespace rocwmma
             // RowNT enforces consistent in-register alignment of contiguous matrix row
             // elements in both in row_major or col_major data layouts.
             // This layout cannot support for VW > 1 in row_major data layout.
-            static_assert(!(std::is_same_v<DataLayoutT, row_major> && VectorWidth > 1),
+            static_assert(!(is_same_v<DataLayoutT, row_major> && VectorWidth > 1),
                           "RowNT in row_major does not support VectorWidth > 1");
 
             // Must ensure that MaxVectorWidth fits inside the leading dimension
             static_assert(
-                !(std::is_same_v<DataLayoutT, col_major> && (MaxVectorWidth > BlockK)),
+                !(is_same_v<DataLayoutT, col_major> && (MaxVectorWidth > BlockK)),
                 "MaxVectorWidth is larger than BlockK dimension. Try reducing MaxVectorWidth");
         };
 
@@ -207,12 +207,12 @@ namespace rocwmma
         {
             // Layouts
             using DataLayout   = DataLayout::template Array1d<DataLayoutT>;
-            using MatrixLayout = std::conditional_t<
-                std::is_same<DataLayoutT, col_major>::value,
+            using MatrixLayout = conditional_t<
+                is_same_v<DataLayoutT, col_major>,
                 MatrixLayout::ColInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
                 MatrixLayout::ColOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>;
             using RegisterLayout
-                = std::conditional_t<std::is_same<DataLayoutT, col_major>::value,
+                = conditional_t<is_same_v<DataLayoutT, col_major>,
                                      RegisterLayout::template Aos<BlockDim, MaxVectorWidth>,
                                      RegisterLayout::template Soa<BlockDim, MaxVectorWidth>>;
 
@@ -223,7 +223,7 @@ namespace rocwmma
             // Sanity checks
             // Must ensure that MaxVectorWidth fits inside the leading dimension
             static_assert(
-                !(std::is_same_v<DataLayoutT, row_major> && (MaxVectorWidth > BlockK)),
+                !(is_same_v<DataLayoutT, row_major> && (MaxVectorWidth > BlockK)),
                 "MaxVectorWidth is larger than BlockK dimension. Try reducing MaxVectorWidth");
         };
 
@@ -248,12 +248,12 @@ namespace rocwmma
         {
             // Layouts
             using DataLayout   = DataLayout::template Array1d<DataLayoutT>;
-            using MatrixLayout = std::conditional_t<
-                std::is_same<DataLayoutT, row_major>::value,
+            using MatrixLayout = conditional_t<
+                is_same_v<DataLayoutT, row_major>,
                 MatrixLayout::RowInlineVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>,
                 MatrixLayout::RowOrthoVW<BlockDim, BlockK, DataT, VectorWidth, MaxVectorWidth>>;
             using RegisterLayout
-                = std::conditional_t<std::is_same<DataLayoutT, row_major>::value,
+                = conditional_t<is_same_v<DataLayoutT, row_major>,
                                      RegisterLayout::template Aos<BlockDim, MaxVectorWidth>,
                                      RegisterLayout::template Soa<BlockDim, MaxVectorWidth>>;
 
@@ -264,7 +264,7 @@ namespace rocwmma
             // Sanity checks
             // Must ensure that MaxVectorWidth fits inside the leading dimension
             static_assert(
-                !(std::is_same_v<DataLayoutT, col_major> && (MaxVectorWidth > BlockK)),
+                !(is_same_v<DataLayoutT, col_major> && (MaxVectorWidth > BlockK)),
                 "MaxVectorWidth is larger than BlockK dimension. Try reducing MaxVectorWidth");
         };
         /** @}*/
@@ -275,7 +275,7 @@ namespace rocwmma
     /// Helper to ensure layout types are consistent (same, or equivalent)
     ///
     template <typename LhsLayout, typename RhsLayout>
-    struct ConsistencyCheck : public std::false_type
+    struct ConsistencyCheck : public false_type
     {
     };
 
@@ -283,7 +283,7 @@ namespace rocwmma
     /// Check for layout orthogonality
     ///
     template <typename LhsMatrixLayout, typename RhsMatrixLayout>
-    struct OrthogonalCheck : public std::false_type
+    struct OrthogonalCheck : public false_type
     {
     };
 

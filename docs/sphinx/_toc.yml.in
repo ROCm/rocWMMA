@@ -1,0 +1,19 @@
+# Anywhere {branch} is used, the branch name will be substituted.
+# These comments will also be removed.
+root: index
+subtrees:
+  - entries:
+    - file: what-is-rocwmma
+  - caption:  Tutorial
+    entries:
+    - file: installation
+  - caption:  Conceptual
+    entries:
+    - file: programmers-guide
+  - caption:  API reference
+    entries:
+    - file: api-reference-guide   
+  - caption: About
+    entries:
+    - file: license
+    

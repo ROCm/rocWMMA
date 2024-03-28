@@ -106,7 +106,7 @@ namespace rocwmma
                     WaveSize = IOTraits::ThreadsPerIO,
 
                     // Strides
-                    BlockDimStride_X = std::min(BlockDim, WaveSize),
+                    BlockDimStride_X = min(BlockDim, WaveSize),
                     BlockDimStride_Y = 0u,
 
                     BlockKStride_X = 0u,
@@ -366,7 +366,7 @@ namespace rocwmma
                     WaveSize = IOTraits::ThreadsPerIO,
 
                     // Strides
-                    BlockDimStride_X = std::min(BlockDim, WaveSize),
+                    BlockDimStride_X = min(BlockDim, WaveSize),
                     BlockDimStride_Y = 0u,
 
                     BlockKStride_X = 0u,
@@ -555,7 +555,7 @@ namespace rocwmma
             {
                 auto t = Traits::OrthoLayout::strides();
                 return make_vector(
-                    swap(std::get<0>(t)), swap(std::get<1>(t)), swap(std::get<2>(t)));
+                    swap(get<0>(t)), swap(get<1>(t)), swap(get<2>(t)));
             }
 
             ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
@@ -601,7 +601,7 @@ namespace rocwmma
             {
                 auto t = Traits::OrthoLayout::strides();
                 return make_vector(
-                    swap(std::get<0>(t)), swap(std::get<1>(t)), swap(std::get<2>(t)));
+                    swap(get<0>(t)), swap(get<1>(t)), swap(get<2>(t)));
             }
 
             ROCWMMA_DEVICE static inline typename Traits::MatrixCoordT
@@ -757,15 +757,15 @@ namespace rocwmma
 
     // In general, assume that an orthogonal layout has been assigned
     template <typename LhsDataLayout, typename RhsDataLayout>
-    struct is_orthogonal : public std::integral_constant<
+    struct is_orthogonal : public integral_constant<
                                bool,
-                               std::is_same_v<orthogonal_layout_t<LhsDataLayout>, RhsDataLayout>>
+                               is_same_v<orthogonal_layout_t<LhsDataLayout>, RhsDataLayout>>
     {
     };
 
     // Special case for self: not orthogonal
     template <typename Layout>
-    struct is_orthogonal<Layout, Layout> : public std::false_type
+    struct is_orthogonal<Layout, Layout> : public false_type
     {
     };
 
@@ -779,7 +779,7 @@ namespace rocwmma
     struct is_orthogonal<
         MatrixLayout::template ColOrthoVW<BlockDim, BlockK, DataT, VectorWidthL, MaxVectorWidth>,
         MatrixLayout::template RowOrthoVW<BlockDim, BlockK, DataT, VectorWidthR, MaxVectorWidth>>
-        : public std::true_type
+        : public true_type
     {
     };
 
@@ -792,7 +792,7 @@ namespace rocwmma
     struct is_orthogonal<
         MatrixLayout::template RowOrthoVW<BlockDim, BlockK, DataT, VectorWidthL, MaxVectorWidth>,
         MatrixLayout::template ColOrthoVW<BlockDim, BlockK, DataT, VectorWidthR, MaxVectorWidth>>
-        : public std::true_type
+        : public true_type
     {
     };
 
@@ -805,7 +805,7 @@ namespace rocwmma
     struct is_orthogonal<
         MatrixLayout::template ColInlineVW<BlockDim, BlockK, DataT, VectorWidthL, MaxVectorWidth>,
         MatrixLayout::template RowInlineVW<BlockDim, BlockK, DataT, VectorWidthR, MaxVectorWidth>>
-        : public std::true_type
+        : public true_type
     {
     };
 
@@ -818,7 +818,7 @@ namespace rocwmma
     struct is_orthogonal<
         MatrixLayout::template RowInlineVW<BlockDim, BlockK, DataT, VectorWidthL, MaxVectorWidth>,
         MatrixLayout::template ColInlineVW<BlockDim, BlockK, DataT, VectorWidthR, MaxVectorWidth>>
-        : public std::true_type
+        : public true_type
     {
     };
 

@@ -176,6 +176,18 @@ namespace rocwmma
         using ExtractByteOddEven = Driver<BlendImpl::Ops::ExtractByteOddEven>;
         using ExtractWordOddEven = Driver<BlendImpl::Ops::ExtractWordOddEven>;
 
+        // Extract functions
+        using ExtractByteEven = Driver<BlendImpl::Ops::ExtractByteEven>;
+        using ExtractByteOdd  = Driver<BlendImpl::Ops::ExtractByteOdd>;
+        using ExtractWordEven = Driver<BlendImpl::Ops::ExtractWordEven>;
+        using ExtractWordOdd  = Driver<BlendImpl::Ops::ExtractWordOdd>;
+
+        using ExtractByteEvenOdd = Driver<BlendImpl::Ops::ExtractByteEvenOdd>;
+        using ExtractWordEvenOdd = Driver<BlendImpl::Ops::ExtractWordEvenOdd>;
+
+        using ExtractByteOddEven = Driver<BlendImpl::Ops::ExtractByteOddEven>;
+        using ExtractWordOddEven = Driver<BlendImpl::Ops::ExtractWordOddEven>;
+
     } // namespace Blend
 
 } // namespace rocwmma

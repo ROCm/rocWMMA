@@ -133,11 +133,11 @@ namespace rocwmma
             MaxVW = detail::
                 MaxVWSelector<matrix_a, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>::Result,
 
-            VW = std::is_same<DataLayoutT, row_major>::value || BlockDim > 32 ? MaxVW : 1u
+            VW = is_same<DataLayoutT, row_major>::value || BlockDim > 32 ? MaxVW : 1u
         };
 
         // Layout profile for 'matrix_a': ColNT for small frags, Col for large frags
-        using Profile = std::conditional_t<
+        using Profile = conditional_t<
             BlockDim <= 32,
             LayoutProfile::template ColNT<BlockDim, BlockK, DataT, DataLayoutT, VW, MaxVW>,
             LayoutProfile::template Col<BlockDim, BlockK, DataT, DataLayoutT, VW, MaxVW>>;
@@ -160,11 +160,11 @@ namespace rocwmma
             MaxVW = detail::
                 MaxVWSelector<matrix_b, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>::Result,
 
-            VW = std::is_same<DataLayoutT, col_major>::value || BlockDim > 32 ? MaxVW : 1u
+            VW = is_same<DataLayoutT, col_major>::value || BlockDim > 32 ? MaxVW : 1u
         };
 
         // Layout profile for 'matrix_b': RowNT for small frags, Row for large frags
-        using Profile = std::conditional_t<
+        using Profile = conditional_t<
             BlockDim <= 32,
             LayoutProfile::template RowNT<BlockDim, BlockK, DataT, DataLayoutT, VW, MaxVW>,
             LayoutProfile::template Row<BlockDim, BlockK, DataT, DataLayoutT, VW, MaxVW>>;
@@ -184,8 +184,8 @@ namespace rocwmma
         // Vector size properties
         enum : uint32_t
         {
-            MaxVW = (std::is_same<DataT, float64_t>::value || ROCWMMA_ARCH_GFX11) ? 1u : 4u,
-            VW    = std::is_same<DataLayoutT, col_major>::value ? MaxVW : 1u
+            MaxVW = (is_same<DataT, float64_t>::value || ROCWMMA_ARCH_GFX11) ? 1u : 4u,
+            VW    = is_same<DataLayoutT, col_major>::value ? MaxVW : 1u
         };
 
         // Layout profile for 'accumulator' set to RowNT

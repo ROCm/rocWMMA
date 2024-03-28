@@ -52,7 +52,7 @@ namespace rocwmma
                 BlockM,
                 BlockN,
                 BlockK,
-                typename std::enable_if_t<ROCWMMA_ARCH_GFX9 && (BlockM == BlockN)>>
+                enable_if_t<ROCWMMA_ARCH_GFX9 && (BlockM == BlockN)>>
     {
         // Full-fragment IO traits
         using IOTraitsA   = IOTraits<BlockM, BlockK, InputT>;
@@ -90,10 +90,10 @@ namespace rocwmma
 
             // A / B  and C / D types must match
             static_assert(
-                std::is_same<typename VecTraitsA::DataT, typename VecTraitsB::DataT>::value,
+                is_same<typename VecTraitsA::DataT, typename VecTraitsB::DataT>::value,
                 "A and B registers must be of same type");
             static_assert(
-                std::is_same<typename VecTraitsC::DataT, typename VecTraitsD::DataT>::value,
+                is_same<typename VecTraitsC::DataT, typename VecTraitsD::DataT>::value,
                 "C and D registers must be of same type");
 
             // Full fragment counts must match packed IO counts
