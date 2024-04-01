@@ -36,10 +36,8 @@ namespace rocwmma
 
     struct TestParams : public UnitTestParams
     {
-        using Base = UnitTestParams;
-
-        // Types: Base IOC + double
-        using Types = std::tuple<int8_t, float16_t, bfloat16_t, float32_t, float64_t>;
+        using Base  = UnitTestParams;
+        using Types = typename Base::TestAllSizeTypes;
 
         // Vector Sizes.
         // Test up to VecSize = 64. Anything bigger is impractical.

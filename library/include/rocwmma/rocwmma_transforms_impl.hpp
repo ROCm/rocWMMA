@@ -226,10 +226,9 @@ namespace rocwmma
             // Optimal case: input and output register layouts match
             template <uint32_t WaveCount = 1,
                       typename FragT,
-                      typename enable_if_t<
-                          is_same_v<FragT, FragIn>
-                          && is_same_v<RegisterLayoutIn, RegisterLayoutOut>,
-                          int>
+                      enable_if_t<is_same_v<FragT, FragIn>
+                                      && is_same_v<RegisterLayoutIn, RegisterLayoutOut>,
+                                  int>
                       = 0>
             ROCWMMA_DEVICE constexpr static inline decltype(auto) exec(FragT const& frag)
             {
@@ -239,10 +238,9 @@ namespace rocwmma
             // Input and output register layouts do not match: must transform using AOS<->SOA
             template <uint32_t WaveCount = 1,
                       typename FragT,
-                      typename enable_if_t<
-                          is_same_v<FragT, FragIn>
-                          && !is_same_v<RegisterLayoutIn, RegisterLayoutOut>,
-                          int>
+                      enable_if_t<is_same_v<FragT, FragIn>
+                                      && !is_same_v<RegisterLayoutIn, RegisterLayoutOut>,
+                                  int>
                       = 0>
             ROCWMMA_DEVICE constexpr static inline auto exec(FragT const& frag)
             {
@@ -296,8 +294,7 @@ namespace rocwmma
     template <typename FragT>
     ROCWMMA_DEVICE static inline decltype(auto) applyTranspose(FragT&& frag)
     {
-        return detail::template ApplyTranspose<decay_t<FragT>>::exec(
-            forward<FragT>(frag));
+        return detail::template ApplyTranspose<decay_t<FragT>>::exec(forward<FragT>(frag));
     }
 
     template <typename DataLayoutT, uint32_t WaveCount /*=1*/, typename FragT>

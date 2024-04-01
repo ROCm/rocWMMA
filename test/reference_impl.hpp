@@ -336,7 +336,6 @@ namespace rocwmma
                         uint32_t ele1 = ((uint32_t*)&blendSrc1)[index];
                         // 0 <= Select < 4  element 0
                         // 4 <= Select < 8  element 1
-                        // TODO uint32_t => DataT
                         uint32_t bytes0 = ((Select0 < 4u) ? ele0 : ele1);
                         uint32_t bytes1 = ((Select1 < 4u) ? ele0 : ele1);
                         uint32_t bytes2 = ((Select2 < 4u) ? ele0 : ele1);
