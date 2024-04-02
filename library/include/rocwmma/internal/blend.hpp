@@ -32,8 +32,6 @@
 #include "vector.hpp"
 // clang-format on
 
-#include "vector_util.hpp"
-
 namespace rocwmma
 {
     namespace Blend

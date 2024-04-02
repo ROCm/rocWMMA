@@ -28,14 +28,6 @@
 #define ROCWMMA_VECTOR_HPP
 
 #include "types.hpp"
-// #include "types_ext.hpp"
-#if !defined(__HIPCC_RTC__)
-
-#include <hip/hip_fp16.h>
-#include <hip/hip_vector_types.h>
-
-#endif
-
 #include "utility/forward.hpp"
 #include "utility/type_traits.hpp"
 
@@ -400,7 +392,6 @@ ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::b
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat16_t, 512);
 
 #include "type_traits.hpp"
-#include "utility/get.hpp"
 
 namespace rocwmma
 {
@@ -518,7 +509,4 @@ namespace rocwmma
     using Coord2d      = non_native_vector_base<Coord2dDataT, 2>;
 
 } // namespace rocwmma
-
-#include "utility/vector.hpp"
-
 #endif // ROCWMMA_VECTOR_HPP

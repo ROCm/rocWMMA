@@ -28,7 +28,6 @@
 #define ROCWMMA_VECTOR_IMPL_HPP
 
 #include "utility/sequence.hpp"
-#include "vector.hpp"
 
 namespace rocwmma
 {
