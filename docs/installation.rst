@@ -13,12 +13,13 @@ This document provides instructions for installing and configuring the rocWMMA l
 The quickest way to install is using prebuilt packages. Alternatively, there are instructions to build from source.
 
 Available packages are:
-* rocwmma-dev (sources files for development)
-* rocwmma-samples (sample executables)
-* rocwmma-samples-dbgsym (sample executables with debug symbols)
-* rocwmma-tests (test executables)
-* rocwmma-tests-dbgsym (test executables with debug symbols)
-* rocwmma-clients (samples, tests and benchmarks executables)
+
+* rocwmma-dev (sources files for development).
+* rocwmma-samples (sample executables).
+* rocwmma-samples-dbgsym (sample executables with debug symbols).
+* rocwmma-tests (test executables).
+* rocwmma-tests-dbgsym (test executables with debug symbols).
+* rocwmma-clients (samples, tests and benchmarks executables).
 
 -------------
 Prerequisites
@@ -76,12 +77,13 @@ GPU support
 AMD CDNA class GPU featuring matrix core support: `gfx908`, `gfx90a`, `gfx940`, `gfx941`, `gfx942` as `gfx9`
 
 .. note::
-    Double precision FP64 datatype support requires gfx90a, gfx940, gfx941 or gfx942
-    F8 and BF8 datatype support requires gfx940, gfx941 or gfx942
+    Double precision FP64 datatype support requires gfx90a, gfx940, gfx941 or gfx942.
+
+    F8 and BF8 datatype support requires gfx940, gfx941 or gfx942.
 
 Or
 
-AMD RDNA3 class GPU featuring AI acceleration support: `gfx1100`, `gfx1101`, `gfx1102` as `gfx11`
+AMD RDNA3 class GPU featuring AI acceleration support: `gfx1100`, `gfx1101`, `gfx1102` as `gfx11`.
 
 Download rocWMMA
 ^^^^^^^^^^^^^^^^^
@@ -271,18 +273,18 @@ The tests in ``<build_dir>`` contain executables as given in the table below.
 ============================================= ===================================================================================================================================================
 Executable Name                               Description
 ============================================= ===================================================================================================================================================
-``dlrm/dlrm_dot_test-``*                        A DLRM implementation using rocWMMA API
-``dlrm/dlrm_dot_lds_test-``*                    A DLRM implementation using rocWMMA API with LDS shared memory
-``gemm/gemm_PGR0_LB0_MP0_SB_NC-``*              A simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API
-``gemm/gemm_PGR0_LB0_MP0_MB_NC-``*              A modified GEMM operation where each wave targets a sub-grid of output blocks using rocWMMA API
-``gemm/gemm_PGR1_LB2_MP0_MB_CP_BLK-``*          A modified GEMM operation where each wave targets a sub-grid of output blocks using LDS memory, rocWMMA API, and block-level collaboration
-``gemm/gemm_PGR1_LB2_MP0_MB_CP_WV-``*           A modified GEMM operation where each wave targets a sub-grid of output blocks using LDS memory, rocWMMA API, and wave-level collaboration
-``gemm/gemm_PGR1_LB2_MP0_MB_CP_WG-``*           A modified GEMM operation where each wave targets a sub-grid of output blocks using LDS memory, rocWMMA API, and workgroup-level collaboration
-``gemm/gemm_PGR0_LB0_MP0_SB_NC_ad_hoc-``*       An adhoc version of ``gemm_PGR0_LB0_MP0_SB_NC-``*
-``gemm/gemm_PGR0_LB0_MP0_MB_NC_ad_hoc-``*       An adhoc version of ``gemm_PGR0_LB0_MP0_MB_NC-``*
-``gemm/gemm_PGR1_LB2_MP0_MB_CP_BLK_ad_hoc-``*   An adhoc version of ``gemm_PGR1_LB2_MP0_MB_CP_BLK-``*
-``gemm/gemm_PGR1_LB2_MP0_MB_CP_WV_ad_hoc-``*    An adhoc version of ``gemm_PGR1_LB2_MP0_MB_CP_WV-``*
-``gemm/gemm_PGR1_LB2_MP0_MB_CP_WG_ad_hoc-``*    An adhoc version of ``gemm_PGR1_LB2_MP0_MB_CP_WG-``*
+``dlrm/dlrm_dot_test-*``                        A DLRM implementation using rocWMMA API
+``dlrm/dlrm_dot_lds_test-*``                    A DLRM implementation using rocWMMA API with LDS shared memory
+``gemm/gemm_PGR0_LB0_MP0_SB_NC-*``              A simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API
+``gemm/gemm_PGR0_LB0_MP0_MB_NC-*``              A modified GEMM operation where each wave targets a sub-grid of output blocks using rocWMMA API
+``gemm/gemm_PGR1_LB2_MP0_MB_CP_BLK-*``          A modified GEMM operation where each wave targets a sub-grid of output blocks using LDS memory, rocWMMA API, and block-level collaboration
+``gemm/gemm_PGR1_LB2_MP0_MB_CP_WV-*``           A modified GEMM operation where each wave targets a sub-grid of output blocks using LDS memory, rocWMMA API, and wave-level collaboration
+``gemm/gemm_PGR1_LB2_MP0_MB_CP_WG-*``           A modified GEMM operation where each wave targets a sub-grid of output blocks using LDS memory, rocWMMA API, and workgroup-level collaboration
+``gemm/gemm_PGR0_LB0_MP0_SB_NC_ad_hoc-*``       An adhoc version of ``gemm_PGR0_LB0_MP0_SB_NC-*``
+``gemm/gemm_PGR0_LB0_MP0_MB_NC_ad_hoc-*``       An adhoc version of ``gemm_PGR0_LB0_MP0_MB_NC-*``
+``gemm/gemm_PGR1_LB2_MP0_MB_CP_BLK_ad_hoc-*``   An adhoc version of ``gemm_PGR1_LB2_MP0_MB_CP_BLK-*``
+``gemm/gemm_PGR1_LB2_MP0_MB_CP_WV_ad_hoc-*``    An adhoc version of ``gemm_PGR1_LB2_MP0_MB_CP_WV-*``
+``gemm/gemm_PGR1_LB2_MP0_MB_CP_WG_ad_hoc-*``    An adhoc version of ``gemm_PGR1_LB2_MP0_MB_CP_WG-*``
 ``unit/contamination_test``                     Tests against contamination of pristine data for loads and stores
 ``unit/cross_lane_ops_test``                    Tests cross-lane vector operations
 ``unit/fill_fragment_test``                     Tests fill_fragment API function
