@@ -173,7 +173,7 @@ Minimum HIP runtime version support is hip-rocclr 4.3.0 (hip-runtime-amd).
 Minimum LLVM OpenMP runtime dev package version support is libomp-11-dev (rocm-llvm-dev).
 
 .. note::
-    * = if using rocBLAS for validation
+    `* = if using rocBLAS for validation
 
 By default, the project is configured in Release mode.
 
@@ -191,13 +191,13 @@ Here are some other example project configurations:
 +-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |           Configuration           |                                                                          Command                                                                           |
 +===================================+============================================================================================================================================================+
-|               Basic               |                                      ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir>``                                       |
+|               Basic               |                                      ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ | cmake -B <build_dir>``                                       |
 +-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|         Targeting gfx908          |                      ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DAMDGPU_TARGETS=gfx908:xnack-``                      |
+|         Targeting gfx908          |                      ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ | cmake -B <build_dir> . -DAMDGPU_TARGETS=gfx908:xnack-``                      |
 +-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|            Debug build            |                         ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DCMAKE_BUILD_TYPE=Debug``                         |
+|            Debug build            |                         ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ | cmake -B <build_dir> . -DCMAKE_BUILD_TYPE=Debug``                         |
 +-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Build without rocBLAS(default on) | ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DROCWMMA_VALIDATE_WITH_ROCBLAS=OFF -DROCWMMA_BENCHMARK_WITH_ROCBLAS=OFF`` |
+| Build without rocBLAS(default on) | ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ | cmake -B <build_dir> . -DROCWMMA_VALIDATE_WITH_ROCBLAS=OFF -DROCWMMA_BENCHMARK_WITH_ROCBLAS=OFF`` |
 +-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 
