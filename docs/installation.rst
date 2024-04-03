@@ -12,11 +12,20 @@ Installation
 This document provides instructions for installing and configuring the rocWMMA library.
 The quickest way to install is using prebuilt packages. Alternatively, there are instructions to build from source.
 
+Available packages are:
+* rocwmma-dev (sources files for development)
+* rocwmma-samples (sample executables)
+* rocwmma-samples-dbgsym (sample executables with debug symbols)
+* rocwmma-tests (test executables)
+* rocwmma-tests-dbgsym (test executables with debug symbols)
+* rocwmma-clients (samples, tests and benchmarks executables)
+
 -------------
 Prerequisites
 -------------
 
-A ROCm enabled platform. More information `here <https://github.com/ROCm/ROCm>`_.
+* A ROCm 6.0 enabled platform. More information `here <https://github.com/ROCm/ROCm>`_.
+* rocBLAS for ROCm 6.0, if rocWMMA is configured to validate with rocBLAS (see below).
 
 -----------------------------
 Installing pre-built packages
@@ -27,26 +36,27 @@ To install rocWMMA on Ubuntu or Debian, use:
 ::
 
    sudo apt-get update
-   sudo apt-get install rocWMMA
+   sudo apt-get install rocwmma-dev rocwmma-samples rocwmma-tests
 
 To install rocWMMA on CentOS, use:
 
 ::
 
     sudo yum update
-    sudo yum install rocWMMA
+    sudo yum install rocwmma-dev rocwmma-samples rocwmma-tests
 
 To install rocWMMA on SLES, use:
 
 ::
 
     sudo dnf upgrade
-    sudo dnf install rocWMMA
+    sudo dnf install rocwmma-dev rocwmma-samples rocwmma-tests
 
 Once installed, rocWMMA can be used just like any other library with a C++ API.
 
-Once rocWMMA is installed, you can see the ``rocwmma.hpp`` header file in the ``/opt/rocm/include`` directory.
-You must include only ``rocwmma.hpp`` in the user code to make calls into rocWMMA. Don't directly include other rocWMMA files that are found in ``/opt/rocm/include/internal``.
+Once rocWMMA is installed, you can see the ``rocwmma.hpp`` header file in the ``/opt/rocm/include/rocwmma`` directory.
+You must include only ``rocwmma.hpp``, ``rocwmma_coop.hpp`` and ``rocwmma_transforms.hpp`` in the user code to make calls into rocWMMA.
+Don't directly include other rocWMMA files that are found in ``/opt/rocm/include/internal``.
 
 -------------------------------
 Building and installing rocWMMA
@@ -57,15 +67,17 @@ packages as described above. If still desired, here are the instructions to buil
 
 System requirements
 ^^^^^^^^^^^^^^^^^^^
-As a general rule, 8GB of system memory is required for a full rocWMMA build. This value can be lower if rocWMMA is built without tests. This value may also increase in the future as more functions are added to rocWMMA.
+As a general rule, a minimum of 8GB of system memory is required for a full rocWMMA build. This value can be lower if rocWMMA is built without tests.
+This value may also increase in the future as more features are added to rocWMMA.
 
 
 GPU support
 ^^^^^^^^^^^
-AMD CDNA class GPU featuring matrix core support: `gfx908`, `gfx90a` as `gfx9`
+AMD CDNA class GPU featuring matrix core support: `gfx908`, `gfx90a`, `gfx940`, `gfx941`, `gfx942` as `gfx9`
 
 .. note::
-    Double precision FP64 datatype support requires gfx90a
+    Double precision FP64 datatype support requires gfx90a, gfx940, gfx941 or gfx942
+    F8 and BF8 datatype support requires gfx940, gfx941 or gfx942
 
 Or
 
@@ -74,7 +86,7 @@ AMD RDNA3 class GPU featuring AI acceleration support: `gfx1100`, `gfx1101`, `gf
 Download rocWMMA
 ^^^^^^^^^^^^^^^^^
 
-The rocWMMA source code is available at the `rocWMMA github page <https://github.com/ROCmSoftwarePlatform/rocWMMA>`_. rocWMMA has a minimum ROCm support version 5.4.
+The rocWMMA source code is available at the `rocWMMA github page <https://github.com/ROCmSoftwarePlatform/rocWMMA>`_. rocWMMA has a minimum ROCm support version 6.0.
 To check the ROCm version on an Ubuntu system, use:
 
 ::
@@ -105,9 +117,9 @@ You can choose to build any of the following:
 
 * library and tests
 
-* library, tests, and assembly
+* library, samples, tests, and (optionally) assembly
 
-You only need (library) for calling rocWMMA from your code.
+You only need the library include headers for calling rocWMMA from your code.
 The client contains the test samples and benchmark code.
 
 Below are the project options available to build rocWMMA library with or without clients.
@@ -148,9 +160,18 @@ Below are the project options available to build rocWMMA library with or without
 Build library
 ^^^^^^^^^^^^^^^^^^
 
-ROCm-cmake has a minimum version requirement of 0.8.0 for ROCm 5.3.
+Minimum ROCm version support is 6.0.
 
-Minimum ROCm version support is 5.4.
+ROCm-cmake has a minimum version requirement of 0.8.0.
+
+Minimum rocBLAS version support is rocBLAS 4.0.0 for ROCm 6.0* (rocblas and rocblas-dev).
+
+Minimum HIP runtime version support is hip-rocclr 4.3.0 (hip-runtime-amd).
+
+Minimum LLVM OpenMP runtime dev package version support is libomp-11-dev (rocm-llvm-dev).
+
+.. note::
+    * = if using rocBLAS for validation
 
 By default, the project is configured in Release mode.
 
@@ -158,24 +179,25 @@ To build the library alone, run:
 
 .. code-block:: bash
 
-    CC=hipcc CXX=hipcc cmake -B<build_dir> . -DROCWMMA_BUILD_TESTS=OFF -DROCWMMA_BUILD_SAMPLES=OFF
+    CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DROCWMMA_BUILD_TESTS=OFF -DROCWMMA_BUILD_SAMPLES=OFF
 
 Here are some other example project configurations:
 
 .. tabularcolumns::
    |\X{1}{4}|\X{3}{4}|
 
-+-----------------------------------+--------------------------------------------------------------------------------------------------------------------+
-|         Configuration             |                                          Command                                                                   |
-+===================================+====================================================================================================================+
-|            Basic                  |                                ``CC=hipcc CXX=hipcc cmake -B<build_dir>``                                          |
-+-----------------------------------+--------------------------------------------------------------------------------------------------------------------+
-|        Targeting gfx908           |                   ``CC=hipcc CXX=hipcc cmake -B<build_dir> . -DAMDGPU_TARGETS=gfx908:xnack-``                      |
-+-----------------------------------+--------------------------------------------------------------------------------------------------------------------+
-|          Debug build              |                    ``CC=hipcc CXX=hipcc cmake -B<build_dir> . -DCMAKE_BUILD_TYPE=Debug``                           |
-+-----------------------------------+--------------------------------------------------------------------------------------------------------------------+
-| Build without rocBLAS(default on) |  ``CC=hipcc CXX=hipcc cmake -B<build_dir> . -DROCWMMA_VALIDATE_WITH_ROCBLAS=OFF -DROCWMMA_BENCHMARK_WITH_ROCBLAS=OFF`` |
-+-----------------------------------+--------------------------------------------------------------------------------------------------------------------+
++-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|           Configuration           |                                                                          Command                                                                           |
++===================================+============================================================================================================================================================+
+|               Basic               |                                      ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir>``                                       |
++-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|         Targeting gfx908          |                      ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DAMDGPU_TARGETS=gfx908:xnack-``                      |
++-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|            Debug build            |                         ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DCMAKE_BUILD_TYPE=Debug``                         |
++-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Build without rocBLAS(default on) | ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DROCWMMA_VALIDATE_WITH_ROCBLAS=OFF -DROCWMMA_BENCHMARK_WITH_ROCBLAS=OFF`` |
++-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
 
 After configuration, build using:
 
@@ -190,7 +212,7 @@ To build library and samples, run:
 
 .. code-block:: bash
 
-    CC=hipcc CXX=hipcc cmake -B<build_dir> . -DROCWMMA_BUILD_TESTS=OFF -DROCWMMA_BUILD_SAMPLES=ON
+    CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DROCWMMA_BUILD_TESTS=OFF -DROCWMMA_BUILD_SAMPLES=ON
 
 After configuration, build using:
 
@@ -230,13 +252,13 @@ rocWMMA provides the following test suites:
 
 rocWMMA can build both validation and benchmark tests. The library uses CPU or rocBLAS methods for validation (when available) and benchmark comparisons based on the provided project option.
 By default, the project is linked against rocBLAS for validating results.
-Minimum ROCBLAS library version requirement for ROCm 4.3.0 is 2.39.0. 
+Minimum ROCBLAS library version requirement for ROCm 4.3.0 is 2.39.0.
 
 To build library and tests, run:
 
 .. code-block:: bash
 
-    CC=hipcc CXX=hipcc cmake -B<build_dir> .
+    CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> .
 
 After configuration, build using:
 
@@ -246,35 +268,41 @@ After configuration, build using:
 
 The tests in ``<build_dir>`` contain executables as given in the table below.
 
-====================================== ===========================================================================================================
-Executable Name                        Description
-====================================== ===========================================================================================================
-``dlrm/dlrm_dot_test-``*                   A DLRM implementation using rocWMMA API
-``dlrm/dlrm_dot_lds_test-``*               A DLRM implementation using rocWMMA API with LDS shared memory
-``gemm/mma_sync_test-``*                   A simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API
-``gemm/mma_sync_multi_test-``*             A modified GEMM operation where each wave targets a sub-grid of output blocks using rocWMMA API
-``gemm/mma_sync_multi_ad_hoc_test-``*      An adhoc version of ``mma_sync_multi_test-``*
-``gemm/mma_sync_multi_lds_test-``*         A modified GEMM operation where each wave targets a sub-grid of output blocks using LDS memory, rocWMMA API, and wave-level collaboration
-``gemm/mma_sync_multi_lds_ad_hoc_test-``*  An adhoc version of ``mma_sync_multi_lds_test-``*
-``gemm/mma_sync_coop_wg_test-``*           A modified GEMM operation where each wave targets a sub-grid of output blocks using LDS memory, rocWMMA API, and workgroup-level collaboration
-``gemm/mma_sync_coop_wg_ad_hoc_test-``*    An adhoc version of ``mma_sync_coop_wg_test-``*
-``gemm/barrier_test-``*                    A simple GEMM operation with wave synchronization
-``unit/contamination_test``                Tests against contamination of pristine data for loads and stores
-``unit/cross_lane_ops_test``               Tests cross-lane vector operations
-``unit/fill_fragment_test``                Tests fill_fragment API function
-``unit/io_shape_test``                     Tests input and output shape meta data
-``unit/io_traits_test``                    Tests input and output logistical meta data
-``unit/layout_test``                       Tests accuracy of internal matrix layout patterns
-``unit/load_store_matrix_sync_test``       Tests ``load_matrix_sync`` and ``store_matrix_sync`` API functions
-``unit/load_store_matrix_coop_sync_test``  Tests ``load_matrix_coop_sync`` and ``store_matrix_coop_sync`` API functions
-``unit/map_util_test``                     Tests mapping utilities used in rocWMMA implementations
-``unit/vector_iterator_test``              Tests internal vector storage iteration implementation
-``unit/vector_test``                       Tests internal vector storage implementation
-====================================== ===========================================================================================================
+============================================= ===================================================================================================================================================
+Executable Name                               Description
+============================================= ===================================================================================================================================================
+``dlrm/dlrm_dot_test-``*                        A DLRM implementation using rocWMMA API
+``dlrm/dlrm_dot_lds_test-``*                    A DLRM implementation using rocWMMA API with LDS shared memory
+``gemm/gemm_PGR0_LB0_MP0_SB_NC-``*              A simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API
+``gemm/gemm_PGR0_LB0_MP0_MB_NC-``*              A modified GEMM operation where each wave targets a sub-grid of output blocks using rocWMMA API
+``gemm/gemm_PGR1_LB2_MP0_MB_CP_BLK-``*          A modified GEMM operation where each wave targets a sub-grid of output blocks using LDS memory, rocWMMA API, and block-level collaboration
+``gemm/gemm_PGR1_LB2_MP0_MB_CP_WV-``*           A modified GEMM operation where each wave targets a sub-grid of output blocks using LDS memory, rocWMMA API, and wave-level collaboration
+``gemm/gemm_PGR1_LB2_MP0_MB_CP_WG-``*           A modified GEMM operation where each wave targets a sub-grid of output blocks using LDS memory, rocWMMA API, and workgroup-level collaboration
+``gemm/gemm_PGR0_LB0_MP0_SB_NC_ad_hoc-``*       An adhoc version of ``gemm_PGR0_LB0_MP0_SB_NC-``*
+``gemm/gemm_PGR0_LB0_MP0_MB_NC_ad_hoc-``*       An adhoc version of ``gemm_PGR0_LB0_MP0_MB_NC-``*
+``gemm/gemm_PGR1_LB2_MP0_MB_CP_BLK_ad_hoc-``*   An adhoc version of ``gemm_PGR1_LB2_MP0_MB_CP_BLK-``*
+``gemm/gemm_PGR1_LB2_MP0_MB_CP_WV_ad_hoc-``*    An adhoc version of ``gemm_PGR1_LB2_MP0_MB_CP_WV-``*
+``gemm/gemm_PGR1_LB2_MP0_MB_CP_WG_ad_hoc-``*    An adhoc version of ``gemm_PGR1_LB2_MP0_MB_CP_WG-``*
+``unit/contamination_test``                     Tests against contamination of pristine data for loads and stores
+``unit/cross_lane_ops_test``                    Tests cross-lane vector operations
+``unit/fill_fragment_test``                     Tests fill_fragment API function
+``unit/io_shape_test``                          Tests input and output shape meta data
+``unit/io_traits_test``                         Tests input and output logistical meta data
+``unit/layout_test``                            Tests accuracy of internal matrix layout patterns
+``unit/load_store_matrix_sync_test``            Tests ``load_matrix_sync`` and ``store_matrix_sync`` API functions
+``unit/load_store_matrix_coop_sync_test``       Tests ``load_matrix_coop_sync`` and ``store_matrix_coop_sync`` API functions
+``unit/map_util_test``                          Tests mapping utilities used in rocWMMA implementations
+``unit/pack_util_test``                         Tests vector packing utilities used in rocWMMA implementations
+``unit/transforms_test``                        Tests transform utilities used in rocWMMA implementations
+``unit/unpack_util_test``                       Tests un-packing utilities used in rocWMMA implementations
+``unit/vector_iterator_test``                   Tests internal vector storage iteration implementation
+``unit/vector_test``                            Tests internal vector storage implementation
+``unit/vector_util_test``                       Tests internal vector manipulation utilities implementation
+============================================= ===================================================================================================================================================
 
-*= Validate: Executables that compare outputs for correctness against reference sources such as CPU or rocBLAS calculations.
+*= validate: Executables that compare outputs for correctness against reference sources such as CPU or rocBLAS calculations.
 
-*= Bench: Executables that measure kernel execution speeds and may compare against those of rocBLAS references.
+*= bench: Executables that measure kernel execution speeds and may compare against those of rocBLAS references.
 
 Build library, tests, and assembly
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -283,7 +311,7 @@ To build the library and tests with assembly code generation, run:
 
 .. code-block:: bash
 
-    CC=hipcc CXX=hipcc cmake -B<build_dir> . -DROCWMMA_BUILD_ASSEMBLY=ON
+    CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DROCWMMA_BUILD_ASSEMBLY=ON
 
 After configuration, build using:
 
@@ -291,4 +319,4 @@ After configuration, build using:
 
     cmake --build <build_dir> -- -j
 
-The assembly folder in ``<build_dir>`` contains assembly generation of test executables in the format ``test_executable_name.s``
+The ``assembly`` folder in ``<build_dir>`` contains assembly generation of test executables in the format ``test_executable_name.s``
