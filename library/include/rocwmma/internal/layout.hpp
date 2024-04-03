@@ -267,8 +267,7 @@ namespace rocwmma
                 !(is_same_v<DataLayoutT, col_major> && (MaxVectorWidth > BlockK)),
                 "MaxVectorWidth is larger than BlockK dimension. Try reducing MaxVectorWidth");
         };
-        /** @}*/
-
+        
     } // namespace FragmentLayout
 
     ///
