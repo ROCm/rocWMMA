@@ -195,8 +195,9 @@ namespace rocwmma
         // Because there is only one result from 2 sources, we must choose to blend either the low, or the
         // high elements per group of inputs.
         // E.g. src0 = [0, 1, 2, 3] src1 = [4, 5, 6, 7]
-        // UnpackLo = [0, 4, 1, 5]
-        // UnpackHi = [2, 6, 3, 7]
+        // UnpackLo   = [0, 4, 1, 5]
+        // UnpackHi   = [2, 6, 3, 7]
+        // UnpackLoHi = [0, 4, 2, 6]
 
         /*! \class UnpackByteLo
         *  \brief  Blend class that unpacks lo bytes from each 4B element of src0 and src1.
@@ -233,8 +234,10 @@ namespace rocwmma
         // Extract functions
         // These functions extract elements in order from src0 and src1 and concatenate their result together.
         // e.g. src0   = [0, 1, 2, 3] src1 = [4, 5, 6, 7]
-        //      extract_even = [0, 2, 4, 6]
-        //      extract_odd  = [1, 3, 5, 7]
+        // extract_even      = [0, 2, 4, 6]
+        // extract_odd       = [1, 3, 5, 7]
+        // extract_even_odd  = [0, 2, 5, 7]
+        // extract_odd_even  = [1, 3, 4, 6]
 
         /*! \class ExtractByteEven
         *  \brief  Blend class that extracts even ordered bytes from each 4B element of src0 and src1 and
