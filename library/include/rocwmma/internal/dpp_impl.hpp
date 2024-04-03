@@ -27,6 +27,7 @@
 #define ROCWMMA_MOVE_DPP_IMPL_HPP
 
 #include "dpp.hpp"
+#include "vector_util.hpp"
 
 namespace rocwmma
 {
@@ -103,6 +104,8 @@ namespace rocwmma
                           typename DataT>
                 ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1)
                 {
+                    static_assert(sizeof(DataT) == sizeof(uint32_t),
+                                  "The unit of the DPP operation should be 32 bits");
                     reinterpret_cast<int32_t&>(src0) = __builtin_amdgcn_update_dpp(
                         reinterpret_cast<int32_t const&>(src1), // fill value 'prev'
                         reinterpret_cast<int32_t const&>(src0), // Src value

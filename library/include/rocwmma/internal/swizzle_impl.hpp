@@ -68,6 +68,8 @@ namespace rocwmma
                 template <typename DataT>
                 ROCWMMA_DEVICE static inline DataT exec(DataT input)
                 {
+                    static_assert(sizeof(DataT) == sizeof(uint32_t),
+                                  "The unit of the Swizzle operation should be 32 bits");
                     reinterpret_cast<int32_t&>(input) = __builtin_amdgcn_ds_swizzle(
                         reinterpret_cast<int32_t const&>(input), SwizzleCtrl::opCtrl());
                     return input;

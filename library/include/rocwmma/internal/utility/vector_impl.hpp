@@ -27,8 +27,8 @@
 #ifndef ROCWMMA_UTILITY_VECTOR_IMPL_HPP
 #define ROCWMMA_UTILITY_VECTOR_IMPL_HPP
 
-#include "type_traits.hpp"
-#include "get.hpp"
+#include <rocwmma/internal/utility/get.hpp>
+#include <rocwmma/internal/utility/type_traits.hpp>
 
 namespace rocwmma
 {
@@ -68,6 +68,40 @@ namespace rocwmma
 
         template <typename... Ts>
         constexpr bool is_same_type_v = is_same_type<Ts...>::value;
+
+        template <uint32_t N>
+        using Number = integral_constant<int32_t, N>;
+
+        // Can be used to build any vector class of <DataT, VecSize>
+        // Either VecT or non_native_vector_vase.
+        // Class acts as a static for_each style generator:
+        // Incoming functor F will be called with each index + args in sequence.
+        // Results of functor calls are used to construct a new vector.
+        template <template <typename, uint32_t> class VecT, typename DataT, uint32_t VecSize>
+        struct vector_generator
+        {
+            static_assert(VecSize > 0, "VectorSize must be at least 1");
+
+            ROCWMMA_HOST_DEVICE constexpr vector_generator() {}
+
+            // F signature: F(Number<Iter>, args...)
+            template <class F, typename... ArgsT>
+            ROCWMMA_HOST_DEVICE constexpr auto operator()(F f, ArgsT&&... args) const
+            {
+                // Build the number sequence to be expanded below.
+                return operator()(f, detail::Seq<VecSize>{}, forward<ArgsT>(args)...);
+            }
+
+        private:
+            template <class F, uint32_t... Indices, typename... ArgsT>
+            ROCWMMA_HOST_DEVICE constexpr auto
+                operator()(F f, detail::SeqT<Indices...>, ArgsT&&... args) const
+            {
+                // Execute incoming functor f with each index, as well as forwarded args.
+                // The resulting vector is constructed with the results of each functor call.
+                return VecT<DataT, VecSize>{(f(Number<Indices>{}, forward<ArgsT>(args)...))...};
+            }
+        };
     }
 
     template <typename DataT>

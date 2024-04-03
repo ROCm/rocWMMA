@@ -69,15 +69,6 @@ namespace rocwmma
         template <typename SwizzleOp>
         struct Driver
         {
-        private:
-            template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-            ROCWMMA_DEVICE static inline auto forEach(VecT<DataT, VecSize> const& src,
-                                                      detail::SeqT<Idx...>)
-            {
-                static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{SwizzleOp::exec(get<Idx>(src))...};
-            }
-
         public:
             // Sanity checks
             static_assert(SwizzleOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_SWIZZLE,
@@ -93,32 +84,41 @@ namespace rocwmma
             template <typename DataT>
             ROCWMMA_DEVICE static inline auto exec(DataT const& src)
             {
-                return SwizzleOp::exec(src);
+                // Vectorize to B32.
+                // This way we can support B64+ types
+                using B32VecT = VecT<uint32_t, sizeof(DataT) / sizeof(uint32_t)>;
+
+                // Ensure that we can vectorize to B32
+                static_assert(sizeof(DataT) % sizeof(uint32_t) == 0,
+                              "DataT size must be a multiple of B32");
+                static_assert(sizeof(B32VecT) == sizeof(DataT), "Unable to vectorize DataT");
+
+                // Forward to vectorized function
+                auto result = exec(reinterpret_cast<B32VecT const&>(src));
+
+                // Restore result to input type
+                return reinterpret_cast<DataT&>(result);
             }
 
             template <typename DataT, uint32_t VecSize>
             ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src)
             {
-#if ROCWMMA_ARCH_GFX1102
-                VecT<DataT, VecSize> result;
-                auto const           itR = makeVectorIterator(src).begin();
-                auto                 itW = makeVectorIterator(result).begin();
+                constexpr uint32_t B32VecSize = sizeof(src) / sizeof(uint32_t);
+                using B32VecT                 = VecT<uint32_t, B32VecSize>;
 
-                static_assert(decltype(itR)::range() == VecSize,
-                              "VecSize inconsistent with iterator range");
-                static_assert(decltype(itW)::range() == VecSize,
-                              "VecSize inconsistent with iterator range");
+                // Ensure that we can vectorize to B32
+                static_assert(sizeof(DataT) % sizeof(uint32_t) == 0,
+                              "DataT size must be a multiple of B32");
+                static_assert(sizeof(B32VecT) == sizeof(src), "Unable to vectorize DataT");
 
-#pragma unroll
-                for(uint32_t i = 0; i < VecSize; ++i, itR++, itW++)
-                {
-                    get<0>(*itW) = SwizzleOp::exec(get<0>(*itR));
-                }
+                auto op = [](auto&& idx, auto&& v) {
+                    constexpr auto i = decay_t<decltype(idx)>::value;
+                    return SwizzleOp::exec(v.data[i]);
+                };
 
-                return result;
-#else
-                return forEach(src, detail::Seq<VecSize>{});
-#endif
+                auto swizzle_result = vector_generator<uint32_t, B32VecSize>()(
+                    op, reinterpret_cast<B32VecT const&>(src));
+                return reinterpret_cast<VecT<DataT, VecSize> const&>(swizzle_result);
             }
         };
 

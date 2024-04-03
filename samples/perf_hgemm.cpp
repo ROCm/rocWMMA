@@ -348,7 +348,7 @@ ROCWMMA_DEVICE static inline void
 {
     // No transpose, but apply the lds data layout
     store_matrix_coop_sync<WaveCountA>(
-        ldsAddr, applyDataLayout<DataLayoutLds>(grBuffA), ldsld, waveIndexA);
+        ldsAddr, applyDataLayout<DataLayoutLds, WaveCountA>(grBuffA), ldsld, waveIndexA);
 }
 
 // Local B writes in cooperative mode (macro tile)
@@ -358,7 +358,7 @@ ROCWMMA_DEVICE static inline void
 {
     // Transpose B and then apply lds data layout
     store_matrix_coop_sync<WaveCountB>(
-        ldsAddr, applyDataLayout<DataLayoutLds>(applyTranspose(grBuffB)), ldsld, waveIndexB);
+        ldsAddr, applyDataLayout<DataLayoutLds, WaveCountB>(applyTranspose(grBuffB)), ldsld, waveIndexB);
 }
 
 // Local A reads for warp tile gemm, non-cooperative

@@ -29,6 +29,7 @@
 #include "detail/load_contamination.hpp"
 #include "kernel_generator.hpp"
 #include "unit_test.hpp"
+#include <rocwmma/internal/vector.hpp>
 
 namespace rocwmma
 {

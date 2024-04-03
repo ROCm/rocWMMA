@@ -40,25 +40,6 @@ namespace rocwmma
         template <typename BlendOp>
         struct Driver
         {
-        private:
-            template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-            ROCWMMA_DEVICE static inline auto
-                forEach(VecT<DataT, VecSize> const& src0, DataT const& src1, detail::SeqT<Idx...>)
-            {
-                static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{BlendOp::exec(get<Idx>(src0), src1)...};
-            }
-
-            template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-            ROCWMMA_DEVICE static inline auto forEach(VecT<DataT, VecSize> const& src0,
-                                                      VecT<DataT, VecSize> const& src1,
-                                                      detail::SeqT<Idx...>)
-            {
-                static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{BlendOp::exec(get<Idx>(src0), get<Idx>(src1))...};
-            }
-
-        public:
             // Sanity checks
             static_assert((BlendOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_VPERM)
                               || (BlendOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_VBLEND),
@@ -70,21 +51,92 @@ namespace rocwmma
             template <typename DataT>
             ROCWMMA_DEVICE static inline auto exec(DataT const& src0, DataT const& src1)
             {
-                return BlendOp::exec(src0, src1);
+                // Vectorize to B32.
+                // This way we can support B64+ types
+                using B32VecT = VecT<uint32_t, sizeof(DataT) / sizeof(uint32_t)>;
+
+                // Ensure that we can vectorize to B32
+                static_assert(sizeof(DataT) % sizeof(uint32_t) == 0,
+                              "DataT size must be a multiple of B32");
+                static_assert(sizeof(B32VecT) == sizeof(DataT), "Unable to vectorize DataT");
+
+                // Forward to vectorized function
+                auto result = exec(reinterpret_cast<B32VecT const&>(src0),
+                                   reinterpret_cast<B32VecT const&>(src1));
+
+                // Restore result to input type
+                return reinterpret_cast<DataT&>(result);
             }
 
             template <typename DataT, uint32_t VecSize>
             ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src0,
                                                    DataT const&                src1)
             {
-                return forEach(src0, src1, detail::Seq<VecSize>{});
+                // Reinterpret vector as B32 so we can support B64+ elements.
+                constexpr uint32_t B32VecSize = sizeof(DataT) / sizeof(uint32_t) * VecSize;
+                using B32VecT                 = VecT<uint32_t, B32VecSize>;
+                using InputVecT               = VecT<DataT, VecSize>;
+
+                // Ensure that we can vectorize src0 to B32
+                static_assert(sizeof(InputVecT) % sizeof(uint32_t) == 0,
+                              "VecT size must be a multiple of B32");
+                static_assert(sizeof(B32VecT) == sizeof(InputVecT),
+                              "Unable to vectorize src0 to B32");
+
+                // Reinterpret scalar as B32 vector so we can support B64+ elements.
+                constexpr uint32_t B32ScalarVecSize = sizeof(DataT) / sizeof(uint32_t);
+                using B32ScalarVecT                 = VecT<uint32_t, B32ScalarVecSize>;
+
+                // Ensure that we can vectorize src1 to B32
+                static_assert(sizeof(B32ScalarVecT) % sizeof(uint32_t) == 0,
+                              "DataT size must be a multiple of B32");
+                static_assert(sizeof(B32ScalarVecT) == sizeof(DataT), "Unable to vectorize src1");
+
+                auto op = [](auto&& idx, auto&& v0, auto&& s, auto&& opCtrl) {
+                    // Pair up the b32 vector elements with the appropriate b32 scalar elements.
+                    constexpr auto i = decay_t<decltype(idx)>::value;
+                    return BlendOp::exec(get<i>(v0), get<i % B32ScalarVecSize>(s), opCtrl);
+                };
+
+                // Static unroll with cached opCtrl
+                auto result = vector_generator<uint32_t, B32VecSize>()(
+                    op,
+                    reinterpret_cast<B32VecT const&>(src0),
+                    reinterpret_cast<B32ScalarVecT const&>(src1),
+                    BlendOp::opCtrl());
+
+                // Restore result to input type
+                return reinterpret_cast<InputVecT&>(result);
             }
 
             template <typename DataT, uint32_t VecSize>
             ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src0,
                                                    VecT<DataT, VecSize> const& src1)
             {
-                return forEach(src0, src1, detail::Seq<VecSize>{});
+                // Reinterpret vectors as B32 so we can support B64+ elements.
+                constexpr uint32_t B32VecSize = sizeof(DataT) / sizeof(uint32_t) * VecSize;
+                using B32VecT                 = VecT<uint32_t, B32VecSize>;
+                using InputVecT               = VecT<DataT, VecSize>;
+                static_assert(sizeof(InputVecT) % sizeof(uint32_t) == 0,
+                              "VecT size must be a multiple of B32");
+                static_assert(sizeof(B32VecT) == sizeof(InputVecT),
+                              "Unable to vectorize src0 / src1 to B32");
+
+                auto op = [](auto&& idx, auto&& v0, auto&& v1, auto&& opCtrl) {
+                    // Pair up the b32 vector elements
+                    constexpr auto i = decay_t<decltype(idx)>::value;
+                    return BlendOp::exec(get<i>(v0), get<i>(v1), opCtrl);
+                };
+
+                // Static unroll with cached opCtrl
+                auto result = vector_generator<uint32_t, B32VecSize>()(
+                    op,
+                    reinterpret_cast<B32VecT const&>(src0),
+                    reinterpret_cast<B32VecT const&>(src1),
+                    BlendOp::opCtrl());
+
+                // Restore result to input type
+                return reinterpret_cast<InputVecT&>(result);
             }
         };
 
@@ -102,11 +154,24 @@ namespace rocwmma
         using Zip32   = Driver<BlendImpl::Ops::Zip32>;
 
         // Unpack functions
-        using UnpackByteLo   = Driver<BlendImpl::Ops::UnpackByteLo>;
-        using UnpackByteHi   = Driver<BlendImpl::Ops::UnpackByteHi>;
-        using UnpackWordLo   = Driver<BlendImpl::Ops::UnpackWordLo>;
-        using UnpackWordHi   = Driver<BlendImpl::Ops::UnpackWordHi>;
-        using UnpackByteLoHi = Driver<BlendImpl::Ops::UnpackByteLoHi>;
+        using UnpackByteLo     = Driver<BlendImpl::Ops::UnpackByteLo>;
+        using UnpackByteHi     = Driver<BlendImpl::Ops::UnpackByteHi>;
+        using UnpackWordLo     = Driver<BlendImpl::Ops::UnpackWordLo>;
+        using UnpackWordHi     = Driver<BlendImpl::Ops::UnpackWordHi>;
+        using UnpackByteLoHi   = Driver<BlendImpl::Ops::UnpackByteLoHi>;
+        using UnpackByte3BCast = Driver<BlendImpl::Ops::UnpackByte3BCast>;
+
+        // Extract functions
+        using ExtractByteEven = Driver<BlendImpl::Ops::ExtractByteEven>;
+        using ExtractByteOdd  = Driver<BlendImpl::Ops::ExtractByteOdd>;
+        using ExtractWordEven = Driver<BlendImpl::Ops::ExtractWordEven>;
+        using ExtractWordOdd  = Driver<BlendImpl::Ops::ExtractWordOdd>;
+
+        using ExtractByteEvenOdd = Driver<BlendImpl::Ops::ExtractByteEvenOdd>;
+        using ExtractWordEvenOdd = Driver<BlendImpl::Ops::ExtractWordEvenOdd>;
+
+        using ExtractByteOddEven = Driver<BlendImpl::Ops::ExtractByteOddEven>;
+        using ExtractWordOddEven = Driver<BlendImpl::Ops::ExtractWordOddEven>;
 
         // Extract functions
         using ExtractByteEven = Driver<BlendImpl::Ops::ExtractByteEven>;

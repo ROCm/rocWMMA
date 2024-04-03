@@ -27,7 +27,8 @@
 #ifndef ROCWMMA_UTILITY_FORWARD_IMPL_HPP
 #define ROCWMMA_UTILITY_FORWARD_IMPL_HPP
 
-#include "type_traits.hpp"
+#include <rocwmma/internal/config.hpp>
+#include <rocwmma/internal/type_traits.hpp>
 
 namespace rocwmma
 {

@@ -27,7 +27,8 @@
 #ifndef ROCWMMA_UTILITY_VECTOR_HPP
 #define ROCWMMA_UTILITY_VECTOR_HPP
 
-#include "vector_impl.hpp"
+#include <rocwmma/internal/types.hpp>
+#include <rocwmma/internal/utility/vector_impl.hpp>
 
 namespace rocwmma
 {
@@ -36,6 +37,11 @@ namespace rocwmma
 
     template <typename... Ts>
     ROCWMMA_HOST_DEVICE constexpr decltype(auto) make_vector(Ts&&... ts);
+
+    template <typename DataT, uint32_t VecSize>
+    struct vector_generator : public detail::vector_generator<VecT, DataT, VecSize>
+    {
+    };
 
     template <typename Lhs, typename Rhs>
     ROCWMMA_HOST_DEVICE constexpr decltype(auto) vector_cat(Lhs&& lhs, Rhs&& rhs);

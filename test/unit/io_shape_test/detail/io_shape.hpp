@@ -66,27 +66,35 @@ namespace rocwmma
             constexpr auto KDim     = std::is_same_v<MatrixT, accumulator> ? BlockM : BlockK;
 
             constexpr auto MaxVW
-                = (std::is_same_v<MatrixT, accumulator>)
-                      ? (std::is_same_v<DataT, float64_t> ? 1u : 4u)
-                      : (detail::
-                             MaxVWSelector<MatrixT, BlockDim, KDim, DataT, DataLayoutT, WaveCount>::
-                                 Result);
-
+                = std::is_same_v<MatrixT, matrix_a> ? detail::
+                          MaxVWSelector<matrix_a, BlockDim, KDim, DataT, DataLayoutT, WaveCount>::
+                              Result
+                  : std::is_same_v<MatrixT, matrix_b>
+                      ? detail::
+                          MaxVWSelector<matrix_b, BlockDim, KDim, DataT, DataLayoutT, WaveCount>::
+                              Result
+                      : (std::is_same<DataT, float64_t>::value || ROCWMMA_ARCH_GFX11 ? 1u : 4u);
             constexpr auto VW
-                = ((std::is_same_v<MatrixT, matrix_a> && std::is_same_v<DataLayoutT, col_major>)
-                   || ((std::is_same_v<MatrixT, matrix_b>
-                        || std::is_same_v<MatrixT, accumulator>)&&std::is_same_v<DataLayoutT,
-                                                                                 row_major>))
-                      ? 1u
-                      : MaxVW;
+                = std::is_same_v<MatrixT, matrix_a>
+                      ? std::is_same<DataLayoutT, row_major>::value || BlockDim > 32 ? MaxVW : 1u
+                  : std::is_same_v<MatrixT, matrix_b>
+                      ? (std::is_same<DataLayoutT, col_major>::value || BlockDim > 32 ? MaxVW : 1u)
+                      : (std::is_same<DataLayoutT, col_major>::value ? MaxVW : 1u);
 
             using RowNT
-                = MatrixLayout::template RowNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
+                = LayoutProfile::template RowNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
             using ColNT
-                = MatrixLayout::template ColNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
+                = LayoutProfile::template ColNT<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
 
-            using MatrixLayout =
-                typename std::conditional_t<std::is_same<MatrixT, matrix_a>::value, ColNT, RowNT>;
+            using Row = LayoutProfile::template Row<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
+            using Col = LayoutProfile::template Col<BlockDim, KDim, DataT, DataLayoutT, VW, MaxVW>;
+
+            using Profile = typename std::conditional_t<
+                std::is_same_v<MatrixT, matrix_a>,
+                std::conditional_t<BlockDim <= 32, ColNT, Col>,
+                std::conditional_t<std::is_same_v<MatrixT, matrix_b>,
+                                   std::conditional_t<BlockDim <= 32, RowNT, Row>,
+                                   RowNT>>;
 
             using DataLayout = DataLayout::template Array1d<DataLayoutT>;
 
@@ -94,7 +102,7 @@ namespace rocwmma
 
             err |= (IOLayout::MaxVW != MaxVW);
             err |= (IOLayout::VW != VW);
-            err |= (!std::is_same<typename IOLayout::MatrixLayout, MatrixLayout>::value);
+            err |= (!std::is_same<typename IOLayout::Profile, Profile>::value);
             err |= (!std::is_same<typename IOLayout::DataLayout, DataLayout>::value);
 
             return err;

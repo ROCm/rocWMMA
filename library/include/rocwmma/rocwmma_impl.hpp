@@ -60,12 +60,12 @@ namespace rocwmma
     namespace detail
     {
         // Ensure that MFMA fragments for A and B have orthogonal layouts
-        template <typename FragA, typename FragB>
-        struct MfmaCheck : public MatrixLayout::detail::OrthogonalCheck<
-                               typename GetIOShape_t<FragA>::MatrixLayout,
-                               typename GetIOShape_t<FragB>::MatrixLayout>
-        {
-        };
+        // template <typename FragA, typename FragB>
+        // struct MfmaCheck : public MatrixLayout::detail::OrthogonalCheck<
+        //                        typename GetIOShape_t<FragA>::MatrixLayout,
+        //                        typename GetIOShape_t<FragB>::MatrixLayout>
+        // {
+        // };
     }
 
     // fragment implementations
