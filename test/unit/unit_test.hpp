@@ -67,6 +67,7 @@ namespace rocwmma
             // Mark skipped tests in GTest
             if(!kernel->runFlag())
             {
+                std::cout << *kernel << std::endl;
                 GTEST_SKIP();
             }
         }

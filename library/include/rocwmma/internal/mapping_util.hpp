@@ -28,6 +28,7 @@
 
 #include "types.hpp"
 #include "utility/type_traits.hpp"
+#include "vector.hpp"
 namespace rocwmma
 {
     // Fwd declaration
@@ -58,11 +59,11 @@ namespace rocwmma
             ROCWMMA_DEVICE constexpr static inline WorkgroupCoordT workgroupCoord();
 
             // Size of workgroup, normalized to wave count.
-            template <bool IsConst                        = (TBlockX > 0u && TBlockY > 0u),
+            template <bool IsConst          = (TBlockX > 0u && TBlockY > 0u),
                       enable_if_t<IsConst>* = nullptr>
             ROCWMMA_DEVICE constexpr static inline WorkgroupDimT workgroupDim();
 
-            template <bool IsConst                         = (TBlockX > 0u && TBlockY > 0u),
+            template <bool IsConst           = (TBlockX > 0u && TBlockY > 0u),
                       enable_if_t<!IsConst>* = nullptr>
             ROCWMMA_DEVICE static inline WorkgroupDimT workgroupDim();
         };

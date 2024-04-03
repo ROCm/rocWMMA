@@ -30,6 +30,7 @@
 #include "device/cross_lane_ops.hpp"
 #include "reference.hpp"
 #include "unit_kernel_base.hpp"
+#include <rocwmma/internal/pack_util.hpp>
 
 namespace rocwmma
 {
@@ -56,11 +57,10 @@ namespace rocwmma
         dim3 gridDim() const final
         {
             // Need to address the input array as 32b elements per thread.
-            auto x
-                = dim3(static_cast<uint32_t>(roundf(static_cast<float32_t>(sizeof(DataT))
-                                                    / static_cast<float32_t>(sizeof(uint32_t))
-                                                    * static_cast<float32_t>(Base::mM * Base::mN)))
-                       / Base::mTBlockX);
+            auto x = dim3(static_cast<uint32_t>(
+                              roundf(static_cast<float32_t>(Base::mM * Base::mN)
+                                     / static_cast<float32_t>(PackTraits<DataT>::PackRatio)))
+                          / Base::mTBlockX);
 
             return x;
         }

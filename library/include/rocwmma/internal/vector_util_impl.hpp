@@ -29,53 +29,10 @@
 
 #include "blend.hpp"
 #include "types.hpp"
-#include "vector.hpp"
+#include "utility/vector.hpp"
 
 namespace rocwmma
 {
-    namespace detail
-    {
-        template <uint32_t N>
-        using Number = integral_constant<int32_t, N>;
-
-        // Can be used to build any vector class of <DataT, VecSize>
-        // Either VecT or non_native_vector_vase.
-        // Class acts as a static for_each style generator:
-        // Incoming functor F will be called with each index + args in sequence.
-        // Results of functor calls are used to construct a new vector.
-        template <template <typename, uint32_t> class VecT, typename DataT, uint32_t VecSize>
-        struct vector_generator
-        {
-            static_assert(VecSize > 0, "VectorSize must be at least 1");
-
-            ROCWMMA_HOST_DEVICE constexpr vector_generator() {}
-
-            // F signature: F(Number<Iter>, args...)
-            template <class F, typename... ArgsT>
-            ROCWMMA_HOST_DEVICE constexpr auto operator()(F f, ArgsT&&... args) const
-            {
-                // Build the number sequence to be expanded below.
-                return operator()(f, detail::Seq<VecSize>{}, forward<ArgsT>(args)...);
-            }
-
-        private:
-            template <class F, uint32_t... Indices, typename... ArgsT>
-            ROCWMMA_HOST_DEVICE constexpr auto
-                operator()(F f, detail::SeqT<Indices...>, ArgsT&&... args) const
-            {
-                // Execute incoming functor f with each index, as well as forwarded args.
-                // The resulting vector is constructed with the results of each functor call.
-                return VecT<DataT, VecSize>{
-                    (f(Number<Indices>{}, forward<ArgsT>(args)...))...};
-            }
-        };
-    }
-
-    template <typename DataT, uint32_t VecSize>
-    struct vector_generator : public detail::vector_generator<VecT, DataT, VecSize>
-    {
-    };
-
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE constexpr static inline auto concat(VecT<DataT, VecSize> const& v0,
                                                        VecT<DataT, VecSize> const& v1)
@@ -369,7 +326,10 @@ namespace rocwmma
         // Optimize data-reorder with cross-lane ops.
         constexpr auto ElementSize   = sizeof(DataT);
         constexpr auto PackedVecSize = max(VecSize / PackTraits::PackRatio, 1u);
-        if constexpr(ElementSize < 4u)
+
+        // The optimization should only be applied on a pair of register. So v0 and v1
+        // should not be larger than a register
+        if constexpr(ElementSize < 4u && PackedVecSize <= 1)
         {
             auto unpackLo = [](auto&& idx, auto&& v0, auto&& v1) {
                 constexpr auto Index = decay_t<decltype(idx)>::value;
@@ -406,22 +366,42 @@ namespace rocwmma
         // Special case: Sub-dword data sizes
         // Optimize data-reorder with cross-lane ops.
         constexpr auto ElementSize   = sizeof(DataT);
-        constexpr auto PackedVecSize = max(VecSize / PackTraits::PackRatio, 1u);
-        if constexpr(ElementSize < 4u)
-        {
-            auto unpackHi = [](auto&& idx, auto&& v0, auto&& v1) {
-                constexpr auto Index = decay_t<decltype(idx)>::value;
-                return (ElementSize == 2u)
-                           ? Blend::UnpackWordHi::exec(get<Index>(v0), get<Index>(v1))
-                           : Blend::UnpackByteHi::exec(get<Index>(v0), get<Index>(v1));
-            };
+        constexpr auto PackedVecSize = VecSize / PackTraits::PackRatio;
 
-            // Pack, extract and unpack
-            using PackedT = typename PackTraits::PackedT;
-            auto packed0  = PackUtil::paddedPack(v0);
-            auto packed1  = PackUtil::paddedPack(v1);
-            auto result   = vector_generator<PackedT, PackedVecSize>()(unpackHi, packed0, packed1);
-            return PackUtil::template paddedUnpack<VecSize>(result);
+        // The optimization should only be applied on a pair of register. So v0 and v1
+        // should not be larger than a register
+        if constexpr(ElementSize < 4u && PackedVecSize <= 1)
+        {
+            if constexpr(ElementSize < 2u && PackedVecSize == 0)
+            {
+                auto unpackHi = [](auto&& idx, auto&& v0, auto&& v1) {
+                    constexpr auto Index = decay_t<decltype(idx)>::value;
+                    return Blend::UnpackByte3BCast::exec(get<Index>(v0), get<Index>(v1));
+                };
+
+                // Pack, extract and unpack
+                using PackedT = typename PackTraits::PackedT;
+                auto packed0  = PackUtil::paddedPack(v0);
+                auto packed1  = PackUtil::paddedPack(v1);
+                auto result   = vector_generator<PackedT, 1u>()(unpackHi, packed0, packed1);
+                return PackUtil::template paddedUnpack<VecSize>(result);
+            }
+            else
+            {
+                auto unpackHi = [](auto&& idx, auto&& v0, auto&& v1) {
+                    constexpr auto Index = decay_t<decltype(idx)>::value;
+                    return (ElementSize == 2u)
+                               ? Blend::UnpackWordHi::exec(get<Index>(v0), get<Index>(v1))
+                               : Blend::UnpackByteHi::exec(get<Index>(v0), get<Index>(v1));
+                };
+
+                // Pack, extract and unpack
+                using PackedT = typename PackTraits::PackedT;
+                auto packed0  = PackUtil::paddedPack(v0);
+                auto packed1  = PackUtil::paddedPack(v1);
+                auto result   = vector_generator<PackedT, 1u>()(unpackHi, packed0, packed1);
+                return PackUtil::template paddedUnpack<VecSize>(result);
+            }
         }
         else
         {

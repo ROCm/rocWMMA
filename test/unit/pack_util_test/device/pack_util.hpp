@@ -67,6 +67,314 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool padTest()
+    {
+        /**
+         * 8 bits [0x01, 0x02, 0x03, 0x04] -> 32 bits [0x00000001, 0x00000002, 0x00000003, 0x00000004]
+         * 16 bits [0x0001, 0x0002, 0x0003, 0x0004] -> 32 bits [0x00000001, 0x00000002, 0x00000003, 0x00000004]
+         * 32 bits, return the argument itself
+         * 64 bits, return the argument itself
+         **/
+        using PackUtil = rocwmma::PackUtil<DataT>;
+
+        bool err = false;
+        auto res = generateSeqVec<DataT, VecSize>();
+
+        if constexpr(PackUtil::Traits::PackRatio == 1)
+        {
+            err |= res != PackUtil::pad(res);
+        }
+        else
+        {
+            using PackedT   = typename PackUtil::Traits::PackedT;
+            using UnpackedT = typename PackUtil::Traits::UnpackedT;
+
+            auto paddedData = PackUtil::pad(res);
+            err |= !std::is_same_v<decltype(paddedData), VecT<PackedT, VecSize>>;
+            for(uint32_t i = 0; i < VecSize; i++)
+            {
+                auto value = get(paddedData, i);
+
+                // unpadded data is at idx 0 in the padded data by default
+                err |= *reinterpret_cast<DataT*>(&value) != static_cast<DataT>((float)i);
+            }
+        }
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool padWithIdxTest()
+    {
+        /**
+         * 8 bits [0x01, 0x02, 0x03, 0x04] -> 32 bits [0x00000100, 0x00000200, 0x00000300, 0x00000400]
+         * 16 bits [0x0001, 0x0002, 0x0003, 0x0004] -> 32 bits [0x00010000, 0x00020000, 0x00030000, 0x00040000]
+         * 32 bits, return the argument itself
+         * 64 bits, return the argument itself
+         **/
+        using PackUtil = rocwmma::PackUtil<DataT>;
+
+        bool err = false;
+        auto res = generateSeqVec<DataT, VecSize>();
+
+        if constexpr(PackUtil::Traits::PackRatio == 1)
+        {
+            err |= res != PackUtil::pad(res);
+        }
+        else
+        {
+            using PackedT   = typename PackUtil::Traits::PackedT;
+            using UnpackedT = typename PackUtil::Traits::UnpackedT;
+
+            // padIdx == 1 which is valid for 8 bits and 16 bits
+            auto paddedData = PackUtil::template pad<1>(res);
+            err |= !std::is_same_v<decltype(paddedData), VecT<PackedT, VecSize>>;
+            for(uint32_t i = 0; i < VecSize; i++)
+            {
+                auto value = get(paddedData, i);
+                err |= *(reinterpret_cast<DataT*>(&value) + 1) != static_cast<DataT>((float)i);
+            }
+        }
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool unpadTest()
+    {
+        /**
+         * 32 bits [0x00000001, 0x00000002, 0x00000003, 0x00000004] -> 8 bits [0x01, 0x02, 0x03, 0x04]
+         * 32 bits [0x00000001, 0x00000002, 0x00000003, 0x00000004] -> 16 bits [0x0001, 0x0002, 0x0003, 0x0004]
+         * 32 bits, return the argument itself
+         * 64 bits, return the argument itself
+         **/
+        using PackUtil  = rocwmma::PackUtil<DataT>;
+        using PackedT   = typename PackUtil::Traits::PackedT;
+        using UnpackedT = typename PackUtil::Traits::UnpackedT;
+
+        bool err = false;
+
+        if constexpr(PackUtil::Traits::PackRatio == 1)
+        {
+            auto res = generateSeqVec<PackedT, VecSize>();
+            err |= res != PackUtil::unpad(res);
+        }
+        else
+        {
+            auto res = VecT<PackedT, VecSize>(0);
+            for(uint32_t i = 0; i < VecSize; i++)
+            {
+                *reinterpret_cast<UnpackedT*>(reinterpret_cast<PackedT*>(&res.data) + i)
+                    = static_cast<UnpackedT>((float)i);
+            }
+
+            auto unpaddedData = PackUtil::unpad(res);
+            err |= !std::is_same_v<decltype(unpaddedData), VecT<UnpackedT, VecSize>>;
+            err |= unpaddedData != generateSeqVec<DataT, VecSize>();
+        }
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool unpadWithIdxTest()
+    {
+        /**
+         * 32 bits [0x00000100, 0x00000200, 0x00000300, 0x00000400] -> 8 bits [0x01, 0x02, 0x03, 0x04]
+         * 32 bits [0x00010000, 0x00020000, 0x00030000, 0x00040000] -> 16 bits [0x0001, 0x0002, 0x0003, 0x0004]
+         * 32 bits, return the argument itself
+         * 64 bits, return the argument itself
+         **/
+        using PackUtil  = rocwmma::PackUtil<DataT>;
+        using PackedT   = typename PackUtil::Traits::PackedT;
+        using UnpackedT = typename PackUtil::Traits::UnpackedT;
+
+        bool err = false;
+
+        if constexpr(PackUtil::Traits::PackRatio == 1)
+        {
+            auto res = generateSeqVec<PackedT, VecSize>();
+            err |= res != PackUtil::unpad(res);
+        }
+        else
+        {
+            auto res = VecT<PackedT, VecSize>(0);
+            for(uint32_t i = 0; i < VecSize; i++)
+            {
+                *(reinterpret_cast<UnpackedT*>(reinterpret_cast<PackedT*>(&res.data) + i) + 1)
+                    = static_cast<UnpackedT>((float)i);
+            }
+
+            auto unpaddedData = PackUtil::template unpad<1>(res);
+            err |= !std::is_same_v<decltype(unpaddedData), VecT<UnpackedT, VecSize>>;
+            err |= unpaddedData != generateSeqVec<DataT, VecSize>();
+        }
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool packTest()
+    {
+        using PackUtil  = rocwmma::PackUtil<DataT>;
+        using PackedT   = typename PackUtil::Traits::PackedT;
+        using UnpackedT = typename PackUtil::Traits::UnpackedT;
+
+        bool err = false;
+
+        // required by pack(): VecSize % PackUtil::Traits::PackRatio == 0
+        if constexpr(VecSize % PackUtil::Traits::PackRatio == 0)
+        {
+            auto res = generateSeqVec<UnpackedT, VecSize>();
+
+            // pack() cast VecT<UnpackedT, VecSize> const &  to VecT<PackedT, VecSize / PackRatio> const &
+            err |= !std::is_same_v<decltype(PackUtil::pack(res)),
+                                   VecT<PackedT, VecSize / PackUtil::Traits::PackRatio> const&>;
+
+            // argument and return of pack() point to the same addr
+            err |= reinterpret_cast<void const*>(&PackUtil::pack(res))
+                   != reinterpret_cast<void const*>(&res);
+        }
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool unpackTest()
+    {
+        using PackUtil  = rocwmma::PackUtil<DataT>;
+        using PackedT   = typename PackUtil::Traits::PackedT;
+        using UnpackedT = typename PackUtil::Traits::UnpackedT;
+
+        bool err = false;
+
+        auto res = generateSeqVec<PackedT, VecSize>();
+
+        // pack() cast VecT<PackedT, VecSize> const &  to VecT<UnpackedT, VecSize * PackRatio> const &
+        err |= !std::is_same_v<decltype(PackUtil::unpack(res)),
+                               VecT<UnpackedT, VecSize * PackUtil::Traits::PackRatio> const&>;
+
+        // argument and return of pack() point to the same addr
+        err |= reinterpret_cast<void const*>(&PackUtil::unpack(res))
+               != reinterpret_cast<void const*>(&res);
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool paddedPackTest()
+    {
+        using PackUtil  = rocwmma::PackUtil<DataT>;
+        using PackedT   = typename PackUtil::Traits::PackedT;
+        using UnpackedT = typename PackUtil::Traits::UnpackedT;
+
+        bool err = false;
+        auto res = generateSeqVec<UnpackedT, VecSize>();
+
+        if constexpr(VecSize % PackUtil::Traits::PackRatio == 0)
+        {
+            err |= !std::is_same_v<decltype(PackUtil::paddedPack(res)),
+                                   VecT<PackedT, VecSize / PackUtil::Traits::PackRatio> const&>;
+            err |= reinterpret_cast<void const*>(&PackUtil::paddedPack(res))
+                   != reinterpret_cast<void const*>(&res);
+        }
+        else if constexpr(VecSize * 2 == PackUtil::Traits::PackRatio)
+        {
+            auto expectedResult = VecT<PackedT, 1>(0);
+            for(uint32_t i = 0; i < 2; i++)
+            {
+                *(reinterpret_cast<VecT<UnpackedT, VecSize>*>(&expectedResult) + i) = res;
+            }
+
+            err |= expectedResult != PackUtil::paddedPack(res);
+        }
+        else if constexpr(VecSize == 1)
+        {
+            if constexpr(PackUtil::Traits::PackRatio == 1)
+            {
+                err |= res != PackUtil::paddedPack(res);
+            }
+            else
+            {
+                auto paddedData = PackUtil::paddedPack(res);
+                err |= !std::is_same_v<decltype(paddedData), VecT<PackedT, VecSize>>;
+                for(uint32_t i = 0; i < VecSize; i++)
+                {
+                    auto value = get(paddedData, i);
+
+                    // unpadded data is at idx 0 in the padded data by default
+                    err |= *reinterpret_cast<DataT*>(&value) != static_cast<DataT>((float)i);
+                }
+            }
+        }
+
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool paddedUnpackNoPaddingTest()
+    {
+        using PackUtil  = rocwmma::PackUtil<DataT>;
+        using PackedT   = typename PackUtil::Traits::PackedT;
+        using UnpackedT = typename PackUtil::Traits::UnpackedT;
+
+        bool err = false;
+
+        if constexpr(VecSize % PackUtil::Traits::PackRatio == 0)
+        {
+            auto res = generateSeqVec<PackedT, VecSize / PackUtil::Traits::PackRatio>();
+            err |= !std::is_same_v<decltype(PackUtil::template paddedUnpack<VecSize>(res)),
+                                   VecT<UnpackedT, VecSize> const&>;
+            err |= reinterpret_cast<void const*>(&PackUtil::template paddedUnpack<VecSize>(res))
+                   != reinterpret_cast<void const*>(&res);
+        }
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool paddedUnpackWithLowHalfTest()
+    {
+        using PackUtil  = rocwmma::PackUtil<DataT>;
+        using PackedT   = typename PackUtil::Traits::PackedT;
+        using UnpackedT = typename PackUtil::Traits::UnpackedT;
+
+        bool err = false;
+
+        if constexpr(VecSize * 2 == PackUtil::Traits::PackRatio)
+        {
+            auto constexpr packSize = std::max(1u, VecSize / PackUtil::Traits::PackRatio);
+            auto res                = VecT<PackedT, packSize>(0);
+            auto expectedData       = generateSeqVec<UnpackedT, VecSize>();
+            for(uint32_t i = 0; i < VecSize; i++)
+            {
+                *(reinterpret_cast<VecT<UnpackedT, VecSize>*>(&res.data) + i) = expectedData;
+            }
+            err |= PackUtil::template paddedUnpack<VecSize>(res) != expectedData;
+        }
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    ROCWMMA_DEVICE static inline bool paddedUnpackWithSizeOneTest()
+    {
+        using PackUtil  = rocwmma::PackUtil<DataT>;
+        using PackedT   = typename PackUtil::Traits::PackedT;
+        using UnpackedT = typename PackUtil::Traits::UnpackedT;
+
+        bool err = false;
+
+        if constexpr(VecSize == 1)
+        {
+            auto res          = VecT<PackedT, 1>(0);
+            auto expectedData = VecT<UnpackedT, 1>(static_cast<UnpackedT>(1.0F));
+            (*(reinterpret_cast<VecT<UnpackedT, VecSize>*>(&res.data))).data[0]
+                = expectedData.data[0];
+            err |= PackUtil::template paddedUnpack<VecSize>(res) != expectedData;
+        }
+        return err;
+    }
+
+    template <typename DataT, uint32_t VecSize>
     ROCWMMA_KERNEL void packUtilTest(uint32_t     m,
                                      uint32_t     n,
                                      DataT const* in,
@@ -83,6 +391,16 @@ namespace rocwmma
 
         // Add tests here
         err = err ? err : packUtilTestBasic<DataT, VecSize>();
+        err = err ? err : padTest<DataT, VecSize>();
+        err = err ? err : padWithIdxTest<DataT, VecSize>();
+        err = err ? err : unpadTest<DataT, VecSize>();
+        err = err ? err : unpadWithIdxTest<DataT, VecSize>();
+        err = err ? err : packTest<DataT, VecSize>();
+        err = err ? err : unpackTest<DataT, VecSize>();
+        err = err ? err : paddedPackTest<DataT, VecSize>();
+        err = err ? err : paddedUnpackNoPaddingTest<DataT, VecSize>();
+        err = err ? err : paddedUnpackWithLowHalfTest<DataT, VecSize>();
+        err = err ? err : paddedUnpackWithSizeOneTest<DataT, VecSize>();
 
         // Reduce error count
         atomicAdd(&result, (int32_t)err);

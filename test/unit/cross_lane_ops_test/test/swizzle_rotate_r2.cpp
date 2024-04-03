@@ -39,7 +39,7 @@ namespace rocwmma
         using Base = UnitTestParams;
 
         // Types: Base IOC + double
-        using Types = typename Base::TestTypes16;
+        using Types = typename Base::TestAllSizeTypes;
 
         using SwizzleOps = std::tuple<SwizzleImpl::Ops::RotateR2<0>, SwizzleImpl::Ops::RotateR2<1>>;
 

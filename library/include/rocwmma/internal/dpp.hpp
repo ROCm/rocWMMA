@@ -105,39 +105,6 @@ namespace rocwmma
                   bool     BoundCtrl     = false>
         struct Driver
         {
-        private:
-            template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-            ROCWMMA_DEVICE static inline auto forEach(VecT<DataT, VecSize> const& src,
-                                                      detail::SeqT<Idx...>)
-            {
-                static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{
-                    DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(get<Idx>(src),
-                                                                                 get<Idx>(src))...};
-            }
-
-            template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-            ROCWMMA_DEVICE static inline auto
-                forEach(VecT<DataT, VecSize> const& src0, DataT const& src1, detail::SeqT<Idx...>)
-            {
-                static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                static_assert(sizeof(DataT) == sizeof(uint32_t), "Scalar must be 32b");
-                return VecT<DataT, VecSize>{
-                    DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(get<Idx>(src0),
-                                                                                 src1)...};
-            }
-
-            template <typename DataT, uint32_t VecSize, uint32_t... Idx>
-            ROCWMMA_DEVICE static inline auto forEach(VecT<DataT, VecSize> const& src0,
-                                                      VecT<DataT, VecSize> const& src1,
-                                                      detail::SeqT<Idx...>)
-            {
-                static_assert(sizeof...(Idx) == VecSize, "Index count must match vector size");
-                return VecT<DataT, VecSize>{
-                    DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(
-                        get<Idx>(src0), get<Idx>(src1))...};
-            }
-
         public:
             // Sanity checks
             static_assert(DppOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP,
@@ -155,14 +122,28 @@ namespace rocwmma
             template <typename DataT>
             ROCWMMA_DEVICE static inline auto exec(DataT const& src0, DataT const& src1)
             {
-                return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(src0, src1);
+                // Vectorize to B32.
+                // This way we can support B64+ types
+                using B32VecT = VecT<uint32_t, sizeof(DataT) / sizeof(uint32_t)>;
+
+                // Ensure that we can vectorize to B32
+                static_assert(sizeof(DataT) % sizeof(uint32_t) == 0,
+                              "DataT size must be a multiple of B32");
+                static_assert(sizeof(B32VecT) == sizeof(DataT), "Unable to vectorize DataT");
+
+                // Forward to vectorized function
+                auto result = exec(reinterpret_cast<B32VecT const&>(src0),
+                                   reinterpret_cast<B32VecT const&>(src1));
+
+                // Restore result to input type
+                return reinterpret_cast<DataT&>(result);
             }
 
             // Self as prev
             template <typename DataT, uint32_t VecSize>
             ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src)
             {
-                return forEach(src, detail::Seq<VecSize>{});
+                return exec(src, src);
             }
 
             // Scalar as prev
@@ -170,7 +151,29 @@ namespace rocwmma
             ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src0,
                                                    DataT const&                src1)
             {
-                return forEach(src0, src1, detail::Seq<VecSize>{});
+                // Reinterpret vector as B32 so we can support B64+ elements.
+                constexpr uint32_t B32VecSize = sizeof(DataT) / sizeof(uint32_t) * VecSize;
+                using B32VecT                 = VecT<uint32_t, B32VecSize>;
+                using InputVecT               = VecT<DataT, VecSize>;
+
+                // Ensure that we can vectorize to B32
+                static_assert(sizeof(InputVecT) % sizeof(uint32_t) == 0,
+                              "VecT size must be a multiple of B32");
+                static_assert(sizeof(B32VecT) == sizeof(InputVecT),
+                              "Unable to vectorize src0 to B32");
+
+                auto op = [](auto&& idx, auto&& v0, auto&& v1) {
+                    // Pair up the b32 vector elements with the appropriate b32 scalar elements.
+                    constexpr auto i              = decay_t<decltype(idx)>::value;
+                    constexpr auto v1InB32VecSize = sizeof(v1) / sizeof(uint32_t);
+                    auto v1InB32Vec = reinterpret_cast<VecT<uint32_t, v1InB32VecSize> const&>(v1);
+                    return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(
+                        v0.data[i], v1InB32Vec.data[i % v1InB32VecSize]);
+                };
+
+                auto result = vector_generator<uint32_t, B32VecSize>()(
+                    op, reinterpret_cast<B32VecT const&>(src0), src1);
+                return reinterpret_cast<InputVecT&>(result);
             }
 
             // Vector as prev
@@ -178,7 +181,29 @@ namespace rocwmma
             ROCWMMA_DEVICE static inline auto exec(VecT<DataT, VecSize> const& src0,
                                                    VecT<DataT, VecSize> const& src1)
             {
-                return forEach(src0, src1, detail::Seq<VecSize>{});
+                // Reinterpret vector as B32 so we can support B64+ elements.
+                constexpr uint32_t B32VecSize = sizeof(DataT) / sizeof(uint32_t) * VecSize;
+                using B32VecT                 = VecT<uint32_t, B32VecSize>;
+                using InputVecT               = VecT<DataT, VecSize>;
+
+                // Ensure that we can vectorize to B32
+                static_assert(sizeof(InputVecT) % sizeof(uint32_t) == 0,
+                              "VecT size must be a multiple of B32");
+                static_assert(sizeof(B32VecT) == sizeof(InputVecT),
+                              "Unable to vectorize src0 to B32");
+
+                auto op = [](auto&& idx, auto&& v0, auto&& v1) {
+                    // Pair up the b32 vector elements with the appropriate b32 scalar elements.
+                    constexpr auto i = decay_t<decltype(idx)>::value;
+                    return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(v0.data[i],
+                                                                                        v1.data[i]);
+                };
+
+                auto result = vector_generator<uint32_t, B32VecSize>()(
+                    op,
+                    reinterpret_cast<B32VecT const&>(src0),
+                    reinterpret_cast<B32VecT const&>(src1));
+                return reinterpret_cast<InputVecT&>(result);
             }
         };
 

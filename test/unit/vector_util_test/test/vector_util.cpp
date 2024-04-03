@@ -36,10 +36,8 @@ namespace rocwmma
 
     struct TestParams : public UnitTestParams
     {
-        using Base = UnitTestParams;
-
-        // Types: Base IOC + double
-        using Types = typename Base::TestTypes16;
+        using Base  = UnitTestParams;
+        using Types = typename Base::TestAllSizeTypes;
 
         // Vector Sizes.
         // Test up to VecSize = 64. Anything bigger is impractical.

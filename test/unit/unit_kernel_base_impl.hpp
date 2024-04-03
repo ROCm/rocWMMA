@@ -63,6 +63,12 @@ namespace rocwmma
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>
     dim3 UnitKernelBase<BlockM, BlockN, DataT, Layout>::gridDim() const
     {
+        if(BlockM * mTBlockX < DeviceInfo::instance()->warpSize())
+        {
+            return dim3(0, 0);
+        }
+
+        // There will be a divide by zero error if `BlockM * mTBlockX < DeviceInfo::instance()->warpSize()`
         return dim3(ceilDiv(mM, BlockM * mTBlockX / DeviceInfo::instance()->warpSize()),
                     ceilDiv(mN, BlockN * mTBlockY));
     }
@@ -98,6 +104,7 @@ namespace rocwmma
         // Forfeit the run because there is no tail for cleanup of remainders.
         auto tileSize = std::make_pair(BlockM * mTBlockX / DeviceInfo::instance()->warpSize(),
                                        BlockN * mTBlockY);
+
         auto gridDims = gridDim();
         return (gridDims.x * std::get<0>(tileSize) == mM)
                && (gridDims.y * std::get<1>(tileSize) == mN);

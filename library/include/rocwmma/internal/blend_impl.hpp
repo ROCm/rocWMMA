@@ -26,7 +26,8 @@
 #ifndef ROCWMMA_BLEND_IMPL_HPP
 #define ROCWMMA_BLEND_IMPL_HPP
 
-#include "blend.hpp"
+#include "utility/vector.hpp"
+#include "utils.hpp"
 
 namespace rocwmma
 {
@@ -69,7 +70,7 @@ namespace rocwmma
             * @arg src1 is the 'upper' reference
             */
             template <class OpCtrl>
-            struct amdgcn_perm
+            struct amdgcn_perm : OpCtrl
             {
                 template <typename DataT>
                 ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1)
@@ -87,6 +88,24 @@ namespace rocwmma
                                                 OpCtrl::opCtrl());
                     return src0;
                 }
+
+                // This function takes an opCtrl override to support pre-calculated opCtrl re-use
+                template <typename DataT>
+                ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1, uint32_t opCtrl)
+                {
+                    static_assert(sizeof(DataT) == sizeof(uint32_t), "Inputs must be 32 bit");
+
+                    // NOTE: src0 and src1 are flipped here due to spec's select
+                    // concatenation of i[3:0] = src1 and i[7:4] = src0 .
+                    // amdgcn_blend_byte does the inverse of this to make
+                    // the rocWMMA interface more intuitive, with src0 as the lower
+                    // 4 bytes and src1 in the upper 4 bytes.
+                    reinterpret_cast<uint32_t&>(src0)
+                        = __builtin_amdgcn_perm(reinterpret_cast<uint32_t&>(src1),
+                                                reinterpret_cast<uint32_t&>(src0),
+                                                opCtrl);
+                    return src0;
+                }
             };
 
             /*! \class amdgcn_blend
@@ -102,18 +121,29 @@ namespace rocwmma
             * @arg src0 is the 'lower' source (e.g. mask = 0)
             * @arg src1 is the 'upper' source (e.g. mask = 1)
             */
-            template <class MaskCtrl>
-            struct amdgcn_blend
+            template <class OpCtrl>
+            struct amdgcn_blend : OpCtrl
             {
                 template <typename DataT>
                 ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1)
                 {
+                    static_assert(sizeof(DataT) % sizeof(uint32_t) == 0,
+                                  "Inputs must be a multiple of 32 bit");
+                    uint32_t const maskCtrl = OpCtrl::opCtrl();
+                    return maskCtrl ? src1 : src0;
+                }
+
+                // This function takes an opCtrl override to support pre-calculated opCtrl re-use
+                template <typename DataT>
+                ROCWMMA_DEVICE static inline DataT exec(DataT src0, DataT src1, uint32_t maskCtrl)
+                {
                     static_assert(sizeof(DataT) == sizeof(uint32_t), "Inputs must be 32 bit");
-                    uint32_t const mask = MaskCtrl::maskCtrl();
-                    reinterpret_cast<uint32_t&>(src0)
-                        = (reinterpret_cast<uint32_t&>(src1) & mask)
-                          | (reinterpret_cast<uint32_t&>(src0) & ~mask);
-                    return src0;
+                    // TODO:: WHY?
+                    // reinterpret_cast<uint32_t&>(src0)
+                    //     = (reinterpret_cast<uint32_t&>(src1) & maskCtrl)
+                    //       | (reinterpret_cast<uint32_t&>(src0) & ~maskCtrl);
+                    // return src0;
+                    return maskCtrl ? src1 : src0;
                 }
             };
 
@@ -156,20 +186,13 @@ namespace rocwmma
             template <uint32_t GroupSize>
             struct BlendElements
             {
-            private:
-                enum Traits : uint32_t
-                {
-                    MASK_BASE = LsbMask<32>::value
-                };
-
             public:
-                constexpr static uint32_t maskCtrl()
+                constexpr static bool opCtrl()
                 {
-                    // Just like a zipper, alternate mask between src0 (0x000000000)
-                    // and src1 (0xFFFFFFFF) based on threadIdx.x.
-                    // GroupSize of N means that N elements are used from src0, followed
-                    // by N elements from src1, and so on.
-                    return ((threadIdx.x >> Log2<GroupSize>::value) & 0x1) * MASK_BASE;
+                    // Just like a zipper, if threadIdx.x in [0, GroupSize - 1], return 0,
+                    // if threadIdx.x in [GroupSize, 2 * GroupSize - 1], return 1
+                    // and so on.
+                    return (threadIdx.x >> Log2<GroupSize>::value) & 0x1;
                 }
             };
 
@@ -251,11 +274,22 @@ namespace rocwmma
             using Zip32   = Zip<OP_GROUP_SIZE_32>;
 
             // Blend sub-dword elements in regular ordered patterns
-            using UnpackByteLo   = PermByte<0u, 4u, 1u, 5u>;
-            using UnpackByteHi   = PermByte<2u, 6u, 3u, 7u>;
-            using UnpackWordLo   = PermWord<0u, 2u>;
-            using UnpackWordHi   = PermWord<1u, 3u>;
-            using UnpackByteLoHi = PermByte<0u, 6u, 1u, 7u>;
+            using UnpackByteLo     = PermByte<0u, 4u, 1u, 5u>;
+            using UnpackByteHi     = PermByte<2u, 6u, 3u, 7u>;
+            using UnpackWordLo     = PermWord<0u, 2u>;
+            using UnpackWordHi     = PermWord<1u, 3u>;
+            using UnpackByteLoHi   = PermByte<0u, 6u, 1u, 7u>;
+            using UnpackByte3BCast = PermByte<3u, 7u, 3u, 7u>;
+
+            using ExtractByteEven = PermByte<0u, 2u, 4u, 6u>;
+            using ExtractByteOdd  = PermByte<1u, 3u, 5u, 7u>;
+            using ExtractWordEven = UnpackWordLo;
+            using ExtractWordOdd  = UnpackWordHi;
+
+            using ExtractByteEvenOdd = PermByte<0u, 2u, 5u, 7u>;
+            using ExtractByteOddEven = PermByte<1u, 3u, 4u, 6u>;
+            using ExtractWordEvenOdd = PermWord<0u, 3u>;
+            using ExtractWordOddEven = PermWord<1u, 2u>;
 
             using ExtractByteEven = PermByte<0u, 2u, 4u, 6u>;
             using ExtractByteOdd  = PermByte<1u, 3u, 5u, 7u>;

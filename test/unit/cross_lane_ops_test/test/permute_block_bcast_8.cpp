@@ -39,7 +39,7 @@ namespace rocwmma
         using Base = UnitTestParams;
 
         // Types: Base IOC + double
-        using Types = typename Base::TestTypes16;
+        using Types = typename Base::TestAllSizeTypes;
 
         using PermuteOps = std::tuple<PermuteImpl::Ops::BlockBCast8<0>,
                                       PermuteImpl::Ops::BlockBCast8<1>,

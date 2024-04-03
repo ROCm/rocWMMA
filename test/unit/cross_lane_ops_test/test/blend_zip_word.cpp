@@ -38,8 +38,7 @@ namespace rocwmma
     {
         using Base = UnitTestParams;
 
-        // Types: Base IOC + double
-        using Types = typename Base::TestTypes16;
+        using Types = typename Base::TestAllSizeTypes;
 
         using BlendOps = std::tuple<BlendImpl::Ops::ZipWord>;
 

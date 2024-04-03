@@ -27,6 +27,7 @@
 #define ROCWMMA_PACK_UTIL_HPP
 
 #include "types.hpp"
+#include "vector.hpp"
 
 namespace rocwmma
 {

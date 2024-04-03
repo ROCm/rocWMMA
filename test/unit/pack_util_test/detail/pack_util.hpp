@@ -73,6 +73,19 @@ namespace rocwmma
         {
             return typename Base::KernelFunc(packUtilTest<DataT, VecSize>);
         }
+
+        std::ostream& printHeader(std::ostream& stream = std::cout) const override
+        {
+            return stream << "WSize, DataT, VecSize" << std::endl;
+        }
+        std::ostream& printKernel(std::ostream& stream = std::cout) const override
+        {
+            using DeviceInfo = HipDevice;
+            stream << "w" << DeviceInfo::instance()->warpSize() << ", " << dataTypeToString<DataT>()
+                   << ", " << VecSize;
+
+            return stream;
+        }
     };
 
     // This is the GeneratorImpl class
