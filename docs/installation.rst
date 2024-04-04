@@ -10,9 +10,10 @@ Installation
 ==============
 
 This document provides instructions for installing and configuring the rocWMMA library.
-The quickest way to install is using prebuilt packages. Alternatively, there are instructions to build from source.
+The quickest way to install is using prebuilt packages that are released with ROCm.
+Alternatively, there are instructions to build from source.
 
-Available packages are:
+Available ROCm packages are:
 
 * rocwmma-dev (sources files for development).
 * rocwmma-samples (sample executables).
@@ -26,7 +27,7 @@ Prerequisites
 -------------
 
 * A ROCm 6.0 enabled platform. More information `here <https://github.com/ROCm/ROCm>`_.
-* rocBLAS for ROCm 6.0, if rocWMMA is configured to validate with rocBLAS (see below).
+* rocBLAS 4.0.0 for ROCm 6.0, if rocWMMA is configured to validate with rocBLAS (see below).
 
 -----------------------------
 Installing pre-built packages
@@ -85,6 +86,22 @@ Or
 
 AMD RDNA3 class GPU featuring AI acceleration support: `gfx1100`, `gfx1101`, `gfx1102` as `gfx11`.
 
+Dependencies
+^^^^^^^^^^^^
+rocWMMA is designed to have minimal external dependencies such that it is light-weight and portable.
+
+* Minimum ROCm version support is 6.0.
+* Minimum cmake version support is 3.14.
+* Minimum ROCm-cmake version support is 0.8.0.
+* Minimum rocBLAS version support is rocBLAS 4.0.0 for ROCm 6.0* (or ROCm packages rocblas and rocblas-dev).
+* Minimum HIP runtime version support is 4.3.0 (or ROCm package ROCm hip-runtime-amd).
+* Minimum LLVM OpenMP runtime dev package version support is 10.0 (available as ROCm package rocm-llvm-dev).
+
+.. note::
+    \* = if using rocBLAS for validation.
+
+    It is best to use available ROCm packages from the same release where applicable.
+
 Download rocWMMA
 ^^^^^^^^^^^^^^^^^
 
@@ -101,27 +118,24 @@ On Centos, use:
 
     yum info rocm-libs
 
-The ROCm version has major, minor, and patch fields, possibly followed by a build specific identifier. For example, a ROCm version 4.0.0.40000-23 corresponds to major = 4, minor = 0, patch = 0, and build identifier 40000-23.
-There are GitHub branches at the rocWMMA site with names ``rocm-major.minor.x`` where major and minor are the same as in the ROCm version. To download rocWMMA on ROCm version 4.0.0.40000-23, use:
+The ROCm version has major, minor, and patch fields, possibly followed by a build specific identifier. For example, a ROCm version 6.0.0.40000-23 corresponds to major = 6, minor = 0, patch = 0, and build identifier 40000-23.
+There are GitHub branches at the rocWMMA site with names ``rocm-major.minor.x`` where major and minor are the same as in the ROCm version. To download rocWMMA on ROCm version 6.0.0.40000-23, use:
 
 ::
 
    git clone -b release/rocm-rel-x.y https://github.com/ROCmSoftwarePlatform/rocWMMA.git
    cd rocWMMA
 
-Replace ``x.y`` in the above command with the version of ROCm installed on your machine. For example, if you have ROCm 5.0 installed, then replace release/rocm-rel-x.y with release/rocm-rel-5.0.
+Replace ``x.y`` in the above command with the version of ROCm installed on your machine. For example, if you have ROCm 6.0 installed, then replace release/rocm-rel-x.y with release/rocm-rel-6.0.
 
 You can choose to build any of the following:
 
-* library
-
+* library only
 * library and samples
-
-* library and tests
-
+* library and tests (validation and / or benchmarks)
 * library, samples, tests, and (optionally) assembly
 
-You only need the library include headers for calling rocWMMA from your code.
+Since rocWMMA is a header library, you only need the header includes for calling rocWMMA from your code.
 The client contains the test samples and benchmark code.
 
 Below are the project options available to build rocWMMA library with or without clients.
@@ -162,15 +176,6 @@ Below are the project options available to build rocWMMA library with or without
 Build library
 ^^^^^^^^^^^^^^^^^^
 
-* Minimum ROCm version support is 6.0.
-* ROCm-cmake has a minimum version requirement of 0.8.0.
-* Minimum rocBLAS version support is rocBLAS 4.0.0 for ROCm 6.0* (rocblas and rocblas-dev).
-* Minimum HIP runtime version support is hip-rocclr 4.3.0 (hip-runtime-amd).
-* Minimum LLVM OpenMP runtime dev package version support is libomp-11-dev (rocm-llvm-dev).
-
-.. note::
-    \* = if using rocBLAS for validation
-
 By default, the project is configured in Release mode.
 
 To build the library alone, run:
@@ -187,7 +192,7 @@ Here are some other example project configurations:
 +-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |           Configuration           |                                                                          Command                                                                           |
 +===================================+============================================================================================================================================================+
-|               Basic               |                                      ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ \ncmake -B <build_dir>``                                     |
+|               Basic               |                                      ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir>``                                     |
 +-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |         Targeting gfx908          |                      ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DAMDGPU_TARGETS=gfx908:xnack-``                      |
 +-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -201,7 +206,10 @@ After configuration, build using:
 
 .. code-block:: bash
 
-    cmake --build <build_dir> -- -j
+    cmake --build <build_dir> -- -j<nproc>
+
+.. note::
+    We recommend using a minimum of 16 threads to build rocWMMA with any tests (-j16).
 
 Build library and samples
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -216,14 +224,14 @@ After configuration, build using:
 
 .. code-block:: bash
 
-    cmake --build <build_dir> -- -j
+    cmake --build <build_dir> -- -j<nproc>
 
 The samples folder in ``<build_dir>`` contains executables as given in the table below.
 
 ================ ==============================================================================================================================
 Executable Name  Description
 ================ ==============================================================================================================================
-``simple_sgemm``      A simple General Matrix Multiply (GEMM) operation [D = alpha * (A x B) + beta * C] using rocWMMA API for single-precision floating point types
+``simple_sgemm``      A simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for single-precision floating point types
 ``simple_dgemm``      A simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for double-precision floating point types
 ``simple_hgemm``      A simple GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for half-precision floating point types
 
@@ -231,8 +239,8 @@ Executable Name  Description
 ``perf_dgemm``        An optimized GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for double-precision floating point types
 ``perf_hgemm``        An optimized GEMM operation [D = alpha * (A x B) + beta * C] using rocWMMA API for half-precision floating point types
 
-``simple_sgemv``      A simple GEMV operation [y = alpha * (A) * x + beta * y] using rocWMMA API for single-precision fp32 inputs and output
-``simple_dgemv``      A simple GEMV operation [y = alpha * (A) * x + beta * y] using rocWMMA API for double-precision fp64 inputs and output
+``simple_sgemv``      A simple GEMV operation [y = alpha * (A) * x + beta * y] using rocWMMA API for single-precision floating point types
+``simple_dgemv``      A simple GEMV operation [y = alpha * (A) * x + beta * y] using rocWMMA API for double-precision floating point types
 
 ``simple-dlrm``       A simple DLRM operation using rocWMMA API
 
@@ -244,25 +252,26 @@ Build library and tests
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 rocWMMA provides the following test suites:
 
-- DLRM tests: Cover the dot product interactions between embeddings used in DLRM
-- GEMM tests: Cover block-wise Generalized Matrix Multiplication (GEMM) implemented with rocWMMA
-- Unit tests: Cover various aspects of rocWMMA API and internal functionality
+- DLRM tests: Cover the dot product interactions between embeddings used in Deep Learning Recommendation Model (DLRM) implemented with rocWMMA.
+- GEMM tests: Cover block-wise Generalized Matrix Multiplication (GEMM) implemented with rocWMMA.
+- Unit tests: Cover various aspects of rocWMMA API and internal functionality.
 
-rocWMMA can build both validation and benchmark tests. The library uses CPU or rocBLAS methods for validation (when available) and benchmark comparisons based on the provided project option.
-By default, the project is linked against rocBLAS for validating results.
-Minimum ROCBLAS library version requirement for ROCm 4.3.0 is 2.39.0.
+rocWMMA can build both validation and benchmark tests. Validation tests verify the rocWMMA implementations against a reference model, giving a PASS
+or FAIL result. Benchmark tests invoke the tests multiple times, returning average compute throughput in tera-flop/sec (TFlops) and may guage efficiency
+as a percentage of expected peak performance. The library uses CPU or rocBLAS methods for validation (when available) and benchmark
+comparisons based on the provided selected project configurations. By default, the project is linked against rocBLAS for validating results more efficiently.
 
 To build library and tests, run:
 
 .. code-block:: bash
 
-    CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> .
+    CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DROCWMMA_BUILD_TESTS=ON
 
 After configuration, build using:
 
 .. code-block:: bash
 
-    cmake --build <build_dir> -- -j
+    cmake --build <build_dir> -- -j<nproc>
 
 The tests in ``<build_dir>`` contain executables as given in the table below.
 
@@ -292,7 +301,7 @@ Executable Name                               Description
 ``unit/map_util_test``                          Tests mapping utilities used in rocWMMA implementations
 ``unit/pack_util_test``                         Tests vector packing utilities used in rocWMMA implementations
 ``unit/transforms_test``                        Tests transform utilities used in rocWMMA implementations
-``unit/unpack_util_test``                       Tests un-packing utilities used in rocWMMA implementations
+``unit/unpack_util_test``                       Tests vector un-packing utilities used in rocWMMA implementations
 ``unit/vector_iterator_test``                   Tests internal vector storage iteration implementation
 ``unit/vector_test``                            Tests internal vector storage implementation
 ``unit/vector_util_test``                       Tests internal vector manipulation utilities implementation
@@ -309,12 +318,14 @@ To build the library and tests with assembly code generation, run:
 
 .. code-block:: bash
 
-    CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DROCWMMA_BUILD_ASSEMBLY=ON
+    CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DROCWMMA_BUILD_ASSEMBLY=ON -DROCWMMA_BUILD_TESTS=ON
 
 After configuration, build using:
 
 .. code-block:: bash
 
-    cmake --build <build_dir> -- -j
+    cmake --build <build_dir> -- -j<nproc>
 
-The ``assembly`` folder in ``<build_dir>`` contains assembly generation of test executables in the format ``test_executable_name.s``
+.. note::
+    The ``assembly`` folder within ``<build_dir>`` contains a hierarchy of assembly files generated the executables in the format ``test_executable_name.s``.
+    These may be viewed from your favorite text editor.
