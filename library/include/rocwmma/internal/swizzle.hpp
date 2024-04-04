@@ -126,73 +126,191 @@ namespace rocwmma
         // Func::exec(src0)
 
         // BCast variants
+
+        /*! \class BCast32
+        *  \brief  Swizzle class that broadcasts one thread to all threads in each group of 32
+        *  @tparam ElementIdx thread index [0-31]
+        */
         template <uint32_t ElementIdx>
         using BCast32 = Driver<SwizzleImpl::Ops::BCast32<ElementIdx>>;
 
+        /*! \class BCast16
+        *  \brief  Swizzle class that broadcasts one thread to all threads in each group of 16
+        *  @tparam ElementIdx thread index [0-15]
+        */
         template <uint32_t ElementIdx>
         using BCast16 = Driver<SwizzleImpl::Ops::BCast16<ElementIdx>>;
 
+        /*! \class BCast8
+        *  \brief  Swizzle class that broadcasts one thread to all threads in each group of 8
+        *  @tparam ElementIdx thread index [0-7]
+        */
         template <uint32_t ElementIdx>
         using BCast8 = Driver<SwizzleImpl::Ops::BCast8<ElementIdx>>;
 
+        /*! \class BCast4
+        *  \brief  Swizzle class that broadcasts one thread to all threads in each group of 4
+        *  @tparam ElementIdx thread index [0-3]
+        */
         template <uint32_t ElementIdx>
         using BCast4 = Driver<SwizzleImpl::Ops::BCast4<ElementIdx>>;
 
+        /*! \class BCast2
+        *  \brief  Swizzle class that broadcasts one thread to all threads in each group of 2
+        *  @tparam ElementIdx thread index [0-1]
+        */
         template <uint32_t ElementIdx>
         using BCast2 = Driver<SwizzleImpl::Ops::BCast2<ElementIdx>>;
 
         // Reverse variants
+
+        /*! \class Reverse32
+        *  \brief  Swizzle class that mirrors all threads in each group of 32
+        */
         using Reverse32 = Driver<SwizzleImpl::Ops::Reverse32>;
+
+        /*! \class Reverse16
+        *  \brief  Swizzle class that mirrors all threads in each group of 16
+        */
         using Reverse16 = Driver<SwizzleImpl::Ops::Reverse16>;
-        using Reverse8  = Driver<SwizzleImpl::Ops::Reverse8>;
-        using Reverse4  = Driver<SwizzleImpl::Ops::Reverse4>;
-        using Reverse2  = Driver<SwizzleImpl::Ops::Reverse2>;
+
+        /*! \class Reverse8
+        *  \brief  Swizzle class that mirrors all threads in each group of 8
+        */
+        using Reverse8 = Driver<SwizzleImpl::Ops::Reverse8>;
+
+        /*! \class Reverse4
+        *  \brief  Swizzle class that mirrors all threads in each group of 4
+        */
+        using Reverse4 = Driver<SwizzleImpl::Ops::Reverse4>;
+
+        /*! \class Reverse2
+        *  \brief  Swizzle class that mirrors all threads in each group of 2
+        */
+        using Reverse2 = Driver<SwizzleImpl::Ops::Reverse2>;
 
         // Rotate variants
+
+        /*! \class RotateL32
+        *  \brief  Swizzle class that rotates all threads to the left in each group of 32
+        *  @tparam RotateDistance thread index [0-31]
+        */
         template <uint32_t RotateDistance>
         using RotateL32 = Driver<SwizzleImpl::Ops::RotateL32<RotateDistance>>;
 
+        /*! \class RotateL16
+        *  \brief  Swizzle class that rotates all threads to the left in each group of 16
+        *  @tparam RotateDistance thread index [0-15]
+        */
         template <uint32_t RotateDistance>
         using RotateL16 = Driver<SwizzleImpl::Ops::RotateL16<RotateDistance>>;
 
+        /*! \class RotateL8
+        *  \brief  Swizzle class that rotates all threads to the left in each group of 8
+        *  @tparam RotateDistance thread index [0-7]
+        */
         template <uint32_t RotateDistance>
         using RotateL8 = Driver<SwizzleImpl::Ops::RotateL8<RotateDistance>>;
 
+        /*! \class RotateL4
+        *  \brief  Swizzle class that rotates all threads to the left in each group of 4
+        *  @tparam RotateDistance thread index [0-3]
+        */
         template <uint32_t RotateDistance>
         using RotateL4 = Driver<SwizzleImpl::Ops::RotateL4<RotateDistance>>;
 
+        /*! \class RotateL2
+        *  \brief  Swizzle class that rotates all threads to the left in each group of 2
+        *  @tparam RotateDistance thread index [0-1]
+        */
         template <uint32_t RotateDistance>
         using RotateL2 = Driver<SwizzleImpl::Ops::RotateL2<RotateDistance>>;
 
+        /*! \class RotateR32
+        *  \brief  Swizzle class that rotates all threads to the right in each group of 32
+        *  @tparam RotateDistance thread index [0-31]
+        */
         template <uint32_t RotateDistance>
         using RotateR32 = Driver<SwizzleImpl::Ops::RotateR32<RotateDistance>>;
 
+        /*! \class RotateR16
+        *  \brief  Swizzle class that rotates all threads to the right in each group of 16
+        *  @tparam RotateDistance thread index [0-15]
+        */
         template <uint32_t RotateDistance>
         using RotateR16 = Driver<SwizzleImpl::Ops::RotateR16<RotateDistance>>;
 
+        /*! \class RotateR8
+        *  \brief  Swizzle class that rotates all threads to the right in each group of 8
+        *  @tparam RotateDistance thread index [0-7]
+        */
         template <uint32_t RotateDistance>
         using RotateR8 = Driver<SwizzleImpl::Ops::RotateR8<RotateDistance>>;
 
+        /*! \class RotateR4
+        *  \brief  Swizzle class that rotates all threads to the right in each group of 4
+        *  @tparam RotateDistance thread index [0-3]
+        */
         template <uint32_t RotateDistance>
         using RotateR4 = Driver<SwizzleImpl::Ops::RotateR4<RotateDistance>>;
 
+        /*! \class RotateR2
+        *  \brief  Swizzle class that rotates all threads to the right in each group of 2
+        *  @tparam RotateDistance thread index [0-1]
+        */
         template <uint32_t RotateDistance>
         using RotateR2 = Driver<SwizzleImpl::Ops::RotateR2<RotateDistance>>;
 
         // Shuffle variants
+
+        /*! \class Shuffle4
+        *  \brief  Swizzle class that shuffles elements in each group of 4
+        *  @tparam Select0 element index [0-3]
+        *  @tparam Select1 element index [0-3]
+        *  @tparam Select2 element index [0-3]
+        *  @tparam Select3 element index [0-3]
+        */
         template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
         using Shuffle4 = Driver<SwizzleImpl::Ops::Shuffle4<Select0, Select1, Select2, Select3>>;
 
+        /*! \class Shuffle2
+        *  \brief  Swizzle class that shuffles elements in each group of 2
+        *  @tparam Select0 element index [0-1]
+        *  @tparam Select1 element index [0-1]
+        */
         template <uint32_t Select0, uint32_t Select1>
         using Shuffle2 = Driver<SwizzleImpl::Ops::Shuffle2<Select0, Select1>>;
 
         // Swap variants
+
+        /*! \class Swap16
+        *  \brief  Swizzle class that swaps neighbouring groups in sizes of 16
+        */
         using Swap16 = Driver<SwizzleImpl::Ops::Swap16>;
-        using Swap8  = Driver<SwizzleImpl::Ops::Swap8>;
-        using Swap4  = Driver<SwizzleImpl::Ops::Swap4>;
-        using Swap2  = Driver<SwizzleImpl::Ops::Swap2>;
+
+        /*! \class Swap8
+        *  \brief  Swizzle class that swaps neighbouring groups in sizes of 8
+        */
+        using Swap8 = Driver<SwizzleImpl::Ops::Swap8>;
+
+        /*! \class Swap4
+        *  \brief  Swizzle class that swaps neighbouring groups in sizes of 4
+        */
+        using Swap4 = Driver<SwizzleImpl::Ops::Swap4>;
+
+        /*! \class Swap2
+        *  \brief  Swizzle class that swaps neighbouring groups in sizes of 2
+        */
+        using Swap2 = Driver<SwizzleImpl::Ops::Swap2>;
 
         // Fft variants
+
+        /*! \class Fft
+        *  \brief  Swizzle class that applies a specific fft transform given by control codes.
+        *  For a listing of these codes, consult the ISA documentation for ds_swizzle.
+        *  @tparam SubGroupSize affect size of sub-groups [0, 1, 2, 4, 8, 16, 32]
+        *  @tparam FftCtrl control code for ds_swizzle fft function (see ISA)
+        */
         template <uint32_t SubGroupSize, uint32_t FftCtrl>
         using Fft = Driver<SwizzleImpl::Ops::Fft<SubGroupSize, FftCtrl>>;
         /** @}*/
