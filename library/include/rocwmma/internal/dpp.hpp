@@ -116,7 +116,8 @@ namespace rocwmma
                               || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_SWAP)
                               || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_BCAST)
                               || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_WFALL_BCAST)
-                              || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_MOVE),
+                              || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_MOVE)
+                              || (DppOp::opId() == CrossLaneOps::Properties::OP_ID_BLEND),
                           "DppOp is unsupported");
 
             template <typename DataT>
@@ -207,22 +208,44 @@ namespace rocwmma
             }
         };
 
-        /// Dpp ops interface
-        // Func::exec(src0)
+        /// Dpp ops usage interface
+        // Class::exec(src0, src1)
 
         // BCast variants
+
+        /*! \class BCast16
+        *  \brief  DPP class that broadcasts one thread to all threads in each row
+        *  @tparam ElementIdx thread index [0-15]
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t ElementIdx,
                   uint32_t RowMask   = 0xF,
                   uint32_t BankMask  = 0xF,
                   bool     BoundCtrl = false>
         using BCast16 = Driver<DppImpl::Ops::BCast16<ElementIdx>, RowMask, BankMask, BoundCtrl>;
 
+        /*! \class BCast4
+        *  \brief  DPP class that broadcasts one thread to all threads in each bank
+        *  @tparam ElementIdx thread index [0-3]
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t ElementIdx,
                   uint32_t RowMask   = 0xF,
                   uint32_t BankMask  = 0xF,
                   bool     BoundCtrl = false>
         using BCast4 = Driver<DppImpl::Ops::BCast4<ElementIdx>, RowMask, BankMask, BoundCtrl>;
 
+        /*! \class BCast2
+        *  \brief  DPP class that broadcasts one thread to all threads in each pair
+        *  @tparam ElementIdx thread index [0-1]
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t ElementIdx,
                   uint32_t RowMask   = 0xF,
                   uint32_t BankMask  = 0xF,
@@ -234,36 +257,103 @@ namespace rocwmma
         // <M> = subgroup size
         // <N> = element idx
         // NOTE: These functions only broadcast the <N>th element of the current subgroup to the NEXT subgroup
+
+        /*! \class BCast16x15
+        *  \brief  DPP class that broadcasts the last thread of each row to the entire next row
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RowMask = 0xF, uint32_t BankMask = 0xF, bool BoundCtrl = false>
         using BCast16x15 = Driver<DppImpl::Ops::BCast16x15, RowMask, BankMask, BoundCtrl>;
 
+        /*! \class BCast32x31
+        *  \brief  DPP class that broadcasts thread 31 to the next 2 rows (wave64 only)
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RowMask = 0xF, uint32_t BankMask = 0xF, bool BoundCtrl = false>
         using BCast32x31 = Driver<DppImpl::Ops::BCast32x31, RowMask, BankMask, BoundCtrl>;
 
         // Move variants
+
+        /*! \class MaskMove
+        *  \brief  DPP class copies src0 to src1, depends on write masks
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RowMask = 0xF, uint32_t BankMask = 0xF, bool BoundCtrl = false>
         using MaskMove = Driver<DppImpl::Ops::MaskMove, RowMask, BankMask, BoundCtrl>;
 
         // Reversal variants
+
+        /*! \class Reverse16
+        *  \brief  DPP class that mirrors threads within each row
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RowMask = 0xF, uint32_t BankMask = 0xF, bool BoundCtrl = false>
         using Reverse16 = Driver<DppImpl::Ops::Reverse16, RowMask, BankMask, BoundCtrl>;
 
+        /*! \class Reverse8
+        *  \brief  DPP class that mirrors threads within each half-row
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RowMask = 0xF, uint32_t BankMask = 0xF, bool BoundCtrl = false>
         using Reverse8 = Driver<DppImpl::Ops::Reverse8, RowMask, BankMask, BoundCtrl>;
 
+        /*! \class Reverse4
+        *  \brief  DPP class that mirrors threads within each bank
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RowMask = 0xF, uint32_t BankMask = 0xF, bool BoundCtrl = false>
         using Reverse4 = Driver<DppImpl::Ops::Reverse4, RowMask, BankMask, BoundCtrl>;
 
+        /*! \class Reverse2
+        *  \brief  DPP class that mirrors threads within each pair
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RowMask = 0xF, uint32_t BankMask = 0xF, bool BoundCtrl = false>
         using Reverse2 = Driver<DppImpl::Ops::Reverse2, RowMask, BankMask, BoundCtrl>;
 
         // Rotation variants
+
+        /*! \class RotateWaveR1
+        *  \brief  DPP class that rotates all wavefront threads to the right by 1.
+        *          Currently only supported on gfx9.
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RowMask = 0xF, uint32_t BankMask = 0xF, bool BoundCtrl = false>
         using RotateWaveR1 = Driver<DppImpl::Ops::RotateWaveR1, RowMask, BankMask, BoundCtrl>;
 
+        /*! \class RotateWaveL1
+        *  \brief  DPP class that rotates all wavefront threads to the left by 1.
+        *          Currently only supported on gfx9.
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RowMask = 0xF, uint32_t BankMask = 0xF, bool BoundCtrl = false>
         using RotateWaveL1 = Driver<DppImpl::Ops::RotateWaveL1, RowMask, BankMask, BoundCtrl>;
 
+        /*! \class RotateR16
+        *  \brief  DPP class that rotates threads in each row to the right by 0-15 threads.
+        *  @tparam RotateDistance [0 - 15]
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RotateDistance,
                   uint32_t RowMask   = 0xF,
                   uint32_t BankMask  = 0xF,
@@ -271,6 +361,13 @@ namespace rocwmma
         using RotateR16
             = Driver<DppImpl::Ops::RotateR16<RotateDistance>, RowMask, BankMask, BoundCtrl>;
 
+        /*! \class RotateL4
+        *  \brief  DPP class that rotates threads in each bank to the left by 0-3 threads.
+        *  @tparam RotateDistance [0 - 3]
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RotateDistance,
                   uint32_t RowMask   = 0xF,
                   uint32_t BankMask  = 0xF,
@@ -278,6 +375,13 @@ namespace rocwmma
         using RotateL4
             = Driver<DppImpl::Ops::RotateL4<RotateDistance>, RowMask, BankMask, BoundCtrl>;
 
+        /*! \class RotateR4
+        *  \brief  DPP class that rotates threads in each bank to the right by 0-3 threads.
+        *  @tparam RotateDistance [0 - 3]
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RotateDistance,
                   uint32_t RowMask   = 0xF,
                   uint32_t BankMask  = 0xF,
@@ -285,6 +389,13 @@ namespace rocwmma
         using RotateR4
             = Driver<DppImpl::Ops::RotateR4<RotateDistance>, RowMask, BankMask, BoundCtrl>;
 
+        /*! \class RotateL2
+        *  \brief  DPP class that rotates threads in each pair to the left by 0-1 threads.
+        *  @tparam RotateDistance [0 - 1]
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RotateDistance,
                   uint32_t RowMask   = 0xF,
                   uint32_t BankMask  = 0xF,
@@ -292,6 +403,13 @@ namespace rocwmma
         using RotateL2
             = Driver<DppImpl::Ops::RotateL2<RotateDistance>, RowMask, BankMask, BoundCtrl>;
 
+        /*! \class RotateR2
+        *  \brief  DPP class that rotates threads in each pair to the right by 0-1 threads.
+        *  @tparam RotateDistance [0 - 1]
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RotateDistance,
                   uint32_t RowMask   = 0xF,
                   uint32_t BankMask  = 0xF,
@@ -300,19 +418,34 @@ namespace rocwmma
             = Driver<DppImpl::Ops::RotateR2<RotateDistance>, RowMask, BankMask, BoundCtrl>;
 
         // Shift variants
-        template <uint32_t RowMask = 0xF, uint32_t BankMask = 0xF, bool BoundCtrl = false>
-        using ShiftWaveL1 = Driver<DppImpl::Ops::ShiftWaveL1, RowMask, BankMask, BoundCtrl>;
 
+        /*! \class ShiftWaveR1
+        *  \brief  DPP class that shifts all wavefront threads to the right by 1.
+        *          Currently only supported on gfx9.
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RowMask = 0xF, uint32_t BankMask = 0xF, bool BoundCtrl = false>
         using ShiftWaveR1 = Driver<DppImpl::Ops::ShiftWaveR1, RowMask, BankMask, BoundCtrl>;
 
-        template <uint32_t ShiftDistance,
-                  uint32_t RowMask   = 0xF,
-                  uint32_t BankMask  = 0xF,
-                  bool     BoundCtrl = false>
-        using ShiftL16
-            = Driver<DppImpl::Ops::ShiftL16<ShiftDistance>, RowMask, BankMask, BoundCtrl>;
+        /*! \class ShiftWaveL1
+        *  \brief  DPP class that shifts all wavefront threads to the left by 1.
+        *          Currently only supported on gfx9.
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
+        template <uint32_t RowMask = 0xF, uint32_t BankMask = 0xF, bool BoundCtrl = false>
+        using ShiftWaveL1 = Driver<DppImpl::Ops::ShiftWaveL1, RowMask, BankMask, BoundCtrl>;
 
+        /*! \class ShiftR16
+        *  \brief  DPP class that shifts all threads in each row to the right by 0-15.
+        *  @tparam ShiftDistance [0 - 15]
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t ShiftDistance,
                   uint32_t RowMask   = 0xF,
                   uint32_t BankMask  = 0xF,
@@ -320,7 +453,32 @@ namespace rocwmma
         using ShiftR16
             = Driver<DppImpl::Ops::ShiftR16<ShiftDistance>, RowMask, BankMask, BoundCtrl>;
 
+        /*! \class ShiftL16
+        *  \brief  DPP class that shifts all threads in each row to the left by 0-15.
+        *  @tparam ShiftDistance [0 - 15]
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
+        template <uint32_t ShiftDistance,
+                  uint32_t RowMask   = 0xF,
+                  uint32_t BankMask  = 0xF,
+                  bool     BoundCtrl = false>
+        using ShiftL16
+            = Driver<DppImpl::Ops::ShiftL16<ShiftDistance>, RowMask, BankMask, BoundCtrl>;
+
         // Shuffle variants
+
+        /*! \class Shuffle4
+        *  \brief  DPP class that applies the 4-element shuffle pattern to all banks.
+        *  @tparam Select0 [0 - 3]
+        *  @tparam Select1 [0 - 3]
+        *  @tparam Select2 [0 - 3]
+        *  @tparam Select3 [0 - 3]
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t Select0,
                   uint32_t Select1,
                   uint32_t Select2,
@@ -333,6 +491,14 @@ namespace rocwmma
                                 BankMask,
                                 BoundCtrl>;
 
+        /*! \class Shuffle4
+        *  \brief  DPP class that applies the 2-element shuffle pattern to all pairs.
+        *  @tparam Select0 [0 - 1]
+        *  @tparam Select1 [0 - 1]
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t Select0,
                   uint32_t Select1,
                   uint32_t RowMask   = 0xF,
@@ -342,9 +508,44 @@ namespace rocwmma
             = Driver<DppImpl::Ops::Shuffle2<Select0, Select1>, RowMask, BankMask, BoundCtrl>;
 
         // Swap variants
+
+        /*! \class Swap2
+        *  \brief  DPP class that swaps each pair of elements.
+        *  @tparam Row write mask [0x0 - 0xF]
+        *  @tparam Bank write mask [0x0 - 0xF]
+        *  @tparam Bound control [true - false]
+        */
         template <uint32_t RowMask = 0xF, uint32_t BankMask = 0xF, bool BoundCtrl = false>
         using Swap2 = Driver<DppImpl::Ops::Swap2, RowMask, BankMask, BoundCtrl>;
 
+        // Zip variants
+
+        /*! \class Zip4
+        *  \brief  DPP class that blends even banks from src0 and odd banks from src1.
+        */
+        using Zip4 = Driver<DppImpl::Ops::Zip4, 0xF, 0x5, false>;
+
+        /*! \class Zip8
+        *  \brief  DPP class that blends even half-rows from src0 and odd half-rows from src1.
+        */
+        using Zip8 = Driver<DppImpl::Ops::Zip8, 0xF, 0x3, false>;
+
+        /*! \class Zip16
+        *  \brief  DPP class that blends even rows from src0 and odd rows from src1.
+        */
+        using Zip16 = Driver<DppImpl::Ops::Zip16, 0x5, 0xF, false>;
+
+        /*! \class Zip32
+        *  \brief  DPP class that blends 32 elements from src0 and src1.
+        *          Only supported on gfx9.
+        */
+        using Zip32 = Driver<DppImpl::Ops::Zip32, 0x3, 0xF, false>;
+
+        // Nop
+
+        /*! \class Nop
+        *  \brief  DPP class that does nothing but a straight copy.
+        */
         using Nop = MaskMove<>;
         /** @}*/
 

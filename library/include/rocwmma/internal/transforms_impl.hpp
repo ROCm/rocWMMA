@@ -173,44 +173,47 @@ namespace rocwmma
         static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
         using PackUtil = PackUtil<DataT>;
 
-        // TODO replace with dpp::move
         auto lo     = PackUtil::paddedPack(extractEven(v));
         auto hi     = PackUtil::paddedPack(extractOdd(v));
         auto rot_lo = Swizzle::RotateR32<16>::exec(lo);
         auto rot_hi = Swizzle::RotateR32<16>::exec(hi);
-        lo          = Blend::Zip16::exec(lo, rot_hi);
-        hi          = Blend::Zip16::exec(rot_lo, hi);
+        lo          = Dpp::Zip16::exec(lo, rot_hi);
+        hi          = Dpp::Zip16::exec(rot_lo, hi);
 
         return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo),
                       PackUtil::template paddedUnpack<VecSize / 2u>(hi));
     }
 
-    // TODO: Wave64 only?
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline auto unpackLoHi32(VecT<DataT, VecSize> const& v)
     {
-        static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
-        using PackUtil = PackUtil<DataT>;
+        if constexpr(ROCWMMA_WAVE64_MODE)
+        {
+            static_assert(VecSize % 2 == 0, "VecSize must be a multiple of 2");
+            using PackUtil = PackUtil<DataT>;
 
-        auto lo = PackUtil::paddedPack(extractEven(v));
-        auto hi = PackUtil::paddedPack(extractOdd(v));
+            auto lo = PackUtil::paddedPack(extractEven(v));
+            auto hi = PackUtil::paddedPack(extractOdd(v));
 
-        // TODO: label as rotateR64 for consistency?
-        // TODO replace with dpp::move
-        auto rot_lo = Permute::RotateWaveR<32>::exec(lo);
-        auto rot_hi = Permute::RotateWaveR<32>::exec(hi);
-        lo          = Blend::Zip32::exec(lo, rot_hi);
-        hi          = Blend::Zip32::exec(rot_lo, hi);
+            auto rot_lo = Permute::RotateWaveR<32>::exec(lo);
+            auto rot_hi = Permute::RotateWaveR<32>::exec(hi);
+            lo          = Dpp::Zip32::exec(lo, rot_hi);
+            hi          = Dpp::Zip32::exec(rot_lo, hi);
 
-        return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo),
-                      PackUtil::template paddedUnpack<VecSize / 2u>(hi));
+            return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo),
+                          PackUtil::template paddedUnpack<VecSize / 2u>(hi));
+        }
+        else
+        {
+            return v;
+        }
     }
 
     namespace TransformsImpl
     {
         namespace Ops
         {
-          
+
             template <uint32_t BlockDim, uint32_t VectorWidth>
             struct AosToSoa
             {
@@ -541,14 +544,15 @@ namespace rocwmma
                     // Step 2 : Unpack groups of 8
                     result = unpackLoHi8(result);
 
-                    if constexpr (PackUtil::Traits::PackRatio >= VW)
+                    if constexpr(PackUtil::Traits::PackRatio >= VW)
                     {
                         // Step 3 : UnpackLoHi16
                         // Small types more efficient to do full rotation.
                         result = unpackLoHi16(result);
 
                         // Step 4 : Gather
-                        auto packed_data = Permute::Gather32<VW, 0>::exec(PackUtil::paddedPack(result));
+                        auto packed_data
+                            = Permute::Gather32<VW, 0>::exec(PackUtil::paddedPack(result));
 
                         return PackUtil::template paddedUnpack<VecSize>(packed_data);
                     }
@@ -561,8 +565,8 @@ namespace rocwmma
                         auto odds  = PackUtil::paddedPack(extractOdd(result));
 
                         auto rot = Swizzle::RotateR32<16>::exec(odds);
-                        auto lo  = Blend::Zip16::exec(evens, rot);
-                        auto hi  = Blend::Zip16::exec(rot, evens);
+                        auto lo  = Dpp::Zip16::exec(evens, rot);
+                        auto hi  = Dpp::Zip16::exec(rot, evens);
 
                         // Step 4 : Gather (half-rotate offset)
                         // Note the offset of 16 in hi
@@ -593,14 +597,15 @@ namespace rocwmma
                     // Step 2 : Unpack groups of 16
                     result = unpackLoHi16(result);
 
-                    if constexpr (PackUtil::Traits::PackRatio >= VW)
+                    if constexpr(PackUtil::Traits::PackRatio >= VW)
                     {
                         // Step 2 : UnpackLoHi32
                         // Small types more efficient to do full rotation.
                         result = unpackLoHi32(result);
 
                         // Step 3 : Gather
-                        auto packed_data = Permute::GatherWave<VW, 0>::exec(PackUtil::paddedPack(result));
+                        auto packed_data
+                            = Permute::GatherWave<VW, 0>::exec(PackUtil::paddedPack(result));
 
                         return PackUtil::template paddedUnpack<VecSize>(packed_data);
                     }
@@ -615,8 +620,8 @@ namespace rocwmma
 
                         // TODO: label as rotateR64 for consistency?
                         auto rot_hi = Permute::RotateWaveR<32>::exec(hi);
-                        hi          = Blend::Zip32::exec(rot_hi, lo);
-                        lo          = Blend::Zip32::exec(lo, rot_hi);
+                        hi          = Dpp::Zip32::exec(rot_hi, lo);
+                        lo          = Dpp::Zip32::exec(lo, rot_hi);
 
                         // Step 4 : Gather (half-rotate offset)
                         // Note the offset of 32 in hi
@@ -849,14 +854,15 @@ namespace rocwmma
                     // Step 1 : UnpackLoHi8
                     auto unpacked_data = unpackLoHi8(v);
 
-                    if constexpr (PackUtil::Traits::PackRatio >= VW)
+                    if constexpr(PackUtil::Traits::PackRatio >= VW)
                     {
                         // Step 2 : UnpackLoHi16
                         // Small types more efficient to do full rotation.
                         unpacked_data = unpackLoHi16(unpacked_data);
 
                         // Step 3 : Gather
-                        auto packed_data = Permute::Gather32<4, 0>::exec(PackUtil::paddedPack(unpacked_data));
+                        auto packed_data
+                            = Permute::Gather32<4, 0>::exec(PackUtil::paddedPack(unpacked_data));
 
                         return PackUtil::template paddedUnpack<VW>(packed_data);
                     }
@@ -868,16 +874,18 @@ namespace rocwmma
                         auto lo       = PackUtil::paddedPack(extractEven(unpacked_data));
                         auto hi       = PackUtil::paddedPack(extractOdd(unpacked_data));
                         auto rot_hi   = Swizzle::RotateR32<16>::exec(hi);
-                        hi            = Blend::Zip16::exec(rot_hi, lo);
-                        lo            = Blend::Zip16::exec(lo, rot_hi);
+                        hi            = Dpp::Zip16::exec(rot_hi, lo);
+                        lo            = Dpp::Zip16::exec(lo, rot_hi);
                         unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(lo),
-                                            PackUtil::template paddedUnpack<VW / 2>(hi));
+                                               PackUtil::template paddedUnpack<VW / 2>(hi));
 
                         // Step 3 : Gather (half-rotate offset)
-                        hi = Permute::Gather32<4, 16>::exec(PackUtil::paddedPack(extractHi(unpacked_data)));
-                        lo = Permute::Gather32<4, 0>::exec(PackUtil::paddedPack(extractLo(unpacked_data)));
+                        hi = Permute::Gather32<4, 16>::exec(
+                            PackUtil::paddedPack(extractHi(unpacked_data)));
+                        lo = Permute::Gather32<4, 0>::exec(
+                            PackUtil::paddedPack(extractLo(unpacked_data)));
                         unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(lo),
-                                            PackUtil::template paddedUnpack<VW / 2>(hi));
+                                               PackUtil::template paddedUnpack<VW / 2>(hi));
 
                         return unpacked_data;
                     }
@@ -907,7 +915,8 @@ namespace rocwmma
                         unpacked_data = unpackLoHi32(unpacked_data);
 
                         // Step 3 : Gather
-                        auto packed_data = Permute::GatherWave<4, 0>::exec(PackUtil::paddedPack(unpacked_data));
+                        auto packed_data
+                            = Permute::GatherWave<4, 0>::exec(PackUtil::paddedPack(unpacked_data));
 
                         return PackUtil::template paddedUnpack<VW>(packed_data);
                     }
@@ -921,15 +930,15 @@ namespace rocwmma
 
                         hi = Permute::RotateWaveR<32>::exec(hi);
 
-                        auto zip_lo = Blend::Zip32::exec(lo, hi);
-                        auto zip_hi = Blend::Zip32::exec(hi, lo);
+                        auto zip_lo = Dpp::Zip32::exec(lo, hi);
+                        auto zip_hi = Dpp::Zip32::exec(hi, lo);
 
                         // Step 3 : Gather (half-rotate offset)
                         lo = Permute::GatherWave<4, 0>::exec(zip_lo);
                         hi = Permute::GatherWave<4, 32>::exec(zip_hi);
 
                         return concat(PackUtil::template paddedUnpack<VW / 2>(lo),
-                                    PackUtil::template paddedUnpack<VW / 2>(hi));
+                                      PackUtil::template paddedUnpack<VW / 2>(hi));
                     }
                 }
             };
@@ -1250,7 +1259,7 @@ namespace rocwmma
             };
 
 #endif
-          
+
             template <uint32_t BlockDim, uint32_t VectorWidth>
             struct SoaToAos
             {
@@ -1520,14 +1529,15 @@ namespace rocwmma
                 {
                     using PackUtil = PackUtil<DataT>;
 
-                    if constexpr (PackUtil::Traits::PackRatio >= VW)
+                    if constexpr(PackUtil::Traits::PackRatio >= VW)
                     {
                         // Small types more efficient to do full rotation.
                         // Step 1 : Scatter
                         auto packed_data = Permute::Scatter32<8, 0>::exec(PackUtil::paddedPack(v));
 
                         // Step 2 : UnpackLoHi4
-                        auto unpacked_data = unpackLoHi4(PackUtil::template paddedUnpack<VW>(packed_data));
+                        auto unpacked_data
+                            = unpackLoHi4(PackUtil::template paddedUnpack<VW>(packed_data));
 
                         // Step 3 : UnpackLoHi8
                         unpacked_data = unpackLoHi8(unpacked_data);
@@ -1539,8 +1549,10 @@ namespace rocwmma
                     else
                     {
                         // Step 1 : Scatter (half-rotate offset)
-                        auto hi = (Permute::Scatter32<8, 16>::exec(PackUtil::paddedPack(extractHi(v))));
-                        auto lo = (Permute::Scatter32<8, 0>::exec(PackUtil::paddedPack(extractLo(v))));
+                        auto hi
+                            = (Permute::Scatter32<8, 16>::exec(PackUtil::paddedPack(extractHi(v))));
+                        auto lo
+                            = (Permute::Scatter32<8, 0>::exec(PackUtil::paddedPack(extractLo(v))));
                         auto unpacked_data = concat(PackUtil::template paddedUnpack<4>(lo),
                                                     PackUtil::template paddedUnpack<4>(hi));
 
@@ -1560,7 +1572,7 @@ namespace rocwmma
                         hi = Swizzle::RotateR32<16>::exec(hi);
 
                         return concat(PackUtil::template paddedUnpack<4u>(lo_final),
-                                    PackUtil::template paddedUnpack<4u>(hi));
+                                      PackUtil::template paddedUnpack<4u>(hi));
                     }
                 }
             };
@@ -1578,11 +1590,12 @@ namespace rocwmma
                 {
                     using PackUtil = PackUtil<DataT>;
 
-                    if constexpr (PackUtil::Traits::PackRatio >= VW)
+                    if constexpr(PackUtil::Traits::PackRatio >= VW)
                     {
                         // Small types more efficient to do full rotation.
                         // Step 1 : Scatter
-                        auto packed_data = Permute::ScatterWave<8, 0>::exec(PackUtil::paddedPack(v));
+                        auto packed_data
+                            = Permute::ScatterWave<8, 0>::exec(PackUtil::paddedPack(v));
 
                         // Step 2 : UnpackLoHi8
                         auto unpacked_data = unpackLoHi8(PackUtil::paddedUnPack<VW>(packed_data));
@@ -1597,8 +1610,10 @@ namespace rocwmma
                     else
                     {
                         // Step 1 : Scatter (half-rotate offset)
-                        auto hi = (Permute::ScatterWave<8, 32>::exec(PackUtil::paddedPack(extractHi(v))));
-                        auto lo = (Permute::ScatterWave<8, 0>::exec(PackUtil::paddedPack(extractLo(v))));
+                        auto hi            = (Permute::ScatterWave<8, 32>::exec(
+                            PackUtil::paddedPack(extractHi(v))));
+                        auto lo            = (Permute::ScatterWave<8, 0>::exec(
+                            PackUtil::paddedPack(extractLo(v))));
                         auto unpacked_data = concat(PackUtil::template paddedUnpack<4>(lo),
                                                     PackUtil::template paddedUnpack<4>(hi));
 
@@ -1618,7 +1633,7 @@ namespace rocwmma
                         hi = Permute::RotateWaveR<32>::exec(hi);
 
                         return concat(PackUtil::template paddedUnpack<VecSize / 2u>(lo_final),
-                                    PackUtil::template paddedUnpack<VecSize / 2u>(hi));
+                                      PackUtil::template paddedUnpack<VecSize / 2u>(hi));
                     }
                 }
             };
@@ -1784,14 +1799,15 @@ namespace rocwmma
                 {
                     using PackUtil = PackUtil<DataT>;
 
-                    if constexpr (PackUtil::Traits::PackRatio >= VW)
+                    if constexpr(PackUtil::Traits::PackRatio >= VW)
                     {
                         // Small types more efficient to do full rotation.
                         // Step 1 : Scatter
                         auto packed_data = Permute::Scatter32<4, 0>::exec(PackUtil::paddedPack(v));
 
                         // Step 2 : UnpackLoHi8
-                        auto unpacked_data = unpackLoHi8(PackUtil::template paddedUnpack<VW>(packed_data));
+                        auto unpacked_data
+                            = unpackLoHi8(PackUtil::template paddedUnpack<VW>(packed_data));
 
                         // Step 3 : UnpackLoHi16
                         unpacked_data = unpackLoHi16(unpacked_data);
@@ -1800,8 +1816,10 @@ namespace rocwmma
                     else
                     {
                         // Step 1 : Scatter (half-rotate offset)
-                        auto hi = (Permute::Scatter32<4, 16>::exec(PackUtil::paddedPack(extractHi(v))));
-                        auto lo = (Permute::Scatter32<4, 0>::exec(PackUtil::paddedPack(extractLo(v))));
+                        auto hi
+                            = (Permute::Scatter32<4, 16>::exec(PackUtil::paddedPack(extractHi(v))));
+                        auto lo
+                            = (Permute::Scatter32<4, 0>::exec(PackUtil::paddedPack(extractLo(v))));
                         auto unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(lo),
                                                     PackUtil::template paddedUnpack<VW / 2>(hi));
 
@@ -1811,11 +1829,11 @@ namespace rocwmma
                         // Step 3 : UnpackLoHi16 (half-rotate offset)
                         lo             = PackUtil::paddedPack(extractEven(unpacked_data));
                         hi             = PackUtil::paddedPack(extractOdd(unpacked_data));
-                        auto zipped_lo = Blend::Zip16::exec(lo, hi);
-                        auto zipped_hi = Blend::Zip16::exec(hi, lo);
+                        auto zipped_lo = Dpp::Zip16::exec(lo, hi);
+                        auto zipped_hi = Dpp::Zip16::exec(hi, lo);
                         auto rot_hi    = Swizzle::RotateR32<16>::exec(zipped_hi);
                         unpacked_data  = concat(PackUtil::template paddedUnpack<VW / 2>(zipped_lo),
-                                            PackUtil::template paddedUnpack<VW / 2>(rot_hi));
+                                               PackUtil::template paddedUnpack<VW / 2>(rot_hi));
 
                         return unpacked_data;
                     }
@@ -1835,14 +1853,16 @@ namespace rocwmma
                 {
                     using PackUtil = PackUtil<DataT>;
 
-                    if constexpr (PackUtil::Traits::PackRatio >= VW)
+                    if constexpr(PackUtil::Traits::PackRatio >= VW)
                     {
                         // Small types more efficient to do full rotation.
                         // Step 1 : Scatter
-                        auto packed_data = Permute::ScatterWave<4, 0>::exec(PackUtil::paddedPack(v));
+                        auto packed_data
+                            = Permute::ScatterWave<4, 0>::exec(PackUtil::paddedPack(v));
 
                         // Step 2 : UnpackLoHi16
-                        auto unpacked_data = unpackLoHi16(PackUtil::template paddedUnpack<VW>(packed_data));
+                        auto unpacked_data
+                            = unpackLoHi16(PackUtil::template paddedUnpack<VW>(packed_data));
 
                         // Step 3 : UnpackLoHi32
                         unpacked_data = unpackLoHi32(unpacked_data);
@@ -1851,8 +1871,10 @@ namespace rocwmma
                     else
                     {
                         // Step 1 : Scatter (half-rotate offset)
-                        auto lo = Permute::ScatterWave<4, 0>::exec(PackUtil::paddedPack(extractLo(v)));
-                        auto hi = Permute::ScatterWave<4, 32>::exec(PackUtil::paddedPack(extractHi(v)));
+                        auto lo
+                            = Permute::ScatterWave<4, 0>::exec(PackUtil::paddedPack(extractLo(v)));
+                        auto hi
+                            = Permute::ScatterWave<4, 32>::exec(PackUtil::paddedPack(extractHi(v)));
                         auto unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(lo),
                                                     PackUtil::template paddedUnpack<VW / 2>(hi));
 
@@ -1863,13 +1885,13 @@ namespace rocwmma
                         lo = PackUtil::paddedPack(extractEven(unpacked_data));
                         hi = PackUtil::paddedPack(extractOdd(unpacked_data));
 
-                        auto zip_lo = Blend::Zip32::exec(lo, hi);
-                        auto zip_hi = Blend::Zip32::exec(hi, lo);
+                        auto zip_lo = Dpp::Zip32::exec(lo, hi);
+                        auto zip_hi = Dpp::Zip32::exec(hi, lo);
 
                         auto rot_hi = Permute::RotateWaveR<32>::exec(zip_hi);
 
                         unpacked_data = concat(PackUtil::template paddedUnpack<VW / 2>(zip_lo),
-                                            PackUtil::template paddedUnpack<VW / 2>(rot_hi));
+                                               PackUtil::template paddedUnpack<VW / 2>(rot_hi));
 
                         return unpacked_data;
                     }
@@ -2192,11 +2214,11 @@ namespace rocwmma
                 }
             };
 #endif
-          
+
         } // namespace Ops
-      
+
     } // namespace TransformsImpl
-  
+
 } // namespace rocwmma
 
 #endif // ROCWMMA_TRANSFORMS_IMPL_HPP
