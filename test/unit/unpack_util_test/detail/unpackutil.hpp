@@ -277,6 +277,33 @@ namespace rocwmma
     };
 
     template <uint32_t VW, typename DataT>
+    struct UnpackLoHi1Kernel final : public UnpackKernel<VW, DataT>
+    {
+    private:
+        using Base = typename UnpackKernel<VW, DataT>::Base;
+
+    public:
+        UnpackLoHi1Kernel()        = default;
+        ~UnpackLoHi1Kernel() final = default;
+
+        void manipulateRegisterBankOnCpu(test::references::RegisterBank<DataT>& m) override
+        {
+            m.unpackLoHi1();
+        }
+
+        uint32_t resultSize() const override
+        {
+            auto blockX = static_cast<uint32_t>(this->blockDim().x);
+            return blockX * VW;
+        }
+
+        typename Base::KernelFunc kernelImpl() const final
+        {
+            return typename Base::KernelFunc(unpackLoHi1Test<DataT, VW>);
+        }
+    };
+
+    template <uint32_t VW, typename DataT>
     struct UnpackLoHi2Kernel final : public UnpackKernel<VW, DataT>
     {
     private:
@@ -454,6 +481,7 @@ namespace rocwmma
     using UnpackHi2Generator    = UnpackGenerator<UnpackHi2Kernel>;
     using UnpackHi4Generator    = UnpackGenerator<UnpackHi4Kernel>;
     using UnpackHi8Generator    = UnpackGenerator<UnpackHi8Kernel>;
+    using UnpackLoHi1Generator  = UnpackGenerator<UnpackLoHi1Kernel>;
     using UnpackLoHi2Generator  = UnpackGenerator<UnpackLoHi2Kernel>;
     using UnpackLoHi4Generator  = UnpackGenerator<UnpackLoHi4Kernel>;
     using UnpackLoHi8Generator  = UnpackGenerator<UnpackLoHi8Kernel>;
