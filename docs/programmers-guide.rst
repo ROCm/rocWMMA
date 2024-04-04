@@ -120,6 +120,4 @@ The ``test`` directory contains the test code support:
 Contributing
 ^^^^^^^^^^^^
 
-For those wishing to contribute to the project, here are some additional details:
-
-.. include:: ../CONTRIBUTING.md
+For those wishing to contribute to the project, please see `Contributing to ROCm  <https://rocm.docs.amd.com/en/latest/contribute/contributing.html>`_.
