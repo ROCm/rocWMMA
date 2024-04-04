@@ -43,6 +43,7 @@ namespace rocwmma
 
         // Functional
         using Properties::OP_ID_BCAST;
+        using Properties::OP_ID_BLEND;
         using Properties::OP_ID_MOVE;
         using Properties::OP_ID_REVERSE;
         using Properties::OP_ID_ROTATE;
@@ -695,6 +696,13 @@ namespace rocwmma
                 }
             };
 
+            /*! \class Shuffle2
+            *  \brief Shuffle\<N\> Perform localized shuffling within all sub-groups of \em N threads.
+            * \em N = group size.
+            *
+            * @tparam Select0 - index of element to shuffle to index 0
+            * @tparam Select1 - index of element to shuffle to index 1
+            */
             template <uint32_t Select0, uint32_t Select1>
             struct Shuffle2 : public Shuffle<OP_GROUP_SIZE_2,
                                              Ctrl::Shuffle4<Select0,
@@ -726,6 +734,15 @@ namespace rocwmma
                           public Backend::amdgcn_mov_dpp<SwapCtrl>
             {
             };
+
+            /*! \class Zip
+            *  \brief Perform blending of sub-groups of \p SubGroupSize threads between sources.
+            */
+            template <uint32_t SubGroupSize>
+            struct Zip : public DppOp<OP_ID_BLEND, SubGroupSize>,
+                         public Backend::amdgcn_mov_dpp<Ctrl::Move>
+            {
+            };
             /** @}*/
 
         } // namespace OpsBase
@@ -734,7 +751,7 @@ namespace rocwmma
         {
             // clang-format off
 
-            /// BCast variants
+            // BCast variants
             template <uint32_t ElementIdx>
             using BCast16 = OpsBase::BCast<ElementIdx, OP_GROUP_SIZE_16, Ctrl::RowBCast<ElementIdx>>;
 
@@ -753,7 +770,8 @@ namespace rocwmma
 
             using BCast32x31 = OpsBase::WFallBCast<OP_GROUP_SIZE_32, Ctrl::RowBCast31>;
 
-            /// Move variants
+            // Move variants
+
             using MaskMove = OpsBase::Move;
 
             /// Reversal variants
@@ -812,6 +830,15 @@ namespace rocwmma
 
             // Swap variants
             using Swap2 = OpsBase::Swap<OP_GROUP_SIZE_2, Ctrl::Shuffle4<0x02, 0x03, 0x00, 0x01>>;
+
+            // Zip variants
+            using Zip4 = OpsBase::Zip<OP_GROUP_SIZE_4>;
+
+            using Zip8 = OpsBase::Zip<OP_GROUP_SIZE_8>;
+
+            using Zip16 = OpsBase::Zip<OP_GROUP_SIZE_16>;
+
+            using Zip32 = OpsBase::Zip<OP_GROUP_SIZE_32>;
 
             // clang-format on
 

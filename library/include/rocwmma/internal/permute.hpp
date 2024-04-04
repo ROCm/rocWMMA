@@ -76,11 +76,10 @@ namespace rocwmma
                 constexpr uint32_t B32VecSize = sizeof(DataT) / sizeof(uint32_t) * VecSize;
 
                 // Ensure that DataT is a multiple of B32
-                static_assert(B32VecSize >= 1,
-                              "DataT must be a multiple of B32");
+                static_assert(B32VecSize >= 1, "DataT must be a multiple of B32");
 
-                using B32VecT                 = VecT<uint32_t, B32VecSize>;
-                using InputVecT               = VecT<DataT, VecSize>;
+                using B32VecT   = VecT<uint32_t, B32VecSize>;
+                using InputVecT = VecT<DataT, VecSize>;
 
                 // Ensure that we can vectorize to B32
                 static_assert(sizeof(InputVecT) % sizeof(uint32_t) == 0,
@@ -106,42 +105,106 @@ namespace rocwmma
             }
         };
 
+        /*! \class BlockBCast32
+        *  \brief  Permute class that broadcasts one block of 32 threads to all other blocks
+        *  @tparam BlockIdx block index [0 - WaveSize/32]
+        */
         template <uint32_t BlockIdx>
         using BlockBCast32 = Driver<PermuteImpl::Ops::BlockBCast32<BlockIdx>>;
 
+        /*! \class BlockBCast16
+        *  \brief  Permute class that broadcasts one block of 16 threads to all other blocks
+        *  @tparam BlockIdx block index [0 - WaveSize/16]
+        */
         template <uint32_t BlockIdx>
         using BlockBCast16 = Driver<PermuteImpl::Ops::BlockBCast16<BlockIdx>>;
 
+        /*! \class BlockBCast8
+        *  \brief  Permute class that broadcasts one block of 8 threads to all other blocks
+        *  @tparam BlockIdx block index [0 - WaveSize/8]
+        */
         template <uint32_t BlockIdx>
         using BlockBCast8 = Driver<PermuteImpl::Ops::BlockBCast8<BlockIdx>>;
 
+        /*! \class BlockBCast4
+        *  \brief  Permute class that broadcasts one block of 4 threads to all other blocks
+        *  @tparam BlockIdx block index [0 - WaveSize/4]
+        */
         template <uint32_t BlockIdx>
         using BlockBCast4 = Driver<PermuteImpl::Ops::BlockBCast4<BlockIdx>>;
 
+        /*! \class BlockBCast2
+        *  \brief  Permute class that broadcasts one block of 2 threads to all other blocks
+        *  @tparam BlockIdx block index [0 - WaveSize/2]
+        */
         template <uint32_t BlockIdx>
         using BlockBCast2 = Driver<PermuteImpl::Ops::BlockBCast2<BlockIdx>>;
 
+        /*! \class GatherWave
+        *  \brief  Permute class that pulls interleaved values based on VW in each group size.
+        * Interleaved offsets are where each thread will read from.
+        *  @tparam VW vector width [1, 2, 4, 8, 16]
+        *  @tparam ElementShift rotation offset [0 - VW]
+        */
         template <uint32_t VW, uint32_t ElementShift>
         using GatherWave = Driver<PermuteImpl::Ops::GatherWave<VW, ElementShift>>;
 
+        /*! \class Gather32
+        *  \brief  Permute class that pulls interleaved values based on VW in each group size of 32.
+        * Interleaved offsets are where each thread will read from.
+        *  @tparam VW vector width [1, 2, 4, 8, 16]
+        *  @tparam ElementShift rotation offset [0 - VW]
+        */
         template <uint32_t VW, uint32_t ElementShift>
         using Gather32 = Driver<PermuteImpl::Ops::Gather32<VW, ElementShift>>;
 
+        /*! \class Gather16
+        *  \brief  Permute class that pulls interleaved values based on VW in each group size of 16.
+        * Interleaved offsets are where each thread will read from.
+        *  @tparam VW vector width [1, 2, 4, 8, 16]
+        *  @tparam ElementShift rotation offset [0 - VW]
+        */
         template <uint32_t VW, uint32_t ElementShift>
         using Gather16 = Driver<PermuteImpl::Ops::Gather16<VW, ElementShift>>;
 
+        /*! \class ScatterWave
+        *  \brief  Permute class that pushes interleaved values based on VW in each group size.
+        * Interleaved offsets are where each thread will write to.
+        *  @tparam VW vector width [1, 2, 4, 8, 16]
+        *  @tparam ElementShift rotation offset [0 - VW]
+        */
         template <uint32_t VW, uint32_t ElementShift>
         using ScatterWave = Driver<PermuteImpl::Ops::ScatterWave<VW, ElementShift>>;
 
+        /*! \class Scatter32
+        *  \brief  Permute class that pushes interleaved values based on VW in each group size of 32.
+        * Interleaved offsets are where each thread will write to.
+        *  @tparam VW vector width [1, 2, 4, 8, 16]
+        *  @tparam ElementShift rotation offset [0 - VW]
+        */
         template <uint32_t VW, uint32_t ElementShift>
         using Scatter32 = Driver<PermuteImpl::Ops::Scatter32<VW, ElementShift>>;
 
+        /*! \class Scatter16
+        *  \brief  Permute class that pushes interleaved values based on VW in each group size of 16.
+        * Interleaved offsets are where each thread will write to.
+        *  @tparam VW vector width [1, 2, 4, 8, 16]
+        *  @tparam ElementShift rotation offset [0 - VW]
+        */
         template <uint32_t VW, uint32_t ElementShift>
         using Scatter16 = Driver<PermuteImpl::Ops::Scatter16<VW, ElementShift>>;
 
+        /*! \class RotateWaveL
+        *  \brief  Swizzle class that rotates all threads to the left
+        *  @tparam RotateDistance thread index [0 - WaveSize-1]
+        */
         template <uint32_t RotateDistance>
         using RotateWaveL = Driver<PermuteImpl::Ops::RotateWaveL<RotateDistance>>;
 
+        /*! \class RotateWaveR
+        *  \brief  Swizzle class that rotates all threads to the right
+        *  @tparam RotateDistance thread index [0 - WaveSize-1]
+        */
         template <uint32_t RotateDistance>
         using RotateWaveR = Driver<PermuteImpl::Ops::RotateWaveR<RotateDistance>>;
 
