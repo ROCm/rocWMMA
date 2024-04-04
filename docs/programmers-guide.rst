@@ -168,4 +168,4 @@ The ``test`` directory contains the test code support:
 Contributing
 ^^^^^^^^^^^^
 
-For those wishing to contribute to the project, please see `Contributing to ROCm  <https://rocm.docs.amd.com/en/latest/contribute/contributing.html>`_.
+For those wishing to contribute to the project, please see `Contributing to ROCm  <https://github.com/ROCm/rocWMMA/blob/develop/CONTRIBUTING.md>`_.
