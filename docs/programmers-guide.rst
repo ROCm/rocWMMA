@@ -19,7 +19,7 @@ Infrastructure
 
 - Jenkins is used to automate Continuous Integration (CI) testing (``.jenkins`` folder has configurations).
 
-- rocWMMA is hosted and maintained by AMD on `Github <https://github.com/ROCm/rocWMMA>.`_
+- rocWMMA is hosted and maintained by AMD on `Github  <https://github.com/ROCm/rocWMMA>`_.
 
 - The rocWMMA project is organized and configured via ``CMake`` and the collection of ``CMakeLists.txt`` in the base of each directory.
 
@@ -64,18 +64,11 @@ blocks, or fragments of data that may be efficiently processed by individual wav
 
 The implementation code is generally encapsulated into different layers of objects, fulfilling specific interface communications (from low level functions to API level):
 
-- Unit backend operations. These are often wrappers to device-specific functions such as intrinsics that usually prefixed with ``amdgcn_*``. These functions
-translate inputs into raw vector forms and addresses required by the low-level intrinsics. This backend-area of the code usually handles architecture or device-specific
-behavior differences.
+- Unit backend operations. These are often wrappers to device-specific functions such as intrinsics that usually prefixed with ``amdgcn_*``. These functions translate inputs into raw vector forms and addresses required by the low-level intrinsics. This backend-area of the code usually handles architecture or device-specific behavior differences.
 
-- Vector operations. This level of objects such as ``OpaqueLoad`` or ``OpaqueStore`` handle variable-sized vector inputs and marshall them into
-unrolled unit backend operations. They encompass thread-wise details of vector operations. These classes provide a consistent functional interface for input vectors of all sizes, independent of device architecture,
-whose details are handled at a lower level.
+- Vector operations. This level of objects such as ``OpaqueLoad`` or ``OpaqueStore`` handle variable-sized vector inputs and marshall them into unrolled unit backend operations. They encompass thread-wise details of vector operations. These classes provide a consistent functional interface for input vectors of all sizes, independent of device architecture, whose details are handled at a lower level.
 
-- Fragment operations. This is the API level of rocWMMA where user data is stored and manipulated in ``fragment`` objects. Fragment objects can be visualized as
-geometric 'blocks' of data in the perspective of the current wavefront, which are to be stored as vectors. Each of the loading / storing and mma operations provided by rocWMMA are in the perspective
-of the wavefront, assuming that all threads in the wavefront are participating under the hood. This layer's implementation translates wavefront fragment operations into vector operations
-and so on. This way, the rocWMMA API experience intends to be seamless across different device architectures and platforms.
+- Fragment operations. This is the API level of rocWMMA where user data is stored and manipulated in ``fragment`` objects. Fragment objects can be visualized as geometric 'blocks' of data in the perspective of the current wavefront, which are to be stored as vectors. Each of the loading / storing and mma operations provided by rocWMMA are in the perspective of the wavefront, assuming that all threads in the wavefront are participating under the hood. This layer's implementation translates wavefront fragment operations into vector operations and so on. This way, the rocWMMA API experience intends to be seamless across different device architectures and platforms.
 
 --------------------------------
 Library source code organization
