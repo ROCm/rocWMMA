@@ -196,7 +196,6 @@ Here are some other example project configurations:
 | Build without rocBLAS(default on) | ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DROCWMMA_VALIDATE_WITH_ROCBLAS=OFF -DROCWMMA_BENCHMARK_WITH_ROCBLAS=OFF`` |
 +-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
-
 After configuration, build using:
 
 .. code-block:: bash

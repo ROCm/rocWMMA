@@ -144,45 +144,147 @@ namespace rocwmma
         // Func::exec(src0, src1)
 
         // Zip functions
+        // Blend even thread elements from src0 with odd thread elements from src1,
+        // just like a zipper. We can reverse the order of the inputs if the opposite is desired.
+        // E.g. src0 = [0, 1, 2, 3] src1 = [4, 5, 6, 7]
+        // Zip1 = [0, 5, 2, 7]
+        // Zip2 = [0, 1, 6, 7]
+
+        /*! \class ZipByte
+        *  \brief  Blend class that alternates bytes from src0 and src1
+        */
         using ZipByte = Driver<BlendImpl::Ops::ZipByte>;
+
+        /*! \class ZipWord
+        *  \brief  Blend class that alternates words (2B) from src0 and src1
+        */
         using ZipWord = Driver<BlendImpl::Ops::ZipWord>;
-        using Zip1    = Driver<BlendImpl::Ops::Zip1>;
-        using Zip2    = Driver<BlendImpl::Ops::Zip2>;
-        using Zip4    = Driver<BlendImpl::Ops::Zip4>;
-        using Zip8    = Driver<BlendImpl::Ops::Zip8>;
-        using Zip16   = Driver<BlendImpl::Ops::Zip16>;
-        using Zip32   = Driver<BlendImpl::Ops::Zip32>;
+
+        /*! \class Zip1
+        *  \brief  Blend class that alternates thread elements (4B) from src0 and src1.
+        */
+        using Zip1 = Driver<BlendImpl::Ops::Zip1>;
+
+        /*! \class Zip2
+        *  \brief  Blend class that alternates groups of 2 thread elements (8B) from src0 and src1.
+        */
+        using Zip2 = Driver<BlendImpl::Ops::Zip2>;
+
+        /*! \class Zip4
+        *  \brief  Blend class that alternates groups of 4 thread elements (16B) from src0 and src1.
+        */
+        using Zip4 = Driver<BlendImpl::Ops::Zip4>;
+
+        /*! \class Zip8
+        *  \brief  Blend class that alternates groups of 8 thread elements (32B) from src0 and src1.
+        */
+        using Zip8 = Driver<BlendImpl::Ops::Zip8>;
+
+        /*! \class Zip16
+        *  \brief  Blend class that alternates groups of 16 thread elements (64B) from src0 and src1.
+        */
+        using Zip16 = Driver<BlendImpl::Ops::Zip16>;
+
+        /*! \class Zip32
+        *  \brief  Blend class that alternates groups of 32 thread elements (128B) from src0 and src1.
+        */
+        using Zip32 = Driver<BlendImpl::Ops::Zip32>;
 
         // Unpack functions
-        using UnpackByteLo     = Driver<BlendImpl::Ops::UnpackByteLo>;
-        using UnpackByteHi     = Driver<BlendImpl::Ops::UnpackByteHi>;
-        using UnpackWordLo     = Driver<BlendImpl::Ops::UnpackWordLo>;
-        using UnpackWordHi     = Driver<BlendImpl::Ops::UnpackWordHi>;
-        using UnpackByteLoHi   = Driver<BlendImpl::Ops::UnpackByteLoHi>;
+        // The unpack functionality blends elements from the same thread in src0 and src1.
+        // Because there is only one result from 2 sources, we must choose to blend either the low, or the
+        // high elements per group of inputs.
+        // E.g. src0 = [0, 1, 2, 3] src1 = [4, 5, 6, 7]
+        // UnpackLo   = [0, 4, 1, 5]
+        // UnpackHi   = [2, 6, 3, 7]
+        // UnpackLoHi = [0, 4, 2, 6]
+
+        /*! \class UnpackByteLo
+        *  \brief  Blend class that unpacks lo bytes from each 4B element of src0 and src1.
+        */
+        using UnpackByteLo = Driver<BlendImpl::Ops::UnpackByteLo>;
+
+        /*! \class UnpackByteHi
+        *  \brief  Blend class that unpacks hi bytes from each 4B element of src0 and src1.
+        */
+        using UnpackByteHi = Driver<BlendImpl::Ops::UnpackByteHi>;
+
+        /*! \class UnpackWordLo
+        *  \brief  Blend class that unpacks lo words from each 4B element of src0 and src1.
+        */
+        using UnpackWordLo = Driver<BlendImpl::Ops::UnpackWordLo>;
+
+        /*! \class UnpackWordHi
+        *  \brief  Blend class that unpacks hi words from each 4B element of src0 and src1.
+        */
+        using UnpackWordHi = Driver<BlendImpl::Ops::UnpackWordHi>;
+
+        /*! \class UnpackByteLoHi
+        *  \brief  Blend class that unpacks two lo bytes followed by two hi bytes from each 4B element of src0 and src1.
+        */
+        using UnpackByteLoHi = Driver<BlendImpl::Ops::UnpackByteLoHi>;
+
+        /*! \class UnpackByte3BCast
+        *  \brief  Blend class that unpacks byte 3 from each 4B element of src0 and src1, which is broadcasted.
+        *  e.g. src0[0]   = [0, 1, 2, 3] src1[0] = [4, 5, 6, 7]
+        *       result[0] = [3, 7, 3, 7]
+        */
         using UnpackByte3BCast = Driver<BlendImpl::Ops::UnpackByte3BCast>;
 
         // Extract functions
-        using ExtractByteEven = Driver<BlendImpl::Ops::ExtractByteEven>;
-        using ExtractByteOdd  = Driver<BlendImpl::Ops::ExtractByteOdd>;
-        using ExtractWordEven = Driver<BlendImpl::Ops::ExtractWordEven>;
-        using ExtractWordOdd  = Driver<BlendImpl::Ops::ExtractWordOdd>;
+        // These functions extract elements in order from src0 and src1 and concatenate their result together.
+        // e.g. src0   = [0, 1, 2, 3] src1 = [4, 5, 6, 7]
+        // extract_even      = [0, 2, 4, 6]
+        // extract_odd       = [1, 3, 5, 7]
+        // extract_even_odd  = [0, 2, 5, 7]
+        // extract_odd_even  = [1, 3, 4, 6]
 
+        /*! \class ExtractByteEven
+        *  \brief  Blend class that extracts even ordered bytes from each 4B element of src0 and src1 and
+        *  concatenates them together.
+        */
+        using ExtractByteEven = Driver<BlendImpl::Ops::ExtractByteEven>;
+
+        /*! \class ExtractByteOdd
+        *  \brief  Blend class that extracts odd ordered bytes from each 4B element of src0 and src1 and
+        *  concatenates them together.
+        */
+        using ExtractByteOdd = Driver<BlendImpl::Ops::ExtractByteOdd>;
+
+        /*! \class ExtractWordEven
+        *  \brief  Blend class that extracts even ordered words from each 4B element of src0 and src1 and
+        *  concatenates them together.
+        */
+        using ExtractWordEven = Driver<BlendImpl::Ops::ExtractWordEven>;
+
+        /*! \class ExtractWordOdd
+        *  \brief  Blend class that extracts odd ordered words from each 4B element of src0 and src1 and
+        *  concatenates them together.
+        */
+        using ExtractWordOdd = Driver<BlendImpl::Ops::ExtractWordOdd>;
+
+        /*! \class ExtractByteEvenOdd
+        *  \brief  Blend class that extracts even ordered bytes src0, odd ordered bytes from src1 and
+        *  concatenates them together.
+        */
         using ExtractByteEvenOdd = Driver<BlendImpl::Ops::ExtractByteEvenOdd>;
+
+        /*! \class ExtractWordEvenOdd
+        *  \brief  Blend class that extracts even ordered words src0, odd ordered words from src1 and
+        *  concatenates them together.
+        */
         using ExtractWordEvenOdd = Driver<BlendImpl::Ops::ExtractWordEvenOdd>;
 
+        /*! \class ExtractByteOddEven
+        *  \brief  Blend class that extracts odd ordered bytes src0, even ordered bytes from src1 and
+        *  concatenates them together.
+        */
         using ExtractByteOddEven = Driver<BlendImpl::Ops::ExtractByteOddEven>;
-        using ExtractWordOddEven = Driver<BlendImpl::Ops::ExtractWordOddEven>;
 
-        // Extract functions
-        using ExtractByteEven = Driver<BlendImpl::Ops::ExtractByteEven>;
-        using ExtractByteOdd  = Driver<BlendImpl::Ops::ExtractByteOdd>;
-        using ExtractWordEven = Driver<BlendImpl::Ops::ExtractWordEven>;
-        using ExtractWordOdd  = Driver<BlendImpl::Ops::ExtractWordOdd>;
-
-        using ExtractByteEvenOdd = Driver<BlendImpl::Ops::ExtractByteEvenOdd>;
-        using ExtractWordEvenOdd = Driver<BlendImpl::Ops::ExtractWordEvenOdd>;
-
-        using ExtractByteOddEven = Driver<BlendImpl::Ops::ExtractByteOddEven>;
+        /*! \class ExtractWordOddEven
+        *  \brief  Blend class that extracts odd ordered words src0, even ordered words from src1 and
+        *  concatenates them together.
+        */
         using ExtractWordOddEven = Driver<BlendImpl::Ops::ExtractWordOddEven>;
 
     } // namespace Blend
