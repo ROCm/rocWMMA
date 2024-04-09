@@ -39,11 +39,11 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayout>
+              typename DataLayoutT>
     ROCWMMA_DEVICE void
-        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
-                              const DataT*                                                  data,
-                              uint32_t                                                      ldm,
+        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag,
+                              const DataT*                                                   data,
+                              uint32_t                                                       ldm,
                               uint32_t waveIndex,
                               uint32_t waveCount,
                               uint32_t splitCount)
@@ -57,11 +57,11 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayout>
+              typename DataLayoutT>
     ROCWMMA_DEVICE inline void
-        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
-                              const DataT*                                                  data,
-                              uint32_t                                                      ldm,
+        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag,
+                              const DataT*                                                   data,
+                              uint32_t                                                       ldm,
                               uint32_t waveIndex,
                               uint32_t waveCount)
     {
@@ -70,7 +70,7 @@ namespace rocwmma
         using Loader = typename GetCoopIOConfig_t<FragT>::Loader;
 
         // Sanity checks
-        static_assert(!is_same<DataLayout, void>::value,
+        static_assert(!is_same<DataLayoutT, void>::value,
                       "Must provide layout information. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
@@ -89,11 +89,11 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayout>
+              typename DataLayoutT>
     ROCWMMA_DEVICE void
-        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
-                              const DataT*                                                  data,
-                              uint32_t                                                      ldm)
+        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag,
+                              const DataT*                                                   data,
+                              uint32_t                                                       ldm)
     {
         using FragT       = decay_t<decltype(frag)>;
         using MappingUtil = GetMappingUtil_t<FragT>;
@@ -114,11 +114,11 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayout>
+              typename DataLayoutT>
     ROCWMMA_DEVICE void
-        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
-                              const DataT*                                                  data,
-                              uint32_t                                                      ldm,
+        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag,
+                              const DataT*                                                   data,
+                              uint32_t                                                       ldm,
                               uint32_t waveIndex)
     {
         // SplitCount is unused
@@ -131,18 +131,18 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayout>
+              typename DataLayoutT>
     ROCWMMA_DEVICE void
-        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
-                              const DataT*                                                  data,
-                              uint32_t                                                      ldm,
+        load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag,
+                              const DataT*                                                   data,
+                              uint32_t                                                       ldm,
                               uint32_t waveIndex)
     {
         using FragT  = decay_t<decltype(frag)>;
         using Loader = typename GetCoopIOConfig_t<FragT, WaveCount>::Loader;
 
         // Sanity checks
-        static_assert(!is_same<DataLayout, void>::value,
+        static_assert(!is_same<DataLayoutT, void>::value,
                       "Must provide layout information. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
@@ -161,14 +161,14 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayout>
+              typename DataLayoutT>
     ROCWMMA_DEVICE void store_matrix_coop_sync(
-        DataT*                                                              data,
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
-        uint32_t                                                            ldm,
-        uint32_t                                                            waveIndex,
-        uint32_t                                                            waveCount,
-        uint32_t                                                            splitCount)
+        DataT*                                                               data,
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag,
+        uint32_t                                                             ldm,
+        uint32_t                                                             waveIndex,
+        uint32_t                                                             waveCount,
+        uint32_t                                                             splitCount)
     {
         // splitCount unused
         store_matrix_coop_sync(data, frag, ldm, waveIndex, waveCount);
@@ -179,19 +179,19 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayout>
+              typename DataLayoutT>
     ROCWMMA_DEVICE void store_matrix_coop_sync(
-        DataT*                                                              data,
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
-        uint32_t                                                            ldm,
-        uint32_t                                                            waveIndex,
-        uint32_t                                                            waveCount)
+        DataT*                                                               data,
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag,
+        uint32_t                                                             ldm,
+        uint32_t                                                             waveIndex,
+        uint32_t                                                             waveCount)
     {
         using FragT  = decay_t<decltype(frag)>;
         using Storer = typename GetCoopIOConfig_t<FragT>::Storer;
 
         // Sanity checks
-        static_assert(!is_same<DataLayout, void>::value,
+        static_assert(!is_same<DataLayoutT, void>::value,
                       "Must provide data layout. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
@@ -210,11 +210,11 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayout>
+              typename DataLayoutT>
     ROCWMMA_DEVICE void store_matrix_coop_sync(
-        DataT*                                                              data,
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
-        uint32_t                                                            ldm)
+        DataT*                                                               data,
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag,
+        uint32_t                                                             ldm)
     {
         using FragT       = decay_t<decltype(frag)>;
         using MappingUtil = GetMappingUtil_t<FragT>;
@@ -235,12 +235,12 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayout>
+              typename DataLayoutT>
     ROCWMMA_DEVICE void store_matrix_coop_sync(
-        DataT*                                                              data,
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
-        uint32_t                                                            ldm,
-        uint32_t                                                            waveIndex)
+        DataT*                                                               data,
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag,
+        uint32_t                                                             ldm,
+        uint32_t                                                             waveIndex)
     {
         // Implicit unpack and store
         // Note: the frag is only be partially filled with useful data.
@@ -254,19 +254,19 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayout>
+              typename DataLayoutT>
     ROCWMMA_DEVICE void store_matrix_coop_sync(
-        DataT*                                                              data,
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
-        uint32_t                                                            ldm,
-        uint32_t                                                            waveIndex)
+        DataT*                                                               data,
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag,
+        uint32_t                                                             ldm,
+        uint32_t                                                             waveIndex)
     {
 
         using FragT  = decay_t<decltype(frag)>;
         using Storer = typename GetCoopIOConfig_t<FragT, WaveCount>::Storer;
 
         // Sanity checks
-        static_assert(!is_same<DataLayout, void>::value,
+        static_assert(!is_same<DataLayoutT, void>::value,
                       "Must provide data layout. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
