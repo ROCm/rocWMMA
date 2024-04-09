@@ -142,6 +142,22 @@ namespace rocwmma
      *************************************************************/
 
     template <typename DataT, uint32_t VW>
+    ROCWMMA_KERNEL void unpackLoHi1Test(uint32_t     m,
+                                        uint32_t     n,
+                                        DataT const* in,
+                                        DataT*       out,
+                                        uint32_t     ld,
+                                        DataT        param1,
+                                        DataT        param2)
+    {
+        using InVecT  = VecT<DataT, VW>;
+        using OutVecT = VecT<DataT, VW>;
+        InVecT v      = *(reinterpret_cast<InVecT const*>(in + (uint32_t)threadIdx.x * VW));
+        auto   result = unpackLoHi1(v);
+        *(reinterpret_cast<OutVecT*>(out + (uint32_t)threadIdx.x * VW)) = result;
+    }
+
+    template <typename DataT, uint32_t VW>
     ROCWMMA_KERNEL void unpackLoHi2Test(uint32_t     m,
                                         uint32_t     n,
                                         DataT const* in,

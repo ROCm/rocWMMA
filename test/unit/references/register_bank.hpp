@@ -62,16 +62,19 @@ namespace rocwmma
                 void zipLoHi(int group);
                 void concatHorizon(RegisterBank const& m);
 
+                void unpackLo1();
                 void unpackLo2();
                 void unpackLo4();
                 void unpackLo8();
                 void unpackLo16();
                 void unpackLo32();
+                void unpackHi1();
                 void unpackHi2();
                 void unpackHi4();
                 void unpackHi8();
                 void unpackHi16();
                 void unpackHi32();
+                void unpackLoHi1();
                 void unpackLoHi2();
                 void unpackLoHi4();
                 void unpackLoHi8();
@@ -228,6 +231,14 @@ namespace rocwmma
             }
 
             template <class T>
+            void RegisterBank<T>::unpackLo1()
+            {
+                gatherOddEven();
+                rotateR(16, 1, {width / 2, width});
+                zipLoHi(1);
+            }
+
+            template <class T>
             void RegisterBank<T>::unpackLo2()
             {
                 gatherOddEven();
@@ -268,6 +279,14 @@ namespace rocwmma
             }
 
             template <class T>
+            void RegisterBank<T>::unpackHi1()
+            {
+                gatherOddEven();
+                rotateR(16, 15, {0, width / 2});
+                zipLoHi(1);
+            }
+
+            template <class T>
             void RegisterBank<T>::unpackHi2()
             {
                 gatherOddEven();
@@ -305,6 +324,17 @@ namespace rocwmma
                 gatherOddEven();
                 rotateR(64, 32, {0, width / 2});
                 zipLoHi(32);
+            }
+
+            template <class T>
+            void RegisterBank<T>::unpackLoHi1()
+            {
+                RegisterBank<T> lo(array);
+                RegisterBank<T> hi(array);
+                lo.unpackLo1();
+                hi.unpackHi1();
+                lo.concatHorizon(hi);
+                array = lo.array;
             }
 
             template <class T>

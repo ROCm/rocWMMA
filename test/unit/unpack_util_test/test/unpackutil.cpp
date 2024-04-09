@@ -43,7 +43,7 @@ namespace rocwmma
         using Types = typename Base::TestAllSizeTypes;
 
         // Vector Width.
-        using VWs = std::tuple<I<2>, I<4>, I<8>>;
+        using VWs = std::tuple<I<2>, I<4>, I<8>, I<16>>;
 
         using KernelParams = typename CombineLists<VWs, Types>::Result;
 
@@ -82,6 +82,7 @@ namespace rocwmma
     using UnpackHi2TestParams    = TestParams<UnpackHi2Generator>;
     using UnpackHi4TestParams    = TestParams<UnpackHi4Generator>;
     using UnpackHi8TestParams    = TestParams<UnpackHi8Generator>;
+    using UnpackLoHi1TestParams  = TestParams<UnpackLoHi1Generator>;
     using UnpackLoHi2TestParams  = TestParams<UnpackLoHi2Generator>;
     using UnpackLoHi4TestParams  = TestParams<UnpackLoHi4Generator>;
     using UnpackLoHi8TestParams  = TestParams<UnpackLoHi8Generator>;
@@ -95,6 +96,7 @@ ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackLo8Test, UnpackLo8TestParams)
 ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackHi2Test, UnpackHi2TestParams)
 ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackHi4Test, UnpackHi4TestParams)
 ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackHi8Test, UnpackHi8TestParams)
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackLoHi1Test, UnpackLoHi1TestParams)
 ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackLoHi2Test, UnpackLoHi2TestParams)
 ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackLoHi4Test, UnpackLoHi4TestParams)
 ROCWMMA_GENERATE_UNIT_GTEST_SUITE(UnpackLoHi8Test, UnpackLoHi8TestParams)
