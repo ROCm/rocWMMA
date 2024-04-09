@@ -3,7 +3,7 @@
 Documentation for rocWMMA is available at
 [https://rocm.docs.amd.com/projects/rocWMMA/en/latest](https://rocm.docs.amd.com/projects/rocWMMA/en/latest).
 
-## (Unreleased) rocWMMA 1.4.0 for ROCm 6.1.0
+## rocWMMA 1.4.0 for ROCm 6.1.0
 
 ### Additions
 
