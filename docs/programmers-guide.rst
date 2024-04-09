@@ -27,11 +27,9 @@ Infrastructure
 
 - ``GTest`` is used to implement test suite organization and execution.
 
-- ``CTest`` is used to consolidate and invoke multiple test targets. In the ``<rocWMMA_install_dir>/bin/rocWMMA/CTestTestfile.cmake`` file,
-testing targets are listed that will be run when ``ctest`` is invoked.
+- ``CTest`` is used to consolidate and invoke multiple test targets. In the ``<rocWMMA_install_dir>/bin/rocWMMA/CTestTestfile.cmake`` file, testing targets are listed that will be run when ``ctest`` is invoked.
 
-- The preferred compiler for rocWMMA is ``CC=<path_to_rocm>/bin/amdclang and CXX=<path_to_rocm>/bin/amdclang++``. ``hipcc`` is also supported,
-however may be deprecated in future ROCm releases.
+- The preferred compiler for rocWMMA is ``CC=<path_to_rocm>/bin/amdclang and CXX=<path_to_rocm>/bin/amdclang++``. ``hipcc`` is also supported, however may be deprecated in future ROCm releases.
 
 
 --------------------------------
@@ -87,14 +85,12 @@ The rocWMMA code is split into four major parts:
 The ``library`` directory contains the following structure:
 
 - ``library/include/rocwmma/``: C++ include files for the rocWMMA API. These files also contain Doxygen content that documents the API.
+
 The API currently has three API contexts:
 
-  - ``rocwmma.hpp``: The main API for rocWMMA, defining fragment data abstractions, wave-wise storing, loading, matrix multiply-accumulate (mma)
-  and threadblock synchronization. This API's function signatures are portable from nvcuda::wmma.
-  - ``rocwmma_coop.hpp``: A complimentary API for rocWMMA, defining functionality that allows GPU wavefronts to collaborate in the loading / storing
-  of fragment data. These are unique to rocWMMA.
-  - ``rocwmma_transforms.hpp``: A complimentary API for rocWMMA, defining functionality to manipulate fragment data (e.g. transpose and data layout changes).
-  These are unique to rocWMMA.
+  - ``rocwmma.hpp``: The main API for rocWMMA, defining fragment data abstractions, wave-wise storing, loading, matrix multiply-accumulate (mma) and threadblock synchronization. This API's function signatures are portable from nvcuda::wmma.
+  - ``rocwmma_coop.hpp``: A complimentary API for rocWMMA, defining functionality that allows GPU wavefronts to collaborate in the loading / storing of fragment data. These are unique to rocWMMA.
+  - ``rocwmma_transforms.hpp``: A complimentary API for rocWMMA, defining functionality to manipulate fragment data (e.g. transpose and data layout changes). These are unique to rocWMMA.
 
 - ``library/include/internal``: Internal include files define the main infrastructure driving the rocWMMA API:
 

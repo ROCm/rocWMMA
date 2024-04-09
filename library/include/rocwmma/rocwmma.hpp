@@ -115,20 +115,12 @@ namespace rocwmma
     * which frees the user to focus on wavefront block-wise decomposition. Written purely in device code, the programmer can use this object in their own
     * device kernels.
     *
-    * @tparam MatrixT - fragment context
-    * @tparam BlockM/N/K - block dimensions
-    * @tparam DataT - datatype
-    * @tparam DataLayoutT - in-memory layout as col_major or row_major
+    * @tparam MatrixT fragment context
+    * @tparam BlockM/N/K block dimensions
+    * @tparam DataT datatype
+    * @tparam DataLayoutT in-memory layout as col_major or row_major
     *
-    * @property Traits::PackedElementT The packed type for element data
-    * @property Traits::UnpackedElementT The unpacked type, or original element datatype
-    * @property Traits::IOTraits Input / output traits specific to AMDGCN architecture
-    * @property Traits::AccessT Unpacked data access view
-    * @property Traits::StorageT Packed data storage view
-    * @property num_elements The size of the unpacked data vector
-    * @property element_type The unpacked datatype
-    *
-    * @note Fragments are stored in packed registers, however thread elements have no guaranteed order.
+    * @note Fragments are stored in packed registers, however vector elements have no guaranteed order or locality.
     */
 
     // clang-format on
@@ -141,16 +133,23 @@ namespace rocwmma
     class __align__(4) fragment
     {
     public:
+        //! Input / output traits specific to AMDGCN architecture
         using IOTraits =
             typename IOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::IOTraits;
         struct Traits
         {
         private:
-            using PackedElementT   = typename PackTraits<DataT>::PackedT;
+            //! The packed type for element data
+            using PackedElementT = typename PackTraits<DataT>::PackedT;
+
+            //! The unpacked type for element data
             using UnpackedElementT = typename PackTraits<DataT>::UnpackedT;
 
         public:
-            using AccessT  = VecT<UnpackedElementT, IOTraits::UnpackedSize>;
+            //! Unpacked data access view
+            using AccessT = VecT<UnpackedElementT, IOTraits::UnpackedSize>;
+
+            //! Packed data storage view
             using StorageT = VecT<PackedElementT, IOTraits::PackedSize>;
 
             constexpr static uint32_t Size = IOTraits::UnpackedSize;

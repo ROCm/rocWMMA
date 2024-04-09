@@ -192,7 +192,7 @@ Here are some other example project configurations:
 +-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |           Configuration           |                                                                          Command                                                                           |
 +===================================+============================================================================================================================================================+
-|               Basic               |                                      ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir>``                                     |
+|               Basic               |                                      ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir>``                                       |
 +-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |         Targeting gfx908          |                      ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DAMDGPU_TARGETS=gfx908:xnack-``                      |
 +-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -306,9 +306,8 @@ Executable Name                               Description
 ``unit/vector_util_test``                       Tests internal vector manipulation utilities implementation
 ============================================= ===================================================================================================================================================
 
-*= validate: Executables that compare outputs for correctness against reference sources such as CPU or rocBLAS calculations.
-
-*= bench: Executables that measure kernel execution speeds and may compare against those of rocBLAS references.
+\*= validate: Executables that compare outputs for correctness against reference sources such as CPU or rocBLAS calculations.
+\*= bench: Executables that measure kernel execution speeds and may compare against those of rocBLAS references.
 
 Build library, tests, and assembly
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

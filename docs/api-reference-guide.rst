@@ -72,74 +72,74 @@ Data Types **<Ti / To / Tc>** = <Input type / Output Type / Compute Type>, where
 |                              |            |           |(Powers of 2)  |                            |                    |
 +==============================+============+===========+===============+============================+====================+
 |                              |16          |16         | 32+           |                            |                    |
-|     bf8 / f32 / f32          +------------+-----------+---------------+          gfx940+           |         -          |
+|     bf8 / f32 / f32          +------------+-----------+---------------+          gfx940+           |        \-          |
 |                              |32          |32         | 16+           |                            |                    |
 +------------------------------+------------+-----------+---------------+----------------------------+--------------------+
 |                              |16          |16         | 32+           |                            |                    |
-|     f8 / f32 / f32           +------------+-----------+---------------+          gfx940+           |         -          |
+|     f8 / f32 / f32           +------------+-----------+---------------+          gfx940+           |        \-          |
 |                              |32          |32         | 16+           |                            |                    |
 +------------------------------+------------+-----------+---------------+----------------------------+--------------------+
 |                              |            |           | 16+           |      gfx908, gfx90a        |       gfx11        |
 |                              |     16     |    16     +---------------+----------------------------+--------------------+
-|                              |            |           | 32+           |          gfx940+           |         -          |
+|                              |            |           | 32+           |          gfx940+           |        \-          |
 |     i8 / i32 / i32           +------------+-----------+---------------+----------------------------+--------------------+
-|                              |            |           | 8+            |      gfx908, gfx90a        |         -          |
+|                              |            |           | 8+            |      gfx908, gfx90a        |        \-          |
 |                              |     32     |    32     +---------------+----------------------------+--------------------+
-|                              |            |           | 16+           |          gfx940+           |         -          |
+|                              |            |           | 16+           |          gfx940+           |        \-          |
 +------------------------------+------------+-----------+---------------+----------------------------+--------------------+
 |                              |            |           | 16+           |      gfx908, gfx90a        |       gfx11        |
 |                              |     16     |    16     +---------------+----------------------------+--------------------+
-|                              |            |           | 32+           |          gfx940+           |         -          |
+|                              |            |           | 32+           |          gfx940+           |        \-          |
 |     i8 / i8 / i32            +------------+-----------+---------------+----------------------------+--------------------+
-|                              |            |           | 8+            |      gfx908, gfx90a        |         -          |
+|                              |            |           | 8+            |      gfx908, gfx90a        |        \-          |
 |                              |     32     |    32     +---------------+----------------------------+--------------------+
-|                              |            |           | 16+           |          gfx940+           |         -          |
+|                              |            |           | 16+           |          gfx940+           |        \-          |
 +------------------------------+------------+-----------+---------------+----------------------------+--------------------+
 |                              |16          |16         | 16+           |           gfx9             |       gfx11        |
 |     f16 / f32 / f32          +------------+-----------+---------------+----------------------------+--------------------+
-|                              |32          |32         | 8+            |           gfx9             |         -          |
+|                              |32          |32         | 8+            |           gfx9             |        \-          |
 +------------------------------+------------+-----------+---------------+----------------------------+--------------------+
 |                              |16          |16         | 16+           |           gfx9             |       gfx11        |
 |     f16 / f16 / f32          +------------+-----------+---------------+----------------------------+--------------------+
-|                              |32          |32         | 8+            |           gfx9             |         -          |
+|                              |32          |32         | 8+            |           gfx9             |        \-          |
 +------------------------------+------------+-----------+---------------+----------------------------+--------------------+
 |                              |16          |16         | 16+           |           gfx9             |       gfx11        |
 |     f16 / f16 / f16**        +------------+-----------+---------------+----------------------------+--------------------+
-|                              |32          |32         | 8+            |           gfx9             |         -          |
+|                              |32          |32         | 8+            |           gfx9             |        \-          |
 +------------------------------+------------+-----------+---------------+----------------------------+--------------------+
-|                              |            |           | 8+            |          gfx908            |         -          |
+|                              |            |           | 8+            |          gfx908            |        \-          |
 |                              |     16     |    16     +---------------+----------------------------+--------------------+
 |                              |            |           | 16+           |      gfx90a, gfx940+       |       gfx11        |
 |     bf16 / f32 / f32         +------------+-----------+---------------+----------------------------+--------------------+
-|                              |            |           | 4+            |          gfx908            |         -          |
+|                              |            |           | 4+            |          gfx908            |        \-          |
 |                              |     32     |    32     +---------------+----------------------------+--------------------+
-|                              |            |           | 8+            |      gfx90a, gfx940+       |         -          |
+|                              |            |           | 8+            |      gfx90a, gfx940+       |        \-          |
 +------------------------------+------------+-----------+---------------+----------------------------+--------------------+
-|                              |            |           | 8+            |          gfx908            |         -          |
+|                              |            |           | 8+            |          gfx908            |        \-          |
 |                              |     16     |    16     +---------------+----------------------------+--------------------+
 |                              |            |           | 16+           |      gfx90a, gfx940+       |       gfx11        |
 |     bf16 / bf16 / f32        +------------+-----------+---------------+----------------------------+--------------------+
-|                              |            |           | 4+            |          gfx908            |         -          |
+|                              |            |           | 4+            |          gfx908            |        \-          |
 |                              |     32     |    32     +---------------+----------------------------+--------------------+
-|                              |            |           | 8+            |      gfx90a, gfx940+       |         -          |
+|                              |            |           | 8+            |      gfx90a, gfx940+       |        \-          |
 +------------------------------+------------+-----------+---------------+----------------------------+--------------------+
-|                              |            |           | 8+            |          gfx908            |         -          |
+|                              |            |           | 8+            |          gfx908            |        \-          |
 |                              |     16     |    16     +---------------+----------------------------+--------------------+
 |                              |            |           | 16+           |      gfx90a, gfx940+       |       gfx11        |
 |     bf16 / bf16 / bf16**     +------------+-----------+---------------+----------------------------+--------------------+
-|                              |            |           | 4+            |          gfx908            |         -          |
+|                              |            |           | 4+            |          gfx908            |        \-          |
 |                              |     32     |    32     +---------------+----------------------------+--------------------+
-|                              |            |           | 8+            |      gfx90a, gfx940+       |         -          |
+|                              |            |           | 8+            |      gfx90a, gfx940+       |        \-          |
 +------------------------------+------------+-----------+---------------+----------------------------+--------------------+
-|                              |16          |16         | 4+            |           gfx9             |         -          |
+|                              |16          |16         | 4+            |           gfx9             |        \-          |
 |     f32 / f32 / f32          +------------+-----------+---------------+----------------------------+--------------------+
-|                              |32          |32         | 2+            |           gfx9             |         -          |
+|                              |32          |32         | 2+            |           gfx9             |        \-          |
 +------------------------------+------------+-----------+---------------+----------------------------+--------------------+
 |                              |16          |16         | 8+            |                            |                    |
-|     xf32 / xf32 / xf32       +------------+-----------+---------------+          gfx940+           |         -          |
+|     xf32 / xf32 / xf32       +------------+-----------+---------------+          gfx940+           |        \-          |
 |                              |32          |32         | 4+            |                            |                    |
 +------------------------------+------------+-----------+---------------+----------------------------+--------------------+
-|      f64 / f64 / f64         |16          |16         | 4+            |      gfx90a, gfx940+       |         -          |
+|      f64 / f64 / f64         |16          |16         | 4+            |      gfx90a, gfx940+       |        \-          |
 +------------------------------+------------+-----------+---------------+----------------------------+--------------------+
 
 .. note::
@@ -245,7 +245,7 @@ col_major
 
 
 fragment
-''''
+''''''''
 
 .. doxygenclass:: rocwmma::fragment
 
@@ -254,7 +254,7 @@ rocWMMA enumeration
 ^^^^^^^^^^^^^^^^^^^
 
 layout_t
-''''''''''''
+''''''''
 
 .. doxygenenum:: rocwmma::layout_t
 
@@ -264,13 +264,13 @@ rocWMMA API functions
 
 .. doxygenfunction:: rocwmma::fill_fragment
 
-.. doxygenfunction:: rocwmma::load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag, const DataT* data, uint32_t ldm)
+.. doxygenfunction:: rocwmma::load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag, const DataT* data, uint32_t ldm)
 
 .. doxygenfunction:: rocwmma::load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT>& frag, const DataT* data, uint32_t ldm, layout_t layout)
 
-.. doxygenfunction:: rocwmma::store_matrix_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag, uint32_t ldm)
+.. doxygenfunction:: rocwmma::store_matrix_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag, uint32_t ldm)
 
-.. doxygenfunction:: rocwmma::store_matrix_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag, uint32_t ldm,layout_t layout)
+.. doxygenfunction:: rocwmma::store_matrix_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag, uint32_t ldm, layout_t layout)
 
 .. doxygenfunction:: rocwmma::mma_sync
 
@@ -279,24 +279,24 @@ rocWMMA API functions
 rocWMMA cooperative API functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. doxygenfunction:: rocwmma::load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag, const DataT* data, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount)
+.. doxygenfunction:: rocwmma::load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag, const DataT* data, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount)
 
-.. doxygenfunction:: rocwmma::load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag, const DataT* data, uint32_t ldm)
+.. doxygenfunction:: rocwmma::load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag, const DataT* data, uint32_t ldm)
 
-.. doxygenfunction:: rocwmma::load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag, const DataT* data, uint32_t ldm, uint32_t waveIndex)
+.. doxygenfunction:: rocwmma::load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag, const DataT* data, uint32_t ldm, uint32_t waveIndex)
 
-.. doxygenfunction:: store_matrix_coop_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount)
+.. doxygenfunction:: rocwmma::store_matrix_coop_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount)
 
-.. doxygenfunction:: store_matrix_coop_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag, uint32_t ldm)
+.. doxygenfunction:: rocwmma::store_matrix_coop_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag, uint32_t ldm)
 
-.. doxygenfunction:: store_matrix_coop_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag, uint32_t ldm, uint32_t waveIndex)
+.. doxygenfunction:: rocwmma::store_matrix_coop_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag, uint32_t ldm, uint32_t waveIndex)
 
 rocWMMA transforms API functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. doxygenfunction:: rocwmma::applyTranspose(FragT&& frag)
+.. doxygenfunction:: rocwmma::applyTranspose(FragT frag)
 
-.. doxygenfunction:: rocwmma::applyDataLayout(FragT&& frag)
+.. doxygenfunction:: rocwmma::applyDataLayout(FragT &&frag)
 
 Sample programs
 ^^^^^^^^^^^^^^^^
