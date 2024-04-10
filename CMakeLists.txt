@@ -134,7 +134,12 @@ if(ROCWMMA_BUILD_TESTS)
 endif()
 
 # Package
-rocm_package_add_dependencies("hip-rocclr >= 4.3.0")
+if(BUILD_ADDRESS_SANITIZER)
+  set(DEPENDS_HIP_RUNTIME "hip-runtime-amd-asan" )
+else()
+  set(DEPENDS_HIP_RUNTIME "hip-runtime-amd" )
+endif()
+rocm_package_add_dependencies("${DEPENDS_HIP_RUNTIME} >= 4.5.0")
 rocm_package_add_deb_dependencies("libomp-dev")
 rocm_package_add_rpm_dependencies("libomp-devel")
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
