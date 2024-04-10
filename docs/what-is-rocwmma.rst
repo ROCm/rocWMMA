@@ -5,9 +5,9 @@
 
 .. _what-is-rocwmma:
 
-*****************
+=================
 What is rocWMMA?
-*****************
+=================
 
 rocWMMA is a C++ header library for accelerating mixed precision matrix multiply-accumulate operations
 leveraging specialized GPU matrix cores on AMD's latest discrete GPUs. 'roc' being an AMD-specific

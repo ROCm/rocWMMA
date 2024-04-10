@@ -182,6 +182,7 @@ namespace rocwmma
       \tparam DataT data type
       \tparam DataLayoutT in-memory layout as col_major or row_major
     */
+    // @cond
     template <uint32_t WaveCount,
               uint32_t SplitCount,
               typename MatrixT,
@@ -196,6 +197,7 @@ namespace rocwmma
                               const DataT*                                                   data,
                               uint32_t                                                       ldm,
                               uint32_t waveIndex);
+    // @endcond
 
     //! Loads the fragment from memory address cooperatively across wavefronts.
     //! Each cooperating wavefront is responsible in loading a portion of the final fragment.
@@ -365,6 +367,7 @@ namespace rocwmma
       \tparam DataT data type
       \tparam DataLayoutT in-memory layout as col_major or row_major
     */
+    // @cond
     template <uint32_t WaveCount,
               uint32_t SplitCount,
               typename MatrixT,
@@ -380,6 +383,7 @@ namespace rocwmma
             fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag,
             uint32_t                                                             ldm,
             uint32_t                                                             waveIndex);
+    // @endcond
 
     //! Cooperative Store Matrix - Stores the entire fragment to data address cooperatively across waves.
     //! Each cooperative wave is responsible in storing a portion of the final fragment.

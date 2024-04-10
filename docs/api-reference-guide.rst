@@ -5,14 +5,14 @@
 
 .. _api-reference-guide:
 
-********************
+====================
 API reference guide
-********************
+====================
 
 This document provides information about rocWMMA functions, data types, and other programming constructs.
 
 Synchronous API
-^^^^^^^^^^^^^^^
+---------------
 
 In general, rocWMMA API functions ( ``load_matrix_sync``, ``store_matrix_sync``, ``mma_sync`` ) are assumed to be synchronous when
 used in the context of global memory.
@@ -22,7 +22,7 @@ may be required due to the nature of this memory usage.
 
 
 Supported architectures
-^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------
 
 List of supported CDNA architectures (wave64):
 
@@ -49,7 +49,7 @@ List of supported RDNA architectures (wave32):
 
 
 Supported data types
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 
 rocWMMA mixed precision multiply-accumulate operations support the following data type combinations.
 
@@ -149,7 +149,7 @@ Data Types **<Ti / To / Tc>** = <Input type / Output Type / Compute Type>, where
 
 
 Supported matrix layouts
-^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------
 
 (N = col major, T = row major)
 
@@ -177,7 +177,7 @@ Supported matrix layouts
 +---------+--------+---------+--------+
 
 Supported thread block sizes
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------
 
 rocWMMA generally supports and tests up to 4 wavefronts per threadblock. The X dimension is expected to be a multiple of the wave size and will be scaled as such.
 
@@ -212,55 +212,55 @@ Using rocWMMA API
 This section describes how to use the rocWMMA library API.
 
 rocWMMA datatypes
-^^^^^^^^^^^^^^^^^
+-----------------
 
 matrix_a
-''''''''
+^^^^^^^^
 
 .. doxygenstruct:: rocwmma::matrix_a
 
 
 matrix_b
-''''''''
+^^^^^^^^
 
 .. doxygenstruct:: rocwmma::matrix_b
 
 
 accumulator
-'''''''''''
+^^^^^^^^^^^
 
 .. doxygenstruct:: rocwmma::accumulator
 
 
 row_major
-'''''''''
+^^^^^^^^^
 
 .. doxygenstruct:: rocwmma::row_major
 
 
 col_major
-'''''''''
+^^^^^^^^^
 
 .. doxygenstruct:: rocwmma::col_major
 
 
 fragment
-''''''''
+^^^^^^^^
 
 .. doxygenclass:: rocwmma::fragment
 
 
 rocWMMA enumeration
-^^^^^^^^^^^^^^^^^^^
+-------------------
 
 layout_t
-''''''''
+^^^^^^^^
 
 .. doxygenenum:: rocwmma::layout_t
 
 
 rocWMMA API functions
-^^^^^^^^^^^^^^^^^^^^^^
+----------------------
 
 .. doxygenfunction:: rocwmma::fill_fragment
 
@@ -277,7 +277,7 @@ rocWMMA API functions
 .. doxygenfunction:: rocwmma::synchronize_workgroup
 
 rocWMMA cooperative API functions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------------
 
 .. doxygenfunction:: rocwmma::load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag, const DataT* data, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount)
 
@@ -294,12 +294,12 @@ rocWMMA cooperative API functions
 rocWMMA transforms API functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. doxygenfunction:: rocwmma::applyTranspose(FragT frag)
+.. doxygenfunction:: rocwmma::applyTranspose(FragT &&frag)
 
 .. doxygenfunction:: rocwmma::applyDataLayout(FragT &&frag)
 
 Sample programs
-^^^^^^^^^^^^^^^^
+----------------
 
 See a sample code for calling rocWMMA functions ``load_matrix_sync``, ``store_matrix_sync``, ``fill_fragment``, and ``mma_sync`` `here <https://github.com/ROCm/rocWMMA/blob/develop/samples/simple_hgemm.cpp>`_.
 For more such sample programs, refer to the `Samples directory <https://github.com/ROCm/rocWMMA/tree/develop/samples>`_.

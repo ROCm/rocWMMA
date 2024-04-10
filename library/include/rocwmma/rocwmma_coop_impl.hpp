@@ -107,6 +107,7 @@ namespace rocwmma
         load_matrix_coop_sync(frag, data, ldm, waveIndex, waveCount);
     }
 
+    // @cond
     template <uint32_t WaveCount,
               uint32_t SplitCount,
               typename MatrixT,
@@ -124,6 +125,7 @@ namespace rocwmma
         // SplitCount is unused
         load_matrix_coop_sync<WaveCount>(frag, data, ldm, waveIndex);
     }
+    // @endcond
 
     template <uint32_t WaveCount,
               typename MatrixT,
@@ -228,6 +230,7 @@ namespace rocwmma
         store_matrix_coop_sync(data, frag, ldm, waveIndex, waveCount);
     }
 
+    // @cond
     template <uint32_t WaveCount,
               uint32_t SplitCount,
               typename MatrixT,
@@ -247,6 +250,7 @@ namespace rocwmma
         // Layout and thread locality is not guaranteed.
         store_matrix_coop_sync<WaveCount>(data, frag, ldm, waveIndex);
     }
+    // @endcond
 
     template <uint32_t WaveCount,
               typename MatrixT,

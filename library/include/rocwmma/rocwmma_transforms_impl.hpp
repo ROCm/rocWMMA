@@ -224,24 +224,24 @@ namespace rocwmma
             using Type = FragOut;
 
             // Optimal case: input and output register layouts match
-            template <uint32_t WaveCount = 1,
-                      typename FragT,
-                      enable_if_t<is_same_v<FragT, FragIn>
-                                      && is_same_v<RegisterLayoutIn, RegisterLayoutOut>,
-                                  int>
-                      = 0>
+            template <
+                uint32_t WaveCount = 1,
+                typename FragT,
+                enable_if_t<
+                    is_same_v<FragT, FragIn> && is_same_v<RegisterLayoutIn, RegisterLayoutOut>,
+                    int> = 0>
             ROCWMMA_DEVICE constexpr static inline decltype(auto) exec(FragT const& frag)
             {
                 return reinterpret_cast<FragOut const&>(frag);
             }
 
             // Input and output register layouts do not match: must transform using AOS<->SOA
-            template <uint32_t WaveCount = 1,
-                      typename FragT,
-                      enable_if_t<is_same_v<FragT, FragIn>
-                                      && !is_same_v<RegisterLayoutIn, RegisterLayoutOut>,
-                                  int>
-                      = 0>
+            template <
+                uint32_t WaveCount = 1,
+                typename FragT,
+                enable_if_t<
+                    is_same_v<FragT, FragIn> && !is_same_v<RegisterLayoutIn, RegisterLayoutOut>,
+                    int> = 0>
             ROCWMMA_DEVICE constexpr static inline auto exec(FragT const& frag)
             {
                 // TODO: Make sure to use coop configs to get the right MaxVW!!!
@@ -291,6 +291,7 @@ namespace rocwmma
 
     /// These wrappers must perfect-forward and perfect-return because the return types and
     // arguments above could be references or copy types.
+    // @cond
     template <typename FragT>
     ROCWMMA_DEVICE static inline decltype(auto) applyTranspose(FragT&& frag)
     {
@@ -303,6 +304,7 @@ namespace rocwmma
         return detail::template ApplyDataLayout<decay_t<FragT>, DataLayoutT>::template exec<
             WaveCount>(forward<FragT>(frag));
     }
+    // @endcond
 
 } // namespace rocwmma
 
