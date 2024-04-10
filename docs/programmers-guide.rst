@@ -31,6 +31,15 @@ Infrastructure
 
 - The preferred compiler for rocWMMA is ``CC=<path_to_rocm>/bin/amdclang and CXX=<path_to_rocm>/bin/amdclang++``. ``hipcc`` is also supported, however may be deprecated in future ROCm releases.
 
+--------------------------------
+hipRTC Support
+--------------------------------
+
+The HIP runtime compilation (hipRTC) environment allows on-the-fly runtime compilation, loading, and execution of device code on AMD GPUs. The rocWMMA library is compatible with hipRTC, so it can be leveraged for runtime-generated kernels.
+A simple GEMM sample is included to demonstrate compatibility.
+
+For more information, refer to the `HIP API Reference  <https://rocm.docs.amd.com/projects/HIP/en/latest/doxygen/html/index.html>`_
+
 
 --------------------------------
 General Design Concepts
@@ -67,6 +76,92 @@ The implementation code is generally encapsulated into different layers of objec
 - Vector operations. This level of objects such as ``OpaqueLoad`` or ``OpaqueStore`` handle variable-sized vector inputs and marshall them into unrolled unit backend operations. They encompass thread-wise details of vector operations. These classes provide a consistent functional interface for input vectors of all sizes, independent of device architecture, whose details are handled at a lower level.
 
 - Fragment operations. This is the API level of rocWMMA where user data is stored and manipulated in ``fragment`` objects. Fragment objects can be visualized as geometric 'blocks' of data in the perspective of the current wavefront, which are to be stored as vectors. Each of the loading / storing and mma operations provided by rocWMMA are in the perspective of the wavefront, assuming that all threads in the wavefront are participating under the hood. This layer's implementation translates wavefront fragment operations into vector operations and so on. This way, the rocWMMA API experience intends to be seamless across different device architectures and platforms.
+
+--------------------------------
+Nomenclature
+--------------------------------
+
+GEMM
+^^^^^
+
+GEneralized Matrix-Matrix multiplication (or, GEMM) is one of the fundamental applications for rocWMMA. In general, GEMM solves the equation ``D = \alpha * A x B + \beta * C`` , where ``A, B, C, D`` are matrices and ``\alpha`` and ``\beta`` are scalars.
+Matrices are generally sized by ``M x N x K``, such that ``A = M x K``, ``B = K x N`` and ``C, D = M x N``.
+rocWMMA implements many varieties of testing and sample kernels for this purpose and encompasses a wide variety of parameters. Testing kernels are grouped into executables that are named as a string of parameters that describe their implementations.
+
+.. code-block:: bash
+    PGR# - Prefetch Global Read lookup stages. PGR0 = no global read prefetch. PGR1 = 1 stage global read prefetch.
+    LB# - Lds buffer count. LB0 = no lds usage, LB2 = 2 Lds buffers used for swap.
+    MP# - MFMA instruction priority. MP0 = default MFMA instruction priority of 0. MP1 = raise MFMA instruction priority to 1.
+    MB - Multiple output blocks targeted per wave
+    SB - Single output block target per wave
+    NC - Non-Cooperative load / store
+    CP - Cooperative load / store
+    BLK - Cooperative load / store per block tile
+    WV - Cooperative load / store per wave tile
+    WG - Cooperative load / store per macro tile
+
+* ``gemm_PGR0_LB0_MP0_SB_NC``: The simplest blocked GEMM example, which targets one output
+  block of matrix multiplication per wave. No prefetch, no lDs usage, default MFMA prioritization, single
+  block output and non-collaborative.
+
+* ``gemm_PGR0_LB0_MP0_MB_NC``: Implements a multi-block GEMM where each wave is responsible
+  for a BlocksX x BlocksY grid of output blocks. No prefetch, no lDs usage, default MFMA prioritization,
+  multiple blocks output, and non-collaborative.
+
+* ``gemm_PGR1_LB2_MP0_MB_CP_BLK``: Implements a multi-block GEMM where each wave is
+  responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to
+  implement a data prefetching pipeline and collaborates with other waves to improve performance.
+  Implements single stage prefetch, double lDs buffer, default MFMA prioritization, multiple blocks
+  output, and is block-tile collaborative in global read and local write.
+
+* ``gemm_PGR1_LB2_MP0_MB_CP_WV``: Implements a multi-block GEMM where each wave is
+  responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to
+  implement a data prefetching pipeline and collaborates with other waves to improve performance.
+  Implements single stage prefetch, double lDs buffer, default MFMA prioritization, multiple blocks
+  output, and is wave-tile collaborative in global read and local write.
+
+* ``gemm_PGR1_LB2_MP0_MB_CP_WG``: Implements a multi-block GEMM where each wave is
+  responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to
+  implement a data prefetching pipeline and collaborates with other waves to improve performance.
+  Implements single stage prefetch, double lDs buffer, default MFMA prioritization, multiple blocks
+  output and is macro-tile collaborative in global read and local write.
+
+* ``Ad Hoc Test``: An executable that focuses on a specific set of kernel parameters. This is used as a
+  quick mock-up of a situational investigation of a particular GEMM kernel.
+
+Validation tests are postfixed with ``-validate``. Benchmark tests are postfixed with ``-bench``.
+
+Sample kernels are constructed with as minimal infrastructure as possible. Their namings are much different to appeal to a broader audience.
+
+* ``simple_sgemm``: a simple GEMM kernel with ``s`` denoting single-precision floating point datatype.
+
+* ``simple_dgemm``: a simple GEMM kernel with ``d`` denoting double-precision floating point datatype.
+
+* ``simple_hgemm``: a simple GEMM kernel with ``h`` denoting half-precision floating point datatype.
+
+* ``perf_sgemm``: a performant GEMM kernel with ``s`` denoting single-precision floating point datatype.
+
+* ``perf_dgemm``: a performant GEMM kernel with ``d`` denoting double-precision floating point datatype.
+
+* ``perf_hgemm``: a performant GEMM kernel with ``h`` denoting half-precision floating point datatype.
+
+GEMV
+^^^^^
+
+GEneralized Matrix-Vector multiplication (or, GEMV) is another application for rocWMMA. In general, GEMV solves the equation \f$ y = \alpha * A * x + \beta * y \f$, where \f$ A \f$ is a matrix, \f$ x and y \f$ are vectors and \f$ \alpha and \beta \f$ are scalars.
+``Matrix A`` is generally sized as ``M x K``, vector ``X`` as ``K x 1`` and vector ``Y`` as ``M x 1``.
+rocWMMA implements some samples of simple GEMV demonstrations as below:
+
+* ``simple_sgemv``: Simple GEMV kernel with ``s`` denoting single-precision floating point datatype.
+
+* ``simple_dgemv``: Simple GEMV kernel with ``d`` denoting double-precision floating point datatype.
+
+DLRM
+^^^^
+
+rocWMMA implements a simple component of Deep Learning Recommendation Model (DLRM) for machine learning. Both forward and backwards passes on half-precision inputs and outputs are demonstrated.
+
+* ``simple_dlrm``: Simple GEMV kernel with ``s`` denoting single-precision floating point datatype.
 
 --------------------------------
 Library source code organization
