@@ -28,8 +28,6 @@
 
 #include "rocwmma.hpp"
 
-//! \{
-
 /**
  * rocWMMA cooperative API complements the rocWMMA API with support for cooperative operations.
  * Operations may be split into smaller unit work items that are assigned to wavefronts
@@ -430,5 +428,3 @@ namespace rocwmma
 #include "rocwmma_coop_impl.hpp"
 
 #endif // ROCWMMA_COOP_API_HPP
-
-//! \}
