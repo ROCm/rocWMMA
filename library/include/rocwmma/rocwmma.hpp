@@ -61,69 +61,66 @@
 
 namespace rocwmma
 {
-    /**
-     * \defgroup Rocwmma rocWMMA Public API
-     *
-     * @brief rocWMMA objects and API function definitions.
-     * @{
-     */
+    //! @defgroup Rocwmma rocWMMA Public API
+    //!
+    //! @brief rocWMMA objects and API function definitions.
+    //! @{
 
-    // clang-format off
+    //! @struct row_major
+    //! @brief Meta-tag indicating 2D in-memory data layout as row major.
+    struct row_major
+    {
+    };
 
-    /*! \struct row_major
-    *  \brief Meta-tag indicating 2D in-memory data layout as row major.
-    */
-    struct row_major{};
+    //! @struct col_major
+    //! @brief Meta-tag indicating 2D in-memory data layout as column major.
+    struct col_major
+    {
+    };
 
-    /*! \struct col_major
-    *  \brief Meta-tag indicating 2D in-memory data layout as column major.
-    */
-    struct col_major{};
+    //! @struct matrix_a
+    //! @brief Meta-tag indicating data context is input Matrix A.
+    struct matrix_a
+    {
+    };
 
-    /*! \struct matrix_a
-    *  \brief Meta-tag indicating data context is input Matrix A.
-    */
-    struct matrix_a{};
+    //! @struct matrix_b
+    //! @brief Meta-tag indicating data context is input Matrix B.
+    struct matrix_b
+    {
+    };
 
-    /*! \struct matrix_b
-    *  \brief Meta-tag indicating data context is input Matrix B.
-    */
-    struct matrix_b{};
+    //! @struct accumulator
+    //! @brief Meta-tag indicating data context is Accumulator (also used as Matrix C / D).
+    struct accumulator
+    {
+    };
 
-    /*! \struct accumulator
-    *  \brief Meta-tag indicating data context is Accumulator (also used as Matrix C / D).
-    */
-    struct accumulator{};
-
-    /*! \struct layout_t
-    *  \brief Runtime data layout tags
-    *  @var mem_row_major
-    *  @var mem_col_major
-    */
+    //! @struct layout_t
+    //! @brief Runtime data layout tags
+    //! @var mem_row_major
+    //! @var mem_col_major
     enum layout_t : uint32_t
     {
         mem_row_major,
         mem_col_major
     };
 
-    /*! \class fragment
-    *  \brief rocWMMA fragment class. This is the primary object used in block-wise decomposition of the matrix multiply-accumulate (mma)
-    * problem space. In general, fragment data is associated with a matrix context (matrix_a, matrix_b or accumulator), a block size (BlockM/N/K),
-    * a datatype (e.g. single-precision float, etc.) and an in-memory 2D layout (e.g. row_major or col_major). These fragment properties are used
-    * to define how data is handled and stored locally, and to drive API implementations for loading / storing, mma and transforms. Fragment abstractions are
-    * designed to promote a simple wavefront programming model, which can accelerate development time. Internal thread-level details are handled by rocWMMA
-    * which frees the user to focus on wavefront block-wise decomposition. Written purely in device code, the programmer can use this object in their own
-    * device kernels.
-    *
-    * @tparam MatrixT fragment context
-    * @tparam BlockM/N/K block dimensions
-    * @tparam DataT datatype
-    * @tparam DataLayoutT in-memory layout as col_major or row_major
-    *
-    * @note Fragments are stored in packed registers, however vector elements have no guaranteed order or locality.
-    */
-
-    // clang-format on
+    //! @class fragment
+    //! @brief rocWMMA fragment class. This is the primary object used in block-wise decomposition of the matrix multiply-accumulate (mma)
+    //! problem space. In general, fragment data is associated with a matrix context (matrix_a, matrix_b or accumulator), a block size (BlockM/N/K),
+    //! a datatype (e.g. single-precision float, etc.) and an in-memory 2D layout (e.g. row_major or col_major). These fragment properties are used
+    //! to define how data is handled and stored locally, and to drive API implementations for loading / storing, mma and transforms. Fragment abstractions are
+    //! designed to promote a simple wavefront programming model, which can accelerate development time. Internal thread-level details are handled by rocWMMA
+    //! which frees the user to focus on wavefront block-wise decomposition. Written purely in device code, the programmer can use this object in their own
+    //! device kernels.
+    //!
+    //! @tparam MatrixT fragment context
+    //! @tparam BlockM/N/K block dimensions
+    //! @tparam DataT datatype
+    //! @tparam DataLayoutT in-memory layout as col_major or row_major
+    //!
+    //! @note Fragments are stored in packed registers, however vector elements have no guaranteed order or locality.
     template <typename MatrixT,
               uint32_t BlockM,
               uint32_t BlockN,
@@ -164,28 +161,26 @@ namespace rocwmma
         ROCWMMA_DEVICE           fragment(const fragment& other);
         ROCWMMA_DEVICE fragment& operator=(const fragment& other);
 
-        /*! Accessor for unpacked elements
-         * @param index Element index
-         */
+        //! @param index Element index
+        //! @returns Mutable unpacked element accessor at given index
         ROCWMMA_DEVICE inline DataT& operator[](uint32_t index);
-        /*! Accessor for unpacked elements
-         * @param index Element index
-         */
+        //! @param index Element index
+        //! @returns Immutable unpacked element accessor at given index
         ROCWMMA_DEVICE inline DataT const& operator[](uint32_t index) const;
-        //! Accessor for packed elements
+        //! @returns Mutable packed storage vector accessor
         ROCWMMA_DEVICE inline typename Traits::StorageT& operator*();
-        //! Accessor for packed elements
+        //! @returns Immutable packed storage vector accessor
         ROCWMMA_DEVICE inline typename Traits::StorageT const& operator*() const;
 
-        //! Returns the geometric height of fragment
+        //! @returns The geometric height of fragment
         ROCWMMA_DEVICE constexpr static inline uint32_t height();
-        //! Returns the geometric width of fragment
+        //! @returns The geometric width of fragment
         ROCWMMA_DEVICE constexpr static inline uint32_t width();
-        //! Returns the leading block dimension (non-K)
+        //! @returns The leading block dimension (non-K)
         ROCWMMA_DEVICE constexpr static inline uint32_t blockDim();
-        //! Returns the k dimension
+        //! @returns The k dimension
         ROCWMMA_DEVICE constexpr static inline uint32_t kDim();
-        //! Returns the size of the unpacked elements vector
+        //! @returns The size of the unpacked elements vector
         ROCWMMA_DEVICE constexpr static inline uint32_t size();
 
         //! Internal data storage views. Compatibility with nvcuda::wmma
@@ -204,14 +199,12 @@ namespace rocwmma
     };
 
     //! Fills the entire fragment with the desired value.
-    /*!
-      \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
-      \param value Fill value of type DataT
-      \tparam Matrix Fragment context
-      \tparam BlockM/N/K Block dimensions
-      \tparam DataT Datatype
-      \tparam DataLayoutT in-memory layout as col_major or row_major
-    */
+    //! @param frag Fragment of type MatrixT with its associated block sizes, data type and layout
+    //! @param value Fill value of type DataT
+    //! @tparam Matrix Fragment context
+    //! @tparam BlockM/N/K Block dimensions
+    //! @tparam DataT Datatype
+    //! @tparam DataLayoutT in-memory layout as col_major or row_major
     template <typename MatrixT,
               uint32_t BlockM,
               uint32_t BlockN,
@@ -223,15 +216,13 @@ namespace rocwmma
                       DataT                                                          value);
 
     //! Loads the entire fragment from the data pointer according to its matrix and data layout contexts. Data pointer may point to either local or global memory.
-    /*!
-      \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
-      \param data Data pointer to global or local memory
-      \param ldm Leading dimension size
-      \tparam MatrixT Fragment context
-      \tparam BlockM/N/K Block dimensions
-      \tparam DataT Datatype
-      \tparam DataLayoutT In-memory layout as col_major or row_major
-    */
+    //! @param frag Fragment of type MatrixT with its associated block sizes, data type and layout
+    //! @param data Data pointer to global or local memory
+    //! @param ldm Leading dimension size
+    //! @tparam MatrixT Fragment context
+    //! @tparam BlockM/N/K Block dimensions
+    //! @tparam DataT Datatype
+    //! @tparam DataLayoutT In-memory layout as col_major or row_major
     template <typename MatrixT,
               uint32_t BlockM,
               uint32_t BlockN,
@@ -245,15 +236,13 @@ namespace rocwmma
 
     //! Loads the entire fragment from the data pointer according to its matrix layout and data layout contexts.
     //! Data pointer may point to either local or global memory. This overload provides a run-time ability to choose the data layout of the target fragment.
-    /*!
-      \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
-      \param data Data pointer to global/local memory
-      \param ldm Leading dimension size
-      \param layout Data layout
-      \tparam MatrixT Fragment context
-      \tparam BlockM/N/K Block dimensions
-      \tparam DataT Datatype
-    */
+    //! @param frag Fragment of type MatrixT with its associated block sizes, data type and layout
+    //! @param data Data pointer to global/local memory
+    //! @param ldm Leading dimension size
+    //! @param layout Data layout
+    //! @tparam MatrixT Fragment context
+    //! @tparam BlockM/N/K Block dimensions
+    //! @tparam DataT Datatype
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
     ROCWMMA_DEVICE void load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT>& frag,
                                          const DataT*                                      data,
@@ -261,15 +250,13 @@ namespace rocwmma
                                          layout_t                                          layout);
 
     //! Stores the entire fragment to the data pointer according to its matrix and data layouts. Data pointer may point to either local or global memory.
-    /*!
-      \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
-      \param data Data pointer to global/local memory
-      \param ldm Leading dimension size
-      \tparam MatrixT Fragment context
-      \tparam BlockM/N/K Block dimensions
-      \tparam DataT Datatype
-      \tparam DataLayoutT in-memory layout as col_major or row_major
-    */
+    //! @param frag Fragment of type MatrixT with its associated block sizes, data type and layout
+    //! @param data Data pointer to global/local memory
+    //! @param ldm Leading dimension size
+    //! @tparam MatrixT Fragment context
+    //! @tparam BlockM/N/K Block dimensions
+    //! @tparam DataT Datatype
+    //! @tparam DataLayoutT in-memory layout as col_major or row_major
     template <typename MatrixT,
               uint32_t BlockM,
               uint32_t BlockN,
@@ -283,15 +270,13 @@ namespace rocwmma
 
     //! Stores the entire fragment to the data pointer according to its matrix layout. Data pointer may point to either local or global memory.
     //! This overload provides a run-time ability to choose the data layout of the target fragment.
-    /*!
-      \param frag Fragment of type MatrixT with its associated block sizes, data type and layout
-      \param data Data pointer to global/local memory
-      \param ldm Leading dimension size
-      \param layout Data layout
-      \tparam MatrixT Fragment context
-      \tparam BlockM/N/K Block dimensions
-      \tparam DataT Datatype
-    */
+    //! @param frag Fragment of type MatrixT with its associated block sizes, data type and layout
+    //! @param data Data pointer to global/local memory
+    //! @param ldm Leading dimension size
+    //! @param layout Data layout
+    //! @tparam MatrixT Fragment context
+    //! @tparam BlockM/N/K Block dimensions
+    //! @tparam DataT Datatype
     template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
     ROCWMMA_DEVICE void
         store_matrix_sync(DataT*                                                  data,
@@ -300,17 +285,15 @@ namespace rocwmma
                           layout_t                                                layout);
 
     //! Performs the Multiply-Accumulate operation on the fragments A, B, C and D (D = A * B + C)
-    /*!
-      \param d Accumulator output D
-      \param a Input fragment A
-      \param b Input fragment B
-      \param c Input accumulator fragment C
-      \tparam BlockM/N/K block dimensions
-      \tparam InputT Datatype of input frags A and B
-      \tparam ComputeT Datatype of accumulator fragment C / D
-      \tparam LayoutA/B/C/D In-memory layout of frag as col_major or row_major
-      \note Frag c = d is valid
-    */
+    //! @param d Accumulator output D
+    //! @param a Input fragment A
+    //! @param b Input fragment B
+    //! @param c Input accumulator fragment C
+    //! @tparam BlockM/N/K block dimensions
+    //! @tparam InputT Datatype of input frags A and B
+    //! @tparam ComputeT Datatype of accumulator fragment C / D
+    //! @tparam LayoutA/B/C/D In-memory layout of frag as col_major or row_major
+    //! @note Frag c = d is valid
     template <uint32_t BlockM,
               uint32_t BlockN,
               uint32_t BlockK,

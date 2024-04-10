@@ -24,9 +24,8 @@
  *
  *******************************************************************************/
 
-/*!\file
- * \brief rocwmma-version.hpp provides the configured version and settings
- */
+//! @file
+//! @brief rocwmma-version.hpp provides the configured version and settings
 
 #ifndef ROCWMMA_API_VERSION_HPP
 #define ROCWMMA_API_VERSION_HPP
