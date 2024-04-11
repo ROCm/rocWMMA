@@ -12,7 +12,7 @@ def runCI =
     prj.paths.build_command = './install -c'
     prj.libraryDependencies = ['rocBLAS']
     prj.defaults.ccache = true
-    prj.timeout.compile = 300
+    prj.timeout.compile = 600
 
     def nodes = new dockerNodes(nodeDetails, jobName, prj)
 
