@@ -74,7 +74,7 @@ Nomenclature
 GEMM
 ^^^^^
 
-GEneralized Matrix-Matrix multiplication (or, GEMM) is one of the fundamental applications for rocWMMA. In general, GEMM solves the equation ``D = \alpha * A x B + \beta * C`` , where ``A, B, C, D`` are matrices and ``\alpha`` and ``\beta`` are scalars.
+GEneralized Matrix-Matrix multiplication (or, GEMM) is one of the fundamental applications for rocWMMA. In general, GEMM solves the equation ``D = alpha * A x B + beta * C`` , where ``A, B, C, D`` are matrices and ``alpha`` and ``beta`` are scalars.
 Matrices are generally sized by ``M x N x K``, such that ``A = M x K``, ``B = K x N`` and ``C, D = M x N``.
 rocWMMA implements many varieties of testing and sample kernels for this purpose and encompasses a wide variety of parameters. Testing kernels are grouped into executables that are named as a string of parameters that describe their implementations.
 
@@ -134,7 +134,7 @@ Sample kernels are constructed with as minimal infrastructure as possible. Their
 GEMV
 ^^^^^
 
-GEneralized Matrix-Vector multiplication (or, GEMV) is another application for rocWMMA. In general, GEMV solves the equation \f$ y = \alpha * A * x + \beta * y \f$, where \f$ A \f$ is a matrix, \f$ x and y \f$ are vectors and \f$ \alpha and \beta \f$ are scalars.
+GEneralized Matrix-Vector multiplication (or, GEMV) is another application for rocWMMA. In general, GEMV solves the equation ``y = alpha * A * x + beta * y``, where ``A`` is a matrix, ``x and y`` are vectors and ``alpha and beta`` are scalars.
 ``Matrix A`` is generally sized as ``M x K``, vector ``X`` as ``K x 1`` and vector ``Y`` as ``M x 1``.
 rocWMMA implements some samples of simple GEMV demonstrations as below:
 
