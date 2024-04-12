@@ -172,6 +172,9 @@ Below are the project options available to build rocWMMA library with or without
     *   -   ROCWMMA_BENCHMARK_WITH_ROCBLAS
         -   Include rocBLAS benchmarking data
         -   OFF (requires ROCWMMA_BUILD_BENCHMARK_TESTS=ON)
+    *   -   ROCWMMA_USE_SYSTEM_GOOGLETEST
+        -   Use system Google Test library instead of downloading and building it
+        -   OFF (requires ROCWMMA_BUILD_TESTS=ON)
 
 Build library
 ^^^^^^^^^^^^^^^^^^
@@ -327,3 +330,163 @@ After configuration, build using:
 .. note::
     The ``assembly`` folder within ``<build_dir>`` contains a hierarchy of assembly files generated the executables in the format ``test_executable_name.s``.
     These may be viewed from your favorite text editor.
+
+Make Targets List
+^^^^^^^^^^^^^^^^^
+
+When building rocWMMA during the ``make`` step, we can specify make targets instead of defaulting ``make all``. The following table highlights relationships between high level grouped targets and individual targets.
+
+.. tabularcolumns::
+   |\X{1}{4}|\X{3}{4}|
+
++-----------------------------------+------------------------------------------+
+|           Group Target            |            Individual Targets            |
++===================================+==========================================+
+|                                   | simple_sgemm                             |
+|                                   +------------------------------------------+
+| rocwmma_samples                   | simple_dgemm                             |
+|                                   +------------------------------------------+
+|                                   | simple_hgemm                             |
+|                                   +------------------------------------------+
+|                                   | perf_sgemm                               |
+|                                   +------------------------------------------+
+|                                   | perf_dgemm                               |
+|                                   +------------------------------------------+
+|                                   | perf_hgemm                               |
+|                                   +------------------------------------------+
+|                                   | simple_sgemv                             |
+|                                   +------------------------------------------+
+|                                   | simple_dgemv                             |
+|                                   +------------------------------------------+
+|                                   | simple_dlrm                              |
+|                                   +------------------------------------------+
+|                                   | hipRTC_gemm                              |
++-----------------------------------+------------------------------------------+
+|                                   | gemm_PGR0_LB0_MP0_SB_NC-validate         |
+|                                   +------------------------------------------+
+|                                   | gemm_PGR0_LB0_MP0_SB_NC_ad_hoc-validate  |
+|                                   +------------------------------------------+
+|                                   | gemm_PGR0_LB0_MP0_MB_NC-validate         |
+|                                   +------------------------------------------+
+|                                   | gemm_PGR0_LB0_MP0_MB_NC_ad_hoc-validate  |
+|                                   +------------------------------------------+
+|     rocwmma_gemm_tests_validate   | gemm_PGR1_LB2_MP0_MB_CP_BLK-validate     |
+|                                   +------------------------------------------+
+|                                   | gemm_PGR1_LB2_MP0_MB_CP_WV-validate      |
+|                                   +------------------------------------------+
+|                                   | gemm_PGR1_LB2_MP0_MB_CP_WG-validate      |
+|                                   +------------------------------------------+
+|                                   | gemm_PGR1_LB2_MP0_MB_CP_ad_hoc-validate  |
++-----------------------------------+------------------------------------------+
+|                                   | gemm_PGR0_LB0_MP0_SB_NC-bench            |
+|                                   +------------------------------------------+
+|                                   | gemm_PGR0_LB0_MP0_SB_NC_ad_hoc-bench     |
+|                                   +------------------------------------------+
+|                                   | gemm_PGR0_LB0_MP0_MB_NC-bench            |
+|                                   +------------------------------------------+
+|                                   | gemm_PGR0_LB0_MP0_MB_NC_ad_hoc-bench     |
+|                                   +------------------------------------------+
+|     rocwmma_gemm_tests_bench      | gemm_PGR1_LB2_MP0_MB_CP_BLK-bench        |
+|                                   +------------------------------------------+
+|                                   | gemm_PGR1_LB2_MP0_MB_CP_WV-bench         |
+|                                   +------------------------------------------+
+|                                   | gemm_PGR1_LB2_MP0_MB_CP_WG-bench         |
+|                                   +------------------------------------------+
+|                                   | gemm_PGR1_LB2_MP0_MB_CP_ad_hoc-bench     |
++-----------------------------------+------------------------------------------+
+|                                   | dlrm_dot_test-validate                   |
+|    rocwmma_dlrm_tests_validate    +------------------------------------------+
+|                                   | dlrm_dot_lds_test-validate               |
++-----------------------------------+------------------------------------------+
+|                                   | dlrm_dot_test-bench                      |
+|    rocwmma_dlrm_tests_bench       +------------------------------------------+
+|                                   | dlrm_dot_lds_test-bench                  |
++-----------------------------------+------------------------------------------+
+|                                   | contamination_test                       |
+|                                   +------------------------------------------+
+|                                   | layout_test                              |
+|                                   +------------------------------------------+
+|                                   | map_util_test                            |
+|                                   +------------------------------------------+
+|                                   | load_store_matrix_sync_test              |
+|                                   +------------------------------------------+
+|     rocwmma_unit_tests            | load_store_matrix_coop_sync_test         |
+|                                   +------------------------------------------+
+|                                   | fill_fragment_test                       |
+|                                   +------------------------------------------+
+|                                   | vector_iterator_test                     |
+|                                   +------------------------------------------+
+|                                   | vector_test                              |
+|                                   +------------------------------------------+
+|                                   | vector_util_test                         |
+|                                   +------------------------------------------+
+|                                   | pack_util_test                           |
+|                                   +------------------------------------------+
+|                                   | io_traits_test                           |
+|                                   +------------------------------------------+
+|                                   | cross_lane_ops_test                      |
+|                                   +------------------------------------------+
+|                                   | io_shape_test                            |
+|                                   +------------------------------------------+
+|                                   | tuple_test                               |
+|                                   +------------------------------------------+
+|                                   | transforms_test                          |
+|                                   +------------------------------------------+
+|                                   | unpack_util_test                         |
++-----------------------------------+------------------------------------------+
+
+Build Performance
+^^^^^^^^^^^^^^^^^
+
+Depending on the resources available to the build machine and the build configuration selected, rocWMMA build times can be on the order of an hour or more. Here are some things you can do to reduce build times:
+
+* Target a specific GPU (e.g., ``-D AMDGPU_TARGETS=gfx908:xnack-``)
+* Use lots of threads (e.g., ``-j32``)
+* Select ``ROCWMMA_BUILD_ASSEMBLY=OFF``
+* Select ``ROCWMMA_BUILD_DOCS=OFF``.
+* Select ``ROCWMMA_BUILD_EXTENDED_TESTS=OFF``.
+* Specify either ``ROCWMMA_BUILD_VALIDATION_TESTS`` or ``ROCWMMA_BUILD_BENCHMARK_TESTS`` as ON, and the other as OFF instead of doing both.
+* During the ``make`` command, build a specific target, e.g: ``rocwmma_gemm_tests``.
+
+Test Runtime
+^^^^^^^^^^^^^^^^^
+
+Depending on the resources available to the machine running the selected tests, rocWMMA test runtimes can be on the order of an hour or more. Here are some things you can do to reduce run-times:
+
+* CTest will invoke the entire test suite. You may invoke tests individually by name.
+* Use GoogleTest filters, targeting specific test cases:
+
+.. code-block:: bash
+
+    <test_exe> --gtest_filter=\*name_filter\*
+
+* Use ad hoc tests to focus on a specific set of parameters.
+* Manually adjust the test cases coverage.
+
+GEMM Test Verbosity and Output Redirection
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+GEMM tests support logging arguments that can be used to control verbosity and output redirection.
+
+.. code-block:: bash
+
+    <test_exe> --output_stream "output.csv" --omit 1
+
+.. tabularcolumns::
+   |C|C|C|
+
++------------------------+-------------------------------------+--------------------------------------------+
+|Compact                 |Verbose                              |  Description                               |
++========================+=====================================+============================================+
+| -os <output_file>.csv  | --output_stream <output_file>.csv   |  redirect GEMM testing output to CSV file  |
++------------------------+-------------------------------------+--------------------------------------------+
+|                        |                                     |  code = 1: Omit gtest SKIPPED tests        |
+|                        |                                     +--------------------------------------------+
+|                        | --omit <code>                       |  code = 2: Omit gtest FAILED tests         |
+|                        |                                     +--------------------------------------------+
+|                        |                                     |  code = 4: Omit gtest PASSED tests         |
+|                        |                                     +--------------------------------------------+
+|                        |                                     |  code = 8: Omit all gtest output           |
+|                        |                                     +--------------------------------------------+
+|                        |                                     |  code = <N>: OR'd combination of 1, 2, 4   |
++------------------------+-------------------------------------+--------------------------------------------+

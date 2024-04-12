@@ -331,7 +331,7 @@ namespace rocwmma
         fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag,
         uint32_t                                                             ldm);
 
-    // \cond
+    // @cond
     //! Cooperative Store Matrix - Stores the entire fragment to data address cooperatively across waves.
     //! Each cooperative wave is responsible in storing a portion of the final fragment.
     //! @note The full fragment data is not required to be cohesive for individual waves as they
@@ -357,7 +357,6 @@ namespace rocwmma
     //! @tparam BlockM/N/K block dimensions
     //! @tparam DataT data type
     //! @tparam DataLayoutT in-memory layout as col_major or row_major
-
     template <uint32_t WaveCount,
               uint32_t SplitCount,
               typename MatrixT,
@@ -373,7 +372,7 @@ namespace rocwmma
             fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag,
             uint32_t                                                             ldm,
             uint32_t                                                             waveIndex);
-    // \endcond
+    // @endcond
 
     //! Cooperative Store Matrix - Stores the entire fragment to data address cooperatively across waves.
     //! Each cooperative wave is responsible in storing a portion of the final fragment.

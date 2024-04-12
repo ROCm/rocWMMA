@@ -16,19 +16,12 @@ Infrastructure
 --------------------------------
 
 - Doxygen and Sphinx are used to generate the project's documentation.
-
 - Jenkins is used to automate Continuous Integration (CI) testing (``.jenkins`` folder has configurations).
-
 - rocWMMA is hosted and maintained by AMD on `Github  <https://github.com/ROCm/rocWMMA>`_.
-
 - The rocWMMA project is organized and configured via ``CMake`` and the collection of ``CMakeLists.txt`` in the base of each directory.
-
 - ``clang-format`` is used to format C++ code. ``.githooks/install`` ensures that a clang-format pass will run on each committed file.
-
 - ``GTest`` is used to implement test suite organization and execution.
-
 - ``CTest`` is used to consolidate and invoke multiple test targets. In the ``<rocWMMA_install_dir>/bin/rocWMMA/CTestTestfile.cmake`` file, testing targets are listed that will be run when ``ctest`` is invoked.
-
 - The preferred compiler for rocWMMA is ``CC=<path_to_rocm>/bin/amdclang and CXX=<path_to_rocm>/bin/amdclang++``. ``hipcc`` is also supported, however may be deprecated in future ROCm releases.
 
 --------------------------------
@@ -39,7 +32,6 @@ The HIP runtime compilation (hipRTC) environment allows on-the-fly runtime compi
 A simple GEMM sample is included to demonstrate compatibility.
 
 For more information, refer to the `HIP API Reference  <https://rocm.docs.amd.com/projects/HIP/en/latest/doxygen/html/index.html>`_
-
 
 --------------------------------
 General Design Concepts
@@ -72,9 +64,7 @@ blocks, or fragments of data that may be efficiently processed by individual wav
 The implementation code is generally encapsulated into different layers of objects, fulfilling specific interface communications (from low level functions to API level):
 
 - Unit backend operations. These are often wrappers to device-specific functions such as intrinsics that usually prefixed with ``amdgcn_*``. These functions translate inputs into raw vector forms and addresses required by the low-level intrinsics. This backend-area of the code usually handles architecture or device-specific behavior differences.
-
 - Vector operations. This level of objects such as ``OpaqueLoad`` or ``OpaqueStore`` handle variable-sized vector inputs and marshall them into unrolled unit backend operations. They encompass thread-wise details of vector operations. These classes provide a consistent functional interface for input vectors of all sizes, independent of device architecture, whose details are handled at a lower level.
-
 - Fragment operations. This is the API level of rocWMMA where user data is stored and manipulated in ``fragment`` objects. Fragment objects can be visualized as geometric 'blocks' of data in the perspective of the current wavefront, which are to be stored as vectors. Each of the loading / storing and mma operations provided by rocWMMA are in the perspective of the wavefront, assuming that all threads in the wavefront are participating under the hood. This layer's implementation translates wavefront fragment operations into vector operations and so on. This way, the rocWMMA API experience intends to be seamless across different device architectures and platforms.
 
 --------------------------------
@@ -89,6 +79,7 @@ Matrices are generally sized by ``M x N x K``, such that ``A = M x K``, ``B = K 
 rocWMMA implements many varieties of testing and sample kernels for this purpose and encompasses a wide variety of parameters. Testing kernels are grouped into executables that are named as a string of parameters that describe their implementations.
 
 .. code-block:: bash
+
     PGR# - Prefetch Global Read lookup stages. PGR0 = no global read prefetch. PGR1 = 1 stage global read prefetch.
     LB# - Lds buffer count. LB0 = no lds usage, LB2 = 2 Lds buffers used for swap.
     MP# - MFMA instruction priority. MP0 = default MFMA instruction priority of 0. MP1 = raise MFMA instruction priority to 1.
@@ -134,15 +125,10 @@ Validation tests are postfixed with ``-validate``. Benchmark tests are postfixed
 Sample kernels are constructed with as minimal infrastructure as possible. Their namings are much different to appeal to a broader audience.
 
 * ``simple_sgemm``: a simple GEMM kernel with ``s`` denoting single-precision floating point datatype.
-
 * ``simple_dgemm``: a simple GEMM kernel with ``d`` denoting double-precision floating point datatype.
-
 * ``simple_hgemm``: a simple GEMM kernel with ``h`` denoting half-precision floating point datatype.
-
 * ``perf_sgemm``: a performant GEMM kernel with ``s`` denoting single-precision floating point datatype.
-
 * ``perf_dgemm``: a performant GEMM kernel with ``d`` denoting double-precision floating point datatype.
-
 * ``perf_hgemm``: a performant GEMM kernel with ``h`` denoting half-precision floating point datatype.
 
 GEMV
@@ -153,7 +139,6 @@ GEneralized Matrix-Vector multiplication (or, GEMV) is another application for r
 rocWMMA implements some samples of simple GEMV demonstrations as below:
 
 * ``simple_sgemv``: Simple GEMV kernel with ``s`` denoting single-precision floating point datatype.
-
 * ``simple_dgemv``: Simple GEMV kernel with ``d`` denoting double-precision floating point datatype.
 
 DLRM
@@ -209,27 +194,17 @@ The API currently has three API contexts:
 
 The ``samples`` directory contains the sample codes for the following use cases:
 
-- ``samples/hipRTC_gemm.cpp``: For calling simple General Matrix Multiply (GEMM) algorithm demonstration without LDS memory usage and no transpose, from within the hipRTC environment
-
-- ``samples/simple_sgemv.cpp``: For calling simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose for single-precision floating point types
-
-- ``samples/simple_dgemv.cpp``: For calling simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose for double-precision floating point types
-
-- ``samples/simple_sgemm.cpp``: For calling simple GEMM algorithm demonstration without LDS memory usage and no transpose for single-precision floating point types
-
-- ``samples/simple_dgemm.cpp``: For calling simple GEMM algorithm demonstration without LDS memory usage and no transpose for double-precision floating point types
-
-- ``samples/simple_hgemm.cpp``: For calling simple GEMM algorithm demonstration without LDS memory usage and no transpose for half-precision floating point types
-
-- ``samples/perf_sgemm.cpp``: For calling the high performing multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and optimized pipeline for single-precision floating point types
-
-- ``samples/perf_dgemm.cpp``: For calling the high performing multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and optimized pipeline for double-precision floating point types
-
-- ``samples/perf_hgemm.cpp``: For calling the high performant multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and optimized pipeline for half-precision floating point types
-
-- ``samples/simple_dlrm.cpp``: For calling simple Deep Learning Recommendation Model (DLRM) for machine learning
-
-- ``samples/common.hpp``: Common code used by all the above rocWMMA samples files
+- ``samples/hipRTC_gemm.cpp``: For calling simple General Matrix Multiply (GEMM) algorithm demonstration without LDS memory usage and no transpose, from within the hipRTC environment.
+- ``samples/simple_sgemv.cpp``: For calling simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose for single-precision floating point types.
+- ``samples/simple_dgemv.cpp``: For calling simple matrix multiply-accumulate with a vector demonstration, without LDS and no transpose for double-precision floating point types.
+- ``samples/simple_sgemm.cpp``: For calling simple GEMM algorithm demonstration without LDS memory usage and no transpose for single-precision floating point types.
+- ``samples/simple_dgemm.cpp``: For calling simple GEMM algorithm demonstration without LDS memory usage and no transpose for double-precision floating point types.
+- ``samples/simple_hgemm.cpp``: For calling simple GEMM algorithm demonstration without LDS memory usage and no transpose for half-precision floating point types.
+- ``samples/perf_sgemm.cpp``: For calling the high performing multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and optimized pipeline for single-precision floating point types.
+- ``samples/perf_dgemm.cpp``: For calling the high performing multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and optimized pipeline for double-precision floating point types.
+- ``samples/perf_hgemm.cpp``: For calling the high performant multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and optimized pipeline for half-precision floating point types.
+- ``samples/simple_dlrm.cpp``: For calling simple Deep Learning Recommendation Model (DLRM) for machine learning.
+- ``samples/common.hpp``: Common code used by all the above rocWMMA samples files.
 
 ``test`` directory
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -237,13 +212,9 @@ The ``samples`` directory contains the sample codes for the following use cases:
 The ``test`` directory contains the test code support:
 
 - ``test/bin``: To generate benchmark plots from the ``gtest`` output dumps of rocWMMA's benchmark tests.
-
 - ``test/device``: Device utility kernels to support test setup and validation on GPU.
-
 - ``test/dlrm``: For various strategies of DLRM application. This test is used to validate DLRM functions using rocWMMA API.
-
 - ``test/gemm``: For various strategies of GEMM application. This test is used to validate and benchmark GEMM functions using rocWMMA API.
-
 - ``test/unit``: For testing the basic functional units of rocWMMA library.
 
 ``docs`` directory
