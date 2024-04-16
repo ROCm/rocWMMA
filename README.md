@@ -37,6 +37,8 @@ Dependencies:
 
 ## Build with CMake
 
+For more detailed information, please refer to the [rocWMMA installation guide](https://rocm.docs.amd.com/projects/rocWMMA/en/latest/installation.html).
+
 ### Project options
 
 |Option|Description|Default value|
@@ -69,7 +71,7 @@ After configuration, build with `cmake --build <build_dir> -- -j<nproc>`
 
 ## Documentation
 
-For more comprehensive documentation on installation, samples and test contents, API reference and programmer's guide you may build the documentation locally using the following commands:
+For more comprehensive documentation on installation, samples and test contents, API reference and programmer's guide you can build the documentation locally using the following commands:
 
 ```bash
 cd docs

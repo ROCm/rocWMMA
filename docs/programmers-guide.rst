@@ -37,7 +37,7 @@ For more information, refer to the `HIP API Reference  <https://rocm.docs.amd.co
 General Design Concepts
 --------------------------------
 
-rocWMMA is developed with the ``C++17`` language standard. The library takes advantage several meta-programming techniques that help to statically
+rocWMMA is developed with the ``C++17`` language standard. The library takes advantage of several meta-programming techniques that help to statically
 optimize code at compile time and generate more efficient GPU kernels. All of the code is contained within the ``rocwmma`` namespace. Due to the templated
 nature of the code, the rocWMMA API is a header-only library. The developer has the advantage of full visibility of the implementation, as well as the ability to
 integrate rocWMMA API calls directly within their own kernels. An important feature is that the integrated code has higher visibility
@@ -230,4 +230,4 @@ The ``test`` directory contains the test code support:
 Contributing
 ^^^^^^^^^^^^
 
-For those wishing to contribute to the project, please see `Contributing to ROCm  <https://github.com/ROCm/rocWMMA/blob/develop/CONTRIBUTING.md>`_.
+For those wishing to contribute to the project, please see `Contributing to rocWMMA  <https://github.com/ROCm/rocWMMA/blob/develop/CONTRIBUTING.md>`_.

@@ -21,8 +21,8 @@ When using these functions in the context of shared memory (e.g. LDS memory), ad
 may be required due to the nature of this memory usage.
 
 
-Supported architectures
-------------------------
+Supported GPU architectures
+----------------------------
 
 List of supported CDNA architectures (wave64):
 
@@ -58,6 +58,16 @@ Data Types **<Ti / To / Tc>** = <Input type / Output Type / Compute Type>, where
 * Input Type = Matrix A / B
 * Output Type = Matrix C / D
 * Compute Type = Math / accumulation type
+
+* i8 = 8-bit precision integer
+* f8 = 8-bit precision floating point
+* bf16 = 8-bit precision brain floating point
+* f16 = half-precision floating point
+* bf16 = half-precision brain floating point
+* f32 = single-precision floating point
+* i32 = 32-bit precision integer
+* xf32 = single-precision tensor floating point
+* f64 = double-precision floating point
 
 .. note::
     f16 represents equivalent support for both _Float16 and __half types.
@@ -248,6 +258,7 @@ fragment
 ^^^^^^^^
 
 .. doxygenclass:: rocwmma::fragment
+   :members:
 
 
 rocWMMA enumeration
@@ -257,6 +268,7 @@ layout_t
 ^^^^^^^^
 
 .. doxygenenum:: rocwmma::layout_t
+   :members:
 
 
 rocWMMA API functions

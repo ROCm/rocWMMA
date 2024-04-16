@@ -128,6 +128,32 @@ There are GitHub branches at the rocWMMA site with names ``rocm-major.minor.x`` 
 
 Replace ``x.y`` in the above command with the version of ROCm installed on your machine. For example, if you have ROCm 6.0 installed, then replace release/rocm-rel-x.y with release/rocm-rel-6.0.
 
+Build Documentation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To build documentation locally, run:
+
+.. code-block:: bash
+
+    cd docs
+
+    sudo apt-get update
+    sudo apt-get install doxygen
+    sudo apt-get install texlive-latex-base texlive-latex-extra
+
+    pip3 install -r sphinx/requirements.txt
+
+    python3 -m sphinx -T -E -b latex -d _build/doctrees -D language=en . _build/latex
+
+    cd _build/latex
+
+    pdflatex rocwmma.tex
+
+Running the above commands generates ``rocwmma.pdf``.
+
+Build Configuration
+^^^^^^^^^^^^^^^^^^^^
+
 You can choose to build any of the following:
 
 * library only
@@ -192,17 +218,17 @@ Here are some other example project configurations:
 .. tabularcolumns::
    |\X{1}{4}|\X{3}{4}|
 
-+-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|           Configuration           |                                                                          Command                                                                           |
-+===================================+============================================================================================================================================================+
-|               Basic               |                                      ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir>``                                       |
-+-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|         Targeting gfx908          |                      ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DAMDGPU_TARGETS=gfx908:xnack-``                      |
-+-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|            Debug build            |                         ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DCMAKE_BUILD_TYPE=Debug``                         |
-+-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Build without rocBLAS(default on) | ``CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DROCWMMA_VALIDATE_WITH_ROCBLAS=OFF -DROCWMMA_BENCHMARK_WITH_ROCBLAS=OFF`` |
-+-----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
++-----------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|           Configuration           |                                                                          Command                                                                               |
++===================================+================================================================================================================================================================+
+|               Basic               |                                      :code:`CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir>`                                       |
++-----------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|         Targeting gfx908          |                      :code:`CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DAMDGPU_TARGETS=gfx908:xnack-`                      |
++-----------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|            Debug build            |                         :code:`CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DCMAKE_BUILD_TYPE=Debug`                         |
++-----------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Build without rocBLAS(default on) | :code:`CC=/opt/rocm/bin/amdclang CXX=/opt/rocm/bin/amdclang++ cmake -B <build_dir> . -DROCWMMA_VALIDATE_WITH_ROCBLAS=OFF -DROCWMMA_BENCHMARK_WITH_ROCBLAS=OFF` |
++-----------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 After configuration, build using:
 
@@ -331,7 +357,7 @@ After configuration, build using:
     The ``assembly`` folder within ``<build_dir>`` contains a hierarchy of assembly files generated the executables in the format ``test_executable_name.s``.
     These may be viewed from your favorite text editor.
 
-Make Targets List
+Make targets list
 ^^^^^^^^^^^^^^^^^
 
 When building rocWMMA during the ``make`` step, we can specify make targets instead of defaulting ``make all``. The following table highlights relationships between high level grouped targets and individual targets.
@@ -435,7 +461,7 @@ When building rocWMMA during the ``make`` step, we can specify make targets inst
 |                                   | unpack_util_test                         |
 +-----------------------------------+------------------------------------------+
 
-Build Performance
+Build performance
 ^^^^^^^^^^^^^^^^^
 
 Depending on the resources available to the build machine and the build configuration selected, rocWMMA build times can be on the order of an hour or more. Here are some things you can do to reduce build times:
@@ -448,7 +474,7 @@ Depending on the resources available to the build machine and the build configur
 * Specify either ``ROCWMMA_BUILD_VALIDATION_TESTS`` or ``ROCWMMA_BUILD_BENCHMARK_TESTS`` as ON, and the other as OFF instead of doing both.
 * During the ``make`` command, build a specific target, e.g: ``rocwmma_gemm_tests``.
 
-Test Runtime
+Test runtime
 ^^^^^^^^^^^^^^^^^
 
 Depending on the resources available to the machine running the selected tests, rocWMMA test runtimes can be on the order of an hour or more. Here are some things you can do to reduce run-times:
@@ -463,7 +489,7 @@ Depending on the resources available to the machine running the selected tests, 
 * Use ad hoc tests to focus on a specific set of parameters.
 * Manually adjust the test cases coverage.
 
-GEMM Test Verbosity and Output Redirection
+Test verbosity and output redirection
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 GEMM tests support logging arguments that can be used to control verbosity and output redirection.
