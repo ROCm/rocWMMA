@@ -43,16 +43,94 @@
 #include "gemm_kernel_base.hpp"
 #include "performance.hpp"
 
-#ifdef ROCWMMA_VALIDATION_TESTS
+#if ROCWMMA_VALIDATION_TESTS
 #include "reference.hpp" // Vanilla CPU kernel
 #endif // ROCWMMA_VALIDATION_TESTS
 
-#if defined(ROCWMMA_VALIDATE_WITH_ROCBLAS) || defined(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
+#if ROCWMMA_ROCBLAS_INTEGRATION
 #include "rocblas_reference.hpp" // rocBLAS GPU kernel
 #endif // ROCWMMA_VALIDATE_WITH_ROCBLAS || ROCWMMA_BENCHMARK_WITH_ROCBLAS
 
 namespace rocwmma
 {
+
+    // Using Cpu reference kernel if:
+    // - Not using rocBLAS OR
+    // - Using rocBLAS and it cannot solve the problem
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename InputT,
+              typename OutputT,
+              typename ComputeT,
+              typename LayoutA,
+              typename LayoutB,
+              typename LayoutC,
+              typename LayoutD>
+    constexpr bool GemmKernelBase<BlockM,
+                                  BlockN,
+                                  BlockK,
+                                  InputT,
+                                  OutputT,
+                                  ComputeT,
+                                  LayoutA,
+                                  LayoutB,
+                                  LayoutC,
+                                  LayoutD>::mIsCpuRef
+        = !(bool)ROCWMMA_ROCBLAS_INTEGRATION
+          || ((bool)ROCWMMA_ROCBLAS_INTEGRATION
+              && !quirks::rocblas_supported<InputT, OutputT, ComputeT>::value);
+
+    // Prepare / run reference kernel if:
+    // - Validation mode OR
+    // - Benchmarking with rocBLAS and it can solve the problem
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename InputT,
+              typename OutputT,
+              typename ComputeT,
+              typename LayoutA,
+              typename LayoutB,
+              typename LayoutC,
+              typename LayoutD>
+    constexpr bool GemmKernelBase<BlockM,
+                                  BlockN,
+                                  BlockK,
+                                  InputT,
+                                  OutputT,
+                                  ComputeT,
+                                  LayoutA,
+                                  LayoutB,
+                                  LayoutC,
+                                  LayoutD>::mRunRefFlag
+        = (bool)ROCWMMA_VALIDATION_TESTS || mBenchRef;
+
+    // Benchmark the reference if:
+    // - Benchmarking with rocBLAS AND
+    // - rocBLAS can solve the problem
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename InputT,
+              typename OutputT,
+              typename ComputeT,
+              typename LayoutA,
+              typename LayoutB,
+              typename LayoutC,
+              typename LayoutD>
+    constexpr bool GemmKernelBase<BlockM,
+                                  BlockN,
+                                  BlockK,
+                                  InputT,
+                                  OutputT,
+                                  ComputeT,
+                                  LayoutA,
+                                  LayoutB,
+                                  LayoutC,
+                                  LayoutD>::mBenchRef
+        = ((bool)ROCWMMA_BENCHMARK_TESTS && ROCWMMA_BENCHMARK_WITH_ROCBLAS
+           && quirks::rocblas_supported<InputT, OutputT, ComputeT>::value);
 
     template <uint32_t BlockM,
               uint32_t BlockN,
@@ -314,18 +392,18 @@ namespace rocwmma
         mLda = mLdb = mLdc = mLdd = 0u;
         mAlpha = mBeta = static_cast<ComputeT>(0u);
 
-        mRepeats =
-#ifdef ROCWMMA_VALIDATION_TESTS
-            1u;
-#else
-            5u;
-#endif
+        mColdRuns = (bool)(ROCWMMA_VALIDATION_TESTS) ? 0u : 2u;
+        mHotRuns  = (bool)(ROCWMMA_VALIDATION_TESTS) ? 1u : 10u;
+
         mRunFlag          = true;
         mValidationResult = false;
         mMaxRelativeError = 0.0;
 
         mElapsedTimeMs = mTotalGFlops = mMeasuredTFlopsPerSec = 0.0;
-        mEfficiency = mReferenceEfficiency = -1;
+        mEfficiency                                           = -1;
+
+        mMeasuredTFlopsPerSec = 0.0;
+        mRefEfficiency        = -1;
     }
 
     template <uint32_t BlockM,
@@ -373,7 +451,6 @@ namespace rocwmma
                                  LayoutC,
                                  LayoutD>::printHeader(std::ostream& stream /* = std::cout */) const
     {
-
         return stream << "TBlkX, TBlkY, "
                       << "BlkM, BlkN, BlkK, "
                       << "MatM, MatN, MatK, "
@@ -384,9 +461,7 @@ namespace rocwmma
                       << "Problem Size(GFlops), "
                       << "TFlops/s, "
                       << "Efficiency(%), "
-#if defined(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
-                      << "rocBLAS Efficiency(%), "
-#endif // ROCWMMA_BENCHMARK_WITH_ROCBLAS
+                      << (mBenchRef ? "rocBLAS TFlops/s(%), rocBLAS Efficiency(%), " : "")
                       << "Result" << std::endl;
     }
 
@@ -421,34 +496,25 @@ namespace rocwmma
 
         if(!mRunFlag)
         {
-            stream << "n/a"
+            stream << "n/a, "
                    << ", "
                    << "n/a"
                    << ", "
                    << "n/a"
                    << ", "
                    << "n/a"
-                   << ", "
-#if defined(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
-                   << "n/a"
-                   << ", "
-#endif // ROCWMMA_BENCHMARK_WITH_ROCBLAS
-                   << "SKIPPED" << std::endl;
+                   << ", " << (mBenchRef ? "n/a, n/a, " : "") << "SKIPPED" << std::endl;
         }
         else
         {
 
             stream << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredTFlopsPerSec
                    << ", " << mEfficiency << ", "
-#if defined(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
-                   << mReferenceEfficiency << ", "
-#endif // ROCWMMA_BENCHMARK_WITH_ROCBLAS
-
-#if defined(ROCWMMA_VALIDATION_TESTS)
-                   << (mValidationResult ? "PASSED" : "FAILED")
-#else
-                   << "BENCH"
-#endif // ROCWMMA_VALIDATION_TESTS
+                   << (mBenchRef ? (std::to_string(mRefMeasuredTFlopsPerSec) + ", "
+                                    + std::to_string(mRefEfficiency) + ", ")
+                                 : "")
+                   << ((bool)ROCWMMA_VALIDATION_TESTS ? (mValidationResult ? "PASSED" : "FAILED")
+                                                      : "BENCH")
                    << std::endl;
         }
 
@@ -518,19 +584,13 @@ namespace rocwmma
                                                      mN,
                                                      std::numeric_limits<OutputT>::signaling_NaN());
 
-            // Copy to host if performing cpu validation
-#if !defined(ROCWMMA_VALIDATE_WITH_ROCBLAS) && defined(ROCWMMA_VALIDATION_TESTS)
-            dataInstance->copyDeviceToHostAll();
-#endif // !defined(ROCWMMA_VALIDATE_WITH_ROCBLAS) && defined(ROCWMMA_VALIDATION_TESTS)
-
-#if defined(ROCWMMA_VALIDATE_WITH_ROCBLAS)
-            if(!quirks::rocblas_supported<InputT, OutputT, ComputeT>::value)
+            // Initialize the host data if we are to use Cpu validation.
+            if constexpr(mRunRefFlag && mIsCpuRef)
             {
                 dataInstance->copyDeviceToHostAll();
             }
-#endif // ROCWMMA_VALIDATE_WITH_ROCBLAS
         }
-    };
+    }
 
     template <uint32_t BlockM,
               uint32_t BlockN,
@@ -584,68 +644,91 @@ namespace rocwmma
                                       this->mBeta); // beta
             };
 
+            // Cold runs for frequency warm-up
+            for(uint32_t i = 0; i < mColdRuns; ++i)
             {
-                hipEvent_t startEvent, stopEvent;
-                CHECK_HIP_ERROR(hipEventCreate(&startEvent));
-                CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
-
-                CHECK_HIP_ERROR(hipEventRecord(startEvent));
-                for(uint32_t i = 0; i < mRepeats; ++i)
-                {
-                    rocwmmaKernel();
-                }
-                CHECK_HIP_ERROR(hipEventRecord(stopEvent));
-                CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
-
-                auto timeMs = 0.0f;
-                CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
-
-                // Calculate efficiency
-                auto& deviceInfo = DeviceInfo::instance();
-
-                auto devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<InputT>();
-
-                mElapsedTimeMs        = float64_t(timeMs);
-                mTotalGFlops          = calculateGFlops(mM, mN, mK);
-                mMeasuredTFlopsPerSec = calculateTFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
-                                        * static_cast<float64_t>(mRepeats);
-
-                mEfficiency = round(mMeasuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0);
-
-                CHECK_HIP_ERROR(hipEventDestroy(startEvent));
-                CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
+                rocwmmaKernel();
             }
 
-            ///
-            /// Select and run a reference kernel (if necessary)
-            ///
+            // Use the hot runs for timing
+            hipEvent_t startEvent, stopEvent;
+            CHECK_HIP_ERROR(hipEventCreate(&startEvent));
+            CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
+            CHECK_HIP_ERROR(hipEventRecord(startEvent));
+            for(uint32_t i = 0; i < mHotRuns; ++i)
+            {
+                rocwmmaKernel();
+            }
+            CHECK_HIP_ERROR(hipEventRecord(stopEvent));
+            CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
 
-            bool                  benchRef = false;
-            std::function<void()> referenceKernel;
+            auto timeMs = 0.0f;
+            CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
 
-#if defined(ROCWMMA_VALIDATE_WITH_ROCBLAS) || defined(ROCWMMA_BENCHMARK_WITH_ROCBLAS)
+            // Calculate efficiency
+            auto& deviceInfo = DeviceInfo::instance();
 
-            // Create a rocBLAS handle to be used with rocBLAS API
-            rocblas_handle handle;
-            CHECK_ROCBLAS_ERROR(rocblas_create_handle(&handle));
+            auto devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<InputT>();
 
-            // Create a guard object to release handle when it goes out of scope.
-            using HandleGuardT = std::unique_ptr<rocblas_handle, void (*)(rocblas_handle*)>;
-            auto handleGuard   = HandleGuardT(&handle, [](rocblas_handle* handle) {
-                CHECK_ROCBLAS_ERROR(rocblas_destroy_handle(*handle));
-            });
+            mElapsedTimeMs        = float64_t(timeMs);
+            mTotalGFlops          = calculateGFlops(mM, mN, mK);
+            mMeasuredTFlopsPerSec = calculateTFlopsPerSec(mM, mN, mK, mElapsedTimeMs)
+                                    * static_cast<float64_t>(mHotRuns);
 
-            auto rocBlasKernel = [this, &handle]() {
-                auto& dataInstance = DataStorage::instance();
+            mEfficiency = round(mMeasuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0);
 
-                if constexpr((std::is_same<InputT, float8_t>::value)
-                             || (std::is_same<InputT, bfloat8_t>::value))
+            CHECK_HIP_ERROR(hipEventDestroy(startEvent));
+            CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
+
+            if constexpr(mRunRefFlag)
+            {
+                // Reference kernel selection
+                std::function<void()> refKernel;
+
+                if constexpr(mIsCpuRef)
                 {
-#if defined(ROCBLAS_DATA_TYPE_FLOAT8)
-                    {
-                        rocblas_computetype computeType = rocblas_compute_type_f32;
+
+#if ROCWMMA_VALIDATION_TESTS
+
+                    // Define fallback CPU kernel
+                    auto cpuKernel = [this]() {
+                        auto& dataInstance = DataStorage::instance();
+                        gemm_CPU<InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD>(
+                            this->mM,
+                            this->mN,
+                            this->mK,
+                            dataInstance->hostA().get(),
+                            dataInstance->hostB().get(),
+                            dataInstance->hostC().get(),
+                            dataInstance->hostD().get(),
+                            this->mAlpha,
+                            this->mBeta);
+                    };
+
+                    // Assign cpu func
+                    refKernel = cpuKernel;
+
+#endif // ROCWMMA_VALIDATION_TESTS
+                }
+                else
+                {
+
+#if ROCWMMA_ROCBLAS_INTEGRATION
+
+                    auto rocBlasKernel = [this]() {
+                        // Create a rocBLAS handle to be used with rocBLAS API
+                        rocblas_handle handle;
+                        CHECK_ROCBLAS_ERROR(rocblas_create_handle(&handle));
+
+                        auto& dataInstance = DataStorage::instance();
+
+                        static_assert((!std::is_same_v<InputT, float8_t>
+                                       && !std::is_same_v<InputT, bfloat8_t>)
+                                          || std::is_same_v<ComputeT, float32_t>,
+                                      "f8 types must have f32 compute type");
+
                         CHECK_ROCBLAS_ERROR(
-                            rocblas_gemm_ex3(handle,
+                            dispatch_rocBLAS(handle,
                                              rocblas_layout<LayoutA>::operation(), // opA
                                              rocblas_layout<LayoutB>::operation(), // opB
                                              this->mM, // M
@@ -665,132 +748,120 @@ namespace rocwmma
                                              dataInstance->deviceD().get(), // D*
                                              rocblas_types<OutputT>::type(), // d_type
                                              this->mM, // ldd (col major output only)
-                                             computeType, // compute_type
+                                             rocblas_types<ComputeT>::type(), // compute_type
                                              rocblas_gemm_algo_standard, // algo
                                              0, // solution_index
                                              0)); // flags
+
+                        rocblas_destroy_handle(handle);
+                    };
+
+                    // Assign cpu func
+                    refKernel = rocBlasKernel;
+
+#endif // ROCWMMA_ROCBLAS_INTEGRATION
+                }
+
+                // Sanity check that a reference was selected
+                if(!refKernel)
+                {
+                    std::cout << "No ref kernel\n";
+                    return;
+                }
+
+                // Prepare inputs for the reference kernel
+                auto& dataInstance = DataStorage::instance();
+
+                // rocBLAS ref
+                auto rocWMMACacheD = DataStorage::template allocDevice<OutputT>(0);
+                if constexpr(!mIsCpuRef)
+                {
+                    // A, B, C & D are cached on on device pointers from the rocWMMA run.
+                    // Need to cache rocWMMA D result device memory, then re-initialize
+                    // C and D as necessary for the reference device run.
+
+                    // Cache rocWMMA result on device only if we are validating
+                    if constexpr(!mBenchRef)
+                    {
+                        dataInstance->template reallocDevice<OutputT>(rocWMMACacheD, mM * mN);
+                        dataInstance->copyData(rocWMMACacheD, dataInstance->deviceD(), mM * mN);
                     }
-#endif
+
+                    // rocBLAS matrix C is always in col_major, so adjust it if needed
+                    if(!std::is_same<LayoutC, col_major>::value)
+                    {
+                        MatrixUtil<col_major>::fillLaunchKernel(
+                            dataInstance->deviceC().get(), mM, mN);
+                    }
+
+                    // Reset device D with NaN
+                    MatrixUtil<LayoutD>::fillValLaunchKernel(
+                        dataInstance->deviceD().get(),
+                        mM,
+                        mN,
+                        std::numeric_limits<OutputT>::signaling_NaN());
                 }
-                else
+
+                // Cold runs for frequency warm-up
+                for(uint32_t i = 0; i < mColdRuns; ++i)
                 {
-                    CHECK_ROCBLAS_ERROR(
-                        rocblas_gemm_ex(handle,
-                                        rocblas_layout<LayoutA>::operation(), // opA
-                                        rocblas_layout<LayoutB>::operation(), // opB
-                                        this->mM, // M
-                                        this->mN, // N
-                                        this->mK, // K
-                                        &(this->mAlpha), // alpha,
-                                        dataInstance->deviceA().get(), // A*,
-                                        rocblas_types<InputT>::type(), // a_type
-                                        this->mLda, // lda
-                                        dataInstance->deviceB().get(), // B*,
-                                        rocblas_types<InputT>::type(), // b_type
-                                        this->mLdb, // ldb
-                                        &(this->mBeta), // beta
-                                        dataInstance->deviceC().get(), // C*
-                                        rocblas_types<OutputT>::type(), // c_type
-                                        this->mM, // ldc (col major output only)
-                                        dataInstance->deviceD().get(), // D*
-                                        rocblas_types<OutputT>::type(), // d_type
-                                        this->mM, // ldd (col major output only)
-                                        rocblas_types<ComputeT>::type(), // compute_type
-                                        rocblas_gemm_algo_standard, // algo
-                                        0, // solution_index
-                                        0)); // flags
-                }
-            };
-            if(quirks::rocblas_supported<InputT, OutputT, ComputeT>::value)
-            {
-                auto& dataInstance = DataStorage::instance();
-
-                // A, B & C are already cached on GPU from ROCWMMA run.
-                // Rocblas matrix C, D always in col_major, so we must
-                // change C if needed
-                if(!std::is_same<LayoutC, col_major>::value)
-                {
-                    MatrixUtil<col_major>::fillLaunchKernel(dataInstance->deviceC().get(), mM, mN);
+                    refKernel();
                 }
 
-                benchRef        = true;
-                referenceKernel = rocBlasKernel;
-
-#if defined(ROCWMMA_VALIDATE_WITH_ROCBLAS)
-                // Cache the ROCWMMA result from device
-                auto rocwmmaResult = dataInstance->template allocHost<OutputT>(mM * mN);
-                dataInstance->copyData(rocwmmaResult, dataInstance->deviceD(), mM * mN);
-
-                // Reset device D with NaN
-                MatrixUtil<LayoutD>::fillValLaunchKernel(
-                    dataInstance->deviceD().get(),
-                    mM,
-                    mN,
-                    std::numeric_limits<OutputT>::signaling_NaN());
-
-                // Move the ROCWMMA result to host for analysis
-                dataInstance->copyData(dataInstance->hostD(), rocwmmaResult, mM * mN);
-#endif // ROCWMMA_VALIDATE_WITH_ROCBLAS
-            }
-#endif // ROCWMMA_VALIDATE_WITH_ROCBLAS || ROCWMMA_BENCHMARK_WITH_ROCBLAS
-
-#if defined(ROCWMMA_VALIDATION_TESTS)
-
-            // Fallback CPU kernel for validation
-            auto cpuKernel = [this]() {
-                auto& dataInstance = DataStorage::instance();
-                gemm_CPU<InputT, OutputT, ComputeT, LayoutA, LayoutB, LayoutC, LayoutD>(
-                    this->mM,
-                    this->mN,
-                    this->mK,
-                    dataInstance->hostA().get(),
-                    dataInstance->hostB().get(),
-                    dataInstance->hostC().get(),
-                    dataInstance->hostD().get(), // Cpu result on host D
-                    this->mAlpha,
-                    this->mBeta);
-            };
-
-            if(!referenceKernel)
-            {
-                benchRef        = false; // No bench for cpu
-                referenceKernel = cpuKernel;
-            }
-#endif // ROCWMMA_VALIDATION_TESTS
-
-            // Run reference kernel
-            if(referenceKernel)
-            {
+                // Hot runs for timing
                 hipEvent_t startEvent, stopEvent;
                 CHECK_HIP_ERROR(hipEventCreate(&startEvent));
                 CHECK_HIP_ERROR(hipEventCreate(&stopEvent));
-
                 CHECK_HIP_ERROR(hipEventRecord(startEvent));
-                for(uint32_t i = 0; i < mRepeats; ++i)
+                for(uint32_t i = 0; i < mHotRuns; ++i)
                 {
-                    referenceKernel();
+                    refKernel();
                 }
                 CHECK_HIP_ERROR(hipEventRecord(stopEvent));
                 CHECK_HIP_ERROR(hipEventSynchronize(stopEvent));
 
                 auto timeMs = 0.0f;
                 CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
+                CHECK_HIP_ERROR(hipEventDestroy(startEvent));
+                CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
 
-                if(benchRef)
+                // Calculate reference efficiency
+                if constexpr(mBenchRef)
                 {
-                    // Calculate GPU efficiency
+
                     auto& deviceInfo             = DeviceInfo::instance();
                     auto  devicePeakGFlopsPerSec = deviceInfo->peakGFlopsPerSec<InputT>();
 
                     auto elapsedTimeMs        = float64_t(timeMs);
                     auto measuredTFlopsPerSec = calculateTFlopsPerSec(mM, mN, mK, elapsedTimeMs)
-                                                * static_cast<float64_t>(mRepeats);
-                    mReferenceEfficiency
+                                                * static_cast<float64_t>(mHotRuns);
+
+                    mRefMeasuredTFlopsPerSec = measuredTFlopsPerSec;
+                    mRefEfficiency
                         = round(measuredTFlopsPerSec / devicePeakGFlopsPerSec * 100000.0);
                 }
 
-                CHECK_HIP_ERROR(hipEventDestroy(startEvent));
-                CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
+                // Prepare data for validation
+                if constexpr((bool)ROCWMMA_VALIDATION_TESTS)
+                {
+                    if constexpr(mIsCpuRef)
+                    {
+                        // A, B, C & D from rocWMMA run are cached on device pointers.
+                        // A, B, C & D from reference are cached on host pointers.
+                        // Copy the reference host D result to C device pointer so we
+                        // can validate the reference (device C) vs rocWMMA (device D).
+                        dataInstance->copyData(
+                            dataInstance->deviceC(), dataInstance->hostD(), mM * mN);
+                    }
+                    else
+                    {
+                        // A, B, C & D from reference run are cached on device pointers.
+                        // D from rocWMMA is cached in local device pointer.
+                        // Copy the rocWMMA local result to C device pointer so we can
+                        // validate the reference (device D) vs rocWMMA (device C).
+                        dataInstance->copyData(dataInstance->deviceC(), rocWMMACacheD, mM * mN);
+                    }
+                }
             }
         }
     }
@@ -817,28 +888,20 @@ namespace rocwmma
                         LayoutD>::validateResults()
     {
 
-#if defined(ROCWMMA_VALIDATION_TESTS)
-        if(mRunFlag)
+        if(mRunFlag && (bool)ROCWMMA_VALIDATION_TESTS)
         {
-            using DeviceLayoutD =
-#if defined(ROCWMMA_VALIDATE_WITH_ROCBLAS)
-                // rocBLAS output is col_major.
-                typename std::conditional_t<
-                    quirks::rocblas_supported<InputT, OutputT, ComputeT>::value,
-                    col_major,
-                    LayoutD>;
-#else
-                LayoutD;
-#endif // ROCWMMA_VALIDATE_WITH_ROCBLAS
+            // If CPU reference, result layout is LayoutD, otherwise rocBLAS ref is always in col_major;
+            using DeviceRefLayout = typename std::conditional_t<mIsCpuRef, LayoutD, col_major>;
 
             auto& dataInstance = DataStorage::instance();
 
-            // Allocated managed memory for results on host
-            const int64_t sizeD = mM * mN;
+            // If CPU ref, the rocWMMA result is in device D, otherwise device C
+            auto* rocWMMAResult
+                = mIsCpuRef ? dataInstance->deviceD().get() : dataInstance->deviceC().get();
 
-            // One result on host needs to be transfered to device
-            auto reference = dataInstance->template allocDevice<OutputT>(sizeD);
-            dataInstance->copyData(reference, dataInstance->hostD(), sizeD);
+            // If CPU ref, the reference result is in device C, otherwise device D
+            auto* refResult
+                = mIsCpuRef ? dataInstance->deviceC().get() : dataInstance->deviceD().get();
 
             // Give more error tolerance to ComputeT = fp16,
             // due to MFMA output is always fp32. We downcast the MFMA result to fp16, which
@@ -851,18 +914,11 @@ namespace rocwmma
             double errorTolerance = sizeof(ComputeT) < sizeof(float32_t) ? 100.0 : 10.0;
 
             std::tie(mValidationResult, mMaxRelativeError)
-                = compareEqualLaunchKernel<OutputT, OutputT, DeviceLayoutD, LayoutD>(
-                    dataInstance->deviceD().get(), reference.get(), mM, mN, errorTolerance);
-
-            // auto result = dataInstance->template allocHost<OutputT>(sizeD);
-            // dataInstance->copyData(result, dataInstance->deviceD(), sizeD);
-
-            // MatrixUtil<DeviceLayoutD>::print(dataInstance->hostD().get(), mM, mN);
-            // MatrixUtil<LayoutD>::print(result.get(), mM, mN);
+                = compareEqualLaunchKernel<OutputT, OutputT, LayoutD, DeviceRefLayout>(
+                    rocWMMAResult, refResult, mM, mN, errorTolerance);
 
             EXPECT_TRUE(mValidationResult) << "Max relative error: " << mMaxRelativeError;
         }
-#endif // ROCWMMA_VALIDATION_TESTS
     }
 
     template <uint32_t BlockM,
