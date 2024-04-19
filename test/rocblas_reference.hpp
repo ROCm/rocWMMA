@@ -262,12 +262,122 @@ namespace rocwmma
         }
     };
 
+    //! @brief Dispatcher for rocBLAS.
+    //! Need to call different interface for f8 validation
+    auto dispatch_rocBLAS(rocblas_handle    handle,
+                          rocblas_operation opA,
+                          rocblas_operation opB,
+                          rocblas_int       m,
+                          rocblas_int       n,
+                          rocblas_int       k,
+                          const void*       alpha,
+                          const void*       a,
+                          rocblas_datatype  a_type,
+                          rocblas_int       lda,
+                          const void*       b,
+                          rocblas_datatype  b_type,
+                          rocblas_int       ldb,
+                          const void*       beta,
+                          const void*       c,
+                          rocblas_datatype  c_type,
+                          rocblas_int       ldc,
+                          void*             d,
+                          rocblas_datatype  d_type,
+                          rocblas_int       ldd,
+                          rocblas_datatype  compute_type,
+                          rocblas_gemm_algo algo,
+                          int32_t           solution_index,
+                          uint32_t          flags)
+    {
+#if defined(ROCBLAS_DATA_TYPE_FLOAT8)
+        if(a_type == rocblas_datatype_f8_r || b_type == rocblas_datatype_f8_r
+           || a_type == rocblas_datatype_bf8_r || b_type == rocblas_datatype_bf8_r)
+        {
+            if(compute_type != rocblas_datatype_f32_r)
+            {
+                std::cerr << "float8_t and bfloat8_t input types must have f32 compute type with "
+                             "this version of rocBLAS"
+                          << std::endl;
+                return rocblas_status_not_implemented;
+            }
+
+            // rocblas_gemm_ex3 needs a rocblas_computetype
+            rocblas_computetype compute_type_f32 = rocblas_compute_type_f32;
+            if(a_type == rocblas_datatype_f8_r && b_type == rocblas_datatype_f8_r)
+            {
+                compute_type_f32 = rocblas_compute_type_f8_f8_f32;
+            }
+            else if(a_type == rocblas_datatype_f8_r && b_type == rocblas_datatype_bf8_r)
+            {
+                compute_type_f32 = rocblas_compute_type_f8_bf8_f32;
+            }
+            else if(a_type == rocblas_datatype_bf8_r && b_type == rocblas_datatype_f8_r)
+            {
+                compute_type_f32 = rocblas_compute_type_bf8_f8_f32;
+            }
+            else if(a_type == rocblas_datatype_bf8_r && b_type == rocblas_datatype_bf8_r)
+            {
+                compute_type_f32 = rocblas_compute_type_bf8_bf8_f32;
+            }
+
+            return rocblas_gemm_ex3(handle,
+                                    opA,
+                                    opB,
+                                    m,
+                                    n,
+                                    k,
+                                    alpha,
+                                    a,
+                                    a_type,
+                                    lda,
+                                    b,
+                                    b_type,
+                                    ldb,
+                                    beta,
+                                    c,
+                                    c_type,
+                                    ldc,
+                                    d,
+                                    d_type,
+                                    ldd,
+                                    compute_type_f32,
+                                    algo,
+                                    solution_index,
+                                    flags);
+        }
+#endif
+
+        return rocblas_gemm_ex(handle,
+                               opA,
+                               opB,
+                               m,
+                               n,
+                               k,
+                               alpha,
+                               a,
+                               a_type,
+                               lda,
+                               b,
+                               b_type,
+                               ldb,
+                               beta,
+                               c,
+                               c_type,
+                               ldc,
+                               d,
+                               d_type,
+                               ldd,
+                               compute_type,
+                               algo,
+                               solution_index,
+                               flags);
+    }
     /*
-* Rocblas notes:
-* Layouts C and D are always assumed as col_major
-* Non-transpose (N) is col-major
-* Transpose (T) is row-major
-*/
+    * Rocblas notes:
+    * Layouts C and D are always assumed as col_major
+    * Non-transpose (N) is col-major
+    * Transpose (T) is row-major
+    */
     template <typename InputT,
               typename OutputT,
               typename ComputeT,
@@ -283,10 +393,11 @@ namespace rocwmma
                       ComputeT       alpha,
                       ComputeT       beta)
     {
-        rocblas_datatype a_type = rocblas_types<InputT>::type();
-        rocblas_datatype b_type = rocblas_types<InputT>::type();
-        rocblas_datatype c_type = rocblas_types<OutputT>::type();
-        rocblas_datatype d_type = rocblas_types<OutputT>::type();
+        rocblas_datatype a_type       = rocblas_types<InputT>::type();
+        rocblas_datatype b_type       = rocblas_types<InputT>::type();
+        rocblas_datatype c_type       = rocblas_types<OutputT>::type();
+        rocblas_datatype d_type       = rocblas_types<OutputT>::type();
+        rocblas_datatype compute_type = rocblas_types<ComputeT>::type();
 
         using a_t = typename rocblas_types<InputT>::DataType;
         using b_t = typename rocblas_types<InputT>::DataType;
@@ -332,64 +443,38 @@ namespace rocwmma
 
         if((std::is_same<InputT, float8_t>::value) || (std::is_same<InputT, bfloat8_t>::value))
         {
-#if defined(ROCBLAS_DATA_TYPE_FLOAT8)
-            {
-                rocblas_computetype compute_type = rocblas_compute_type_f32;
-                CHECK_ROCBLAS_ERROR(rocblas_gemm_ex3(handle,
-                                                     opA,
-                                                     opB,
-                                                     m,
-                                                     n,
-                                                     k,
-                                                     &alpha,
-                                                     da,
-                                                     a_type,
-                                                     lda,
-                                                     db,
-                                                     b_type,
-                                                     ldb,
-                                                     &beta,
-                                                     dc,
-                                                     c_type,
-                                                     ldc,
-                                                     dd,
-                                                     d_type,
-                                                     ldd,
-                                                     compute_type,
-                                                     algo,
-                                                     solution_index,
-                                                     flags));
-            }
+#if !defined(ROCBLAS_DATA_TYPE_FLOAT8)
+            std::cerr
+                << "float8_t and bfloat8_t types are not supported with this version of rocBLAS"
+                << std::endl;
+            return;
 #endif
         }
-        else
-        {
-            rocblas_datatype compute_type = rocblas_types<ComputeT>::type();
-            CHECK_ROCBLAS_ERROR(rocblas_gemm_ex(handle,
-                                                opA,
-                                                opB,
-                                                m,
-                                                n,
-                                                k,
-                                                &alpha,
-                                                da,
-                                                a_type,
-                                                lda,
-                                                db,
-                                                b_type,
-                                                ldb,
-                                                &beta,
-                                                dc,
-                                                c_type,
-                                                ldc,
-                                                dd,
-                                                d_type,
-                                                ldd,
-                                                compute_type,
-                                                algo,
-                                                solution_index,
-                                                flags));
-        }
+
+        CHECK_ROCBLAS_ERROR(dispatch_rocBLAS(handle,
+                                             opA,
+                                             opB,
+                                             m,
+                                             n,
+                                             k,
+                                             &alpha,
+                                             da,
+                                             a_type,
+                                             lda,
+                                             db,
+                                             b_type,
+                                             ldb,
+                                             &beta,
+                                             dc,
+                                             c_type,
+                                             ldc,
+                                             dd,
+                                             d_type,
+                                             ldd,
+                                             compute_type,
+                                             algo,
+                                             solution_index,
+                                             flags));
 
         // copy output from device to CPU
         CHECK_HIP_ERROR(hipMemcpy(&hd[0], dd, sizeof(d_t) * size_d, hipMemcpyDeviceToHost));

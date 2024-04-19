@@ -39,6 +39,8 @@
 
 #include <rocwmma/internal/types.hpp>
 
+#include "test_config.hpp"
+
 #include "device/common.hpp"
 
 #ifndef CHECK_HIP_ERROR
