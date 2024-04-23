@@ -7,10 +7,22 @@ Documentation for rocWMMA is available at
 
 ### Additions
 
+* Added internal utilities for element-wise vector transforms
+* Added internal utilities for cross-lane vector transforms
+* Implemented internal aos<->soa transforms for block sizes of 16, 32, 64, 128 and 256 and vector widths of 2, 4, 8 and 16
+* Added tests for new internal transforms
+
 ### Changes
+
+* Improved loading layouts by increasing vector width for fragments with blockDim > 32
+* API applyDataLayout transform now accepts WaveCount template argument for cooperative fragments
+* API applyDataLayout transform now physically applies aos<->soa transform as necessary
+* Refactored entry-point of std library usage to improve hipRTC support
+* Documentation updates for installation, programmer's guide and API reference
 
 ### Fixes
 
+* Fixed some header includes ordering to improve portability
 
 ## rocWMMA 1.4.0 for ROCm 6.1.0
 
