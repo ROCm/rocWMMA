@@ -24,7 +24,7 @@
  #
  ###############################################################################
 
-cmake_minimum_required( VERSION 3.5 )
+cmake_minimum_required( VERSION 3.14 )
 
 # This has to be initialized before the project() command appears
 # Set the default of CMAKE_BUILD_TYPE to be release, unless user specifies with -D.  MSVC_IDE does not use CMAKE_BUILD_TYPE
@@ -75,7 +75,7 @@ include(ROCMCheckTargetIds)
 include(ROCMClients)
 
 # Versioning via rocm-cmake
-set ( VERSION_STRING "1.3.0" )
+set ( VERSION_STRING "1.5.0" )
 rocm_setup_version( VERSION ${VERSION_STRING} )
 
 # configure a header file to pass the CMake version settings to the source
