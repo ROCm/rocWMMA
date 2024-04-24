@@ -44,11 +44,12 @@ integrate rocWMMA API calls directly within their own kernels. An important feat
 to the compiler's optimization passes where there is higher potential to generate more efficient device code. Moreover, no expensive host-device transfers or
 external kernel invokations are imposed by the API.
 
-The programming model that is the most useful with the rocWMMA API is wavefront-centric, in that all function calls will be assumed involve the entire wavefront. In a more general
+The programming model that is the most useful with the rocWMMA API is wavefront-centric. In a more general
 sense, loading and storing data or mma calls are assumed to involve the entire wavefront (or, warp). In the collaborative API, we can assume that other wavefronts in the
-same threadblock may collaborate moving data around.
+same threadblock may collaborate moving data from one location to another.
 
-Wavefronts will abstract blocks of data into ``fragments``, which are designed to encapsulate meta-data properties about the blocks in different contexts, along with the data itself:
+The rocWMMA API can eliminate a very large amount of boiler-plate code as it provides tools to decompose matrix multiply-accumulate based problems into
+blocks, or fragments of data that may be efficiently processed by individual wavefronts. Wavefronts will abstract blocks of data into ``fragments``, which are designed to encapsulate meta-data properties about the blocks in different contexts, along with the data itself:
 
 - a general geometric shape (e.g. BlockM/N/K dimensions)
 - a context of the provenance of the data (e.g. ``matrix_a`` or ``matrix_b``)
@@ -57,15 +58,13 @@ Wavefronts will abstract blocks of data into ``fragments``, which are designed t
 
 These basic traits are then used to decide things like how much storage is needed, and how rocWMMA will organize individual threads in a layout to fetch or store the data.
 ``Fragments`` are powerful objects because they are versatile in configuring and representing data, and their meta-properties propagate easily via Argument
-Dependent Lookup (ADL) and other deduction techniques. Of major importance to rocWMMA, the user first configures the fragments correctly and rocWMMA conveniently takes
-care of the rest. The rocWMMA API can eliminate a very large amount of boiler-plate code as it provides tools to decompose matrix multiply-accumulate based problems into
-blocks, or fragments of data that may be efficiently processed by individual wavefronts.
+Dependent Lookup (ADL) and other deduction techniques. In practice, the user must simply configure the fragments correctly for their problem and rocWMMA conveniently takes care of the rest.
 
 The implementation code is generally encapsulated into different layers of objects, fulfilling specific interface communications (from low level functions to API level):
 
 - Unit backend operations. These are often wrappers to device-specific functions such as intrinsics that usually prefixed with ``amdgcn_*``. These functions translate inputs into raw vector forms and addresses required by the low-level intrinsics. This backend-area of the code usually handles architecture or device-specific behavior differences.
 - Vector operations. This level of objects such as ``OpaqueLoad`` or ``OpaqueStore`` handle variable-sized vector inputs and marshall them into unrolled unit backend operations. They encompass thread-wise details of vector operations. These classes provide a consistent functional interface for input vectors of all sizes, independent of device architecture, whose details are handled at a lower level.
-- Fragment operations. This is the API level of rocWMMA where user data is stored and manipulated in ``fragment`` objects. Fragment objects can be visualized as geometric 'blocks' of data in the perspective of the current wavefront, which are to be stored as vectors. Each of the loading / storing and mma operations provided by rocWMMA are in the perspective of the wavefront, assuming that all threads in the wavefront are participating under the hood. This layer's implementation translates wavefront fragment operations into vector operations and so on. This way, the rocWMMA API experience intends to be seamless across different device architectures and platforms.
+- Fragment operations. This is the API level of rocWMMA where user data is stored and manipulated in ``fragment`` objects. Fragment objects can be visualized as geometric 'blocks' of data in the perspective of the current wavefront, which are to be stored as vectors. Each of the loading / storing and mma operations provided by rocWMMA are in the perspective of the wavefront, assuming that all threads in the wavefront are participating under the hood. This layer's implementation translates wavefront fragment operations into vector operations and so on. The encapsulation of rocWMMA into these separate layers allows for an API experience that is seamless across different device architectures and platforms.
 
 --------------------------------
 Nomenclature
@@ -81,7 +80,7 @@ rocWMMA implements many varieties of testing and sample kernels for this purpose
 .. code-block:: bash
 
     PGR# - Prefetch Global Read lookup stages. PGR0 = no global read prefetch. PGR1 = 1 stage global read prefetch.
-    LB# - Lds buffer count. LB0 = no lds usage, LB2 = 2 Lds buffers used for swap.
+    LB# - LDS buffer count. LB0 = no LDS usage, LB2 = 2 LDS buffers used for swap.
     MP# - MFMA instruction priority. MP0 = default MFMA instruction priority of 0. MP1 = raise MFMA instruction priority to 1.
     MB - Multiple output blocks targeted per wave
     SB - Single output block target per wave
@@ -92,29 +91,29 @@ rocWMMA implements many varieties of testing and sample kernels for this purpose
     WG - Cooperative load / store per macro tile
 
 * ``gemm_PGR0_LB0_MP0_SB_NC``: The simplest blocked GEMM example, which targets one output
-  block of matrix multiplication per wave. No prefetch, no lDs usage, default MFMA prioritization, single
+  block of matrix multiplication per wave. No prefetch, no LDS usage, default MFMA prioritization, single
   block output and non-collaborative.
 
 * ``gemm_PGR0_LB0_MP0_MB_NC``: Implements a multi-block GEMM where each wave is responsible
-  for a BlocksX x BlocksY grid of output blocks. No prefetch, no lDs usage, default MFMA prioritization,
+  for a BlocksX x BlocksY grid of output blocks. No prefetch, no LDS usage, default MFMA prioritization,
   multiple blocks output, and non-collaborative.
 
 * ``gemm_PGR1_LB2_MP0_MB_CP_BLK``: Implements a multi-block GEMM where each wave is
   responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to
   implement a data prefetching pipeline and collaborates with other waves to improve performance.
-  Implements single stage prefetch, double lDs buffer, default MFMA prioritization, multiple blocks
+  Implements single stage prefetch, double LDS buffer, default MFMA prioritization, multiple blocks
   output, and is block-tile collaborative in global read and local write.
 
 * ``gemm_PGR1_LB2_MP0_MB_CP_WV``: Implements a multi-block GEMM where each wave is
   responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to
   implement a data prefetching pipeline and collaborates with other waves to improve performance.
-  Implements single stage prefetch, double lDs buffer, default MFMA prioritization, multiple blocks
+  Implements single stage prefetch, double LDS buffer, default MFMA prioritization, multiple blocks
   output, and is wave-tile collaborative in global read and local write.
 
 * ``gemm_PGR1_LB2_MP0_MB_CP_WG``: Implements a multi-block GEMM where each wave is
   responsible for a BlocksX x BlocksY grid of output blocks. This kernel leverages shared memory to
   implement a data prefetching pipeline and collaborates with other waves to improve performance.
-  Implements single stage prefetch, double lDs buffer, default MFMA prioritization, multiple blocks
+  Implements single stage prefetch, double LDS buffer, default MFMA prioritization, multiple blocks
   output and is macro-tile collaborative in global read and local write.
 
 * ``Ad Hoc Test``: An executable that focuses on a specific set of kernel parameters. This is used as a
@@ -188,6 +187,7 @@ The API currently has three API contexts:
   - Cooperative loading and storing
   - Threadblock synchronization and flow control
   - Utility code
+  - Data layout transformation utilities
 
 ``samples`` directory
 ^^^^^^^^^^^^^^^^^^^^^^^

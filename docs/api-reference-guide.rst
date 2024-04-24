@@ -61,7 +61,7 @@ Data Types **<Ti / To / Tc>** = <Input type / Output Type / Compute Type>, where
 
 * i8 = 8-bit precision integer
 * f8 = 8-bit precision floating point
-* bf16 = 8-bit precision brain floating point
+* bf8 = 8-bit precision brain floating point
 * f16 = half-precision floating point
 * bf16 = half-precision brain floating point
 * f32 = single-precision floating point

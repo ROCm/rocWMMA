@@ -105,7 +105,7 @@ rocWMMA is designed to have minimal external dependencies such that it is light-
 Download rocWMMA
 ^^^^^^^^^^^^^^^^^
 
-The rocWMMA source code is available at the `rocWMMA github page <https://github.com/ROCmSoftwarePlatform/rocWMMA>`_. rocWMMA has a minimum ROCm support version 6.0.
+The rocWMMA source code is available at the `rocWMMA github page <https://github.com/ROCm/rocWMMA>`_. rocWMMA has a minimum ROCm support version 6.0.
 To check the ROCm version on an Ubuntu system, use:
 
 ::
@@ -131,7 +131,7 @@ Replace ``x.y`` in the above command with the version of ROCm installed on your 
 Build Documentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To build documentation locally, run:
+To build documentation locally as a pdf, run:
 
 .. code-block:: bash
 
@@ -150,6 +150,18 @@ To build documentation locally, run:
     pdflatex rocwmma.tex
 
 Running the above commands generates ``rocwmma.pdf``.
+
+To build documentation locally as html, run:
+
+.. code-block:: bash
+
+    cd docs
+
+    pip3 install -r sphinx/requirements.txt
+
+    python3 -m sphinx -T -E -b html -d _build/doctrees -D language=en . _build/html
+
+The HTML documentation can be viewed in your browser by opening the ``docs/_build/html/index.html`` result.
 
 Build Configuration
 ^^^^^^^^^^^^^^^^^^^^
@@ -335,8 +347,11 @@ Executable Name                               Description
 ``unit/vector_util_test``                       Tests internal vector manipulation utilities implementation
 ============================================= ===================================================================================================================================================
 
-\*= validate: Executables that compare outputs for correctness against reference sources such as CPU or rocBLAS calculations.
-\*= bench: Executables that measure kernel execution speeds and may compare against those of rocBLAS references.
+.. note::
+
+    \*= validate: Executables that compare outputs for correctness against reference sources such as CPU or rocBLAS calculations.
+
+    \*= bench: Executables that measure kernel execution speeds and may compare against those of rocBLAS references.
 
 Build library, tests, and assembly
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

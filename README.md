@@ -71,7 +71,9 @@ After configuration, build with `cmake --build <build_dir> -- -j<nproc>`
 
 ## Documentation
 
-For more comprehensive documentation on installation, samples and test contents, API reference and programmer's guide you can build the documentation locally using the following commands:
+For more comprehensive documentation on installation, samples and test contents, API reference and programmer's guide you can build the documentation locally in different ways.
+
+### Html
 
 ```bash
 cd docs
@@ -82,6 +84,26 @@ python3 -m sphinx -T -E -b html -d _build/doctrees -D language=en . _build/html
 ```
 
 The HTML documentation can be viewed in your browser by opening docs/_build/html/index.html result.
+
+### Pdf
+
+```bash
+cd docs
+
+sudo apt-get update
+sudo apt-get install doxygen
+sudo apt-get install texlive-latex-base texlive-latex-extra
+
+pip3 install -r sphinx/requirements.txt
+
+python3 -m sphinx -T -E -b latex -d _build/doctrees -D language=en . _build/latex
+
+cd _build/latex
+
+pdflatex rocwmma.tex
+```
+
+Running the above commands generates `rocwmma.pdf`.
 
 The latest official documentation for rocWMMA is available at:
 [https://rocm.docs.amd.com/projects/rocWMMA/en/latest/index.html](https://rocm.docs.amd.com/projects/rocWMMA/en/latest/index.html).
