@@ -35,7 +35,8 @@ namespace rocwmma
     template <typename T>
     __device__ inline float64_t toDouble(T const& val)
     {
-        return static_cast<float64_t>(static_cast<float32_t>(val));
+        // TODO: deprecate. Not needed anymore because bfloat16_t has float operator
+        return static_cast<double>(val);
     }
 
     __device__ inline uint32_t rowMjr(uint32_t row, uint32_t col, uint32_t ld)
