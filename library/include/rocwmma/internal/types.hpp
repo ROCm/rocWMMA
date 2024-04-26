@@ -43,27 +43,11 @@ namespace rocwmma
 {
 
     /**
- * \defgroup DataTypes Data Type Metadata
+ * \defgroup Datatypes Datatypes
  *
- * @brief Definition and metadata on supported data types of matrices.
+ * @brief Summary of datatypes used in rocWMMA.
  *
  * @{
- *
- * Native Data Types:
- * float64_t = f64 = double
- * float = f32
- * _Float16 = f16
- * int8
- * uint8
- * int16
- * int32
- * uint32
- *
- *
- * Non-Native Data Types:
- * h16 = __half
- * bf16 = bfloat16
- *
  */
 
     // Native types
@@ -109,44 +93,6 @@ namespace rocwmma
 
     using xfloat32_t = rocwmma_xfloat32;
 
-    // clang-format off
-
-    // Data layout meta-tags
-    /*! \struct row_major
- *  \brief Data/In-memory Layout as Row Major
- */
-    struct row_major{};
-    /*! \struct col_major
- *  \brief Data/In-memory Layout as Column Major
- */
-    struct col_major{};
-
-    // Fragment usage meta-tags
-    /*! \struct matrix_a
- *  \brief Input Matrix A
- */
-    struct matrix_a{};
-    /*! \struct matrix_b
- *  \brief Input Matrix B
- */
-    struct matrix_b{};
-    /*! \struct accumulator
- *  \brief Input/Output Matrix Accumulator
- */
-    struct accumulator{};
-
-    // clang-format on
-
-    /*! \struct layout_t
- *  \brief Definition of Runtime data layout flags
- *  @var mem_row_major
- *  @var mem_col_major
- */
-    enum layout_t : uint32_t
-    {
-        mem_row_major,
-        mem_col_major
-    };
     /** @}*/
 
 } // namespace rocwmma

@@ -562,6 +562,7 @@ namespace rocwmma
         // xf32 mantissa is 7 bits
         return ((int32_t)1 << 8);
     }
+
 #endif // !defined(__HIPCC_RTC__)
 
 } // namespace rocwmma

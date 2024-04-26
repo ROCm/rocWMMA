@@ -26,6 +26,7 @@
 #ifndef ROCWMMA_IO_LAYOUT_HPP
 #define ROCWMMA_IO_LAYOUT_HPP
 
+#include "api_fwd.hpp"
 #include "constants.hpp"
 #include "layout.hpp"
 #include "types.hpp"

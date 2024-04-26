@@ -57,26 +57,15 @@
 
 namespace rocwmma
 {
-    namespace detail
-    {
-        // Ensure that MFMA fragments for A and B have orthogonal layouts
-        // template <typename FragA, typename FragB>
-        // struct MfmaCheck : public MatrixLayout::detail::OrthogonalCheck<
-        //                        typename GetIOShape_t<FragA>::MatrixLayout,
-        //                        typename GetIOShape_t<FragB>::MatrixLayout>
-        // {
-        // };
-    }
-
     // fragment implementations
     template <typename MatrixT,
               uint32_t BlockM,
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename LayoutT>
-    ROCWMMA_DEVICE
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::fragment(const fragment& other)
+              typename DataLayoutT>
+    ROCWMMA_DEVICE fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::fragment(
+        const fragment& other)
         : mStorage(other.mStorage)
     {
     }
@@ -86,10 +75,10 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename LayoutT>
-    ROCWMMA_DEVICE fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>&
-                   fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator=(
-            const fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>& other)
+              typename DataLayoutT>
+    ROCWMMA_DEVICE fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>&
+                   fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::operator=(
+            const fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& other)
     {
         mStorage = other.mStorage;
         return *this;
@@ -100,9 +89,9 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename LayoutT>
+              typename DataLayoutT>
     ROCWMMA_DEVICE inline DataT&
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator[](uint32_t index)
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::operator[](uint32_t index)
     {
         return mAccess.data[index];
     }
@@ -112,9 +101,9 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename LayoutT>
+              typename DataLayoutT>
     ROCWMMA_DEVICE inline auto
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator*() ->
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::operator*() ->
         typename Traits::StorageT&
     {
         return mStorage;
@@ -125,9 +114,10 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename LayoutT>
+              typename DataLayoutT>
     ROCWMMA_DEVICE inline DataT const&
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator[](uint32_t index) const
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::operator[](
+            uint32_t index) const
     {
         return mAccess.data[index];
     }
@@ -137,9 +127,9 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename LayoutT>
+              typename DataLayoutT>
     ROCWMMA_DEVICE inline auto
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::operator*() const ->
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::operator*() const ->
         typename Traits::StorageT const&
     {
         return mStorage;
@@ -150,9 +140,9 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename LayoutT>
+              typename DataLayoutT>
     ROCWMMA_DEVICE constexpr inline uint32_t
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::height()
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::height()
     {
         return GetIOShape_t<decltype(fragment())>::BlockHeight;
     }
@@ -162,9 +152,9 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename LayoutT>
+              typename DataLayoutT>
     ROCWMMA_DEVICE constexpr inline uint32_t
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::width()
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::width()
     {
         return GetIOShape_t<decltype(fragment())>::BlockWidth;
     }
@@ -174,9 +164,9 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename LayoutT>
+              typename DataLayoutT>
     ROCWMMA_DEVICE constexpr inline uint32_t
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::blockDim()
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::blockDim()
     {
         return GetIOShape_t<decltype(fragment())>::BlockDim;
     }
@@ -186,9 +176,9 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename LayoutT>
+              typename DataLayoutT>
     ROCWMMA_DEVICE constexpr inline uint32_t
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::kDim()
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::kDim()
     {
         return GetIOShape_t<decltype(fragment())>::KDim;
     }
@@ -198,9 +188,9 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename LayoutT>
+              typename DataLayoutT>
     ROCWMMA_DEVICE constexpr inline uint32_t
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, LayoutT>::size()
+        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::size()
     {
         return num_elements;
     }
@@ -210,17 +200,17 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayout>
+              typename DataLayoutT>
     ROCWMMA_DEVICE void
-        fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
-                      DataT                                                         value)
+        fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag,
+                      DataT                                                          value)
     {
         using FragT       = decay_t<decltype(frag)>;
         using Broadcaster = typename GetIOConfig_t<FragT>::Broadcaster;
 
         // Sanity check
         static_assert(is_same<typename Broadcaster::Traits::BroadcastT,
-                                   typename FragT::Traits::AccessT>::value,
+                              typename FragT::Traits::AccessT>::value,
                       "Broadcast input and fragment access types do not match");
 
         Broadcaster::exec(frag.mAccess, value);
@@ -231,17 +221,17 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayout>
+              typename DataLayoutT>
     ROCWMMA_DEVICE void
-        load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>& frag,
-                         const DataT*                                                  data,
-                         uint32_t                                                      ldm)
+        load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag,
+                         const DataT*                                                   data,
+                         uint32_t                                                       ldm)
     {
         using FragT  = decay_t<decltype(frag)>;
         using Loader = typename GetIOConfig_t<FragT>::Loader;
 
         // Sanity checks
-        static_assert(!is_same<DataLayout, void>::value,
+        static_assert(!is_same<DataLayoutT, void>::value,
                       "Must provide layout information. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
@@ -278,17 +268,17 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename DataT,
-              typename DataLayout>
+              typename DataLayoutT>
     ROCWMMA_DEVICE void
-        store_matrix_sync(DataT*                                                              data,
-                          fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout> const& frag,
-                          uint32_t                                                            ldm)
+        store_matrix_sync(DataT*                                                               data,
+                          fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag,
+                          uint32_t                                                             ldm)
     {
         using FragT  = decay_t<decltype(frag)>;
         using Storer = typename GetIOConfig_t<FragT>::Storer;
 
         // Sanity check
-        static_assert(!is_same<DataLayout, void>::value,
+        static_assert(!is_same<DataLayoutT, void>::value,
                       "Must provide data layout. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
 
@@ -339,13 +329,37 @@ namespace rocwmma
         using FragA = decay_t<decltype(a)>;
         using FragB = decay_t<decltype(b)>;
 
-        // Sanity check
-        // static_assert(detail::MfmaCheck<FragA, FragB>::value,
-        //              "A and B fragment layouts must be orthogonal");
-        using MMA = conditional_t<ROCWMMA_ARCH_GFX9,
-                                                Mfma<InputT, ComputeT, BlockM, BlockN, BlockK>,
-                                                Wmma<InputT, ComputeT, BlockM, BlockN, BlockK>>;
+        using IOConfigA = GetIOConfig_t<FragA>;
+        using IOConfigB = GetIOConfig_t<FragB>;
 
+        // Sanity checks
+        static_assert((IOConfigA::IOShape::BlockDim >= 16) && (IOConfigB::IOShape::BlockDim >= 16)
+                          && (IOConfigA::IOShape::BlockDim <= 32)
+                          && (IOConfigB::IOShape::BlockDim <= 32),
+                      "Input fragment BlockDim is not mfma friendly");
+
+        static_assert(IOConfigA::IOShape::KDim == IOConfigB::IOShape::KDim,
+                      "KDim of input fragments must match");
+
+        static_assert(is_orthogonal_v<typename IOConfigA::IOLayout::MatrixLayout,
+                                      typename IOConfigB::IOLayout::MatrixLayout>,
+                      "Input fragment matrix layouts are not orthogonal");
+
+        static_assert(is_same_v<typename IOConfigA::IOLayout::RegisterLayout,
+                                typename IOConfigB::IOLayout::RegisterLayout>,
+                      "Input fragment register layouts do not match");
+
+        static_assert(is_same_v<typename IOConfigA::IOLayout::RegisterLayout,
+                                RegisterLayout::template Soa<IOConfigA::IOShape::BlockDim,
+                                                             IOConfigA::IOLayout::MaxVW>>,
+                      "Input fragment register layouts are not mfma friendly");
+
+        // Gfx9 uses MFMA, gfx11 uses WMMA
+        using MMA = conditional_t<ROCWMMA_ARCH_GFX9,
+                                  Mfma<InputT, ComputeT, BlockM, BlockN, BlockK>,
+                                  Wmma<InputT, ComputeT, BlockM, BlockN, BlockK>>;
+
+        // mma functions operate on packed vectors
         (*d) = MMA::exec(*a, *b, *c);
     }
 
