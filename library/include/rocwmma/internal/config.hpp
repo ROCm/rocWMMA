@@ -26,9 +26,6 @@
 #ifndef ROCWMMA_CONFIG_HPP
 #define ROCWMMA_CONFIG_HPP
 
-namespace rocwmma
-{
-
 ///
 /// Architecture support
 /// Guaranteed symbols:
@@ -148,27 +145,21 @@ namespace rocwmma
 #define ROCWMMA_NO_HALF 0
 #endif // HIP_NO_HALF
 
-#if ROCWMMA_NO_HALF || (!ROCWMMA_NO_HALF && defined(__HIP_NO_HALF_CONVERSIONS__))
-#define ROCWMMA_TESTS_NO_HALF 1
-#else
-#define ROCWMMA_TESTS_NO_HALF 0
-#endif // !ROCWMMA_NO_HALF && defined(__HIP_NO_HALF_CONVERSIONS__)
-
 ///
 /// Sanity checks
 ///
 #if ROCWMMA_ARCH_GFX11
-    static_assert((bool)(ROCWMMA_WAVE32_MODE) && !(bool)(ROCWMMA_WAVE64_MODE),
-                  "rocWMMA supports only wave32 for gfx11 arch");
-    static_assert((bool)(ROCWMMA_BLOCK_DIM_16_SUPPORTED) && !(bool)(ROCWMMA_BLOCK_DIM_32_SUPPORTED),
-                  "rocWMMA supports only block size of 16 for gfx11 arch");
+static_assert((bool)(ROCWMMA_WAVE32_MODE) && !(bool)(ROCWMMA_WAVE64_MODE),
+              "rocWMMA supports only wave32 for gfx11 arch");
+static_assert((bool)(ROCWMMA_BLOCK_DIM_16_SUPPORTED) && !(bool)(ROCWMMA_BLOCK_DIM_32_SUPPORTED),
+              "rocWMMA supports only block size of 16 for gfx11 arch");
 #endif
 
 #if ROCWMMA_ARCH_GFX9
-    static_assert(!(bool)(ROCWMMA_WAVE32_MODE) && (bool)(ROCWMMA_WAVE64_MODE),
-                  "rocWMMA supports only wave64 for gfx9 arch");
-    static_assert((bool)(ROCWMMA_BLOCK_DIM_16_SUPPORTED) && (bool)(ROCWMMA_BLOCK_DIM_32_SUPPORTED),
-                  "rocWMMA requires block size of 16 and 32 for gfx9 arch");
+static_assert(!(bool)(ROCWMMA_WAVE32_MODE) && (bool)(ROCWMMA_WAVE64_MODE),
+              "rocWMMA supports only wave64 for gfx9 arch");
+static_assert((bool)(ROCWMMA_BLOCK_DIM_16_SUPPORTED) && (bool)(ROCWMMA_BLOCK_DIM_32_SUPPORTED),
+              "rocWMMA requires block size of 16 and 32 for gfx9 arch");
 #endif
 
 ///
@@ -181,7 +172,5 @@ namespace rocwmma
 #define ROCWMMA_HOST_DEVICE ROCWMMA_HOST ROCWMMA_DEVICE
 
 #define ROCWMMA_KERNEL __global__
-
-} // namespace rocwmma
 
 #endif // ROCWMMA_CONFIG_HPP

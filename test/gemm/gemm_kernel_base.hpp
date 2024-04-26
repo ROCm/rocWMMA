@@ -169,14 +169,22 @@ namespace rocwmma
         ComputeT mAlpha, mBeta;
 
         // Execution flow control
-        uint32_t mRepeats;
+        uint32_t mColdRuns;
+        uint32_t mHotRuns;
         bool     mRunFlag          = true;
         bool     mValidationResult = false;
         double   mMaxRelativeError;
 
         // Performance
         float64_t mElapsedTimeMs, mTotalGFlops, mMeasuredTFlopsPerSec;
-        int32_t   mEfficiency, mReferenceEfficiency;
+        int32_t   mEfficiency;
+
+        // Reference
+        float64_t         mRefMeasuredTFlopsPerSec;
+        int32_t           mRefEfficiency;
+        static const bool mIsCpuRef;
+        static const bool mRunRefFlag;
+        static const bool mBenchRef;
     };
 
 } // namespace rocwmma
