@@ -26,10 +26,11 @@
 #ifndef ROCWMMA_UTILS_HPP
 #define ROCWMMA_UTILS_HPP
 
+#include "api_fwd.hpp"
 #include "types.hpp"
 
-#include "utility/get.hpp"
 #include "utility/apply.hpp"
+#include "utility/get.hpp"
 #include "vector.hpp"
 
 namespace rocwmma

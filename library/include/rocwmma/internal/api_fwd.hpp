@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,23 +23,26 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+#ifndef ROCWMMA_INTERNAL_API_FWD_HPP
+#define ROCWMMA_INTERNAL_API_FWD_HPP
 
-//! @file
-//! @brief rocwmma-version.hpp provides the configured version and settings
-
-#ifndef ROCWMMA_API_VERSION_HPP
-#define ROCWMMA_API_VERSION_HPP
-
-// clang-format off
-#define ROCWMMA_VERSION_MAJOR       @rocwmma_VERSION_MAJOR@
-#define ROCWMMA_VERSION_MINOR       @rocwmma_VERSION_MINOR@
-#define ROCWMMA_VERSION_PATCH       @rocwmma_VERSION_PATCH@
-// clang-format on
-
-inline std::string rocwmma_get_version()
+namespace rocwmma
 {
-    return std::to_string(ROCWMMA_VERSION_MAJOR) + "." + std::to_string(ROCWMMA_VERSION_MINOR) + "."
-           + std::to_string(ROCWMMA_VERSION_PATCH);
-}
+    // Fwd declare API tags
+    struct col_major;
+    struct row_major;
+    struct matrix_a;
+    struct matrix_b;
+    struct accumulator;
 
-#endif // ROCWMMA_API_VERSION_HPP
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayoutT>
+    class __align__(4) fragment;
+
+} // namespace rocwmma
+
+#endif // ROCWMMA_INTERNAL_API_FWD_HPP

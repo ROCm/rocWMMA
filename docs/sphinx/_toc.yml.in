@@ -12,8 +12,11 @@ subtrees:
     - file: programmers-guide
   - caption:  API reference
     entries:
-    - file: api-reference-guide   
+    - file: api-reference-guide
+  - caption:  Contribution
+    entries:
+    - file: contributors-guide
   - caption: About
     entries:
     - file: license
-    
+
