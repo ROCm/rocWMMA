@@ -239,13 +239,6 @@ namespace rocwmma
             auto waveIndex    = get<1>(waveCoord);
             auto waveCount    = get<1>(workgroupDim);
 
-            constexpr auto splitCount = std::min((uint32_t)IOTraits<GlobalReadFragA>::IOCount,
-                                                 (uint32_t)IOTraits<LocalWriteFragA>::IOCount);
-
-            static_assert(((uint32_t)IOTraits<GlobalReadFragA>::IOCount % splitCount == 0)
-                              && ((uint32_t)IOTraits<LocalWriteFragA>::IOCount % splitCount == 0),
-                          "splitCount is not common divisor of GlobalRead and LocalWrite IOCounts");
-
             for(int32_t i = 0; i < BlocksX; ++i)
             {
                 // Issue global read
@@ -255,16 +248,14 @@ namespace rocwmma
                     baseA + GlobalAOffsets::dataOffset(make_coord2d(BlockM * i, 0), lda),
                     lda,
                     waveIndex,
-                    waveCount,
-                    splitCount);
+                    waveCount);
 
                 // Issue local store
                 store_matrix_coop_sync(baseLds + baseOffsetA() + waveOffsetA() + blockOffsetA(i),
                                        reinterpret_cast<LocalWriteFragA&>(fetchA),
                                        ld(),
                                        waveIndex,
-                                       waveCount,
-                                       splitCount);
+                                       waveCount);
             }
         }
 
@@ -275,16 +266,10 @@ namespace rocwmma
             // we need to ensure that splitCounts are the same on both sides of
             // global fetch and local writes - Otherwise the waves don't have the
             // same data responsibility.
-            auto           workgroupDim = GlobalBOffsets::workgroupDim();
-            auto           waveCoord    = GlobalBOffsets::waveCoord();
-            auto           waveIndex    = get<0>(waveCoord);
-            auto           waveCount    = get<0>(workgroupDim);
-            constexpr auto splitCount   = std::min((uint32_t)IOTraits<GlobalReadFragB>::IOCount,
-                                                 (uint32_t)IOTraits<LocalWriteFragB>::IOCount);
-
-            static_assert(((uint32_t)IOTraits<GlobalReadFragB>::IOCount % splitCount == 0)
-                              && ((uint32_t)IOTraits<LocalWriteFragB>::IOCount % splitCount == 0),
-                          "splitCount is not common divisor of GlobalRead and LocalWrite IOCounts");
+            auto workgroupDim = GlobalBOffsets::workgroupDim();
+            auto waveCoord    = GlobalBOffsets::waveCoord();
+            auto waveIndex    = get<0>(waveCoord);
+            auto waveCount    = get<0>(workgroupDim);
 
             for(int32_t i = 0; i < BlocksY; ++i)
             {
@@ -295,16 +280,14 @@ namespace rocwmma
                     baseB + GlobalBOffsets::dataOffset(make_coord2d(0, BlockN * i), ldb),
                     ldb,
                     waveIndex,
-                    waveCount,
-                    splitCount);
+                    waveCount);
 
                 // Issue local store
                 store_matrix_coop_sync(baseLds + baseOffsetB() + waveOffsetB() + blockOffsetB(i),
                                        reinterpret_cast<LocalWriteFragB&>(fetchB),
                                        ld(),
                                        waveIndex,
-                                       waveCount,
-                                       splitCount);
+                                       waveCount);
             }
         }
 
@@ -364,7 +347,6 @@ namespace rocwmma
 
         __device__ static inline void prefetchLocalA(FragA* fragsA, DataT const* baseLds)
         {
-#pragma unroll
             for(int i = 0; i < BlocksX; i++)
             {
                 prefetchLocalA(fragsA[i], baseLds, i);
@@ -373,7 +355,6 @@ namespace rocwmma
 
         __device__ static inline void prefetchLocalB(FragB* fragsB, DataT const* baseLds)
         {
-#pragma unroll
             for(int i = 0; i < BlocksY; i++)
             {
                 prefetchLocalB(fragsB[i], baseLds, i);
