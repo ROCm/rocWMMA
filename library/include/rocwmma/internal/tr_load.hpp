@@ -56,7 +56,9 @@ namespace rocwmma
             }
         };
 
-#if ROCWMMA_ARCH_GFX12
+// TODO: Until compiler has settled on intrinsic naming, disable to allow successful builds
+// #if ROCWMMA_ARCH_GFX12
+#if 0
 
         template <>
         struct amdgcn_tr_load<float16_t, 8u>
