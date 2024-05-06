@@ -152,6 +152,21 @@
 #define ROCWMMA_BLOCK_DIM_32_SUPPORTED 0
 #endif
 
+///
+/// Architecture datatypes configuration.
+/// FP8_NANOO only supported on gfx940, gfx941 and gfx942
+/// Guaranteed symbols:
+/// ROCWMMA_ENABLE_FP8_OCP
+/// ROCWMMA_ENABLE_FP8_NANOO
+///
+#if (ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942)
+#define ROCWMMA_ENABLE_FP8_NANOO 1
+#define ROCWMMA_ENABLE_FP8_OCP 0
+#else
+#define ROCWMMA_ENABLE_FP8_NANOO 0
+#define ROCWMMA_ENABLE_FP8_OCP 1
+#endif
+
 #if defined(NDEBUG)
 #define ROCWMMA_UNSUPPORTED_IMPL(MSG)
 #else

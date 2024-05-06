@@ -73,6 +73,7 @@ namespace rocwmma
         typename std::enable_if<
             ((std::is_same<InputT, float16_t>::value && std::is_same<ComputeT, float16_t>::value)
              || (std::is_same<InputT, float16_t>::value && std::is_same<ComputeT, float32_t>::value)
+             || (std::is_same<InputT, float8_t>::value && std::is_same<ComputeT, float32_t>::value)
              
 #if !ROCWMMA_NO_HALF
              || (std::is_same<InputT, hfloat16_t>::value
