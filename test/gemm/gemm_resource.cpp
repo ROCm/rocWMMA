@@ -40,7 +40,7 @@ namespace rocwmma
     template struct GemmResource<xfloat32_t, float32_t>;
     template struct GemmResource<float64_t, float64_t>;
 
-#if defined(ROCWMMA_EXTENDED_TESTS)
+#if ROCWMMA_EXTENDED_TESTS
     template struct GemmResource<int8_t, int8_t>;
     template struct GemmResource<bfloat16_t, bfloat16_t>;
     template struct GemmResource<float16_t, float16_t>;
