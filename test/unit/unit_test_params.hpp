@@ -58,7 +58,7 @@ namespace rocwmma
                                         xfloat32_t,
                                         int8_t,
                                         int32_t
-#ifdef ROCWMMA_EXTENDED_TESTS
+#if ROCWMMA_EXTENDED_TESTS
                                         ,
                                         uint8_t,
                                         uint32_t
@@ -81,7 +81,7 @@ namespace rocwmma
         using TestBlockSizes16 = std::tuple<std::tuple<I<16>, I<16>>,
                                             std::tuple<I<16>, I<32>>,
                                             std::tuple<I<16>, I<64>>
-#ifdef ROCWMMA_EXTENDED_TESTS
+#if ROCWMMA_EXTENDED_TESTS
                                             ,
                                             std::tuple<I<16>, I<128>>,
                                             std::tuple<I<16>, I<256>>
@@ -92,7 +92,7 @@ namespace rocwmma
                                             std::tuple<I<32>, I<16>>,
                                             std::tuple<I<32>, I<32>>,
                                             std::tuple<I<32>, I<64>>
-#ifdef ROCWMMA_EXTENDED_TESTS
+#if ROCWMMA_EXTENDED_TESTS
                                             ,
                                             std::tuple<I<32>, I<128>>,
                                             std::tuple<I<32>, I<256>>
@@ -103,7 +103,7 @@ namespace rocwmma
                                             std::tuple<I<64>, I<16>>,
                                             std::tuple<I<64>, I<32>>,
                                             std::tuple<I<64>, I<64>>
-#ifdef ROCWMMA_EXTENDED_TESTS
+#if ROCWMMA_EXTENDED_TESTS
                                             ,
                                             std::tuple<I<64>, I<128>>,
                                             std::tuple<I<64>, I<256>>
@@ -114,7 +114,7 @@ namespace rocwmma
                                              std::tuple<I<128>, I<16>>,
                                              std::tuple<I<128>, I<32>>,
                                              std::tuple<I<128>, I<64>>
-#ifdef ROCWMMA_EXTENDED_TESTS
+#if ROCWMMA_EXTENDED_TESTS
                                              ,
                                              std::tuple<I<128>, I<128>>,
                                              std::tuple<I<128>, I<256>>
@@ -125,7 +125,7 @@ namespace rocwmma
                                              std::tuple<I<256>, I<16>>,
                                              std::tuple<I<256>, I<32>>,
                                              std::tuple<I<256>, I<64>>
-#ifdef ROCWMMA_EXTENDED_TESTS
+#if ROCWMMA_EXTENDED_TESTS
                                              ,
                                              std::tuple<I<256>, I<128>>,
                                              std::tuple<I<256>, I<256>>
@@ -156,7 +156,7 @@ namespace rocwmma
         return { {warpSize, 1},  // 1 Wave
                  {warpSize, 2}, {warpSize * 2, 1}, // 2 Waves
                  {warpSize, 4}, {warpSize * 2, 2}, {warpSize * 4, 1}, // 4 Waves
-#ifdef ROCWMMA_EXTENDED_TESTS
+#if ROCWMMA_EXTENDED_TESTS
                  {warpSize, 8}, {warpSize * 2, 4}, {warpSize * 4, 2}, {warpSize * 8, 1} // 8 waves
 #endif // ROCWMMA_EXTENDED_TESTS
             };
@@ -175,7 +175,7 @@ namespace rocwmma
                  {512, 8},  {512, 16},  {512, 32},  {512, 64},  {512, 128},  {512, 256},  {512, 512},
                  {1024, 8}, {1024, 16}, {1024, 32}, {1024, 64}, {1024, 128}, {1024, 256}, {1024, 512},
 
-#ifdef ROCWMMA_EXTENDED_TESTS
+#if ROCWMMA_EXTENDED_TESTS
                  {1024, 1024},
                  {2048, 2048},
                  {2560, 2560},

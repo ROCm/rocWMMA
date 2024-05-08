@@ -63,10 +63,7 @@ namespace rocwmma
 
         // Outer loop = index 0,
         // Inner loop = index N-1
-        template <size_t Depth = 0,
-                  typename Iterator,
-                  typename StrideSpace,
-                  typename Strides2d>
+        template <size_t Depth = 0, typename Iterator, typename StrideSpace, typename Strides2d>
         ROCWMMA_DEVICE static inline auto unroll_right(Iterator&     out,
                                                        DataT const*  dataPtr,
                                                        uint32_t      ldm,
@@ -93,7 +90,6 @@ namespace rocwmma
             // Recurse to the next nested layer
             else
             {
-#pragma unroll
                 for(int i = 0; i < strideCount; i++)
                 {
                     unroll_right<Depth + 1>(out, dataPtr, ldm, strideSpace, strides2d);

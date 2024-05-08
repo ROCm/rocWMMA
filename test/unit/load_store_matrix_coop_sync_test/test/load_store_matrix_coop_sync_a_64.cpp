@@ -67,17 +67,14 @@ namespace rocwmma
 
         static inline std::vector<Base::Param2T> param2s()
         {
-            return {
-                0.0,
-                1.0,
-                2.0,
-                3.0 // 1 - 4 waves
-#ifdef ROCWMMA_EXTENDED_TESTS
-                ,
-                4.0,
-                5.0,
-                6.0,
-                7.0 // 8 waves
+            return
+            {
+                0.0, 1.0, 2.0,
+                    3.0 // 1 - 4 waves
+#if ROCWMMA_EXTENDED_TESTS
+                    ,
+                    4.0, 5.0, 6.0,
+                    7.0 // 8 waves
 #endif // ROCWMMA_EXTENDED_TESTS
             };
         }

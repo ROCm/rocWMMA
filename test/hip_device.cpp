@@ -91,7 +91,7 @@ namespace rocwmma
         mMaxFreqMhz    = static_cast<int>(static_cast<double>(mProps.clockRate) / 1000.0);
         mCurFreqMhz    = mMaxFreqMhz;
 
-#ifdef ROCWMMA_BENCHMARK_TESTS
+#if ROCWMMA_BENCHMARK_TESTS
         bool smiErrorFlag = false;
         CHECK_RSMI_ERROR(rsmi_init(0), smiErrorFlag);
         if(!smiErrorFlag)
@@ -134,7 +134,7 @@ namespace rocwmma
                 }
             }
         }
-#endif
+#endif // ROCWMMA_BENCHMARK_TESTS
     }
 
     hipDevice_t HipDevice::getDeviceHandle() const
@@ -184,10 +184,10 @@ namespace rocwmma
 
     HipDevice::~HipDevice()
     {
-#ifdef ROCWMMA_BENCHMARK_TESTS
+#if ROCWMMA_BENCHMARK_TESTS
         bool smiErrorFlag = false;
         CHECK_RSMI_ERROR(rsmi_shut_down(), smiErrorFlag);
-#endif
+#endif // ROCWMMA_BENCHMARK_TESTS
     }
 
     // Need to check the host device target support statically before hip modules attempt

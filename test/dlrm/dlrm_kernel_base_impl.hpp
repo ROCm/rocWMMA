@@ -51,7 +51,7 @@
 
 // Library includes
 
-#ifdef ROCWMMA_VALIDATION_TESTS
+#if ROCWMMA_VALIDATION_TESTS
 #include "reference.hpp" // Vanilla CPU kernel
 #endif // ROCWMMA_VALIDATION_TESTS
 
@@ -156,11 +156,11 @@ namespace rocwmma
         mM = mK = mB = 0;
         mMPadded = mKPadded = 0;
         mRepeats =
-#ifdef ROCWMMA_VALIDATION_TESTS
+#if ROCWMMA_VALIDATION_TESTS
             1;
 #else
             5;
-#endif
+#endif // ROCWMMA_VALIDATION_TESTS
 
         mRunFlag = true;
 
@@ -187,10 +187,10 @@ namespace rocwmma
                       << "DataT, "
                       << "Direction, "
                       << "MatM, MatK, MatB, "
-#if defined(ROCWMMA_VALIDATION_TESTS)
+#if ROCWMMA_VALIDATION_TESTS
                       << "maxRelativeDiff, "
                       << "tolerance, "
-#endif
+#endif // ROCWMMA_VALIDATION_TESTS
                       << "elapsedMs, "
                       << "Problem Size(GFlops), "
                       << "TFlops/s, "
@@ -206,9 +206,9 @@ namespace rocwmma
                           << (passDirection == DlrmDirection_t::Forward ? "Forwards" : "Backwards")
                           << ", " << mM << ", " << mK << ", " << mB << ", "
 
-#if defined(ROCWMMA_VALIDATION_TESTS)
+#if ROCWMMA_VALIDATION_TESTS
                           << "n/a, "
-#endif
+#endif // ROCWMMA_VALIDATION_TESTS
                           << "n/a, n/a, n/a, n/a, SKIPPED" << std::endl;
         }
         else
@@ -217,12 +217,12 @@ namespace rocwmma
                           << (passDirection == DlrmDirection_t::Forward ? "Forwards" : "Backwards")
                           << ", " << mM << ", " << mK << ", " << mB << ", "
 
-#if defined(ROCWMMA_VALIDATION_TESTS)
+#if ROCWMMA_VALIDATION_TESTS
                           << mMaxRelativeError << ", "
-#endif
+#endif // ROCWMMA_VALIDATION_TESTS
                           << mElapsedTimeMs << ", " << mTotalGFlops << ", " << mMeasuredTFlopsPerSec
                           << ", " << mEfficiency << ", "
-#if defined(ROCWMMA_VALIDATION_TESTS)
+#if ROCWMMA_VALIDATION_TESTS
                           << (mValidationResult ? "PASSED" : "FAILED")
 #else
                           << "BENCH"
@@ -275,7 +275,7 @@ namespace rocwmma
             {
                 MatrixUtil<row_major>::fillLaunchKernel(
                     dataInstance->deviceInput().get(), mM, mK, mB);
-#if defined(ROCWMMA_VALIDATION_TESTS)
+#if ROCWMMA_VALIDATION_TESTS
                 dataInstance->copyDeviceToHostFwdInput();
 #endif // ROCWMMA_VALIDATION_TESTS
             }
@@ -286,7 +286,7 @@ namespace rocwmma
                     dataInstance->deviceInput().get(), mM, mK, mB);
                 MatrixUtil<row_major>::fillLaunchKernel(
                     dataInstance->deviceUpstreamGrad().get(), 1, gradSize, mB);
-#if defined(ROCWMMA_VALIDATION_TESTS)
+#if ROCWMMA_VALIDATION_TESTS
                 dataInstance->copyDeviceToHostBwdInput();
 #endif // ROCWMMA_VALIDATION_TESTS
             }
@@ -418,7 +418,7 @@ namespace rocwmma
             CHECK_HIP_ERROR(hipEventDestroy(startEvent));
             CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
 
-#if defined(ROCWMMA_VALIDATION_TESTS)
+#if ROCWMMA_VALIDATION_TESTS
 
             // Run reference CPU kernel
             std::function<void()> cpuKernel;
@@ -447,14 +447,14 @@ namespace rocwmma
                 };
             }
             cpuKernel();
-#endif
+#endif // ROCWMMA_VALIDATION_TESTS
         }
     }
 
     template <uint32_t TileSize, typename DataT>
     void DlrmKernelBase<TileSize, DataT>::validateResults()
     {
-#ifdef ROCWMMA_VALIDATION_TESTS
+#if ROCWMMA_VALIDATION_TESTS
         if(mRunFlag)
         {
             auto& dataInstance = DataStorage::instance();
