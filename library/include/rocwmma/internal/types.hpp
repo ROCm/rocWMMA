@@ -38,10 +38,9 @@
 #include "config.hpp"
 
 #if ROCWMMA_ENABLE_FP8_OCP
-#include "float8_e4m3_ocp.hpp"
-// TODO: replace with bf8 when ready
-// #include "float8_e5m2_ocp.hpp"
 #include "float8.hpp"
+#include "float8_e4m3_ocp.hpp"
+#include "float8_e5m2_ocp.hpp"
 #elif ROCWMMA_ENABLE_FP8_NANOO
 #include "float8.hpp"
 #endif
@@ -99,8 +98,7 @@ namespace rocwmma
 
     using float8_t = std::conditional_t<(bool)ROCWMMA_ENABLE_FP8_OCP, Float8_e4m3fn, rocwmma_f8>;
 
-    using bfloat8_t = rocwmma_bf8;
-    
+    using bfloat8_t = std::conditional_t<(bool)ROCWMMA_ENABLE_FP8_OCP, Float8_e5m2fn, rocwmma_bf8>;
 
     using xfloat32_t = rocwmma_xfloat32;
 
