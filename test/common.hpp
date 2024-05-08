@@ -57,7 +57,7 @@
     }
 #endif
 
-#ifdef ROCWMMA_BENCHMARK_TESTS
+#if ROCWMMA_BENCHMARK_TESTS
 #ifndef CHECK_RSMI_ERROR
 #define CHECK_RSMI_ERROR(expression, smiErrorFlag)                                               \
     if(auto status = (expression); status != RSMI_STATUS_SUCCESS)                                \
@@ -68,7 +68,7 @@
         smiErrorFlag = true;                                                                     \
     }
 #endif
-#endif
+#endif // ROCWMMA_BENCHMARK_TESTS
 
 namespace rocwmma
 {
