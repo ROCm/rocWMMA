@@ -49,7 +49,7 @@
 
 #if ROCWMMA_ROCBLAS_INTEGRATION
 #include "rocblas_reference.hpp" // rocBLAS GPU kernel
-#endif // ROCWMMA_VALIDATE_WITH_ROCBLAS || ROCWMMA_BENCHMARK_WITH_ROCBLAS
+#endif // ROCWMMA_ROCBLAS_INTEGRATION
 
 namespace rocwmma
 {
@@ -496,7 +496,7 @@ namespace rocwmma
 
         if(!mRunFlag)
         {
-            stream << "n/a, "
+            stream << "n/a"
                    << ", "
                    << "n/a"
                    << ", "

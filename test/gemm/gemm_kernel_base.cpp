@@ -845,7 +845,7 @@ namespace rocwmma
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(xfloat32_t, float32_t, float32_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(float64_t, float64_t, float64_t);
 
-#if defined(ROCWMMA_EXTENDED_TESTS)
+#if ROCWMMA_EXTENDED_TESTS
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(int8_t, int8_t, int32_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(bfloat16_t, bfloat16_t, bfloat16_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(bfloat16_t, bfloat16_t, float32_t);
