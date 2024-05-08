@@ -27,6 +27,8 @@
 #ifndef ROCWMMA_FLOAT8_E5M2_OCP_HPP
 #define ROCWMMA_FLOAT8_E5M2_OCP_HPP
 
+#include "float_conversion.hpp"
+
 /// Defines the Float8_e5m2fn type (8-bit floating-point) including conversions
 /// to standard C types and basic arithmetic operations. Note that arithmetic
 /// operations are implemented by converting to floating point and
@@ -60,27 +62,6 @@ namespace rocwmma
 
     namespace detail
     {
-        // move somewhere shared with bf8
-        ROCWMMA_HOST_DEVICE inline float fp32_from_bits(uint32_t w)
-        {
-            union
-            {
-                uint32_t as_bits;
-                float    as_value;
-            } fp32 = {w};
-            return fp32.as_value;
-        }
-
-        ROCWMMA_HOST_DEVICE inline uint32_t fp32_to_bits(float f)
-        {
-            union
-            {
-                float    as_value;
-                uint32_t as_bits;
-            } fp32 = {f};
-            return fp32.as_bits;
-        }
-
         /*
  * Convert a 16-bit floating-point number in IEEE half-precision format, in bit
  * representation, to a 32-bit floating-point number in IEEE single-precision
