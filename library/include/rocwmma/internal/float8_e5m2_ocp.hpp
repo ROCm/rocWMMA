@@ -141,7 +141,7 @@ namespace rocwmma
             // const float exp_scale = 0x1.0p-112f;
             constexpr uint32_t scale_bits    = (uint32_t)15 << 23;
             float              exp_scale_val = 0;
-            std::memcpy(&exp_scale_val, &scale_bits, sizeof(exp_scale_val));
+            memcpy(&exp_scale_val, &scale_bits, sizeof(exp_scale_val));
             const float exp_scale        = exp_scale_val;
             const float normalized_value = fp32_from_bits((two_w >> 4) + exp_offset) * exp_scale;
 

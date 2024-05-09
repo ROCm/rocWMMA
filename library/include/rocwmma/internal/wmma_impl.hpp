@@ -482,10 +482,10 @@ namespace rocwmma
                     AccumBits = WmmaCtrlFlags::LOW,
                     AccumSign = WmmaCtrlFlags::SIGNED
                 };
-                using ARegsT = VRegI32x2;
-                using BRegsT = VRegI32x2;
-                using CRegsT = AccRegI32x8;
-                using DRegsT = AccRegI32x8;
+                using ARegsT = VRegF32x2;
+                using BRegsT = VRegF32x2;
+                using CRegsT = AccRegF32x8;
+                using DRegsT = AccRegF32x8;
             };
 
             ROCWMMA_DEVICE static inline auto exec(typename Traits::ARegsT const& regsA,
@@ -493,9 +493,12 @@ namespace rocwmma
                                                    typename Traits::CRegsT const& regsC) ->
                 typename Traits::DRegsT
             {
+                // Built-in expects vector of int.
+                using TypeIn = VecT<int, 2>;
+                
                 typename Traits::DRegsT result;
                 result.data = {__builtin_amdgcn_wmma_f32_16x16x16_bf8_bf8_w32_gfx12(
-                    regsA.data, regsB.data, regsC.data)};
+                    reinterpret_cast<TypeIn const&>(regsA).data, reinterpret_cast<TypeIn const&>(regsB).data, regsC.data)};
                 return result;
             }
         };
