@@ -642,6 +642,10 @@ namespace std
         {
             return rocwmma::Float8_e5m2fn(0x7C, rocwmma::Float8_e5m2fn::from_bits());
         }
+        static constexpr rocwmma::Float8_e5m2fn signaling_NaN()
+        {
+            return rocwmma::Float8_e5m2fn(0x7F, rocwmma::Float8_e5m2fn::from_bits());
+        }
         static constexpr rocwmma::Float8_e5m2fn denorm_min()
         {
             return rocwmma::Float8_e5m2fn(0x01, rocwmma::Float8_e5m2fn::from_bits());
