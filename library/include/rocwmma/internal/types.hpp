@@ -37,13 +37,12 @@
 
 #include "config.hpp"
 
-#if ROCWMMA_ENABLE_FP8_OCP
+// Nanoo f8/bf8
 #include "float8.hpp"
+
+// OCP f8/bf8
 #include "float8_e4m3_ocp.hpp"
 #include "float8_e5m2_ocp.hpp"
-#elif ROCWMMA_ENABLE_FP8_NANOO
-#include "float8.hpp"
-#endif
 
 #include "rocwmma_xfloat32.hpp"
 
