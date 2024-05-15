@@ -481,9 +481,9 @@ ROCWMMA_DEVICE constexpr uint32_t totalIterations(const uint32_t m,
   );
 }
 
-ROCWMMA_DEVICE constexpr uint32_t ceilIterationsPerCTA(const uint32_t m,
-                                                    const uint32_t n,
-                                                    const uint32_t k) {
+ROCWMMA_DEVICE uint32_t ceilIterationsPerCTA(const uint32_t m,
+                                             const uint32_t n,
+                                             const uint32_t k) {
   return static_cast<uint32_t>(ceilDiv(totalIterations(m, n, k), gridDim.x));
 }
 
@@ -498,6 +498,60 @@ ROCWMMA_DEVICE static inline auto macroTileCoordinate(const int tileIdx,
        (static_cast<int>(std::ceil(static_cast<float>(n) /
                                    static_cast<float>(MACRO_TILE_Y))))) *
           MACRO_TILE_Y);
+}
+
+ROCWMMA_DEVICE static inline void fixupPartials(
+    const ComputeT* partials,
+    int cta_index,
+    MfmaFragAcc (&acc)[BLOCKS_X][BLOCKS_Y]) {
+  constexpr uint32_t WAVE_TILE_X = BLOCKS_X * ROCWMMA_M;
+  constexpr uint32_t WAVE_TILE_Y = BLOCKS_Y * ROCWMMA_N;
+
+#pragma unroll
+  for (int i = 0; i < BLOCKS_X; i++) {
+    auto x_offset = i * WAVE_TILE_X;
+#pragma unroll
+    for (int j = 0; j < BLOCKS_Y; j++) {
+      auto offset = (x_offset * MACRO_TILE_Y + j * WAVE_TILE_Y);
+      for (int k = 0; k < acc[i][j].num_elements; k++) {
+        acc[i][j].x[k] +=
+            partials[cta_index * MACRO_TILE_X * MACRO_TILE_Y + (offset + k)];
+      }
+    }
+  }
+}
+
+ROCWMMA_DEVICE inline void storePartials(
+    ComputeT* partials,
+    int cta_index,
+    MfmaFragAcc const (&acc)[BLOCKS_X][BLOCKS_Y]) {
+  constexpr uint32_t WAVE_TILE_X = BLOCKS_X * ROCWMMA_M;
+  constexpr uint32_t WAVE_TILE_Y = BLOCKS_Y * ROCWMMA_N;
+
+#pragma unroll
+  for (int i = 0; i < BLOCKS_X; i++) {
+    auto x_offset = i * WAVE_TILE_X;
+#pragma unroll
+    for (int j = 0; j < BLOCKS_Y; j++) {
+      auto offset = (x_offset * MACRO_TILE_Y + j * WAVE_TILE_Y);
+      for (int k = 0; k < acc[i][j].num_elements; k++) {
+        partials[cta_index * MACRO_TILE_X * MACRO_TILE_Y + (offset + k)] =
+            acc[i][j].x[k];
+      }
+    }
+  }
+}
+
+ROCWMMA_DEVICE inline void unlock(volatile int* mutex) {
+  if (threadIdx.x == 0 && threadIdx.y == 0) {
+    atomicExch((int*)mutex, 0);
+  }
+  __threadfence();
+}
+
+ROCWMMA_DEVICE inline void waitForUnlock(volatile int* mutex) {
+  while (*mutex) {
+  }
 }
 
 
@@ -515,7 +569,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
                                                           ComputeT       alpha,
                                                           ComputeT       beta,
                                                           int*           flags,
-                                                          ComputeT       partials)
+                                                          ComputeT*      partials)
 {
     ///
     /// 2D matrix coordinate setup
@@ -605,8 +659,8 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
             grBuffB, b + globalReadOffsetB + localIter * ROCWMMA_K * ldb, ldb, 
             warpIndex);
 
-        globalReadOffsetA += kStepOffsetA;
-        globalReadOffsetB += kStepOffsetB;
+        // globalReadOffsetA += kStepOffsetA;
+        // globalReadOffsetB += kStepOffsetB;
 
         ///
         /// Setup LDS addressing
@@ -674,9 +728,11 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
 
             // Prefetch next round of global frags
             globalReadCoopA<warpCount, splitCountA>(
-                grBuffA, a + globalReadOffsetA  + (currentK + 1) * ROCWMMA_K * lda, lda, warpIndex);
+                grBuffA, a + globalReadOffsetA  + (currentK + 1) * ROCWMMA_K * lda, lda, 
+                warpIndex);
             globalReadCoopB<warpCount, splitCountB>(
-                grBuffB, b + globalReadOffsetB  + (currentK + 1) * ROCWMMA_K * ldb, ldb, warpIndex);
+                grBuffB, b + globalReadOffsetB  + (currentK + 1) * ROCWMMA_K * ldb, ldb, 
+                warpIndex);
 
             // accum(A * B)
             mfma(fragsAcc, fragsA, fragsB, fragsAcc);
@@ -715,8 +771,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         // partials to a temporary buffer, and allows the owning-CTA perform the
         // reduction/fixup and write results to memory.
         if (iter != tileIter) {
-            store_partials<BLK, MACRO_TILE, WMMA, compute_t>
-                (partials, blockIdx.x, fragsAcc);
+            storePartials(partials, blockIdx.x, fragsAcc);
             unlock(flags + blockIdx.x);
         } else {
             // If fix-up is required, i.e. iteration end =!= tile's iteration end.
@@ -726,9 +781,8 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
                 for (uint32_t end = tileIter + localIterEnd, ctaNext = blockIdx.x + 1;
                     (end < tileIterEnd) && (ctaNext < gridDim.x);
                     end += itersPerCTA, ctaNext++) {
-                    wait_for_unlock(flags + ctaNext);
-                    fixup_partials<BLK, MACRO_TILE, WMMA, compute_t>
-                        (partials, ctaNext, fragsAcc);
+                    waitForUnlock(flags + ctaNext);
+                    fixupPartials(partials, ctaNext, fragsAcc);
                 }
             }
 
