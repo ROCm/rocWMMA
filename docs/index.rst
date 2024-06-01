@@ -16,7 +16,7 @@ Our documentation is structured as follows:
 .. grid:: 2
   :gutter: 3
 
-  .. grid-item-card:: Tutorial
+  .. grid-item-card:: Install
 
     * :ref:`installation`
 
@@ -26,7 +26,7 @@ Our documentation is structured as follows:
  
   .. grid-item-card:: API reference
 
-    * :ref:`api-reference-guide` 
+    * :ref:`api-reference-guide`
     
 To contribute to the documentation refer to
 `Contributing to ROCm  <https://rocm.docs.amd.com/en/latest/contribute/contributing.html>`_.
