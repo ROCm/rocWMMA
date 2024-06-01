@@ -4,18 +4,15 @@ root: index
 subtrees:
   - entries:
     - file: what-is-rocwmma
-  - caption:  Tutorial
+  - caption:  Install
     entries:
-    - file: installation
+    - file: install/installation
   - caption:  Conceptual
     entries:
-    - file: programmers-guide
+    - file: conceptual/programmers-guide
   - caption:  API reference
     entries:
-    - file: api-reference-guide
-  - caption:  Contribution
-    entries:
-    - file: contributors-guide
+    - file: api-reference/api-reference-guide
   - caption: About
     entries:
     - file: license
