@@ -9,9 +9,12 @@
 rocWMMA documentation
 ===========================
 
-Welcome to the rocWMMA docs home page! To learn more, see :ref:`what-is-rocwmma`.
+rocWMMA is a C++ header library for accelerating mixed precision matrix multiply-accumulate operations
+leveraging specialized GPU matrix cores on AMD's latest discrete GPUs. To learn more, see :ref:`what-is-rocwmma`
 
-Our documentation is structured as follows:
+You can access rocWMMA code on our `GitHub repository <https://github.com/ROCm/rocWMMA>`_.
+
+The documentation is structured as follows:
 
 .. grid:: 2
   :gutter: 3
