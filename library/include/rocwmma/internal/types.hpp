@@ -40,9 +40,9 @@
 // Nanoo f8/bf8
 #include "float8.hpp"
 
-// OCP f8/bf8
-#include "float8_e4m3_ocp.hpp"
-#include "float8_e5m2_ocp.hpp"
+// TODO: When available, use HIP type
+struct hip_fp8_e4m3{};
+struct hip_fp8_e5m2{};
 
 #include "rocwmma_xfloat32.hpp"
 
@@ -95,9 +95,9 @@ namespace rocwmma
     using hfloat16_t = __half;
 #endif // !ROCWMMA_NO_HALF
 
-    using float8_t = std::conditional_t<(bool)ROCWMMA_ENABLE_FP8_OCP, Float8_e4m3fn, rocwmma_f8>;
+    using float8_t = std::conditional_t<(bool)ROCWMMA_ENABLE_FP8_OCP, hip_fp8_e4m3, rocwmma_f8>;
 
-    using bfloat8_t = std::conditional_t<(bool)ROCWMMA_ENABLE_FP8_OCP, Float8_e5m2fn, rocwmma_bf8>;
+    using bfloat8_t = std::conditional_t<(bool)ROCWMMA_ENABLE_FP8_OCP, hip_fp8_e5m2, rocwmma_bf8>;
 
     using xfloat32_t = rocwmma_xfloat32;
 

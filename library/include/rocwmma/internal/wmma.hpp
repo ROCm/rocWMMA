@@ -73,7 +73,10 @@ namespace rocwmma
         typename std::enable_if<
             ((std::is_same<InputT, float16_t>::value && std::is_same<ComputeT, float16_t>::value)
              || (std::is_same<InputT, float16_t>::value && std::is_same<ComputeT, float32_t>::value)
-             || (std::is_same<InputT, float8_t>::value && std::is_same<ComputeT, float32_t>::value)
+
+            // TODO: update
+            // || (std::is_same<InputT, float8_t>::value && std::is_same<ComputeT, float32_t>::value)
+            // || (std::is_same<InputT, bfloat8_t>::value && std::is_same<ComputeT, float32_t>::value)
              
 #if !ROCWMMA_NO_HALF
              || (std::is_same<InputT, hfloat16_t>::value
@@ -86,7 +89,6 @@ namespace rocwmma
                  && std::is_same<ComputeT, bfloat16_t>::value)
              || (std::is_same<InputT, bfloat16_t>::value
                  && std::is_same<ComputeT, float32_t>::value)
-             || (std::is_same<InputT, bfloat8_t>::value && std::is_same<ComputeT, float32_t>::value)
              || (std::is_same<InputT, int8_t>::value && std::is_same<ComputeT, int32_t>::value))
             && (BlockM == 16) && (BlockN == 16) && (BlockK >= 16) // 16 block size only
             >::type>
@@ -172,7 +174,6 @@ namespace rocwmma
                                    accum);
 #else
 
-                // Inputs not duplicated in gfx12
                 accum = WMMA::exec(*aIt, *bIt, accum);
 
 #endif

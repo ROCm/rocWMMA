@@ -163,8 +163,9 @@
 #define ROCWMMA_ENABLE_FP8_NANOO 1
 #define ROCWMMA_ENABLE_FP8_OCP 0
 #else
+// TODO: Update
 #define ROCWMMA_ENABLE_FP8_NANOO 0
-#define ROCWMMA_ENABLE_FP8_OCP 1
+#define ROCWMMA_ENABLE_FP8_OCP 0
 #endif
 
 #if defined(NDEBUG)
