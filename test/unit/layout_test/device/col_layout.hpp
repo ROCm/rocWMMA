@@ -61,7 +61,7 @@ namespace rocwmma
             };
 
             using IOTraits = IOTraits<BlockM, BlockN, DataT, VectorWidth>;
-            using LayoutT  = MatrixLayout::Col<BlockM, BlockN, DataT, DataLayoutT, VectorWidth>;
+            using LayoutT  = typename LayoutProfile::Col<BlockM, BlockN, DataT, DataLayoutT, VectorWidth>::MatrixLayout;
             using Mapping  = MappingUtil<BlockM, BlockN, DataT, DataLayoutT>;
 
             auto baseOffset  = LayoutT::baseOffset();
