@@ -36,14 +36,7 @@
 #endif // !__HIPCC_RTC__
 
 #include "config.hpp"
-
-// Nanoo f8/bf8
 #include "float8.hpp"
-
-// TODO: When available, use HIP type
-struct hip_fp8_e4m3{};
-struct hip_fp8_e5m2{};
-
 #include "rocwmma_xfloat32.hpp"
 
 namespace rocwmma
@@ -95,9 +88,10 @@ namespace rocwmma
     using hfloat16_t = __half;
 #endif // !ROCWMMA_NO_HALF
 
-    using float8_t = conditional_t<(bool)ROCWMMA_ENABLE_FP8_OCP, hip_fp8_e4m3, rocwmma_f8>;
 
-    using bfloat8_t = conditional_t<(bool)ROCWMMA_ENABLE_FP8_OCP, hip_fp8_e5m2, rocwmma_bf8>;
+    using float8_t = rocwmma_f8;
+
+    using bfloat8_t = rocwmma_bf8;
 
     using xfloat32_t = rocwmma_xfloat32;
 

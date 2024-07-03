@@ -37,6 +37,8 @@
 /// ROCWMMA_ARCH_GFX1100
 /// ROCWMMA_ARCH_GFX1101
 /// ROCWMMA_ARCH_GFX1102
+/// ROCWMMA_ARCH_GFX1200
+/// ROCWMMA_ARCH_GFX1201
 ///
 /// IMPORTANT: __gfx908__ and similar macros are exclusively defined during the device
 ///            compiler pass, and all other macros rely on their definition.
@@ -105,6 +107,7 @@
 /// Guaranteed symbols:
 /// ROCWMMA_ARCH_GFX9
 /// ROCWMMA_ARCH_GFX11
+/// ROCWMMA_ARCH_GFX12
 /// ROCWMMA_WAVE64_MODE
 /// ROCWMMA_WAVE32_MODE
 /// ROCWMMA_BLOCK_DIM_16_SUPPORTED
@@ -156,16 +159,12 @@
 /// Architecture datatypes configuration.
 /// FP8_NANOO only supported on gfx940, gfx941 and gfx942
 /// Guaranteed symbols:
-/// ROCWMMA_ENABLE_FP8_OCP
 /// ROCWMMA_ENABLE_FP8_NANOO
 ///
 #if (ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942)
-#define ROCWMMA_ENABLE_FP8_NANOO 1
-#define ROCWMMA_ENABLE_FP8_OCP 0
+#define ROCWMMA_USE_FP8_NANOO 1
 #else
-// TODO: Update
-#define ROCWMMA_ENABLE_FP8_NANOO 0
-#define ROCWMMA_ENABLE_FP8_OCP 0
+#define ROCWMMA_USE_FP8_NANOO 0
 #endif
 
 #if defined(NDEBUG)
