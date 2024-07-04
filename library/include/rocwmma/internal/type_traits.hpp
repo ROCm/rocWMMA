@@ -119,7 +119,7 @@ namespace NUMERIC_LIMITS_NAMESPACE
     ///////////////////////////////////////////////////////////
     ///////////  std::numeric_limits<float16_t>  //////////////
     ///////////////////////////////////////////////////////////
-
+    // @cond
     template <>
     ROCWMMA_HOST_DEVICE constexpr rocwmma::float16_t
         numeric_limits<rocwmma::float16_t>::epsilon() noexcept
