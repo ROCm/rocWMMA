@@ -975,6 +975,7 @@ namespace std
         rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x80));
         return eps.bf8;
     }
+    //@endcond
 }
 
 #endif // ROCWMMA_FLOAT8_H
