@@ -238,7 +238,7 @@ namespace rocwmma
             using type = T;
         };
 
-        template <typename T, std::size_t _Size>
+        template <typename T, size_t _Size>
         struct remove_extent<T[_Size]>
         {
             using type = T;

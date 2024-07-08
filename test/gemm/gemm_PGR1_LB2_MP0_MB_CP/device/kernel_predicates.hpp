@@ -75,9 +75,21 @@ namespace rocwmma
                                         WaveSize,
                                         ArchId>;
 
+    private:
+        enum struct GlobalPredicates : bool
+        {
+            // Quirk for LdsRF is that it requires matching waves in X and Y directions
+            // for correctness.
+            // Second part is that the ldsRF crosses threshold from 16/32 block sizes to 64, which has different considerations
+            // for the MaxVW. This unfortunately limits applicability in cooperative environment.
+            LdsRFTest = !(std::is_same_v<GemmConfig, typename CooperativeGemm::BlockLevel::LdsRF>)
+                        || ((BlockM * BlockK / WaveSize > 8u) && (BlockN * BlockK / WaveSize > 8u)),
+
+            Enable = (LdsRFTest)
+        };
+
         using TestTraits = typename Base::TestTraits;
 
-    private:
         enum struct Gfx9Predicates : bool
         {
             // Valid for gfx9 only
@@ -117,7 +129,7 @@ namespace rocwmma
         enum struct Gfx11Predicates : bool
         {
             // Valid for gfx11 only
-            ArchTest = (bool)TestTraits::Arch::IsGfx11,
+            ArchTest = (bool)TestTraits::Arch::IsGfx11 || (bool)TestTraits::Arch::IsGfx12,
 
             // AB inputs are duplicated, double buffered
             // Acc tiles are unpacked.
@@ -148,13 +160,13 @@ namespace rocwmma
     public:
         constexpr static bool enableBuild()
         {
-            return Base::enableBuild()
+            return Base::enableBuild() && (bool)GlobalPredicates::Enable
                    && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable);
         }
 
         constexpr static bool enableRun()
         {
-            return Base::enableRun()
+            return Base::enableRun() && (bool)GlobalPredicates::Enable
                    && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable);
         }
 

@@ -93,18 +93,24 @@ namespace rocwmma
                             || deviceArch == Base::DeviceInfo::GFX1101
                             || deviceArch == Base::DeviceInfo::GFX1102);
 
+            bool isGfx12 = (deviceArch == Base::DeviceInfo::GFX1200)
+                           || (deviceArch == Base::DeviceInfo::GFX1201);
+
             bool dppWaveShiftCheck
-                = !(isGfx11 && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
+                = !((isGfx11 || isGfx12)
+                    && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
                     && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_SHIFT)
                     && (CrossLaneOp::groupSize() == CrossLaneOps::Properties::OP_GROUP_SIZE_WARP));
 
             bool dppWaveRotateCheck
-                = !(isGfx11 && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
+                = !((isGfx11 || isGfx12)
+                    && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
                     && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_ROTATE)
                     && (CrossLaneOp::groupSize() == CrossLaneOps::Properties::OP_GROUP_SIZE_WARP));
 
             bool dppWaterfallBCastCheck
-                = !(isGfx11 && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
+                = !((isGfx11 || isGfx12)
+                    && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
                     && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_WFALL_BCAST));
 
             return Base::checkDevice() && dppBCast16Check && dppWaveShiftCheck && dppWaveRotateCheck

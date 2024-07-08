@@ -110,6 +110,8 @@ namespace rocwmma
         auto isGfx11  = (deviceArch == DeviceInfo::GFX1100) || (deviceArch == DeviceInfo::GFX1101)
                        || (deviceArch == DeviceInfo::GFX1102);
 
+        auto isGfx12 = (deviceArch == DeviceInfo::GFX1200) || (deviceArch == DeviceInfo::GFX1201);
+
         // Datatypes
         auto isF64 = std::is_same<DataT, float64_t>::value;
 
@@ -134,7 +136,10 @@ namespace rocwmma
         // gfx11 only supports f16, i8 and bf16 inputs with block size 16
         bool gfx11Check = !(isGfx11 && ((!isF16 && !isBF16 && !isI8) || !is16x16));
 
-        return unsupportedDeviceCheck && gfx908F64Check && gfx11Check;
+        // gfx12 only supports f16, i8 and bf16 inputs with block size 16
+        bool gfx12Check = !(isGfx12 && ((!isF16 && !isBF16 && !isI8) || !is16x16));
+
+        return unsupportedDeviceCheck && gfx908F64Check && gfx11Check && gfx12Check;
     }
 
     template <uint32_t TileSize, typename DataT>

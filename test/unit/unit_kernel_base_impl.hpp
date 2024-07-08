@@ -86,14 +86,9 @@ namespace rocwmma
     bool UnitKernelBase<BlockM, BlockN, DataT, Layout>::checkDevice() const
     {
         auto deviceArch = DeviceInfo::instance()->getGcnArch();
-        return (
-            deviceArch != DeviceInfo::UNSUPPORTED_ARCH
-            && !(deviceArch == DeviceInfo::GFX908
-                 && (std::is_same<DataT, float64_t>::value || std::is_same<DataT, float8_t>::value
-                     || std::is_same<DataT, bfloat8_t>::value))
-            && !(deviceArch == DeviceInfo::GFX90A
-                 && (std::is_same<DataT, float8_t>::value
-                     || std::is_same<DataT, bfloat8_t>::value)));
+        // Unit tests aren't currently testing mma, as these are done in GEMM tests
+        // All types can be tested here for data movement and traits.
+        return deviceArch != DeviceInfo::UNSUPPORTED_ARCH;
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>

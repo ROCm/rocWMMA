@@ -37,14 +37,7 @@ namespace rocwmma
     template <uint32_t BlockM,
               uint32_t BlockN,
               typename DataT,
-              typename DataLayout,
-              typename std::enable_if_t<
-                  FragSize_guard<BlockM,
-                                 BlockN,
-                                 DataT,
-                                 DataLayout,
-                                 Constants::AMDGCN_WAVE_SIZE,
-                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
+              typename DataLayout>
     __global__ void fillFragmentA(uint32_t     m,
                                   uint32_t     n,
                                   DataT const* in,
@@ -53,50 +46,30 @@ namespace rocwmma
                                   DataT        param1,
                                   DataT        param2)
     {
-        using Mapping = MappingUtil<BlockM, BlockN, DataT, DataLayout>;
-
-        // Create frag and fill
-        auto frag = fragment<matrix_a, BlockM, 1, BlockN, DataT, DataLayout>();
-
-        fill_fragment(frag, param1);
-
-        // Map and store
-        auto* offset = Mapping::dataCoord(out, ld);
-        store_matrix_sync(offset, frag, ld);
-    }
-
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              typename DataT,
-              typename DataLayout,
-              typename std::enable_if_t<
-                  !FragSize_guard<BlockM,
-                                  BlockN,
-                                  DataT,
-                                  DataLayout,
-                                  Constants::AMDGCN_WAVE_SIZE,
-                                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
-    __global__ void fillFragmentA(uint32_t     m,
-                                  uint32_t     n,
-                                  DataT const* in,
-                                  DataT*       out,
-                                  uint32_t     ld,
-                                  DataT        param1,
-                                  DataT        param2)
-    {
-    }
-
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              typename DataT,
-              typename DataLayout,
-              typename std::enable_if_t<
-                  FragSize_guard<BlockM,
+        if constexpr (FragSize_guard<BlockM,
                                  BlockN,
                                  DataT,
                                  DataLayout,
                                  Constants::AMDGCN_WAVE_SIZE,
-                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
+                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable())
+        {
+            using Mapping = MappingUtil<BlockM, BlockN, DataT, DataLayout>;
+
+            // Create frag and fill
+            auto frag = fragment<matrix_a, BlockM, 1, BlockN, DataT, DataLayout>();
+
+            fill_fragment(frag, param1);
+
+            // Map and store
+            auto* offset = Mapping::dataCoord(out, ld);
+            store_matrix_sync(offset, frag, ld);
+        }
+    }
+
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename DataLayout>
     __global__ void fillFragmentB(uint32_t     m,
                                   uint32_t     n,
                                   DataT const* in,
@@ -105,81 +78,30 @@ namespace rocwmma
                                   DataT        param1,
                                   DataT        param2)
     {
-        using Mapping = MappingUtil<BlockM, BlockN, DataT, DataLayout>;
-
-        // Create frag and fill
-        auto frag = fragment<matrix_b, 1, BlockN, BlockM, DataT, DataLayout>();
-
-        fill_fragment(frag, param1);
-
-        // Map and store
-        auto* offset = Mapping::dataCoord(out, ld);
-        store_matrix_sync(offset, frag, ld);
-    }
-
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              typename DataT,
-              typename DataLayout,
-              typename std::enable_if_t<
-                  !FragSize_guard<BlockM,
-                                  BlockN,
-                                  DataT,
-                                  DataLayout,
-                                  Constants::AMDGCN_WAVE_SIZE,
-                                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
-    __global__ void fillFragmentB(uint32_t     m,
-                                  uint32_t     n,
-                                  DataT const* in,
-                                  DataT*       out,
-                                  uint32_t     ld,
-                                  DataT        param1,
-                                  DataT        param2)
-    {
-    }
-
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              typename DataT,
-              typename DataLayout,
-              typename std::enable_if_t<
-                  FragSize_guard<BlockM,
+        if constexpr(FragSize_guard<BlockM,
                                  BlockN,
                                  DataT,
                                  DataLayout,
                                  Constants::AMDGCN_WAVE_SIZE,
-                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
-    __global__ void fillFragmentAcc(uint32_t     m,
-                                    uint32_t     n,
-                                    DataT const* in,
-                                    DataT*       out,
-                                    uint32_t     ld,
-                                    DataT        param1,
-                                    DataT        param2)
-    {
-        using Mapping = MappingUtil<BlockM, BlockN, DataT, DataLayout>;
+                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable())
+        {
+            using Mapping = MappingUtil<BlockM, BlockN, DataT, DataLayout>;
 
-        // Create frag and fill
-        auto frag = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>();
+            // Create frag and fill
+            auto frag = fragment<matrix_b, 1, BlockN, BlockM, DataT, DataLayout>();
 
-        fill_fragment(frag, param1);
+            fill_fragment(frag, param1);
 
-        // Map and store
-        auto* offset = Mapping::dataCoord(out, ld);
-        store_matrix_sync(offset, frag, ld);
+            // Map and store
+            auto* offset = Mapping::dataCoord(out, ld);
+            store_matrix_sync(offset, frag, ld);
+        }
     }
 
     template <uint32_t BlockM,
               uint32_t BlockN,
               typename DataT,
-              typename DataLayout,
-              typename std::enable_if_t<
-                  !FragSize_guard<BlockM,
-                                  BlockN,
-                                  DataT,
-                                  DataLayout,
-                                  Constants::AMDGCN_WAVE_SIZE,
-                                  Constants::AMDGCN_CURRENT_ARCH_ID>::enable()>* = nullptr>
+              typename DataLayout>
     __global__ void fillFragmentAcc(uint32_t     m,
                                     uint32_t     n,
                                     DataT const* in,
@@ -188,6 +110,24 @@ namespace rocwmma
                                     DataT        param1,
                                     DataT        param2)
     {
+        if constexpr (FragSize_guard<BlockM,
+                                 BlockN,
+                                 DataT,
+                                 DataLayout,
+                                 Constants::AMDGCN_WAVE_SIZE,
+                                 Constants::AMDGCN_CURRENT_ARCH_ID>::enable())
+        {
+            using Mapping = MappingUtil<BlockM, BlockN, DataT, DataLayout>;
+
+            // Create frag and fill
+            auto frag = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>();
+
+            fill_fragment(frag, param1);
+
+            // Map and store
+            auto* offset = Mapping::dataCoord(out, ld);
+            store_matrix_sync(offset, frag, ld);
+        }
     }
 
 } // namespace rocwmma

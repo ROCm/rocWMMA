@@ -73,7 +73,8 @@ namespace rocwmma
             CurrentWaveSizeTest = (WaveSize == Constants::AMDGCN_WAVE_SIZE),
 
             // Only supported hardware allowed
-            ArchTest = (bool)TestTraits::Arch::IsGfx9 || (bool)TestTraits::Arch::IsGfx11,
+            ArchTest = (bool)TestTraits::Arch::IsGfx9 || (bool)TestTraits::Arch::IsGfx11
+                       || (bool)TestTraits::Arch::IsGfx12,
 
             // During the build phase, we have information about current target arch.
             // This means only the current arch and wave size are valid.
@@ -92,6 +93,10 @@ namespace rocwmma
             std::cout << "Global Predicates:\n";
             std::cout << "TBlockXTest: " << (bool)GlobalPredicates::TBlockXTest << std::endl;
             std::cout << "MinTBlockTest: " << (bool)GlobalPredicates::MinTBlockTest << std::endl;
+            std::cout << "CurrentArchTest: " << (bool)GlobalPredicates::CurrentArchTest
+                      << std::endl;
+            std::cout << "CurrentWaveSizeTest: " << (bool)GlobalPredicates::CurrentWaveSizeTest
+                      << std::endl;
             std::cout << "ArchTest: " << (bool)GlobalPredicates::ArchTest << std::endl;
             std::cout << "EnableBuild: " << (bool)GlobalPredicates::EnableBuild << std::endl;
             std::cout << "EnableRun: " << (bool)GlobalPredicates::EnableRun << std::endl;
@@ -282,17 +287,72 @@ namespace rocwmma
         }
 #endif // !NDEBUG
 
+        enum struct Gfx12Predicates : bool
+        {
+            // Valid for gfx11 only
+            ArchTest = (bool)TestTraits::Arch::IsGfx12,
+
+            // Wave size on gfx11 is 32
+            WaveSizeTest = (bool)TestTraits::Arch::IsWave32,
+
+            // Max recommended TBlock size is 256
+            TBlockTest
+            = (TBlockX * TBlockY >= Constants::AMDGCN_WAVE_SIZE_32) && (TBlockX * TBlockY <= 256u),
+
+            // Input types supported
+            InputTypesTest
+            = (bool)TestTraits::InputType::IsInt8 
+              || (bool)TestTraits::InputType::IsFloat16 || (bool)TestTraits::InputType::IsBFloat16,
+              // TODO: update
+              //|| (bool)TestTraits::InputType::IsFloat8  || (bool)TestTraits::InputType::IsBFloat8,
+
+            // General int8_t block size
+            // BlockM/N = 16; Block K >= 16
+            I8BlockSizeTest
+            = !((bool)TestTraits::InputType::IsInt8 || (bool)TestTraits::InputType::IsFloat8
+                || (bool)TestTraits::InputType::IsBFloat8)
+              || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 16u)
+                  && (BlockK % 16u == 0u)),
+
+            // General float16_t / hfloat16_t / bfloat16_t block size
+            // BlockM/N = 16; Block K >= 16
+            F16BlockSizeTest
+            = !((bool)TestTraits::InputType::IsFloat16 || (bool)TestTraits::InputType::IsBFloat16)
+              || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 16u)
+                  && (BlockK % 16u == 0u)),
+
+            Enable = (ArchTest && WaveSizeTest && TBlockTest && InputTypesTest && I8BlockSizeTest
+                      && F16BlockSizeTest)
+        };
+
+#if !NDEBUG
+        static constexpr void debugGfx12Predicates()
+        {
+            std::cout << "Gfx12 Predicates:\n";
+            std::cout << "ArchTest: " << (bool)Gfx12Predicates::ArchTest << std::endl;
+            std::cout << "WaveSizeTest: " << (bool)Gfx12Predicates::WaveSizeTest << std::endl;
+            std::cout << "TBlockTest: " << (bool)Gfx12Predicates::TBlockTest << std::endl;
+            std::cout << "InputTypesTest: " << (bool)Gfx12Predicates::InputTypesTest << std::endl;
+            std::cout << "I8BlockSizeTest: " << (bool)Gfx12Predicates::I8BlockSizeTest << std::endl;
+            std::cout << "F16BlockSizeTest: " << (bool)Gfx12Predicates::F16BlockSizeTest
+                      << std::endl;
+            std::cout << "Enable: " << (bool)Gfx12Predicates::Enable << std::endl;
+        }
+#endif // !NDEBUG
+
     public:
         constexpr static bool enableBuild()
         {
             return ((bool)GlobalPredicates::EnableBuild
-                    && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable));
+                    && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable
+                        || (bool)Gfx12Predicates::Enable));
         }
 
         constexpr static bool enableRun()
         {
             return ((bool)GlobalPredicates::EnableRun
-                    && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable));
+                    && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable
+                        || (bool)Gfx12Predicates::Enable));
         }
 
 #if !NDEBUG
@@ -301,6 +361,7 @@ namespace rocwmma
             debugGlobalPredicates();
             debugGfx9Predicates();
             debugGfx11Predicates();
+            debugGfx12Predicates();
 
             std::cout << "Overall enable build: " << enableBuild() << std::endl;
             std::cout << "Overall enable run: " << enableRun() << std::endl;
