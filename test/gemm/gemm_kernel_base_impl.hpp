@@ -392,8 +392,8 @@ namespace rocwmma
         mLda = mLdb = mLdc = mLdd = 0u;
         mAlpha = mBeta = static_cast<ComputeT>(0u);
 
-        mColdRuns = (bool)(ROCWMMA_VALIDATION_TESTS) ? 0u : 2u;
-        mHotRuns  = (bool)(ROCWMMA_VALIDATION_TESTS) ? 1u : 10u;
+        mColdRuns = (bool)(ROCWMMA_VALIDATION_TESTS) ? 0u : 1u;
+        mHotRuns  = (bool)(ROCWMMA_VALIDATION_TESTS) ? 1u : 5u;
 
         mRunFlag          = true;
         mValidationResult = false;
