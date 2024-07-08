@@ -55,17 +55,17 @@ namespace rocwmma
                                                                      ArchId>
     {
         using Base       = GemmPredicatesBase<BlockM,
-                                        BlockN,
-                                        BlockK,
-                                        InputT,
-                                        OutputT,
-                                        ComputeT,
-                                        1u,
-                                        1u,
-                                        TBlockX,
-                                        TBlockY,
-                                        WaveSize,
-                                        ArchId>;
+                                              BlockN,
+                                              BlockK,
+                                              InputT,
+                                              OutputT,
+                                              ComputeT,
+                                              1u,
+                                              1u,
+                                              TBlockX,
+                                              TBlockY,
+                                              WaveSize,
+                                              ArchId>;
         using TestTraits = typename Base::TestTraits;
 
     private:
@@ -98,7 +98,7 @@ namespace rocwmma
         enum struct Gfx11Predicates : bool
         {
             // Valid for gfx11 only
-            ArchTest = (bool)TestTraits::Arch::IsGfx11,
+            ArchTest = (bool)TestTraits::Arch::IsGfx11 || (bool)TestTraits::Arch::IsGfx12,
 
             // AB inputs are duplicated, single buffered
             // C tiles are unpacked.

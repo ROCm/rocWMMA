@@ -185,7 +185,9 @@ namespace rocwmma
         // Vector size properties
         enum : uint32_t
         {
-            MaxVW = (is_same<DataT, float64_t>::value || ROCWMMA_ARCH_GFX11) ? 1u : 4u,
+            MaxVW = ROCWMMA_ARCH_GFX12
+                        ? 8u
+                        : ((is_same<DataT, float64_t>::value || ROCWMMA_ARCH_GFX11) ? 1u : 4u),
             VW    = is_same<DataLayoutT, col_major>::value ? MaxVW : 1u
         };
 
