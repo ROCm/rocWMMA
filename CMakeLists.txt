@@ -84,12 +84,28 @@ rocm_setup_version( VERSION ${VERSION_STRING} )
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/library/include/rocwmma/internal/rocwmma-version.hpp.in"
                "${CMAKE_CURRENT_SOURCE_DIR}/library/include/rocwmma/rocwmma-version.hpp" )
 
-rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
-  TARGETS "gfx908;gfx90a;gfx940;gfx941;gfx942;gfx1100;gfx1101;gfx1102;gfx1200;gfx1201" )
+# check if asan is enabled
+if (NOT DEFINED ADDRESS_SANITIZER AND DEFINED ENV{ADDRESS_SANITIZER})
+    set(ADDRESS_SANITIZER $ENV{ADDRESS_SANITIZER})
+endif()
+if (ADDRESS_SANITIZER OR CMAKE_CXX_FLAGS MATCHES "-fsanitize=address")
+    set(ADDRESS_SANITIZER_ENABLED ON)
+else()
+    set(ADDRESS_SANITIZER_ENABLED OFF)
+endif()
+
+if (ADDRESS_SANITIZER_ENABLED)
+    rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
+        TARGETS "gfx90a:xnack+;gfx940:xnack+;gfx941:xnack+;gfx942:xnack+" )
+else()
+    rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
+        TARGETS "gfx908;gfx90a;gfx940;gfx941;gfx942;gfx1100;gfx1101;gfx1102;gfx1200;gfx1201" )
+endif()
+
 
 # Variable AMDGPU_TARGET must be a cached variable and must be specified before calling find_package(hip)
 # This is because hip-config.cmake sets --offload-arch via AMDGPU_TARGET cached variable __after__ setting
-# default cached variable AMDGPU_TARGET to "gfx900;gfx906;gfx908;gfx1100;gfx1101;gfx1102;gfx940", where not all archs are compatible with MFMA instructions
+# default cached variable AMDGPU_TARGET to DEFAULT_AMDGPU_TARGETS, where not all archs are compatible with MFMA instructions
 #
 # By rule, once cached variable is set, it cannot be overridden unless we use the FORCE option
 if(AMDGPU_TARGETS)
