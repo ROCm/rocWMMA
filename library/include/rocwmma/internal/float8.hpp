@@ -826,6 +826,7 @@ inline ROCWMMA_HOST_DEVICE T explicit_downcast(Ta a, uint32_t rng)
 
 // =================================================================================================
 
+#include "utility/numeric_limits.hpp"
 namespace rocwmma
 {
     namespace detail
@@ -851,15 +852,15 @@ namespace rocwmma
             {
             }
         };
+
     } // namespace detail
+
 } // namespace rocwmma
 
-#include "utility/numeric_limits.hpp"
-
-namespace rocwmma
+namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
 {
     ///////////////////////////////////////////////////////////
-    ///////////  std::numeric_limits<rocwmma_f8>  //////////////
+    ///////////////  numeric_limits<rocwmma_f8>  //////////////
     ///////////////////////////////////////////////////////////
     // @cond
     template <>
@@ -912,7 +913,7 @@ namespace rocwmma
     }
 
     ///////////////////////////////////////////////////////////
-    ///////////  std::numeric_limits<rocwmma_bf8>  //////////////
+    //////////////  numeric_limits<rocwmma_bf8>  //////////////
     ///////////////////////////////////////////////////////////
 
     template <>
@@ -965,6 +966,6 @@ namespace rocwmma
     }
     //@endcond
 
-} // namespace rocwmma
+} // namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
 
 #endif // ROCWMMA_FLOAT8_H
