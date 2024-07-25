@@ -100,18 +100,13 @@ namespace rocwmma
         };
 
     } // namespace detail
+
 } // namespace rocwmma
 
 #include "utility/numeric_limits.hpp"
-
-#if defined(__HIPCC_RTC__)
-#define NUMERIC_LIMITS_NAMESPACE rocwmma::detail
-#else
-#define NUMERIC_LIMITS_NAMESPACE std
-#endif
-
-namespace NUMERIC_LIMITS_NAMESPACE
+namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
 {
+
 #if defined(__HIPCC_RTC__)
     using uint16_t = rocwmma::uint16_t;
 #endif
@@ -359,7 +354,7 @@ namespace NUMERIC_LIMITS_NAMESPACE
     }
     // @endcond
 
-} // namespace rocwmma
+} // namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
 
 namespace rocwmma
 {

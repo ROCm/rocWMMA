@@ -37,6 +37,9 @@ namespace rocwmma
 
 } // namespace rocwmma
 
+// When specializing numeric_limits, ensure the correct namespace
+#define ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE rocwmma::detail
+
 #else
 
 #include <limits>
@@ -46,6 +49,9 @@ namespace rocwmma
     using std::numeric_limits;
 
 } // namespace rocwmma
+
+// When specializing numeric_limits, ensure the correct namespace
+#define ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE std
 
 #endif // defined(__HIPCC_RTC__)
 
