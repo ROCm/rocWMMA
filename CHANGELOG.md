@@ -3,7 +3,28 @@
 Documentation for rocWMMA is available at
 [https://rocm.docs.amd.com/projects/rocWMMA/en/latest](https://rocm.docs.amd.com/projects/rocWMMA/en/latest).
 
-## (Unreleased) rocWMMA 1.5.0 for ROCm 6.2.0
+## (Unreleased) rocWMMA 1.6.0 for ROCm 6.3.0
+
+### Additions
+
+* Added OCP f8/bf8 datatype support
+* Added support for gfx12 arch targets
+
+### Changes
+
+* Optimized some aos<->soa transforms with half-rotation offsets
+* Refactored rocBLAS reference entrypoint for validation and benchmarking
+* ROCWMMA_* preprocessor configurations are now all assigned values
+* Updated default arch targets for ASAN builds
+* Updated actor-critic implementation
+
+### Fixes
+
+* Fixed a bug in f64 validation due to faulty typecasting
+* Fixed a bug causing runtime compilation errors with hipRTC
+* Various documentation updates and fixes
+
+## rocWMMA 1.5.0 for ROCm 6.2.0
 
 ### Additions
 
