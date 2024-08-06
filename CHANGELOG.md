@@ -16,6 +16,7 @@ Documentation for rocWMMA is available at
 * Refactored rocBLAS reference entrypoint for validation and benchmarking
 * ROCWMMA_* preprocessor configurations are now all assigned values
 * Updated default arch targets for ASAN builds
+* Updated actor-critic implementation
 
 ### Fixes
 
