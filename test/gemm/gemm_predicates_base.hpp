@@ -302,16 +302,17 @@ namespace rocwmma
             // Input types supported
             InputTypesTest
             = (bool)TestTraits::InputType::IsInt8 
-              || (bool)TestTraits::InputType::IsFloat16 || (bool)TestTraits::InputType::IsBFloat16,
-              // TODO: update
-              //|| (bool)TestTraits::InputType::IsFloat8  || (bool)TestTraits::InputType::IsBFloat8,
+              || (bool)TestTraits::InputType::IsFloat16 || (bool)TestTraits::InputType::IsBFloat16
+              || (bool)TestTraits::InputType::IsFloat8  || (bool)TestTraits::InputType::IsBFloat8,
 
             // General int8_t block size
             // BlockM/N = 16; Block K >= 16
             I8BlockSizeTest
-            = !((bool)TestTraits::InputType::IsInt8 || (bool)TestTraits::InputType::IsFloat8
+            = !(   (bool)TestTraits::InputType::IsInt8 
+                || (bool)TestTraits::InputType::IsFloat8
                 || (bool)TestTraits::InputType::IsBFloat8)
-              || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 16u)
+              || (   (bool)TestTraits::BlockSizes::isBlockMN16 
+                  && (BlockK >= 16u)
                   && (BlockK % 16u == 0u)),
 
             // General float16_t / hfloat16_t / bfloat16_t block size

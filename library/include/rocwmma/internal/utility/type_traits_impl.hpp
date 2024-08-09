@@ -518,6 +518,11 @@ namespace rocwmma
         struct is_floating_point : public false_type
         {
         };
+        // Note: native _Float16 trait is set in hip f16 header.
+        template <>
+        struct is_floating_point<_Float16> : public true_type
+        {
+        };
         template <>
         struct is_floating_point<float> : public true_type
         {
