@@ -93,6 +93,31 @@ namespace ROCWMMA_TYPE_TRAITS_IMPL_NAMESPACE
 #include <hip/hip_fp8.h>
 #include "utility/numeric_limits.hpp"
 
+
+constexpr inline ROCWMMA_HOST_DEVICE hip_fp8_e4m3 make_hip_fp8_e4m3_from_bits(__hip_fp8_storage_t bits)
+{
+    static_assert(sizeof(hip_fp8_e4m3) == sizeof(__hip_fp8_storage_t), "Sizes of hip_fp8_e4m3 and __hip_fp8_storage_t are different");
+    union 
+    {
+        __hip_fp8_storage_t c8;
+        hip_fp8_e4m3 fp8;
+
+    } result {bits};
+    return result.fp8;
+}
+
+constexpr inline ROCWMMA_HOST_DEVICE hip_fp8_e5m2 make_hip_fp8_e5m2_from_bits(__hip_fp8_storage_t bits)
+{
+    static_assert(sizeof(hip_fp8_e5m2) == sizeof(__hip_fp8_storage_t), "Sizes of hip_fp8_e5m2 and __hip_fp8_storage_t are different");
+    union 
+    {
+        __hip_fp8_storage_t c8;
+        hip_fp8_e5m2 fp8;
+
+    } result {bits};
+    return result.fp8;
+}
+
 #if !defined(__HIPCC_RTC__)
 
 // Special operator overloading
@@ -111,11 +136,12 @@ inline std::ostream& operator<<(std::ostream& os, hip_fp8_e5m2 a)
 // Unary sign inversion
 inline ROCWMMA_HOST_DEVICE hip_fp8_e4m3 operator-(hip_fp8_e4m3 a)
 {
-    return hip_fp8_e4m3{a.__x ^ 0x80};
+    return make_hip_fp8_e4m3_from_bits(a.__x ^ 0x80);
 }
+
 inline ROCWMMA_HOST_DEVICE hip_fp8_e5m2 operator-(hip_fp8_e5m2 a)
 {
-    return hip_fp8_e5m2{a.__x ^ 0x80};
+    return make_hip_fp8_e5m2_from_bits(a.__x ^ 0x80);
 }
 
 // all + operator overloading with mixed types
@@ -410,28 +436,6 @@ inline ROCWMMA_HOST_DEVICE bool operator>=(hip_fp8_e4m3 a, hip_fp8_e4m3 b)
 inline ROCWMMA_HOST_DEVICE bool operator>=(hip_fp8_e5m2 a, hip_fp8_e5m2 b)
 {
     return float(a) >= float(b);
-}
-
-constexpr inline ROCWMMA_HOST_DEVICE auto make_hip_fp8_e4m3_from_bits(__hip_fp8_storage_t bits)
-{
-    union 
-    {
-        uint8_t c8;
-        hip_fp8_e4m3 fp8;
-
-    } result {bits};
-    return result.fp8;
-}
-
-constexpr inline ROCWMMA_HOST_DEVICE auto make_hip_fp8_e5m2_from_bits(__hip_fp8_storage_t bits)
-{
-    union 
-    {
-        uint8_t c8;
-        hip_fp8_e5m2 fp8;
-
-    } result {bits};
-    return result.fp8;
 }
 
 // Define numeric limits traits
