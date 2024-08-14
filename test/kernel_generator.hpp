@@ -30,6 +30,8 @@
 #include <tuple>
 #include <vector>
 
+#include "hip_device.hpp"
+
 namespace rocwmma
 {
 
@@ -275,7 +277,7 @@ namespace rocwmma
     struct KernelGenerator
     {
         template <typename... Ts>
-        static void generate(Ts...)
+        ROCWMMA_HOST static void generate(Ts...)
         {
         }
     };
@@ -284,18 +286,22 @@ namespace rocwmma
     struct KernelGenerator<std::tuple<KernelParams, Next...>, GeneratorImpl>
     {
         using ResultT = std::vector<typename GeneratorImpl::ResultT>;
-        static ResultT generate()
+        ROCWMMA_HOST static ResultT generate()
         {
             auto result = ResultT();
             generate(result);
             return result;
         }
 
-        static void generate(ResultT& kernels)
+        ROCWMMA_HOST static void generate(ResultT& kernels)
         {
-            // Quirk: Host code doesn't know anything about GPU targets until runtime.
-            // There is a special case for gfx94* devices that will run on fnuz f8/bf8 types,
-            // so we need to force our 'float8_t' and 'bfloat8_t' types to fnuz mode here...
+            #if ROCWMMA_ARCH_HOST
+            // Quirk: Host code doesn't know anything about GPU targets until runtime. We could have multiple targets
+            // in the same project, such as gfx940 and gfx1200. gfx940 supports fp8 fnuz types and gfx1200 does not.
+            // As a result, host doesn't use fp8 fnuz types by default during compilation (e.g., float8_t = non fnuz).
+            // This is an issue because gfx94* targets DO default to fnuz types during compilation (e.g., float8_t = fnuz).
+            // Special case for test generation: in order to avoid linking issues, we need the host to become
+            // aware of and use f8/bf8 fnuz types when we encounter gfx94* targets at runtime.
             if constexpr (contains_type_v<float8_t, KernelParams>
                          || contains_type_v<bfloat8_t, KernelParams>)
             {
@@ -312,6 +318,7 @@ namespace rocwmma
                     return;
                 }
             }
+            #endif // ROCWMMA_ARCH_HOST
             
             // Generate unmodified kernels 
             kernels.push_back(GeneratorImpl::generate(KernelParams()));

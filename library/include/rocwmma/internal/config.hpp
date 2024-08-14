@@ -157,15 +157,29 @@
 
 ///
 /// Architecture datatypes configuration.
-/// FP8_NANOO only supported on gfx940, gfx941 and gfx942
+/// FP8 fnuz types only supported on gfx940, gfx941 and gfx942
 /// Guaranteed symbols:
-/// ROCWMMA_ENABLE_FP8_NANOO
+/// ROCWMMA_USE_FP8_FNUZ
 ///
+#ifndef ROCWMMA_USE_FP8_FNUZ
+
 #if (ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942)
-#define ROCWMMA_USE_FP8_NANOO 1
+#define ROCWMMA_USE_FP8_FNUZ 1
 #else
-#define ROCWMMA_USE_FP8_NANOO 0
+#define ROCWMMA_USE_FP8_FNUZ 0
 #endif
+
+#else // ROCWMMA_USE_FP8_FNUZ is defined
+
+// Sanity check for externally set FP8 flag
+#if ROCWMMA_USE_FP8_FNUZ
+static_assert((bool)ROCWMMA_ARCH_GFX940 || (bool)ROCWMMA_ARCH_GFX941 || (bool)ROCWMMA_ARCH_GFX942  || (bool)ROCWMMA_ARCH_HOST, "fp8 fnuz types only supported on gfx94*. Use ROCWMMA_USE_FP8_FNUZ 0.");
+#else
+static_assert(!(bool)ROCWMMA_ARCH_GFX940 && !(bool)ROCWMMA_ARCH_GFX941 && !(bool)ROCWMMA_ARCH_GFX942, "fp8 fnuz types required supported on gfx94*. Use ROCWMMA_USE_FP8_FNUZ 1");
+#endif // ROCWMMA_USE_FP8_FNUZ
+
+#endif // ROCWMMA_USE_FP8_FNUZ
+
 
 #if defined(NDEBUG)
 #define ROCWMMA_UNSUPPORTED_IMPL(MSG)
