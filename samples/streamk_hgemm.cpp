@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -617,9 +617,25 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
     /// Stream-K setup, determine work distribution.
     ///
 
+    int itersTotal  = totalIterations(m, n, k);
     int itersPerCTA = ceilIterationsPerCTA(m, n, k);
     int iter        = blockIdx.x * itersPerCTA;
-    int iterEnd     = iter + itersPerCTA;
+    int iterEnd     = min(iter + itersPerCTA, itersTotal);
+
+    if(threadIdx.x == 0 && threadIdx.y == 0 && blockIdx.x == 0)
+    {
+        printf("itersTotal = %d, itersPerCTA = %d\n", itersTotal, itersPerCTA);
+    }
+    if(threadIdx.x == 0 && blockIdx.x < 120)
+    {
+        // printf("totalIterations = %d\n", itersTotal);
+        // printf("itersPerCTA = %d\n", itersPerCTA);
+        printf("blockIdx.x = %d,\tthreadIdx.y = %d,\titer = %d,\titerEnd = %d\n",
+               blockIdx.x,
+               threadIdx.y,
+               iter,
+               iterEnd);
+    }
 
     ///
     /// Stream-K's main-while loop.
@@ -843,7 +859,18 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     fillRand(matrixC.data(), m, n);
 
     // Misc. allocations.
-    int                   grid = 304;
+    hipDevice_t     handle;
+    hipDeviceProp_t props;
+
+    CHECK_HIP_ERROR(hipGetDevice(&handle));
+    CHECK_HIP_ERROR(hipGetDeviceProperties(&props, handle));
+    int cuCount = props.multiProcessorCount;
+
+    // int                   grid = 304;
+    int gridMax = cuCount;
+    int grid    = ceilDiv(m, MACRO_TILE_X) * ceilDiv(n, MACRO_TILE_Y);
+    grid        = min(grid, gridMax);
+
     std::vector<int>      flags(grid, 0);
     std::vector<ComputeT> partials(grid * MACRO_TILE_X * MACRO_TILE_Y, static_cast<ComputeT>(0.f));
 
@@ -916,8 +943,10 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
                               d_partials);
     };
 
-    constexpr uint32_t warmups    = 2u;
-    constexpr uint32_t recordRuns = 5u;
+    // constexpr uint32_t warmups    = 2u;
+    // constexpr uint32_t recordRuns = 5u;
+    constexpr uint32_t warmups    = 0u;
+    constexpr uint32_t recordRuns = 1u;
 
     // Warm-up runs, not recorded
     for(uint32_t i = 0; i < warmups; ++i)
@@ -1017,6 +1046,12 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
 
 int main()
 {
-    gemm_test(7168, 7168, 7168, 2, 2);
+    // gemm_test(256, 256, 256, 2, 2);
+    // gemm_test(256, 512, 256, 2, 2);
+    // gemm_test(512, 512, 512, 2, 2);
+    // gemm_test(1024, 1024, 1024, 2, 2);
+    gemm_test(7040, 256, 32, 2, 2);
+    gemm_test(7168, 256, 32, 2, 2);
+    // gemm_test(2048, 2048, 2048, 2, 2);
     return 0;
 }
