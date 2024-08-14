@@ -118,26 +118,50 @@ namespace rocwmma
     };
 
     template <>
-    struct PackTraits<float8_t>
+    struct PackTraits<hip_fp8_e4m3>
     {
         enum : uint32_t
         {
             PackRatio = 4
         };
 
-        using UnpackedT = float8_t;
+        using UnpackedT = hip_fp8_e4m3;
         using PackedT   = float32_t;
     };
 
     template <>
-    struct PackTraits<bfloat8_t>
+    struct PackTraits<hip_fp8_e5m2>
     {
         enum : uint32_t
         {
             PackRatio = 4
         };
 
-        using UnpackedT = bfloat8_t;
+        using UnpackedT = hip_fp8_e5m2;
+        using PackedT   = float32_t;
+    };
+
+    template <>
+    struct PackTraits<hip_fp8_e4m3_fnuz>
+    {
+        enum : uint32_t
+        {
+            PackRatio = 4
+        };
+
+        using UnpackedT = hip_fp8_e4m3_fnuz;
+        using PackedT   = float32_t;
+    };
+
+    template <>
+    struct PackTraits<hip_fp8_e5m2_fnuz>
+    {
+        enum : uint32_t
+        {
+            PackRatio = 4
+        };
+
+        using UnpackedT = hip_fp8_e5m2_fnuz;
         using PackedT   = float32_t;
     };
 
