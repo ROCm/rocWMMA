@@ -50,7 +50,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<DefaultArch, float8_t>
+    struct MfmaPerfTraits<DefaultArch, hip_fp8_e4m3>
     {
         enum : uint32_t
         {
@@ -59,7 +59,25 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<DefaultArch, bfloat8_t>
+    struct MfmaPerfTraits<DefaultArch, hip_fp8_e5m2>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<DefaultArch, hip_fp8_e4m3_fnuz>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<DefaultArch, hip_fp8_e5m2_fnuz>
     {
         enum : uint32_t
         {
@@ -123,7 +141,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<ArchGfx908, float8_t>
+    struct MfmaPerfTraits<ArchGfx908, hip_fp8_e4m3>
     {
         enum : uint32_t
         {
@@ -132,7 +150,25 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<ArchGfx908, bfloat8_t>
+    struct MfmaPerfTraits<ArchGfx908, hip_fp8_e5m2>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<ArchGfx908, hip_fp8_e4m3_fnuz>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<ArchGfx908, hip_fp8_e5m2_fnuz>
     {
         enum : uint32_t
         {
@@ -196,7 +232,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<ArchGfx90a, float8_t>
+    struct MfmaPerfTraits<ArchGfx90a, hip_fp8_e4m3>
     {
         enum : uint32_t
         {
@@ -205,7 +241,25 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<ArchGfx90a, bfloat8_t>
+    struct MfmaPerfTraits<ArchGfx90a, hip_fp8_e5m2>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<ArchGfx90a, hip_fp8_e4m3_fnuz>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<ArchGfx90a, hip_fp8_e5m2_fnuz>
     {
         enum : uint32_t
         {

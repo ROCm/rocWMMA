@@ -116,8 +116,11 @@ namespace rocwmma
         enum struct InputType : bool
         {
             IsInt8    = std::is_same_v<InputT, int8_t>,
-            IsFloat8  = std::is_same_v<InputT, float8_t>,
-            IsBFloat8 = std::is_same_v<InputT, bfloat8_t>,
+
+            // Make sure to include fnuz f8 types
+            IsFloat8  = std::is_same_v<InputT, hip_fp8_e4m3> || std::is_same_v<InputT, hip_fp8_e4m3_fnuz>,
+            IsBFloat8 = std::is_same_v<InputT, hip_fp8_e5m2> || std::is_same_v<InputT, hip_fp8_e5m2_fnuz>,
+            
 #if !ROCWMMA_TESTS_NO_HALF
             IsHFloat16 = std::is_same_v<InputT, hfloat16_t>,
 #else

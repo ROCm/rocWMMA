@@ -207,15 +207,27 @@ namespace rocwmma
     ///////////////////////////////////////////////////////////
 
     template <>
-    constexpr const char* dataTypeToString<float8_t>()
+    constexpr const char* dataTypeToString<hip_fp8_e4m3>()
     {
         return "f8";
     }
 
     template <>
-    constexpr const char* dataTypeToString<bfloat8_t>()
+    constexpr const char* dataTypeToString<hip_fp8_e5m2>()
     {
         return "bf8";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<hip_fp8_e4m3_fnuz>()
+    {
+        return "f8(fnuz)";
+    }
+
+    template <>
+    constexpr const char* dataTypeToString<hip_fp8_e5m2_fnuz>()
+    {
+        return "bf8(fnuz)";
     }
 
     template <>

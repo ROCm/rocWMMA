@@ -31,11 +31,20 @@ namespace rocwmma
     template struct GemmResource<int8_t, int32_t>;
     template struct GemmResource<float8_t, float32_t>;
     template struct GemmResource<bfloat8_t, float32_t>;
+
+    // Host needs to know about fnuz types in case we are running gfx94*
+#if ROCWMMA_ARCH_HOST 
+    template struct GemmResource<hip_fp8_e4m3_fnuz, float32_t>;
+    template struct GemmResource<hip_fp8_e5m2_fnuz, float32_t>;
+#endif // ROCWMMA_ARCH_HOST
+
     template struct GemmResource<bfloat16_t, float32_t>;
     template struct GemmResource<float16_t, float32_t>;
+
 #if !ROCWMMA_TESTS_NO_HALF
     template struct GemmResource<hfloat16_t, float32_t>;
 #endif // !ROCWMMA_TESTS_NO_HALF
+
     template struct GemmResource<float32_t, float32_t>;
     template struct GemmResource<xfloat32_t, float32_t>;
     template struct GemmResource<float64_t, float64_t>;

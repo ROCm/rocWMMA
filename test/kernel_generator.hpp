@@ -212,6 +212,54 @@ namespace rocwmma
         using Result = List;
     };
 
+    // Class that will force incoming f8 types to fnuz mode (see usage below)
+    template<typename DataT>
+    struct F8FnuzOverride
+    {
+        using Type = DataT;
+    };
+
+    template<>
+    struct F8FnuzOverride<float8_t>
+    {
+        using Type = hip_fp8_e4m3_fnuz;
+    };
+
+    template<>
+    struct F8FnuzOverride<bfloat8_t>
+    {
+        using Type = hip_fp8_e5m2_fnuz;
+    };
+
+    template<typename DataT>
+    using F8FnuzOverride_t = typename F8FnuzOverride<DataT>::Type;
+
+    // Class that will force incoming f8 tuple element types to fnuz mode
+    template<typename TupleT>
+    struct F8FnuzTupleOverride
+    {
+        using Type = TupleT;
+    };
+
+    template<typename... Ts>
+    struct F8FnuzTupleOverride<std::tuple<Ts...>>
+    {
+        using Type = std::tuple<F8FnuzOverride_t<Ts>...>;
+    };
+
+    template<typename TupleT>
+    using F8FnuzTupleOverride_t = typename F8FnuzTupleOverride<TupleT>::Type;
+
+    // Helper classes to determine if a tuple contains an element with type DataT
+    template <typename DataT, typename TupleT>
+    struct contains_type;
+
+    template <typename DataT, typename... TupleTs>
+    struct contains_type<DataT, std::tuple<TupleTs...>> : std::disjunction<std::is_same<DataT, TupleTs>...> {};
+
+    template<typename DataT, typename TupleT>
+    inline constexpr bool contains_type_v = contains_type<DataT, TupleT>::value;
+
     /// Kernel Generator
     /// Requires two inputs:
     /// TestParams: nested tuple of KernelParams
@@ -245,7 +293,27 @@ namespace rocwmma
 
         static void generate(ResultT& kernels)
         {
-            // Generate kernels
+            // Quirk: Host code doesn't know anything about GPU targets until runtime.
+            // There is a special case for gfx94* devices that will run on fnuz f8/bf8 types,
+            // so we need to force our 'float8_t' and 'bfloat8_t' types to fnuz mode here...
+            if constexpr (contains_type_v<float8_t, KernelParams>
+                         || contains_type_v<bfloat8_t, KernelParams>)
+            {
+                // Check gfx94* device
+                using DeviceInfo = HipDevice;
+                auto arch = DeviceInfo::instance()->getGcnArch();
+                if(arch == DeviceInfo::hipGcnArch_t::GFX940
+                    || arch == DeviceInfo::hipGcnArch_t::GFX941 
+                    || arch == DeviceInfo::hipGcnArch_t::GFX942)
+                {
+                    // Generate modified fnuz kernels 
+                    kernels.push_back(GeneratorImpl::generate(F8FnuzTupleOverride_t<KernelParams>()));
+                    KernelGenerator<std::tuple<Next...>, GeneratorImpl>::generate(kernels);
+                    return;
+                }
+            }
+            
+            // Generate unmodified kernels 
             kernels.push_back(GeneratorImpl::generate(KernelParams()));
             KernelGenerator<std::tuple<Next...>, GeneratorImpl>::generate(kernels);
         }
