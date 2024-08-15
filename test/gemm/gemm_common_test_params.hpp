@@ -57,8 +57,13 @@ namespace rocwmma
         // float8
         using TestTypesF8 = std::tuple<
 #if ROCWMMA_FP8
-        std::tuple<float8_t, float32_t, float32_t>,
+        std::tuple<float8_t, float32_t, float32_t>
 #endif // ROCWMMA_FP8
+
+// Only host will ever include both
+#if ROCWMMA_FP8 && ROCWMMA_FP8_FNUZ
+        ,
+#endif // ROCWMMA_FP8 && ROCWMMA_FP8_FNUZ
 
 #if ROCWMMA_FP8_FNUZ
          std::tuple<float8_fnuz_t, float32_t, float32_t>
@@ -67,8 +72,13 @@ namespace rocwmma
 
         using TestTypesBF8 = std::tuple<
 #if ROCWMMA_FP8
-        std::tuple<bfloat8_t, float32_t, float32_t>,
+        std::tuple<bfloat8_t, float32_t, float32_t>
 #endif // ROCWMMA_FP8
+
+// Only host will ever include both
+#if ROCWMMA_FP8 && ROCWMMA_FP8_FNUZ
+        ,
+#endif // ROCWMMA_FP8 && ROCWMMA_FP8_FNUZ
 
 #if ROCWMMA_FP8_FNUZ
          std::tuple<bfloat8_fnuz_t, float32_t, float32_t>
