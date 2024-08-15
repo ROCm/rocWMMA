@@ -339,14 +339,14 @@ namespace rocwmma
         return ((int32_t)1 << 8);
     }
 
-    template <typename T, enable_if_t<is_same<T, hip_fp8_e4m3_fnuz>::value, int> = 0>
+    template <typename T, enable_if_t<is_same<T, float8_fnuz_t>::value, int> = 0>
     constexpr auto maxExactInteger() -> int32_t
     {
         // f8 mantissa is 3 bits
         return ((int32_t)1 << 4);
     }
 
-    template <typename T, enable_if_t<is_same<T, hip_fp8_e5m2_fnuz>::value, int> = 0>
+    template <typename T, enable_if_t<is_same<T, bfloat8_fnuz_t>::value, int> = 0>
     constexpr auto maxExactInteger() -> int32_t
     {
         // bf8 mantissa is 2 bits

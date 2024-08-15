@@ -834,14 +834,16 @@ namespace rocwmma
 
     // All supported instantiations
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(int8_t, int32_t, int32_t);
+
+#if ROCWMMA_FP8
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(float8_t, float32_t, float32_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(bfloat8_t, float32_t, float32_t);
+#endif
 
-// Host needs to know about fnuz types in case we are running gfx94*
-#if ROCWMMA_ARCH_HOST 
-    ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(hip_fp8_e4m3_fnuz, float32_t, float32_t);
-    ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(hip_fp8_e5m2_fnuz, float32_t, float32_t);
-#endif // ROCWMMA_ARCH_HOST
+#if ROCWMMA_FP8_FNUZ
+    ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(float8_fnuz_t, float32_t, float32_t);
+    ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(bfloat8_fnuz_t, float32_t, float32_t);
+#endif
 
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(bfloat16_t, float32_t, float32_t);
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(float16_t, float32_t, float32_t);

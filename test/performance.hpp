@@ -50,7 +50,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<DefaultArch, hip_fp8_e4m3>
+    struct MfmaPerfTraits<DefaultArch, float8_t>
     {
         enum : uint32_t
         {
@@ -59,7 +59,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<DefaultArch, hip_fp8_e5m2>
+    struct MfmaPerfTraits<DefaultArch, bfloat8_t>
     {
         enum : uint32_t
         {
@@ -68,7 +68,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<DefaultArch, hip_fp8_e4m3_fnuz>
+    struct MfmaPerfTraits<DefaultArch, float8_fnuz_t>
     {
         enum : uint32_t
         {
@@ -77,7 +77,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<DefaultArch, hip_fp8_e5m2_fnuz>
+    struct MfmaPerfTraits<DefaultArch, bfloat8_fnuz_t>
     {
         enum : uint32_t
         {
@@ -141,7 +141,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<ArchGfx908, hip_fp8_e4m3>
+    struct MfmaPerfTraits<ArchGfx908, float8_t>
     {
         enum : uint32_t
         {
@@ -150,7 +150,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<ArchGfx908, hip_fp8_e5m2>
+    struct MfmaPerfTraits<ArchGfx908, bfloat8_t>
     {
         enum : uint32_t
         {
@@ -159,7 +159,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<ArchGfx908, hip_fp8_e4m3_fnuz>
+    struct MfmaPerfTraits<ArchGfx908, float8_fnuz_t>
     {
         enum : uint32_t
         {
@@ -168,7 +168,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<ArchGfx908, hip_fp8_e5m2_fnuz>
+    struct MfmaPerfTraits<ArchGfx908, bfloat8_fnuz_t>
     {
         enum : uint32_t
         {
@@ -232,7 +232,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<ArchGfx90a, hip_fp8_e4m3>
+    struct MfmaPerfTraits<ArchGfx90a, float8_t>
     {
         enum : uint32_t
         {
@@ -241,7 +241,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<ArchGfx90a, hip_fp8_e5m2>
+    struct MfmaPerfTraits<ArchGfx90a, bfloat8_t>
     {
         enum : uint32_t
         {
@@ -250,7 +250,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<ArchGfx90a, hip_fp8_e4m3_fnuz>
+    struct MfmaPerfTraits<ArchGfx90a, float8_fnuz_t>
     {
         enum : uint32_t
         {
@@ -259,7 +259,7 @@ namespace rocwmma
     };
 
     template <>
-    struct MfmaPerfTraits<ArchGfx90a, hip_fp8_e5m2_fnuz>
+    struct MfmaPerfTraits<ArchGfx90a, bfloat8_fnuz_t>
     {
         enum : uint32_t
         {

@@ -118,9 +118,11 @@ namespace rocwmma
             IsInt8    = std::is_same_v<InputT, int8_t>,
 
             // Make sure to include fnuz f8 types
-            IsFloat8  = std::is_same_v<InputT, hip_fp8_e4m3> || std::is_same_v<InputT, hip_fp8_e4m3_fnuz>,
-            IsBFloat8 = std::is_same_v<InputT, hip_fp8_e5m2> || std::is_same_v<InputT, hip_fp8_e5m2_fnuz>,
-            
+            IsFloat8  = std::is_same_v<InputT, float8_t>,
+            IsFloat8Fnuz = std::is_same_v<InputT, float8_fnuz_t>,
+            IsBFloat8  = std::is_same_v<InputT, bfloat8_t>,
+            IsBFloat8Fnuz = std::is_same_v<InputT, bfloat8_fnuz_t>,
+
 #if !ROCWMMA_TESTS_NO_HALF
             IsHFloat16 = std::is_same_v<InputT, hfloat16_t>,
 #else
@@ -138,8 +140,10 @@ namespace rocwmma
         enum struct OutputType : bool
         {
             IsInt8    = std::is_same_v<OutputT, int8_t>,
-            IsFloat8  = std::is_same_v<OutputT, float8_t>,
-            IsBFloat8 = std::is_same_v<OutputT, bfloat8_t>,
+            IsFloat8  = std::is_same_v<InputT, float8_t>,
+            IsFloat8Fnuz = std::is_same_v<InputT, float8_fnuz_t>,
+            IsBFloat8  = std::is_same_v<InputT, bfloat8_t>,
+            IsBFloat8Fnuz = std::is_same_v<InputT, bfloat8_fnuz_t>,
 
 #if !ROCWMMA_TESTS_NO_HALF
             IsHFloat16 = std::is_same_v<OutputT, hfloat16_t>,
@@ -159,8 +163,10 @@ namespace rocwmma
         enum struct ComputeType : bool
         {
             IsInt8    = std::is_same_v<ComputeT, int8_t>,
-            IsFloat8  = std::is_same_v<ComputeT, float8_t>,
-            IsBFloat8 = std::is_same_v<ComputeT, bfloat8_t>,
+            IsFloat8  = std::is_same_v<InputT, float8_t>,
+            IsFloat8Fnuz = std::is_same_v<InputT, float8_fnuz_t>,
+            IsBFloat8  = std::is_same_v<InputT, bfloat8_t>,
+            IsBFloat8Fnuz = std::is_same_v<InputT, bfloat8_fnuz_t>,
 
 #if !ROCWMMA_TESTS_NO_HALF
             IsHFloat16 = std::is_same_v<ComputeT, hfloat16_t>,
