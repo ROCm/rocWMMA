@@ -48,55 +48,80 @@ using hip_fp8_e5m2_fnuz = __hip_fp8_e5m2_fnuz;
 
 namespace ROCWMMA_TYPE_TRAITS_IMPL_NAMESPACE
 {
-    template<>
-    struct is_arithmetic<hip_fp8_e4m3> : true_type{};
+    template <>
+    struct is_arithmetic<hip_fp8_e4m3> : true_type
+    {
+    };
 
-    template<>
-    struct is_floating_point<hip_fp8_e4m3> : true_type{};
+    template <>
+    struct is_floating_point<hip_fp8_e4m3> : true_type
+    {
+    };
 
-    template<>
-    struct is_signed<hip_fp8_e4m3> : true_type{};
+    template <>
+    struct is_signed<hip_fp8_e4m3> : true_type
+    {
+    };
 
-    template<>
-    struct is_arithmetic<hip_fp8_e5m2> : true_type{};
+    template <>
+    struct is_arithmetic<hip_fp8_e5m2> : true_type
+    {
+    };
 
-    template<>
-    struct is_floating_point<hip_fp8_e5m2> : true_type{};
+    template <>
+    struct is_floating_point<hip_fp8_e5m2> : true_type
+    {
+    };
 
-    template<>
-    struct is_signed<hip_fp8_e5m2> : true_type{};
+    template <>
+    struct is_signed<hip_fp8_e5m2> : true_type
+    {
+    };
 
     //////////////////////////////////////////
     ///       FNUZ f8 / bf8  overloads     ///
     //////////////////////////////////////////
-    template<>
-    struct is_arithmetic<hip_fp8_e4m3_fnuz> : true_type{};
+    template <>
+    struct is_arithmetic<hip_fp8_e4m3_fnuz> : true_type
+    {
+    };
 
-    template<>
-    struct is_floating_point<hip_fp8_e4m3_fnuz> : true_type{};
+    template <>
+    struct is_floating_point<hip_fp8_e4m3_fnuz> : true_type
+    {
+    };
 
-    template<>
-    struct is_signed<hip_fp8_e4m3_fnuz> : true_type{};
+    template <>
+    struct is_signed<hip_fp8_e4m3_fnuz> : true_type
+    {
+    };
 
-    template<>
-    struct is_arithmetic<hip_fp8_e5m2_fnuz> : true_type{};
+    template <>
+    struct is_arithmetic<hip_fp8_e5m2_fnuz> : true_type
+    {
+    };
 
-    template<>
-    struct is_floating_point<hip_fp8_e5m2_fnuz> : true_type{};
+    template <>
+    struct is_floating_point<hip_fp8_e5m2_fnuz> : true_type
+    {
+    };
 
-    template<>
-    struct is_signed<hip_fp8_e5m2_fnuz> : true_type{};
+    template <>
+    struct is_signed<hip_fp8_e5m2_fnuz> : true_type
+    {
+    };
 
 } // namespace ROCWMMA_TYPE_TRAITS_IMPL_NAMESPACE
 
 // Include full implementations for following overrides.
-#include <hip/hip_fp8.h>
 #include "utility/numeric_limits.hpp"
+#include <hip/hip_fp8.h>
 
 // From HIP, device visibility of fp8/bf8 is limited to certain devices.
 // Host has visibility of all fp8/bf8 types
 #if defined(HIP_FP8_TYPE_FNUZ) && HIP_FP8_TYPE_FNUZ
-static_assert((bool)ROCWMMA_ARCH_GFX94X || (bool)ROCWMMA_ARCH_HOST, "fp8_fnuz types only supported on gfx94X archs");
+static_assert((bool)ROCWMMA_ARCH_GFX94X || (bool)ROCWMMA_ARCH_HOST,
+              "fp8_fnuz types only supported on gfx94X archs");
 #define ROCWMMA_FP8_FNUZ 1
 #define ROCWMMA_FP8_FNUZ_VISIBILITY ROCWMMA_HOST_DEVICE
 #else
@@ -105,7 +130,8 @@ static_assert((bool)ROCWMMA_ARCH_GFX94X || (bool)ROCWMMA_ARCH_HOST, "fp8_fnuz ty
 #endif // defined(HIP_FP8_TYPE_FNUZ) && HIP_FP8_TYPE_FNUZ
 
 #if defined(HIP_FP8_TYPE_OCP) && HIP_FP8_TYPE_OCP
-static_assert((bool)ROCWMMA_ARCH_GFX12 || (bool)ROCWMMA_ARCH_HOST, "fp8_fnuz types only supported on gfx12 archs");
+static_assert((bool)ROCWMMA_ARCH_GFX12 || (bool)ROCWMMA_ARCH_HOST,
+              "fp8_fnuz types only supported on gfx12 archs");
 #define ROCWMMA_FP8 1
 #define ROCWMMA_FP8_VISIBILITY ROCWMMA_HOST_DEVICE
 #else
@@ -113,27 +139,31 @@ static_assert((bool)ROCWMMA_ARCH_GFX12 || (bool)ROCWMMA_ARCH_HOST, "fp8_fnuz typ
 #define ROCWMMA_FP8_VISIBILITY ROCWMMA_HOST
 #endif // defined(HIP_FP8_TYPE_OCP) && HIP_FP8_TYPE_OCP
 
-ROCWMMA_FP8_VISIBILITY constexpr inline hip_fp8_e4m3 make_hip_fp8_e4m3_from_bits(__hip_fp8_storage_t bits)
+ROCWMMA_FP8_VISIBILITY constexpr inline hip_fp8_e4m3
+    make_hip_fp8_e4m3_from_bits(__hip_fp8_storage_t bits)
 {
-    static_assert(sizeof(hip_fp8_e4m3) == sizeof(__hip_fp8_storage_t), "Sizes of hip_fp8_e4m3 and __hip_fp8_storage_t are different");
+    static_assert(sizeof(hip_fp8_e4m3) == sizeof(__hip_fp8_storage_t),
+                  "Sizes of hip_fp8_e4m3 and __hip_fp8_storage_t are different");
     union
     {
         __hip_fp8_storage_t c8;
-        hip_fp8_e4m3 fp8;
+        hip_fp8_e4m3        fp8;
 
-    } result {bits};
+    } result{bits};
     return result.fp8;
 }
 
-ROCWMMA_FP8_VISIBILITY constexpr inline  hip_fp8_e5m2 make_hip_fp8_e5m2_from_bits(__hip_fp8_storage_t bits)
+ROCWMMA_FP8_VISIBILITY constexpr inline hip_fp8_e5m2
+    make_hip_fp8_e5m2_from_bits(__hip_fp8_storage_t bits)
 {
-    static_assert(sizeof(hip_fp8_e5m2) == sizeof(__hip_fp8_storage_t), "Sizes of hip_fp8_e5m2 and __hip_fp8_storage_t are different");
+    static_assert(sizeof(hip_fp8_e5m2) == sizeof(__hip_fp8_storage_t),
+                  "Sizes of hip_fp8_e5m2 and __hip_fp8_storage_t are different");
     union
     {
         __hip_fp8_storage_t c8;
-        hip_fp8_e5m2 fp8;
+        hip_fp8_e5m2        fp8;
 
-    } result {bits};
+    } result{bits};
     return result.fp8;
 }
 
@@ -488,35 +518,35 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
         static constexpr auto traps             = numeric_limits<float>::traps;
         static constexpr auto tinyness_before   = false;
 
-        ROCWMMA_FP8_VISIBILITY static constexpr hip_fp8_e4m3 min()
+        static constexpr hip_fp8_e4m3 min()
         {
             return make_hip_fp8_e4m3_from_bits(0x08);
         }
-        ROCWMMA_FP8_VISIBILITY static constexpr hip_fp8_e4m3 lowest()
+        static constexpr hip_fp8_e4m3 lowest()
         {
             return make_hip_fp8_e4m3_from_bits(0xFE);
         }
-        ROCWMMA_FP8_VISIBILITY static constexpr hip_fp8_e4m3 max()
+        static constexpr hip_fp8_e4m3 max()
         {
             return make_hip_fp8_e4m3_from_bits(0x7E);
         }
-        ROCWMMA_FP8_VISIBILITY static constexpr hip_fp8_e4m3 epsilon()
+        static constexpr hip_fp8_e4m3 epsilon()
         {
             return make_hip_fp8_e4m3_from_bits(0x20);
         }
-        ROCWMMA_FP8_VISIBILITY static constexpr hip_fp8_e4m3 round_error()
+        static constexpr hip_fp8_e4m3 round_error()
         {
             return make_hip_fp8_e4m3_from_bits(0x30);
         }
-        ROCWMMA_FP8_VISIBILITY static constexpr hip_fp8_e4m3 quiet_NaN()
+        static constexpr hip_fp8_e4m3 quiet_NaN()
         {
             return make_hip_fp8_e4m3_from_bits(0x7F);
         }
-        ROCWMMA_FP8_VISIBILITY static constexpr hip_fp8_e4m3 signaling_NaN()
+        static constexpr hip_fp8_e4m3 signaling_NaN()
         {
             return make_hip_fp8_e4m3_from_bits(0x7F);
         }
-        ROCWMMA_FP8_VISIBILITY static constexpr hip_fp8_e4m3 denorm_min()
+        static constexpr hip_fp8_e4m3 denorm_min()
         {
             return make_hip_fp8_e4m3_from_bits(0x01);
         }
@@ -642,22 +672,26 @@ ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator+(hip_fp8_e5m2_fnuz a, hip_fp8_
     return (float(a) + float(b));
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz operator+(hip_fp8_e4m3_fnuz a, hip_fp8_e4m3_fnuz b)
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz operator+(hip_fp8_e4m3_fnuz a,
+                                                               hip_fp8_e4m3_fnuz b)
 {
     return hip_fp8_e4m3_fnuz(float(a) + float(b));
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz operator+(hip_fp8_e5m2_fnuz a, hip_fp8_e5m2_fnuz b)
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz operator+(hip_fp8_e5m2_fnuz a,
+                                                               hip_fp8_e5m2_fnuz b)
 {
     return hip_fp8_e5m2_fnuz(float(a) + float(b));
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz& operator+=(hip_fp8_e4m3_fnuz& a, hip_fp8_e4m3_fnuz b)
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz& operator+=(hip_fp8_e4m3_fnuz& a,
+                                                                 hip_fp8_e4m3_fnuz  b)
 {
     return a = hip_fp8_e4m3_fnuz(float(a) + float(b));
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz& operator+=(hip_fp8_e5m2_fnuz& a, hip_fp8_e5m2_fnuz b)
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz& operator+=(hip_fp8_e5m2_fnuz& a,
+                                                                 hip_fp8_e5m2_fnuz  b)
 {
     return a = hip_fp8_e5m2_fnuz(float(a) + float(b));
 }
@@ -694,22 +728,26 @@ ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator-(hip_fp8_e5m2_fnuz a, hip_fp8_
     return (float(a) - float(b));
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz operator-(hip_fp8_e4m3_fnuz a, hip_fp8_e4m3_fnuz b)
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz operator-(hip_fp8_e4m3_fnuz a,
+                                                               hip_fp8_e4m3_fnuz b)
 {
     return hip_fp8_e4m3_fnuz(float(a) - float(b));
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz operator-(hip_fp8_e5m2_fnuz a, hip_fp8_e5m2_fnuz b)
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz operator-(hip_fp8_e5m2_fnuz a,
+                                                               hip_fp8_e5m2_fnuz b)
 {
     return hip_fp8_e5m2_fnuz(float(a) - float(b));
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz& operator-=(hip_fp8_e4m3_fnuz& a, hip_fp8_e4m3_fnuz b)
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz& operator-=(hip_fp8_e4m3_fnuz& a,
+                                                                 hip_fp8_e4m3_fnuz  b)
 {
     return a = hip_fp8_e4m3_fnuz(float(a) - float(b));
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz& operator-=(hip_fp8_e5m2_fnuz& a, hip_fp8_e5m2_fnuz b)
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz& operator-=(hip_fp8_e5m2_fnuz& a,
+                                                                 hip_fp8_e5m2_fnuz  b)
 {
     return a = hip_fp8_e5m2_fnuz(float(a) - float(b));
 }
@@ -838,12 +876,14 @@ ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(hip_fp8_e5m2_fnuz a, hip_fp8_
     return float(a) / float(b);
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz& operator/=(hip_fp8_e4m3_fnuz& a, hip_fp8_e4m3_fnuz b)
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz& operator/=(hip_fp8_e4m3_fnuz& a,
+                                                                 hip_fp8_e4m3_fnuz  b)
 {
     return a = hip_fp8_e4m3_fnuz(float(a) / float(b));
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz& operator/=(hip_fp8_e5m2_fnuz& a, hip_fp8_e5m2_fnuz b)
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz& operator/=(hip_fp8_e5m2_fnuz& a,
+                                                                 hip_fp8_e5m2_fnuz  b)
 {
     return a = hip_fp8_e5m2_fnuz(float(a) / float(b));
 }
@@ -909,25 +949,27 @@ ROCWMMA_FP8_FNUZ_VISIBILITY inline bool operator>=(hip_fp8_e5m2_fnuz a, hip_fp8_
     return float(a) >= float(b);
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY constexpr inline auto make_hip_fp8_e4m3_fnuz_from_bits(__hip_fp8_storage_t bits)
+ROCWMMA_FP8_FNUZ_VISIBILITY constexpr inline auto
+    make_hip_fp8_e4m3_fnuz_from_bits(__hip_fp8_storage_t bits)
 {
     union
     {
-        uint8_t c8;
+        uint8_t           c8;
         hip_fp8_e4m3_fnuz fp8;
 
-    } result {bits};
+    } result{bits};
     return result.fp8;
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY constexpr inline auto make_hip_fp8_e5m2_fnuz_from_bits(__hip_fp8_storage_t bits)
+ROCWMMA_FP8_FNUZ_VISIBILITY constexpr inline auto
+    make_hip_fp8_e5m2_fnuz_from_bits(__hip_fp8_storage_t bits)
 {
     union
     {
-        uint8_t c8;
+        uint8_t           c8;
         hip_fp8_e5m2_fnuz fp8;
 
-    } result {bits};
+    } result{bits};
     return result.fp8;
 }
 
@@ -936,86 +978,86 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
     // Float 8 E4M3
     // @cond
     template <>
-    ROCWMMA_FP8_FNUZ_VISIBILITY constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::epsilon() noexcept
+    constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::epsilon() noexcept
     {
         return make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(0x28));
     }
 
     template <>
-    ROCWMMA_FP8_FNUZ_VISIBILITY constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::infinity() noexcept
+    constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::infinity() noexcept
     {
         return make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(0x80));
     }
 
     template <>
-    ROCWMMA_FP8_FNUZ_VISIBILITY constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::lowest() noexcept
+    constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::lowest() noexcept
     {
         return make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(0xFF));
     }
 
     template <>
-    ROCWMMA_FP8_FNUZ_VISIBILITY constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::max() noexcept
+    constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::max() noexcept
     {
         return make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(0x7F));
     }
 
     template <>
-    ROCWMMA_FP8_FNUZ_VISIBILITY constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::min() noexcept
+    constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::min() noexcept
     {
         return make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(0x01));
     }
 
     template <>
-    ROCWMMA_FP8_FNUZ_VISIBILITY constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::quiet_NaN() noexcept
+    constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::quiet_NaN() noexcept
     {
         return make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(0x80));
     }
 
     template <>
-    ROCWMMA_FP8_FNUZ_VISIBILITY constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::signaling_NaN() noexcept
+    constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::signaling_NaN() noexcept
     {
         return make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(0x80));
     }
 
     // BFloat8 E5M2
     template <>
-    ROCWMMA_FP8_FNUZ_VISIBILITY constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::epsilon() noexcept
+    constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::epsilon() noexcept
     {
         return make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(0x38));
     }
 
     template <>
-    ROCWMMA_FP8_FNUZ_VISIBILITY constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::infinity() noexcept
+    constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::infinity() noexcept
     {
         return make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(0x80));
     }
 
     template <>
-    ROCWMMA_FP8_FNUZ_VISIBILITY constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::lowest() noexcept
+    constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::lowest() noexcept
     {
         return make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(0xFF));
     }
 
     template <>
-    ROCWMMA_FP8_FNUZ_VISIBILITY constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::max() noexcept
+    constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::max() noexcept
     {
         return make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(0x7F));
     }
 
     template <>
-    ROCWMMA_FP8_FNUZ_VISIBILITY constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::min() noexcept
+    constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::min() noexcept
     {
         return make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(0x01));
     }
 
     template <>
-    ROCWMMA_FP8_FNUZ_VISIBILITY constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::quiet_NaN() noexcept
+    constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::quiet_NaN() noexcept
     {
         return make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(0x80));
     }
 
     template <>
-    ROCWMMA_FP8_FNUZ_VISIBILITY constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::signaling_NaN() noexcept
+    constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::signaling_NaN() noexcept
     {
         return make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(0x80));
     }
