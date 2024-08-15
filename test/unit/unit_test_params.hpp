@@ -47,8 +47,16 @@ namespace rocwmma
         ///
 
         // Testing types as Input/Output/Compute (IOC)
-        using TestTypesIOC = std::tuple<float8_t,
+        using TestTypesIOC = std::tuple<
+#if ROCWMMA_FP8
+                                        float8_t,
                                         bfloat8_t,
+#endif // ROCWMMA_FP8
+
+#if ROCWMMA_FP8_FNUZ
+                                        float8_fnuz_t,
+                                        bfloat8_fnuz_t,
+#endif // ROCWMMA_FP8_FNUZ
                                         bfloat16_t,
                                         float16_t,
 #if !ROCWMMA_TESTS_NO_HALF

@@ -29,14 +29,16 @@ namespace rocwmma
 {
     // All supported instantiations
     template struct GemmResource<int8_t, int32_t>;
+
+#if ROCWMMA_FP8
     template struct GemmResource<float8_t, float32_t>;
     template struct GemmResource<bfloat8_t, float32_t>;
+#endif
 
-    // Host needs to know about fnuz types in case we are running gfx94*
-#if ROCWMMA_ARCH_HOST 
-    template struct GemmResource<hip_fp8_e4m3_fnuz, float32_t>;
-    template struct GemmResource<hip_fp8_e5m2_fnuz, float32_t>;
-#endif // ROCWMMA_ARCH_HOST
+#if ROCWMMA_FP8_FNUZ
+    template struct GemmResource<float8_fnuz_t, float32_t>;
+    template struct GemmResource<bfloat8_fnuz_t, float32_t>;
+#endif
 
     template struct GemmResource<bfloat16_t, float32_t>;
     template struct GemmResource<float16_t, float32_t>;

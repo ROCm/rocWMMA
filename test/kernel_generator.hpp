@@ -30,6 +30,7 @@
 #include <tuple>
 #include <vector>
 
+#include <rocwmma/internal/types.hpp>
 #include "hip_device.hpp"
 
 namespace rocwmma
@@ -214,44 +215,6 @@ namespace rocwmma
         using Result = List;
     };
 
-    // Class that will force incoming f8 types to fnuz mode (see usage below)
-    template<typename DataT>
-    struct F8FnuzOverride
-    {
-        using Type = DataT;
-    };
-
-    template<>
-    struct F8FnuzOverride<float8_t>
-    {
-        using Type = hip_fp8_e4m3_fnuz;
-    };
-
-    template<>
-    struct F8FnuzOverride<bfloat8_t>
-    {
-        using Type = hip_fp8_e5m2_fnuz;
-    };
-
-    template<typename DataT>
-    using F8FnuzOverride_t = typename F8FnuzOverride<DataT>::Type;
-
-    // Class that will force incoming f8 tuple element types to fnuz mode
-    template<typename TupleT>
-    struct F8FnuzTupleOverride
-    {
-        using Type = TupleT;
-    };
-
-    template<typename... Ts>
-    struct F8FnuzTupleOverride<std::tuple<Ts...>>
-    {
-        using Type = std::tuple<F8FnuzOverride_t<Ts>...>;
-    };
-
-    template<typename TupleT>
-    using F8FnuzTupleOverride_t = typename F8FnuzTupleOverride<TupleT>::Type;
-
     // Helper classes to determine if a tuple contains an element with type DataT
     template <typename DataT, typename TupleT>
     struct contains_type;
@@ -295,34 +258,87 @@ namespace rocwmma
 
         ROCWMMA_HOST static void generate(ResultT& kernels)
         {
-            #if ROCWMMA_ARCH_HOST
-            // Quirk: Host code doesn't know anything about GPU targets until runtime. We could have multiple targets
-            // in the same project, such as gfx940 and gfx1200. gfx940 supports fp8 fnuz types and gfx1200 does not.
-            // As a result, host doesn't use fp8 fnuz types by default during compilation (e.g., float8_t = non fnuz).
-            // This is an issue because gfx94* targets DO default to fnuz types during compilation (e.g., float8_t = fnuz).
-            // Special case for test generation: in order to avoid linking issues, we need the host to become
-            // aware of and use f8/bf8 fnuz types when we encounter gfx94* targets at runtime.
-            if constexpr (contains_type_v<float8_t, KernelParams>
-                         || contains_type_v<bfloat8_t, KernelParams>)
+            // Generates the kernel for the current set of KernelParams
+            auto gen_kernel = [](ResultT& k)
             {
-                // Check gfx94* device
-                using DeviceInfo = HipDevice;
-                auto arch = DeviceInfo::instance()->getGcnArch();
-                if(arch == DeviceInfo::hipGcnArch_t::GFX940
-                    || arch == DeviceInfo::hipGcnArch_t::GFX941 
-                    || arch == DeviceInfo::hipGcnArch_t::GFX942)
+                k.push_back(GeneratorImpl::generate(KernelParams()));
+            };
+
+            // Advances to the next set of KernelParams
+            auto next_kernel = [](ResultT& k)
+            {
+                KernelGenerator<std::tuple<Next...>, GeneratorImpl>::generate(k);
+            };
+
+            if constexpr (contains_type_v<float8_t, KernelParams>
+                            || contains_type_v<bfloat8_t, KernelParams>)
+            {
+                if constexpr (!(bool)ROCWMMA_FP8)
                 {
-                    // Generate modified fnuz kernels 
-                    kernels.push_back(GeneratorImpl::generate(F8FnuzTupleOverride_t<KernelParams>()));
-                    KernelGenerator<std::tuple<Next...>, GeneratorImpl>::generate(kernels);
+                    // Current KernelParams have f8: skip kernel on unsupported arch.
+                    next_kernel(kernels);
                     return;
                 }
+
+                // Quirk: Here, the host code supports F8, but doesn't know
+                // if the runtime target supports it. Make sure the runtime
+                // target can support this type, otherwise don't generate the kernel.
+                if constexpr((bool)ROCWMMA_ARCH_HOST)
+                {
+                    // Only gfx12 devices support f8
+                    using DeviceInfo = HipDevice;
+                    auto arch = DeviceInfo::instance()->getGcnArch();
+                    if(arch != DeviceInfo::hipGcnArch_t::GFX1200
+                        && arch != DeviceInfo::hipGcnArch_t::GFX1201)
+                    {
+                        // Current KernelParams have f8: skip kernel on host.
+                        next_kernel(kernels);
+                        return;
+                    }
+                }
+
+                // Generate kernel
+                gen_kernel(kernels);
+                next_kernel(kernels);
             }
-            #endif // ROCWMMA_ARCH_HOST
-            
-            // Generate unmodified kernels 
-            kernels.push_back(GeneratorImpl::generate(KernelParams()));
-            KernelGenerator<std::tuple<Next...>, GeneratorImpl>::generate(kernels);
+            else if constexpr (contains_type_v<float8_fnuz_t, KernelParams>
+                                || contains_type_v<bfloat8_fnuz_t, KernelParams>)
+            {
+                if constexpr (!(bool)ROCWMMA_FP8_FNUZ)
+                {
+                    // Current KernelParams have f8_fnuz: skip kernel on unsupported arch.
+                    next_kernel(kernels);
+                    return;
+                }
+
+                // Quirk: Here, the host code supports F8_fnuz, but doesn't know
+                // if the runtime target supports it. Make sure the runtime
+                // target can support this type, otherwise don't generate the kernel.
+                if constexpr((bool)ROCWMMA_ARCH_HOST)
+                {
+                    // Only gfx94* devices support f8_fnuz
+                    using DeviceInfo = HipDevice;
+                    auto arch = DeviceInfo::instance()->getGcnArch();
+                    if(arch != DeviceInfo::hipGcnArch_t::GFX940
+                        && arch != DeviceInfo::hipGcnArch_t::GFX941
+                        && arch != DeviceInfo::hipGcnArch_t::GFX942)
+                    {
+                        // Current KernelParams have f8_fnuz: skip kernel on host.
+                        next_kernel(kernels);
+                        return;
+                    }
+                }
+
+                // Generate kernel
+                gen_kernel(kernels);
+                next_kernel(kernels);
+            }
+            else
+            {
+                // Generate kernel
+                gen_kernel(kernels);
+                next_kernel(kernels);
+            }
         }
     };
 
