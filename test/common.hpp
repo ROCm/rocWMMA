@@ -103,6 +103,16 @@ namespace rocwmma
 
 #if !defined(ROCBLAS_DATA_TYPE_FLOAT8)
         template <>
+        struct rocblas_supported<float8_fnuz_t, float32_t, float32_t> : std::false_type
+        {
+        };
+
+        template <>
+        struct rocblas_supported<bfloat8_fnuz_t, float32_t, float32_t> : std::false_type
+        {
+        };
+#endif
+        template <>
         struct rocblas_supported<float8_t, float32_t, float32_t> : std::false_type
         {
         };
@@ -111,7 +121,6 @@ namespace rocwmma
         struct rocblas_supported<bfloat8_t, float32_t, float32_t> : std::false_type
         {
         };
-#endif
 
     } // namespace quirks
 
