@@ -637,12 +637,14 @@ inline std::ostream& operator<<(std::ostream& os, hip_fp8_e5m2_fnuz a)
 // Unary sign inversion
 ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz operator-(hip_fp8_e4m3_fnuz a)
 {
-    return hip_fp8_e4m3_fnuz{a.__x ^ 0x80};
+    // Special case for 0 -> avoid flipping sign to NaN
+    return a.__x == __hip_fp8_storage_t{0} ? a : hip_fp8_e4m3_fnuz{a.__x ^ 0x80};
 }
 
 ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz operator-(hip_fp8_e5m2_fnuz a)
 {
-    return hip_fp8_e5m2_fnuz{a.__x ^ 0x80};
+    // Special case for 0 -> avoid flipping sign to NaN
+    return a.__x == __hip_fp8_storage_t{0} ? a : hip_fp8_e5m2_fnuz{a.__x ^ 0x80};
 }
 
 // all + operator overloading with mixed types
