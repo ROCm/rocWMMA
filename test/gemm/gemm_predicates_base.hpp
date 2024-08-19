@@ -113,40 +113,31 @@ namespace rocwmma
             = (TBlockX * TBlockY >= Constants::AMDGCN_WAVE_SIZE_64) && (TBlockX * TBlockY <= 256u),
 
             InputTypesTest
-            = (bool)TestTraits::InputType::IsFloat8
-              || (bool)TestTraits::InputType::IsBFloat8
+            = (bool)TestTraits::InputType::IsFloat8 || (bool)TestTraits::InputType::IsBFloat8
               || (bool)TestTraits::InputType::IsFloat8Fnuz
-              || (bool)TestTraits::InputType::IsBFloat8Fnuz
-              || (bool)TestTraits::InputType::IsInt8
-              || (bool)TestTraits::InputType::IsFloat16
-              || (bool)TestTraits::InputType::IsBFloat16
-              || (bool)TestTraits::InputType::IsFloat32
-              || (bool)TestTraits::InputType::IsXFloat32
+              || (bool)TestTraits::InputType::IsBFloat8Fnuz || (bool)TestTraits::InputType::IsInt8
+              || (bool)TestTraits::InputType::IsFloat16 || (bool)TestTraits::InputType::IsBFloat16
+              || (bool)TestTraits::InputType::IsFloat32 || (bool)TestTraits::InputType::IsXFloat32
               || (bool)TestTraits::InputType::IsFloat64,
 
             // Gfx940/1/2 arch req'd for float8_fnuz_t, bfloat8_fnuz_t and xfloat32_t
-            F8XF32ArchTest
-            = !((bool)TestTraits::InputType::IsFloat8Fnuz
-                || (bool)TestTraits::InputType::IsBFloat8Fnuz
-                || (bool)TestTraits::InputType::IsXFloat32)
-              || (bool)TestTraits::Arch::IsGfx940
-              || (bool)TestTraits::Arch::IsGfx941
-              || (bool)TestTraits::Arch::IsGfx942,
+            F8XF32ArchTest = !((bool)TestTraits::InputType::IsFloat8Fnuz
+                               || (bool)TestTraits::InputType::IsBFloat8Fnuz
+                               || (bool)TestTraits::InputType::IsXFloat32)
+                             || (bool)TestTraits::Arch::IsGfx940 || (bool)TestTraits::Arch::IsGfx941
+                             || (bool)TestTraits::Arch::IsGfx942,
 
             // All archs except gfx908 can run float64_t
             F64ArchTest
-            = !(bool)TestTraits::InputType::IsFloat64
-              || !(bool)TestTraits::Arch::IsGfx908,
+            = !(bool)TestTraits::InputType::IsFloat64 || !(bool)TestTraits::Arch::IsGfx908,
 
             // General int8_t block size
             // BlockM/N = 16; Block K >= 16
             // BlockM/N = 32; Block K >= 8
             I8BlockSizeTest = !((bool)TestTraits::InputType::IsInt8)
-                              || ((bool)TestTraits::BlockSizes::isBlockMN16
-                                  && (BlockK >= 16u)
+                              || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 16u)
                                   && (BlockK % 16u == 0u))
-                              || ((bool)TestTraits::BlockSizes::isBlockMN32
-                                  && (BlockK >= 8u)
+                              || ((bool)TestTraits::BlockSizes::isBlockMN32 && (BlockK >= 8u)
                                   && (BlockK % 8u == 0u)),
 
             // Follow-on to gfx940/1/2 int8_t.
@@ -154,100 +145,73 @@ namespace rocwmma
             // BlockM/N = 32; Block K >= 16
             Gfx940I8BlockSizeTest
             = !((bool)TestTraits::InputType::IsInt8
-              && ((bool)TestTraits::Arch::IsGfx940
-                    || (bool)TestTraits::Arch::IsGfx941
+                && ((bool)TestTraits::Arch::IsGfx940 || (bool)TestTraits::Arch::IsGfx941
                     || (bool)TestTraits::Arch::IsGfx942))
-              || ((bool)TestTraits::BlockSizes::isBlockMN16
-                  && (BlockK >= 32u)
+              || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 32u)
                   && (BlockK % 32u == 0u))
-              || ((bool)TestTraits::BlockSizes::isBlockMN32
-                  && (BlockK >= 16u)
+              || ((bool)TestTraits::BlockSizes::isBlockMN32 && (BlockK >= 16u)
                   && (BlockK % 16u == 0u)),
 
             // General float8_t / bfloat8_t block size
             // BlockM/N = 16; Block K >= 32
             // BlockM/N = 32; Block K >= 16
             F8BlockSizeTest
-            = !((bool)TestTraits::InputType::IsFloat8
-                || (bool)TestTraits::InputType::IsBFloat8
+            = !((bool)TestTraits::InputType::IsFloat8 || (bool)TestTraits::InputType::IsBFloat8
                 || (bool)TestTraits::InputType::IsFloat8Fnuz
                 || (bool)TestTraits::InputType::IsBFloat8Fnuz)
-              || ((bool)TestTraits::BlockSizes::isBlockMN16
-                  && (BlockK >= 32u)
+              || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 32u)
                   && (BlockK % 32u == 0u))
-              || ((bool)TestTraits::BlockSizes::isBlockMN32
-                  && (BlockK >= 16u)
+              || ((bool)TestTraits::BlockSizes::isBlockMN32 && (BlockK >= 16u)
                   && (BlockK % 16u == 0u)),
 
             // General float16_t / hfloat16_t / bfloat16_t block size
             // BlockM/N = 16; Block K >= 16
             // BlockM/N = 32; Block K >= 8
             F16BlockSizeTest
-            = !((bool)TestTraits::InputType::IsFloat16
-                || (bool)TestTraits::InputType::IsBFloat16)
-              || ((bool)TestTraits::BlockSizes::isBlockMN16
-                  && (BlockK >= 16u)
+            = !((bool)TestTraits::InputType::IsFloat16 || (bool)TestTraits::InputType::IsBFloat16)
+              || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 16u)
                   && (BlockK % 16u == 0u))
-              || ((bool)TestTraits::BlockSizes::isBlockMN32
-                  && (BlockK >= 8u)
+              || ((bool)TestTraits::BlockSizes::isBlockMN32 && (BlockK >= 8u)
                   && (BlockK % 8u == 0u)),
 
             // Older gfx908 arch has half BlockK on bfloat16_t
             // BlockM/N = 16; Block K >= 8
             // BlockM/N = 32; Block K >= 4
             Gfx908BF16BlockSizeTest
-            = !((bool)TestTraits::InputType::IsBFloat16
-                && (bool)TestTraits::Arch::IsGfx908)
-              || ((bool)TestTraits::BlockSizes::isBlockMN16
-                  && (BlockK >= 8u)
+            = !((bool)TestTraits::InputType::IsBFloat16 && (bool)TestTraits::Arch::IsGfx908)
+              || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 8u)
                   && (BlockK % 8u == 0u))
-              || ((bool)TestTraits::BlockSizes::isBlockMN32
-                  && (BlockK >= 4u)
+              || ((bool)TestTraits::BlockSizes::isBlockMN32 && (BlockK >= 4u)
                   && (BlockK % 4u == 0u)),
 
             // General float32_t block size
             // BlockM/N = 16; Block K >= 4
             // BlockM/N = 32; Block K >= 2
             F32BlockSizeTest = !((bool)TestTraits::InputType::IsFloat32)
-                               || ((bool)TestTraits::BlockSizes::isBlockMN16
-                                   && (BlockK >= 4u)
+                               || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 4u)
                                    && (BlockK % 4u == 0u))
-                               || ((bool)TestTraits::BlockSizes::isBlockMN32
-                                   && (BlockK >= 2u)
+                               || ((bool)TestTraits::BlockSizes::isBlockMN32 && (BlockK >= 2u)
                                    && (BlockK % 2u == 0u)),
 
             // General xfloat32_t block size
             // BlockM/N = 16; Block K >= 8
             // BlockM/N = 32; Block K >= 4
             XF32BlockSizeTest = !((bool)TestTraits::InputType::IsXFloat32)
-                                || ((bool)TestTraits::BlockSizes::isBlockMN16
-                                    && (BlockK >= 8u)
+                                || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 8u)
                                     && (BlockK % 8u == 0u))
-                                || ((bool)TestTraits::BlockSizes::isBlockMN32
-                                    && (BlockK >= 4u)
+                                || ((bool)TestTraits::BlockSizes::isBlockMN32 && (BlockK >= 4u)
                                     && (BlockK % 4u == 0u)),
 
             // General float64_t block size
             // BlockM/N = 16; Block K >= 4
             F64BlockSizeTest = !((bool)TestTraits::InputType::IsFloat64)
-                               || ((bool)TestTraits::BlockSizes::isBlockMN16
-                                   && (BlockK >= 4u)
+                               || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 4u)
                                    && (BlockK % 4u == 0u)),
 
-            Enable = (ArchTest
-                      && WaveSizeTest
-                      && TBlockTest
-                      && InputTypesTest
-                      && F8XF32ArchTest
-                      && F64ArchTest
-                      && I8BlockSizeTest
-                      && Gfx940I8BlockSizeTest
-                      && F8BlockSizeTest
-                      && F16BlockSizeTest
-                      && Gfx908BF16BlockSizeTest
-                      && F32BlockSizeTest
-                      && XF32BlockSizeTest
-                      && F64BlockSizeTest)
+            Enable = (ArchTest && WaveSizeTest && TBlockTest && InputTypesTest && F8XF32ArchTest
+                      && F64ArchTest && I8BlockSizeTest && Gfx940I8BlockSizeTest && F8BlockSizeTest
+                      && F16BlockSizeTest && Gfx908BF16BlockSizeTest && F32BlockSizeTest
+                      && XF32BlockSizeTest && F64BlockSizeTest)
         };
 
 #if !NDEBUG
@@ -288,8 +252,7 @@ namespace rocwmma
 
             // Max recommended TBlock size is 256
             TBlockTest
-            = (TBlockX * TBlockY >= Constants::AMDGCN_WAVE_SIZE_32)
-               && (TBlockX * TBlockY <= 256u),
+            = (TBlockX * TBlockY >= Constants::AMDGCN_WAVE_SIZE_32) && (TBlockX * TBlockY <= 256u),
 
             // Input types supported
             InputTypesTest = (bool)TestTraits::InputType::IsInt8
@@ -299,25 +262,18 @@ namespace rocwmma
             // General int8_t block size
             // BlockM/N = 16; Block K >= 16
             I8BlockSizeTest = !((bool)TestTraits::InputType::IsInt8)
-                              || ((bool)TestTraits::BlockSizes::isBlockMN16
-                                  && (BlockK >= 16u)
+                              || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 16u)
                                   && (BlockK % 16u == 0u)),
 
             // General float16_t / hfloat16_t / bfloat16_t block size
             // BlockM/N = 16; Block K >= 16
             F16BlockSizeTest
-            = !((bool)TestTraits::InputType::IsFloat16
-                || (bool)TestTraits::InputType::IsBFloat16)
-              || ((bool)TestTraits::BlockSizes::isBlockMN16
-                  && (BlockK >= 16u)
+            = !((bool)TestTraits::InputType::IsFloat16 || (bool)TestTraits::InputType::IsBFloat16)
+              || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 16u)
                   && (BlockK % 16u == 0u)),
 
-            Enable = (ArchTest
-                     && WaveSizeTest
-                     && TBlockTest
-                     && InputTypesTest
-                     && I8BlockSizeTest
-                     && F16BlockSizeTest)
+            Enable = (ArchTest && WaveSizeTest && TBlockTest && InputTypesTest && I8BlockSizeTest
+                      && F16BlockSizeTest)
         };
 
 #if !NDEBUG
@@ -345,42 +301,31 @@ namespace rocwmma
 
             // Max recommended TBlock size is 256
             TBlockTest
-            = (TBlockX * TBlockY >= Constants::AMDGCN_WAVE_SIZE_32)
-              && (TBlockX * TBlockY <= 256u),
+            = (TBlockX * TBlockY >= Constants::AMDGCN_WAVE_SIZE_32) && (TBlockX * TBlockY <= 256u),
 
             // Input types supported
             InputTypesTest
-            = (bool)TestTraits::InputType::IsInt8
-              || (bool)TestTraits::InputType::IsFloat16
-              || (bool)TestTraits::InputType::IsBFloat16
-              || (bool)TestTraits::InputType::IsFloat8
+            = (bool)TestTraits::InputType::IsInt8 || (bool)TestTraits::InputType::IsFloat16
+              || (bool)TestTraits::InputType::IsBFloat16 || (bool)TestTraits::InputType::IsFloat8
               || (bool)TestTraits::InputType::IsBFloat8,
 
             // General int8_t block size
             // BlockM/N = 16; Block K >= 16
             I8BlockSizeTest
-            = !(   (bool)TestTraits::InputType::IsInt8
-                || (bool)TestTraits::InputType::IsFloat8
+            = !((bool)TestTraits::InputType::IsInt8 || (bool)TestTraits::InputType::IsFloat8
                 || (bool)TestTraits::InputType::IsBFloat8)
-              || (   (bool)TestTraits::BlockSizes::isBlockMN16
-                  && (BlockK >= 16u)
+              || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 16u)
                   && (BlockK % 16u == 0u)),
 
             // General float16_t / hfloat16_t / bfloat16_t block size
             // BlockM/N = 16; Block K >= 16
             F16BlockSizeTest
-            = !((bool)TestTraits::InputType::IsFloat16
-                || (bool)TestTraits::InputType::IsBFloat16)
-              || ((bool)TestTraits::BlockSizes::isBlockMN16
-                  && (BlockK >= 16u)
+            = !((bool)TestTraits::InputType::IsFloat16 || (bool)TestTraits::InputType::IsBFloat16)
+              || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 16u)
                   && (BlockK % 16u == 0u)),
 
-            Enable = (ArchTest
-                     && WaveSizeTest
-                     && TBlockTest
-                     && InputTypesTest
-                     && I8BlockSizeTest
-                     && F16BlockSizeTest)
+            Enable = (ArchTest && WaveSizeTest && TBlockTest && InputTypesTest && I8BlockSizeTest
+                      && F16BlockSizeTest)
         };
 
 #if !NDEBUG
@@ -402,16 +347,14 @@ namespace rocwmma
         constexpr static bool enableBuild()
         {
             return ((bool)GlobalPredicates::EnableBuild
-                    && ((bool)Gfx9Predicates::Enable
-                        || (bool)Gfx11Predicates::Enable
+                    && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable
                         || (bool)Gfx12Predicates::Enable));
         }
 
         constexpr static bool enableRun()
         {
             return ((bool)GlobalPredicates::EnableRun
-                    && ((bool)Gfx9Predicates::Enable
-                        || (bool)Gfx11Predicates::Enable
+                    && ((bool)Gfx9Predicates::Enable || (bool)Gfx11Predicates::Enable
                         || (bool)Gfx12Predicates::Enable));
         }
 

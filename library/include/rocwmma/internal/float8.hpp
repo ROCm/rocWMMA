@@ -500,7 +500,7 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
         static constexpr bool is_exact          = false;
         static constexpr bool has_infinity      = false;
         static constexpr bool has_quiet_NaN     = true;
-        static constexpr bool has_signaling_NaN = false;
+        static constexpr bool has_signaling_NaN = true;
         static constexpr auto has_denorm        = true;
         static constexpr auto has_denorm_loss   = true;
         static constexpr auto round_style       = numeric_limits<float>::round_style;
@@ -561,8 +561,8 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
         static constexpr bool is_specialized    = true;
         static constexpr bool is_exact          = false;
         static constexpr bool has_infinity      = true;
-        static constexpr bool has_quiet_NaN     = false;
-        static constexpr bool has_signaling_NaN = false;
+        static constexpr bool has_quiet_NaN     = true;
+        static constexpr bool has_signaling_NaN = true;
         static constexpr auto has_denorm        = true;
         static constexpr auto has_denorm_loss   = true;
         static constexpr auto round_style       = numeric_limits<float>::round_style;
@@ -604,6 +604,10 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
         {
             return make_hip_fp8_e5m2_from_bits(0x7C);
         }
+        static constexpr hip_fp8_e5m2 quiet_NaN()
+        {
+            return make_hip_fp8_e5m2_from_bits(0x7F);
+        }
         static constexpr hip_fp8_e5m2 signaling_NaN()
         {
             return make_hip_fp8_e5m2_from_bits(0x7F);
@@ -618,6 +622,30 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
 //////////////////////////////////////////
 ///  FNUZ f8 / bf8 operator overloads  ///
 //////////////////////////////////////////
+
+ROCWMMA_FP8_FNUZ_VISIBILITY constexpr inline auto
+    make_hip_fp8_e4m3_fnuz_from_bits(__hip_fp8_storage_t bits)
+{
+    union
+    {
+        uint8_t           c8;
+        hip_fp8_e4m3_fnuz fp8;
+
+    } result{bits};
+    return result.fp8;
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY constexpr inline auto
+    make_hip_fp8_e5m2_fnuz_from_bits(__hip_fp8_storage_t bits)
+{
+    union
+    {
+        uint8_t           c8;
+        hip_fp8_e5m2_fnuz fp8;
+
+    } result{bits};
+    return result.fp8;
+}
 
 #if !defined(__HIPCC_RTC__)
 
@@ -637,14 +665,22 @@ inline std::ostream& operator<<(std::ostream& os, hip_fp8_e5m2_fnuz a)
 // Unary sign inversion
 ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz operator-(hip_fp8_e4m3_fnuz a)
 {
-    // Special case for 0 -> avoid flipping sign to NaN
-    return a.__x == __hip_fp8_storage_t{0} ? a : hip_fp8_e4m3_fnuz{a.__x ^ 0x80};
+    // Case 1: a == 0 -> avoid flipping sign to nan, return 0
+    // Case 2: a == nan -> avoid flipping to 0, return nan
+    // Else: Flip sign
+    return (a.__x == __hip_fp8_storage_t{0}) || (a.__x == __hip_fp8_storage_t{0x80})
+               ? a
+               : make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(a.__x ^ 0x80));
 }
 
 ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz operator-(hip_fp8_e5m2_fnuz a)
 {
-    // Special case for 0 -> avoid flipping sign to NaN
-    return a.__x == __hip_fp8_storage_t{0} ? a : hip_fp8_e5m2_fnuz{a.__x ^ 0x80};
+    // Case 1: a == 0 -> avoid flipping sign to nan, return 0
+    // Case 2: a == nan -> avoid flipping to 0, return nan
+    // Else: Flip sign
+    return (a.__x == __hip_fp8_storage_t{0}) || (a.__x == __hip_fp8_storage_t{0x80})
+               ? a
+               : make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(a.__x ^ 0x80));
 }
 
 // all + operator overloading with mixed types
@@ -949,30 +985,6 @@ ROCWMMA_FP8_FNUZ_VISIBILITY inline bool operator>=(hip_fp8_e4m3_fnuz a, hip_fp8_
 ROCWMMA_FP8_FNUZ_VISIBILITY inline bool operator>=(hip_fp8_e5m2_fnuz a, hip_fp8_e5m2_fnuz b)
 {
     return float(a) >= float(b);
-}
-
-ROCWMMA_FP8_FNUZ_VISIBILITY constexpr inline auto
-    make_hip_fp8_e4m3_fnuz_from_bits(__hip_fp8_storage_t bits)
-{
-    union
-    {
-        uint8_t           c8;
-        hip_fp8_e4m3_fnuz fp8;
-
-    } result{bits};
-    return result.fp8;
-}
-
-ROCWMMA_FP8_FNUZ_VISIBILITY constexpr inline auto
-    make_hip_fp8_e5m2_fnuz_from_bits(__hip_fp8_storage_t bits)
-{
-    union
-    {
-        uint8_t           c8;
-        hip_fp8_e5m2_fnuz fp8;
-
-    } result{bits};
-    return result.fp8;
 }
 
 namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
