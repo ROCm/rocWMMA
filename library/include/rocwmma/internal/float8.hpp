@@ -24,948 +24,1059 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_FLOAT8_H
-#define ROCWMMA_FLOAT8_H
+#ifndef ROCWMMA_FLOAT8_HPP
+#define ROCWMMA_FLOAT8_HPP
 
-#include "config.hpp"
+// NOTE:
+// We want to define some type traits such as
+// is_arithmetic, and is_floating_point.
+// Need to define them first before the hip f16 header
+// is included, as it instantiates is_floating_point
+// in class definitions.
+#include "utility/type_traits.hpp"
 
-#if defined(__HIPCC_RTC__)
+struct __hip_fp8_e4m3;
+struct __hip_fp8_e5m2;
+struct __hip_fp8_e4m3_fnuz;
+struct __hip_fp8_e5m2_fnuz;
 
-using uint8_t  = __hip_internal::uint8_t;
-using uint16_t = __hip_internal::uint16_t;
+using hip_fp8_e4m3 = __hip_fp8_e4m3;
+using hip_fp8_e5m2 = __hip_fp8_e5m2;
 
-#endif
+using hip_fp8_e4m3_fnuz = __hip_fp8_e4m3_fnuz;
+using hip_fp8_e5m2_fnuz = __hip_fp8_e5m2_fnuz;
 
-// We are clipping in down conversion by default
-#define rocwmma_F8_downcast_clipping 1
-
-#define ROCWMMA_F8_DEVICE_SUPPORT \
-    ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942 || ROCWMMA_GFX12
-
-namespace rocwmma_hip_f8_impl
+namespace ROCWMMA_TYPE_TRAITS_IMPL_NAMESPACE
 {
-    template <int wm, int we, typename T, bool negative_zero_nan, bool clip>
-    ROCWMMA_HOST_DEVICE uint8_t cast_to_f8(T _x, bool stoch = false, uint32_t rng = 0);
-
-    template <int wm, int we, typename T, bool negative_zero_nan>
-    ROCWMMA_HOST_DEVICE T cast_from_f8(uint8_t x);
-
-} // namespace rocwmma_hip_f8_impl
-
-#include "rocwmma_hip_f8_impl.h"
-
-static ROCWMMA_DEVICE bool rocwmma_hip_f8_bias_mode_bit_device = true;
-static bool                rocwmma_hip_f8_bias_mode_bit_host   = true;
-
-struct rocwmma_f8
-{
-    uint8_t data;
-    enum class rocwmma_hip_f8_rounding_mode
+    template <>
+    struct is_arithmetic<hip_fp8_e4m3> : true_type
     {
-        standard,
-        stochastic
     };
 
-    // default constructor
-    ROCWMMA_HOST_DEVICE rocwmma_f8() = default;
-
-#if ROCWMMA_F8_DEVICE_SUPPORT
-    // device specific optimized F8 down-conversion code
-    template <bool stochastic_rounding = false>
-    static ROCWMMA_DEVICE uint8_t cast_to_f8_from_f32(float v, uint32_t rng = 0)
+    template <>
+    struct is_floating_point<hip_fp8_e4m3> : true_type
     {
-        uint8_t i8data;
-        union
-        {
-            float    fval;
-            uint32_t i32val;
-            uint8_t  i8val[4]; // NOTE: not endian independent
-        } val;
-
-        uint32_t ival = 0;
-        val.fval      = v;
-
-#ifdef rocwmma_F8_downcast_clipping
-        if((val.i32val & 0x7F800000) != 0x7F800000) /// propagate NAN/INF, no clipping
-        {
-            val.fval = __builtin_amdgcn_fmed3f(val.fval, 240.0, -240.0);
-        }
-#endif
-        if(stochastic_rounding)
-        {
-            ival       = __builtin_amdgcn_cvt_sr_fp8_f32(val.fval, rng, ival, 0); // 0 pos
-            val.i32val = ival;
-            i8data     = val.i8val[0]; // little endian
-        }
-        else // RNE CVT
-        {
-            ival = __builtin_amdgcn_cvt_pk_fp8_f32(
-                val.fval, val.fval, ival, false); // false -> WORD0
-            val.i32val = ival;
-            i8data     = val.i8val[0];
-        }
-        return i8data;
-    }
-
-#endif // ROCWMMA_F8_DEVICE_SUPPORT
-
-    // constructor from float
-#if ROCWMMA_F8_DEVICE_SUPPORT
-
-    // NOTE: ON-DEVICE... always optimal bias
-    explicit ROCWMMA_DEVICE rocwmma_f8(float                        v,
-                                       rocwmma_hip_f8_rounding_mode rm
-                                       = rocwmma_hip_f8_rounding_mode::standard,
-                                       uint32_t rng = 0)
-    {
-        // runtime branch, use cast_to_f8_from_f32 if want to avoid it
-        if(rm == rocwmma_hip_f8_rounding_mode::stochastic)
-        {
-            data = cast_to_f8_from_f32<true>(v, rng);
-        }
-        else
-        {
-            data = cast_to_f8_from_f32<false>(v);
-        }
-    }
-
-    // Host only implementation using s/w simulation
-    explicit ROCWMMA_HOST
-#else
-    // both Host and DEVICE for non-gfx940 using s/w simulation
-    explicit ROCWMMA_HOST_DEVICE
-#endif // ROCWMMA_F8_DEVICE_SUPPORT
-        rocwmma_f8(float                        v,
-                   rocwmma_hip_f8_rounding_mode rm  = rocwmma_hip_f8_rounding_mode::standard,
-                   uint32_t                     rng = 0)
-    {
-#ifdef rocwmma_F8_downcast_clipping
-        data = rocwmma_hip_f8_impl::
-            cast_to_f8<3, 4, float, true /*negative_zero_nan*/, true /*clip*/>(
-                v, (rm == rocwmma_hip_f8_rounding_mode::stochastic), rng);
-#else // rocwmma_F8_downcast_clipping
-        data = rocwmma_hip_f8_impl::
-            cast_to_f8<3, 4, float, true /*negative_zero_nan*/, false /*clip*/>(
-                v, (rm == rocwmma_hip_f8_rounding_mode::stochastic), rng);
-#endif // rocwmma_F8_downcast_clipping
-    }
-
-    // Constructor from half
-    explicit ROCWMMA_HOST_DEVICE rocwmma_f8(_Float16                     v,
-                                            rocwmma_hip_f8_rounding_mode rm
-                                            = rocwmma_hip_f8_rounding_mode::standard,
-                                            uint32_t rng = 0)
-        : rocwmma_f8((float)v, rm, rng)
-
-    {
-    }
-
-    // constructor from int
-    explicit ROCWMMA_HOST_DEVICE rocwmma_f8(int                          v,
-                                            rocwmma_hip_f8_rounding_mode rm
-                                            = rocwmma_hip_f8_rounding_mode::standard,
-                                            uint32_t rng = 0)
-        : rocwmma_f8((float)v, rm, rng)
-    {
-    }
-
-    // constructor from unsigned int
-    explicit ROCWMMA_HOST_DEVICE rocwmma_f8(unsigned int                 v,
-                                            rocwmma_hip_f8_rounding_mode rm
-                                            = rocwmma_hip_f8_rounding_mode::standard,
-                                            uint32_t rng = 0)
-        : rocwmma_f8((float)v, rm, rng)
-    {
-    }
-
-    // constructor from double
-    explicit ROCWMMA_HOST_DEVICE rocwmma_f8(double                       v,
-                                            rocwmma_hip_f8_rounding_mode rm
-                                            = rocwmma_hip_f8_rounding_mode::standard,
-                                            uint32_t rng = 0)
-        : rocwmma_f8((float)v, rm, rng)
-    {
-    }
-
-    // convert to float
-#if ROCWMMA_F8_DEVICE_SUPPORT
-    // upcast using device specific intrinsic
-    explicit inline ROCWMMA_DEVICE operator float() const
-    {
-        float    fval;
-        uint32_t i32val = static_cast<uint32_t>(data);
-
-        // upcast
-        asm volatile("v_cvt_f32_fp8 %0, %1 src0_sel:BYTE_0" : "=v"(fval) : "v"(i32val));
-
-        return fval;
-    }
-
-    explicit inline ROCWMMA_HOST operator float() const
-#else // non gfx940
-    explicit inline ROCWMMA_HOST_DEVICE operator float() const
-#endif // ROCWMMA_F8_DEVICE_SUPPORT
-    {
-        return rocwmma_hip_f8_impl::cast_from_f8<3, 4, float, true /*negative_zero_nan*/>(data);
-    }
-
-    // convert to half
-    explicit inline ROCWMMA_HOST_DEVICE operator _Float16() const
-    {
-        return _Float16(float(*this)); // convert to float, then convert to f16
-    }
-
-    // convert to unsigned int
-    explicit inline ROCWMMA_HOST_DEVICE operator uint32_t() const
-    {
-        return uint32_t(float(*this)); // convert to float, then convert to u32
-    }
-
-    // convert to long
-    explicit inline ROCWMMA_HOST_DEVICE operator long() const
-    {
-        return long(float(*this)); // convert to float, then convert to long
-    }
-
-    // convert to double
-    explicit inline ROCWMMA_HOST_DEVICE operator double() const
-    {
-        return double(float(*this)); // convert to float, then convert to double
-    }
-
-    inline ROCWMMA_HOST_DEVICE rocwmma_f8 operator-()
-    {
-        this->data ^= 0x80;
-        return *this;
-    }
-
-    // check for zero
-    inline ROCWMMA_HOST_DEVICE bool is_zero() const
-    {
-        return data == 0x00;
-    }
-
-    // check for nan
-    inline ROCWMMA_HOST_DEVICE bool is_nan() const
-    {
-        return data == 0x80;
-    }
-
-    // check for inf
-    inline ROCWMMA_HOST_DEVICE bool is_inf() const
-    {
-        return data == 0x80;
-    }
-};
-
-struct rocwmma_bf8
-{
-    uint8_t data;
-    enum class rocwmma_hip_f8_rounding_mode
-    {
-        standard,
-        stochastic
     };
 
-    // default constructor
-    ROCWMMA_HOST_DEVICE rocwmma_bf8() = default;
-
-#if ROCWMMA_F8_DEVICE_SUPPORT
-    // device specific optimized F8 down-conversion code
-
-    template <bool stochastic_rounding = false>
-    static ROCWMMA_DEVICE uint8_t cast_to_bf8_from_f32(float v, uint32_t rng = 0)
+    template <>
+    struct is_signed<hip_fp8_e4m3> : true_type
     {
-        uint8_t i8data;
-        union
-        {
-            float    fval;
-            uint32_t i32val;
-            uint8_t  i8val[4]; // NOTE: not endian independent
-        } val;
+    };
 
-        uint32_t ival = 0;
-        val.fval      = v;
-
-#ifdef rocwmma_F8_downcast_clipping
-        if((val.i32val & 0x7F800000) != 0x7F800000) // propagate NAN/INF, no clipping
-        {
-            val.fval = __builtin_amdgcn_fmed3f(val.fval, 57344.0, -57344.0);
-        }
-#endif
-        if(stochastic_rounding)
-        {
-            ival       = __builtin_amdgcn_cvt_sr_bf8_f32(val.fval, rng, ival, 0); // 0 pos
-            val.i32val = ival;
-            i8data     = val.i8val[0]; // little endian
-        }
-        else // RNE CVT
-        {
-            ival = __builtin_amdgcn_cvt_pk_bf8_f32(
-                val.fval, val.fval, ival, false); // false -> WORD0
-            val.i32val = ival;
-            i8data     = val.i8val[0];
-        }
-        return i8data;
-    }
-
-#endif // ROCWMMA_F8_DEVICE_SUPPORT
-
-    // constructor from float
-#if ROCWMMA_F8_DEVICE_SUPPORT
-
-    // NOTE: ON-DEVICE... always optimal bias
-    explicit ROCWMMA_DEVICE rocwmma_bf8(float                        v,
-                                        rocwmma_hip_f8_rounding_mode rm
-                                        = rocwmma_hip_f8_rounding_mode::standard,
-                                        uint32_t rng = 0)
+    template <>
+    struct is_arithmetic<hip_fp8_e5m2> : true_type
     {
-        // runtime branch, use cast_to_f8_from_f32 if want to avoid it
-        if(rm == rocwmma_hip_f8_rounding_mode::stochastic)
-        {
-            data = cast_to_bf8_from_f32<true>(v, rng);
-        }
-        else
-        {
-            data = cast_to_bf8_from_f32<false>(v);
-        }
-    }
+    };
 
-    // Host only implementation using s/w simulation
-    explicit ROCWMMA_HOST
+    template <>
+    struct is_floating_point<hip_fp8_e5m2> : true_type
+    {
+    };
+
+    template <>
+    struct is_signed<hip_fp8_e5m2> : true_type
+    {
+    };
+
+    //////////////////////////////////////////
+    ///       FNUZ f8 / bf8  overloads     ///
+    //////////////////////////////////////////
+    template <>
+    struct is_arithmetic<hip_fp8_e4m3_fnuz> : true_type
+    {
+    };
+
+    template <>
+    struct is_floating_point<hip_fp8_e4m3_fnuz> : true_type
+    {
+    };
+
+    template <>
+    struct is_signed<hip_fp8_e4m3_fnuz> : true_type
+    {
+    };
+
+    template <>
+    struct is_arithmetic<hip_fp8_e5m2_fnuz> : true_type
+    {
+    };
+
+    template <>
+    struct is_floating_point<hip_fp8_e5m2_fnuz> : true_type
+    {
+    };
+
+    template <>
+    struct is_signed<hip_fp8_e5m2_fnuz> : true_type
+    {
+    };
+
+} // namespace ROCWMMA_TYPE_TRAITS_IMPL_NAMESPACE
+
+// Include full implementations for following overrides.
+#include "utility/numeric_limits.hpp"
+#include <hip/hip_fp8.h>
+
+// From HIP, device visibility of fp8/bf8 is limited to certain devices.
+// Host has visibility of all fp8/bf8 types
+#if defined(HIP_FP8_TYPE_FNUZ) && HIP_FP8_TYPE_FNUZ
+static_assert((bool)ROCWMMA_ARCH_GFX94X || (bool)ROCWMMA_ARCH_HOST,
+              "fp8_fnuz types only supported on gfx94X archs");
+#define ROCWMMA_FP8_FNUZ 1
+#define ROCWMMA_FP8_FNUZ_VISIBILITY ROCWMMA_HOST_DEVICE
 #else
-    // both Host and DEVICE for non-gfx940 using s/w simulation
-    explicit ROCWMMA_HOST_DEVICE
-#endif // ROCWMMA_F8_DEVICE_SUPPORT
-        rocwmma_bf8(float                        v,
-                    rocwmma_hip_f8_rounding_mode rm  = rocwmma_hip_f8_rounding_mode::standard,
-                    uint32_t                     rng = 0)
-    {
-#ifdef rocwmma_F8_downcast_clipping
-        data = rocwmma_hip_f8_impl::
-            cast_to_f8<2, 5, float, true /*negative_zero_nan*/, true /*clip*/>(
-                v, (rm == rocwmma_hip_f8_rounding_mode::stochastic), rng);
+#define ROCWMMA_FP8_FNUZ 0
+#define ROCWMMA_FP8_FNUZ_VISIBILITY ROCWMMA_HOST
+#endif // defined(HIP_FP8_TYPE_FNUZ) && HIP_FP8_TYPE_FNUZ
+
+#if defined(HIP_FP8_TYPE_OCP) && HIP_FP8_TYPE_OCP
+static_assert((bool)ROCWMMA_ARCH_GFX12 || (bool)ROCWMMA_ARCH_HOST,
+              "fp8_fnuz types only supported on gfx12 archs");
+#define ROCWMMA_FP8 1
+#define ROCWMMA_FP8_VISIBILITY ROCWMMA_HOST_DEVICE
 #else
-        data = rocwmma_hip_f8_impl::
-            cast_to_f8<2, 5, float, true /*negative_zero_nan*/, false /*clip*/>(
-                v, (rm == rocwmma_hip_f8_rounding_mode::stochastic), rng);
-#endif // rocwmma_F8_downcast_clipping
-    }
+#define ROCWMMA_FP8 0
+#define ROCWMMA_FP8_VISIBILITY ROCWMMA_HOST
+#endif // defined(HIP_FP8_TYPE_OCP) && HIP_FP8_TYPE_OCP
 
-    // Constructor from half
-    explicit ROCWMMA_HOST_DEVICE rocwmma_bf8(_Float16                     v,
-                                             rocwmma_hip_f8_rounding_mode rm
-                                             = rocwmma_hip_f8_rounding_mode::standard,
-                                             uint32_t rng = 0)
-        : rocwmma_bf8((float)v, rm, rng)
-    {
-    }
-
-    // constructor from int
-    explicit ROCWMMA_HOST_DEVICE rocwmma_bf8(int                          v,
-                                             rocwmma_hip_f8_rounding_mode rm
-                                             = rocwmma_hip_f8_rounding_mode::standard,
-                                             uint32_t rng = 0)
-        : rocwmma_bf8((float)v, rm, rng)
-    {
-    }
-
-    // constructor from unsigned int
-    explicit ROCWMMA_HOST_DEVICE rocwmma_bf8(unsigned int                 v,
-                                             rocwmma_hip_f8_rounding_mode rm
-                                             = rocwmma_hip_f8_rounding_mode::standard,
-                                             uint32_t rng = 0)
-        : rocwmma_bf8((float)v, rm, rng)
-    {
-    }
-
-    // constructor from double
-    explicit ROCWMMA_HOST_DEVICE rocwmma_bf8(double                       v,
-                                             rocwmma_hip_f8_rounding_mode rm
-                                             = rocwmma_hip_f8_rounding_mode::standard,
-                                             uint32_t rng = 0)
-        : rocwmma_bf8((float)v, rm, rng)
-    {
-    }
-
-    // convert to float
-#if ROCWMMA_F8_DEVICE_SUPPORT
-    // upcast using device specific intrinsic
-    explicit inline ROCWMMA_DEVICE operator float() const
-    {
-        float    fval;
-        uint32_t i32val = static_cast<uint32_t>(data);
-
-        // upcast
-        asm volatile("v_cvt_f32_bf8 %0, %1 src0_sel:BYTE_0" : "=v"(fval) : "v"(i32val));
-
-        return fval;
-    }
-    explicit inline ROCWMMA_HOST operator float() const
-#else // non gfx940
-    explicit inline ROCWMMA_HOST_DEVICE operator float() const
-#endif // ROCWMMA_F8_DEVICE_SUPPORT
-    {
-        return rocwmma_hip_f8_impl::cast_from_f8<2, 5, float, true /*negative_zero_nan*/>(data);
-    }
-
-    // convert to half
-    explicit inline ROCWMMA_HOST_DEVICE operator _Float16() const
-    {
-        return _Float16(float(*this)); // convert to float, then convert to f16
-    }
-
-    // convert to unsigned int
-    explicit inline ROCWMMA_HOST_DEVICE operator uint32_t() const
-    {
-        return uint32_t(float(*this)); // convert to float, then convert to u32
-    }
-
-    // convert to long
-    explicit inline ROCWMMA_HOST_DEVICE operator long() const
-    {
-        return long(float(*this)); // convert to float, then convert to long
-    }
-
-    // convert to double
-    explicit inline ROCWMMA_HOST_DEVICE operator double() const
-    {
-        return double(float(*this)); // convert to float, then convert to double
-    }
-
-    inline ROCWMMA_HOST_DEVICE rocwmma_bf8 operator-()
-    {
-        this->data ^= 0x80;
-        return *this;
-    }
-
-    // check for zero
-    inline ROCWMMA_HOST_DEVICE bool is_zero() const
-    {
-        return data == 0x00;
-    }
-
-    // check for nan
-    inline ROCWMMA_HOST_DEVICE bool is_nan() const
-    {
-        return data == 0x80;
-    }
-
-    // check for inf
-    inline ROCWMMA_HOST_DEVICE bool is_inf() const
-    {
-        return data == 0x80;
-    }
-};
-
-namespace std
+ROCWMMA_FP8_VISIBILITY constexpr inline hip_fp8_e4m3
+    make_hip_fp8_e4m3_from_bits(__hip_fp8_storage_t bits)
 {
-    ROCWMMA_HOST_DEVICE inline rocwmma_f8 sin(rocwmma_f8 a)
+    static_assert(sizeof(hip_fp8_e4m3) == sizeof(__hip_fp8_storage_t),
+                  "Sizes of hip_fp8_e4m3 and __hip_fp8_storage_t are different");
+    union
     {
-        return rocwmma_f8(sinf(float(a)));
-    }
-    ROCWMMA_HOST_DEVICE inline rocwmma_f8 cos(rocwmma_f8 a)
+        __hip_fp8_storage_t c8;
+        hip_fp8_e4m3        fp8;
+
+    } result{bits};
+    return result.fp8;
+}
+
+ROCWMMA_FP8_VISIBILITY constexpr inline hip_fp8_e5m2
+    make_hip_fp8_e5m2_from_bits(__hip_fp8_storage_t bits)
+{
+    static_assert(sizeof(hip_fp8_e5m2) == sizeof(__hip_fp8_storage_t),
+                  "Sizes of hip_fp8_e5m2 and __hip_fp8_storage_t are different");
+    union
     {
-        return rocwmma_f8(cosf(float(a)));
-    }
-    ROCWMMA_HOST_DEVICE inline rocwmma_bf8 sin(rocwmma_bf8 a)
-    {
-        return rocwmma_bf8(sinf(float(a)));
-    }
-    ROCWMMA_HOST_DEVICE inline rocwmma_bf8 cos(rocwmma_bf8 a)
-    {
-        return rocwmma_bf8(cosf(float(a)));
-    }
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_f8 real(const rocwmma_f8& a)
-    {
-        return a;
-    }
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_bf8 real(const rocwmma_bf8& a)
-    {
-        return a;
-    }
+        __hip_fp8_storage_t c8;
+        hip_fp8_e5m2        fp8;
+
+    } result{bits};
+    return result.fp8;
 }
 
 #if !defined(__HIPCC_RTC__)
 
 // Special operator overloading
-inline std::ostream& operator<<(std::ostream& os, const rocwmma_f8& f8)
+inline std::ostream& operator<<(std::ostream& os, hip_fp8_e4m3 a)
 {
-    return os << float(f8);
+    return os << float(a);
 }
 
-inline std::ostream& operator<<(std::ostream& os, const rocwmma_bf8& bf8)
+inline std::ostream& operator<<(std::ostream& os, hip_fp8_e5m2 a)
 {
-    return os << float(bf8);
+    return os << float(a);
 }
 
 #endif // !defined(__HIPCC_RTC__)
 
+// Unary sign inversion
+ROCWMMA_FP8_VISIBILITY inline hip_fp8_e4m3 operator-(hip_fp8_e4m3 a)
+{
+    return make_hip_fp8_e4m3_from_bits(a.__x ^ 0x80);
+}
+
+ROCWMMA_FP8_VISIBILITY inline hip_fp8_e5m2 operator-(hip_fp8_e5m2 a)
+{
+    return make_hip_fp8_e5m2_from_bits(a.__x ^ 0x80);
+}
+
 // all + operator overloading with mixed types
 // mixed types, always converts to f32, does computation in f32, and returns float
-inline ROCWMMA_HOST_DEVICE float operator+(const float fa, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator+(const float fa, hip_fp8_e4m3 b)
 {
     return (fa + float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE float operator+(const float fa, rocwmma_bf8 b)
-{
-    return (fa + float(b));
-}
-
-inline ROCWMMA_HOST_DEVICE float operator+(rocwmma_f8 a, const float fb)
+ROCWMMA_FP8_VISIBILITY inline float operator+(hip_fp8_e4m3 a, const float fb)
 {
     return (float(a) + fb);
 }
 
-inline ROCWMMA_HOST_DEVICE float operator+(rocwmma_bf8 a, const float fb)
+ROCWMMA_FP8_VISIBILITY inline float operator+(hip_fp8_e5m2 a, const float fb)
 {
     return (float(a) + fb);
 }
 
-inline ROCWMMA_HOST_DEVICE float operator+(rocwmma_f8 a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator+(hip_fp8_e4m3 a, hip_fp8_e5m2 b)
 {
     return (float(a) + float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE float operator+(rocwmma_bf8 a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator+(hip_fp8_e5m2 a, hip_fp8_e4m3 b)
 {
     return (float(a) + float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE rocwmma_f8 operator+(rocwmma_f8 a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline hip_fp8_e4m3 operator+(hip_fp8_e4m3 a, hip_fp8_e4m3 b)
 {
-    return rocwmma_f8(float(a) + float(b));
+    return hip_fp8_e4m3(float(a) + float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE rocwmma_bf8 operator+(rocwmma_bf8 a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline hip_fp8_e5m2 operator+(hip_fp8_e5m2 a, hip_fp8_e5m2 b)
 {
-    return rocwmma_bf8(float(a) + float(b));
+    return hip_fp8_e5m2(float(a) + float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE rocwmma_f8& operator+=(rocwmma_f8& a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline hip_fp8_e4m3& operator+=(hip_fp8_e4m3& a, hip_fp8_e4m3 b)
 {
-    return a = rocwmma_f8(float(a) + float(b));
+    return a = hip_fp8_e4m3(float(a) + float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE rocwmma_bf8& operator+=(rocwmma_bf8& a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline hip_fp8_e5m2& operator+=(hip_fp8_e5m2& a, hip_fp8_e5m2 b)
 {
-    return a = rocwmma_bf8(float(a) + float(b));
+    return a = hip_fp8_e5m2(float(a) + float(b));
 }
 
 // all - operator overloading with mixed types
 // mixed types, always converts to f32, does computation in f32, and returns float
-inline ROCWMMA_HOST_DEVICE float operator-(const float fa, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator-(const float fa, hip_fp8_e4m3 b)
 {
     return (fa - float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE float operator-(const float fa, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator-(const float fa, hip_fp8_e5m2 b)
 {
     return (fa - float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE float operator-(rocwmma_f8 a, const float fb)
+ROCWMMA_FP8_VISIBILITY inline float operator-(hip_fp8_e4m3 a, const float fb)
 {
     return (float(a) - fb);
 }
 
-inline ROCWMMA_HOST_DEVICE float operator-(rocwmma_bf8 a, const float fb)
+ROCWMMA_FP8_VISIBILITY inline float operator-(hip_fp8_e5m2 a, const float fb)
 {
     return (float(a) - fb);
 }
 
-inline ROCWMMA_HOST_DEVICE float operator-(rocwmma_f8 a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator-(hip_fp8_e4m3 a, hip_fp8_e5m2 b)
 {
     return (float(a) - float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE float operator-(rocwmma_bf8 a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator-(hip_fp8_e5m2 a, hip_fp8_e4m3 b)
 {
     return (float(a) - float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE rocwmma_f8 operator-(rocwmma_f8 a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline hip_fp8_e4m3 operator-(hip_fp8_e4m3 a, hip_fp8_e4m3 b)
 {
-    return rocwmma_f8(float(a) - float(b));
+    return hip_fp8_e4m3(float(a) - float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE rocwmma_bf8 operator-(rocwmma_bf8 a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline hip_fp8_e5m2 operator-(hip_fp8_e5m2 a, hip_fp8_e5m2 b)
 {
-    return rocwmma_bf8(float(a) - float(b));
+    return hip_fp8_e5m2(float(a) - float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE rocwmma_f8& operator-=(rocwmma_f8& a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline hip_fp8_e4m3& operator-=(hip_fp8_e4m3& a, hip_fp8_e4m3 b)
 {
-    return a = rocwmma_f8(float(a) - float(b));
+    return a = hip_fp8_e4m3(float(a) - float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE rocwmma_bf8& operator-=(rocwmma_bf8& a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline hip_fp8_e5m2& operator-=(hip_fp8_e5m2& a, hip_fp8_e5m2 b)
 {
-    return a = rocwmma_bf8(float(a) - float(b));
+    return a = hip_fp8_e5m2(float(a) - float(b));
 }
 
 // overloading multiplication, always returns float,
-inline ROCWMMA_HOST_DEVICE float operator*(rocwmma_f8 a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator*(hip_fp8_e4m3 a, hip_fp8_e4m3 b)
 {
     return float(a) * float(b);
 }
 
-inline ROCWMMA_HOST_DEVICE float operator*(float a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator*(float a, hip_fp8_e4m3 b)
 {
     return (a * float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE float operator*(rocwmma_f8 a, float b)
+ROCWMMA_FP8_VISIBILITY inline float operator*(hip_fp8_e4m3 a, float b)
 {
     return (float(a) * b);
 }
 
-inline ROCWMMA_HOST_DEVICE float operator*(int32_t a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator*(int32_t a, hip_fp8_e4m3 b)
 {
     return ((float)a * float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE float operator*(double a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator*(double a, hip_fp8_e4m3 b)
 {
     return ((float)a * float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE float operator*(rocwmma_bf8 a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator*(hip_fp8_e5m2 a, hip_fp8_e5m2 b)
 {
     return float(a) * float(b);
 }
 
-inline ROCWMMA_HOST_DEVICE float operator*(float a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator*(float a, hip_fp8_e5m2 b)
 {
     return (a * float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE float operator*(rocwmma_bf8 a, float b)
+ROCWMMA_FP8_VISIBILITY inline float operator*(hip_fp8_e5m2 a, float b)
 {
     return (float(a) * b);
 }
 
-inline ROCWMMA_HOST_DEVICE float operator*(int32_t a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator*(int32_t a, hip_fp8_e5m2 b)
 {
     return ((float)a * float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE float operator*(double a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator*(double a, hip_fp8_e5m2 b)
 {
     return ((float)a * float(b));
 }
 
 // overloading for mixed f8 and bf8 types
-inline ROCWMMA_HOST_DEVICE float operator*(rocwmma_f8 a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator*(hip_fp8_e4m3 a, hip_fp8_e5m2 b)
 {
     return float(a) * float(b);
 }
 
-inline ROCWMMA_HOST_DEVICE float operator*(rocwmma_bf8 a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator*(hip_fp8_e5m2 a, hip_fp8_e4m3 b)
 {
     return float(a) * float(b);
 }
 
 // overloading division, always returns float,
-inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_f8 a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator/(hip_fp8_e4m3 a, hip_fp8_e4m3 b)
 {
     return float(a) / float(b);
 }
 
-inline ROCWMMA_HOST_DEVICE float operator/(float a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator/(float a, hip_fp8_e4m3 b)
 {
     return (a / float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_f8 a, float b)
+ROCWMMA_FP8_VISIBILITY inline float operator/(hip_fp8_e4m3 a, float b)
 {
     return (float(a) / b);
 }
 
-inline ROCWMMA_HOST_DEVICE float operator/(int32_t a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator/(int32_t a, hip_fp8_e4m3 b)
 {
     return ((float)a / float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE float operator/(double a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator/(double a, hip_fp8_e4m3 b)
 {
     return ((float)a / float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_bf8 a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator/(hip_fp8_e5m2 a, hip_fp8_e5m2 b)
 {
     return float(a) / float(b);
 }
 
-inline ROCWMMA_HOST_DEVICE float operator/(float a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator/(float a, hip_fp8_e5m2 b)
 {
     return (a / float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_bf8 a, float b)
+ROCWMMA_FP8_VISIBILITY inline float operator/(hip_fp8_e5m2 a, float b)
 {
     return (float(a) / b);
 }
 
-inline ROCWMMA_HOST_DEVICE float operator/(int32_t a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator/(int32_t a, hip_fp8_e5m2 b)
 {
     return ((float)a / float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE float operator/(double a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator/(double a, hip_fp8_e5m2 b)
 {
     return ((float)a / float(b));
 }
 
 // overloading for mixed f8 and bf8 types
-inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_f8 a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator/(hip_fp8_e4m3 a, hip_fp8_e5m2 b)
 {
     return float(a) / float(b);
 }
 
-inline ROCWMMA_HOST_DEVICE float operator/(rocwmma_bf8 a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline float operator/(hip_fp8_e5m2 a, hip_fp8_e4m3 b)
 {
     return float(a) / float(b);
 }
 
-inline ROCWMMA_HOST_DEVICE rocwmma_f8& operator/=(rocwmma_f8& a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline hip_fp8_e4m3& operator/=(hip_fp8_e4m3& a, hip_fp8_e4m3 b)
 {
-    return a = rocwmma_f8(float(a) / float(b));
+    return a = hip_fp8_e4m3(float(a) / float(b));
 }
 
-inline ROCWMMA_HOST_DEVICE rocwmma_bf8& operator/=(rocwmma_bf8& a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline hip_fp8_e5m2& operator/=(hip_fp8_e5m2& a, hip_fp8_e5m2 b)
 {
-    return a = rocwmma_bf8(float(a) / float(b));
+    return a = hip_fp8_e5m2(float(a) / float(b));
 }
 
-// overloading for compare
-inline ROCWMMA_HOST_DEVICE bool operator==(rocwmma_f8 a, rocwmma_f8 b)
+// Comparison operators
+ROCWMMA_FP8_VISIBILITY inline bool operator==(hip_fp8_e4m3 a, hip_fp8_e4m3 b)
 {
-    return (a.data == b.data);
+    return (a.__x == b.__x);
 }
 
-inline ROCWMMA_HOST_DEVICE bool operator==(rocwmma_bf8 a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline bool operator==(hip_fp8_e5m2 a, hip_fp8_e5m2 b)
 {
-    return (a.data == b.data);
+    return (a.__x == b.__x);
 }
 
-inline ROCWMMA_HOST_DEVICE bool operator!=(rocwmma_f8 a, rocwmma_f8 b)
+ROCWMMA_FP8_VISIBILITY inline bool operator!=(hip_fp8_e4m3 a, hip_fp8_e4m3 b)
 {
-    return (a.data != b.data);
+    return (a.__x != b.__x);
 }
 
-inline ROCWMMA_HOST_DEVICE bool operator!=(rocwmma_bf8 a, rocwmma_bf8 b)
+ROCWMMA_FP8_VISIBILITY inline bool operator!=(hip_fp8_e5m2 a, hip_fp8_e5m2 b)
 {
-    return (a.data != b.data);
+    return (a.__x != b.__x);
 }
 
-// ================ Explicit downcasting to support different rounding (RNE, SR) ===============
-// NOTE: we going to remove all assignment operator overloading from other types and enforce
-// this explicit_downcast function to make any roudning behavior default
-// We have to explicitly call this function with SR flag
-
-template <typename T,
-          typename Ta,
-          bool stochastic_rounding,
-          typename rocwmma::enable_if<rocwmma::is_same<T, Ta>{}, int>::type = 0>
-inline ROCWMMA_HOST_DEVICE T explicit_downcast(Ta a)
+ROCWMMA_FP8_VISIBILITY inline bool operator<(hip_fp8_e4m3 a, hip_fp8_e4m3 b)
 {
-    // same type, no conversion
-    return a;
+    return float(a) < float(b);
 }
 
-// Use h/w intrinsic and optimized version when __gfx940__
-template <typename T,
-          typename Ta,
-          bool stochastic_rounding,
-          typename rocwmma::enable_if<(!(rocwmma::is_same<T, Ta>{})
-                                       && (rocwmma::is_same<T, rocwmma_f8>{}
-                                           || rocwmma::is_same<T, rocwmma_bf8>{})),
-                                      int>::type
-          = 0>
-inline ROCWMMA_HOST_DEVICE T explicit_downcast(Ta a, uint32_t rng)
+ROCWMMA_FP8_VISIBILITY inline bool operator<(hip_fp8_e5m2 a, hip_fp8_e5m2 b)
 {
-#if ROCWMMA_F8_DEVICE_SUPPORT
-    // NOTE: we are directly calling cast_to_f8_from_f32 instead of constructor to optimize away one runtime branch
-    T val;
-    if(rocwmma::is_same<T, rocwmma_f8>::value)
+    return float(a) < float(b);
+}
+
+ROCWMMA_FP8_VISIBILITY inline bool operator>(hip_fp8_e4m3 a, hip_fp8_e4m3 b)
+{
+    return float(a) > float(b);
+}
+
+ROCWMMA_FP8_VISIBILITY inline bool operator>(hip_fp8_e5m2 a, hip_fp8_e5m2 b)
+{
+    return float(a) > float(b);
+}
+
+ROCWMMA_FP8_VISIBILITY inline bool operator<=(hip_fp8_e4m3 a, hip_fp8_e4m3 b)
+{
+    return float(a) <= float(b);
+}
+
+ROCWMMA_FP8_VISIBILITY inline bool operator<=(hip_fp8_e5m2 a, hip_fp8_e5m2 b)
+{
+    return float(a) <= float(b);
+}
+
+ROCWMMA_FP8_VISIBILITY inline bool operator>=(hip_fp8_e4m3 a, hip_fp8_e4m3 b)
+{
+    return float(a) >= float(b);
+}
+
+ROCWMMA_FP8_VISIBILITY inline bool operator>=(hip_fp8_e5m2 a, hip_fp8_e5m2 b)
+{
+    return float(a) >= float(b);
+}
+
+// Define numeric limits traits
+namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
+{
+    template <>
+    class numeric_limits<hip_fp8_e4m3>
     {
-        val.data = rocwmma_f8::cast_to_f8_from_f32<stochastic_rounding>(float(a), rng);
-    }
-    else
-    {
-        val.data = rocwmma_bf8::cast_to_bf8_from_f32<stochastic_rounding>(float(a), rng);
-    }
-    return val;
-#else // non gfx940
-    return T(float(a),
-             stochastic_rounding ? T::rocwmma_hip_f8_rounding_mode::stochastic
-                                 : T::rocwmma_hip_f8_rounding_mode::standard,
-             rng);
-#endif // ROCWMMA_F8_DEVICE_SUPPORT
-}
+    public:
+        static constexpr bool is_specialized    = true;
+        static constexpr bool is_signed         = true;
+        static constexpr bool is_integer        = false;
+        static constexpr bool is_exact          = false;
+        static constexpr bool has_infinity      = false;
+        static constexpr bool has_quiet_NaN     = true;
+        static constexpr bool has_signaling_NaN = true;
+        static constexpr auto has_denorm        = true;
+        static constexpr auto has_denorm_loss   = true;
+        static constexpr auto round_style       = numeric_limits<float>::round_style;
+        static constexpr bool is_iec559         = false;
+        static constexpr bool is_bounded        = true;
+        static constexpr bool is_modulo         = false;
+        static constexpr int  digits            = 4;
+        static constexpr int  digits10          = 0;
+        static constexpr int  max_digits10      = 3;
+        static constexpr int  radix             = 2;
+        static constexpr int  min_exponent      = -5;
+        static constexpr int  min_exponent10    = -1;
+        static constexpr int  max_exponent      = 8;
+        static constexpr int  max_exponent10    = 2;
+        static constexpr auto traps             = numeric_limits<float>::traps;
+        static constexpr auto tinyness_before   = false;
 
-// NOTE NOTE: The above code is good if we don't consider HIP-GEMM code and only consider the quantization
-// However, if we need HIP-GEMM for fall-back, we would need explicit_cast handles Tacc=f32 to To=f16/bf16 conversion
-template <typename T,
-          typename Ta,
-          bool stochastic_rounding,
-          typename rocwmma::enable_if<(!(rocwmma::is_same<T, Ta>{})
-                                       && !(rocwmma::is_same<T, rocwmma_f8>{}
-                                            || rocwmma::is_same<T, rocwmma_bf8>{})),
-                                      int>::type
-          = 0>
-inline ROCWMMA_HOST_DEVICE T explicit_downcast(Ta a, uint32_t rng)
-{
-    // the return type is not a F8 types, no SR for those types
-    // not sure if we have direct conversion, so converting to float first
-    // no effect if the input type is float
-    return T(float(a));
-}
-
-// =================================================================================================
-
-#include "utility/numeric_limits.hpp"
-namespace rocwmma
-{
-    namespace detail
-    {
-        struct Fp8Bits
+        static constexpr hip_fp8_e4m3 min()
         {
-            union
-            {
-                uint8_t     i8;
-                rocwmma_f8  f8;
-                rocwmma_bf8 bf8;
-            };
-            constexpr Fp8Bits(uint8_t initVal)
-                : i8(initVal)
-            {
-            }
-            constexpr Fp8Bits(rocwmma_f8 initVal)
-                : f8(initVal)
-            {
-            }
-            constexpr Fp8Bits(rocwmma_bf8 initVal)
-                : bf8(initVal)
-            {
-            }
-        };
+            return make_hip_fp8_e4m3_from_bits(0x08);
+        }
+        static constexpr hip_fp8_e4m3 lowest()
+        {
+            return make_hip_fp8_e4m3_from_bits(0xFE);
+        }
+        static constexpr hip_fp8_e4m3 max()
+        {
+            return make_hip_fp8_e4m3_from_bits(0x7E);
+        }
+        static constexpr hip_fp8_e4m3 epsilon()
+        {
+            return make_hip_fp8_e4m3_from_bits(0x20);
+        }
+        static constexpr hip_fp8_e4m3 round_error()
+        {
+            return make_hip_fp8_e4m3_from_bits(0x30);
+        }
+        static constexpr hip_fp8_e4m3 quiet_NaN()
+        {
+            return make_hip_fp8_e4m3_from_bits(0x7F);
+        }
+        static constexpr hip_fp8_e4m3 signaling_NaN()
+        {
+            return make_hip_fp8_e4m3_from_bits(0x7F);
+        }
+        static constexpr hip_fp8_e4m3 denorm_min()
+        {
+            return make_hip_fp8_e4m3_from_bits(0x01);
+        }
+    };
 
-    } // namespace detail
+    template <>
+    class numeric_limits<hip_fp8_e5m2>
+    {
+    public:
+        static constexpr bool is_signed         = true;
+        static constexpr bool is_integer        = false;
+        static constexpr bool is_specialized    = true;
+        static constexpr bool is_exact          = false;
+        static constexpr bool has_infinity      = true;
+        static constexpr bool has_quiet_NaN     = true;
+        static constexpr bool has_signaling_NaN = true;
+        static constexpr auto has_denorm        = true;
+        static constexpr auto has_denorm_loss   = true;
+        static constexpr auto round_style       = numeric_limits<float>::round_style;
+        static constexpr bool is_iec559         = false;
+        static constexpr bool is_bounded        = true;
+        static constexpr bool is_modulo         = false;
+        static constexpr int  digits            = 3;
+        static constexpr int  digits10          = 0;
+        static constexpr int  max_digits10      = 2;
+        static constexpr int  radix             = 2;
+        static constexpr int  min_exponent      = -13;
+        static constexpr int  min_exponent10    = -4;
+        static constexpr int  max_exponent      = 16;
+        static constexpr int  max_exponent10    = 4;
+        static constexpr auto traps             = numeric_limits<float>::traps;
+        static constexpr auto tinyness_before   = false;
 
-} // namespace rocwmma
+        static constexpr hip_fp8_e5m2 min()
+        {
+            return make_hip_fp8_e5m2_from_bits(0x04);
+        }
+        static constexpr hip_fp8_e5m2 max()
+        {
+            return make_hip_fp8_e5m2_from_bits(0x7B);
+        }
+        static constexpr hip_fp8_e5m2 lowest()
+        {
+            return make_hip_fp8_e5m2_from_bits(0xFB);
+        }
+        static constexpr hip_fp8_e5m2 epsilon()
+        {
+            return make_hip_fp8_e5m2_from_bits(0x34);
+        }
+        static constexpr hip_fp8_e5m2 round_error()
+        {
+            return make_hip_fp8_e5m2_from_bits(0x38);
+        }
+        static constexpr hip_fp8_e5m2 infinity()
+        {
+            return make_hip_fp8_e5m2_from_bits(0x7C);
+        }
+        static constexpr hip_fp8_e5m2 quiet_NaN()
+        {
+            return make_hip_fp8_e5m2_from_bits(0x7F);
+        }
+        static constexpr hip_fp8_e5m2 signaling_NaN()
+        {
+            return make_hip_fp8_e5m2_from_bits(0x7F);
+        }
+        static constexpr hip_fp8_e5m2 denorm_min()
+        {
+            return make_hip_fp8_e5m2_from_bits(0x01);
+        }
+    };
+}
+
+//////////////////////////////////////////
+///  FNUZ f8 / bf8 operator overloads  ///
+//////////////////////////////////////////
+
+ROCWMMA_FP8_FNUZ_VISIBILITY constexpr inline auto
+    make_hip_fp8_e4m3_fnuz_from_bits(__hip_fp8_storage_t bits)
+{
+    union
+    {
+        uint8_t           c8;
+        hip_fp8_e4m3_fnuz fp8;
+
+    } result{bits};
+    return result.fp8;
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY constexpr inline auto
+    make_hip_fp8_e5m2_fnuz_from_bits(__hip_fp8_storage_t bits)
+{
+    union
+    {
+        uint8_t           c8;
+        hip_fp8_e5m2_fnuz fp8;
+
+    } result{bits};
+    return result.fp8;
+}
+
+#if !defined(__HIPCC_RTC__)
+
+// Special operator overloading
+inline std::ostream& operator<<(std::ostream& os, hip_fp8_e4m3_fnuz a)
+{
+    return os << float(a);
+}
+
+inline std::ostream& operator<<(std::ostream& os, hip_fp8_e5m2_fnuz a)
+{
+    return os << float(a);
+}
+
+#endif // !defined(__HIPCC_RTC__)
+
+// Unary sign inversion
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz operator-(hip_fp8_e4m3_fnuz a)
+{
+    // Case 1: a == 0 -> avoid flipping sign to nan, return 0
+    // Case 2: a == nan -> avoid flipping to 0, return nan
+    // Else: Flip sign
+    return (a.__x == __hip_fp8_storage_t{0}) || (a.__x == __hip_fp8_storage_t{0x80})
+               ? a
+               : make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(a.__x ^ 0x80));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz operator-(hip_fp8_e5m2_fnuz a)
+{
+    // Case 1: a == 0 -> avoid flipping sign to nan, return 0
+    // Case 2: a == nan -> avoid flipping to 0, return nan
+    // Else: Flip sign
+    return (a.__x == __hip_fp8_storage_t{0}) || (a.__x == __hip_fp8_storage_t{0x80})
+               ? a
+               : make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(a.__x ^ 0x80));
+}
+
+// all + operator overloading with mixed types
+// mixed types, always converts to f32, does computation in f32, and returns float
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator+(const float fa, hip_fp8_e4m3_fnuz b)
+{
+    return (fa + float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator+(hip_fp8_e4m3_fnuz a, const float fb)
+{
+    return (float(a) + fb);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator+(hip_fp8_e5m2_fnuz a, const float fb)
+{
+    return (float(a) + fb);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator+(hip_fp8_e4m3_fnuz a, hip_fp8_e5m2_fnuz b)
+{
+    return (float(a) + float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator+(hip_fp8_e5m2_fnuz a, hip_fp8_e4m3_fnuz b)
+{
+    return (float(a) + float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz operator+(hip_fp8_e4m3_fnuz a,
+                                                               hip_fp8_e4m3_fnuz b)
+{
+    return hip_fp8_e4m3_fnuz(float(a) + float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz operator+(hip_fp8_e5m2_fnuz a,
+                                                               hip_fp8_e5m2_fnuz b)
+{
+    return hip_fp8_e5m2_fnuz(float(a) + float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz& operator+=(hip_fp8_e4m3_fnuz& a,
+                                                                 hip_fp8_e4m3_fnuz  b)
+{
+    return a = hip_fp8_e4m3_fnuz(float(a) + float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz& operator+=(hip_fp8_e5m2_fnuz& a,
+                                                                 hip_fp8_e5m2_fnuz  b)
+{
+    return a = hip_fp8_e5m2_fnuz(float(a) + float(b));
+}
+
+// all - operator overloading with mixed types
+// mixed types, always converts to f32, does computation in f32, and returns float
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator-(const float fa, hip_fp8_e4m3_fnuz b)
+{
+    return (fa - float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator-(const float fa, hip_fp8_e5m2_fnuz b)
+{
+    return (fa - float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator-(hip_fp8_e4m3_fnuz a, const float fb)
+{
+    return (float(a) - fb);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator-(hip_fp8_e5m2_fnuz a, const float fb)
+{
+    return (float(a) - fb);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator-(hip_fp8_e4m3_fnuz a, hip_fp8_e5m2_fnuz b)
+{
+    return (float(a) - float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator-(hip_fp8_e5m2_fnuz a, hip_fp8_e4m3_fnuz b)
+{
+    return (float(a) - float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz operator-(hip_fp8_e4m3_fnuz a,
+                                                               hip_fp8_e4m3_fnuz b)
+{
+    return hip_fp8_e4m3_fnuz(float(a) - float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz operator-(hip_fp8_e5m2_fnuz a,
+                                                               hip_fp8_e5m2_fnuz b)
+{
+    return hip_fp8_e5m2_fnuz(float(a) - float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz& operator-=(hip_fp8_e4m3_fnuz& a,
+                                                                 hip_fp8_e4m3_fnuz  b)
+{
+    return a = hip_fp8_e4m3_fnuz(float(a) - float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz& operator-=(hip_fp8_e5m2_fnuz& a,
+                                                                 hip_fp8_e5m2_fnuz  b)
+{
+    return a = hip_fp8_e5m2_fnuz(float(a) - float(b));
+}
+
+// overloading multiplication, always returns float,
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(hip_fp8_e4m3_fnuz a, hip_fp8_e4m3_fnuz b)
+{
+    return float(a) * float(b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(float a, hip_fp8_e4m3_fnuz b)
+{
+    return (a * float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(hip_fp8_e4m3_fnuz a, float b)
+{
+    return (float(a) * b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(int32_t a, hip_fp8_e4m3_fnuz b)
+{
+    return ((float)a * float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(double a, hip_fp8_e4m3_fnuz b)
+{
+    return ((float)a * float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(hip_fp8_e5m2_fnuz a, hip_fp8_e5m2_fnuz b)
+{
+    return float(a) * float(b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(float a, hip_fp8_e5m2_fnuz b)
+{
+    return (a * float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(hip_fp8_e5m2_fnuz a, float b)
+{
+    return (float(a) * b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(int32_t a, hip_fp8_e5m2_fnuz b)
+{
+    return ((float)a * float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(double a, hip_fp8_e5m2_fnuz b)
+{
+    return ((float)a * float(b));
+}
+
+// overloading for mixed f8 and bf8 types
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(hip_fp8_e4m3_fnuz a, hip_fp8_e5m2_fnuz b)
+{
+    return float(a) * float(b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(hip_fp8_e5m2_fnuz a, hip_fp8_e4m3_fnuz b)
+{
+    return float(a) * float(b);
+}
+
+// overloading division, always returns float,
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(hip_fp8_e4m3_fnuz a, hip_fp8_e4m3_fnuz b)
+{
+    return float(a) / float(b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(float a, hip_fp8_e4m3_fnuz b)
+{
+    return (a / float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(hip_fp8_e4m3_fnuz a, float b)
+{
+    return (float(a) / b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(int32_t a, hip_fp8_e4m3_fnuz b)
+{
+    return ((float)a / float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(double a, hip_fp8_e4m3_fnuz b)
+{
+    return ((float)a / float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(hip_fp8_e5m2_fnuz a, hip_fp8_e5m2_fnuz b)
+{
+    return float(a) / float(b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(float a, hip_fp8_e5m2_fnuz b)
+{
+    return (a / float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(hip_fp8_e5m2_fnuz a, float b)
+{
+    return (float(a) / b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(int32_t a, hip_fp8_e5m2_fnuz b)
+{
+    return ((float)a / float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(double a, hip_fp8_e5m2_fnuz b)
+{
+    return ((float)a / float(b));
+}
+
+// overloading for mixed f8 and bf8 types
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(hip_fp8_e4m3_fnuz a, hip_fp8_e5m2_fnuz b)
+{
+    return float(a) / float(b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(hip_fp8_e5m2_fnuz a, hip_fp8_e4m3_fnuz b)
+{
+    return float(a) / float(b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e4m3_fnuz& operator/=(hip_fp8_e4m3_fnuz& a,
+                                                                 hip_fp8_e4m3_fnuz  b)
+{
+    return a = hip_fp8_e4m3_fnuz(float(a) / float(b));
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline hip_fp8_e5m2_fnuz& operator/=(hip_fp8_e5m2_fnuz& a,
+                                                                 hip_fp8_e5m2_fnuz  b)
+{
+    return a = hip_fp8_e5m2_fnuz(float(a) / float(b));
+}
+
+// Comparison operators
+ROCWMMA_FP8_FNUZ_VISIBILITY inline bool operator==(hip_fp8_e4m3_fnuz a, hip_fp8_e4m3_fnuz b)
+{
+    return (a.__x == b.__x);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline bool operator==(hip_fp8_e5m2_fnuz a, hip_fp8_e5m2_fnuz b)
+{
+    return (a.__x == b.__x);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline bool operator!=(hip_fp8_e4m3_fnuz a, hip_fp8_e4m3_fnuz b)
+{
+    return (a.__x != b.__x);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline bool operator!=(hip_fp8_e5m2_fnuz a, hip_fp8_e5m2_fnuz b)
+{
+    return (a.__x != b.__x);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline bool operator<(hip_fp8_e4m3_fnuz a, hip_fp8_e4m3_fnuz b)
+{
+    return float(a) < float(b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline bool operator<(hip_fp8_e5m2_fnuz a, hip_fp8_e5m2_fnuz b)
+{
+    return float(a) < float(b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline bool operator>(hip_fp8_e4m3_fnuz a, hip_fp8_e4m3_fnuz b)
+{
+    return float(a) > float(b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline bool operator>(hip_fp8_e5m2_fnuz a, hip_fp8_e5m2_fnuz b)
+{
+    return float(a) > float(b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline bool operator<=(hip_fp8_e4m3_fnuz a, hip_fp8_e4m3_fnuz b)
+{
+    return float(a) <= float(b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline bool operator<=(hip_fp8_e5m2_fnuz a, hip_fp8_e5m2_fnuz b)
+{
+    return float(a) <= float(b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline bool operator>=(hip_fp8_e4m3_fnuz a, hip_fp8_e4m3_fnuz b)
+{
+    return float(a) >= float(b);
+}
+
+ROCWMMA_FP8_FNUZ_VISIBILITY inline bool operator>=(hip_fp8_e5m2_fnuz a, hip_fp8_e5m2_fnuz b)
+{
+    return float(a) >= float(b);
+}
 
 namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
 {
-    ///////////////////////////////////////////////////////////
-    ///////////////  numeric_limits<rocwmma_f8>  //////////////
-    ///////////////////////////////////////////////////////////
+    // Float 8 E4M3
     // @cond
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_f8 numeric_limits<rocwmma_f8>::epsilon() noexcept
+    constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::epsilon() noexcept
     {
-        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x28));
-        return eps.f8;
+        return make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(0x28));
     }
 
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_f8 numeric_limits<rocwmma_f8>::infinity() noexcept
+    constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::infinity() noexcept
     {
-        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x80));
-        return eps.f8;
+        return make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(0x80));
     }
 
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_f8 numeric_limits<rocwmma_f8>::lowest() noexcept
+    constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::lowest() noexcept
     {
-        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0xFF));
-        return eps.f8;
+        return make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(0xFF));
     }
 
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_f8 numeric_limits<rocwmma_f8>::max() noexcept
+    constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::max() noexcept
     {
-        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x7F));
-        return eps.f8;
+        return make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(0x7F));
     }
 
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_f8 numeric_limits<rocwmma_f8>::min() noexcept
+    constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::min() noexcept
     {
-        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x01));
-        return eps.f8;
+        return make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(0x01));
     }
 
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_f8 numeric_limits<rocwmma_f8>::quiet_NaN() noexcept
+    constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::quiet_NaN() noexcept
     {
-        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x80));
-        return eps.f8;
+        return make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(0x80));
     }
 
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_f8 numeric_limits<rocwmma_f8>::signaling_NaN() noexcept
+    constexpr hip_fp8_e4m3_fnuz numeric_limits<hip_fp8_e4m3_fnuz>::signaling_NaN() noexcept
     {
-        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x80));
-        return eps.f8;
+        return make_hip_fp8_e4m3_fnuz_from_bits(static_cast<uint8_t>(0x80));
     }
 
-    ///////////////////////////////////////////////////////////
-    //////////////  numeric_limits<rocwmma_bf8>  //////////////
-    ///////////////////////////////////////////////////////////
-
+    // BFloat8 E5M2
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_bf8 numeric_limits<rocwmma_bf8>::epsilon() noexcept
+    constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::epsilon() noexcept
     {
-        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x38));
-        return eps.bf8;
+        return make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(0x38));
     }
 
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_bf8 numeric_limits<rocwmma_bf8>::infinity() noexcept
+    constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::infinity() noexcept
     {
-        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x80));
-        return eps.bf8;
+        return make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(0x80));
     }
 
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_bf8 numeric_limits<rocwmma_bf8>::lowest() noexcept
+    constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::lowest() noexcept
     {
-        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0xFF));
-        return eps.bf8;
+        return make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(0xFF));
     }
 
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_bf8 numeric_limits<rocwmma_bf8>::max() noexcept
+    constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::max() noexcept
     {
-        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x7F));
-        return eps.bf8;
+        return make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(0x7F));
     }
 
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_bf8 numeric_limits<rocwmma_bf8>::min() noexcept
+    constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::min() noexcept
     {
-        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x01));
-        return eps.bf8;
+        return make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(0x01));
     }
 
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_bf8 numeric_limits<rocwmma_bf8>::quiet_NaN() noexcept
+    constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::quiet_NaN() noexcept
     {
-        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x80));
-        return eps.bf8;
+        return make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(0x80));
     }
 
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_bf8 numeric_limits<rocwmma_bf8>::signaling_NaN() noexcept
+    constexpr hip_fp8_e5m2_fnuz numeric_limits<hip_fp8_e5m2_fnuz>::signaling_NaN() noexcept
     {
-        rocwmma::detail::Fp8Bits eps(static_cast<uint8_t>(0x80));
-        return eps.bf8;
+        return make_hip_fp8_e5m2_fnuz_from_bits(static_cast<uint8_t>(0x80));
     }
     //@endcond
 
 } // namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
 
-#endif // ROCWMMA_FLOAT8_H
+#endif // ROCWMMA_FLOAT8_HPP

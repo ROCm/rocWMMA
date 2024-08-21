@@ -183,28 +183,28 @@ namespace rocwmma
         ROCWMMA_HOST_DEVICE
         constexpr inline VecT operator/(const VecT& x_) noexcept;
 
-        template <typename U = T, typename enable_if<is_integral<U>{}>::type* = nullptr>
+        template <typename U = T, enable_if_integral_t<U>* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT& operator%=(const VecT& x_) noexcept;
 
-        template <typename U = T, typename enable_if<is_signed<U>{}>::type* = nullptr>
+        template <typename U = T, enable_if_signed_t<U>* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT operator-() const noexcept;
 
-        template <typename U = T, typename enable_if<is_integral<U>{}>::type* = nullptr>
+        template <typename U = T, enable_if_integral_t<U>* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT& operator&=(const VecT& x_) noexcept;
 
-        template <typename U = T, typename enable_if<is_integral<U>{}>::type* = nullptr>
+        template <typename U = T, enable_if_integral_t<U>* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT& operator|=(const VecT& x_) noexcept;
 
-        template <typename U = T, typename enable_if<is_integral<U>{}>::type* = nullptr>
+        template <typename U = T, enable_if_integral_t<U>* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT operator~() const noexcept;
 
-        template <typename U = T, typename enable_if<is_integral<U>{}>::type* = nullptr>
+        template <typename U = T, enable_if_integral_t<U>* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT& operator^=(const VecT& x_) noexcept;
 
-        template <typename U = T, typename enable_if<is_integral<U>{}>::type* = nullptr>
+        template <typename U = T, enable_if_integral_t<U>* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT& operator>>=(const VecT& x_) noexcept;
 
-        template <typename U = T, typename enable_if<is_integral<U>{}>::type* = nullptr>
+        template <typename U = T, enable_if_integral_t<U>* = nullptr>
         ROCWMMA_HOST_DEVICE inline VecT& operator<<=(const VecT& x_) noexcept;
 
         ROCWMMA_HOST_DEVICE
@@ -233,7 +233,8 @@ namespace rocwmma
 
 #include "vector_impl.hpp"
 
-// Implements HIP_vector_type for rocWMMA types.
+// Implements HIP_vector_type for natively supported types.
+
 // HIP already has built-in support for native data type vectors of size <= 4.
 // Implement support for powers of 2 up to and including 256.
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float16_t, 8);
@@ -242,7 +243,6 @@ ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float16_t, 32);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float16_t, 64);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float16_t, 128);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float16_t, 256);
-ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float16_t, 512);
 
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float32_t, 8);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float32_t, 16);
@@ -250,15 +250,12 @@ ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float32_t, 32);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float32_t, 64);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float32_t, 128);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float32_t, 256);
-ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float32_t, 512);
 
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float64_t, 8);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float64_t, 16);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float64_t, 32);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float64_t, 64);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float64_t, 128);
-ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float64_t, 256);
-ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::float64_t, 512);
 
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int8_t, 8);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int8_t, 16);
@@ -266,7 +263,6 @@ ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int8_t, 32);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int8_t, 64);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int8_t, 128);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int8_t, 256);
-ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int8_t, 512);
 
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint8_t, 8);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint8_t, 16);
@@ -274,7 +270,6 @@ ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint8_t, 32);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint8_t, 64);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint8_t, 128);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint8_t, 256);
-ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint8_t, 512);
 
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int16_t, 8);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int16_t, 16);
@@ -282,7 +277,6 @@ ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int16_t, 32);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int16_t, 64);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int16_t, 128);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int16_t, 256);
-ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int16_t, 512);
 
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint16_t, 8);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint16_t, 16);
@@ -290,7 +284,6 @@ ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint16_t, 32);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint16_t, 64);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint16_t, 128);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint16_t, 256);
-ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint16_t, 512);
 
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int32_t, 8);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int32_t, 16);
@@ -298,7 +291,6 @@ ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int32_t, 32);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int32_t, 64);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int32_t, 128);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int32_t, 256);
-ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int32_t, 512);
 
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint32_t, 8);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint32_t, 16);
@@ -306,23 +298,20 @@ ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint32_t, 32);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint32_t, 64);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint32_t, 128);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint32_t, 256);
-ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint32_t, 512);
 
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int64_t, 8);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int64_t, 16);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int64_t, 32);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int64_t, 64);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int64_t, 128);
-ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int64_t, 256);
-ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::int64_t, 512);
 
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint64_t, 8);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint64_t, 16);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint64_t, 32);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint64_t, 64);
 ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint64_t, 128);
-ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint64_t, 256);
-ROCWMMA_REGISTER_HIP_NATIVE_VECTOR_TYPE(rocwmma::uint64_t, 512);
+
+// Implements HIP_vector_type for non-natively supported (custom) types.
 
 // HIP doesn't have functional support for non-native vector types __half or bfloat16_t.
 // Implement full support for those here.
@@ -337,34 +326,55 @@ ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::hfloat16_t, 32);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::hfloat16_t, 64);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::hfloat16_t, 128);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::hfloat16_t, 256);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::hfloat16_t, 512);
 #endif // !ROCWMMA_NO_HALF
 
-// Register bfloat8_t vector types
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat8_t, 1);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat8_t, 2);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat8_t, 3);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat8_t, 4);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat8_t, 8);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat8_t, 16);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat8_t, 32);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat8_t, 64);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat8_t, 128);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat8_t, 256);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat8_t, 512);
+#if ROCWMMA_FP8
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_t, 1);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_t, 2);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_t, 3);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_t, 4);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_t, 8);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_t, 16);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_t, 32);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_t, 64);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_t, 128);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_t, 256);
 
-// Register float8_t vector types
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::float8_t, 1);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::float8_t, 2);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::float8_t, 3);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::float8_t, 4);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::float8_t, 8);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::float8_t, 16);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::float8_t, 32);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::float8_t, 64);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::float8_t, 128);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::float8_t, 256);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::float8_t, 512);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_t, 1);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_t, 2);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_t, 3);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_t, 4);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_t, 8);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_t, 16);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_t, 32);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_t, 64);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_t, 128);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_t, 256);
+#endif // ROCWMMA_FP8
+
+#if ROCWMMA_FP8_FNUZ
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_fnuz_t, 1);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_fnuz_t, 2);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_fnuz_t, 3);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_fnuz_t, 4);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_fnuz_t, 8);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_fnuz_t, 16);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_fnuz_t, 32);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_fnuz_t, 64);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_fnuz_t, 128);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::float8_fnuz_t, 256);
+
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_fnuz_t, 1);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_fnuz_t, 2);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_fnuz_t, 3);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_fnuz_t, 4);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_fnuz_t, 8);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_fnuz_t, 16);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_fnuz_t, 32);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_fnuz_t, 64);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_fnuz_t, 128);
+ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE(rocwmma::bfloat8_fnuz_t, 256);
+#endif // ROCWMMA_FP8_FNUZ
 
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::xfloat32_t, 1);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::xfloat32_t, 2);
@@ -376,9 +386,7 @@ ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::x
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::xfloat32_t, 64);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::xfloat32_t, 128);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::xfloat32_t, 256);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::xfloat32_t, 512);
 
-/// Register bfloat16_t vector types
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat16_t, 1);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat16_t, 2);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat16_t, 3);
@@ -389,7 +397,6 @@ ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::b
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat16_t, 64);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat16_t, 128);
 ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat16_t, 256);
-ROCWMMA_REGISTER_HIP_NON_NATIVE_VECTOR_TYPE_WITH_INC_DEC_OPS_AS_FLOAT(rocwmma::bfloat16_t, 512);
 
 #include "type_traits.hpp"
 
@@ -509,4 +516,5 @@ namespace rocwmma
     using Coord2d      = non_native_vector_base<Coord2dDataT, 2>;
 
 } // namespace rocwmma
+
 #endif // ROCWMMA_VECTOR_HPP
