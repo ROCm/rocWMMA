@@ -29,6 +29,7 @@
 ///
 /// Architecture support
 /// Guaranteed symbols:
+/// ROCWMMA_DEVICE_COMPILE
 /// ROCWMMA_ARCH_GFX908
 /// ROCWMMA_ARCH_GFX90a
 /// ROCWMMA_ARCH_GFX940
@@ -44,28 +45,35 @@
 ///            compiler pass, and all other macros rely on their definition.
 ///
 ///            Device compiler pass: https://rocm.docs.amd.com/projects/HIP/en/latest/user_guide/hip_porting_guide.html#identifying-current-compilation-pass-host-or-device
-#if defined(__gfx908__)
-#define ROCWMMA_ARCH_GFX908 __gfx908__
-#elif defined(__gfx90a__)
-#define ROCWMMA_ARCH_GFX90A __gfx90a__
-#elif defined(__gfx940__)
-#define ROCWMMA_ARCH_GFX940 __gfx940__
-#elif defined(__gfx941__)
-#define ROCWMMA_ARCH_GFX941 __gfx941__
-#elif defined(__gfx942__)
-#define ROCWMMA_ARCH_GFX942 __gfx942__
-#elif defined(__gfx1100__)
-#define ROCWMMA_ARCH_GFX1100 __gfx1100__
-#elif defined(__gfx1101__)
-#define ROCWMMA_ARCH_GFX1101 __gfx1101__
-#elif defined(__gfx1102__)
-#define ROCWMMA_ARCH_GFX1102 __gfx1102__
-#elif defined(__gfx1200__)
-#define ROCWMMA_ARCH_GFX1200 __gfx1200__
-#elif defined(__gfx1201__)
-#define ROCWMMA_ARCH_GFX1201 __gfx1201__
+#if defined(__HIP_DEVICE_COMPILE__) && __HIP_DEVICE_COMPILE__
+#define ROCWMMA_DEVICE_COMPILE 1
 #else
+#define ROCWMMA_DEVICE_COMPILE 0
+#endif
+#if defined(__gfx908__) && ROCWMMA_DEVICE_COMPILE
+#define ROCWMMA_ARCH_GFX908 __gfx908__
+#elif defined(__gfx90a__) && ROCWMMA_DEVICE_COMPILE
+#define ROCWMMA_ARCH_GFX90A __gfx90a__
+#elif defined(__gfx940__) && ROCWMMA_DEVICE_COMPILE
+#define ROCWMMA_ARCH_GFX940 __gfx940__
+#elif defined(__gfx941__) && ROCWMMA_DEVICE_COMPILE
+#define ROCWMMA_ARCH_GFX941 __gfx941__
+#elif defined(__gfx942__) && ROCWMMA_DEVICE_COMPILE
+#define ROCWMMA_ARCH_GFX942 __gfx942__
+#elif defined(__gfx1100__) && ROCWMMA_DEVICE_COMPILE
+#define ROCWMMA_ARCH_GFX1100 __gfx1100__
+#elif defined(__gfx1101__) && ROCWMMA_DEVICE_COMPILE
+#define ROCWMMA_ARCH_GFX1101 __gfx1101__
+#elif defined(__gfx1102__) && ROCWMMA_DEVICE_COMPILE
+#define ROCWMMA_ARCH_GFX1102 __gfx1102__
+#elif defined(__gfx1200__) && ROCWMMA_DEVICE_COMPILE
+#define ROCWMMA_ARCH_GFX1200 __gfx1200__
+#elif defined(__gfx1201__) && ROCWMMA_DEVICE_COMPILE
+#define ROCWMMA_ARCH_GFX1201 __gfx1201__
+#elif !ROCWMMA_DEVICE_COMPILE
 #define ROCWMMA_ARCH_HOST 1
+#else
+static_assert(0, "Unsupported architecture");
 #endif
 
 #if !defined(ROCWMMA_ARCH_GFX908)
@@ -112,6 +120,7 @@
 /// ROCWMMA_WAVE32_MODE
 /// ROCWMMA_BLOCK_DIM_16_SUPPORTED
 /// ROCWMMA_BLOCK_DIM_32_SUPPORTED
+/// ROCWMMA_ARCH_GFX94X
 ///
 #if ROCWMMA_ARCH_GFX908 || ROCWMMA_ARCH_GFX90A || ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 \
     || ROCWMMA_ARCH_GFX942
@@ -131,6 +140,10 @@
 #define ROCWMMA_ARCH_GFX12 1
 #define ROCWMMA_WAVE32_MODE 1
 #define ROCWMMA_BLOCK_DIM_16_SUPPORTED 1
+#endif
+
+#if ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942
+#define ROCWMMA_ARCH_GFX94X 1
 #endif
 
 #if !defined(ROCWMMA_ARCH_GFX9)
@@ -154,17 +167,8 @@
 #if !defined(ROCWMMA_BLOCK_DIM_32_SUPPORTED)
 #define ROCWMMA_BLOCK_DIM_32_SUPPORTED 0
 #endif
-
-///
-/// Architecture datatypes configuration.
-/// FP8_NANOO only supported on gfx940, gfx941 and gfx942
-/// Guaranteed symbols:
-/// ROCWMMA_ENABLE_FP8_NANOO
-///
-#if (ROCWMMA_ARCH_GFX940 || ROCWMMA_ARCH_GFX941 || ROCWMMA_ARCH_GFX942)
-#define ROCWMMA_USE_FP8_NANOO 1
-#else
-#define ROCWMMA_USE_FP8_NANOO 0
+#if !defined(ROCWMMA_ARCH_GFX94X)
+#define ROCWMMA_ARCH_GFX94X 0
 #endif
 
 #if defined(NDEBUG)
@@ -187,7 +191,7 @@ static_assert(!(bool)(ROCWMMA_WAVE32_MODE) && (bool)(ROCWMMA_WAVE64_MODE),
               "rocWMMA supports only wave64 for gfx9 arch");
 static_assert((bool)(ROCWMMA_BLOCK_DIM_16_SUPPORTED) && (bool)(ROCWMMA_BLOCK_DIM_32_SUPPORTED),
               "rocWMMA requires block size of 16 and 32 for gfx9 arch");
-#endif 
+#endif
 
 #if ROCWMMA_ARCH_GFX11
 static_assert((bool)(ROCWMMA_WAVE32_MODE) && !(bool)(ROCWMMA_WAVE64_MODE),

@@ -29,13 +29,24 @@ namespace rocwmma
 {
     // All supported instantiations
     template struct GemmResource<int8_t, int32_t>;
+
+#if ROCWMMA_FP8
     template struct GemmResource<float8_t, float32_t>;
     template struct GemmResource<bfloat8_t, float32_t>;
+#endif
+
+#if ROCWMMA_FP8_FNUZ
+    template struct GemmResource<float8_fnuz_t, float32_t>;
+    template struct GemmResource<bfloat8_fnuz_t, float32_t>;
+#endif
+
     template struct GemmResource<bfloat16_t, float32_t>;
     template struct GemmResource<float16_t, float32_t>;
+
 #if !ROCWMMA_TESTS_NO_HALF
     template struct GemmResource<hfloat16_t, float32_t>;
 #endif // !ROCWMMA_TESTS_NO_HALF
+
     template struct GemmResource<float32_t, float32_t>;
     template struct GemmResource<xfloat32_t, float32_t>;
     template struct GemmResource<float64_t, float64_t>;

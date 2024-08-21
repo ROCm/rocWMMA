@@ -36,6 +36,7 @@
 #endif // !__HIPCC_RTC__
 
 #include "config.hpp"
+#include "utility/type_traits.hpp"
 #include "float8.hpp"
 #include "rocwmma_xfloat32.hpp"
 
@@ -88,10 +89,13 @@ namespace rocwmma
     using hfloat16_t = __half;
 #endif // !ROCWMMA_NO_HALF
 
+    // fp8 types
+    using float8_t = hip_fp8_e4m3;
+    using bfloat8_t = hip_fp8_e5m2;
 
-    using float8_t = rocwmma_f8;
-
-    using bfloat8_t = rocwmma_bf8;
+    // fp8_fnuz types
+    using float8_fnuz_t =  hip_fp8_e4m3_fnuz;
+    using bfloat8_fnuz_t =  hip_fp8_e5m2_fnuz;
 
     using xfloat32_t = rocwmma_xfloat32;
 
