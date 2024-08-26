@@ -34,7 +34,7 @@ namespace rocwmma
     template <typename DataT, typename CrossLaneOp>
     ROCWMMA_DEVICE bool swizzleOpsTestCase()
     {
-        return false;
+        return true;
     }
 
 } // namespace rocwmma

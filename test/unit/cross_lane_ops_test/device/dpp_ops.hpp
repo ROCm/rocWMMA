@@ -40,7 +40,6 @@ namespace rocwmma
     {
         return true;
     }
-
 } // namespace rocwmma
 
 #endif // ROCWMMA_DEVICE_DPP_OPS_HPP

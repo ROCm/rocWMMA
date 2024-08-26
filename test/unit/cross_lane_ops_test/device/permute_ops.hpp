@@ -34,7 +34,7 @@ namespace rocwmma
     template <typename DataT, typename CrossLaneOp>
     ROCWMMA_DEVICE bool permuteOpsTestCase()
     {
-        return false;
+        return true;
     }
 
 } // namespace rocwmma
