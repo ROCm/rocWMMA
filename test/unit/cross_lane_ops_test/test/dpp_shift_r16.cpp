@@ -70,7 +70,7 @@ namespace rocwmma
         static inline std::vector<ProblemSizeT> problemSizes()
         {
             return {// {64, 1}
-                    {64, 64}};
+                    {warpSize, 1}};
         }
 
         // 'prev' values

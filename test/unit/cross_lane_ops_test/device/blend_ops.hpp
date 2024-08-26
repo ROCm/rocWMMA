@@ -34,7 +34,7 @@ namespace rocwmma
     template <typename DataT, typename CrossLaneOp>
     ROCWMMA_DEVICE bool blendOpsTestCase()
     {
-        return false;
+        return true;
     }
 
 } // namespace rocwmma
