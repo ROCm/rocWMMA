@@ -27,38 +27,57 @@
 #ifndef ROCWMMA_DEVICE_CROSS_LANE_OPS_HPP
 #define ROCWMMA_DEVICE_CROSS_LANE_OPS_HPP
 
+#include "common.hpp"
+#include "device/blend_ops.hpp"
+#include "device/dpp_ops.hpp"
+#include "device/permute_ops.hpp"
+#include "device/swizzle_ops.hpp"
 #include <rocwmma/rocwmma.hpp>
 
 namespace rocwmma
 {
+    template <typename DataT, typename Func>
+    ROCWMMA_DEVICE void crossLaneOpsTest(Func         op,
+                                         uint32_t     m,
+                                         uint32_t     n,
+                                         DataT const* in,
+                                         DataT*       out,
+                                         uint32_t     ld,
+                                         DataT        param1,
+                                         DataT        param2)
+    {
+        __shared__ uint32_t result;
+        if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0 && blockIdx.x == 0
+           && blockIdx.y == 0 && blockIdx.z == 0)
+        {
+            result = 0;
+        }
+        synchronize_workgroup();
+
+        bool err = false;
+
+        // Add tests here
+        err = err ? err : op();
+
+        // Reduce error count
+        atomicAdd(&result, err ? 1 : 0);
+
+        // Wait for all threads
+        synchronize_workgroup();
+
+        // Just need one thread to update output
+        if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0 && blockIdx.x == 0
+           && blockIdx.y == 0 && blockIdx.z == 0)
+        {
+            out[0] = static_cast<DataT>(result == 0 ? SUCCESS_VALUE : ERROR_VALUE);
+        }
+    }
     template <typename DataT,
               typename CrossLaneOp,
               uint32_t WriteRowMask,
               uint32_t WriteBankMask,
               bool     BoundCtrl>
-    __global__ void dppOpsTest(uint32_t     m,
-                               uint32_t     n,
-                               DataT const* in,
-                               DataT*       out,
-                               uint32_t     ld,
-                               DataT        param1,
-                               DataT        param2)
-    {
-        using PackedT = typename PackTraits<DataT>::PackedT;
-        // Each thread operates on 32b or 64b data
-        PackedT*       writeOut = reinterpret_cast<PackedT*>(out);
-        PackedT const* readIn   = reinterpret_cast<PackedT const*>(in);
-        PackedT        prev     = static_cast<PackedT>(param1);
-
-        // Get offset into 1D array where all threads are neighbours.
-        auto dataOffset = blockIdx.x * blockDim.x + threadIdx.x;
-        writeOut[dataOffset]
-            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
-                readIn[dataOffset], prev);
-    }
-
-    template <typename DataT, typename CrossLaneOp>
-    __global__ void swizzleOpsTest(uint32_t     m,
+    ROCWMMA_KERNEL void dppOpsTest(uint32_t     m,
                                    uint32_t     n,
                                    DataT const* in,
                                    DataT*       out,
@@ -66,53 +85,54 @@ namespace rocwmma
                                    DataT        param1,
                                    DataT        param2)
     {
-        using PackedT = typename PackTraits<DataT>::PackedT;
-        // Each thread operates on 32b or 64b data
-        PackedT*       writeOut = reinterpret_cast<PackedT*>(out);
-        PackedT const* readIn   = reinterpret_cast<PackedT const*>(in);
-
-        // Get offset into 1D array where all threads are neighbours.
-        auto dataOffset      = blockIdx.x * blockDim.x + threadIdx.x;
-        writeOut[dataOffset] = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(readIn[dataOffset]);
+        crossLaneOpsTest<DataT>(
+            dppOpsTestCase<DataT, CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>,
+            m,
+            n,
+            in,
+            out,
+            ld,
+            param1,
+            param2);
     }
 
     template <typename DataT, typename CrossLaneOp>
-    __global__ void permuteOpsTest(uint32_t     m,
-                                   uint32_t     n,
-                                   DataT const* in,
-                                   DataT*       out,
-                                   uint32_t     ld,
-                                   DataT        param1,
-                                   DataT        param2)
+    ROCWMMA_KERNEL void swizzleOpsTest(uint32_t     m,
+                                       uint32_t     n,
+                                       DataT const* in,
+                                       DataT*       out,
+                                       uint32_t     ld,
+                                       DataT        param1,
+                                       DataT        param2)
     {
-        using PackedT = typename PackTraits<DataT>::PackedT;
-        // Each thread operates on 32b or 64b data
-        PackedT*       writeOut = reinterpret_cast<PackedT*>(out);
-        PackedT const* readIn   = reinterpret_cast<PackedT const*>(in);
-
-        // Get offset into 1D array where all threads are neighbours.
-        auto dataOffset      = blockIdx.x * blockDim.x + threadIdx.x;
-        writeOut[dataOffset] = rocwmma::Permute::Driver<CrossLaneOp>::exec(readIn[dataOffset]);
+        crossLaneOpsTest<DataT>(
+            swizzleOpsTestCase<DataT, CrossLaneOp>, m, n, in, out, ld, param1, param2);
     }
 
     template <typename DataT, typename CrossLaneOp>
-    __global__ void blendOpsTest(uint32_t     m,
-                                 uint32_t     n,
-                                 DataT const* in,
-                                 DataT*       out,
-                                 uint32_t     ld,
-                                 DataT        param1,
-                                 DataT        param2)
+    ROCWMMA_KERNEL void permuteOpsTest(uint32_t     m,
+                                       uint32_t     n,
+                                       DataT const* in,
+                                       DataT*       out,
+                                       uint32_t     ld,
+                                       DataT        param1,
+                                       DataT        param2)
     {
-        using PackedT = typename PackTraits<DataT>::PackedT;
-        // Each thread operates on 32b or 64b data
-        PackedT*       writeOut = reinterpret_cast<PackedT*>(out);
-        PackedT const* readIn   = reinterpret_cast<PackedT const*>(in);
+        crossLaneOpsTest<DataT>(
+            permuteOpsTestCase<DataT, CrossLaneOp>, m, n, in, out, ld, param1, param2);
+    }
 
-        // Get offset into 1D array where all threads are neighbours.
-        auto dataOffset = blockIdx.x * blockDim.x + threadIdx.x;
-        writeOut[dataOffset]
-            = rocwmma::Blend::Driver<CrossLaneOp>::exec(writeOut[dataOffset], readIn[dataOffset]);
+    template <typename DataT, typename CrossLaneOp>
+    ROCWMMA_KERNEL void blendOpsTest(uint32_t     m,
+                                     uint32_t     n,
+                                     DataT const* in,
+                                     DataT*       out,
+                                     uint32_t     ld,
+                                     DataT        param1,
+                                     DataT        param2)
+    {
+        crossLaneOpsTest<DataT>(
+            blendOpsTestCase<DataT, CrossLaneOp>, m, n, in, out, ld, param1, param2);
     }
 
 } // namespace rocwmma
