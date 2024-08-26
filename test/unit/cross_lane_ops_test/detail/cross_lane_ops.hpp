@@ -154,81 +154,25 @@ namespace rocwmma
             return stream;
         }
 
-        virtual void setupImpl(typename Base::DataStorage::ProblemSize const& probsize)
+        virtual void setupImpl(typename Base::DataStorage::ProblemSize const& /*probsize*/)
         {
             // Allocate storage
             auto& dataInstance = Base::DataStorage::instance();
-            dataInstance->resizeStorage(probsize);
 
-            // Init host
-            MatrixUtil<Layout>::fillLaunchKernel(
-                dataInstance->deviceIn().get(), Base::mM, Base::mN);
-            // for(int i=0; i < Base::mM * Base::mN; i++)
-            // {
-            //     dataInstance->hostIn().get()[i] = i;
-            // }
-            MatrixUtil<Layout>::fillValLaunchKernel(dataInstance->deviceOut().get(),
-                                                    Base::mM,
-                                                    Base::mN,
-                                                    std::numeric_limits<DataT>::signaling_NaN());
+            // Need only one entry to save the test result
+            dataInstance->resizeStorage({1, 1});
+
+            dataInstance->hostOut().get()[0] = static_cast<DataT>(ERROR_VALUE);
+            dataInstance->copyData(dataInstance->deviceOut(), dataInstance->hostOut(), 1);
         }
 
         void validateResultsImpl() final
         {
             auto& dataInstance = Base::DataStorage::instance();
-
-            const int64_t sizeD = Base::mM * Base::mN;
-
-            // Copy back the GPU-initialized input
-            dataInstance->copyData(dataInstance->hostIn(), dataInstance->deviceIn(), sizeD);
-
-            // Perform the host validation
-            // Host reference result in hostOut
-
-            // Determine how many inputs are needed.
-            // Currently CPU references for blend backends need 2 input sources.
-            if constexpr((CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_VPERM)
-                         || (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_VBLEND))
-            {
-                // 2 inputs. Using initial output as first input
-                cross_lane_ref_dispatch_CPU<DataT,
-                                            CrossLaneOp,
-                                            WriteRowMask,
-                                            WriteBankMask,
-                                            BoundCtrl>(dataInstance->hostOut().get(),
-                                                       dataInstance->hostOut().get(),
-                                                       dataInstance->hostIn().get(),
-                                                       sizeD,
-                                                       Base::mParam1);
-            }
-            else
-            {
-                // 1 input
-                cross_lane_ref_dispatch_CPU<DataT,
-                                            CrossLaneOp,
-                                            WriteRowMask,
-                                            WriteBankMask,
-                                            BoundCtrl>(dataInstance->hostOut().get(),
-                                                       dataInstance->hostIn().get(),
-                                                       sizeD,
-                                                       Base::mParam1);
-            }
-
-            // Copy host reference output to GPU
-            auto reference = dataInstance->template allocDevice<DataT>(sizeD);
-            dataInstance->copyData(reference, dataInstance->hostOut(), sizeD);
-
-            // Compare on the GPU
-            std::tie(Base::mValidationResult, Base::mMaxRelativeError)
-                = compareEqualLaunchKernel<DataT, DataT, Layout, Layout>(
-                    reference.get(), dataInstance->deviceOut().get(), Base::mM, Base::mN);
-
-            // for(int i=0; i < Base::mM * Base::mN; i++)
-            // {
-            //     std::cout << std::hex;
-            //     std::cout << "[" << dataInstance->hostOut().get()[i] << ", " << dataInstance->hostIn().get()[i] << "] " << std::endl;
-            //     std::cout << std::dec;
-            // }
+            // Cache current kernel result from device
+            dataInstance->copyData(dataInstance->hostOut(), dataInstance->deviceOut(), 1);
+            // Check the single output result
+            Base::mValidationResult = (dataInstance->hostOut().get()[0] == DataT(SUCCESS_VALUE));
         }
 
         virtual typename Base::KernelFunc kernelImpl() const = 0;
@@ -242,47 +186,6 @@ namespace rocwmma
     public:
         BlendOpsKernel()  = default;
         ~BlendOpsKernel() = default;
-
-        void setupImpl(typename Base::DataStorage::ProblemSize const& probsize) final
-        {
-            // Allocate storage
-            auto& dataInstance = Base::DataStorage::instance();
-            dataInstance->resizeStorage(probsize);
-
-            // hostOut = src0
-            // hostIn = src1
-            MatrixUtil<typename Base::Layout>::fill(
-                dataInstance->hostIn().get(), Base::mM, Base::mN);
-            MatrixUtil<typename Base::Layout>::fill(
-                dataInstance->hostOut().get(), Base::mM, Base::mN);
-
-            // Mix things up so we don't test the same array.
-            std::srand(std::time(nullptr));
-            for(int i = 0; i < (Base::mM * Base::mN) / 3u; i++)
-            {
-                uint32_t swapL                      = uint32_t(std::rand()) % (Base::mM * Base::mN);
-                uint32_t swapR                      = uint32_t(std::rand()) % (Base::mM * Base::mN);
-                auto     tmp                        = dataInstance->hostIn().get()[swapL];
-                dataInstance->hostIn().get()[swapL] = dataInstance->hostIn().get()[swapR];
-                dataInstance->hostIn().get()[swapR] = tmp;
-            }
-
-            // for(int i=0; i < Base::mM * Base::mN; i++)
-            // {
-            //     dataInstance->hostIn().get()[i] = i;
-            //     dataInstance->hostOut().get()[i] = i | 0xFFFFFF00;
-
-            //     std::cout << std::hex;
-            //     std::cout << "[" << dataInstance->hostOut().get()[i] << ", " << dataInstance->hostIn().get()[i] << "] " << std::endl;
-            //     std::cout << std::dec;
-            // }
-
-            // Init device
-            dataInstance->copyData(
-                dataInstance->deviceIn(), dataInstance->hostIn(), Base::mM * Base::mN);
-            dataInstance->copyData(
-                dataInstance->deviceOut(), dataInstance->hostOut(), Base::mM * Base::mN);
-        }
 
         typename Base::KernelFunc kernelImpl() const final
         {
