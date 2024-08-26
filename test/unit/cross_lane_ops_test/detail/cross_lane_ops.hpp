@@ -54,22 +54,6 @@ namespace rocwmma
         CrossLaneOpsKernelBase()          = default;
         virtual ~CrossLaneOpsKernelBase() = default;
 
-        dim3 gridDim() const final
-        {
-            // Need to address the input array as 32b elements per thread.
-            auto x = dim3(static_cast<uint32_t>(
-                              roundf(static_cast<float32_t>(Base::mM * Base::mN)
-                                     / static_cast<float32_t>(PackTraits<DataT>::PackRatio)))
-                          / Base::mTBlockX);
-
-            return x;
-        }
-
-        dim3 blockDim() const final
-        {
-            return dim3(Base::mTBlockX);
-        }
-
         bool checkSizes() const final
         {
             return (Base::mTBlockY == 1);
