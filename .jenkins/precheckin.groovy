@@ -10,7 +10,7 @@ def runCI =
 
     def prj = new rocProject('rocWMMA', 'precheckin')
     prj.paths.build_command = './install -c'
-    prj.libraryDependencies = ['rocBLAS']
+    prj.libraryDependencies = ['hipBLAS-common', 'hipBLASLt', 'rocBLAS']
     prj.defaults.ccache = true
     prj.timeout.compile = 600
 

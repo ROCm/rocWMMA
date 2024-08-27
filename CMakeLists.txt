@@ -95,6 +95,8 @@ else()
 endif()
 
 if (ADDRESS_SANITIZER_ENABLED)
+    #TODO: Remove next line when rocm-cmake fix is available
+    set(CMAKE_NO_BUILTIN_CHRPATH ON)
     rocm_check_target_ids(DEFAULT_AMDGPU_TARGETS
         TARGETS "gfx90a:xnack+;gfx940:xnack+;gfx941:xnack+;gfx942:xnack+" )
 else()
