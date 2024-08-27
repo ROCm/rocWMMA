@@ -187,6 +187,8 @@ namespace rocwmma
     struct DppOpsKernel final
         : public CrossLaneOpsKernelBase<DataT, CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>
     {
+        static_assert((CrossLaneOp::GROUP_SIZE & (CrossLaneOp::GROUP_SIZE - 1)) == 0,
+                      "SubGroupSize must be power of 2.");
         using Base = UnitKernelBase<1, 1, DataT, col_major>;
 
     public:
