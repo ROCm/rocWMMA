@@ -63,11 +63,16 @@ namespace rocwmma
     {
     };
 
-    // template<typename>
-    // struct is_dpp_shift : std::false_type {};
-    //
-    // template <uint32_t ShiftDir, uint32_t ShiftDist, uint32_t SubGroupSize, class ShiftCtrl>
-    // struct is_dpp_shift<DppImpl::OpsBase::Shift<ShiftDir, ShiftDist, SubGroupSize, ShiftCtrl>> : std::true_type {};
+    template <typename>
+    struct is_dpp_shift : std::false_type
+    {
+    };
+
+    template <uint32_t ShiftDir, uint32_t ShiftDist, uint32_t SubGroupSize, class ShiftCtrl>
+    struct is_dpp_shift<DppImpl::OpsBase::Shift<ShiftDir, ShiftDist, SubGroupSize, ShiftCtrl>>
+        : std::true_type
+    {
+    };
 
     ROCWMMA_DEVICE inline bool isDppMasked(int id, uint32_t WriteRowMask, uint32_t WriteBankMask)
     {
@@ -99,15 +104,15 @@ namespace rocwmma
         return (input & (~(SubgroupSize - 1))) | afterRotate;
     }
 
-    // template <uint32_t SubGroupSize, uint32_t ShiftDir, uint32_t ShiftDist>
-    // ROCWMMA_DEVICE inline int getDppShiftExpect(int input)
-    // {
-    // auto afterRotate = (input & (SubgroupSize - 1));
-    // afterRotate += Direction == CrossLaneOps::OP_DIR_L ? -Distance : Distance;
-    // afterRotate += SubgroupSize;
-    // afterRotate &= (SubgroupSize - 1);
-    // return (input & (~(SubgroupSize - 1))) | afterRotate;
-    // }
+    template <uint32_t SubGroupSize, uint32_t ShiftDir, uint32_t ShiftDist, bool BoundCtrl>
+    ROCWMMA_DEVICE inline int getDppShiftExpect(int input, int prev)
+    {
+        input += ShiftDir == CrossLaneOps::OP_DIR_L ? ShiftDist : -ShiftDist;
+        int  fillValue  = BoundCtrl ? 0 : prev;
+        auto afterShift = (input & (SubGroupSize - 1));
+        afterShift += ShiftDir == CrossLaneOps::OP_DIR_L ? -ShiftDist : ShiftDist;
+        return (afterShift < 0 || afterShift >= SubGroupSize) ? fillValue : input;
+    }
 
     template <typename DataT,
               typename CrossLaneOp,
@@ -165,6 +170,30 @@ namespace rocwmma
         int  expect   = isMasked ? getDppRotateExpect<CrossLaneOp::GROUP_SIZE,
                                                    CrossLaneOp::OP_DIR,
                                                    CrossLaneOp::OP_DIST>(input)
+                                 : prev;
+        int  output
+            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
+                                                                                              prev);
+
+        // printf("op (%d, %d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::OP_DIR, CrossLaneOp::OP_DIST, input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
+        return output != expect;
+    }
+
+    template <typename DataT,
+              typename CrossLaneOp,
+              uint32_t WriteRowMask,
+              uint32_t WriteBankMask,
+              bool     BoundCtrl>
+    ROCWMMA_DEVICE std::enable_if_t<is_dpp_shift<CrossLaneOp>::value, bool> dppOpsTestCase()
+    {
+        int  id       = threadIdx.x;
+        int  prev     = 100; // TODO passed in by parameter
+        int  input    = id;
+        bool isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
+        int  expect   = isMasked ? getDppShiftExpect<CrossLaneOp::GROUP_SIZE,
+                                                  CrossLaneOp::OP_DIR,
+                                                  CrossLaneOp::OP_DIST,
+                                                  BoundCtrl>(input, prev)
                                  : prev;
         int  output
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
