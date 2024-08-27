@@ -31,14 +31,46 @@
 
 namespace rocwmma
 {
+    ROCWMMA_DEVICE inline bool isDppMasked(int id, uint32_t WriteRowMask, uint32_t WriteBankMask)
+    {
+        return (WriteRowMask & (1 << ((id >> 4) & 0x3)))
+               && (WriteBankMask & (1 << ((id >> 2) & 0x3)));
+    }
+
+    template <int SubgroupSize, int Element>
+    ROCWMMA_DEVICE inline int getDppBCastExpect(int input)
+    {
+        // TODO 63 should be waveSize - 1
+        return (input & (63 & (~(SubgroupSize - 1)))) + Element;
+    }
+
     template <typename DataT,
               typename CrossLaneOp,
               uint32_t WriteRowMask,
               uint32_t WriteBankMask,
               bool     BoundCtrl>
-    ROCWMMA_DEVICE bool dppOpsTestCase()
+    ROCWMMA_DEVICE std::enable_if_t<std::is_same_v<CrossLaneOp, DppImpl::Ops::BCast2<0>>
+                                        || std::is_same_v<CrossLaneOp, DppImpl::Ops::BCast2<1>>
+                                        || std::is_same_v<CrossLaneOp, DppImpl::Ops::BCast4<0>>
+                                        || std::is_same_v<CrossLaneOp, DppImpl::Ops::BCast4<3>>
+                                        || std::is_same_v<CrossLaneOp, DppImpl::Ops::BCast16<2>>
+                                        || std::is_same_v<CrossLaneOp, DppImpl::Ops::BCast16<11>>,
+                                    bool>
+                   dppOpsTestCase()
     {
-        return true;
+        int  id       = threadIdx.x;
+        int  prev     = 100; // TODO passed in by parameter
+        int  input    = id;
+        bool isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
+        int  expect
+            = isMasked ? getDppBCastExpect<CrossLaneOp::GROUP_SIZE, CrossLaneOp::ELEMENT_IDX>(input)
+                       : prev;
+        int output
+            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
+                                                                                              prev);
+
+        // printf("op 0, input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n",  input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
+        return output != expect;
     }
 } // namespace rocwmma
 
