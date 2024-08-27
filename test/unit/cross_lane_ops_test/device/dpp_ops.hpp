@@ -44,6 +44,13 @@ namespace rocwmma
         return (input & (63 & (~(SubgroupSize - 1)))) + Element;
     }
 
+    template <int SubgroupSize>
+    ROCWMMA_DEVICE inline int getDppReverseExpect(int input)
+    {
+        int maxInGroup = SubgroupSize - 1;
+        return ((input & (~maxInGroup) | (maxInGroup - (input & maxInGroup))));
+    }
+
     template <typename DataT,
               typename CrossLaneOp,
               uint32_t WriteRowMask,
@@ -66,6 +73,31 @@ namespace rocwmma
             = isMasked ? getDppBCastExpect<CrossLaneOp::GROUP_SIZE, CrossLaneOp::ELEMENT_IDX>(input)
                        : prev;
         int output
+            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
+                                                                                              prev);
+
+        // printf("op 0, input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n",  input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
+        return output != expect;
+    }
+
+    template <typename DataT,
+              typename CrossLaneOp,
+              uint32_t WriteRowMask,
+              uint32_t WriteBankMask,
+              bool     BoundCtrl>
+    ROCWMMA_DEVICE std::enable_if_t<std::is_same_v<CrossLaneOp, DppImpl::Ops::Reverse2>
+                                        || std::is_same_v<CrossLaneOp, DppImpl::Ops::Reverse4>
+                                        || std::is_same_v<CrossLaneOp, DppImpl::Ops::Reverse8>
+                                        || std::is_same_v<CrossLaneOp, DppImpl::Ops::Reverse16>,
+                                    bool>
+                   dppOpsTestCase()
+    {
+        int  id       = threadIdx.x;
+        int  prev     = 100; // TODO passed in by parameter
+        int  input    = id;
+        bool isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
+        int  expect   = isMasked ? getDppReverseExpect<CrossLaneOp::GROUP_SIZE>(input) : prev;
+        int  output
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
                                                                                               prev);
 
