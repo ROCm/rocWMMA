@@ -105,6 +105,16 @@ namespace rocwmma
     {
     };
 
+    template <typename>
+    struct is_dpp_wFallBCast : std::false_type
+    {
+    };
+
+    template <uint32_t SubGroupSize, class BCastCtrl>
+    struct is_dpp_wFallBCast<DppImpl::OpsBase::WFallBCast<SubGroupSize, BCastCtrl>> : std::true_type
+    {
+    };
+
     ROCWMMA_DEVICE inline bool isDppMasked(int id, uint32_t WriteRowMask, uint32_t WriteBankMask)
     {
         return (WriteRowMask & (1 << ((id >> 4) & 0x3)))
@@ -167,6 +177,22 @@ namespace rocwmma
     ROCWMMA_DEVICE inline int getDppSwapExpect(int input)
     {
         return input ^ SubGroupSize;
+    }
+
+    template <uint32_t SubGroupSize>
+    ROCWMMA_DEVICE inline int getDppWFallBCastExpect(int input)
+    {
+        if constexpr(SubGroupSize == 16)
+        {
+            auto firstInRow = input & 0b110000;
+            input           = firstInRow > 0 ? firstInRow - 1 : input;
+        }
+        else
+        {
+            auto firstInRow = input & 0b100000;
+            input           = firstInRow > 0 ? firstInRow - 1 : input;
+        }
+        return input;
     }
 
     template <typename DataT,
@@ -307,6 +333,26 @@ namespace rocwmma
         int  input    = id;
         bool isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
         int  expect   = isMasked ? getDppSwapExpect<CrossLaneOp::GROUP_SIZE>(input) : prev;
+        int  output
+            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
+                                                                                              prev);
+
+        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::SELECT_0, CrossLaneOp::SELECT_1, input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
+        return output != expect;
+    }
+
+    template <typename DataT,
+              typename CrossLaneOp,
+              uint32_t WriteRowMask,
+              uint32_t WriteBankMask,
+              bool     BoundCtrl>
+    ROCWMMA_DEVICE std::enable_if_t<is_dpp_wFallBCast<CrossLaneOp>::value, bool> dppOpsTestCase()
+    {
+        int  id       = threadIdx.x;
+        int  prev     = 100; // TODO passed in by parameter
+        int  input    = id;
+        bool isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
+        int  expect   = isMasked ? getDppWFallBCastExpect<CrossLaneOp::GROUP_SIZE>(input) : prev;
         int  output
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
                                                                                               prev);
