@@ -50,16 +50,14 @@ namespace rocwmma
         return input;
     }
 
-    template <uint32_t RotateDist, uint32_t SubGroupSize>
-    ROCWMMA_DEVICE inline int getPermuteRotateLExpect(int input)
+    template <int SubgroupSize, int Direction, int Distance>
+    ROCWMMA_DEVICE inline int getPermuteRotateExpect(int input)
     {
-        return input;
-    }
-
-    template <uint32_t RotateDist, uint32_t SubGroupSize>
-    ROCWMMA_DEVICE inline int getPermuteRotateRExpect(int input)
-    {
-        return input;
+        auto afterRotate = (input & (SubgroupSize - 1));
+        afterRotate += Direction == CrossLaneOps::OP_DIR_L ? Distance : -Distance;
+        afterRotate += SubgroupSize;
+        afterRotate &= (SubgroupSize - 1);
+        return (input & (~(SubgroupSize - 1))) | afterRotate;
     }
 
     template <typename DataT, typename CrossLaneOp>
@@ -81,12 +79,13 @@ namespace rocwmma
                                     bool>
                    permuteOpsTestCase()
     {
-        int input = threadIdx.x;
-        int expect
-            = getPermuteRotateLExpect<CrossLaneOp::ELEMENT_IDX, CrossLaneOp::GROUP_SIZE>(input);
+        int input  = threadIdx.x;
+        int expect = getPermuteRotateExpect<CrossLaneOp::GROUP_SIZE,
+                                            CrossLaneOps::OP_DIR_L,
+                                            CrossLaneOp::opDist()>(input);
         int output = rocwmma::Permute::Driver<CrossLaneOp>::exec(input);
 
-        // printf("op (%d, %d), input %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::ELEMENT_IDX, input , expect , output );
+        // printf("op (%d, %d, %d), input %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::opDir(), CrossLaneOp::opDist(), input , expect , output );
         return output != expect;
     }
 
@@ -96,12 +95,13 @@ namespace rocwmma
                                     bool>
                    permuteOpsTestCase()
     {
-        int input = threadIdx.x;
-        int expect
-            = getPermuteRotateRExpect<CrossLaneOp::ELEMENT_IDX, CrossLaneOp::GROUP_SIZE>(input);
+        int input  = threadIdx.x;
+        int expect = getPermuteRotateExpect<CrossLaneOp::GROUP_SIZE,
+                                            CrossLaneOps::OP_DIR_R,
+                                            CrossLaneOp::opDist()>(input);
         int output = rocwmma::Permute::Driver<CrossLaneOp>::exec(input);
 
-        // printf("op (%d, %d), input %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::ELEMENT_IDX, input , expect , output );
+        // printf("op (%d, %d, %d), input %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::opDir(), CrossLaneOp::opDist(), input , expect , output );
         return output != expect;
     }
 } // namespace rocwmma
