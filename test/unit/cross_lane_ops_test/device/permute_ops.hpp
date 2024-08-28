@@ -31,12 +31,79 @@
 
 namespace rocwmma
 {
-    template <typename DataT, typename CrossLaneOp>
-    ROCWMMA_DEVICE bool permuteOpsTestCase()
+    template <typename>
+    struct is_permute_blockBCast : std::false_type
     {
-        return true;
+    };
+
+    template <uint32_t BlockIdx, uint32_t BlockSize>
+    struct is_permute_blockBCast<PermuteImpl::OpsBase::BlockBCast<BlockIdx, BlockSize>>
+        : std::true_type
+    {
+    };
+
+    template <uint32_t BlockIdx, uint32_t BlockSize>
+    ROCWMMA_DEVICE inline int getPermuteBlockBCastExpect(int input)
+    {
+        auto idxInBlock = input % BlockSize;
+        input           = BlockIdx * BlockSize + idxInBlock;
+        return input;
     }
 
+    template <uint32_t RotateDist, uint32_t SubGroupSize>
+    ROCWMMA_DEVICE inline int getPermuteRotateLExpect(int input)
+    {
+        return input;
+    }
+
+    template <uint32_t RotateDist, uint32_t SubGroupSize>
+    ROCWMMA_DEVICE inline int getPermuteRotateRExpect(int input)
+    {
+        return input;
+    }
+
+    template <typename DataT, typename CrossLaneOp>
+    ROCWMMA_DEVICE std::enable_if_t<is_permute_blockBCast<CrossLaneOp>::value, bool>
+                   permuteOpsTestCase()
+    {
+        int input = threadIdx.x;
+        int expect
+            = getPermuteBlockBCastExpect<CrossLaneOp::ELEMENT_IDX, CrossLaneOp::GROUP_SIZE>(input);
+        int output = rocwmma::Permute::Driver<CrossLaneOp>::exec(input);
+
+        // printf("op (%d, %d), input %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::ELEMENT_IDX, input , expect , output );
+        return output != expect;
+    }
+
+    template <typename DataT, typename CrossLaneOp>
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_ROTATE
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_BPERMUTE,
+                                    bool>
+                   permuteOpsTestCase()
+    {
+        int input = threadIdx.x;
+        int expect
+            = getPermuteRotateLExpect<CrossLaneOp::ELEMENT_IDX, CrossLaneOp::GROUP_SIZE>(input);
+        int output = rocwmma::Permute::Driver<CrossLaneOp>::exec(input);
+
+        // printf("op (%d, %d), input %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::ELEMENT_IDX, input , expect , output );
+        return output != expect;
+    }
+
+    template <typename DataT, typename CrossLaneOp>
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_ROTATE
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_PERMUTE,
+                                    bool>
+                   permuteOpsTestCase()
+    {
+        int input = threadIdx.x;
+        int expect
+            = getPermuteRotateRExpect<CrossLaneOp::ELEMENT_IDX, CrossLaneOp::GROUP_SIZE>(input);
+        int output = rocwmma::Permute::Driver<CrossLaneOp>::exec(input);
+
+        // printf("op (%d, %d), input %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::ELEMENT_IDX, input , expect , output );
+        return output != expect;
+    }
 } // namespace rocwmma
 
 #endif // ROCWMMA_DEVICE_PERMUTE_OPS_HPP
