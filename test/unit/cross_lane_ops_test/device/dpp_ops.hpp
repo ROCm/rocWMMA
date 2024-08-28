@@ -95,6 +95,16 @@ namespace rocwmma
     {
     };
 
+    template <typename>
+    struct is_dpp_swap : std::false_type
+    {
+    };
+
+    template <uint32_t SubGroupSize, class SwapCtrl>
+    struct is_dpp_swap<DppImpl::OpsBase::Swap<SubGroupSize, SwapCtrl>> : std::true_type
+    {
+    };
+
     ROCWMMA_DEVICE inline bool isDppMasked(int id, uint32_t WriteRowMask, uint32_t WriteBankMask)
     {
         return (WriteRowMask & (1 << ((id >> 4) & 0x3)))
@@ -105,7 +115,7 @@ namespace rocwmma
     ROCWMMA_DEVICE inline int getDppBCastExpect(int input)
     {
         // TODO 63 should be waveSize - 1
-        return (input & (63 & (~(SubgroupSize - 1)))) + Element;
+        return (input & (~(SubgroupSize - 1))) + Element;
     }
 
     template <int SubgroupSize>
@@ -151,6 +161,12 @@ namespace rocwmma
         input -= id;
         input += id == 0 ? Select0 : id == 1 ? Select1 : id == 2 ? Select2 : Select3;
         return input;
+    }
+
+    template <uint32_t SubGroupSize>
+    ROCWMMA_DEVICE inline int getDppSwapExpect(int input)
+    {
+        return input ^ SubGroupSize;
     }
 
     template <typename DataT,
@@ -272,6 +288,26 @@ namespace rocwmma
                               : prev;
         }
         int output
+            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
+                                                                                              prev);
+
+        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::SELECT_0, CrossLaneOp::SELECT_1, input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
+        return output != expect;
+    }
+
+    template <typename DataT,
+              typename CrossLaneOp,
+              uint32_t WriteRowMask,
+              uint32_t WriteBankMask,
+              bool     BoundCtrl>
+    ROCWMMA_DEVICE std::enable_if_t<is_dpp_swap<CrossLaneOp>::value, bool> dppOpsTestCase()
+    {
+        int  id       = threadIdx.x;
+        int  prev     = 100; // TODO passed in by parameter
+        int  input    = id;
+        bool isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
+        int  expect   = isMasked ? getDppSwapExpect<CrossLaneOp::GROUP_SIZE>(input) : prev;
+        int  output
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
                                                                                               prev);
 
