@@ -74,6 +74,27 @@ namespace rocwmma
     {
     };
 
+    template <typename>
+    struct is_dpp_shuffle2 : std::false_type
+    {
+    };
+
+    template <uint32_t Select0, uint32_t Select1>
+    struct is_dpp_shuffle2<DppImpl::OpsBase::Shuffle2<Select0, Select1>> : std::true_type
+    {
+    };
+
+    template <typename>
+    struct is_dpp_shuffle4 : std::false_type
+    {
+    };
+
+    template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
+    struct is_dpp_shuffle4<DppImpl::OpsBase::Shuffle4<Select0, Select1, Select2, Select3>>
+        : std::true_type
+    {
+    };
+
     ROCWMMA_DEVICE inline bool isDppMasked(int id, uint32_t WriteRowMask, uint32_t WriteBankMask)
     {
         return (WriteRowMask & (1 << ((id >> 4) & 0x3)))
@@ -112,6 +133,24 @@ namespace rocwmma
         auto afterShift = (input & (SubGroupSize - 1));
         afterShift += ShiftDir == CrossLaneOps::OP_DIR_L ? -ShiftDist : ShiftDist;
         return (afterShift < 0 || afterShift >= SubGroupSize) ? fillValue : input;
+    }
+
+    template <uint32_t Select0, uint32_t Select1>
+    ROCWMMA_DEVICE inline int getDppShuffle2Expect(int input)
+    {
+        auto id = input & 0b1;
+        input -= id;
+        input += id == 0 ? Select0 : Select1;
+        return input;
+    }
+
+    template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
+    ROCWMMA_DEVICE inline int getDppShuffle4Expect(int input)
+    {
+        auto id = input & 0b11;
+        input -= id;
+        input += id == 0 ? Select0 : id == 1 ? Select1 : id == 2 ? Select2 : Select3;
+        return input;
     }
 
     template <typename DataT,
@@ -200,6 +239,43 @@ namespace rocwmma
                                                                                               prev);
 
         // printf("op (%d, %d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::OP_DIR, CrossLaneOp::OP_DIST, input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
+        return output != expect;
+    }
+
+    template <typename DataT,
+              typename CrossLaneOp,
+              uint32_t WriteRowMask,
+              uint32_t WriteBankMask,
+              bool     BoundCtrl>
+    ROCWMMA_DEVICE
+        std::enable_if_t<is_dpp_shuffle2<CrossLaneOp>::value || is_dpp_shuffle4<CrossLaneOp>::value,
+                         bool>
+        dppOpsTestCase()
+    {
+        int  id       = threadIdx.x;
+        int  prev     = 100; // TODO passed in by parameter
+        int  input    = id;
+        bool isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
+        int  expect   = -1;
+        if constexpr(is_dpp_shuffle2<CrossLaneOp>::value)
+        {
+            expect = isMasked
+                         ? getDppShuffle2Expect<CrossLaneOp::SELECT_0, CrossLaneOp::SELECT_1>(input)
+                         : prev;
+        }
+        else if constexpr(is_dpp_shuffle4<CrossLaneOp>::value)
+        {
+            expect = isMasked ? getDppShuffle4Expect<CrossLaneOp::SELECT_0,
+                                                     CrossLaneOp::SELECT_1,
+                                                     CrossLaneOp::SELECT_2,
+                                                     CrossLaneOp::SELECT_3>(input)
+                              : prev;
+        }
+        int output
+            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
+                                                                                              prev);
+
+        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::SELECT_0, CrossLaneOp::SELECT_1, input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
     }
 } // namespace rocwmma
