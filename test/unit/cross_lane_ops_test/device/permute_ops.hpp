@@ -31,17 +31,6 @@
 
 namespace rocwmma
 {
-    template <typename>
-    struct is_permute_blockBCast : std::false_type
-    {
-    };
-
-    template <uint32_t BlockIdx, uint32_t BlockSize>
-    struct is_permute_blockBCast<PermuteImpl::OpsBase::BlockBCast<BlockIdx, BlockSize>>
-        : std::true_type
-    {
-    };
-
     template <uint32_t BlockIdx, uint32_t BlockSize>
     ROCWMMA_DEVICE inline int getPermuteBlockBCastExpect(int input)
     {
@@ -77,7 +66,9 @@ namespace rocwmma
     }
 
     template <typename DataT, typename CrossLaneOp>
-    ROCWMMA_DEVICE std::enable_if_t<is_permute_blockBCast<CrossLaneOp>::value, bool>
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_BLOCK_BCAST
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_BPERMUTE,
+                                    bool>
                    permuteOpsTestCase()
     {
         int input = threadIdx.x;
