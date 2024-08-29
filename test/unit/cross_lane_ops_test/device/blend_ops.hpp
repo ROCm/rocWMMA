@@ -31,10 +31,76 @@
 
 namespace rocwmma
 {
-    template <typename DataT, typename CrossLaneOp>
-    ROCWMMA_DEVICE bool blendOpsTestCase()
+    ROCWMMA_DEVICE inline uint32_t
+        getBlendPermByte(uint32_t input1, uint32_t input2, uint32_t select)
     {
-        return true;
+        // check the invokation of __builtin_amdgcn_perm in blend_impl.hpp
+        // "src0 and src1 are flipped". So do same here.
+        uint64_t inputRegs = input2;
+        inputRegs          = inputRegs << 32 | input1;
+
+        return (inputRegs >> (select * 8)) & 0xFF;
+    }
+
+    template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
+    ROCWMMA_DEVICE inline int getBlendPermByteExpect(int input1, int input2)
+    {
+        uint32_t output = 0;
+        output |= getBlendPermByte(input1, input2, Select3);
+        output <<= 8;
+        output |= getBlendPermByte(input1, input2, Select2);
+        output <<= 8;
+        output |= getBlendPermByte(input1, input2, Select1);
+        output <<= 8;
+        output |= getBlendPermByte(input1, input2, Select0);
+        return output;
+    }
+
+    template <uint32_t SubGroupSize>
+    ROCWMMA_DEVICE inline int getBlendZipExpect(int input1, int input2)
+    {
+        return 0;
+    }
+
+    template <typename DataT, typename CrossLaneOp>
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_PERM_BYTE
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_VPERM,
+                                    bool>
+                   blendOpsTestCase()
+    {
+        int input1 = 0x05060708;
+        int input2 = 0x01020304;
+        int expect = getBlendPermByteExpect<CrossLaneOp::select0(),
+                                            CrossLaneOp::select1(),
+                                            CrossLaneOp::select2(),
+                                            CrossLaneOp::select3()>(input1, input2);
+        int output = rocwmma::Blend::Driver<CrossLaneOp>::exec(input1, input2);
+
+        printf("op perm byte (%d, %d, %d, %d), input1 %x, input2 %x, expect %x, output %x\n",
+               CrossLaneOp::select0(),
+               CrossLaneOp::select1(),
+               CrossLaneOp::select2(),
+               CrossLaneOp::select3(),
+               input1,
+               input2,
+               expect,
+               output);
+        return output != expect;
+    }
+
+    template <typename DataT, typename CrossLaneOp>
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_BLEND
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_VBLEND,
+                                    bool>
+                   blendOpsTestCase()
+    {
+        int input1 = threadIdx.x;
+        int input2 = threadIdx.x;
+        int expect = getBlendZipExpect<CrossLaneOp::groupSize()>(input1, input2);
+        int output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input1, input2);
+
+        // printf("op zip (%d), input1 %d, input2 %d, expect %d, output %d\n", CrossLaneOp::groupSize(), input1, input2, expect , output );
+        return output != expect;
     }
 
 } // namespace rocwmma
