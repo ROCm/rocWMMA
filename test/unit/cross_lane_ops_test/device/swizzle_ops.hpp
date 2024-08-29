@@ -31,10 +31,136 @@
 
 namespace rocwmma
 {
-    template <typename DataT, typename CrossLaneOp>
-    ROCWMMA_DEVICE bool swizzleOpsTestCase()
+    template <int ElementIdx, int SubGroupSize>
+    ROCWMMA_DEVICE inline int getSwizzleBCastExpect(int input)
     {
-        return true;
+        return (input & (~(SubGroupSize - 1))) + ElementIdx;
+    }
+
+    template <int SubGroupSize>
+    ROCWMMA_DEVICE inline int getSwizzleReverseExpect(int input)
+    {
+        int maxInGroup = SubGroupSize - 1;
+        return ((input & (~maxInGroup) | (maxInGroup - (input & maxInGroup))));
+    }
+
+    template <int SubGroupSize, int Direction, int Distance>
+    ROCWMMA_DEVICE inline int getSwizzleRotateExpect(int input)
+    {
+        auto afterRotate = (input & (SubGroupSize - 1));
+        afterRotate += Direction == CrossLaneOps::OP_DIR_L ? Distance : -Distance;
+        afterRotate += SubGroupSize;
+        afterRotate &= (SubGroupSize - 1);
+        return (input & (~(SubGroupSize - 1))) | afterRotate;
+    }
+
+    template <uint32_t Select0, uint32_t Select1>
+    ROCWMMA_DEVICE inline int getSwizzleShuffle2Expect(int input)
+    {
+        auto id = input & 0b1;
+        input -= id;
+        input += id == 0 ? Select0 : Select1;
+        return input;
+    }
+
+    template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
+    ROCWMMA_DEVICE inline int getSwizzleShuffle4Expect(int input)
+    {
+        auto id = input & 0b11;
+        input -= id;
+        input += id == 0 ? Select0 : id == 1 ? Select1 : id == 2 ? Select2 : Select3;
+        return input;
+    }
+
+    template <uint32_t SubGroupSize>
+    ROCWMMA_DEVICE inline int getSwizzleSwapExpect(int input)
+    {
+        return input ^ SubGroupSize;
+    }
+
+    template <typename DataT, typename CrossLaneOp>
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_BCAST
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_SWIZZLE,
+                                    bool>
+                   swizzleOpsTestCase()
+    {
+        int input = threadIdx.x;
+        int expect
+            = getSwizzleBCastExpect<CrossLaneOp::elementIdx(), CrossLaneOp::groupSize()>(input);
+        int output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
+
+        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::select0(), CrossLaneOp::select1(), input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
+        return output != expect;
+    }
+
+    template <typename DataT, typename CrossLaneOp>
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_REVERSE
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_SWIZZLE,
+                                    bool>
+                   swizzleOpsTestCase()
+    {
+        int input  = threadIdx.x;
+        int expect = getSwizzleReverseExpect<CrossLaneOp::groupSize()>(input);
+        int output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
+
+        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::select0(), CrossLaneOp::select1(), input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
+        return output != expect;
+    }
+
+    template <typename DataT, typename CrossLaneOp>
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_ROTATE
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_SWIZZLE,
+                                    bool>
+                   swizzleOpsTestCase()
+    {
+        int input  = threadIdx.x;
+        int expect = getSwizzleRotateExpect<CrossLaneOp::groupSize(),
+                                            CrossLaneOp::opDir(),
+                                            CrossLaneOp::opDist()>(input);
+        int output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
+
+        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::select0(), CrossLaneOp::select1(), input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
+        return output != expect;
+    }
+
+    template <typename DataT, typename CrossLaneOp>
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_SHUFFLE
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_SWIZZLE,
+                                    bool>
+                   swizzleOpsTestCase()
+    {
+        int input  = threadIdx.x;
+        int expect = -1;
+        if constexpr(CrossLaneOp::groupSize() == 2)
+        {
+            expect
+                = getSwizzleShuffle2Expect<CrossLaneOp::select0(), CrossLaneOp::select1()>(input);
+        }
+        else if constexpr(CrossLaneOp::groupSize() == 4)
+        {
+            expect = getSwizzleShuffle4Expect<CrossLaneOp::select0(),
+                                              CrossLaneOp::select1(),
+                                              CrossLaneOp::select2(),
+                                              CrossLaneOp::select3()>(input);
+        }
+        int output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
+
+        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::select0(), CrossLaneOp::select1(), input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
+        return output != expect;
+    }
+
+    template <typename DataT, typename CrossLaneOp>
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_SWAP
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_SWIZZLE,
+                                    bool>
+                   swizzleOpsTestCase()
+    {
+        int input  = threadIdx.x;
+        int expect = getSwizzleSwapExpect<CrossLaneOp::groupSize()>(input);
+        int output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
+
+        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::select0(), CrossLaneOp::select1(), input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
+        return output != expect;
     }
 
 } // namespace rocwmma
