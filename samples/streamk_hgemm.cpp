@@ -1077,15 +1077,6 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
 
     std::cout << "Max relative error: " << std::get<1>(res) << std::endl;
 
-    // std::cout << "Device matrixA" << std::endl;
-    // printMatrix<float16_t, rocwmma::row_major>(matrixA.data(), m, n);
-    // std::cout << "Device matrixB" << std::endl;
-    // printMatrix<float16_t, rocwmma::row_major>(matrixB.data(), m, n);
-    // std::cout << "Device matrixD" << std::endl;
-    // printMatrix<OutputT, rocwmma::row_major>(matrixD.data(), m, n);
-    // std::cout << "Reference matrixD" << std::endl;
-    // printMatrix<OutputT, rocwmma::row_major>(matrixD_ref.data(), m, n);
-
 #endif // !NDEBUG
 
     // Release device memory
