@@ -31,90 +31,6 @@
 
 namespace rocwmma
 {
-    template <typename>
-    struct is_dpp_bcast : std::false_type
-    {
-    };
-
-    template <uint32_t ElementIdx, uint32_t SubGroupSize, class BCastCtrl>
-    struct is_dpp_bcast<DppImpl::OpsBase::BCast<ElementIdx, SubGroupSize, BCastCtrl>>
-        : std::true_type
-    {
-    };
-
-    template <typename>
-    struct is_dpp_reverse : std::false_type
-    {
-    };
-
-    template <uint32_t SubGroupSize, class ReverseCtrl>
-    struct is_dpp_reverse<DppImpl::OpsBase::Reverse<SubGroupSize, ReverseCtrl>> : std::true_type
-    {
-    };
-
-    template <typename>
-    struct is_dpp_rotate : std::false_type
-    {
-    };
-
-    template <uint32_t RotateDir, uint32_t RotateDist, uint32_t SubGroupSize, class RotateCtrl>
-    struct is_dpp_rotate<DppImpl::OpsBase::Rotate<RotateDir, RotateDist, SubGroupSize, RotateCtrl>>
-        : std::true_type
-    {
-    };
-
-    template <typename>
-    struct is_dpp_shift : std::false_type
-    {
-    };
-
-    template <uint32_t ShiftDir, uint32_t ShiftDist, uint32_t SubGroupSize, class ShiftCtrl>
-    struct is_dpp_shift<DppImpl::OpsBase::Shift<ShiftDir, ShiftDist, SubGroupSize, ShiftCtrl>>
-        : std::true_type
-    {
-    };
-
-    template <typename>
-    struct is_dpp_shuffle2 : std::false_type
-    {
-    };
-
-    template <uint32_t Select0, uint32_t Select1>
-    struct is_dpp_shuffle2<DppImpl::OpsBase::Shuffle2<Select0, Select1>> : std::true_type
-    {
-    };
-
-    template <typename>
-    struct is_dpp_shuffle4 : std::false_type
-    {
-    };
-
-    template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
-    struct is_dpp_shuffle4<DppImpl::OpsBase::Shuffle4<Select0, Select1, Select2, Select3>>
-        : std::true_type
-    {
-    };
-
-    template <typename>
-    struct is_dpp_swap : std::false_type
-    {
-    };
-
-    template <uint32_t SubGroupSize, class SwapCtrl>
-    struct is_dpp_swap<DppImpl::OpsBase::Swap<SubGroupSize, SwapCtrl>> : std::true_type
-    {
-    };
-
-    template <typename>
-    struct is_dpp_wFallBCast : std::false_type
-    {
-    };
-
-    template <uint32_t SubGroupSize, class BCastCtrl>
-    struct is_dpp_wFallBCast<DppImpl::OpsBase::WFallBCast<SubGroupSize, BCastCtrl>> : std::true_type
-    {
-    };
-
     ROCWMMA_DEVICE inline bool isDppMasked(int id, uint32_t WriteRowMask, uint32_t WriteBankMask)
     {
         return (WriteRowMask & (1 << ((id >> 4) & 0x3)))
@@ -200,7 +116,10 @@ namespace rocwmma
               uint32_t WriteRowMask,
               uint32_t WriteBankMask,
               bool     BoundCtrl>
-    ROCWMMA_DEVICE std::enable_if_t<is_dpp_bcast<CrossLaneOp>::value, bool> dppOpsTestCase()
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_BCAST
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_DPP,
+                                    bool>
+                   dppOpsTestCase()
     {
         int  id       = threadIdx.x;
         int  prev     = 100; // TODO passed in by parameter
@@ -222,7 +141,10 @@ namespace rocwmma
               uint32_t WriteRowMask,
               uint32_t WriteBankMask,
               bool     BoundCtrl>
-    ROCWMMA_DEVICE std::enable_if_t<is_dpp_reverse<CrossLaneOp>::value, bool> dppOpsTestCase()
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_REVERSE
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_DPP,
+                                    bool>
+                   dppOpsTestCase()
     {
         int  id       = threadIdx.x;
         int  prev     = 100; // TODO passed in by parameter
@@ -242,7 +164,10 @@ namespace rocwmma
               uint32_t WriteRowMask,
               uint32_t WriteBankMask,
               bool     BoundCtrl>
-    ROCWMMA_DEVICE std::enable_if_t<is_dpp_rotate<CrossLaneOp>::value, bool> dppOpsTestCase()
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_ROTATE
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_DPP,
+                                    bool>
+                   dppOpsTestCase()
     {
         int  id       = threadIdx.x;
         int  prev     = 100; // TODO passed in by parameter
@@ -265,7 +190,10 @@ namespace rocwmma
               uint32_t WriteRowMask,
               uint32_t WriteBankMask,
               bool     BoundCtrl>
-    ROCWMMA_DEVICE std::enable_if_t<is_dpp_shift<CrossLaneOp>::value, bool> dppOpsTestCase()
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_SHIFT
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_DPP,
+                                    bool>
+                   dppOpsTestCase()
     {
         int  id       = threadIdx.x;
         int  prev     = 100; // TODO passed in by parameter
@@ -289,23 +217,23 @@ namespace rocwmma
               uint32_t WriteRowMask,
               uint32_t WriteBankMask,
               bool     BoundCtrl>
-    ROCWMMA_DEVICE
-        std::enable_if_t<is_dpp_shuffle2<CrossLaneOp>::value || is_dpp_shuffle4<CrossLaneOp>::value,
-                         bool>
-        dppOpsTestCase()
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_SHUFFLE
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_DPP,
+                                    bool>
+                   dppOpsTestCase()
     {
         int  id       = threadIdx.x;
         int  prev     = 100; // TODO passed in by parameter
         int  input    = id;
         bool isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
         int  expect   = -1;
-        if constexpr(is_dpp_shuffle2<CrossLaneOp>::value)
+        if constexpr(CrossLaneOp::groupSize() == 2)
         {
             expect = isMasked
                          ? getDppShuffle2Expect<CrossLaneOp::SELECT_0, CrossLaneOp::SELECT_1>(input)
                          : prev;
         }
-        else if constexpr(is_dpp_shuffle4<CrossLaneOp>::value)
+        else if constexpr(CrossLaneOp::groupSize() == 4)
         {
             expect = isMasked ? getDppShuffle4Expect<CrossLaneOp::SELECT_0,
                                                      CrossLaneOp::SELECT_1,
@@ -326,7 +254,10 @@ namespace rocwmma
               uint32_t WriteRowMask,
               uint32_t WriteBankMask,
               bool     BoundCtrl>
-    ROCWMMA_DEVICE std::enable_if_t<is_dpp_swap<CrossLaneOp>::value, bool> dppOpsTestCase()
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_SWAP
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_DPP,
+                                    bool>
+                   dppOpsTestCase()
     {
         int  id       = threadIdx.x;
         int  prev     = 100; // TODO passed in by parameter
@@ -346,7 +277,10 @@ namespace rocwmma
               uint32_t WriteRowMask,
               uint32_t WriteBankMask,
               bool     BoundCtrl>
-    ROCWMMA_DEVICE std::enable_if_t<is_dpp_wFallBCast<CrossLaneOp>::value, bool> dppOpsTestCase()
+    ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_WFALL_BCAST
+                                        && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_DPP,
+                                    bool>
+                   dppOpsTestCase()
     {
         int  id       = threadIdx.x;
         int  prev     = 100; // TODO passed in by parameter
