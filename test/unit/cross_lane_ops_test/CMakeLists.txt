@@ -99,6 +99,8 @@ set(CrossLaneOpsTestSources ${UnitCommonSources}
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/permute_block_bcast_8.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/permute_block_bcast_16.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/permute_block_bcast_32.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/permute_rotate.cpp
+                           # ${CMAKE_CURRENT_SOURCE_DIR}/test/permute_gather_scatter.cpp
 
                            # Blend
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/blend_unpack_byte_hi_lo.cpp
@@ -108,6 +110,7 @@ set(CrossLaneOpsTestSources ${UnitCommonSources}
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/blend_unpack_word_lo.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/blend_zip_byte.cpp
                            ${CMAKE_CURRENT_SOURCE_DIR}/test/blend_zip_word.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/test/blend_zip.cpp
 
 )
 
