@@ -237,6 +237,14 @@ namespace rocwmma
                 : public BPermuteOp<OP_ID_GATHER, SubGroupSize>,
                   public Backend::amdgcn_ds_bpermute<Ctrl::Interleave<SubGroupSize, VW, Shift>>
             {
+                constexpr static uint32_t vw()
+                {
+                    return VW;
+                }
+                constexpr static uint32_t shift()
+                {
+                    return Shift;
+                }
             };
 
             template <uint32_t SubGroupSize, uint32_t VW, uint32_t Shift>
@@ -244,6 +252,14 @@ namespace rocwmma
                 : public PermuteOp<OP_ID_SCATTER, SubGroupSize>,
                   public Backend::amdgcn_ds_permute<Ctrl::Interleave<SubGroupSize, VW, Shift>>
             {
+                constexpr static uint32_t vw()
+                {
+                    return VW;
+                }
+                constexpr static uint32_t shift()
+                {
+                    return Shift;
+                }
             };
 
             /*! \class Rotate
