@@ -27,29 +27,11 @@
 #ifndef ROCWMMA_DEVICE_DPP_OPS_HPP
 #define ROCWMMA_DEVICE_DPP_OPS_HPP
 
+#include "cross_lane_ops_util.hpp"
 #include <rocwmma/rocwmma.hpp>
 
 namespace rocwmma
 {
-    constexpr uint32_t VALUE_OUT_OF_RANGE = 100; // 100 is out of [0, SubGroupSize]
-
-    template <typename DataT>
-    ROCWMMA_DEVICE inline DataT makeValueFromU32(uint32_t input)
-    {
-        static_assert(std::is_same_v<uint32_t, DataT> || std::is_same_v<uint64_t, DataT>,
-                      "DataT must be uint32_t or uint64_t. We only test these 2 types");
-        if constexpr(std::is_same_v<uint64_t, DataT>)
-        {
-            uint64_t output = input;
-            output          = output << 32 | input;
-            return output;
-        }
-        else
-        {
-            return input;
-        }
-    }
-
     ROCWMMA_DEVICE inline bool
         isDppMasked(uint32_t id, uint32_t WriteRowMask, uint32_t WriteBankMask)
     {
