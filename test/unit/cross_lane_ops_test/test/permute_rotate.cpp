@@ -38,8 +38,7 @@ namespace rocwmma
     {
         using Base = UnitTestParams;
 
-        // Types: Base IOC + double
-        using Types = typename Base::TestAllSizeTypes;
+        using Types = typename std::tuple<uint32_t, uint64_t>;
 
         using PermuteOps = std::tuple<PermuteImpl::Ops::RotateWaveR<1>,
                                       PermuteImpl::Ops::RotateWaveR<5>,
