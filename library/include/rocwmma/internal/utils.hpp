@@ -293,6 +293,12 @@ namespace rocwmma
     }
 
     template <>
+    constexpr const char* dataTypeToString<uint64_t>()
+    {
+        return "u64";
+    }
+
+    template <>
     constexpr const char* dataTypeToString<row_major>()
     {
         return "T";
