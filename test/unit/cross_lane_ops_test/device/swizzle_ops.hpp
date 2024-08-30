@@ -27,7 +27,7 @@
 #ifndef ROCWMMA_DEVICE_SWIZZLE_OPS_HPP
 #define ROCWMMA_DEVICE_SWIZZLE_OPS_HPP
 
-#include <rocwmma/rocwmma.hpp>
+#include "cross_lane_ops_util.hpp"
 
 namespace rocwmma
 {
@@ -84,10 +84,11 @@ namespace rocwmma
                                     bool>
                    swizzleOpsTestCase()
     {
-        uint32_t input = threadIdx.x;
-        uint32_t expect
-            = getSwizzleBCastExpect<CrossLaneOp::elementIdx(), CrossLaneOp::groupSize()>(input);
-        uint32_t output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
+        uint32_t id     = threadIdx.x;
+        DataT    input  = makeValueFromU32<DataT>(id);
+        DataT    expect = makeValueFromU32<DataT>(
+            getSwizzleBCastExpect<CrossLaneOp::elementIdx(), CrossLaneOp::groupSize()>(id));
+        DataT output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
 
         // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::select0(), CrossLaneOp::select1(), input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
@@ -99,9 +100,11 @@ namespace rocwmma
                                     bool>
                    swizzleOpsTestCase()
     {
-        uint32_t input  = threadIdx.x;
-        uint32_t expect = getSwizzleReverseExpect<CrossLaneOp::groupSize()>(input);
-        uint32_t output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
+        uint32_t id    = threadIdx.x;
+        DataT    input = makeValueFromU32<DataT>(id);
+        DataT    expect
+            = makeValueFromU32<DataT>(getSwizzleReverseExpect<CrossLaneOp::groupSize()>(id));
+        DataT output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
 
         // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::select0(), CrossLaneOp::select1(), input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
@@ -113,11 +116,12 @@ namespace rocwmma
                                     bool>
                    swizzleOpsTestCase()
     {
-        uint32_t input  = threadIdx.x;
-        uint32_t expect = getSwizzleRotateExpect<CrossLaneOp::groupSize(),
-                                                 CrossLaneOp::opDir(),
-                                                 CrossLaneOp::opDist()>(input);
-        uint32_t output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
+        uint32_t id     = threadIdx.x;
+        DataT    input  = makeValueFromU32<DataT>(id);
+        DataT    expect = makeValueFromU32<DataT>(getSwizzleRotateExpect<CrossLaneOp::groupSize(),
+                                                                      CrossLaneOp::opDir(),
+                                                                      CrossLaneOp::opDist()>(id));
+        DataT    output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
 
         // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::select0(), CrossLaneOp::select1(), input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
@@ -129,23 +133,24 @@ namespace rocwmma
                                     bool>
                    swizzleOpsTestCase()
     {
-        uint32_t input  = threadIdx.x;
-        uint32_t expect = -1;
+        uint32_t id     = threadIdx.x;
+        DataT    input  = makeValueFromU32<DataT>(id);
+        DataT    expect = -1;
         if constexpr(CrossLaneOp::groupSize() == 2)
         {
-            expect
-                = getSwizzleShuffle2Expect<CrossLaneOp::select0(), CrossLaneOp::select1()>(input);
+            expect = makeValueFromU32<DataT>(
+                getSwizzleShuffle2Expect<CrossLaneOp::select0(), CrossLaneOp::select1()>(id));
         }
         else if constexpr(CrossLaneOp::groupSize() == 4)
         {
-            expect = getSwizzleShuffle4Expect<CrossLaneOp::select0(),
-                                              CrossLaneOp::select1(),
-                                              CrossLaneOp::select2(),
-                                              CrossLaneOp::select3()>(input);
+            expect = makeValueFromU32<DataT>(getSwizzleShuffle4Expect<CrossLaneOp::select0(),
+                                                                      CrossLaneOp::select1(),
+                                                                      CrossLaneOp::select2(),
+                                                                      CrossLaneOp::select3()>(id));
         }
-        uint32_t output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
+        DataT output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
 
-        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::select0(), CrossLaneOp::select1(), input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
+        // printf("op (%d, %d), input %lx, expect %lx, output %lx\n", CrossLaneOp::select0(), CrossLaneOp::select1(), (uint64_t)input , (uint64_t)expect , (uint64_t)output );
         return output != expect;
     }
 
@@ -155,9 +160,10 @@ namespace rocwmma
                                     bool>
                    swizzleOpsTestCase()
     {
-        uint32_t input  = threadIdx.x;
-        uint32_t expect = getSwizzleSwapExpect<CrossLaneOp::groupSize()>(input);
-        uint32_t output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
+        uint32_t id    = threadIdx.x;
+        DataT    input = makeValueFromU32<DataT>(id);
+        DataT expect = makeValueFromU32<DataT>(getSwizzleSwapExpect<CrossLaneOp::groupSize()>(id));
+        DataT output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
 
         // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::select0(), CrossLaneOp::select1(), input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;

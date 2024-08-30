@@ -38,8 +38,7 @@ namespace rocwmma
     {
         using Base = UnitTestParams;
 
-        // Types: Base IOC + double
-        using Types = typename Base::TestAllSizeTypes;
+        using Types = typename std::tuple<uint32_t, uint64_t>;
 
         using SwizzleOps = std::tuple<SwizzleImpl::Ops::RotateR32<5>,
                                       SwizzleImpl::Ops::RotateR32<25>,

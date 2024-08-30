@@ -28,7 +28,6 @@
 #define ROCWMMA_DEVICE_DPP_OPS_HPP
 
 #include "cross_lane_ops_util.hpp"
-#include <rocwmma/rocwmma.hpp>
 
 namespace rocwmma
 {
@@ -154,7 +153,7 @@ namespace rocwmma
         DataT    input    = makeValueFromU32<DataT>(id);
         bool     isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
         DataT    expect   = makeValueFromU32<DataT>(
-            isMasked ? getDppReverseExpect<CrossLaneOp::GROUP_SIZE>(input) : prev);
+            isMasked ? getDppReverseExpect<CrossLaneOp::GROUP_SIZE>(id) : prev);
         DataT output
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
                 input, makeValueFromU32<DataT>(prev));
@@ -180,7 +179,7 @@ namespace rocwmma
         DataT    expect
             = makeValueFromU32<DataT>(isMasked ? getDppRotateExpect<CrossLaneOp::GROUP_SIZE,
                                                                     CrossLaneOp::OP_DIR,
-                                                                    CrossLaneOp::OP_DIST>(input)
+                                                                    CrossLaneOp::OP_DIST>(id)
                                                : prev);
         DataT output
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
@@ -235,17 +234,17 @@ namespace rocwmma
         if constexpr(CrossLaneOp::groupSize() == 2)
         {
             expect = makeValueFromU32<DataT>(
-                isMasked ? getDppShuffle2Expect<CrossLaneOp::SELECT_0, CrossLaneOp::SELECT_1>(input)
+                isMasked ? getDppShuffle2Expect<CrossLaneOp::SELECT_0, CrossLaneOp::SELECT_1>(id)
                          : prev);
         }
         else if constexpr(CrossLaneOp::groupSize() == 4)
         {
-            expect = makeValueFromU32<DataT>(
-                isMasked ? getDppShuffle4Expect<CrossLaneOp::SELECT_0,
-                                                CrossLaneOp::SELECT_1,
-                                                CrossLaneOp::SELECT_2,
-                                                CrossLaneOp::SELECT_3>(input)
-                         : prev);
+            expect
+                = makeValueFromU32<DataT>(isMasked ? getDppShuffle4Expect<CrossLaneOp::SELECT_0,
+                                                                          CrossLaneOp::SELECT_1,
+                                                                          CrossLaneOp::SELECT_2,
+                                                                          CrossLaneOp::SELECT_3>(id)
+                                                   : prev);
         }
         DataT output
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
@@ -270,7 +269,7 @@ namespace rocwmma
         DataT    input    = makeValueFromU32<DataT>(id);
         bool     isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
         DataT    expect   = makeValueFromU32<DataT>(
-            isMasked ? getDppSwapExpect<CrossLaneOp::GROUP_SIZE>(input) : prev);
+            isMasked ? getDppSwapExpect<CrossLaneOp::GROUP_SIZE>(id) : prev);
         DataT output
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
                 input, makeValueFromU32<DataT>(prev));
@@ -294,7 +293,7 @@ namespace rocwmma
         DataT    input    = makeValueFromU32<DataT>(id);
         bool     isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
         DataT    expect   = makeValueFromU32<DataT>(
-            isMasked ? getDppWFallBCastExpect<CrossLaneOp::GROUP_SIZE>(input) : prev);
+            isMasked ? getDppWFallBCastExpect<CrossLaneOp::GROUP_SIZE>(id) : prev);
         DataT output
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
                 input, makeValueFromU32<DataT>(prev));

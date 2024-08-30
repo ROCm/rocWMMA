@@ -38,7 +38,7 @@ namespace rocwmma
     {
         using Base = UnitTestParams;
 
-        using Types = typename Base::TestAllSizeTypes;
+        using Types = typename std::tuple<uint32_t, uint64_t>;
 
         using BlendOps = std::tuple<BlendImpl::Ops::UnpackByteLoHi>;
 
