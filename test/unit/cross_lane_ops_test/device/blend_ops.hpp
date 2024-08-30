@@ -27,7 +27,7 @@
 #ifndef ROCWMMA_DEVICE_BLEND_OPS_HPP
 #define ROCWMMA_DEVICE_BLEND_OPS_HPP
 
-#include <rocwmma/rocwmma.hpp>
+#include "cross_lane_ops_util.hpp"
 
 namespace rocwmma
 {
@@ -68,15 +68,16 @@ namespace rocwmma
                                     bool>
                    blendOpsTestCase()
     {
-        uint32_t input0 = 0x05060708;
-        uint32_t input1 = 0x01020304;
-        uint32_t expect = getBlendPermByteExpect<CrossLaneOp::select0(),
-                                                 CrossLaneOp::select1(),
-                                                 CrossLaneOp::select2(),
-                                                 CrossLaneOp::select3()>(input0, input1);
-        uint32_t output = rocwmma::Blend::Driver<CrossLaneOp>::exec(input0, input1);
+        DataT input0 = makeValueFromU32<DataT>(0x05060708);
+        DataT input1 = makeValueFromU32<DataT>(0x01020304);
+        DataT expect = makeValueFromU32<DataT>(
+            getBlendPermByteExpect<CrossLaneOp::select0(),
+                                   CrossLaneOp::select1(),
+                                   CrossLaneOp::select2(),
+                                   CrossLaneOp::select3()>(input0, input1));
+        DataT output = rocwmma::Blend::Driver<CrossLaneOp>::exec(input0, input1);
 
-        // printf("op perm byte (%d, %d, %d, %d), input0 %x, input1 %x, expect %x, output %x\n", CrossLaneOp::select0(), CrossLaneOp::select1(), CrossLaneOp::select2(), CrossLaneOp::select3(), input0, input1, expect, output);
+        // printf("op perm byte (%d, %d, %d, %d), input0 %lx, input1 %lx, expect %lx, output %lx\n", CrossLaneOp::select0(), CrossLaneOp::select1(), CrossLaneOp::select2(), CrossLaneOp::select3(), (uint64_t)input0, (uint64_t)input1, (uint64_t)expect, (uint64_t)output);
         return output != expect;
     }
 
@@ -86,10 +87,11 @@ namespace rocwmma
                                     bool>
                    blendOpsTestCase()
     {
-        uint32_t input0 = 0;
-        uint32_t input1 = 1;
-        uint32_t expect = getBlendZipExpect<CrossLaneOp::groupSize()>(input0, input1, threadIdx.x);
-        uint32_t output = rocwmma::Blend::Driver<CrossLaneOp>::exec(input0, input1);
+        DataT input0 = makeValueFromU32<DataT>(1);
+        DataT input1 = makeValueFromU32<DataT>(2);
+        DataT expect = makeValueFromU32<DataT>(
+            getBlendZipExpect<CrossLaneOp::groupSize()>(input0, input1, threadIdx.x));
+        DataT output = rocwmma::Blend::Driver<CrossLaneOp>::exec(input0, input1);
 
         // printf("op zip (%d), input0 %d, input1 %d, expect %d, output %d\n", CrossLaneOp::groupSize(), input0, input1, expect , output );
         return output != expect;
