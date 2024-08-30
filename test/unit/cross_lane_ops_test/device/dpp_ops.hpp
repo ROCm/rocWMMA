@@ -31,28 +31,48 @@
 
 namespace rocwmma
 {
-    ROCWMMA_DEVICE inline bool isDppMasked(int id, uint32_t WriteRowMask, uint32_t WriteBankMask)
+    constexpr uint32_t VALUE_OUT_OF_RANGE = 100; // 100 is out of [0, SubGroupSize]
+
+    template <typename DataT>
+    ROCWMMA_DEVICE inline DataT makeValueFromU32(uint32_t input)
+    {
+        static_assert(std::is_same_v<uint32_t, DataT> || std::is_same_v<uint64_t, DataT>,
+                      "DataT must be uint32_t or uint64_t. We only test these 2 types");
+        if constexpr(std::is_same_v<uint64_t, DataT>)
+        {
+            uint64_t output = input;
+            output          = output << 32 | input;
+            return output;
+        }
+        else
+        {
+            return input;
+        }
+    }
+
+    ROCWMMA_DEVICE inline bool
+        isDppMasked(uint32_t id, uint32_t WriteRowMask, uint32_t WriteBankMask)
     {
         return (WriteRowMask & (1 << ((id >> 4) & 0x3)))
                && (WriteBankMask & (1 << ((id >> 2) & 0x3)));
     }
 
-    template <int SubgroupSize, int Element>
-    ROCWMMA_DEVICE inline int getDppBCastExpect(int input)
+    template <uint32_t SubgroupSize, uint32_t Element>
+    ROCWMMA_DEVICE inline uint32_t getDppBCastExpect(uint32_t input)
     {
         // TODO 63 should be waveSize - 1
         return (input & (~(SubgroupSize - 1))) + Element;
     }
 
-    template <int SubgroupSize>
-    ROCWMMA_DEVICE inline int getDppReverseExpect(int input)
+    template <uint32_t SubgroupSize>
+    ROCWMMA_DEVICE inline uint32_t getDppReverseExpect(uint32_t input)
     {
-        int maxInGroup = SubgroupSize - 1;
+        uint32_t maxInGroup = SubgroupSize - 1;
         return ((input & (~maxInGroup) | (maxInGroup - (input & maxInGroup))));
     }
 
-    template <int SubgroupSize, int Direction, int Distance>
-    ROCWMMA_DEVICE inline int getDppRotateExpect(int input)
+    template <uint32_t SubgroupSize, uint32_t Direction, uint32_t Distance>
+    ROCWMMA_DEVICE inline uint32_t getDppRotateExpect(uint32_t input)
     {
         auto afterRotate = (input & (SubgroupSize - 1));
         afterRotate += Direction == CrossLaneOps::OP_DIR_L ? Distance : -Distance;
@@ -62,17 +82,17 @@ namespace rocwmma
     }
 
     template <uint32_t SubGroupSize, uint32_t ShiftDir, uint32_t ShiftDist, bool BoundCtrl>
-    ROCWMMA_DEVICE inline int getDppShiftExpect(int input, int prev)
+    ROCWMMA_DEVICE inline uint32_t getDppShiftExpect(uint32_t input, uint32_t prev)
     {
         input += ShiftDir == CrossLaneOps::OP_DIR_L ? ShiftDist : -ShiftDist;
-        int  fillValue  = BoundCtrl ? 0 : prev;
-        auto afterShift = (input & (SubGroupSize - 1));
+        uint32_t fillValue  = BoundCtrl ? 0 : prev;
+        auto     afterShift = (input & (SubGroupSize - 1));
         afterShift += ShiftDir == CrossLaneOps::OP_DIR_L ? -ShiftDist : ShiftDist;
         return (afterShift < 0 || afterShift >= SubGroupSize) ? fillValue : input;
     }
 
     template <uint32_t Select0, uint32_t Select1>
-    ROCWMMA_DEVICE inline int getDppShuffle2Expect(int input)
+    ROCWMMA_DEVICE inline uint32_t getDppShuffle2Expect(uint32_t input)
     {
         auto id = input & 0b1;
         input -= id;
@@ -81,7 +101,7 @@ namespace rocwmma
     }
 
     template <uint32_t Select0, uint32_t Select1, uint32_t Select2, uint32_t Select3>
-    ROCWMMA_DEVICE inline int getDppShuffle4Expect(int input)
+    ROCWMMA_DEVICE inline uint32_t getDppShuffle4Expect(uint32_t input)
     {
         auto id = input & 0b11;
         input -= id;
@@ -90,13 +110,13 @@ namespace rocwmma
     }
 
     template <uint32_t SubGroupSize>
-    ROCWMMA_DEVICE inline int getDppSwapExpect(int input)
+    ROCWMMA_DEVICE inline uint32_t getDppSwapExpect(uint32_t input)
     {
         return input ^ SubGroupSize;
     }
 
     template <uint32_t SubGroupSize>
-    ROCWMMA_DEVICE inline int getDppWFallBCastExpect(int input)
+    ROCWMMA_DEVICE inline uint32_t getDppWFallBCastExpect(uint32_t input)
     {
         if constexpr(SubGroupSize == 16)
         {
@@ -121,16 +141,17 @@ namespace rocwmma
                                     bool>
                    dppOpsTestCase()
     {
-        int  id       = threadIdx.x;
-        int  prev     = 100; // TODO passed in by parameter
-        int  input    = id;
-        bool isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
-        int  expect
-            = isMasked ? getDppBCastExpect<CrossLaneOp::GROUP_SIZE, CrossLaneOp::ELEMENT_IDX>(input)
-                       : prev;
-        int output
-            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
-                                                                                              prev);
+        uint32_t id       = threadIdx.x;
+        uint32_t prev     = VALUE_OUT_OF_RANGE;
+        DataT    input    = makeValueFromU32<DataT>(id);
+        bool     isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
+        DataT    expect   = makeValueFromU32<DataT>(
+            isMasked ? getDppBCastExpect<CrossLaneOp::GROUP_SIZE, CrossLaneOp::ELEMENT_IDX>(id)
+                          : prev);
+
+        auto output
+            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
+                input, makeValueFromU32<DataT>(prev));
 
         // printf("op 0, input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n",  input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
@@ -146,16 +167,17 @@ namespace rocwmma
                                     bool>
                    dppOpsTestCase()
     {
-        int  id       = threadIdx.x;
-        int  prev     = 100; // TODO passed in by parameter
-        int  input    = id;
-        bool isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
-        int  expect   = isMasked ? getDppReverseExpect<CrossLaneOp::GROUP_SIZE>(input) : prev;
-        int  output
-            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
-                                                                                              prev);
+        uint32_t id       = threadIdx.x;
+        uint32_t prev     = VALUE_OUT_OF_RANGE;
+        DataT    input    = makeValueFromU32<DataT>(id);
+        bool     isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
+        DataT    expect   = makeValueFromU32<DataT>(
+            isMasked ? getDppReverseExpect<CrossLaneOp::GROUP_SIZE>(input) : prev);
+        DataT output
+            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
+                input, makeValueFromU32<DataT>(prev));
 
-        // printf("op 0, input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n",  input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
+        // printf("op 0, input %lx, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %lx, output %lx\n",  (uint64_t)input , WriteRowMask , WriteBankMask , BoundCtrl, (uint64_t)expect , (uint64_t)output );
         return output != expect;
     }
 
@@ -169,17 +191,18 @@ namespace rocwmma
                                     bool>
                    dppOpsTestCase()
     {
-        int  id       = threadIdx.x;
-        int  prev     = 100; // TODO passed in by parameter
-        int  input    = id;
-        bool isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
-        int  expect   = isMasked ? getDppRotateExpect<CrossLaneOp::GROUP_SIZE,
-                                                   CrossLaneOp::OP_DIR,
-                                                   CrossLaneOp::OP_DIST>(input)
-                                 : prev;
-        int  output
-            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
-                                                                                              prev);
+        uint32_t id       = threadIdx.x;
+        uint32_t prev     = VALUE_OUT_OF_RANGE;
+        DataT    input    = makeValueFromU32<DataT>(id);
+        bool     isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
+        DataT    expect
+            = makeValueFromU32<DataT>(isMasked ? getDppRotateExpect<CrossLaneOp::GROUP_SIZE,
+                                                                    CrossLaneOp::OP_DIR,
+                                                                    CrossLaneOp::OP_DIST>(input)
+                                               : prev);
+        DataT output
+            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
+                input, makeValueFromU32<DataT>(prev));
 
         // printf("op (%d, %d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::OP_DIR, CrossLaneOp::OP_DIST, input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
@@ -195,18 +218,18 @@ namespace rocwmma
                                     bool>
                    dppOpsTestCase()
     {
-        int  id       = threadIdx.x;
-        int  prev     = 100; // TODO passed in by parameter
-        int  input    = id;
-        bool isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
-        int  expect   = isMasked ? getDppShiftExpect<CrossLaneOp::GROUP_SIZE,
-                                                  CrossLaneOp::OP_DIR,
-                                                  CrossLaneOp::OP_DIST,
-                                                  BoundCtrl>(input, prev)
-                                 : prev;
-        int  output
-            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
-                                                                                              prev);
+        uint32_t id       = threadIdx.x;
+        uint32_t prev     = VALUE_OUT_OF_RANGE;
+        DataT    input    = makeValueFromU32<DataT>(id);
+        bool     isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
+        DataT expect = makeValueFromU32<DataT>(isMasked ? getDppShiftExpect<CrossLaneOp::GROUP_SIZE,
+                                                                            CrossLaneOp::OP_DIR,
+                                                                            CrossLaneOp::OP_DIST,
+                                                                            BoundCtrl>(input, prev)
+                                                        : prev);
+        DataT output
+            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
+                input, makeValueFromU32<DataT>(prev));
 
         // printf("op (%d, %d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::OP_DIR, CrossLaneOp::OP_DIST, input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
@@ -222,28 +245,29 @@ namespace rocwmma
                                     bool>
                    dppOpsTestCase()
     {
-        int  id       = threadIdx.x;
-        int  prev     = 100; // TODO passed in by parameter
-        int  input    = id;
-        bool isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
-        int  expect   = -1;
+        uint32_t id       = threadIdx.x;
+        uint32_t prev     = VALUE_OUT_OF_RANGE;
+        DataT    input    = makeValueFromU32<DataT>(id);
+        bool     isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
+        DataT    expect   = -1;
         if constexpr(CrossLaneOp::groupSize() == 2)
         {
-            expect = isMasked
-                         ? getDppShuffle2Expect<CrossLaneOp::SELECT_0, CrossLaneOp::SELECT_1>(input)
-                         : prev;
+            expect = makeValueFromU32<DataT>(
+                isMasked ? getDppShuffle2Expect<CrossLaneOp::SELECT_0, CrossLaneOp::SELECT_1>(input)
+                         : prev);
         }
         else if constexpr(CrossLaneOp::groupSize() == 4)
         {
-            expect = isMasked ? getDppShuffle4Expect<CrossLaneOp::SELECT_0,
-                                                     CrossLaneOp::SELECT_1,
-                                                     CrossLaneOp::SELECT_2,
-                                                     CrossLaneOp::SELECT_3>(input)
-                              : prev;
+            expect = makeValueFromU32<DataT>(
+                isMasked ? getDppShuffle4Expect<CrossLaneOp::SELECT_0,
+                                                CrossLaneOp::SELECT_1,
+                                                CrossLaneOp::SELECT_2,
+                                                CrossLaneOp::SELECT_3>(input)
+                         : prev);
         }
-        int output
-            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
-                                                                                              prev);
+        DataT output
+            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
+                input, makeValueFromU32<DataT>(prev));
 
         // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::SELECT_0, CrossLaneOp::SELECT_1, input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
@@ -259,14 +283,15 @@ namespace rocwmma
                                     bool>
                    dppOpsTestCase()
     {
-        int  id       = threadIdx.x;
-        int  prev     = 100; // TODO passed in by parameter
-        int  input    = id;
-        bool isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
-        int  expect   = isMasked ? getDppSwapExpect<CrossLaneOp::GROUP_SIZE>(input) : prev;
-        int  output
-            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
-                                                                                              prev);
+        uint32_t id       = threadIdx.x;
+        uint32_t prev     = VALUE_OUT_OF_RANGE;
+        DataT    input    = makeValueFromU32<DataT>(id);
+        bool     isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
+        DataT    expect   = makeValueFromU32<DataT>(
+            isMasked ? getDppSwapExpect<CrossLaneOp::GROUP_SIZE>(input) : prev);
+        DataT output
+            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
+                input, makeValueFromU32<DataT>(prev));
 
         // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::SELECT_0, CrossLaneOp::SELECT_1, input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
@@ -282,14 +307,15 @@ namespace rocwmma
                                     bool>
                    dppOpsTestCase()
     {
-        int  id       = threadIdx.x;
-        int  prev     = 100; // TODO passed in by parameter
-        int  input    = id;
-        bool isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
-        int  expect   = isMasked ? getDppWFallBCastExpect<CrossLaneOp::GROUP_SIZE>(input) : prev;
-        int  output
-            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(input,
-                                                                                              prev);
+        uint32_t id       = threadIdx.x;
+        uint32_t prev     = VALUE_OUT_OF_RANGE;
+        DataT    input    = makeValueFromU32<DataT>(id);
+        bool     isMasked = isDppMasked(id, WriteRowMask, WriteBankMask);
+        DataT    expect   = makeValueFromU32<DataT>(
+            isMasked ? getDppWFallBCastExpect<CrossLaneOp::GROUP_SIZE>(input) : prev);
+        DataT output
+            = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
+                input, makeValueFromU32<DataT>(prev));
 
         // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::SELECT_0, CrossLaneOp::SELECT_1, input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
