@@ -27,6 +27,7 @@
 #ifndef ROCWMMA_DETAIL_TRANSFORMS_TEST_HPP
 #define ROCWMMA_DETAIL_TRANSFORMS_TEST_HPP
 
+#include "common.hpp"
 #include "device/transforms.hpp"
 #include "unit_kernel_base.hpp"
 

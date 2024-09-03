@@ -26,6 +26,7 @@
 
 #include <type_traits>
 
+#include "common.hpp"
 #include "detail/io_traits.hpp"
 #include "kernel_generator.hpp"
 #include "unit_test.hpp"

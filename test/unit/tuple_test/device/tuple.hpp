@@ -33,9 +33,6 @@
 #include <rocwmma/internal/vector.hpp>
 #include <rocwmma/rocwmma.hpp>
 
-static constexpr uint32_t ERROR_VALUE   = 7u;
-static constexpr uint32_t SUCCESS_VALUE = 0u;
-
 namespace rocwmma
 {
     __device__ static inline bool operatorMultTest()

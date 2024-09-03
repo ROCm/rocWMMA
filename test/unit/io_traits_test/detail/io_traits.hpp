@@ -27,14 +27,12 @@
 #ifndef ROCWMMA_DETAIL_IO_TRAITS_HPP
 #define ROCWMMA_DETAIL_IO_TRAITS_HPP
 
+#include "common.hpp"
 #include "device/io_traits.hpp"
 #include "unit_kernel_base.hpp"
 
 namespace rocwmma
 {
-    static constexpr uint32_t ERROR_VALUE   = 7;
-    static constexpr uint32_t SUCCESS_VALUE = 0;
-
     // Wrapper into the actual device function
     template <typename DataT, uint32_t BlockDim, uint32_t BlockK, uint32_t VectorWidth>
     struct IOTraitsKernel final : public UnitKernelBase<BlockDim, BlockK, DataT, col_major>
