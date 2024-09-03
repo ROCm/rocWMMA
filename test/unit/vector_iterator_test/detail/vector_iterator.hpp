@@ -27,6 +27,7 @@
 #ifndef ROCWMMA_DETAIL_VECTOR_ITERATOR_HPP
 #define ROCWMMA_DETAIL_VECTOR_ITERATOR_HPP
 
+#include "common.hpp"
 #include "device/vector_iterator.hpp"
 #include "unit_kernel_base.hpp"
 

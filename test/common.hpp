@@ -72,8 +72,8 @@
 
 namespace rocwmma
 {
-    static constexpr uint32_t ERROR_VALUE   = 0u;
-    static constexpr uint32_t SUCCESS_VALUE = 1u;
+    static constexpr uint32_t ERROR_VALUE   = 7u;
+    static constexpr uint32_t SUCCESS_VALUE = 0u;
 
     template <uint32_t N>
     using I = std::integral_constant<uint32_t, N>;
