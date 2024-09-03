@@ -31,9 +31,6 @@
 
 namespace rocwmma
 {
-    static constexpr uint32_t ERROR_VALUE   = 7;
-    static constexpr uint32_t SUCCESS_VALUE = 0;
-
     template <typename MatrixT,
               uint32_t BlockM,
               uint32_t BlockN,

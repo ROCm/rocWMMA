@@ -27,6 +27,7 @@
 #include <tuple>
 #include <type_traits>
 
+#include "common.hpp"
 #include "detail/vector_util.hpp"
 #include "kernel_generator.hpp"
 #include "unit_test.hpp"

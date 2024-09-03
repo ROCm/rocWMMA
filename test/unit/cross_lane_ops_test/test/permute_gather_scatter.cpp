@@ -42,6 +42,7 @@ namespace rocwmma
 
         using PermuteOps = std::tuple<PermuteImpl::Ops::GatherWave<4, 2>,
                                       PermuteImpl::Ops::Gather32<4, 3>,
+                                      PermuteImpl::Ops::Gather32<4, 16>,
                                       PermuteImpl::Ops::Gather16<4, 3>,
                                       PermuteImpl::Ops::RotateWaveL<8>,
                                       PermuteImpl::Ops::RotateWaveL<15>>;

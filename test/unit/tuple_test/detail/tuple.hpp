@@ -27,6 +27,7 @@
 #ifndef ROCWMMA_DETAIL_TUPLE_TEST_HPP
 #define ROCWMMA_DETAIL_TUPLE_TEST_HPP
 
+#include "common.hpp"
 #include "device/tuple.hpp"
 #include "unit_kernel_base.hpp"
 

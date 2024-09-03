@@ -29,9 +29,6 @@
 
 #include <rocwmma/rocwmma.hpp>
 
-static constexpr uint32_t ERROR_VALUE   = 7;
-static constexpr uint32_t SUCCESS_VALUE = 0;
-
 namespace rocwmma
 {
 

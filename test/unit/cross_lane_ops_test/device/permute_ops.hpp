@@ -128,7 +128,7 @@ namespace rocwmma
                                                                       CrossLaneOp::shift()>(id));
         DataT    output = rocwmma::Permute::Driver<CrossLaneOp>::exec(input);
 
-        // printf("op (%d, %d, %d), input %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::vw(), CrossLaneOp::shift(), input , expect , output );
+        printf("op (%d, %d, %d), input %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::vw(), CrossLaneOp::shift(), input , expect , output );
         return output != expect;
     }
 
