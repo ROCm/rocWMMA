@@ -97,8 +97,18 @@ namespace rocwmma
                     && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_DPP)
                     && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_WFALL_BCAST));
 
+            bool permuteWaveRotateCheck
+                = !((isGfx11 || isGfx12)
+                    && (CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_PERMUTE ||
+                        CrossLaneOp::opImpl() == CrossLaneOps::Properties::OP_IMPL_BPERMUTE
+                        )
+                    && (CrossLaneOp::opId() == CrossLaneOps::Properties::OP_ID_ROTATE)
+                    && (CrossLaneOp::groupSize() == CrossLaneOps::Properties::OP_GROUP_SIZE_WARP));
+
+            printf("permuteWaveRotateCheck %d\n", permuteWaveRotateCheck);
+
             return Base::checkDevice() && dppBCast16Check && dppWaveShiftCheck && dppWaveRotateCheck
-                   && dppWaterfallBCastCheck;
+                   && dppWaterfallBCastCheck && permuteWaveRotateCheck;
         }
 
         std::ostream& printHeader(std::ostream& stream = std::cout) const final
