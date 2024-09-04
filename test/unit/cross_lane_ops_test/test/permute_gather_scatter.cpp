@@ -40,12 +40,7 @@ namespace rocwmma
 
         using Types = typename std::tuple<uint32_t, uint64_t>;
 
-        using PermuteOps = std::tuple<PermuteImpl::Ops::GatherWave<4, 2>,
-                                      PermuteImpl::Ops::Gather32<4, 3>,
-                                      PermuteImpl::Ops::Gather32<4, 16>,
-                                      PermuteImpl::Ops::Gather16<4, 3>,
-                                      PermuteImpl::Ops::RotateWaveL<8>,
-                                      PermuteImpl::Ops::RotateWaveL<15>>;
+        using PermuteOps = std::tuple<PermuteImpl::Ops::Gather32<4, 11>>;
 
         using KernelParams = typename CombineLists<Types, PermuteOps>::Result;
 

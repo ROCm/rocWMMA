@@ -40,34 +40,15 @@ namespace rocwmma
 
         using Types = typename std::tuple<uint32_t, uint64_t>;
 
-        using DppOps = std::tuple<DppImpl::Ops::BCast16<0>,
-                                  DppImpl::Ops::BCast16<1>,
-                                  DppImpl::Ops::BCast16<2>,
-                                  DppImpl::Ops::BCast16<3>,
-                                  DppImpl::Ops::BCast16<4>,
-                                  DppImpl::Ops::BCast16<5>,
-                                  DppImpl::Ops::BCast16<6>,
-                                  DppImpl::Ops::BCast16<7>,
-                                  DppImpl::Ops::BCast16<8>,
-                                  DppImpl::Ops::BCast16<9>,
-                                  DppImpl::Ops::BCast16<10>,
-                                  DppImpl::Ops::BCast16<11>,
-                                  DppImpl::Ops::BCast16<12>,
-                                  DppImpl::Ops::BCast16<13>,
-                                  DppImpl::Ops::BCast16<14>,
-                                  DppImpl::Ops::BCast16<15>>;
+        using BlendOps = std::tuple<BlendImpl::Ops::ExtractByteEven,
 
-        // Test random assortment of banks and rows
-        using WriteRowMasks  = std::tuple<I<0xF>, I<0x5>, I<0xA>>;
-        using WriteBankMasks = std::tuple<I<0xF>, I<0x7>, I<0x3>>;
-        using BoundCtrls     = std::tuple<I<false>, I<true>>;
+                                    BlendImpl::Ops::ExtractByteOddEven>;
 
-        using KernelParams =
-            typename CombineLists<Types, DppOps, WriteRowMasks, WriteBankMasks, BoundCtrls>::Result;
+        using KernelParams = typename CombineLists<Types, BlendOps>::Result;
 
         // Assemble the kernel generator
         // Kernel: VectorIterator
-        using GeneratorImpl   = DppOpsGenerator;
+        using GeneratorImpl   = BlendOpsGenerator;
         using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
 
         // Sanity check for kernel generator
@@ -101,18 +82,18 @@ namespace rocwmma
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class DppBCast16Test : public rocwmma::UnitTest
+class BlendExtractByteEvenTest : public rocwmma::UnitTest
 {
 };
 
-TEST_P(DppBCast16Test, RunKernel)
+TEST_P(BlendExtractByteEvenTest, RunKernel)
 {
     this->RunKernel();
 }
 
 INSTANTIATE_TEST_SUITE_P(
     CrossLaneOpTests,
-    DppBCast16Test,
+    BlendExtractByteEvenTest,
     ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
                        ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
                        ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
