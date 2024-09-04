@@ -206,6 +206,8 @@ using DataLayoutB   = row_major;
 using DataLayoutC   = row_major;
 using DataLayoutLds = col_major;
 
+constexpr layout_t LayoutAcc = is_same<DataLayoutC, row_major>::value ? mem_row_major : mem_col_major;
+
 // Block sizes
 constexpr uint32_t ROCWMMA_M = 32u;
 constexpr uint32_t ROCWMMA_N = 32u;
@@ -238,7 +240,7 @@ using MfmaFragA   = fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, InputT, 
 using MfmaFragB   = fragment<matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, InputT, DataLayoutB>;
 using MfmaFragC   = fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, OutputT, DataLayoutC>;
 using MfmaFragD   = MfmaFragC;
-using MfmaFragAcc = fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, ComputeT, DataLayoutC>;
+using MfmaFragAcc = fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, ComputeT>;
 
 // Global read (macro tile)
 using GRBuffA = fragment<matrix_a, MACRO_TILE_X, ROCWMMA_N, ROCWMMA_K, InputT, DataLayoutA>;
@@ -255,6 +257,9 @@ using LWBuffB = ApplyDataLayout_t<ApplyTranspose_t<GRBuffB>, DataLayoutLds>;
 // - Lds has transposed B frags.
 using LRFragA = ApplyDataLayout_t<MfmaFragA, DataLayoutLds>;
 using LRFragB = ApplyDataLayout_t<ApplyTranspose_t<MfmaFragB>, DataLayoutLds>;
+
+// Global write (accumulator partials)
+using GWFragAcc = fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, ComputeT, DataLayoutC>;
 
 ///
 /// Wrapper functions: repeat mfma tile operations across entire warp tile.
@@ -408,9 +413,8 @@ ROCWMMA_DEVICE static inline void
 ROCWMMA_DEVICE static inline void
     globalReadAcc(MfmaFragAcc (&fragsAcc)[BLOCKS_X][BLOCKS_Y], ComputeT const* gAddrAcc, uint32_t ldAcc)
 {
-    // using MfmaFragTemp = fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, ComputeT, DataLayoutC>;
-    using FragShape = GetIOShape_t<MfmaFragAcc>;
-    using Mapper1d  = GetDataLayout_t<MfmaFragAcc>;
+    using FragShape = GetIOShape_t<GWFragAcc>;
+    using Mapper1d  = GetDataLayout_t<GWFragAcc>;
 
     // Iterative offsets for each C block in the wave tile
     auto blockStepX = Mapper1d::fromMatrixCoord(make_coord2d(FragShape::BlockHeight, 0u), ldAcc);
@@ -423,7 +427,8 @@ ROCWMMA_DEVICE static inline void
 #pragma unroll
         for(int j = 0; j < BLOCKS_Y; j++)
         {
-            load_matrix_sync((fragsAcc[i][j]), gAddrAcc + offsetY, ldAcc);
+            // GWFragAcc tmp = static_cast<GWFragAcc>(fragsAcc[i][j]);
+            load_matrix_sync(fragsAcc[i][j], gAddrAcc + offsetY, ldAcc, LayoutAcc);
             offsetY += blockStepY;
         }
         gAddrAcc += blockStepX;
@@ -555,8 +560,8 @@ ROCWMMA_DEVICE static inline void
 ROCWMMA_DEVICE inline void
     storePartials(ComputeT* partials, MfmaFragAcc const (&acc)[BLOCKS_X][BLOCKS_Y], uint32_t ldAcc)
 {
-    using FragShape = GetIOShape_t<MfmaFragAcc>;
-    using Mapper1d  = GetDataLayout_t<MfmaFragAcc>;
+    using FragShape = GetIOShape_t<GWFragAcc>;
+    using Mapper1d  = GetDataLayout_t<GWFragAcc>;
 
     // Iterative offsets for each Acc block in the warp tile
     auto blockStepX = Mapper1d::fromMatrixCoord(make_coord2d(FragShape::BlockHeight, 0u), ldAcc);
@@ -569,7 +574,7 @@ ROCWMMA_DEVICE inline void
 #pragma unroll
         for(int j = 0; j < BLOCKS_Y; j++)
         {
-            store_matrix_sync(partials + offsetY, acc[i][j], ldAcc);
+            store_matrix_sync(partials + offsetY, acc[i][j], ldAcc, LayoutAcc);
             offsetY += blockStepY;
         }
         partials += blockStepX;
@@ -814,7 +819,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         // Global matrix coordinates for Acc/C/D
         auto warpTileCoord = macroTileCoordinate(tileId, n) + localWarpOffset;
 
-        using MfmaFragAccMap1d = GetDataLayout_t<MfmaFragAcc>;
+        using MfmaFragAccMap1d = GetDataLayout_t<GWFragAcc>;
         uint32_t offsetWarpX = MfmaFragAccMap1d::fromMatrixCoord(make_coord2d(get<0>(localWarpOffset), 0u), MACRO_TILE_X);
         uint32_t offsetWarpY = MfmaFragAccMap1d::fromMatrixCoord(make_coord2d(0u, get<1>(localWarpOffset)), MACRO_TILE_X);
         uint32_t offsetWarpTile = offsetWarpX + offsetWarpY;
