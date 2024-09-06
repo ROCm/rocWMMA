@@ -87,7 +87,6 @@ namespace rocwmma
             getPermuteBlockBCastExpect<CrossLaneOp::ELEMENT_IDX, CrossLaneOp::GROUP_SIZE>(id));
         DataT output = rocwmma::Permute::Driver<CrossLaneOp>::exec(input);
 
-        // printf("op (%d, %d), input %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::ELEMENT_IDX, input , expect , output );
         return output != expect;
     }
 
@@ -104,7 +103,6 @@ namespace rocwmma
                                                                       CrossLaneOp::opDist()>(id));
         DataT    output = rocwmma::Permute::Driver<CrossLaneOp>::exec(input);
 
-        // printf("op (%d, %d, %d), input %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::opDir(), CrossLaneOp::opDist(), input , expect , output );
         return output != expect;
     }
 
@@ -121,7 +119,6 @@ namespace rocwmma
                                                                       CrossLaneOp::opDist()>(id));
         DataT    output = rocwmma::Permute::Driver<CrossLaneOp>::exec(input);
 
-        // printf("op (%d, %d, %d), input %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::opDir(), CrossLaneOp::opDist(), input , expect , output );
         return output != expect;
     }
 
@@ -138,7 +135,6 @@ namespace rocwmma
                                                                       CrossLaneOp::shift()>(id));
         DataT    output = rocwmma::Permute::Driver<CrossLaneOp>::exec(input);
 
-        // printf("op (%d, %d, %d), input %lx, expect %lx, output %lx\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::vw(), CrossLaneOp::shift(), (long long)input , (long long)expect , (long long)output );
         return output != expect;
     }
 
@@ -161,7 +157,6 @@ namespace rocwmma
                                                               CrossLaneOp::shift()>(id, srcValues));
         DataT output = rocwmma::Permute::Driver<CrossLaneOp>::exec(input);
 
-        // printf("op (%d, %d, %d), input %llu, expect %llu, output %llu\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::vw(), CrossLaneOp::shift(), (long long)input , (long long)expect , (long long)output );
         return output != expect;
     }
 

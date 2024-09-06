@@ -82,7 +82,6 @@ namespace rocwmma
                                    CrossLaneOp::select3()>(input0, input1));
         DataT output = rocwmma::Blend::Driver<CrossLaneOp>::exec(input0, input1);
 
-        // printf("op perm byte (%d, %d, %d, %d), input0 %lx, input1 %lx, expect %lx, output %lx\n", CrossLaneOp::select0(), CrossLaneOp::select1(), CrossLaneOp::select2(), CrossLaneOp::select3(), (uint64_t)input0, (uint64_t)input1, (uint64_t)expect, (uint64_t)output);
         return output != expect;
     }
 
@@ -98,7 +97,6 @@ namespace rocwmma
             getBlendZipExpect<CrossLaneOp::groupSize()>(input0, input1, threadIdx.x));
         DataT output = rocwmma::Blend::Driver<CrossLaneOp>::exec(input0, input1);
 
-        // printf("op zip (%d), input0 %d, input1 %d, expect %d, output %d\n", CrossLaneOp::groupSize(), input0, input1, expect , output );
         return output != expect;
     }
 

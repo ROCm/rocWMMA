@@ -138,7 +138,6 @@ namespace rocwmma
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
                 input, makeValueFromU32<DataT>(prev));
 
-        // printf("op 0, input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n",  input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
     }
 
@@ -162,7 +161,6 @@ namespace rocwmma
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
                 input, makeValueFromU32<DataT>(prev));
 
-        // printf("op 0, input %lx, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %lx, output %lx\n",  (uint64_t)input , WriteRowMask , WriteBankMask , BoundCtrl, (uint64_t)expect , (uint64_t)output );
         return output != expect;
     }
 
@@ -189,7 +187,6 @@ namespace rocwmma
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
                 input, makeValueFromU32<DataT>(prev));
 
-        // printf("op (%d, %d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::OP_DIR, CrossLaneOp::OP_DIST, input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
     }
 
@@ -216,7 +213,6 @@ namespace rocwmma
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
                 input, makeValueFromU32<DataT>(prev));
 
-        // printf("op (%d, %d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::OP_DIR, CrossLaneOp::OP_DIST, input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
     }
 
@@ -254,7 +250,6 @@ namespace rocwmma
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
                 input, makeValueFromU32<DataT>(prev));
 
-        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::SELECT_0, CrossLaneOp::SELECT_1, input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
     }
 
@@ -278,7 +273,6 @@ namespace rocwmma
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
                 input, makeValueFromU32<DataT>(prev));
 
-        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::SELECT_0, CrossLaneOp::SELECT_1, input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
     }
 
@@ -302,7 +296,6 @@ namespace rocwmma
             = rocwmma::Dpp::Driver<CrossLaneOp, WriteRowMask, WriteBankMask, BoundCtrl>::exec(
                 input, makeValueFromU32<DataT>(prev));
 
-        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::SELECT_0, CrossLaneOp::SELECT_1, input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
     }
 } // namespace rocwmma
