@@ -40,17 +40,27 @@ namespace rocwmma
 
         using Types = typename std::tuple<uint32_t, uint64_t>;
 
-        using PermuteOps = std::tuple<PermuteImpl::Ops::RotateWaveR<1>,
-                                      PermuteImpl::Ops::RotateWaveR<5>,
-                                      PermuteImpl::Ops::RotateWaveL<8>,
-                                      PermuteImpl::Ops::RotateWaveL<15>>;
+        using PermuteOps32 = std::tuple<PermuteImpl::OpsBase::RotateR<1, 32>,
+                                        PermuteImpl::OpsBase::RotateR<5, 32>,
+                                        PermuteImpl::OpsBase::RotateL<8, 32>,
+                                        PermuteImpl::OpsBase::RotateL<15, 32>>;
 
-        using KernelParams = typename CombineLists<Types, PermuteOps>::Result;
+        using PermuteOps64 = std::tuple<PermuteImpl::OpsBase::RotateR<1, 64>,
+                                        PermuteImpl::OpsBase::RotateR<5, 64>,
+                                        PermuteImpl::OpsBase::RotateL<8, 64>,
+                                        PermuteImpl::OpsBase::RotateL<15, 64>>;
+
+        using KernelParams32 = typename CombineLists<Types, PermuteOps32>::Result;
+        using KernelParams64 = typename CombineLists<Types, PermuteOps64>::Result;
 
         // Assemble the kernel generator
         // Kernel: VectorIterator
-        using GeneratorImpl   = PermuteOpsGenerator;
-        using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
+        using GeneratorImpl     = PermuteOpsGenerator;
+        using KernelGenerator32 = KernelGenerator<KernelParams32, GeneratorImpl>;
+        using KernelGenerator64 = KernelGenerator<KernelParams64, GeneratorImpl>;
+        static_assert(std::is_same_v<KernelGenerator64::ResultT, KernelGenerator64::ResultT>,
+                      "KernelGenerator32 and KernelGenerator64 should have the same ResultT");
+        using KernelResultT = KernelGenerator32::ResultT;
 
         // Sanity check for kernel generator
         static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
@@ -74,9 +84,17 @@ namespace rocwmma
             return {5.0};
         }
 
-        static inline typename KernelGenerator::ResultT kernels()
+        static inline KernelResultT kernels()
         {
-            return KernelGenerator::generate();
+            auto warpSize = HipDevice::instance()->warpSize();
+            if(warpSize == 32)
+            {
+                return KernelGenerator32::generate();
+            }
+            else
+            {
+                return KernelGenerator64::generate();
+            }
         }
     };
 
