@@ -331,4 +331,27 @@ __host__ std::pair<bool, double>
     return std::make_pair(retval, max_relative_error);
 }
 
+template <typename DataT, typename Layout>
+__host__ static inline void printMatrix(DataT const* mat, uint32_t m, uint32_t n, std::ostream& stream = std::cout)
+{
+    auto rowMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return row * ld + col; };
+    auto colMjr = [](uint32_t row, uint32_t col, uint32_t ld) { return col * ld + row; };
+
+    auto index = std::is_same<Layout, rocwmma::row_major>::value ? rowMjr : colMjr;
+    auto ld    = std::is_same<Layout, rocwmma::row_major>::value ? n : m;
+
+    for(int i = 0; i < m; ++i) // row
+    {
+        // stream << "[ ";
+        for(int j = 0; j < n; ++j) // col
+        {
+            // (Row, col)
+                stream << mat[index(i, j, ld)] << "\t";
+        }
+        // stream << "]\n";
+        stream << "\n";
+    }
+    stream << "\n";
+}
+
 #endif // ROCWMMA_SAMPLES_COMMON_HPP

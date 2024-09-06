@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright 2021-2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2021-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -203,8 +203,8 @@ using ComputeT = float32_t;
 
 using DataLayoutA   = col_major;
 using DataLayoutB   = row_major;
-using DataLayoutC   = col_major;
-using DataLayoutLds = row_major;
+using DataLayoutC   = row_major;
+using DataLayoutLds = col_major;
 
 // Block sizes
 constexpr uint32_t ROCWMMA_M = 32u;
@@ -238,7 +238,7 @@ using MfmaFragA   = fragment<matrix_a, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, InputT, 
 using MfmaFragB   = fragment<matrix_b, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, InputT, DataLayoutB>;
 using MfmaFragC   = fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, OutputT, DataLayoutC>;
 using MfmaFragD   = MfmaFragC;
-using MfmaFragAcc = fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, ComputeT>;
+using MfmaFragAcc = fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, ComputeT, DataLayoutC>;
 
 // Global read (macro tile)
 using GRBuffA = fragment<matrix_a, MACRO_TILE_X, ROCWMMA_N, ROCWMMA_K, InputT, DataLayoutA>;
@@ -404,6 +404,31 @@ ROCWMMA_DEVICE static inline void
     }
 }
 
+// Global Acc reads used in partial fixup step
+ROCWMMA_DEVICE static inline void
+    globalReadAcc(MfmaFragAcc (&fragsAcc)[BLOCKS_X][BLOCKS_Y], ComputeT const* gAddrAcc, uint32_t ldAcc)
+{
+    using FragShape = GetIOShape_t<MfmaFragAcc>;
+    using Mapper1d  = GetDataLayout_t<MfmaFragAcc>;
+
+    // Iterative offsets for each C block in the wave tile
+    auto blockStepX = Mapper1d::fromMatrixCoord(make_coord2d(FragShape::BlockHeight, 0u), ldAcc);
+    auto blockStepY = Mapper1d::fromMatrixCoord(make_coord2d(0u, FragShape::BlockWidth), ldAcc);
+
+#pragma unroll
+    for(int i = 0; i < BLOCKS_X; i++)
+    {
+        auto offsetY = 0u;
+#pragma unroll
+        for(int j = 0; j < BLOCKS_Y; j++)
+        {
+            load_matrix_sync(fragsAcc[i][j], gAddrAcc + offsetY, ldAcc);
+            offsetY += blockStepY;
+        }
+        gAddrAcc += blockStepX;
+    }
+}
+
 // Broadcast value to fragments in warp tile
 template <typename FragT>
 ROCWMMA_DEVICE static inline void fill(FragT (&frags)[BLOCKS_X][BLOCKS_Y],
@@ -502,46 +527,51 @@ ROCWMMA_DEVICE static inline auto macroTileCoordinate(const int tileIdx, const u
 }
 
 ROCWMMA_DEVICE static inline void
-    fixupPartials(const ComputeT* partials, int cta_index, MfmaFragAcc (&acc)[BLOCKS_X][BLOCKS_Y])
+    fixupPartials(const ComputeT* partials, MfmaFragAcc (&acc)[BLOCKS_X][BLOCKS_Y], uint32_t ldAcc)
 {
-    constexpr uint32_t WAVE_TILE_X = BLOCKS_X * ROCWMMA_M;
-    constexpr uint32_t WAVE_TILE_Y = BLOCKS_Y * ROCWMMA_N;
+    using MfmaFragTemp = fragment<accumulator, ROCWMMA_M, ROCWMMA_N, ROCWMMA_K, ComputeT, DataLayoutC>;
+    using MfmaFragMap1d = GetDataLayout_t<MfmaFragTemp>;
+
+    MfmaFragAcc temp[BLOCKS_X][BLOCKS_Y];
+
+    // read partials into temp fragment
+    globalReadAcc(temp, partials, ldAcc);
 
 #pragma unroll
     for(int i = 0; i < BLOCKS_X; i++)
     {
-        auto x_offset = i * WAVE_TILE_X;
 #pragma unroll
         for(int j = 0; j < BLOCKS_Y; j++)
         {
-            auto offset = (x_offset * MACRO_TILE_Y + j * WAVE_TILE_Y);
             for(int k = 0; k < acc[i][j].num_elements; k++)
             {
-                acc[i][j].x[k] += partials[cta_index * MACRO_TILE_X * MACRO_TILE_Y + (offset + k)];
+                acc[i][j].x[k] += temp[i][j].x[k];
             }
         }
     }
 }
 
 ROCWMMA_DEVICE inline void
-    storePartials(ComputeT* partials, int cta_index, MfmaFragAcc const (&acc)[BLOCKS_X][BLOCKS_Y])
+    storePartials(ComputeT* partials, MfmaFragAcc const (&acc)[BLOCKS_X][BLOCKS_Y], uint32_t ldAcc)
 {
-    constexpr uint32_t WAVE_TILE_X = BLOCKS_X * ROCWMMA_M;
-    constexpr uint32_t WAVE_TILE_Y = BLOCKS_Y * ROCWMMA_N;
+    using FragShape = GetIOShape_t<MfmaFragAcc>;
+    using Mapper1d  = GetDataLayout_t<MfmaFragAcc>;
+
+    // Iterative offsets for each Acc block in the warp tile
+    auto blockStepX = Mapper1d::fromMatrixCoord(make_coord2d(FragShape::BlockHeight, 0u), ldAcc);
+    auto blockStepY = Mapper1d::fromMatrixCoord(make_coord2d(0u, FragShape::BlockWidth), ldAcc);
 
 #pragma unroll
     for(int i = 0; i < BLOCKS_X; i++)
     {
-        auto x_offset = i * WAVE_TILE_X;
+        auto offsetY = 0u;
 #pragma unroll
         for(int j = 0; j < BLOCKS_Y; j++)
         {
-            auto offset = (x_offset * MACRO_TILE_Y + j * WAVE_TILE_Y);
-            for(int k = 0; k < acc[i][j].num_elements; k++)
-            {
-                partials[cta_index * MACRO_TILE_X * MACRO_TILE_Y + (offset + k)] = acc[i][j].x[k];
-            }
+            store_matrix_sync(partials + offsetY, acc[i][j], ldAcc);
+            offsetY += blockStepY;
         }
+        partials += blockStepX;
     }
 }
 
@@ -617,27 +647,38 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
     /// Stream-K setup, determine work distribution.
     ///
 
-    int itersPerCTA = ceilIterationsPerCTA(m, n, k);
-    int iter        = blockIdx.x * itersPerCTA;
-    int iterEnd     = iter + itersPerCTA;
+    int itersTotal   = totalIterations(m, n, k);
+    int itersPerCTA  = totalIterations(m, n, k) / gridDim.x;
+    int partialIters = totalIterations(m, n, k) % gridDim.x;
+    int iter, iterEnd;
+
+    // Start and end iterations are different if work is unevenly allocated
+    if (blockIdx.x < partialIters)
+    {
+        iter    = blockIdx.x * (itersPerCTA + 1);
+        iterEnd = min(iter + itersPerCTA + 1, itersTotal);
+    }
+    else
+    {
+        iter    = blockIdx.x * itersPerCTA + partialIters;
+        iterEnd = min(iter + itersPerCTA, itersTotal);
+    }
 
     ///
     /// Stream-K's main-while loop.
     /// As long as this CTA has work (iterations), keep consuming the work.
     ///
-
     while(iter < iterEnd)
     {
-
         // Active tile for this iteration.
         int itersPerTile = iterationsPerTile(k);
         int tileId       = iter / itersPerTile;
-        int tileIter     = tileId * itersPerTile;
-        int tileIterEnd  = tileIter + itersPerTile;
+        int tileIterStart     = tileId * itersPerTile;
+        int tileIterEnd  = tileIterStart + itersPerTile;
 
         // Perform the range of MAC iterations for this tile.
-        int localIter    = iter - tileIter;
-        int localIterEnd = std::min(iterEnd, tileIterEnd) - tileIter;
+        int localIter    = iter - tileIterStart;
+        int localIterEnd = std::min(iterEnd, tileIterEnd) - tileIterStart;
 
         ///
         /// Perform initial global pre-fetch
@@ -653,13 +694,17 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         auto kStepOffsetA = GRBuffAMap1d::fromMatrixCoord(make_coord2d(0u, ROCWMMA_K), lda);
         auto kStepOffsetB = GRBuffBMap1d::fromMatrixCoord(make_coord2d(ROCWMMA_K, 0u), ldb);
 
-        globalReadCoopA<warpCount>(
-            grBuffA, a + globalReadOffsetA + localIter * ROCWMMA_K * lda, lda, warpIndex);
-        globalReadCoopB<warpCount>(
-            grBuffB, b + globalReadOffsetB + localIter * ROCWMMA_K * ldb, ldb, warpIndex);
+        // Increment initial global read address based on starting itteration
+        globalReadOffsetA += localIter * kStepOffsetA;
+        globalReadOffsetB += localIter * kStepOffsetB;
 
-        // globalReadOffsetA += kStepOffsetA;
-        // globalReadOffsetB += kStepOffsetB;
+        globalReadCoopA<warpCount>(grBuffA, a + globalReadOffsetA, lda, warpIndex);
+        globalReadCoopB<warpCount>(grBuffB, b + globalReadOffsetB, ldb, warpIndex);
+
+        synchronize_workgroup();
+
+        globalReadOffsetA += kStepOffsetA;
+        globalReadOffsetB += kStepOffsetB;
 
         ///
         /// Setup LDS addressing
@@ -668,35 +713,38 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         ///
 
         HIP_DYNAMIC_SHARED(void*, localMemPtr);
-        constexpr uint32_t ldsWidth = ROCWMMA_K;
 
         using LWBuffAShape = GetIOShape_t<LWBuffA>;
         using LWBuffBShape = GetIOShape_t<LWBuffB>;
         using LWBuffAMap1d = GetDataLayout_t<LWBuffA>;
         using LWBuffBMap1d = GetDataLayout_t<LWBuffB>;
 
-        uint32_t sizeLds  = (LWBuffAShape::BlockHeight + LWBuffBShape::BlockHeight) * ldsWidth;
+        constexpr uint32_t ldsWidth = ROCWMMA_K;
+        constexpr uint32_t ldsHeight = LWBuffAShape::BlockHeight + LWBuffBShape::BlockHeight;
+        constexpr uint32_t sizeLds  = ldsHeight * ldsWidth;
+        constexpr uint32_t ldsld = std::is_same_v<DataLayoutLds, row_major> ? ldsWidth : ldsHeight;
+
         auto*    ldsPtrLo = reinterpret_cast<InputT*>(localMemPtr);
         auto*    ldsPtrHi = ldsPtrLo + sizeLds;
 
         // Local write offsets to start of A / B data
         auto ldsWriteOffsetA = 0u;
         auto ldsWriteOffsetB
-            = LWBuffAMap1d::fromMatrixCoord(make_coord2d(LWBuffAShape::BlockHeight, 0u), ldsWidth);
+            = LWBuffAMap1d::fromMatrixCoord(make_coord2d(LWBuffAShape::BlockHeight, 0u), ldsld);
 
         // Local read offsets for mfma frags
         auto ldsReadOffsetA
             = ldsWriteOffsetA
-              + LWBuffAMap1d::fromMatrixCoord(make_coord2d(get<0>(localWarpOffset), 0u), ldsWidth);
+              + LWBuffAMap1d::fromMatrixCoord(make_coord2d(get<0>(localWarpOffset), 0u), ldsld);
         auto ldsReadOffsetB
             = ldsWriteOffsetB
-              + LWBuffBMap1d::fromMatrixCoord(make_coord2d(get<1>(localWarpOffset), 0u), ldsWidth);
+              + LWBuffBMap1d::fromMatrixCoord(make_coord2d(get<1>(localWarpOffset), 0u), ldsld);
 
         ///
         /// Write prefetch to local
         ///
-        localWriteCoopA<warpCount>(ldsPtrLo + ldsWriteOffsetA, grBuffA, ldsWidth, warpIndex);
-        localWriteCoopB<warpCount>(ldsPtrLo + ldsWriteOffsetB, grBuffB, ldsWidth, warpIndex);
+        localWriteCoopA<warpCount>(ldsPtrLo + ldsWriteOffsetA, grBuffA, ldsld, warpIndex);
+        localWriteCoopB<warpCount>(ldsPtrLo + ldsWriteOffsetB, grBuffB, ldsld, warpIndex);
 
         ///
         /// Initialize accumulation frags
@@ -720,21 +768,23 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
             MfmaFragB fragsB[BLOCKS_Y];
 
             // Local read mfma frags from first LDS buffer
-            localReadA(fragsA, ldsPtrLo + ldsReadOffsetA, ldsWidth);
-            localReadB(fragsB, ldsPtrLo + ldsReadOffsetB, ldsWidth);
+            localReadA(fragsA, ldsPtrLo + ldsReadOffsetA, ldsld);
+            localReadB(fragsB, ldsPtrLo + ldsReadOffsetB, ldsld);
 
             // Prefetch next round of global frags
-            globalReadCoopA<warpCount>(
-                grBuffA, a + globalReadOffsetA + (currentK + 1) * ROCWMMA_K * lda, lda, warpIndex);
-            globalReadCoopB<warpCount>(
-                grBuffB, b + globalReadOffsetB + (currentK + 1) * ROCWMMA_K * ldb, ldb, warpIndex);
+            globalReadCoopA<warpCount>(grBuffA, a + globalReadOffsetA, lda, warpIndex);
+            globalReadCoopB<warpCount>(grBuffB, b + globalReadOffsetB, ldb, warpIndex);
+
+            // Advance offsets to next k step
+            globalReadOffsetA += kStepOffsetA;
+            globalReadOffsetB += kStepOffsetB;
 
             // accum(A * B)
             mfma(fragsAcc, fragsA, fragsB, fragsAcc);
 
             // Write prefetch to second LDS buffer
-            localWriteCoopA<warpCount>(ldsPtrHi + ldsWriteOffsetA, grBuffA, ldsWidth, warpIndex);
-            localWriteCoopB<warpCount>(ldsPtrHi + ldsWriteOffsetB, grBuffB, ldsWidth, warpIndex);
+            localWriteCoopA<warpCount>(ldsPtrHi + ldsWriteOffsetA, grBuffA, ldsld, warpIndex);
+            localWriteCoopB<warpCount>(ldsPtrHi + ldsWriteOffsetB, grBuffB, ldsld, warpIndex);
 
             // Make sure that all waves have finished reading / writing to lds for currentK.
             synchronize_workgroup();
@@ -752,21 +802,32 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         MfmaFragB fragsB[BLOCKS_Y];
 
         // Local read mfma frags
-        localReadA(fragsA, ldsPtrLo + ldsReadOffsetA, ldsWidth);
-        localReadB(fragsB, ldsPtrLo + ldsReadOffsetB, ldsWidth);
+        localReadA(fragsA, ldsPtrLo + ldsReadOffsetA, ldsld);
+        localReadB(fragsB, ldsPtrLo + ldsReadOffsetB, ldsld);
         mfma(fragsAcc, fragsA, fragsB, fragsAcc);
 
         ///
         /// Fix-up condition
         ///
 
+        // Global matrix coordinates for Acc/C/D
+        auto warpTileCoord = macroTileCoordinate(tileId, n) + localWarpOffset;
+
+        using MfmaFragAccMap1d = GetDataLayout_t<MfmaFragAcc>;
+        uint32_t offsetWarpX = MfmaFragAccMap1d::fromMatrixCoord(make_coord2d(get<0>(localWarpOffset), 0u), MACRO_TILE_X);
+        uint32_t offsetWarpY = MfmaFragAccMap1d::fromMatrixCoord(make_coord2d(0u, get<1>(localWarpOffset)), MACRO_TILE_X);
+        uint32_t offsetWarpTile = offsetWarpX + offsetWarpY;
+
         // If the current CTA did not "own" the tile (k_start =!= 0), it writes the
         // partials to a temporary buffer, and allows the owning-CTA perform the
         // reduction/fixup and write results to memory.
-        if(iter != tileIter)
+        if(iter != tileIterStart)
         {
-            storePartials(partials, blockIdx.x, fragsAcc);
-            unlock(flags + blockIdx.x);
+            uint32_t offsetMacroTile = MACRO_TILE_X * MACRO_TILE_Y * blockIdx.x;
+
+            storePartials(partials + offsetMacroTile + offsetWarpTile, fragsAcc, MACRO_TILE_X);
+
+            unlock(&flags[blockIdx.x]);
         }
         else
         {
@@ -775,17 +836,17 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
             // current accumulators.
             if(iterEnd < tileIterEnd)
             {
-                for(uint32_t end = tileIter + localIterEnd, ctaNext = blockIdx.x + 1;
+                for(uint32_t end = tileIterStart + localIterEnd, ctaNext = blockIdx.x + 1;
                     (end < tileIterEnd) && (ctaNext < gridDim.x);
-                    end += itersPerCTA, ctaNext++)
+                    end += (itersPerCTA + (ctaNext < partialIters ? 1 : 0)), ctaNext++)
                 {
-                    waitForUnlock(flags + ctaNext);
-                    fixupPartials(partials, ctaNext, fragsAcc);
+                    uint32_t offsetMacroTile = MACRO_TILE_X * MACRO_TILE_Y * ctaNext;
+
+                    waitForUnlock(&flags[ctaNext]);
+
+                    fixupPartials(partials + offsetMacroTile + offsetWarpTile, fragsAcc, MACRO_TILE_X);
                 }
             }
-
-            // Global matrix coordinates for C/D
-            auto warpTileCoord = macroTileCoordinate(tileId, n) + localWarpOffset;
 
             ///
             /// Start loading C
@@ -823,44 +884,55 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     }
 
     // Layouts = N_T_N_N
-    int lda = m;
-    int ldb = n;
-    int ldc = m;
+    int lda = std::is_same_v<DataLayoutA, row_major> ? k : m;
+    int ldb = std::is_same_v<DataLayoutB, row_major> ? n : k;
+    int ldc = std::is_same_v<DataLayoutC, row_major> ? n : m;
     int ldd = ldc;
 
     std::cout << "Initializing host data..." << std::endl;
 
     // Initialize input matrices
-    std::vector<float16_t> matrixA(m * k);
-    std::vector<float16_t> matrixB(k * n);
-    std::vector<float16_t> matrixC(m * n);
+    std::vector<InputT> matrixA(m * k);
+    std::vector<InputT> matrixB(k * n);
+    std::vector<OutputT> matrixC(m * n);
 
     // Fill outputs with NaN to catch contamination
-    std::vector<float16_t> matrixD(m * n, std::numeric_limits<float16_t>::signaling_NaN());
+    std::vector<OutputT> matrixD(m * n, std::numeric_limits<OutputT>::signaling_NaN());
 
     fillRand(matrixA.data(), m, k);
     fillRand(matrixB.data(), k, n);
     fillRand(matrixC.data(), m, n);
 
     // Misc. allocations.
-    int                   grid = 304;
-    std::vector<int>      flags(grid, 0);
+    hipDevice_t     handle;
+    hipDeviceProp_t props;
+
+    CHECK_HIP_ERROR(hipGetDevice(&handle));
+    CHECK_HIP_ERROR(hipGetDeviceProperties(&props, handle));
+    int cuCount = props.multiProcessorCount;
+
+    // int                   grid = 304;
+    int gridMax = cuCount;
+    int grid    = ceilDiv(m, MACRO_TILE_X) * ceilDiv(n, MACRO_TILE_Y);
+    grid        = min(grid, gridMax);
+
+    std::vector<int>      flags(grid, 1);
     std::vector<ComputeT> partials(grid * MACRO_TILE_X * MACRO_TILE_Y, static_cast<ComputeT>(0.f));
 
     std::cout << "Initializing device data..." << std::endl;
 
     // Allocate and copy device memory
-    float16_t* d_a;
-    float16_t* d_b;
-    float16_t* d_c;
-    float16_t* d_d;
+    InputT* d_a;
+    InputT* d_b;
+    OutputT* d_c;
+    OutputT* d_d;
     int*       d_flags;
     ComputeT*  d_partials;
 
-    const size_t bytesA        = matrixA.size() * sizeof(float16_t);
-    const size_t bytesB        = matrixB.size() * sizeof(float16_t);
-    const size_t bytesC        = matrixC.size() * sizeof(float16_t);
-    const size_t bytesD        = matrixD.size() * sizeof(float16_t);
+    const size_t bytesA        = matrixA.size() * sizeof(InputT);
+    const size_t bytesB        = matrixB.size() * sizeof(InputT);
+    const size_t bytesC        = matrixC.size() * sizeof(OutputT);
+    const size_t bytesD        = matrixD.size() * sizeof(OutputT);
     const size_t bytesFlags    = flags.size() * sizeof(int);
     const size_t bytesPartials = partials.size() * sizeof(ComputeT);
 
@@ -887,7 +959,7 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
 
     // Uses 2 lds blocks for prefetch loop (A and B)
     int ldsusage
-        = 2u * sizeof(float16_t) * (get<0>(macroTileSize) + get<1>(macroTileSize)) * ROCWMMA_K;
+        = 2u * sizeof(InputT) * (get<0>(macroTileSize) + get<1>(macroTileSize)) * ROCWMMA_K;
 
     ////
     auto rocwmmaKernel = [&]() {
@@ -976,8 +1048,8 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     CHECK_HIP_ERROR(hipMemcpy(matrixD.data(), d_d, bytesD, hipMemcpyDeviceToHost));
 
     // Setup and run reference computation
-    std::vector<float16_t> matrixD_ref(m * n, std::numeric_limits<float16_t>::signaling_NaN());
-    gemm_cpu_h<float16_t, float16_t, float32_t, col_major, row_major, col_major>(m,
+    std::vector<OutputT> matrixD_ref(m * n, std::numeric_limits<OutputT>::signaling_NaN());
+    gemm_cpu_h<InputT, OutputT, ComputeT, DataLayoutA, DataLayoutB, DataLayoutC>(m,
                                                                                  n,
                                                                                  k,
                                                                                  matrixA.data(),
@@ -1011,6 +1083,8 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha,
     CHECK_HIP_ERROR(hipFree(d_b));
     CHECK_HIP_ERROR(hipFree(d_c));
     CHECK_HIP_ERROR(hipFree(d_d));
+    CHECK_HIP_ERROR(hipFree(d_flags));
+    CHECK_HIP_ERROR(hipFree(d_partials));
 
     std::cout << "Finished!" << std::endl;
 }
