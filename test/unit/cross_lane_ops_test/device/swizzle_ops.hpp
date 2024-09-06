@@ -31,6 +31,10 @@
 
 namespace rocwmma
 {
+    /**
+	 * @addtogroup cross_lane_op_gen_ref_value_funcs
+	 * @{
+	 */
     template <uint32_t ElementIdx, uint32_t SubGroupSize>
     ROCWMMA_DEVICE inline uint32_t getSwizzleBCastExpect(uint32_t input)
     {
@@ -77,6 +81,7 @@ namespace rocwmma
     {
         return input ^ SubGroupSize;
     }
+    /** @} */
 
     template <typename DataT, typename CrossLaneOp>
     ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_BCAST
