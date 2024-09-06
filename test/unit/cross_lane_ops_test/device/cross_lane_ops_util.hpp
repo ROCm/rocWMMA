@@ -33,6 +33,14 @@ namespace rocwmma
 {
     constexpr uint32_t VALUE_OUT_OF_RANGE = 100; // 100 is out of [0, SubGroupSize]
 
+    /**
+	 * @defgroup cross_lane_op_gen_ref_value_funcs Reference values generators of cross-lane ops
+	 *
+	 * This group contains functions related to generate reference values of cross-lane ops.
+	 *
+	 * All functions in this group share the following properties:
+	 * - The parameter input is set to threadIdx.x
+	 */
     template <typename DataT>
     ROCWMMA_DEVICE inline DataT makeValueFromU32(uint32_t input)
     {
