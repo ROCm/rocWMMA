@@ -38,10 +38,13 @@ namespace rocwmma
                && (WriteBankMask & (1 << ((id >> 2) & 0x3)));
     }
 
+    /**
+	 * @addtogroup cross_lane_op_gen_ref_value_funcs
+	 * @{
+	 */
     template <uint32_t SubgroupSize, uint32_t Element>
     ROCWMMA_DEVICE inline uint32_t getDppBCastExpect(uint32_t input)
     {
-        // TODO 63 should be waveSize - 1
         return (input & (~(SubgroupSize - 1))) + Element;
     }
 
@@ -111,6 +114,7 @@ namespace rocwmma
         }
         return input;
     }
+    /** @} */
 
     template <typename DataT,
               typename CrossLaneOp,

@@ -31,6 +31,10 @@
 
 namespace rocwmma
 {
+    /**
+	 * @addtogroup cross_lane_op_gen_ref_value_funcs
+	 * @{
+	 */
     ROCWMMA_DEVICE inline uint32_t
         getBlendPermByte(uint32_t input0, uint32_t input1, uint32_t select)
     {
@@ -61,6 +65,7 @@ namespace rocwmma
     {
         return (idx / SubGroupSize) & 0x1 ? input1 : input0;
     }
+    /** @} */
 
     template <typename DataT, typename CrossLaneOp>
     ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_PERM_BYTE

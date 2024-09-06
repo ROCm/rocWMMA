@@ -31,6 +31,10 @@
 
 namespace rocwmma
 {
+    /**
+	 * @addtogroup cross_lane_op_gen_ref_value_funcs
+	 * @{
+	 */
     template <uint32_t BlockIdx, uint32_t BlockSize>
     ROCWMMA_DEVICE inline uint32_t getPermuteBlockBCastExpect(uint32_t input)
     {
@@ -69,6 +73,7 @@ namespace rocwmma
         __syncthreads();
         return srcValues[threadIdx.x];
     }
+    /** @} */
 
     template <typename DataT, typename CrossLaneOp>
     ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_BLOCK_BCAST
