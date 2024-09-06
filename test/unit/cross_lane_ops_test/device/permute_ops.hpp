@@ -52,24 +52,29 @@ namespace rocwmma
     template <uint32_t SubGroupSize, uint32_t VW, uint32_t Shift>
     ROCWMMA_DEVICE inline uint32_t getPermuteGatherExpect(uint32_t input)
     {
-        auto idxInGroup = input % SubGroupSize;
-        input -= idxInGroup;
-        return input
-               + (((idxInGroup % VW) * (SubGroupSize / VW) + idxInGroup / VW + Shift)
-                  % SubGroupSize);
+        const uint32_t offset0 = (input * SubGroupSize / VW + Shift) % SubGroupSize;
+        const uint32_t offset1 = input / VW % (SubGroupSize / VW);
+        const uint32_t offset2 = (input / SubGroupSize) * SubGroupSize;
+        return (offset0 + offset1 + offset2) % Constants::AMDGCN_WAVE_SIZE;
     }
 
     template <uint32_t SubGroupSize, uint32_t VW, uint32_t Shift>
-    ROCWMMA_DEVICE inline uint32_t getPermuteScatterExpect(uint32_t input)
+    ROCWMMA_DEVICE inline uint32_t getPermuteScatterExpect(uint32_t input, uint32_t* srcValues)
     {
-        return 0;
+        const uint32_t offset0 = (input * SubGroupSize / VW + Shift) % SubGroupSize;
+        const uint32_t offset1 = input / VW % (SubGroupSize / VW);
+        const uint32_t offset2 = (input / SubGroupSize) * SubGroupSize;
+        auto           srcIdx  = (offset0 + offset1 + offset2) % Constants::AMDGCN_WAVE_SIZE;
+        srcValues[srcIdx]      = input;
+        __syncthreads();
+        return srcValues[threadIdx.x];
     }
 
     template <typename DataT, typename CrossLaneOp>
     ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_BLOCK_BCAST
                                         && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_BPERMUTE,
                                     bool>
-                   permuteOpsTestCase()
+                   permuteOpsTestCase(uint32_t* /*srcValues*/)
     {
         uint32_t id     = threadIdx.x;
         DataT    input  = makeValueFromU32<DataT>(id);
@@ -85,7 +90,7 @@ namespace rocwmma
     ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_ROTATE
                                         && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_BPERMUTE,
                                     bool>
-                   permuteOpsTestCase()
+                   permuteOpsTestCase(uint32_t* /*srcValues*/)
     {
         uint32_t id     = threadIdx.x;
         DataT    input  = makeValueFromU32<DataT>(id);
@@ -102,7 +107,7 @@ namespace rocwmma
     ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_ROTATE
                                         && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_PERMUTE,
                                     bool>
-                   permuteOpsTestCase()
+                   permuteOpsTestCase(uint32_t* /*srcValues*/)
     {
         uint32_t id     = threadIdx.x;
         DataT    input  = makeValueFromU32<DataT>(id);
@@ -119,7 +124,7 @@ namespace rocwmma
     ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_GATHER
                                         && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_BPERMUTE,
                                     bool>
-                   permuteOpsTestCase()
+                   permuteOpsTestCase(uint32_t* /*srcValues*/)
     {
         uint32_t id     = threadIdx.x;
         DataT    input  = makeValueFromU32<DataT>(id);
@@ -128,7 +133,7 @@ namespace rocwmma
                                                                       CrossLaneOp::shift()>(id));
         DataT    output = rocwmma::Permute::Driver<CrossLaneOp>::exec(input);
 
-        // printf("op (%d, %d, %d), input %ld, expect %ld, output %ld\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::vw(), CrossLaneOp::shift(), (long long)input , (long long)expect , (long long)output );
+        // printf("op (%d, %d, %d), input %lx, expect %lx, output %lx\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::vw(), CrossLaneOp::shift(), (long long)input , (long long)expect , (long long)output );
         return output != expect;
     }
 
@@ -136,16 +141,22 @@ namespace rocwmma
     ROCWMMA_DEVICE std::enable_if_t<CrossLaneOp::opId() == CrossLaneOps::OP_ID_SCATTER
                                         && CrossLaneOp::opImpl() == CrossLaneOps::OP_IMPL_PERMUTE,
                                     bool>
-                   permuteOpsTestCase()
+                   permuteOpsTestCase(uint32_t* srcValues)
     {
-        uint32_t id     = threadIdx.x;
-        DataT    input  = makeValueFromU32<DataT>(id);
-        DataT    expect = makeValueFromU32<DataT>(getPermuteScatterExpect<CrossLaneOp::GROUP_SIZE,
-                                                                       CrossLaneOp::vw(),
-                                                                       CrossLaneOp::shift()>(id));
-        DataT    output = rocwmma::Permute::Driver<CrossLaneOp>::exec(input);
+        uint32_t id = threadIdx.x;
+        if(id < Constants::AMDGCN_WAVE_SIZE)
+        {
+            srcValues[id] = id;
+        }
 
-        // printf("op (%d, %d, %d), input %d, expect %d, output %d\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::opDir(), CrossLaneOp::opDist(), input , expect , output );
+        DataT input = makeValueFromU32<DataT>(id);
+        DataT expect
+            = makeValueFromU32<DataT>(getPermuteScatterExpect<CrossLaneOp::GROUP_SIZE,
+                                                              CrossLaneOp::vw(),
+                                                              CrossLaneOp::shift()>(id, srcValues));
+        DataT output = rocwmma::Permute::Driver<CrossLaneOp>::exec(input);
+
+        // printf("op (%d, %d, %d), input %llu, expect %llu, output %llu\n", CrossLaneOp::GROUP_SIZE, CrossLaneOp::vw(), CrossLaneOp::shift(), (long long)input , (long long)expect , (long long)output );
         return output != expect;
     }
 
