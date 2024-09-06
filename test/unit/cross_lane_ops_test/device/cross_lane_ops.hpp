@@ -118,8 +118,17 @@ namespace rocwmma
                                        DataT        param1,
                                        DataT        param2)
     {
+        __shared__ uint32_t sharedSrcValues[Constants::AMDGCN_WAVE_SIZE];
+        uint32_t*           srcValues = sharedSrcValues;
         crossLaneOpsTest<DataT>(
-            permuteOpsTestCase<DataT, CrossLaneOp>, m, n, in, out, ld, param1, param2);
+            [srcValues]() { return permuteOpsTestCase<DataT, CrossLaneOp>(srcValues); },
+            m,
+            n,
+            in,
+            out,
+            ld,
+            param1,
+            param2);
     }
 
     template <typename DataT, typename CrossLaneOp>
