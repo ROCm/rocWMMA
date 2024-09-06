@@ -95,7 +95,6 @@ namespace rocwmma
             getSwizzleBCastExpect<CrossLaneOp::elementIdx(), CrossLaneOp::groupSize()>(id));
         DataT output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
 
-        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::select0(), CrossLaneOp::select1(), input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
     }
 
@@ -111,7 +110,6 @@ namespace rocwmma
             = makeValueFromU32<DataT>(getSwizzleReverseExpect<CrossLaneOp::groupSize()>(id));
         DataT output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
 
-        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::select0(), CrossLaneOp::select1(), input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
     }
 
@@ -128,7 +126,6 @@ namespace rocwmma
                                                                       CrossLaneOp::opDist()>(id));
         DataT    output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
 
-        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::select0(), CrossLaneOp::select1(), input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
     }
 
@@ -155,7 +152,6 @@ namespace rocwmma
         }
         DataT output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
 
-        // printf("op (%d, %d), input %lx, expect %lx, output %lx\n", CrossLaneOp::select0(), CrossLaneOp::select1(), (uint64_t)input , (uint64_t)expect , (uint64_t)output );
         return output != expect;
     }
 
@@ -170,7 +166,6 @@ namespace rocwmma
         DataT expect = makeValueFromU32<DataT>(getSwizzleSwapExpect<CrossLaneOp::groupSize()>(id));
         DataT output = rocwmma::Swizzle::Driver<CrossLaneOp>::exec(input);
 
-        // printf("op (%d, %d), input %d, WriteRowMask %x, WriteBankMask %x, BoundCtrl %d, expect %d, output %d\n", CrossLaneOp::select0(), CrossLaneOp::select1(), input , WriteRowMask , WriteBankMask , BoundCtrl, expect , output );
         return output != expect;
     }
 
