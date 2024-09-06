@@ -68,6 +68,7 @@ namespace rocwmma
 
         static inline std::vector<ProblemSizeT> problemSizes()
         {
+            auto warpSize = HipDevice::instance()->warpSize();
             return {// {64, 1}
                     {warpSize, 1}};
         }
