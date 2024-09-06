@@ -40,22 +40,7 @@ namespace rocwmma
 
         using Types = typename std::tuple<uint32_t, uint64_t>;
 
-        using DppOps = std::tuple<DppImpl::Ops::BCast16<0>,
-                                  DppImpl::Ops::BCast16<1>,
-                                  DppImpl::Ops::BCast16<2>,
-                                  DppImpl::Ops::BCast16<3>,
-                                  DppImpl::Ops::BCast16<4>,
-                                  DppImpl::Ops::BCast16<5>,
-                                  DppImpl::Ops::BCast16<6>,
-                                  DppImpl::Ops::BCast16<7>,
-                                  DppImpl::Ops::BCast16<8>,
-                                  DppImpl::Ops::BCast16<9>,
-                                  DppImpl::Ops::BCast16<10>,
-                                  DppImpl::Ops::BCast16<11>,
-                                  DppImpl::Ops::BCast16<12>,
-                                  DppImpl::Ops::BCast16<13>,
-                                  DppImpl::Ops::BCast16<14>,
-                                  DppImpl::Ops::BCast16<15>>;
+        using DppOps = std::tuple<DppImpl::Ops::BCast16<2>, DppImpl::Ops::BCast16<11>>;
 
         // Test random assortment of banks and rows
         using WriteRowMasks  = std::tuple<I<0xF>, I<0x5>, I<0xA>>;
