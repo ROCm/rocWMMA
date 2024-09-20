@@ -506,7 +506,7 @@ namespace rocwmma
     using AccRegF64x32 = VecT<float64_t, 32>;
 
     using Coord2dDataT = uint32_t;
-    using Coord2d      = non_native_vector_base<Coord2dDataT, 2>;
+    using Coord2d      = VecT<Coord2dDataT, 2>;
 
 } // namespace rocwmma
 #endif // ROCWMMA_VECTOR_HPP
