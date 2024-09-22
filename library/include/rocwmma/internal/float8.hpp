@@ -622,6 +622,9 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
 //////////////////////////////////////////
 ///  FNUZ f8 / bf8 operator overloads  ///
 //////////////////////////////////////////
+#if defined(__HIPCC_RTC__)
+using namespace __hip_internal; /* uint8_t for hiprtc is under this namespace */
+#endif
 
 ROCWMMA_FP8_FNUZ_VISIBILITY constexpr inline auto
     make_hip_fp8_e4m3_fnuz_from_bits(__hip_fp8_storage_t bits)

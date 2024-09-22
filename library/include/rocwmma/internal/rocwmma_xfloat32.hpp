@@ -208,18 +208,25 @@ typedef struct
     float data;
 } rocwmma_xfloat32_public;
 
-
+#if defined(__HIPCC_RTC__)
+static_assert(__hip_internal::is_standard_layout<rocwmma_xfloat32>{},
+              "rocwmma_xfloat32 is not a standard layout type, and thus is "
+              "incompatible with C.");
+static_assert(__hip_internal::is_trivial<rocwmma_xfloat32>{},
+              "rocwmma_xfloat32 is not a trivial type, and thus is "
+              "incompatible with C.");
+#else
 static_assert(std::is_standard_layout<rocwmma_xfloat32>{},
               "rocwmma_xfloat32 is not a standard layout type, and thus is "
               "incompatible with C.");
-
 static_assert(std::is_trivial<rocwmma_xfloat32>{},
               "rocwmma_xfloat32 is not a trivial type, and thus is "
               "incompatible with C.");
-
 static_assert(sizeof(rocwmma_xfloat32) == sizeof(rocwmma_xfloat32_public)
                   && offsetof(rocwmma_xfloat32, data) == offsetof(rocwmma_xfloat32_public, data),
               "internal rocwmma_xfloat32 does not match public rocwmma_xfloat32");
+/* offsetof does not exist in hiprtc */
+#endif
 
 
 #if !defined(__HIPCC_RTC__)

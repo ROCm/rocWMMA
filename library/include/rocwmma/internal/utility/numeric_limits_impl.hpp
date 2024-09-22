@@ -35,6 +35,14 @@ namespace rocwmma
         // library needs for regular arithmetic types.
         // Specializations do exist for f8, bf8 and xf32 types where they
         // are currently defined.
+        enum float_round_style
+        {
+            round_indeterminate       = -1,
+            round_toward_zero         = 0,
+            round_to_nearest          = 1,
+            round_toward_infinity     = 2,
+            round_toward_neg_infinity = 3
+        };
         template <typename T>
         class numeric_limits
         {
@@ -48,6 +56,8 @@ namespace rocwmma
             ROCWMMA_HOST_DEVICE static constexpr T quiet_NaN() noexcept;
             ROCWMMA_HOST_DEVICE static constexpr T signaling_NaN() noexcept;
             ROCWMMA_HOST_DEVICE static constexpr T denorm_min() noexcept;
+            static constexpr float_round_style round_style = round_toward_zero;
+            static constexpr bool traps = true;
         };
 
     } // namespace detail
