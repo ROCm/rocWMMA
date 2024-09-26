@@ -74,17 +74,17 @@ namespace rocwmma::detail
     {
         union
         {
-            float  fp32;
-            uint32_t   u32;
+            float    fp32;
+            uint32_t u32;
         };
 
         explicit constexpr Bits32(uint32_t initVal)
-        : u32(initVal)
+            : u32(initVal)
         {
         }
 
         explicit constexpr Bits32(float initVal)
-        : fp32(initVal)
+            : fp32(initVal)
         {
         }
     };
@@ -99,21 +99,21 @@ struct rocwmma_xfloat32
         round_up
     };
 
-    ROCWMMA_HOST_DEVICE rocwmma_xfloat32() = default;
-    constexpr ROCWMMA_HOST_DEVICE rocwmma_xfloat32(rocwmma_xfloat32 const&) = default;
-    constexpr ROCWMMA_HOST_DEVICE rocwmma_xfloat32(rocwmma_xfloat32&&) = default;
+    ROCWMMA_HOST_DEVICE           rocwmma_xfloat32()                                   = default;
+    constexpr ROCWMMA_HOST_DEVICE rocwmma_xfloat32(rocwmma_xfloat32 const&)            = default;
+    constexpr ROCWMMA_HOST_DEVICE rocwmma_xfloat32(rocwmma_xfloat32&&)                 = default;
     constexpr ROCWMMA_HOST_DEVICE rocwmma_xfloat32& operator=(rocwmma_xfloat32 const&) = default;
-    constexpr ROCWMMA_HOST_DEVICE rocwmma_xfloat32& operator=(rocwmma_xfloat32&&) = default;
-    ROCWMMA_HOST_DEVICE ~rocwmma_xfloat32() = default;
-    
+    constexpr ROCWMMA_HOST_DEVICE rocwmma_xfloat32& operator=(rocwmma_xfloat32&&)      = default;
+    ROCWMMA_HOST_DEVICE ~rocwmma_xfloat32()                                            = default;
+
     // round upper 19 bits of IEEE float to convert to xfloat32
     constexpr explicit ROCWMMA_HOST_DEVICE rocwmma_xfloat32(float f, round_t)
-    : data(float_to_xfloat32(f))
+        : data(float_to_xfloat32(f))
     {
     }
 
     constexpr explicit ROCWMMA_HOST_DEVICE rocwmma_xfloat32(float f)
-    : data(truncate_float_to_xfloat32(f))
+        : data(truncate_float_to_xfloat32(f))
     {
     }
 
@@ -198,7 +198,7 @@ private:
     constexpr static ROCWMMA_HOST_DEVICE float truncate_float_to_xfloat32(float f)
     {
         auto u = rocwmma::detail::Bits32{f};
-        u.u32 = u.u32 & 0xffffe000;
+        u.u32  = u.u32 & 0xffffe000;
         return u.fp32;
     }
 };
@@ -208,21 +208,21 @@ typedef struct
     float data;
 } rocwmma_xfloat32_public;
 
-
-static_assert(std::is_standard_layout<rocwmma_xfloat32>{},
+static_assert(rocwmma::is_standard_layout<rocwmma_xfloat32>{},
               "rocwmma_xfloat32 is not a standard layout type, and thus is "
               "incompatible with C.");
 
-static_assert(std::is_trivial<rocwmma_xfloat32>{},
+static_assert(rocwmma::is_trivial<rocwmma_xfloat32>{},
               "rocwmma_xfloat32 is not a trivial type, and thus is "
               "incompatible with C.");
 
-static_assert(sizeof(rocwmma_xfloat32) == sizeof(rocwmma_xfloat32_public)
-                  && offsetof(rocwmma_xfloat32, data) == offsetof(rocwmma_xfloat32_public, data),
+static_assert(sizeof(rocwmma_xfloat32) == sizeof(rocwmma_xfloat32_public),
               "internal rocwmma_xfloat32 does not match public rocwmma_xfloat32");
 
-
 #if !defined(__HIPCC_RTC__)
+
+static_assert(offsetof(rocwmma_xfloat32, data) == offsetof(rocwmma_xfloat32_public, data),
+              "internal rocwmma_xfloat32 does not match public rocwmma_xfloat32");
 
 inline std::ostream& operator<<(std::ostream& os, const rocwmma_xfloat32& xf32)
 {
@@ -238,8 +238,7 @@ inline ROCWMMA_HOST_DEVICE rocwmma_xfloat32 operator+(rocwmma_xfloat32 a)
 
 inline ROCWMMA_HOST_DEVICE rocwmma_xfloat32 operator-(rocwmma_xfloat32 a)
 {
-    return rocwmma_xfloat32::from_bits(
-        rocwmma::detail::Bits32{float(a)}.u32 ^ 0x80000000);
+    return rocwmma_xfloat32::from_bits(rocwmma::detail::Bits32{float(a)}.u32 ^ 0x80000000);
 }
 
 inline ROCWMMA_HOST_DEVICE rocwmma_xfloat32 operator+(rocwmma_xfloat32 a, rocwmma_xfloat32 b)
@@ -374,14 +373,20 @@ namespace std
 // Define extra type traits
 namespace ROCWMMA_TYPE_TRAITS_IMPL_NAMESPACE
 {
-    template<>
-    struct is_arithmetic<rocwmma_xfloat32> : true_type{};
+    template <>
+    struct is_arithmetic<rocwmma_xfloat32> : true_type
+    {
+    };
 
-    template<>
-    struct is_floating_point<rocwmma_xfloat32> : true_type{};
+    template <>
+    struct is_floating_point<rocwmma_xfloat32> : true_type
+    {
+    };
 
-    template<>
-    struct is_signed<rocwmma_xfloat32> : true_type{};
+    template <>
+    struct is_signed<rocwmma_xfloat32> : true_type
+    {
+    };
 
 } // namespace ROCWMMA_TYPE_TRAITS_IMPL_NAMESPACE
 
@@ -413,16 +418,14 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
     }
 
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_xfloat32
-        numeric_limits<rocwmma_xfloat32>::max() noexcept
+    ROCWMMA_HOST_DEVICE constexpr rocwmma_xfloat32 numeric_limits<rocwmma_xfloat32>::max() noexcept
     {
         return rocwmma_xfloat32::from_bits(
             rocwmma::detail::Bits32{static_cast<float>(FLT_MAX)}.u32);
     }
 
     template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma_xfloat32
-        numeric_limits<rocwmma_xfloat32>::min() noexcept
+    ROCWMMA_HOST_DEVICE constexpr rocwmma_xfloat32 numeric_limits<rocwmma_xfloat32>::min() noexcept
     {
         return rocwmma_xfloat32::from_bits(
             rocwmma::detail::Bits32{static_cast<float>(FLT_MIN)}.u32);
