@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -152,6 +152,21 @@ namespace ROCWMMA_TYPE_TRAITS_IMPL_NAMESPACE
 #define ROCWMMA_FP8_VISIBILITY ROCWMMA_HOST
 #endif // defined(HIP_FP8_TYPE_OCP) && HIP_FP8_TYPE_OCP
 
+#if defined(__HIPCC_RTC__)
+    #if ROCWMMA_FP8_FNUZ
+	#define  ENABLE_FNUZ_HIPRTC 1
+    #else
+	#define ENABLE_FNUZ_HIPRTC 0
+    #endif
+
+    #if ROCWMMA_FP8_OCP
+	#define ENABLE_OCP_HIPRTC 1
+    #else
+	#define ENABLE_OCP_HIPRTC 0
+    #endif
+#endif
+
+#if !defined(ENABLE_OCP_HIPRTC) || ENABLE_OCP_HIPRTC
 ROCWMMA_FP8_VISIBILITY constexpr inline hip_fp8_e4m3
     make_hip_fp8_e4m3_from_bits(__hip_fp8_storage_t bits)
 {
@@ -631,13 +646,14 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
         }
     };
 }
-
+#endif // ENABLE_OCP_HIPRTC
 //////////////////////////////////////////
 ///  FNUZ f8 / bf8 operator overloads  ///
 //////////////////////////////////////////
 
 using rocwmma::uint8_t;
 
+#if !defined(ENABLE_FNUZ_HIPRTC) || ENABLE_FNUZ_HIPRTC
 ROCWMMA_FP8_FNUZ_VISIBILITY constexpr inline auto
     make_hip_fp8_e4m3_fnuz_from_bits(__hip_fp8_storage_t bits)
 {
@@ -1093,5 +1109,7 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
     //@endcond
 
 } // namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
+#endif // ENABLE_FNUZ_HIPRTC
 
 #endif // ROCWMMA_FLOAT8_HPP
+
