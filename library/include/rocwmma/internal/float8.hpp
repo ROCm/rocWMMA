@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (C) 2021-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -120,9 +120,15 @@ namespace ROCWMMA_TYPE_TRAITS_IMPL_NAMESPACE
 // From HIP, device visibility of fp8/bf8 is limited to certain devices.
 // Host has visibility of all fp8/bf8 types
 #if defined(HIP_FP8_TYPE_FNUZ) && HIP_FP8_TYPE_FNUZ
-static_assert((bool)ROCWMMA_ARCH_GFX94X || (bool)ROCWMMA_ARCH_HOST,
-              "fp8_fnuz types only supported on gfx94X archs");
-#define ROCWMMA_FP8_FNUZ 1
+
+// TODO: once HIP_FP8_TYPE_FNUZ symbol fixed on hipRTC
+// 1. Re-enable static assert
+// 2. Give ROCWMMA_FP8_FNUZ value of 1
+
+//static_assert((bool)ROCWMMA_ARCH_GFX94X || (bool)ROCWMMA_ARCH_HOST,
+//              "fp8_fnuz types only supported on gfx94X archs");
+
+#define ROCWMMA_FP8_FNUZ (ROCWMMA_ARCH_GFX94X || ROCWMMA_ARCH_HOST)
 #define ROCWMMA_FP8_FNUZ_VISIBILITY ROCWMMA_HOST_DEVICE
 #else
 #define ROCWMMA_FP8_FNUZ 0
@@ -130,15 +136,37 @@ static_assert((bool)ROCWMMA_ARCH_GFX94X || (bool)ROCWMMA_ARCH_HOST,
 #endif // defined(HIP_FP8_TYPE_FNUZ) && HIP_FP8_TYPE_FNUZ
 
 #if defined(HIP_FP8_TYPE_OCP) && HIP_FP8_TYPE_OCP
-static_assert((bool)ROCWMMA_ARCH_GFX12 || (bool)ROCWMMA_ARCH_HOST,
-              "fp8_fnuz types only supported on gfx12 archs");
-#define ROCWMMA_FP8 1
+
+// TODO: once HIP_FP8_TYPE_OCP symbol fixed on hipRTC
+// 1. Re-enable static assert
+// 2. Give ROCWMMA_FP8 value of 1
+
+//static_assert((bool)ROCWMMA_ARCH_GFX12 || (bool)ROCWMMA_ARCH_HOST,
+//              "fp8_fnuz types only supported on gfx12 archs");
+
+#define ROCWMMA_FP8 (ROCWMMA_ARCH_GFX12 || ROCWMMA_ARCH_HOST)
 #define ROCWMMA_FP8_VISIBILITY ROCWMMA_HOST_DEVICE
 #else
+
 #define ROCWMMA_FP8 0
 #define ROCWMMA_FP8_VISIBILITY ROCWMMA_HOST
 #endif // defined(HIP_FP8_TYPE_OCP) && HIP_FP8_TYPE_OCP
 
+#if defined(__HIPCC_RTC__)
+    #if ROCWMMA_FP8_FNUZ
+	#define  ENABLE_FNUZ_HIPRTC 1
+    #else
+	#define ENABLE_FNUZ_HIPRTC 0
+    #endif
+
+    #if ROCWMMA_FP8_OCP
+	#define ENABLE_OCP_HIPRTC 1
+    #else
+	#define ENABLE_OCP_HIPRTC 0
+    #endif
+#endif
+
+#if !defined(ENABLE_OCP_HIPRTC) || ENABLE_OCP_HIPRTC
 ROCWMMA_FP8_VISIBILITY constexpr inline hip_fp8_e4m3
     make_hip_fp8_e4m3_from_bits(__hip_fp8_storage_t bits)
 {
@@ -503,7 +531,7 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
         static constexpr bool has_signaling_NaN = true;
         static constexpr auto has_denorm        = true;
         static constexpr auto has_denorm_loss   = true;
-        static constexpr auto round_style       = numeric_limits<float>::round_style;
+        static constexpr auto round_style       = round_to_nearest;
         static constexpr bool is_iec559         = false;
         static constexpr bool is_bounded        = true;
         static constexpr bool is_modulo         = false;
@@ -515,7 +543,7 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
         static constexpr int  min_exponent10    = -1;
         static constexpr int  max_exponent      = 8;
         static constexpr int  max_exponent10    = 2;
-        static constexpr auto traps             = numeric_limits<float>::traps;
+        static constexpr auto traps             = false;
         static constexpr auto tinyness_before   = false;
 
         static constexpr hip_fp8_e4m3 min()
@@ -565,7 +593,7 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
         static constexpr bool has_signaling_NaN = true;
         static constexpr auto has_denorm        = true;
         static constexpr auto has_denorm_loss   = true;
-        static constexpr auto round_style       = numeric_limits<float>::round_style;
+        static constexpr auto round_style       = round_to_nearest;
         static constexpr bool is_iec559         = false;
         static constexpr bool is_bounded        = true;
         static constexpr bool is_modulo         = false;
@@ -577,7 +605,7 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
         static constexpr int  min_exponent10    = -4;
         static constexpr int  max_exponent      = 16;
         static constexpr int  max_exponent10    = 4;
-        static constexpr auto traps             = numeric_limits<float>::traps;
+        static constexpr auto traps             = false;
         static constexpr auto tinyness_before   = false;
 
         static constexpr hip_fp8_e5m2 min()
@@ -618,11 +646,14 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
         }
     };
 }
-
+#endif // ENABLE_OCP_HIPRTC
 //////////////////////////////////////////
 ///  FNUZ f8 / bf8 operator overloads  ///
 //////////////////////////////////////////
 
+using rocwmma::uint8_t;
+
+#if !defined(ENABLE_FNUZ_HIPRTC) || ENABLE_FNUZ_HIPRTC
 ROCWMMA_FP8_FNUZ_VISIBILITY constexpr inline auto
     make_hip_fp8_e4m3_fnuz_from_bits(__hip_fp8_storage_t bits)
 {
@@ -1078,5 +1109,7 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
     //@endcond
 
 } // namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
+#endif // ENABLE_FNUZ_HIPRTC
 
 #endif // ROCWMMA_FLOAT8_HPP
+
