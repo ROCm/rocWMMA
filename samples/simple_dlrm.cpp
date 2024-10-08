@@ -600,6 +600,7 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
 
     auto timeMs = 0.0f;
     CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
+    CHECK_HIP_ERROR(hipEventDestroy(syncEvent));
     CHECK_HIP_ERROR(hipEventDestroy(startEvent));
     CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
 
