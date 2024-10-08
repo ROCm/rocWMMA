@@ -582,6 +582,8 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
                                   inputBatchOffset,
                                   upstreamBatchOffset,
                                   accBatchOffset);
+            
+            CHECK_HIP_ERROR(hipEventDestroy(syncEvent));
         };
     }
 
@@ -602,7 +604,6 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
     CHECK_HIP_ERROR(hipEventElapsedTime(&timeMs, startEvent, stopEvent));
     CHECK_HIP_ERROR(hipEventDestroy(startEvent));
     CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
-    CHECK_HIP_ERROR(hipEventDestroy(syncEvent));
 
     // DLRM flops converge to 2*mmkb
     auto gFlops       = 2.0 * static_cast<double>(m * m * k * b) * 1.0e-9;
