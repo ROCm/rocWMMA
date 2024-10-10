@@ -26,26 +26,20 @@
 #ifndef ROCWMMA_TYPES_HPP
 #define ROCWMMA_TYPES_HPP
 
+#include "config.hpp"
+
 #if !defined(__HIPCC_RTC__)
-#include <array>
-#include <hip/hip_bfloat16.h>
-#include <hip/hip_fp16.h>
-#include <hip/hip_vector_types.h>
-#include <type_traits>
-#include <utility>
+#include <cstdint>
 #endif // !__HIPCC_RTC__
 
-#include "config.hpp"
-#include "float8.hpp"
-#include "rocwmma_xfloat32.hpp"
-
+// Native types
 namespace rocwmma
 {
 
     /**
  * \defgroup Datatypes Datatypes
  *
- * @brief Summary of datatypes used in rocWMMA.
+ * @brief Summary of built-in native datatypes used in rocWMMA.
  *
  * @{
  */
@@ -81,17 +75,41 @@ namespace rocwmma
 
 #endif // !defined(__HIPCC_RTC__)
 
-    // Non-native types
+    /** @}*/
+
+} // namespace rocwmma
+
+#if !defined(__HIPCC_RTC__)
+#include <hip/hip_bfloat16.h>
+#include <hip/hip_fp16.h>
+#endif // !__HIPCC_RTC__
+
+#include "float8.hpp"
+#include "rocwmma_xfloat32.hpp"
+
+// Non-native types
+namespace rocwmma
+{
+
+    /**
+ * \defgroup Datatypes Datatypes
+ *
+ * @brief Summary of non-native datatypes used in rocWMMA.
+ *
+ * @{
+ */
+
     using bfloat16_t = hip_bfloat16;
 
 #if !ROCWMMA_NO_HALF
     using hfloat16_t = __half;
 #endif // !ROCWMMA_NO_HALF
 
+    using float8_t  = hip_fp8_e4m3;
+    using bfloat8_t = hip_fp8_e5m2;
 
-    using float8_t = rocwmma_f8;
-
-    using bfloat8_t = rocwmma_bf8;
+    using float8_fnuz_t  = hip_fp8_e4m3_fnuz;
+    using bfloat8_fnuz_t = hip_fp8_e5m2_fnuz;
 
     using xfloat32_t = rocwmma_xfloat32;
 
@@ -103,7 +121,6 @@ namespace rocwmma
 // Some of these are required for vector implementations.
 #include "type_traits.hpp"
 #include "types_ext.hpp"
-
 #include "types_impl.hpp"
 
 #endif // ROCWMMA_TYPES_HPP

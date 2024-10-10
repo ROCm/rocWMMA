@@ -276,7 +276,7 @@ namespace rocwmma
         }
 
     } // namespace detail
-
+    
     // NOTE: The single-valued 'broadcast' constructor can only be used with Rank > 1.
     // Why? The bCast function constructs the vector with <Rank> copies of the input val.
     // When Rank == 1, this would create an endless ctor->bcast->ctor->bcast... loop.
@@ -314,7 +314,6 @@ namespace rocwmma
     {
         return d[idx];
     }
-
     template <typename T, unsigned int Rank>
     ROCWMMA_HOST_DEVICE constexpr inline auto
         non_native_vector_base<T, Rank>::operator+=(const VecT& x_) noexcept -> VecT&
@@ -376,7 +375,7 @@ namespace rocwmma
     }
 
     template <typename T, unsigned int Rank>
-    template <typename U, typename enable_if<is_integral<U>{}>::type*>
+    template <typename U, enable_if_integral_t<U>*>
     ROCWMMA_HOST_DEVICE inline auto
         non_native_vector_base<T, Rank>::operator%=(const VecT& x_) noexcept -> VecT&
     {
@@ -384,7 +383,7 @@ namespace rocwmma
     }
 
     template <typename T, unsigned int Rank>
-    template <typename U, typename enable_if<is_signed<U>{}>::type*>
+    template <typename U, enable_if_signed_t<U>*>
     ROCWMMA_HOST_DEVICE inline auto non_native_vector_base<T, Rank>::operator-() const noexcept
         -> VecT
     {
@@ -393,7 +392,7 @@ namespace rocwmma
 
     // @cond
     template <typename T, unsigned int Rank>
-    template <typename U, typename enable_if<is_integral<U>{}>::type*>
+    template <typename U, enable_if_integral_t<U>*>
     ROCWMMA_HOST_DEVICE inline auto
         non_native_vector_base<T, Rank>::operator&=(const VecT& x_) noexcept -> VecT&
     {
@@ -402,7 +401,7 @@ namespace rocwmma
     // @endcond
 
     template <typename T, unsigned int Rank>
-    template <typename U, typename enable_if<is_integral<U>{}>::type*>
+    template <typename U, enable_if_integral_t<U>*>
     ROCWMMA_HOST_DEVICE inline auto
         non_native_vector_base<T, Rank>::operator|=(const VecT& x_) noexcept -> VecT&
     {
@@ -410,7 +409,7 @@ namespace rocwmma
     }
 
     template <typename T, unsigned int Rank>
-    template <typename U, typename enable_if<is_integral<U>{}>::type*>
+    template <typename U, enable_if_integral_t<U>*>
     ROCWMMA_HOST_DEVICE inline auto non_native_vector_base<T, Rank>::operator~() const noexcept
         -> VecT
     {
@@ -418,7 +417,7 @@ namespace rocwmma
     }
 
     template <typename T, unsigned int Rank>
-    template <typename U, typename enable_if<is_integral<U>{}>::type*>
+    template <typename U, enable_if_integral_t<U>*>
     ROCWMMA_HOST_DEVICE inline auto
         non_native_vector_base<T, Rank>::operator^=(const VecT& x_) noexcept -> VecT&
     {
@@ -426,7 +425,7 @@ namespace rocwmma
     }
 
     template <typename T, unsigned int Rank>
-    template <typename U, typename enable_if<is_integral<U>{}>::type*>
+    template <typename U, enable_if_integral_t<U>*>
     ROCWMMA_HOST_DEVICE inline auto
         non_native_vector_base<T, Rank>::operator>>=(const VecT& x_) noexcept -> VecT&
     {
@@ -434,7 +433,7 @@ namespace rocwmma
     }
 
     template <typename T, unsigned int Rank>
-    template <typename U, typename enable_if<is_integral<U>{}>::type*>
+    template <typename U, enable_if_integral_t<U>*>
     ROCWMMA_HOST_DEVICE inline auto
         non_native_vector_base<T, Rank>::operator<<=(const VecT& x_) noexcept -> VecT&
     {

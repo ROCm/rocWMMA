@@ -582,6 +582,8 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
                                   inputBatchOffset,
                                   upstreamBatchOffset,
                                   accBatchOffset);
+            
+            CHECK_HIP_ERROR(hipEventDestroy(syncEvent));
         };
     }
 

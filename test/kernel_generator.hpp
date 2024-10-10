@@ -30,6 +30,9 @@
 #include <tuple>
 #include <vector>
 
+#include <rocwmma/internal/types.hpp>
+#include "hip_device.hpp"
+
 namespace rocwmma
 {
 
@@ -212,6 +215,16 @@ namespace rocwmma
         using Result = List;
     };
 
+    // Helper classes to determine if a tuple contains an element with type DataT
+    template <typename DataT, typename TupleT>
+    struct contains_type;
+
+    template <typename DataT, typename... TupleTs>
+    struct contains_type<DataT, std::tuple<TupleTs...>> : std::disjunction<std::is_same<DataT, TupleTs>...> {};
+
+    template<typename DataT, typename TupleT>
+    inline constexpr bool contains_type_v = contains_type<DataT, TupleT>::value;
+
     /// Kernel Generator
     /// Requires two inputs:
     /// TestParams: nested tuple of KernelParams
@@ -227,7 +240,7 @@ namespace rocwmma
     struct KernelGenerator
     {
         template <typename... Ts>
-        static void generate(Ts...)
+        ROCWMMA_HOST static void generate(Ts...)
         {
         }
     };
@@ -236,18 +249,96 @@ namespace rocwmma
     struct KernelGenerator<std::tuple<KernelParams, Next...>, GeneratorImpl>
     {
         using ResultT = std::vector<typename GeneratorImpl::ResultT>;
-        static ResultT generate()
+        ROCWMMA_HOST static ResultT generate()
         {
             auto result = ResultT();
             generate(result);
             return result;
         }
 
-        static void generate(ResultT& kernels)
+        ROCWMMA_HOST static void generate(ResultT& kernels)
         {
-            // Generate kernels
-            kernels.push_back(GeneratorImpl::generate(KernelParams()));
-            KernelGenerator<std::tuple<Next...>, GeneratorImpl>::generate(kernels);
+            // Generates the kernel for the current set of KernelParams
+            auto gen_kernel = [](ResultT& k)
+            {
+                k.push_back(GeneratorImpl::generate(KernelParams()));
+            };
+
+            // Advances to the next set of KernelParams
+            auto next_kernel = [](ResultT& k)
+            {
+                KernelGenerator<std::tuple<Next...>, GeneratorImpl>::generate(k);
+            };
+
+            if constexpr (contains_type_v<float8_t, KernelParams>
+                            || contains_type_v<bfloat8_t, KernelParams>)
+            {
+                if constexpr (!(bool)ROCWMMA_FP8)
+                {
+                    // Current KernelParams have f8: skip kernel on unsupported arch.
+                    next_kernel(kernels);
+                    return;
+                }
+
+                // Quirk: Here, the host code supports F8, but doesn't know
+                // if the runtime target supports it. Make sure the runtime
+                // target can support this type, otherwise don't generate the kernel.
+                if constexpr((bool)ROCWMMA_ARCH_HOST)
+                {
+                    // Only gfx12 devices support f8
+                    using DeviceInfo = HipDevice;
+                    auto arch = DeviceInfo::instance()->getGcnArch();
+                    if(arch != DeviceInfo::hipGcnArch_t::GFX1200
+                        && arch != DeviceInfo::hipGcnArch_t::GFX1201)
+                    {
+                        // Current KernelParams have f8: skip kernel on host.
+                        next_kernel(kernels);
+                        return;
+                    }
+                }
+
+                // Generate kernel
+                gen_kernel(kernels);
+                next_kernel(kernels);
+            }
+            else if constexpr (contains_type_v<float8_fnuz_t, KernelParams>
+                                || contains_type_v<bfloat8_fnuz_t, KernelParams>)
+            {
+                if constexpr (!(bool)ROCWMMA_FP8_FNUZ)
+                {
+                    // Current KernelParams have f8_fnuz: skip kernel on unsupported arch.
+                    next_kernel(kernels);
+                    return;
+                }
+
+                // Quirk: Here, the host code supports F8_fnuz, but doesn't know
+                // if the runtime target supports it. Make sure the runtime
+                // target can support this type, otherwise don't generate the kernel.
+                if constexpr((bool)ROCWMMA_ARCH_HOST)
+                {
+                    // Only gfx94* devices support f8_fnuz
+                    using DeviceInfo = HipDevice;
+                    auto arch = DeviceInfo::instance()->getGcnArch();
+                    if(arch != DeviceInfo::hipGcnArch_t::GFX940
+                        && arch != DeviceInfo::hipGcnArch_t::GFX941
+                        && arch != DeviceInfo::hipGcnArch_t::GFX942)
+                    {
+                        // Current KernelParams have f8_fnuz: skip kernel on host.
+                        next_kernel(kernels);
+                        return;
+                    }
+                }
+
+                // Generate kernel
+                gen_kernel(kernels);
+                next_kernel(kernels);
+            }
+            else
+            {
+                // Generate kernel
+                gen_kernel(kernels);
+                next_kernel(kernels);
+            }
         }
     };
 

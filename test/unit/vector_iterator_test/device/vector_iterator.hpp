@@ -33,7 +33,7 @@ namespace rocwmma
 {
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool bcastTest()
+    ROCWMMA_DEVICE static inline bool bcastTest()
     {
         bool err = false;
 
@@ -51,7 +51,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool iteratorIndexTest()
+    ROCWMMA_DEVICE static inline bool iteratorIndexTest()
     {
         bool err = false;
 
@@ -75,7 +75,7 @@ namespace rocwmma
               uint32_t VecSize,
               uint32_t StrideSize,
               typename std::enable_if<(StrideSize >= 1)>::type* = nullptr>
-    __device__ static inline bool iteratorStrideIndexTest(VecT<DataT, VecSize> const& vec)
+    ROCWMMA_DEVICE static inline bool iteratorStrideIndexTest(VecT<DataT, VecSize> const& vec)
     {
         bool err = false;
 
@@ -102,13 +102,13 @@ namespace rocwmma
               uint32_t VecSize,
               uint32_t StrideSize,
               typename std::enable_if<(StrideSize == 0)>::type* = nullptr>
-    __device__ static inline bool iteratorStrideIndexTest(VecT<DataT, VecSize> const& vec)
+    ROCWMMA_DEVICE static inline bool iteratorStrideIndexTest(VecT<DataT, VecSize> const& vec)
     {
         return false;
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool iteratorStrideIndexTest()
+    ROCWMMA_DEVICE static inline bool iteratorStrideIndexTest()
     {
         bool err = false;
 
@@ -128,7 +128,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool iteratorValueTest()
+    ROCWMMA_DEVICE static inline bool iteratorValueTest()
     {
         bool err = false;
 
@@ -156,7 +156,7 @@ namespace rocwmma
               uint32_t VecSize,
               uint32_t StrideSize,
               typename std::enable_if<(StrideSize >= 1)>::type* = nullptr>
-    __device__ static inline bool iteratorStrideValueTest(VecT<DataT, VecSize> const& vec)
+    ROCWMMA_DEVICE static inline bool iteratorStrideValueTest(VecT<DataT, VecSize> const& vec)
     {
         bool err = false;
         auto it  = makeVectorIterator<StrideSize>(vec).begin();
@@ -179,13 +179,13 @@ namespace rocwmma
               uint32_t VecSize,
               uint32_t StrideSize,
               typename std::enable_if<(StrideSize == 0)>::type* = nullptr>
-    __device__ static inline bool iteratorStrideValueTest(VecT<DataT, VecSize> const& v)
+    ROCWMMA_DEVICE static inline bool iteratorStrideValueTest(VecT<DataT, VecSize> const& v)
     {
         return false;
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool iteratorStrideValueTest()
+    ROCWMMA_DEVICE static inline bool iteratorStrideValueTest()
     {
         bool err = false;
 
@@ -209,7 +209,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool iteratorSubVectorTypeTest()
+    ROCWMMA_DEVICE static inline bool iteratorSubVectorTypeTest()
     {
         bool err = false;
 
@@ -224,7 +224,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool iteratorBeginTest()
+    ROCWMMA_DEVICE static inline bool iteratorBeginTest()
     {
         bool err = false;
 
@@ -244,7 +244,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool iteratorEndTest()
+    ROCWMMA_DEVICE static inline bool iteratorEndTest()
     {
         bool err = false;
 
@@ -264,7 +264,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool iteratorItTest()
+    ROCWMMA_DEVICE static inline bool iteratorItTest()
     {
         bool err = false;
 
@@ -294,7 +294,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool iteratorPostIncDecTest()
+    ROCWMMA_DEVICE static inline bool iteratorPostIncDecTest()
     {
         bool err = false;
 
@@ -323,7 +323,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool iteratorPreIncDecTest()
+    ROCWMMA_DEVICE static inline bool iteratorPreIncDecTest()
     {
         bool err = false;
 
@@ -357,7 +357,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool iteratorPlusMinusTest()
+    ROCWMMA_DEVICE static inline bool iteratorPlusMinusTest()
     {
         bool err = false;
 
@@ -398,7 +398,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool iteratorPlusMinusEqTest()
+    ROCWMMA_DEVICE static inline bool iteratorPlusMinusEqTest()
     {
         bool err = false;
 
@@ -441,7 +441,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool iteratorEqTest()
+    ROCWMMA_DEVICE static inline bool iteratorEqTest()
     {
         bool err = false;
 
@@ -472,7 +472,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool iteratorRangeBasedForTest()
+    ROCWMMA_DEVICE static inline bool iteratorRangeBasedForTest()
     {
         bool err = false;
 
@@ -493,7 +493,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __global__ void vectorIteratorTest(uint32_t     m,
+    ROCWMMA_KERNEL void vectorIteratorTest(uint32_t     m,
                                        uint32_t     n,
                                        DataT const* in,
                                        DataT*       out,

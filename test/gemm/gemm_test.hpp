@@ -86,11 +86,16 @@ namespace rocwmma
             using Options        = rocwmma::RocwmmaLogging;
             auto& loggingOptions = Options::instance();
 
+            // Invoke first kernel to warm up device
             static bool ranWarmup = false;
             if(!ranWarmup)
             {
                 kernel->exec();
                 ranWarmup = true;
+
+                // Note: Kernel should be re-initialized after 
+                // running warmup
+                this->SetUp();
             }
 
             kernel->exec();
