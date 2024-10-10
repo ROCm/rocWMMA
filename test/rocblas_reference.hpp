@@ -219,9 +219,9 @@ namespace rocwmma
 
 #if defined(ROCBLAS_DATA_TYPE_FLOAT8)
     template <>
-    struct rocblas_types<rocwmma_bf8>
+    struct rocblas_types<bfloat8_t>
     {
-        using DataType = rocwmma_bf8;
+        using DataType = bfloat8_t;
         constexpr static inline rocblas_datatype type()
         {
             return rocblas_datatype_bf8_r;
@@ -229,9 +229,29 @@ namespace rocwmma
     };
 
     template <>
-    struct rocblas_types<rocwmma_f8>
+    struct rocblas_types<float8_t>
     {
-        using DataType = rocwmma_f8;
+        using DataType = float8_t;
+        constexpr static inline rocblas_datatype type()
+        {
+            return rocblas_datatype_f8_r;
+        }
+    };
+
+    template <>
+    struct rocblas_types<bfloat8_fnuz_t>
+    {
+        using DataType = bfloat8_fnuz_t;
+        constexpr static inline rocblas_datatype type()
+        {
+            return rocblas_datatype_bf8_r;
+        }
+    };
+
+    template <>
+    struct rocblas_types<float8_fnuz_t>
+    {
+        using DataType = float8_fnuz_t;
         constexpr static inline rocblas_datatype type()
         {
             return rocblas_datatype_f8_r;
@@ -441,7 +461,8 @@ namespace rocwmma
         int32_t  solution_index = 0;
         uint32_t flags          = 0;
 
-        if((std::is_same<InputT, float8_t>::value) || (std::is_same<InputT, bfloat8_t>::value))
+        if((std::is_same<InputT, float8_t>::value) || (std::is_same<InputT, bfloat8_t>::value
+           || (std::is_same<InputT, float8_fnuz_t>::value) || (std::is_same<InputT, bfloat8_fnuz_t>::value)))
         {
 #if !defined(ROCBLAS_DATA_TYPE_FLOAT8)
             std::cerr

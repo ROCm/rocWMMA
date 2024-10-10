@@ -66,6 +66,11 @@ namespace rocwmma
     using detail::is_same_v;
     using detail::is_signed;
     using detail::is_signed_v;
+
+    // TODO: override namespace not detail
+    using __hip_internal::is_standard_layout;
+    using __hip_internal::is_trivial;
+    
     using detail::is_void;
     using detail::is_void_v;
     using detail::remove_const;
@@ -84,6 +89,8 @@ namespace rocwmma
     using detail::min;
 
 } // namespace rocwmma
+
+#define ROCWMMA_TYPE_TRAITS_IMPL_NAMESPACE rocwmma::detail
 
 #else
 
@@ -124,6 +131,8 @@ namespace rocwmma
     using std::is_same_v;
     using std::is_signed;
     using std::is_signed_v;
+    using std::is_standard_layout;
+    using std::is_trivial;
     using std::is_void;
     using std::is_void_v;
     using std::remove_const;
@@ -143,6 +152,21 @@ namespace rocwmma
 
 } // namespace rocwmma
 
+#define ROCWMMA_TYPE_TRAITS_IMPL_NAMESPACE std
+
 #endif // defined(__HIPCC_RTC__) || defined(__clang__)
+
+// Define some convenience traits
+namespace rocwmma
+{
+    template<typename T>
+    using enable_if_integral_t = enable_if_t<is_integral<T>{}>;
+    
+    template<typename T>
+    using enable_if_signed_t = enable_if_t<is_signed<T>{}>;
+
+    template<typename T>
+    using enable_if_arithmetic_t = enable_if_t<is_arithmetic<T>{}>;
+}
 
 #endif // ROCWMMA_UTILITY_TYPE_TRAITS_HPP

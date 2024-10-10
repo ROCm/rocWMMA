@@ -100,13 +100,18 @@ namespace rocwmma
         };
 
     } // namespace detail
-
 } // namespace rocwmma
 
 #include "utility/numeric_limits.hpp"
-namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
-{
 
+#if defined(__HIPCC_RTC__)
+#define NUMERIC_LIMITS_NAMESPACE rocwmma::detail
+#else
+#define NUMERIC_LIMITS_NAMESPACE std
+#endif
+
+namespace NUMERIC_LIMITS_NAMESPACE
+{
 #if defined(__HIPCC_RTC__)
     using uint16_t = rocwmma::uint16_t;
 #endif
@@ -114,7 +119,7 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
     ///////////////////////////////////////////////////////////
     ///////////  std::numeric_limits<float16_t>  //////////////
     ///////////////////////////////////////////////////////////
-    // @cond
+
     template <>
     ROCWMMA_HOST_DEVICE constexpr rocwmma::float16_t
         numeric_limits<rocwmma::float16_t>::epsilon() noexcept
@@ -293,68 +298,7 @@ namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
         return eps.b16;
     }
 
-    ///////////////////////////////////////////////////////////
-    ///////////  numeric_limits<xfloat32_t>  //////////////
-    ///////////////////////////////////////////////////////////
-
-    template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma::xfloat32_t
-        numeric_limits<rocwmma::xfloat32_t>::epsilon() noexcept
-    {
-        rocwmma::detail::Fp32Bits eps(static_cast<float>(FLT_EPSILON));
-        return eps.xf32;
-    }
-
-    template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma::xfloat32_t
-        numeric_limits<rocwmma::xfloat32_t>::infinity() noexcept
-    {
-        rocwmma::detail::Fp32Bits eps(static_cast<float>(HUGE_VALF));
-        return eps.xf32;
-    }
-
-    template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma::xfloat32_t
-        numeric_limits<rocwmma::xfloat32_t>::lowest() noexcept
-    {
-        rocwmma::detail::Fp32Bits eps(static_cast<float>(-FLT_MAX));
-        return eps.xf32;
-    }
-
-    template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma::xfloat32_t
-        numeric_limits<rocwmma::xfloat32_t>::max() noexcept
-    {
-        rocwmma::detail::Fp32Bits eps(static_cast<float>(FLT_MAX));
-        return eps.xf32;
-    }
-
-    template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma::xfloat32_t
-        numeric_limits<rocwmma::xfloat32_t>::min() noexcept
-    {
-        rocwmma::detail::Fp32Bits eps(static_cast<float>(FLT_MIN));
-        return eps.xf32;
-    }
-
-    template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma::xfloat32_t
-        numeric_limits<rocwmma::xfloat32_t>::quiet_NaN() noexcept
-    {
-        rocwmma::detail::Fp32Bits eps(static_cast<uint32_t>(0x7FF80000));
-        return eps.xf32;
-    }
-
-    template <>
-    ROCWMMA_HOST_DEVICE constexpr rocwmma::xfloat32_t
-        numeric_limits<rocwmma::xfloat32_t>::signaling_NaN() noexcept
-    {
-        rocwmma::detail::Fp32Bits eps(static_cast<uint32_t>(0x7FF00000));
-        return eps.xf32;
-    }
-    // @endcond
-
-} // namespace ROCWMMA_NUMERIC_LIMITS_IMPL_NAMESPACE
+} // namespace rocwmma
 
 namespace rocwmma
 {
@@ -395,14 +339,14 @@ namespace rocwmma
         return ((int32_t)1 << 8);
     }
 
-    template <typename T, enable_if_t<is_same<T, rocwmma::float8_t>::value, int> = 0>
+    template <typename T, enable_if_t<is_same<T, float8_fnuz_t>::value, int> = 0>
     constexpr auto maxExactInteger() -> int32_t
     {
         // f8 mantissa is 3 bits
         return ((int32_t)1 << 4);
     }
 
-    template <typename T, enable_if_t<is_same<T, bfloat8_t>::value, int> = 0>
+    template <typename T, enable_if_t<is_same<T, bfloat8_fnuz_t>::value, int> = 0>
     constexpr auto maxExactInteger() -> int32_t
     {
         // bf8 mantissa is 2 bits

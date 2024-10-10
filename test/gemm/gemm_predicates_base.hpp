@@ -114,16 +114,18 @@ namespace rocwmma
 
             InputTypesTest
             = (bool)TestTraits::InputType::IsFloat8 || (bool)TestTraits::InputType::IsBFloat8
-              || (bool)TestTraits::InputType::IsInt8 || (bool)TestTraits::InputType::IsFloat16
-              || (bool)TestTraits::InputType::IsBFloat16 || (bool)TestTraits::InputType::IsFloat32
-              || (bool)TestTraits::InputType::IsXFloat32 || (bool)TestTraits::InputType::IsFloat64,
+              || (bool)TestTraits::InputType::IsFloat8Fnuz
+              || (bool)TestTraits::InputType::IsBFloat8Fnuz || (bool)TestTraits::InputType::IsInt8
+              || (bool)TestTraits::InputType::IsFloat16 || (bool)TestTraits::InputType::IsBFloat16
+              || (bool)TestTraits::InputType::IsFloat32 || (bool)TestTraits::InputType::IsXFloat32
+              || (bool)TestTraits::InputType::IsFloat64,
 
-            // Gfx940/1/2 arch req'd for float8_t, bfloat8_t and xfloat32_t
-            F8XF32ArchTest
-            = !((bool)TestTraits::InputType::IsFloat8 || (bool)TestTraits::InputType::IsBFloat8
-                || (bool)TestTraits::InputType::IsXFloat32)
-              || (bool)TestTraits::Arch::IsGfx940 || (bool)TestTraits::Arch::IsGfx941
-              || (bool)TestTraits::Arch::IsGfx942,
+            // Gfx940/1/2 arch req'd for float8_fnuz_t, bfloat8_fnuz_t and xfloat32_t
+            F8XF32ArchTest = !((bool)TestTraits::InputType::IsFloat8Fnuz
+                               || (bool)TestTraits::InputType::IsBFloat8Fnuz
+                               || (bool)TestTraits::InputType::IsXFloat32)
+                             || (bool)TestTraits::Arch::IsGfx940 || (bool)TestTraits::Arch::IsGfx941
+                             || (bool)TestTraits::Arch::IsGfx942,
 
             // All archs except gfx908 can run float64_t
             F64ArchTest
@@ -154,7 +156,9 @@ namespace rocwmma
             // BlockM/N = 16; Block K >= 32
             // BlockM/N = 32; Block K >= 16
             F8BlockSizeTest
-            = !((bool)TestTraits::InputType::IsFloat8 || (bool)TestTraits::InputType::IsBFloat8)
+            = !((bool)TestTraits::InputType::IsFloat8 || (bool)TestTraits::InputType::IsBFloat8
+                || (bool)TestTraits::InputType::IsFloat8Fnuz
+                || (bool)TestTraits::InputType::IsBFloat8Fnuz)
               || ((bool)TestTraits::BlockSizes::isBlockMN16 && (BlockK >= 32u)
                   && (BlockK % 32u == 0u))
               || ((bool)TestTraits::BlockSizes::isBlockMN32 && (BlockK >= 16u)
@@ -301,10 +305,9 @@ namespace rocwmma
 
             // Input types supported
             InputTypesTest
-            = (bool)TestTraits::InputType::IsInt8 
-              || (bool)TestTraits::InputType::IsFloat16 || (bool)TestTraits::InputType::IsBFloat16,
-              // TODO: update
-              //|| (bool)TestTraits::InputType::IsFloat8  || (bool)TestTraits::InputType::IsBFloat8,
+            = (bool)TestTraits::InputType::IsInt8 || (bool)TestTraits::InputType::IsFloat16
+              || (bool)TestTraits::InputType::IsBFloat16 || (bool)TestTraits::InputType::IsFloat8
+              || (bool)TestTraits::InputType::IsBFloat8,
 
             // General int8_t block size
             // BlockM/N = 16; Block K >= 16

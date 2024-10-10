@@ -68,6 +68,24 @@ namespace rocwmma
     };
 
     template <>
+    struct MfmaPerfTraits<DefaultArch, float8_fnuz_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<DefaultArch, bfloat8_fnuz_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
     struct MfmaPerfTraits<DefaultArch, bfloat16_t>
     {
         enum : uint32_t
@@ -141,6 +159,24 @@ namespace rocwmma
     };
 
     template <>
+    struct MfmaPerfTraits<ArchGfx908, float8_fnuz_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<ArchGfx908, bfloat8_fnuz_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
     struct MfmaPerfTraits<ArchGfx908, bfloat16_t>
     {
         enum : uint32_t
@@ -206,6 +242,24 @@ namespace rocwmma
 
     template <>
     struct MfmaPerfTraits<ArchGfx90a, bfloat8_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<ArchGfx90a, float8_fnuz_t>
+    {
+        enum : uint32_t
+        {
+            Multiplier = 0
+        };
+    };
+
+    template <>
+    struct MfmaPerfTraits<ArchGfx90a, bfloat8_fnuz_t>
     {
         enum : uint32_t
         {
