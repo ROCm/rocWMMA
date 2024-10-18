@@ -16,12 +16,12 @@ Documentation for rocWMMA is available at
 * Refactored the rocBLAS reference entry point for validation and benchmarking
 * ROCWMMA_* preprocessor configurations are now all assigned values
 * Updated the default architecture targets for ASAN builds
-* Updated the actor-critic implementation
 
 ### Resolved issues
 
 * Fixed a bug in f64 validation due to faulty typecasting
 * Fixed a bug causing runtime compilation errors with hipRTC
+* Fixed a small memory leak by properly destroying HIP events in tests
 * Various documentation updates and fixes
 
 ## rocWMMA 1.5.0 for ROCm 6.2.0
