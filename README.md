@@ -13,6 +13,10 @@ performant GEMMs, DLRM, GEMV and hipRTC integration.
 
 The test suite includes validation and benchmarking projects that focus on unit testing, GEMMs and DLRM.
 
+> [!NOTE]
+> The published rocWMMA documentation is available at [rocWMMA](https://rocm.docs.amd.com/projects/rocWMMA/en/latest/index.html) in an organized, easy-to-read format, with search and a table of contents. The documentation source files reside in the rocWMMA/docs folder of this repository. As with all ROCm projects, the documentation is open source. For more information, see [Contribute to ROCm documentation](https://rocm.docs.amd.com/en/latest/contribute/contributing.html).
+
+
 ## Requirements
 
 rocWMMA currently supports the following AMDGPU architectures:
