@@ -26,7 +26,7 @@ rocWMMA currently supports the following AMDGPU architectures:
 
 Dependencies:
 
-* Minimum ROCm version support is 6.0.
+* Minimum ROCm version support is 6.3.
 * Minimum cmake version support is 3.14.
 * Minimum ROCm-cmake version support is 0.8.0.
 * Minimum rocBLAS version support is rocBLAS 4.0.0 for ROCm 6.0* (or ROCm packages rocblas and rocblas-dev).
