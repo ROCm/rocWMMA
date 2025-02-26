@@ -30,6 +30,7 @@
 #include <rocwmma/rocwmma.hpp>
 
 #include "unit_test_traits.hpp"
+#include "common.hpp"
 
 static constexpr uint32_t ERROR_VALUE   = 7;
 static constexpr uint32_t SUCCESS_VALUE = 0;
