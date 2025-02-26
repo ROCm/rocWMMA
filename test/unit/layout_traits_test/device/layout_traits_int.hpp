@@ -69,12 +69,6 @@ namespace rocwmma
         return compare_result;
     }
 
-    ROCWMMA_DEVICE inline bool isFirstThread()
-    {
-        return (threadIdx.x == 0) && (threadIdx.y == 0) && (threadIdx.z == 0) && (blockIdx.x == 0)
-               && (blockIdx.y == 0) && (blockIdx.z == 0);
-    }
-
     template<typename LayoutLhs, typename LayoutRhs>
     ROCWMMA_DEVICE constexpr void debugRegisterFormats()
     {
