@@ -142,8 +142,11 @@ namespace rocwmma
                         // unpackLoHi16 on entire vector
                         // unpackLoHi32 on entire vector
                         // interleave entire vector
-                        return interleave<1u, AccMaxVW * MmaBlocksB>(
+                        // Note: make a copy here, due to interleave may return
+                        // fwd arg input on nop.
+                        auto result = interleave<1u, MaxVW * MmaBlocksB>(
                             unpackLoHi32(unpackLoHi16(forward<VecT>(v))));
+                        return result;
                     }
                     else if constexpr(AccMaxVW == 4u)
                     {
