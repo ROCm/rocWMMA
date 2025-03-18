@@ -147,6 +147,8 @@ find_library(ROCM_SMI_LIBRARY rocm_smi64
 
 add_library(rocwmma INTERFACE)
 target_link_libraries(rocwmma INTERFACE hip::device hip::host OpenMP::OpenMP_CXX ${ROCM_SMI_LIBRARY})
+target_compile_options(rocwmma PRIVATE -fgpu-rdc)
+target_link_options(rocwmma PRIVATE -fgpu-rdc)
 
 rocm_install_targets(
   TARGETS rocwmma
