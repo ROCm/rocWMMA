@@ -13,7 +13,7 @@ Documentation for rocWMMA is available at
 ### Changed
 
 * Used GPU_TARGETS instead of AMDGPU_TARGETS in `cmakelists.txt`
-* Used `--offload-compress` flag for supported compilers
+* Binary sizes can be reduced on supported compilers by using the `--offload-compress` compiler flag
 
 ### Resolved issues
 
