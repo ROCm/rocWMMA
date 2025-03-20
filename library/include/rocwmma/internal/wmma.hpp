@@ -51,8 +51,8 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockKTest
               = 32u> // Current max possible K-value for wmma instr (most efficient)
-    struct WmmaSelector
-        : public MmaSelector<Wmma_impl, InputTA, InputTB, ComputeT, BlockM, BlockN, BlockKTest>
+    struct WmmaOpSelector
+        : public MmaOpSelector<Wmma_impl, InputTA, InputTB, ComputeT, BlockM, BlockN, BlockKTest>
     {
     };
 
@@ -68,18 +68,14 @@ namespace rocwmma
               uint32_t       BlockK      = FragK, // Default K throughput search
               MmaAccumPolicy AccumPolicy = MmaAccumPolicy::ROW_MAJOR>
     struct Wmma
-        : public Mma<
-              FragM,
-              FragN,
-              FragK,
-              typename WmmaSelector<InputTA, InputTB, ComputeT, BlockM, BlockN, BlockK>::SelectedOp,
-              AccumPolicy>
+        : public Mma<FragM,
+                     FragN,
+                     FragK,
+                     typename WmmaOpSelector<InputTA, InputTB, ComputeT, BlockM, BlockN, BlockK>::
+                         SelectedOp,
+                     AccumPolicy>,
+          WmmaOpSelector<InputTA, InputTB, ComputeT, BlockM, BlockN, BlockK>
     {
-
-        // Op cache
-        using SelectedOp =
-            typename WmmaSelector<InputTA, InputTB, ComputeT, BlockM, BlockN, BlockK>::SelectedOp;
-
         // Driver interface from base class Mma:
         // template <typename VecTA, typename VecTB, typename VecTC>
         // ROCWMMA_DEVICE static inline decltype(auto) exec(VecTA&& a, VecTB&& b, VecTC& accum);

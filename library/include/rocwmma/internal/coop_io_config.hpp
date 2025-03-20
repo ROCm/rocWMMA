@@ -70,9 +70,12 @@ namespace rocwmma
               uint32_t WaveCount>
     struct CoopIOConfig
     {
-        using IOShape = IOShape<MatrixT, BlockM, BlockN, BlockK>;
-        using IOLayout
-            = IOLayout<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, WaveCount>;
+        using IOShape  = IOShape<MatrixT, BlockM, BlockN, BlockK>;
+        using IOLayout = conditional_t<
+            (bool)ROCWMMA_BLOCK_DIM_32_SUPPORTED && (BlockM <= 32u && BlockN <= 32),
+            IOLayout<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, WaveCount>,
+            IOLayoutInt<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, WaveCount>>;
+
         using IOTraits = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT, IOLayout::VW>;
 
         using PackUtil = PackUtil<DataT>;

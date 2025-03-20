@@ -70,9 +70,11 @@ namespace rocwmma
               typename DataLayoutT>
     struct IOConfig
     {
-        using IOShape = IOShape<MatrixT, BlockM, BlockN, BlockK>;
-        using IOLayout
-            = IOLayout<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, 1u>;
+        using IOShape  = IOShape<MatrixT, BlockM, BlockN, BlockK>;
+        using IOLayout = conditional_t<
+            (bool)ROCWMMA_BLOCK_DIM_32_SUPPORTED && (BlockM <= 32u && BlockN <= 32),
+            IOLayout<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, 1u>,
+            IOLayoutInt<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, 1u>>;
         using IOTraits = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT, IOLayout::VW>;
 
         using PackUtil    = PackUtil<DataT>;
@@ -104,10 +106,15 @@ namespace rocwmma
     template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
     struct IOConfig<accumulator, BlockM, BlockN, BlockK, DataT, void>
     {
-        using IOShape  = IOShape<accumulator, BlockM, BlockN, BlockK>;
-        using IOLayout = IOLayout<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, 1u>;
-        using IOTraits = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT>;
-        using PackUtil = PackUtil<DataT>;
+        using IOShape = IOShape<accumulator, BlockM, BlockN, BlockK>;
+
+        using IOLayout = conditional_t<
+            (bool)ROCWMMA_BLOCK_DIM_32_SUPPORTED && (BlockM <= 32u && BlockN <= 32),
+            IOLayout<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, 1u>,
+            IOLayoutInt<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, 1u>>;
+
+        using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT>;
+        using PackUtil    = PackUtil<DataT>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
 
         using PreMmaXForm = register_layout_transform<typename IOLayout::FragmentLayout,

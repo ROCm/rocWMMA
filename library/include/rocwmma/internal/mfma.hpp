@@ -26,31 +26,35 @@
 #ifndef ROCWMMA_MFMA_HPP
 #define ROCWMMA_MFMA_HPP
 
-#include "mma.hpp"
-#include "mma_traits.hpp"
-#include "mma_selector.hpp"
 #include "mfma_impl.hpp"
+#include "mma.hpp"
+#include "mma_selector.hpp"
+#include "mma_traits.hpp"
 
 namespace rocwmma
 {
     // Expose MFMA implementation backend
-    template<typename InputTA,
-             typename InputTB,
-             typename ComputeT,
-             uint32_t BlockM,
-             uint32_t BlockN,
-             uint32_t BlockK>
+    template <typename InputTA,
+              typename InputTB,
+              typename ComputeT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK>
     using Mfma_impl = detail::amdgcn_mfma<InputTA, InputTB, ComputeT, BlockM, BlockN, BlockK>;
 
     // Create a backend selector class for mfma backend. Given fixed BlockM and BlockN,
     // will try to find the highest BlockK throughput instruction if it exists.
-    template<typename InputTA,
-             typename InputTB,
-             typename ComputeT,
-             uint32_t BlockM,
-             uint32_t BlockN,
-             uint32_t BlockKTest = 64u> // Current max possible K-value for mfma instr (most efficient)
-    struct MfmaSelector : public MmaSelector<Mfma_impl, InputTA, InputTB, ComputeT, BlockM, BlockN, BlockKTest>{};
+    template <typename InputTA,
+              typename InputTB,
+              typename ComputeT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockKTest
+              = 64u> // Current max possible K-value for mfma instr (most efficient)
+    struct MfmaOpSelector
+        : public MmaOpSelector<Mfma_impl, InputTA, InputTB, ComputeT, BlockM, BlockN, BlockKTest>
+    {
+    };
 
     // Given a fixed frag size and BlockM and BlockN values, the mfma class will select the mfma backend if it exists
     // and then forward it to the Mma base class driver.
@@ -60,20 +64,19 @@ namespace rocwmma
               typename InputTA,
               typename InputTB,
               typename ComputeT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK = FragK, // Default K throughput search
+              uint32_t       BlockM,
+              uint32_t       BlockN,
+              uint32_t       BlockK      = FragK, // Default K throughput search
               MmaAccumPolicy AccumPolicy = MmaAccumPolicy::ROW_MAJOR>
-    struct Mfma 
-    : public Mma<FragM,
-                 FragN,
-                 FragK,
-                 typename MfmaSelector<InputTA, InputTB, ComputeT, BlockM, BlockN, BlockK>::SelectedOp,
-                 AccumPolicy>
+    struct Mfma
+        : public Mma<FragM,
+                     FragN,
+                     FragK,
+                     typename MfmaOpSelector<InputTA, InputTB, ComputeT, BlockM, BlockN, BlockK>::
+                         SelectedOp,
+                     AccumPolicy>,
+          public MfmaOpSelector<InputTA, InputTB, ComputeT, BlockM, BlockN, BlockK>
     {
-        // Op cache
-        using SelectedOp = typename MfmaSelector<InputTA, InputTB, ComputeT, BlockM, BlockN, BlockK>::SelectedOp;
-
         // Driver interface from base class Mma:
         // template <typename VecTA, typename VecTB, typename VecTC>
         // ROCWMMA_DEVICE static inline decltype(auto) exec(VecTA&& a, VecTB&& b, VecTC& accum);
