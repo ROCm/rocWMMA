@@ -31,7 +31,7 @@
 #include "io_traits.hpp"
 #include "types.hpp"
 #include "vector.hpp"
-
+#include "mma_traits.hpp"
 namespace rocwmma
 {
 

@@ -27,6 +27,7 @@
 #define ROCWMMA_WMMA_IMPL_HPP
 
 #include "constants.hpp"
+#include "mma_traits.hpp"
 #include "types.hpp"
 #include "utility/type_traits.hpp"
 
