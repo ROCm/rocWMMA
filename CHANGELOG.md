@@ -40,6 +40,10 @@ Documentation for rocWMMA is available at
 * Fixed a bug causing runtime compilation errors with hipRTC
 * Various documentation updates and fixes
 
+### Upcoming changes
+
+* rocWMMA 2.x plans to augment fragment API objects with additional meta-properties which will improve API expressiveness and configurability of parameters including multiple-wave cooperation. As part of this change, cooperative rocWMMA API will become deprecated in a future ROCm release.
+
 ## rocWMMA 1.5.0 for ROCm 6.2.0
 
 ### Additions
