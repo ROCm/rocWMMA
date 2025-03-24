@@ -42,7 +42,7 @@ Documentation for rocWMMA is available at
 
 ### Upcoming changes
 
-* rocWMMA 2.x plans to augment fragment API objects with additional meta-properties which will improve API expressiveness and configurability of parameters including multiple-wave cooperation. As part of this change, cooperative rocWMMA API will become deprecated in a future ROCm release.
+* rocWMMA 2.x plans to augment fragment API objects with additional meta-properties which will improve API expressiveness and configurability of parameters including multiple-wave cooperation. As part of this change, cooperative rocWMMA API functions `load_matrix_coop_sync` and `store_matrix_coop_sync` will become deprecated in a future ROCm release.
 
 ## rocWMMA 1.5.0 for ROCm 6.2.0
 
