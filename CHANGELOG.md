@@ -16,7 +16,7 @@ Documentation for rocWMMA is available at
 
 * Removed support for the gfx940 and gfx941 targets
 * Augmented load / store / MMA internals with static loop unrolling
-* Switched to use interleaved layouts in mma to improve overall performance
+* Switched to use interleaved layouts in MMA to improve overall performance
 
 ### Resolved issues
 
