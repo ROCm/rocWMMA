@@ -17,6 +17,7 @@ Documentation for rocWMMA is available at
 * Removed support for the gfx940 and gfx941 targets
 * Augmented load / store / MMA internals with static loop unrolling
 * Switched to use interleaved layouts in MMA to improve overall performance
+* rocWMMA mma_sync API now supports `wave tile` fragment sizes
 
 ### Resolved issues
 
