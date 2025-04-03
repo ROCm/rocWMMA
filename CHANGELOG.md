@@ -3,7 +3,26 @@
 Documentation for rocWMMA is available at
 [https://rocm.docs.amd.com/projects/rocWMMA/en/latest](https://rocm.docs.amd.com/projects/rocWMMA/en/latest).
 
-## (Unreleased) rocWMMA 1.7.0 for ROCm 6.4.0
+## (Unreleased) rocWMMA 1.8.0 for ROCm 6.5.0
+
+### Added
+
+* Added internal flow control barriers to improve asm code layout and improve overall performance
+* Added internal register layout transforms and tests to support interleaved mma layouts
+* Added support for the gfx950 target
+* Added mixed input` bf8` / `fp8` input types mma support
+
+### Changed
+
+* Removed support for targets gfx940 and gfx941
+* Augmented load / store / mma internals with static loop unrolling
+* Switched to use interleaved layouts in mma to improve overall performance
+
+### Resolved issues
+
+* Fixed a validation issue for small precision compute types `< B32` on gfx9
+
+## rocWMMA 1.7.0 for ROCm 6.4.0
 
 ### Added
 
