@@ -77,6 +77,9 @@ file(WRITE "${INSTALL_TEST_FILE}"
 ]=]
 )
 
+#Prevent CMake to add building path to RUNPATH
+set(CMAKE_SKIP_RPATH  TRUE)
+
 # Regular gtests that don't require any special
 # designation for validation or benchmarking
 function(add_rocwmma_test TEST_TARGET TEST_SOURCE)
@@ -84,7 +87,7 @@ function(add_rocwmma_test TEST_TARGET TEST_SOURCE)
   list(APPEND TEST_SOURCE ${ARGN})
   add_executable(${TEST_TARGET} ${TEST_SOURCE})
   target_link_libraries(${TEST_TARGET} rocwmma gtest)
-  target_link_libraries(${TEST_TARGET} OpenMP::OpenMP_CXX "-L${HIP_CLANG_ROOT}/lib" "-Wl,-rpath=${HIP_CLANG_ROOT}/lib")
+  target_link_libraries(${TEST_TARGET} OpenMP::OpenMP_CXX "-L${HIP_CLANG_ROOT}/lib" "-fno-rtlib-add-rpath")
   target_include_directories(${TEST_TARGET} PRIVATE
                              ${CMAKE_CURRENT_SOURCE_DIR}
                              ${ROCWMMA_TEST_INCLUDE_DIRS})
