@@ -21,7 +21,7 @@ Documentation for rocWMMA is available at
 ### Resolved issues
 
 * Fixed a validation issue for small precision compute types `< B32` on gfx9
-* Fixed cmake validation of compiler support for `bf8` / `fp8` types
+* Fixed CMake validation of compiler support for `bf8` / `fp8` types
 
 ## rocWMMA 1.7.0 for ROCm 6.4.0
 
