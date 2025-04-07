@@ -70,11 +70,9 @@ namespace rocwmma
               typename DataLayoutT>
     struct IOConfig
     {
-        using IOShape  = IOShape<MatrixT, BlockM, BlockN, BlockK>;
-        using IOLayout = conditional_t<
-            (bool)ROCWMMA_BLOCK_DIM_32_SUPPORTED && (BlockM <= 32u && BlockN <= 32),
-            IOLayout<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, 1u>,
-            IOLayoutInt<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, 1u>>;
+        using IOShape = IOShape<MatrixT, BlockM, BlockN, BlockK>;
+        using IOLayout
+            = IOLayoutInt<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, 1u>;
         using IOTraits = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT, IOLayout::VW>;
 
         using PackUtil    = PackUtil<DataT>;
@@ -107,12 +105,8 @@ namespace rocwmma
     struct IOConfig<accumulator, BlockM, BlockN, BlockK, DataT, void>
     {
         using IOShape = IOShape<accumulator, BlockM, BlockN, BlockK>;
-
-        using IOLayout = conditional_t<
-            (bool)ROCWMMA_BLOCK_DIM_32_SUPPORTED && (BlockM <= 32u && BlockN <= 32),
-            IOLayout<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, 1u>,
-            IOLayoutInt<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, 1u>>;
-
+        using IOLayout
+            = IOLayoutInt<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, 1u>;
         using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT>;
         using PackUtil    = PackUtil<DataT>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
