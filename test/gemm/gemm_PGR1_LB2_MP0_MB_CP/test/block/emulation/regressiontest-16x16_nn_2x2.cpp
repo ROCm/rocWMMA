@@ -24,21 +24,25 @@
  *
  *******************************************************************************/
 
-#ifndef ROCWMMA_UTILITY_SEQUENCE_HPP
-#define ROCWMMA_UTILITY_SEQUENCE_HPP
+#include "common_test_emulation_params.hpp"
+#include "test/test_includes.hpp"
 
-#include "sequence_impl.hpp"
 namespace rocwmma
 {
-    using detail::index_sequence;
-    using detail::make_index_sequence;
-    using detail::make_offset_index_sequence;
 
-    using detail::contains_number;
-    using detail::contains_number_v;
-    using detail::contains_type;
-    using detail::contains_type_v;
+    ROCWMMA_GENERATE_GEMM_GTEST_SUITE_PARAMS(TestParamsNN,
+                                             EmulationCommonTestParams,
+                                             KernelGeneratorImpl,
+                                             TestTypes16x16,
+                                             TestBlockSizes16x16SmallBlockK,
+                                             TestLayoutsNN,
+                                             TestLdsDataLayouts,
+                                             TestGemmConfigsBlockLevel,
+                                             TestBlocks2x2);
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_UTILITY_SEQUENCE_HPP
+// Instantiate kernels as a test suite
+ROCWMMA_INSTANTIATE_GEMM_GTEST_SUITE_NO_WARMUP(Gemm_PGR1_LB2_MP0_MB_CP,
+                                               EmulationRegression_BLK_16x16_nn_2x2,
+                                               rocwmma::TestParamsNN);
