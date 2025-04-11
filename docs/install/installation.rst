@@ -26,9 +26,9 @@ Prerequisites
 
 rocWMMA requires the following prerequisites:
 
-*  A ROCm-enabled platform, using ROCm version 6.0 or later.
+*  A ROCm-enabled platform, using ROCm version 6.4 or later.
    For more information, see :doc:`ROCm installation <rocm-install-on-linux:index>`.
-*  :doc:`rocBLAS <rocblas:index>` version 4.0.0 for ROCm version 6.0 or later. (Optional: only required if rocWMMA is configured
+*  :doc:`rocBLAS <rocblas:index>` version 4.3.0 for ROCm version 6.3 or later. (Optional: only required if rocWMMA is configured
    to use rocBLAS for validation. See below for more information.)
 
 Installing prebuilt packages
@@ -60,7 +60,7 @@ After rocWMMA is installed, it can be used just like any other library with a C+
 
 .. note::
 
-   The prebuilt package supports the gfx908, gfx90a, gfx942, gfx950,
+   The prebuilt package client executables support the gfx908, gfx90a, gfx942, gfx950,
    gfx1100, gfx1101, gfx1102, gfx1200, and gfx1201 targets.
 
 After rocWMMA is installed, you can find the ``rocwmma.hpp`` header file in the ``/opt/rocm/include/rocwmma`` directory.
@@ -94,7 +94,7 @@ rocWMMA is supported on the following GPUs.
 
       ``F8`` and ``BF8`` data type support requires the gfx942 or gfx950.
 
-*  AMD RDNA3 class GPUs featuring AI acceleration support, including the
+*  AMD RDNA class GPUs featuring AI acceleration support, including the
    gfx1100, gfx1101, and gfx1102 (collectively known as gfx11), and the gfx1200 and gfx1201 (collectively known as gfx12).
 
    .. note::
@@ -113,7 +113,7 @@ The following dependencies are required:
 *  `rocm-cmake <https://github.com/ROCm/rocm-cmake>`_ (Version 0.8.0 or later)
 *  `HIP runtime <https://github.com/ROCm/hip>`_ (Version 4.3.0 or later) (Or the ROCm hip-runtime-amd package)
 *  `LLVM OpenMP <https://openmp.llvm.org/>`_ runtime dev package (Version 10.0 or later) (Also available as the ROCm rocm-llvm-dev package)
-*  (Optional, only required to use rocBLAS for validation) `rocBLAS <https://github.com/ROCm/rocBLAS>`_ (Version 4.0.0 for ROCm 6.0 or later) (Or the ROCm rocblas and rocblas-dev packages).
+*  (Optional, only required to use rocBLAS for validation) `rocBLAS <https://github.com/ROCm/rocBLAS>`_ (Version 4.3.0 for ROCm 6.3 or later) (Or the ROCm rocblas and rocblas-dev packages).
 
 .. <!-- spellcheck-enable -->
 
@@ -235,7 +235,7 @@ After configuration, build the library using this command:
 
 .. note::
 
-   It's recommended to use a minimum of 16 threads to build hipTensor with any tests, for example, using ``-j16``.
+   It's recommended to use a minimum of 16 threads to build rocWMMA with any tests, for example, using ``-j16``.
 
 Building the library and samples
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
