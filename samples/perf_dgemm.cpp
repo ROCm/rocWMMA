@@ -229,9 +229,10 @@ constexpr uint32_t MACRO_TILE_N = WARPS_N * WARP_TILE_N;
 constexpr uint32_t MACRO_TILE_K = ROCWMMA_K;
 
 // Mfma frags (warp tile)
-using MfmaFragA   = fragment<matrix_a, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, InputT, DataLayoutA>;
-using MfmaFragB   = fragment<matrix_b, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, InputT, DataLayoutB>;
-using MfmaFragC   = fragment<accumulator, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, OutputT, DataLayoutC>;
+using MfmaFragA = fragment<matrix_a, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, InputT, DataLayoutA>;
+using MfmaFragB = fragment<matrix_b, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, InputT, DataLayoutB>;
+using MfmaFragC
+    = fragment<accumulator, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, OutputT, DataLayoutC>;
 using MfmaFragD   = MfmaFragC;
 using MfmaFragAcc = fragment<accumulator, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, ComputeT>;
 
@@ -265,7 +266,6 @@ constexpr auto transformLRFragAToMfmaFragA
 
 constexpr auto transformLRFragBToMfmaFragB
     = [](LRFragB const& lrFragB) { return applyDataLayout<DataLayoutB>(applyTranspose(lrFragB)); };
-
 
 ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
                                                           uint32_t       n,
@@ -362,8 +362,10 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
           + LWFragBMap1d::fromMatrixCoord(make_coord2d(get<1>(localWarpOffset), 0u), ldsld);
 
     // Write prefetch to local
-    store_matrix_coop_sync<WARP_COUNT>(ldsPtrLo + ldsWriteOffsetA, transformGRFragAToLWFragA(grFragA), ldsld, warpIndex);
-    store_matrix_coop_sync<WARP_COUNT>(ldsPtrLo + ldsWriteOffsetB, transformGRFragBToLWFragB(grFragB), ldsld, warpIndex);
+    store_matrix_coop_sync<WARP_COUNT>(
+        ldsPtrLo + ldsWriteOffsetA, transformGRFragAToLWFragA(grFragA), ldsld, warpIndex);
+    store_matrix_coop_sync<WARP_COUNT>(
+        ldsPtrLo + ldsWriteOffsetB, transformGRFragBToLWFragB(grFragB), ldsld, warpIndex);
 
     /// Initialize accumulation frags
     MfmaFragAcc mfmaFragAcc;
@@ -382,7 +384,10 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         load_matrix_sync(lrFragB, ldsPtrLo + ldsReadOffsetB, ldsld);
 
         // Matrix mult-accum(A * B)
-        mma_sync(mfmaFragAcc, transformLRFragAToMfmaFragA(lrFragA), transformLRFragBToMfmaFragB(lrFragB), mfmaFragAcc);
+        mma_sync(mfmaFragAcc,
+                 transformLRFragAToMfmaFragA(lrFragA),
+                 transformLRFragBToMfmaFragB(lrFragB),
+                 mfmaFragAcc);
 
         // Prefetch next round of global frags
         load_matrix_coop_sync<WARP_COUNT>(grFragA, a + globalReadOffsetA, lda, warpIndex);
@@ -393,8 +398,10 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         globalReadOffsetB += kStepOffsetB;
 
         // Write prefetch to second LDS buffer
-        store_matrix_coop_sync<WARP_COUNT>(ldsPtrHi + ldsWriteOffsetA, transformGRFragAToLWFragA(grFragA), ldsld, warpIndex);
-        store_matrix_coop_sync<WARP_COUNT>(ldsPtrHi + ldsWriteOffsetB, transformGRFragBToLWFragB(grFragB), ldsld, warpIndex);
+        store_matrix_coop_sync<WARP_COUNT>(
+            ldsPtrHi + ldsWriteOffsetA, transformGRFragAToLWFragA(grFragA), ldsld, warpIndex);
+        store_matrix_coop_sync<WARP_COUNT>(
+            ldsPtrHi + ldsWriteOffsetB, transformGRFragBToLWFragB(grFragB), ldsld, warpIndex);
 
         // Make sure that all waves have finished reading / writing to lds for currentK.
         synchronize_workgroup();
@@ -417,10 +424,13 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
     LRFragB lrFragB;
     load_matrix_sync(lrFragA, ldsPtrLo + ldsReadOffsetA, ldsld);
     load_matrix_sync(lrFragB, ldsPtrLo + ldsReadOffsetB, ldsld);
-    mma_sync(mfmaFragAcc, transformLRFragAToMfmaFragA(lrFragA), transformLRFragBToMfmaFragB(lrFragB), mfmaFragAcc);
+    mma_sync(mfmaFragAcc,
+             transformLRFragAToMfmaFragA(lrFragA),
+             transformLRFragBToMfmaFragB(lrFragB),
+             mfmaFragAcc);
 
     // D = alpha * accum + beta * C
-    MfmaFragD mfmaFragD;
+    MfmaFragD          mfmaFragD;
     constexpr uint32_t chunkSize = 8u;
     constexpr uint32_t chunks    = mfmaFragD.num_elements / chunkSize;
     constexpr uint32_t remain    = mfmaFragD.num_elements % chunkSize;
@@ -429,7 +439,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         for(int i = start_idx; i < start_idx + size; i++)
         {
             mfmaFragD.x[i] = static_cast<OutputT>(alpha * mfmaFragAcc.x[i]
-                                                 + beta * static_cast<ComputeT>(mfmaFragC.x[i]));
+                                                  + beta * static_cast<ComputeT>(mfmaFragC.x[i]));
         }
     };
 
@@ -588,18 +598,20 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, 
     CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
 
     // Echo performance
-    std::cout << "TBlockX, TBlockY, "
-              << "BlocksX, BlocksY, "
-              << "BlkM, BlkN, BlkK, "
-              << "MatM, MatN, MatK, "
-              << "alpha, lda, ldb, "
-              << "beta, ldc, ldd, "
-              << "elapsedMs, Problem Size(GFlops), TFlops/s" << std::endl;
+    std::cout << std::left << std::setw(8) << "TBlockX" << std::setw(8) << "TBlockY" << std::setw(8)
+              << "BlocksM" << std::setw(8) << "BlocksN" << std::setw(6) << "BlkM" << std::setw(6)
+              << "BlkN" << std::setw(6) << "BlkK" << std::setw(8) << "MatM" << std::setw(8)
+              << "MatN" << std::setw(8) << "MatK" << std::setw(8) << "alpha" << std::setw(8)
+              << "lda" << std::setw(8) << "ldb" << std::setw(8) << "beta" << std::setw(8) << "ldc"
+              << std::setw(8) << "ldd" << std::setw(13) << "elapsedMs" << std::setw(23)
+              << "Problem Size(GFlops)" << std::setw(10) << "TFlops/s" << std::endl;
 
-    std::cout << TBLOCK_X << ", " << TBLOCK_Y << ", " << BLOCKS_M << ", " << BLOCKS_N << ", "
-              << ROCWMMA_M << ", " << ROCWMMA_N << ", " << ROCWMMA_K << ", " << m << ", " << n
-              << ", " << k << ", " << alpha << ", " << lda << ", " << ldb << ", " << beta << ", "
-              << ldc << ", " << ldd << ", " << elapsedTimeMs << ", " << gFlops << ", "
+    std::cout << std::left << std::setw(8) << TBLOCK_X << std::setw(8) << TBLOCK_Y << std::setw(8)
+              << BLOCKS_M << std::setw(8) << BLOCKS_N << std::setw(6) << ROCWMMA_M << std::setw(6)
+              << ROCWMMA_N << std::setw(6) << ROCWMMA_K << std::setw(8) << m << std::setw(8) << n
+              << std::setw(8) << k << std::setw(8) << alpha << std::setw(8) << lda << std::setw(8)
+              << ldb << std::setw(8) << beta << std::setw(8) << ldc << std::setw(8) << ldd
+              << std::setw(13) << elapsedTimeMs << std::setw(23) << gFlops << std::setw(10)
               << tFlopsPerSec << std::endl;
 
 #if !NDEBUG
