@@ -38,7 +38,7 @@ function(add_rocwmma_sample TEST_TARGET TEST_SOURCE)
 
   list(APPEND TEST_SOURCE ${ARGN})
   add_executable(${TEST_TARGET} ${TEST_SOURCE})
-  target_link_libraries(${TEST_TARGET} OpenMP::OpenMP_CXX "-L${HIP_CLANG_ROOT}/lib" "-fno-rtlib-add-rpath")
+  target_link_libraries(${TEST_TARGET} OpenMP::OpenMP_CXX "-L${HIP_CLANG_ROOT}/lib" "-Wl,-rpath=${ROCM_PATH}/llvm/lib" "-fno-rtlib-add-rpath")
   target_link_libraries(${TEST_TARGET} rocwmma hiprtc::hiprtc)
   target_include_directories(${TEST_TARGET} PRIVATE
                              ${CMAKE_CURRENT_SOURCE_DIR}
