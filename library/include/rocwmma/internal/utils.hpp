@@ -137,16 +137,6 @@ namespace std
 
 namespace rocwmma
 {
-    // Computes ceil(numerator/divisor) for integer types.
-    template <typename intT1,
-              class = typename enable_if<is_integral<intT1>::value>::type,
-              typename intT2,
-              class = typename enable_if<is_integral<intT2>::value>::type>
-    static constexpr intT1 ceilDiv(const intT1 numerator, const intT2 divisor)
-    {
-        return (numerator + divisor - 1) / divisor;
-    }
-
     // Calculate integer Log base 2
     template <uint32_t x>
     struct Log2

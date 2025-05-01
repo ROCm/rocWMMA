@@ -34,12 +34,10 @@
 
 static constexpr bool DebugOnFail = false;
 
-#define PACK_UTIL_EXPECT_EQ(LHS, RHS) \
-    ROCWMMA_EXPECT_EQUAL(LHS, RHS, DebugOnFail);
+#define PACK_UTIL_EXPECT_EQ(LHS, RHS) ROCWMMA_EXPECT_EQUAL(LHS, RHS, DebugOnFail);
 
 namespace rocwmma
 {
-
 
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline DataT get(VecT<DataT, VecSize> const& v, uint32_t idx)
@@ -48,22 +46,11 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE static inline auto generateSeqVec()
-    {
-        auto buildSeq = [](auto&& idx) {
-            constexpr auto Index = std::decay_t<decltype(idx)>::value;
-            return static_cast<DataT>(Index);
-        };
-
-        return vector_generator<DataT, VecSize>()(buildSeq);
-    }
-
-    template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline bool packUtilTestBasic()
     {
         bool err = false;
 
-        auto res = generateSeqVec<DataT, VecSize>();
+        auto res = make_vector_sequence<DataT, VecSize>();
 
         for(uint32_t i = 0; i < VecSize; i++)
         {
@@ -85,7 +72,7 @@ namespace rocwmma
         using PackUtil = rocwmma::PackUtil<DataT>;
 
         bool err = false;
-        auto res = generateSeqVec<DataT, VecSize>();
+        auto res = make_vector_sequence<DataT, VecSize>();
 
         if constexpr(PackUtil::Traits::PackRatio == 1)
         {
@@ -97,13 +84,15 @@ namespace rocwmma
             using UnpackedT = typename PackUtil::Traits::UnpackedT;
 
             auto paddedData = PackUtil::pad(res);
-            err |= !PACK_UTIL_EXPECT_EQ((std::is_same_v<decltype(paddedData), VecT<PackedT, VecSize>>), true);
+            err |= !PACK_UTIL_EXPECT_EQ(
+                (std::is_same_v<decltype(paddedData), VecT<PackedT, VecSize>>), true);
             for(uint32_t i = 0; i < VecSize; i++)
             {
                 auto value = get(paddedData, i);
 
                 // unpadded data is at idx 0 in the padded data by default
-                err |= !PACK_UTIL_EXPECT_EQ(*reinterpret_cast<DataT*>(&value), static_cast<DataT>((float)i));
+                err |= !PACK_UTIL_EXPECT_EQ(*reinterpret_cast<DataT*>(&value),
+                                            static_cast<DataT>((float)i));
             }
         }
 
@@ -122,7 +111,7 @@ namespace rocwmma
         using PackUtil = rocwmma::PackUtil<DataT>;
 
         bool err = false;
-        auto res = generateSeqVec<DataT, VecSize>();
+        auto res = make_vector_sequence<DataT, VecSize>();
 
         if constexpr(PackUtil::Traits::PackRatio == 1)
         {
@@ -135,11 +124,13 @@ namespace rocwmma
 
             // padIdx == 1 which is valid for 8 bits and 16 bits
             auto paddedData = PackUtil::template pad<1>(res);
-            err |= !PACK_UTIL_EXPECT_EQ((std::is_same_v<decltype(paddedData), VecT<PackedT, VecSize>>), true);
+            err |= !PACK_UTIL_EXPECT_EQ(
+                (std::is_same_v<decltype(paddedData), VecT<PackedT, VecSize>>), true);
             for(uint32_t i = 0u; i < VecSize; i++)
             {
                 PackedT value = get(paddedData, i);
-                err |= !PACK_UTIL_EXPECT_EQ(*(reinterpret_cast<UnpackedT*>(&value) + 1u), static_cast<UnpackedT>(i));
+                err |= !PACK_UTIL_EXPECT_EQ(*(reinterpret_cast<UnpackedT*>(&value) + 1u),
+                                            static_cast<UnpackedT>(i));
             }
         }
 
@@ -163,7 +154,7 @@ namespace rocwmma
 
         if constexpr(PackUtil::Traits::PackRatio == 1)
         {
-            auto res = generateSeqVec<PackedT, VecSize>();
+            auto res = make_vector_sequence<PackedT, VecSize>();
             err |= !PACK_UTIL_EXPECT_EQ(res, PackUtil::unpad(res));
         }
         else
@@ -176,8 +167,9 @@ namespace rocwmma
             }
 
             auto unpaddedData = PackUtil::unpad(res);
-            err |= !PACK_UTIL_EXPECT_EQ((std::is_same_v<decltype(unpaddedData), VecT<UnpackedT, VecSize>>), true);
-            err |= !PACK_UTIL_EXPECT_EQ(unpaddedData, (generateSeqVec<DataT, VecSize>()));
+            err |= !PACK_UTIL_EXPECT_EQ(
+                (std::is_same_v<decltype(unpaddedData), VecT<UnpackedT, VecSize>>), true);
+            err |= !PACK_UTIL_EXPECT_EQ(unpaddedData, (make_vector_sequence<DataT, VecSize>()));
         }
 
         return err;
@@ -200,7 +192,7 @@ namespace rocwmma
 
         if constexpr(PackUtil::Traits::PackRatio == 1)
         {
-            auto res = generateSeqVec<PackedT, VecSize>();
+            auto res = make_vector_sequence<PackedT, VecSize>();
             err |= !PACK_UTIL_EXPECT_EQ(res, PackUtil::unpad(res));
         }
         else
@@ -213,8 +205,9 @@ namespace rocwmma
             }
 
             auto unpaddedData = PackUtil::template unpad<1>(res);
-            err |= !PACK_UTIL_EXPECT_EQ((std::is_same_v<decltype(unpaddedData), VecT<UnpackedT, VecSize>>), true);
-            err |= !PACK_UTIL_EXPECT_EQ(unpaddedData, (generateSeqVec<DataT, VecSize>()));
+            err |= !PACK_UTIL_EXPECT_EQ(
+                (std::is_same_v<decltype(unpaddedData), VecT<UnpackedT, VecSize>>), true);
+            err |= !PACK_UTIL_EXPECT_EQ(unpaddedData, (make_vector_sequence<DataT, VecSize>()));
         }
 
         return err;
@@ -232,14 +225,17 @@ namespace rocwmma
         // required by pack(): VecSize % PackUtil::Traits::PackRatio == 0
         if constexpr(VecSize % PackUtil::Traits::PackRatio == 0)
         {
-            auto res = generateSeqVec<UnpackedT, VecSize>();
+            auto res = make_vector_sequence<UnpackedT, VecSize>();
 
             // pack() cast VecT<UnpackedT, VecSize> const &  to VecT<PackedT, VecSize / PackRatio> const &
-            err |= !PACK_UTIL_EXPECT_EQ((std::is_same_v<decltype(PackUtil::pack(res)),
-                                   VecT<PackedT, VecSize / PackUtil::Traits::PackRatio> const&>), true);
+            err |= !PACK_UTIL_EXPECT_EQ(
+                (std::is_same_v<decltype(PackUtil::pack(res)),
+                                VecT<PackedT, VecSize / PackUtil::Traits::PackRatio> const&>),
+                true);
 
             // argument and return of pack() point to the same addr
-            err |= !PACK_UTIL_EXPECT_EQ(reinterpret_cast<void const*>(&PackUtil::pack(res)), reinterpret_cast<void const*>(&res));
+            err |= !PACK_UTIL_EXPECT_EQ(reinterpret_cast<void const*>(&PackUtil::pack(res)),
+                                        reinterpret_cast<void const*>(&res));
         }
 
         return err;
@@ -254,15 +250,17 @@ namespace rocwmma
 
         bool err = false;
 
-        auto res = generateSeqVec<PackedT, VecSize>();
+        auto res = make_vector_sequence<PackedT, VecSize>();
 
         // pack() cast VecT<PackedT, VecSize> const &  to VecT<UnpackedT, VecSize * PackRatio> const &
-        err |= !PACK_UTIL_EXPECT_EQ((std::is_same_v<decltype(PackUtil::unpack(res)),
-                               VecT<UnpackedT, VecSize * PackUtil::Traits::PackRatio> const&>), true);
+        err |= !PACK_UTIL_EXPECT_EQ(
+            (std::is_same_v<decltype(PackUtil::unpack(res)),
+                            VecT<UnpackedT, VecSize * PackUtil::Traits::PackRatio> const&>),
+            true);
 
         // argument and return of pack() point to the same addr
         err |= !PACK_UTIL_EXPECT_EQ(reinterpret_cast<void const*>(&PackUtil::unpack(res)),
-               reinterpret_cast<void const*>(&res));
+                                    reinterpret_cast<void const*>(&res));
 
         return err;
     }
@@ -275,14 +273,16 @@ namespace rocwmma
         using UnpackedT = typename PackUtil::Traits::UnpackedT;
 
         bool err = false;
-        auto res = generateSeqVec<UnpackedT, VecSize>();
+        auto res = make_vector_sequence<UnpackedT, VecSize>();
 
         if constexpr(VecSize % PackUtil::Traits::PackRatio == 0)
         {
-            err |= !PACK_UTIL_EXPECT_EQ((std::is_same_v<decltype(PackUtil::paddedPack(res)),
-                                   VecT<PackedT, VecSize / PackUtil::Traits::PackRatio> const&>), true);
+            err |= !PACK_UTIL_EXPECT_EQ(
+                (std::is_same_v<decltype(PackUtil::paddedPack(res)),
+                                VecT<PackedT, VecSize / PackUtil::Traits::PackRatio> const&>),
+                true);
             err |= !PACK_UTIL_EXPECT_EQ(reinterpret_cast<void const*>(&PackUtil::paddedPack(res)),
-                    reinterpret_cast<void const*>(&res));
+                                        reinterpret_cast<void const*>(&res));
         }
         else if constexpr(VecSize * 2 == PackUtil::Traits::PackRatio)
         {
@@ -309,7 +309,8 @@ namespace rocwmma
                     auto value = get(paddedData, i);
 
                     // unpadded data is at idx 0 in the padded data by default
-                    err |= !PACK_UTIL_EXPECT_EQ(*reinterpret_cast<DataT*>(&value), static_cast<DataT>((float)i));
+                    err |= !PACK_UTIL_EXPECT_EQ(*reinterpret_cast<DataT*>(&value),
+                                                static_cast<DataT>((float)i));
                 }
             }
         }
@@ -328,11 +329,14 @@ namespace rocwmma
 
         if constexpr(VecSize % PackUtil::Traits::PackRatio == 0)
         {
-            auto res = generateSeqVec<PackedT, VecSize / PackUtil::Traits::PackRatio>();
-            err |= !PACK_UTIL_EXPECT_EQ((std::is_same_v<decltype(PackUtil::template paddedUnpack<VecSize>(res)),
-                                   VecT<UnpackedT, VecSize> const&>), true);
-            err |= !PACK_UTIL_EXPECT_EQ(reinterpret_cast<void const*>(&PackUtil::template paddedUnpack<VecSize>(res)),
-                    reinterpret_cast<void const*>(&res));
+            auto res = make_vector_sequence<PackedT, VecSize / PackUtil::Traits::PackRatio>();
+            err |= !PACK_UTIL_EXPECT_EQ(
+                (std::is_same_v<decltype(PackUtil::template paddedUnpack<VecSize>(res)),
+                                VecT<UnpackedT, VecSize> const&>),
+                true);
+            err |= !PACK_UTIL_EXPECT_EQ(
+                reinterpret_cast<void const*>(&PackUtil::template paddedUnpack<VecSize>(res)),
+                reinterpret_cast<void const*>(&res));
         }
         return err;
     }
@@ -350,12 +354,13 @@ namespace rocwmma
         {
             auto constexpr packSize = std::max(1u, VecSize / PackUtil::Traits::PackRatio);
             auto res                = VecT<PackedT, packSize>(0);
-            auto expectedData       = generateSeqVec<UnpackedT, VecSize>();
+            auto expectedData       = make_vector_sequence<UnpackedT, VecSize>();
             for(uint32_t i = 0; i < VecSize; i++)
             {
                 *(reinterpret_cast<VecT<UnpackedT, VecSize>*>(&res.data) + i) = expectedData;
             }
-            err |= !PACK_UTIL_EXPECT_EQ(PackUtil::template paddedUnpack<VecSize>(res), expectedData);
+            err |= !PACK_UTIL_EXPECT_EQ(PackUtil::template paddedUnpack<VecSize>(res),
+                                        expectedData);
         }
         return err;
     }
@@ -375,7 +380,8 @@ namespace rocwmma
             auto expectedData = VecT<UnpackedT, 1>(static_cast<UnpackedT>(1.0F));
             (*(reinterpret_cast<VecT<UnpackedT, VecSize>*>(&res.data))).data[0]
                 = expectedData.data[0];
-            err |= !PACK_UTIL_EXPECT_EQ(PackUtil::template paddedUnpack<VecSize>(res), expectedData);
+            err |= !PACK_UTIL_EXPECT_EQ(PackUtil::template paddedUnpack<VecSize>(res),
+                                        expectedData);
         }
         return err;
     }

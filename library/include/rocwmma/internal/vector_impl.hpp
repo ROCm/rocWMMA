@@ -239,6 +239,7 @@ namespace rocwmma
         // Helpers for expression expansion, specific to non_native_vector_base
         template <uint32_t... ns>
         using SeqT = integer_sequence<uint32_t, ns...>;
+
         template <uint32_t Rank>
         using Seq = make_integer_sequence<uint32_t, Rank>;
 
@@ -351,8 +352,8 @@ namespace rocwmma
     }
 
     template <typename T, unsigned int Rank>
-    ROCWMMA_HOST_DEVICE constexpr inline auto
-        non_native_vector_base<T, Rank>::operator++() noexcept -> VecT&
+    ROCWMMA_HOST_DEVICE constexpr inline auto non_native_vector_base<T, Rank>::operator++() noexcept
+        -> VecT&
     {
         return *this += VecT{static_cast<T>(1.0f)};
     }
@@ -367,8 +368,8 @@ namespace rocwmma
     }
 
     template <typename T, unsigned int Rank>
-    ROCWMMA_HOST_DEVICE constexpr inline auto
-        non_native_vector_base<T, Rank>::operator--() noexcept -> VecT&
+    ROCWMMA_HOST_DEVICE constexpr inline auto non_native_vector_base<T, Rank>::operator--() noexcept
+        -> VecT&
     {
         return *this -= VecT{static_cast<T>(1.0f)};
     }
@@ -662,7 +663,7 @@ namespace rocwmma
     template <typename T, unsigned int Rank, enable_if_integral_t<T>* /* = nullptr */>
     ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, Rank>
         operator>>(non_native_vector_base<T, Rank> const& x,
-                  non_native_vector_base<T, Rank> const& y) noexcept
+                   non_native_vector_base<T, Rank> const& y) noexcept
     {
         return non_native_vector_base<T, Rank>{x} >>= y;
     }
@@ -684,7 +685,7 @@ namespace rocwmma
     template <typename T, unsigned int Rank, enable_if_integral_t<T>* /* = nullptr */>
     ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, Rank>
         operator<<(non_native_vector_base<T, Rank> const& x,
-                  non_native_vector_base<T, Rank> const& y) noexcept
+                   non_native_vector_base<T, Rank> const& y) noexcept
     {
         return non_native_vector_base<T, Rank>{x} <<= y;
     }
@@ -772,7 +773,7 @@ namespace rocwmma
 #define ROCWMMA_HIP_NON_NATIVE_VECTOR_STORAGE_IMPL(TYPE, RANK)       \
     using Native_vec_ = rocwmma::non_native_vector_base<TYPE, RANK>; \
                                                                      \
-    union alignas(next_pow2(RANK * sizeof(TYPE)))                    \
+    union alignas(rocwmma::next_pow2(RANK * sizeof(TYPE)))           \
     {                                                                \
         Native_vec_ data;                                            \
         ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK##RANK(TYPE);            \

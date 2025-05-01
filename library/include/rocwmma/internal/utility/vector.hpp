@@ -76,6 +76,13 @@ namespace rocwmma
     template <typename VecT>
     ROCWMMA_HOST_DEVICE constexpr static inline auto vector_reduce_and(VecT&& v) noexcept;
 
+    /*! \brief Returns the reduction result of bit-wise and between all elements in the input vector
+    * @param v Input vector
+    * @tparam VecT Input vector type
+    */
+    template <typename VecT>
+    ROCWMMA_HOST_DEVICE constexpr static inline auto vector_reduce_or(VecT&& v) noexcept;
+
     /*! \brief Swaps elements in vector size of 2
     * @param v Input vector
     * @tparam VecT Templated input vector class
@@ -194,6 +201,16 @@ namespace rocwmma
               typename... ArgsT>
     ROCWMMA_HOST_DEVICE constexpr static inline auto
         vector_reduce2(VecT0&& v0, VecT1&& v1, Func&& func, ArgsT&&... args);
+
+    /*! \brief Creates a vector that contains a sequence of numbers starting at Start, incrementing
+    * by Stride for a VecSize number of steps.
+    * @tparam DataT Data type
+    * @tparam VecSize The size of the result vector
+    * @tparam Start The starting offset for the number set (Default = 0)
+    * @tparam Stride The step size between successive values (Default = 1)
+    */
+    template <typename DataT, uint32_t VecSize, uint32_t Start = 0u, uint32_t Stride = 1u>
+    ROCWMMA_HOST_DEVICE constexpr static inline auto make_vector_sequence();
 
 } // namespace rocwmma
 

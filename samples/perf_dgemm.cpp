@@ -733,8 +733,8 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, 
     CHECK_HIP_ERROR(hipMemcpy(d_d, matrixD.data(), bytesD, hipMemcpyHostToDevice));
 
     auto blockDim = dim3(TBLOCK_X, TBLOCK_Y);
-    auto gridDim  = dim3(rocwmma::ceilDiv(m, get<0>(macroTileSize)),
-                        rocwmma::ceilDiv(n, get<1>(macroTileSize)));
+    auto gridDim  = dim3(rocwmma::ceil_div(m, get<0>(macroTileSize)),
+                        rocwmma::ceil_div(n, get<1>(macroTileSize)));
 
     std::cout << "Launching GEMM kernel..." << std::endl;
     std::cout << "gridDim (" << gridDim.x << " " << gridDim.y << ")"

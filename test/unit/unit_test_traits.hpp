@@ -60,7 +60,7 @@ namespace rocwmma
             DWord       = 4u,
 
             PackedTile
-            = ceilDiv((uint32_t)Sizes::TileSize, Granularity* WaveSize* DWord) * Granularity,
+            = ceil_div((uint32_t)Sizes::TileSize, Granularity* WaveSize* DWord) * Granularity,
             UnpackedTile = PackedTile * PackTraits<DataT>::PackRatio,
         };
 
