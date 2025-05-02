@@ -313,77 +313,79 @@ namespace rocwmma
                     // Cache 1d data address offset
                     uint32_t dataOffset = DataLayout::fromMatrixCoord(currentOffset2d, ldm);
 
-                    // The outer loop layers guarantee that the currentOffset2d is at least within the boundary area,
+                    // The outer loop layers guarantee that the baseOffset2d is at least within the boundary area,
                     // and has at least one partial (1x1).
                     // Assumptions:
                     // - Partial count < VW
                     // - Partial count + bound count == VW.
                     // - Assume a minimum of 1 valid partial
 
-                    // Special case of VW == 1u
-                    if constexpr(TransactionSize == 1u)
+                    // Note: Outer layer has already tested 1x1 from baseOffset2d, which gives us
+                    // 1 valid partial.
+                    if constexpr(decay_t<decltype(idx)>::value == 0u && TransactionSize <= 2u)
                     {
-                        // Note: Outer layer has already tested 1x1.
-                        // There are no possible boundary violations
-                        // because we already have 1 valid partial!
-
-                        // Flatten to 1d data address
-                        using Bearer = BearerPolicy<DataT, TransactionSize>;
-                        Bearer::exec(buff, dataPtr + dataOffset);
-                    }
-                    // Special case of VW == 2u
-                    else if constexpr(TransactionSize == 2u)
-                    {
-                        // Check bounds conditions.
-                        // Low mask means no boundary violation
-                        if(!BoundsCtrl::checkBounds(currentOffset2d, dataSize2d))
+                        // Special case of VW == 1u on iteration 0
+                        if constexpr(TransactionSize == 1u)
                         {
-                            // Flatten to 1d data address
+                            // There are no possible boundary violations
+                            // because we already have 1 valid partial!
                             using Bearer = BearerPolicy<DataT, TransactionSize>;
                             Bearer::exec(buff, dataPtr + dataOffset);
                         }
-                        // On high mask treat boundary violations
-                        else
+                        // Special case of VW == 2u on iteration 0
+                        else if constexpr(TransactionSize == 2u)
                         {
-                            // Note: Outer layer has already tested 1x1.
-                            // Because a boundary violation has been detected, we now have
-                            // at least 1 boundary violation, in addition to at least 1 partial.
+                            // Check bounds conditions.
+                            // Low mask means no boundary violation
+                            if(!BoundsCtrl::checkBounds(currentOffset2d, dataSize2d))
+                            {
+                                using Bearer = BearerPolicy<DataT, TransactionSize>;
+                                Bearer::exec(buff, dataPtr + dataOffset);
+                            }
+                            // On high mask treat boundary violations
+                            else
+                            {
+                                // Because a boundary violation has been detected, we now have
+                                // at least 1 boundary violation, in addition to at least 1 partial.
 
-                            // Handle partial transaction
-                            partial_impl<1u>(buff, dataPtr + dataOffset);
+                                // Handle partial transaction
+                                partial_impl<1u>(buff, dataPtr + dataOffset);
 
-                            // Handle boundary violations
-                            bounds_impl<1u>(buff, boundsValue);
+                                // Handle boundary violations
+                                bounds_impl<1u>(buff, boundsValue);
+                            }
                         }
                     }
                     // General case where we need to calculate partial and bound counts.
-                    else if constexpr(TransactionSize > 2u)
+                    else
                     {
                         // Check bounds conditions.
                         // Low mask means no boundary violation
                         if(!BoundsCtrl::checkBounds(currentOffset2d, dataSize2d))
                         {
-                            // Flatten to 1d data address
                             using Bearer = BearerPolicy<DataT, TransactionSize>;
                             Bearer::exec(buff, dataPtr + dataOffset);
                         }
                         // On high mask, we must treat boundary violations
                         else
                         {
-                            // Bounds violations are only possible due to the BearerPolicy, which is a linear transaction of size VW.
-                            // Therefore, calculate valid partials and boundary conditions based on data layout.
-                            auto partialCount = DataLayoutTraits::is_col_major
-                                                    ? (BoundsCtrl::BoundX - get<0>(baseOffset2d))
-                                                    : (BoundsCtrl::BoundY - get<1>(baseOffset2d));
+                            // Bounds violations are possible by either:
+                            // 1. Offset step (currentOffset2d falls on boundary)
+                            // 2. Bearer transaction (currentOffset2d + size falls on boundary or beyond)
+                            // In col major: if diffY is positive, the violation is due to bearer, otherwise the coordinate is fully OOB.
+                            // In row major: if diffX is positive, the violation is due to bearer, otherwise the coordinate is fully OOB.
+                            // When coordinate is fully OOB, we have 0 partials and all bounds violations.
+                            int32_t diffX        = BoundsCtrl::BoundX - get<0>(currentOffset2d);
+                            int32_t diffY        = BoundsCtrl::BoundY - get<1>(currentOffset2d);
+                            auto    partialCount = DataLayoutTraits::is_col_major
+                                                    ? (diffY > 0u ? diffX : 0u)
+                                                    : (diffX > 0u ? diffY : 0u);
 
                             bool processed = false;
 
                             // Caveat: partialCount is not a constexpr value due to dependency on per-thread baseOffset2d.
                             // Dispatch the partialCount value at runtime to match it with templated PartialCount and BoundCount.
-                            // To minimize the dispatching search space, we can leverage the above assumption that there is at
-                            // least one partial in addition to at least one bounds violation.
-                            // The search space is therefore from [1, ..., VW) for partial counts.
-                            static_for<1u, TransactionSize, 1u>(
+                            static_for<0u, TransactionSize, 1u>(
                                 [](auto&& idx,
                                    auto&& buff,
                                    auto&& partialCount,
