@@ -76,11 +76,12 @@ namespace rocwmma
 
     } // namespace detail
 
-    template <class DataLayout, class MatrixLayout>
-    struct OpaqueStore : public IOBearer<DataLayout, MatrixLayout, detail::OpaqueStoreBearer>
+    template <class DataLayout, class MatrixLayout, class BoundsCtrl = IOBoundsCtrl::Default>
+    struct OpaqueStore
+        : public IOBearer<DataLayout, MatrixLayout, detail::OpaqueStoreBearer, BoundsCtrl>
     {
     private:
-        using Base = IOBearer<DataLayout, MatrixLayout, detail::OpaqueStoreBearer>;
+        using Base = IOBearer<DataLayout, MatrixLayout, detail::OpaqueStoreBearer, BoundsCtrl>;
 
         // Don't expose the base implementation, we change arg forwarding order
         using Base::exec;

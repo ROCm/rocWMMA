@@ -63,8 +63,9 @@ namespace rocwmma
 
     } // namespace detail
 
-    template <class DataLayout, class MatrixLayout>
-    struct OpaqueLoad : public IOBearer<DataLayout, MatrixLayout, detail::OpaqueLoadBearer>
+    template <class DataLayout, class MatrixLayout, class BoundsCtrl = IOBoundsCtrl::Default>
+    struct OpaqueLoad
+        : public IOBearer<DataLayout, MatrixLayout, detail::OpaqueLoadBearer, BoundsCtrl>
     {
     };
 

@@ -135,6 +135,12 @@ namespace rocwmma
             using IOConfigA = GetIOConfig_t<FragA>;
             using IOConfigB = GetIOConfig_t<FragB>;
 
+            static_assert(IOConfigA::IOBounds::BlockHeight == IOConfigB::IOBounds::BlockWidth);
+            static_assert(IOConfigB::IOBounds::BlockHeight == IOConfigA::IOBounds::BlockWidth);
+
+            static_assert(IOConfigA::IOTile::BlockM == IOConfigB::IOTile::BlockN);
+            static_assert(IOConfigB::IOTile::BlockM == IOConfigA::IOTile::BlockN);
+
             // Assumptions check
             static_assert(IOConfigA::IOShape::BlockDim == IOConfigB::IOShape::BlockDim,
                           "BlockDim of transposed frag doesn't match");
@@ -211,9 +217,9 @@ namespace rocwmma
                 using DstLayout =
                     typename GetCoopIOConfig_t<DstFrag, WaveCount>::IOLayout::FragmentLayout;
 
-                auto result = DstFrag{};
-                result.mAccess
-                    = register_layout_transform<SrcLayout, DstLayout, WaveCount>::exec(frag.mAccess);
+                auto result    = DstFrag{};
+                result.mAccess = register_layout_transform<SrcLayout, DstLayout, WaveCount>::exec(
+                    frag.mAccess);
                 return result;
             }
         };
@@ -233,7 +239,12 @@ namespace rocwmma
             constexpr static const uint32_t registerFileWidth = Constants::AMDGCN_WAVE_SIZE;
 
         public:
-            using Type = fragment<matrix_b, 1, registerFileWidth, FragT::size(), DataT, DataLayout>;
+            using Type = fragment<matrix_b,
+                                  registerFileWidth,
+                                  registerFileWidth,
+                                  FragT::size(),
+                                  DataT,
+                                  DataLayout>;
         };
 
     } // namespace detail

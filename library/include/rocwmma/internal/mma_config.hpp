@@ -26,10 +26,10 @@
 #ifndef ROCWMMA_MMA_CONFIG_HPP
 #define ROCWMMA_MMA_CONFIG_HPP
 
-#include "layout/register_layout_transforms.hpp"
 #include "io_config.hpp"
-#include "mma_traits.hpp"
+#include "layout/register_layout_transforms.hpp"
 #include "mfma.hpp"
+#include "mma_traits.hpp"
 #include "pack_util.hpp"
 #include "types.hpp"
 #include "wmma.hpp"
@@ -64,8 +64,12 @@ namespace rocwmma
         using IOLayoutD = typename IOConfigD::IOLayout;
 
         // Sanity checks
-        static_assert(is_layout_same_v<typename IOLayoutA::MmaLayout, typename IOLayoutB::MmaLayout>, "Input fragment register layouts do not match");
-        static_assert(is_layout_same_v<typename IOLayoutC::MmaLayout, typename IOLayoutD::MmaLayout>, "Accumulator fragment register layouts do not match");
+        static_assert(
+            is_layout_same_v<typename IOLayoutA::MmaLayout, typename IOLayoutB::MmaLayout>,
+            "Input fragment register layouts do not match");
+        static_assert(
+            is_layout_same_v<typename IOLayoutC::MmaLayout, typename IOLayoutD::MmaLayout>,
+            "Accumulator fragment register layouts do not match");
 
         // Check valid mma layouts
         // TODO: eventually should enforce
@@ -108,12 +112,30 @@ namespace rocwmma
         // - MmaLayout for input A/B must match
         // - MmaLayout for accumulators must match
         static_assert(MmaDimM == MmaDimN, "MmaDims must match");
-        static_assert((MmaDimN == IOLayoutC::MmaDim) && (MmaDimN == IOLayoutD::MmaDim), "Mismatched accumulator MmaDim");
+        static_assert((MmaDimN == IOLayoutC::MmaDim) && (MmaDimN == IOLayoutD::MmaDim),
+                      "Mismatched accumulator MmaDim");
+
+        // Ensure to use padded tiles if necessary
+        using IOTile = IOTile<FragM, FragN, FragK, InputTA>;
 
         // Gfx9 uses MFMA, gfx11/12 uses WMMA
         using Mma = conditional_t<(bool)ROCWMMA_ARCH_GFX9,
-                                  Mfma<FragM, FragN, FragK, InputTA, InputTB, ComputeT, MmaDimM, MmaDimN>,
-                                  Wmma<FragM, FragN, FragK, InputTA, InputTB, ComputeT, MmaDimM, MmaDimN>>;
+                                  Mfma<IOTile::BlockM,
+                                       IOTile::BlockN,
+                                       IOTile::BlockK,
+                                       InputTA,
+                                       InputTB,
+                                       ComputeT,
+                                       MmaDimM,
+                                       MmaDimN>,
+                                  Wmma<IOTile::BlockM,
+                                       IOTile::BlockN,
+                                       IOTile::BlockK,
+                                       InputTA,
+                                       InputTB,
+                                       ComputeT,
+                                       MmaDimM,
+                                       MmaDimN>>;
     };
 
 } // namespace rocwmma

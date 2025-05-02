@@ -32,14 +32,12 @@
 
 namespace rocwmma
 {
-    /*! \struct IOTile
-    *  \brief Definition of fragment tiling quantization.
-    *
-    * @tparam Fragment M dimension
-    * @tparam Fragment N dimension
-    * @tparam Fragment K dimension
-    * @tparam DataT data type
-    */
+    //! @struct IOTile
+    //! @brief Definition of fragment tiling quantization.
+    //! @tparam FragM Fragment M dimension
+    //! @tparam FragN Fragment N dimension
+    //! @tparam FragK Fragment K dimension
+    //! @tparam DataT data type
     template <uint32_t FragM, uint32_t FragN, uint32_t FragK, typename DataT>
     struct IOTile
     {
@@ -67,11 +65,8 @@ namespace rocwmma
                                           || (FragN * FragK % MinElementsPerFrag)
                                           || (FragM * FragN % MinElementsPerFrag);
 
-        // Due to block-wise nature of the API, define the effective block shape for this fragment.
-        // Note: No matter if we get partial data in either BlockDim or KDim, we will have enough complete registers.
-        // - Effective BlockDim size is a multiple of the MinBlockDim
-        // - Effective KDim size to a multiple of the MinKDim
     public:
+        // Apply padding if necessary
         static constexpr uint32_t BlockM = doPadding ? PadBlockM : FragM;
         static constexpr uint32_t BlockN = doPadding ? PadBlockN : FragN;
         static constexpr uint32_t BlockK = doPadding ? PadBlockK : FragK;

@@ -28,107 +28,76 @@
 
 #include "layout/layout.hpp"
 #include "layout/layout_traits.hpp"
-#include "tuple.hpp"
-#include "utility/vector.hpp"
-
+#include "utility/forward.hpp"
 namespace rocwmma
 {
+    //! @struct IOBearer
+    //! @brief IOBearer is the vehicle that executes BearerPolicy transactions iteratively through the coordinate space
+    //! offsets given by the MatrixLayout, while checking and applying bounds controls.
+    //! @tparam DataLayout The class that handles the configuration of the 1d data layout.
+    //! @tparam MatrixLayout The class that handles the configuration of the 2d iterative space in which the BearerPolicy is applied.
+    //! @tparam BearerPolicy Typically represents a memory transaction such as a store or load, described by data type and vector size.
+    //! @tparam BoundsCtrl Checks bounding box boundary violations by the BearerPolicy and may apply adjustments to the violating buffer.
     template <class DataLayout,
               class MatrixLayout,
               template <typename, uint32_t>
-              class BearerPolicy>
+              class BearerPolicy,
+              class BoundsCtrl>
     struct IOBearer
     {
     protected:
+        // Access traits from Matrix and DataLayouts
         using MatrixLayoutTraits = layout_traits<MatrixLayout>;
         using DataLayoutTraits   = layout_traits<DataLayout>;
         using DataT              = typename MatrixLayoutTraits::DataT;
 
-        // Iterative policy traits
-        using Bearer                        = BearerPolicy<DataT, MatrixLayoutTraits::VectorWidth>;
-        static constexpr uint32_t ChunkSize = Bearer::size();
-
-        // Vector type of the bearer
-        template <typename DataT, uint32_t VecSize>
-        using VecT =
-            typename VecTraits<decay_t<typename Bearer::BufferT>>::template VecT<DataT, VecSize>;
+        // Iterative BearerPolicy traits
+        static constexpr uint32_t TransactionSize = MatrixLayoutTraits::VectorWidth;
+        static constexpr uint32_t IterationCount  = reduce_mult(MatrixLayout::strideCounts());
+        static constexpr uint32_t BuffSize        = TransactionSize * IterationCount;
 
     public:
-        // Full buffer traits
-        static constexpr uint32_t BufferSize
-            = ChunkSize * reduce_mult(MatrixLayout::strideCounts());
-        using BufferT = VecT<DataT, BufferSize>;
+        // Full sized buffer for the whole operation
+        using BufferT = typename BearerPolicy<DataT, BuffSize>::BufferT;
 
     protected:
-        // Outer loop = index 0,
-        // Inner loop = index N-1
-        // Notes:
-        // - Assumption: MatrixLayout provides constexpr strideCounts and strides.
-        //   We can then use static unroll to eliminate looping.
-        // - Unroll model will use vector_mutate_for_each because the current bearers are implemented
-        //   as visitor patterns. They either write to, or read from an input vector object.
-        //   The vector needs to be mutable for loads, but the stores will cast as const reference.
-        //   vector_mutate_for_each provides a reference to raw vector data it is operating on, which
-        //   will satisfy both loading and storing visitation needs.
-        template <size_t Depth = 0, typename BuffT, typename ExternDataT>
+        //! @brief Handle partial transactions from front-to-back.
+        //! @tparam PartialCount The number of partial elements in the transaction
+        //! @tparam PBufferT The buffer partial transactions will apply to
+        //! @tparam DataPtrT The base memory data pointer
+        template <uint32_t PartialCount, typename PBufferT, typename DataPtrT>
+        ROCWMMA_DEVICE static inline auto partial_impl(PBufferT& buff, DataPtrT&& dataPtr);
+
+        //! @brief Handle bounds violations from back-to-front.
+        //! @tparam CoundCount The number of boundary violations in the transaction
+        //! @tparam BBufferT The buffer boundary control will apply to
+        //! @tparam ScalarT The datatype of a scalar value to apply in the bounds control
+        template <uint32_t BoundCount, typename BBufferT, typename ScalarT>
+        ROCWMMA_DEVICE static inline auto bounds_impl(BBufferT& buff, ScalarT&& clipVal);
+
+        //! @brief Loop-unroll to cover all transactions described by MatrixLayout strides
+        //! @tparam Depth The loop recursion depth (Default 0)
+        //! @tparam BufferT The buffer segment for the current recursion depth
+        //! @tparam Coord2d The type of the given 2d coordinate object
+        //! @tparam ExternDataT The type of the pointer given by the user
+        //! @note This class is used for both load / store transactions, so the ExternDataT
+        //! is intended to be opaque on the const-ness.
+        template <size_t Depth = 0, typename BufferT, typename Coord2d, typename ExternDataT>
         ROCWMMA_DEVICE static inline auto
-            unroll_impl(BuffT&& buff, ExternDataT* dataPtr, uint32_t ldm)
-        {
-            // Get the layout strides for the current depth
-            constexpr auto StrideSpace = pop_front<Depth>(MatrixLayout::strideCounts());
-            constexpr auto Strides     = pop_front<Depth>(MatrixLayout::strides());
-
-            // Ensure the buffer size is appropriate
-            using BufferTraits = VecTraits<decay_t<BuffT>>;
-            static_assert(BufferTraits::size() == reduce_mult(StrideSpace) * ChunkSize,
-                          "Invalid buffer size");
-
-            constexpr auto CurrentStride     = get_first(Strides);
-            auto           currentDataStride = DataLayout::fromMatrixCoord(CurrentStride, ldm);
-
-            // Last depth layer will invoke the chunk transfer
-            if constexpr((VecTraits<decay_t<decltype(StrideSpace)>>::size()) == 1u)
-            {
-                vector_mutate_for_each<ChunkSize>(
-                    forward<BuffT>(buff),
-                    [](auto&& v, auto idx, auto* dataPtr, auto dataStride) {
-                        uint32_t dataOffset = decay_t<decltype(idx)>::value * dataStride;
-                        Bearer::exec(v, dataPtr + dataOffset);
-                    },
-                    dataPtr,
-                    currentDataStride);
-            }
-            // Recurse to the next nested layer
-            else
-            {
-                constexpr auto NextStrideSpace  = pop_front(StrideSpace);
-                constexpr auto NextBufferStride = reduce_mult(NextStrideSpace) * ChunkSize;
-
-                vector_mutate_for_each<NextBufferStride>(
-                    forward<BuffT>(buff),
-                    [](auto&& v, auto idx, auto* dataPtr, auto ldm, auto dataStride) {
-                        uint32_t dataOffset = decay_t<decltype(idx)>::value * dataStride;
-                        unroll_impl<Depth + 1u>(v, dataPtr + dataOffset, ldm);
-                    },
-                    dataPtr,
-                    ldm,
-                    currentDataStride);
-            }
-        }
+            unroll_impl(BufferT&& buff, Coord2d&& baseOffset2d, ExternDataT* dataPtr, uint32_t ldm);
 
     public:
-        template <typename BuffT, typename ExternDataT>
-        ROCWMMA_DEVICE static void exec(BuffT&& buff, ExternDataT* dataPtr, uint32_t ldm)
-        {
-            // Arrange wave threads to starting matrix layout offsets.
-            auto baseOffset = MatrixLayout::baseOffset();
-
-            // Unroll transfer in each strided dimension
-            unroll_impl(
-                forward<BuffT>(buff), dataPtr + DataLayout::fromMatrixCoord(baseOffset, ldm), ldm);
-        }
+        //! @brief Interface driver for loop-unroll to cover all transactions described by MatrixLayout strides
+        //! @tparam BufferT The buffer full buffer segment for all transactions
+        //! @tparam ExternDataT The type of the pointer given by the user
+        //! @note This class is used for both load / store transactions, so the ExternDataT
+        //! is intended to be opaque on the const-ness.
+        template <typename BufferT, typename ExternDataT>
+        ROCWMMA_DEVICE static inline void exec(BufferT&& buff, ExternDataT* dataPtr, uint32_t ldm);
     };
 
 } // namespace rocwmma
+
+#include "io_bearer_impl.hpp"
 
 #endif // ROCWMMA_IO_BEARER_HPP
