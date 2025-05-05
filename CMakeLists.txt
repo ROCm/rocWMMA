@@ -149,7 +149,7 @@ if (rocm_smi_FOUND)
 else()
   set(ROCM_SMI_INCLUDE_DIR "${ROCM_PATH}/rocm_smi/include")
   set(ROCM_SMI_LIB_DIR     "${ROCM_PATH}/rocm_smi/lib")
-  set(ROCM_SMI_LIBRARIES   rocm_smi64)
+  set(ROCM_SMI_LIBRARY   rocm_smi64)
 endif()
 
 add_library(rocwmma INTERFACE)
