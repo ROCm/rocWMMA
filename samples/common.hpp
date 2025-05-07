@@ -90,7 +90,8 @@ bool isGfx11()
 
     return ((deviceName.find("gfx1100") != std::string::npos)
             || (deviceName.find("gfx1101") != std::string::npos)
-            || (deviceName.find("gfx1102") != std::string::npos));
+            || (deviceName.find("gfx1102") != std::string::npos)
+            || (deviceName.find("gfx1151") != std::string::npos));
 }
 
 bool isGfx12()
