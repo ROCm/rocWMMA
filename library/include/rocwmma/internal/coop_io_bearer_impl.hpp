@@ -28,6 +28,7 @@
 
 #include "io_bearer.hpp"
 #include "layout/matrix_coop_layout.hpp"
+#include "utility/math.hpp"
 #include "vector.hpp"
 
 namespace rocwmma
@@ -39,51 +40,56 @@ namespace rocwmma
         class BearerPolicy, class BoundsCtrl
 #define CoopIOBearerTypesImpl DataLayout, CoopMatrixLayout, BearerPolicy, BoundsCtrl
 
-    // Outer loop = index 0,
-    // Inner loop = index N-1
+    // Forwards to iterative unroll because waveCount override may not be known at compile time.
     template <CoopIOBearerTypesDecl>
-    template <size_t Depth /*= 0*/,
-              typename Iterator,
-              typename ExternDataT,
-              typename StrideSpace,
-              typename Strides2d>
-    ROCWMMA_DEVICE inline auto
-        CoopIOBearer<CoopIOBearerTypesImpl>::unroll_impl(Iterator&     it,
-                                                         ExternDataT*  dataPtr,
-                                                         uint32_t      ldm,
-                                                         StrideSpace&& strideCounts,
-                                                         Strides2d&&   strides2d)
+    template <typename BufferT, typename ExternDataT>
+    ROCWMMA_DEVICE inline void CoopIOBearer<CoopIOBearerTypesImpl>::exec(BufferT&&    buffer,
+                                                                         ExternDataT* dataPtr,
+                                                                         uint32_t     ldm,
+                                                                         uint32_t     waveIndex,
+                                                                         uint32_t     waveCount)
     {
-        static_assert(VecTraits<decay_t<StrideSpace>>::size()
-                          == VecTraits<decay_t<Strides2d>>::size(),
-                      "Mismatched size");
-        auto strideOffset = DataLayout::fromMatrixCoord(get<Depth>(strides2d), ldm);
-        auto strideCount  = get<Depth>(strideCounts);
-
-        // Last depth layer will invoke the load
-        if constexpr(Depth == (VecTraits<decay_t<StrideSpace>>::size() - 1u))
+        // Filter out waves we don't want participating
+        if(!CoopMatrixLayout::waveEnabler(waveIndex, waveCount))
         {
-            for(uint32_t i = 0u; i < strideCount; i++)
-            {
-                Bearer::exec(*it, dataPtr);
-                dataPtr += strideOffset;
-                it++;
-            }
+            return;
         }
-        // Recurse to the next nested layer
-        else
-        {
-            for(uint32_t i = 0u; i < strideCount; i++)
-            {
-                unroll_impl<Depth + 1>(forward<Iterator&>(it),
-                                       dataPtr,
-                                       ldm,
-                                       forward<StrideSpace>(strideCounts),
-                                       forward<Strides2d>(strides2d));
 
-                dataPtr += strideOffset;
-            }
-        }
+        // The base offset will include the wave offset
+        auto baseOffset = CoopMatrixLayout::baseOffset(waveIndex, waveCount);
+
+        // Dispatch run-time wave count to the IOBearer class
+        static_for<0u, 3u, 1u>(
+            [](auto&& idx,
+               auto   waveCount,
+               auto&& buffer,
+               auto&& baseOffset,
+               auto*  dataPtr,
+               auto   ldm) {
+                // Wave counts only supported as powers of 2
+                constexpr auto Idx       = pow2<decay_t<decltype(idx)>::value>::value;
+                bool           processed = false;
+
+                if(Idx == waveCount && !processed)
+                {
+                    // We need to shrink the buffer for the unroll
+                    constexpr auto BuffSize
+                        = reduce_mult(CoopMatrixLayout::strideCounts(Idx)) * TransactionSize;
+                    using ReducedBufferT = conditional_t<is_const_v<BufferT>,
+                                                         VecT<DataT, BuffSize> const,
+                                                         VecT<DataT, BuffSize>>;
+
+                    // Base can unroll statically
+                    Base::unroll_impl((ReducedBufferT&)(buffer), baseOffset, dataPtr, ldm);
+
+                    processed = true;
+                }
+            },
+            waveCount,
+            forward<BufferT>(buffer),
+            baseOffset,
+            dataPtr,
+            ldm);
     }
 
     // Forwards to base class static unroll using static WaveCount
@@ -112,35 +118,6 @@ namespace rocwmma
 
         // Base can unroll statically
         Base::unroll_impl((ReducedBufferT&)(buffer), baseOffset, dataPtr, ldm);
-    }
-
-    // Forwards to iterative unroll because waveCount override may not be known at compile time.
-    template <CoopIOBearerTypesDecl>
-    template <typename BufferT, typename ExternDataT>
-    ROCWMMA_DEVICE inline void CoopIOBearer<CoopIOBearerTypesImpl>::exec(BufferT&&    buffer,
-                                                                         ExternDataT* dataPtr,
-                                                                         uint32_t     ldm,
-                                                                         uint32_t     waveIndex,
-                                                                         uint32_t     waveCount)
-    {
-        // Filter out waves we don't want participating
-        if(!CoopMatrixLayout::waveEnabler(waveIndex, waveCount))
-        {
-            return;
-        }
-
-        // The base offset will include the wave offset
-        auto baseOffset = CoopMatrixLayout::baseOffset(waveIndex, waveCount);
-
-        // Each basic transaction will be of TransactionSize
-        auto it = makeVectorIterator<TransactionSize>(buffer).begin();
-
-        // Alternative iterative unroll
-        unroll_impl(it,
-                    dataPtr + DataLayout::fromMatrixCoord(baseOffset, ldm),
-                    ldm,
-                    CoopMatrixLayout::strideCounts(waveCount),
-                    CoopMatrixLayout::strides());
     }
 
 #undef CoopIOBearerTypesDecl

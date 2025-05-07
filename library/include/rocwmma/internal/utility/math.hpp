@@ -51,6 +51,75 @@ namespace rocwmma
     template <typename IntT, typename = enable_if_integral_t<IntT>>
     ROCWMMA_HOST_DEVICE static inline constexpr bool is_pow2(const IntT val);
 
+    template <uint32_t x>
+    struct pow2
+    {
+        static constexpr uint32_t value = 2 * pow2<x - 1>::value;
+    };
+
+    template <>
+    struct pow2<1>
+    {
+        static constexpr uint32_t value = 2;
+    };
+
+    template <>
+    struct pow2<0>
+    {
+        static constexpr uint32_t value = 1;
+    };
+
+    // Calculate integer Log base 2
+    template <uint32_t x>
+    struct Log2
+    {
+        static constexpr uint32_t value = 1 + Log2<(x >> 1)>::value;
+        static_assert(x % 2 == 0, "Integer input must be a power of 2");
+    };
+
+    template <>
+    struct Log2<1>
+    {
+        static constexpr uint32_t value = 0;
+    };
+
+    template <>
+    struct Log2<0>
+    {
+        static constexpr uint32_t value = 0;
+    };
+
+    // Create a bitmask of size BitCount, starting from the LSB bit
+    template <uint32_t BitCount>
+    struct LsbMask;
+
+    template <>
+    struct LsbMask<1>
+    {
+        enum : uint32_t
+        {
+            value = 0x1
+        };
+    };
+
+    template <>
+    struct LsbMask<0>
+    {
+        enum : uint32_t
+        {
+            value = 0x0
+        };
+    };
+
+    template <uint32_t BitCount>
+    struct LsbMask
+    {
+        enum : uint32_t
+        {
+            value = LsbMask<1>::value << (BitCount - 1) | LsbMask<BitCount - 1>::value
+        };
+    };
+
 } // namespace rocwmma
 
 #include "math_impl.hpp"
