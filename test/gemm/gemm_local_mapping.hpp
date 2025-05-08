@@ -82,17 +82,18 @@ namespace rocwmma
             // GRFragA Transposed
             // GRFragB unchanged
             // Ensure LW frags are LayoutLds friendly.
-            using LWFragA
-                = ApplyDataLayout_t<ApplyTranspose_t<typename GlobalMapping::GRFragA>, LayoutLds>;
-            using LWFragB = ApplyDataLayout_t<typename GlobalMapping::GRFragB, LayoutLds>;
+            using LWFragA = apply_data_layout_t<apply_transpose_t<typename GlobalMapping::GRFragA>,
+                                                LayoutLds>;
+            using LWFragB = apply_data_layout_t<typename GlobalMapping::GRFragB, LayoutLds>;
 
             /// LOCAL READ -> Mfma frags
             // MfmaFragA transposed
             // MfmaFragB unchanged
             // Ensure LR frags are LayoutLds friendly.
             using LRFragA
-                = ApplyDataLayout_t<ApplyTranspose_t<typename GlobalMapping::MfmaFragA>, LayoutLds>;
-            using LRFragB = ApplyDataLayout_t<typename GlobalMapping::MfmaFragB, LayoutLds>;
+                = apply_data_layout_t<apply_transpose_t<typename GlobalMapping::MfmaFragA>,
+                                      LayoutLds>;
+            using LRFragB = apply_data_layout_t<typename GlobalMapping::MfmaFragB, LayoutLds>;
 
             /// Sanity checks:
             // All local R/W tiles should have same height
@@ -144,29 +145,30 @@ namespace rocwmma
             __device__ constexpr static inline auto
                 formatLWFragA(typename GlobalMapping::GRFragA const& grFragA)
             {
-                return rocwmma::template applyDataLayout<LayoutLds, WaveCount>(
-                    applyTranspose(grFragA));
+                return rocwmma::template apply_data_layout<LayoutLds, WaveCount>(
+                    apply_transpose(grFragA));
             }
 
             template <uint32_t WaveCount = 1>
             __device__ constexpr static inline auto
                 formatLWFragB(typename GlobalMapping::GRFragB const& grFragB)
             {
-                return rocwmma::template applyDataLayout<LayoutLds, WaveCount>(grFragB);
+                return rocwmma::template apply_data_layout<LayoutLds, WaveCount>(grFragB);
             }
 
-            __device__ constexpr static inline auto
-                formatLRFragA(LRFragA const& lrFragA)
+            __device__ constexpr static inline auto formatLRFragA(LRFragA const& lrFragA)
             {
-                using MfmaLayout = typename GetDataLayout_t<typename GlobalMapping::MfmaFragA>::Orientation;
-                return rocwmma::template applyDataLayout<MfmaLayout, 1u>(applyTranspose(lrFragA));
+                using MfmaLayout =
+                    typename GetDataLayout_t<typename GlobalMapping::MfmaFragA>::Orientation;
+                return rocwmma::template apply_data_layout<MfmaLayout, 1u>(
+                    apply_transpose(lrFragA));
             }
 
-            __device__ constexpr static inline auto
-                formatLRFragB(LRFragB const& lrFragB)
+            __device__ constexpr static inline auto formatLRFragB(LRFragB const& lrFragB)
             {
-                using MfmaLayout = typename GetDataLayout_t<typename GlobalMapping::MfmaFragB>::Orientation;
-                return rocwmma::template applyDataLayout<MfmaLayout, 1u>(lrFragB);
+                using MfmaLayout =
+                    typename GetDataLayout_t<typename GlobalMapping::MfmaFragB>::Orientation;
+                return rocwmma::template apply_data_layout<MfmaLayout, 1u>(lrFragB);
             }
         };
 
@@ -226,17 +228,18 @@ namespace rocwmma
             // GRFragA unchanged
             // GRFragB transposed
             // Ensure LW frags are LayoutLds friendly.
-            using LWFragA = ApplyDataLayout_t<typename GlobalMapping::GRFragA, LayoutLds>;
-            using LWFragB
-                = ApplyDataLayout_t<ApplyTranspose_t<typename GlobalMapping::GRFragB>, LayoutLds>;
+            using LWFragA = apply_data_layout_t<typename GlobalMapping::GRFragA, LayoutLds>;
+            using LWFragB = apply_data_layout_t<apply_transpose_t<typename GlobalMapping::GRFragB>,
+                                                LayoutLds>;
 
             /// LOCAL READ -> Mfma frags
             // MfmaFragA unchanged
             // MfmaFragB transposed
             // Ensure LR frags are LayoutLds friendly.
-            using LRFragA = ApplyDataLayout_t<typename GlobalMapping::MfmaFragA, LayoutLds>;
+            using LRFragA = apply_data_layout_t<typename GlobalMapping::MfmaFragA, LayoutLds>;
             using LRFragB
-                = ApplyDataLayout_t<ApplyTranspose_t<typename GlobalMapping::MfmaFragB>, LayoutLds>;
+                = apply_data_layout_t<apply_transpose_t<typename GlobalMapping::MfmaFragB>,
+                                      LayoutLds>;
 
             // Sanity check:
             // All local R/W tiles should have same width
@@ -288,28 +291,29 @@ namespace rocwmma
             __device__ constexpr static inline auto
                 formatLWFragA(typename GlobalMapping::GRFragA const& grFragA)
             {
-                return applyDataLayout<LayoutLds, WaveCount>(grFragA);
+                return apply_data_layout<LayoutLds, WaveCount>(grFragA);
             }
 
             template <uint32_t WaveCount = 1>
             __device__ constexpr static inline auto
                 formatLWFragB(typename GlobalMapping::GRFragB const& grFragB)
             {
-                return applyDataLayout<LayoutLds, WaveCount>(applyTranspose(grFragB));
+                return apply_data_layout<LayoutLds, WaveCount>(apply_transpose(grFragB));
             }
 
-            __device__ constexpr static inline auto
-                formatLRFragA(LRFragA const& lrFragA)
+            __device__ constexpr static inline auto formatLRFragA(LRFragA const& lrFragA)
             {
-                using MfmaLayout = typename GetDataLayout_t<typename GlobalMapping::MfmaFragA>::Orientation;
-                return rocwmma::template applyDataLayout<MfmaLayout, 1u>(lrFragA);
+                using MfmaLayout =
+                    typename GetDataLayout_t<typename GlobalMapping::MfmaFragA>::Orientation;
+                return rocwmma::template apply_data_layout<MfmaLayout, 1u>(lrFragA);
             }
 
-            __device__ constexpr static inline auto
-                formatLRFragB(LRFragB const& lrFragB)
+            __device__ constexpr static inline auto formatLRFragB(LRFragB const& lrFragB)
             {
-                using MfmaLayout = typename GetDataLayout_t<typename GlobalMapping::MfmaFragB>::Orientation;
-                return rocwmma::template applyDataLayout<MfmaLayout, 1u>(applyTranspose(lrFragB));
+                using MfmaLayout =
+                    typename GetDataLayout_t<typename GlobalMapping::MfmaFragB>::Orientation;
+                return rocwmma::template apply_data_layout<MfmaLayout, 1u>(
+                    apply_transpose(lrFragB));
             }
         };
 
@@ -380,10 +384,12 @@ namespace rocwmma
             // GRFragA transformed to register file
             // GRFragB transformed to register file
             // Ensure LW frags are LayoutLds friendly.
-            using LWFragA = ApplyDataLayout_t<ApplyRegisterFile_t<typename GlobalMapping::GRFragA>,
-                                              LayoutLds>;
-            using LWFragB = ApplyDataLayout_t<ApplyRegisterFile_t<typename GlobalMapping::GRFragB>,
-                                              LayoutLds>;
+            using LWFragA
+                = apply_data_layout_t<apply_register_file_t<typename GlobalMapping::GRFragA>,
+                                      LayoutLds>;
+            using LWFragB
+                = apply_data_layout_t<apply_register_file_t<typename GlobalMapping::GRFragB>,
+                                      LayoutLds>;
 
             /// LOCAL READ -> Mfma frags
             // Same as LWFrags
@@ -444,8 +450,8 @@ namespace rocwmma
                 // When interpreting as a register block (e.g. BlockDim 64 on CDNA), avoid transforming
                 // direct register layouts because we want the register contents as they currently are.
                 return reinterpret_cast<
-                    ApplyDataLayout_t<ApplyRegisterFile_t<typename GlobalMapping::GRFragA>,
-                                      LayoutLds> const&>(grFragA);
+                    apply_data_layout_t<apply_register_file_t<typename GlobalMapping::GRFragA>,
+                                        LayoutLds> const&>(grFragA);
             }
 
             template <uint32_t WaveCount = 1>
@@ -455,22 +461,22 @@ namespace rocwmma
                 // When interpreting as a register block (e.g. BlockDim 64 on CDNA), avoid transforming
                 // direct register layouts because we want the register contents as they currently are.
                 return reinterpret_cast<
-                    ApplyDataLayout_t<ApplyRegisterFile_t<typename GlobalMapping::GRFragB>,
-                                      LayoutLds> const&>(grFragB);
+                    apply_data_layout_t<apply_register_file_t<typename GlobalMapping::GRFragB>,
+                                        LayoutLds> const&>(grFragB);
             }
 
-            __device__ constexpr static inline auto
-                formatLRFragA(LRFragA const& lrFragA)
+            __device__ constexpr static inline auto formatLRFragA(LRFragA const& lrFragA)
             {
-                using MfmaLayout = typename GetDataLayout_t<typename GlobalMapping::MfmaFragA>::Orientation;
-                return rocwmma::template applyDataLayout<MfmaLayout, 1u>(lrFragA);
+                using MfmaLayout =
+                    typename GetDataLayout_t<typename GlobalMapping::MfmaFragA>::Orientation;
+                return rocwmma::template apply_data_layout<MfmaLayout, 1u>(lrFragA);
             }
 
-            __device__ constexpr static inline auto
-                formatLRFragB(LRFragB const& lrFragB)
+            __device__ constexpr static inline auto formatLRFragB(LRFragB const& lrFragB)
             {
-                using MfmaLayout = typename GetDataLayout_t<typename GlobalMapping::MfmaFragB>::Orientation;
-                return rocwmma::template applyDataLayout<MfmaLayout, 1u>(lrFragB);
+                using MfmaLayout =
+                    typename GetDataLayout_t<typename GlobalMapping::MfmaFragB>::Orientation;
+                return rocwmma::template apply_data_layout<MfmaLayout, 1u>(lrFragB);
             }
         };
 

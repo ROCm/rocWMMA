@@ -35,6 +35,44 @@ namespace rocwmma
 {
     namespace detail
     {
+        template <typename SrcFragT, typename DstFragT, uint32_t WaveCount = 1>
+        struct ApplyFragmentTransform
+        {
+        private:
+            // Make sure to use coop configs to get the right MaxVW!!!
+            using SrcFragLayout =
+                typename GetCoopIOConfig_t<SrcFragT, WaveCount>::IOLayout::FragmentLayout;
+            using DstFragLayout =
+                typename GetCoopIOConfig_t<DstFragT, WaveCount>::IOLayout::FragmentLayout;
+
+        public:
+            // Result type
+            using Type = DstFragT;
+
+            ROCWMMA_DEVICE constexpr static inline decltype(auto) exec(SrcFragT const& frag)
+            {
+                // Same fragment type
+                if constexpr(is_same_v<SrcFragT, DstFragT>)
+                {
+                    return frag;
+                }
+                // Different fragment type but same register layout
+                else if constexpr(is_layout_same_v<SrcFragLayout, DstFragLayout>)
+                {
+                    return reinterpret_cast<DstFragT const&>(frag);
+                }
+                // Apply register transform
+                else
+                {
+                    auto result = DstFragT{};
+                    result.mAccess
+                        = register_layout_transform<SrcFragLayout, DstFragLayout, WaveCount>::exec(
+                            frag.mAccess);
+                    return result;
+                }
+            }
+        };
+
         ///
         /// Apply logical transpose of fragment
         ///
@@ -80,6 +118,8 @@ namespace rocwmma
             using IOConfigA = GetIOConfig_t<FragA>;
             using IOConfigB = GetIOConfig_t<FragB>;
 
+            using ApplyXForm = ApplyFragmentTransform<FragA, FragB>;
+
             // Assumptions check
             static_assert(IOConfigA::IOShape::BlockDim == IOConfigB::IOShape::BlockDim,
                           "BlockDim of transposed fragment doesn't match");
@@ -100,14 +140,14 @@ namespace rocwmma
                           "Register layouts do not match");
 
         public:
-            // Interface
-            using Type = FragB;
+            // Result type
+            using Type = typename ApplyXForm::Type;
 
             // Because of the expectation that matrix_a data is orthogonal to matrix_b
             // with the same register layout, the transpose comes as a simple re-cast.
-            ROCWMMA_DEVICE static inline FragB const& exec(FragA const& frag)
+            ROCWMMA_DEVICE static inline decltype(auto) exec(FragA const& frag)
             {
-                return reinterpret_cast<FragB const&>(frag);
+                return ApplyXForm::exec(frag);
             }
         };
 
@@ -135,11 +175,7 @@ namespace rocwmma
             using IOConfigA = GetIOConfig_t<FragA>;
             using IOConfigB = GetIOConfig_t<FragB>;
 
-            static_assert(IOConfigA::IOBounds::BlockHeight == IOConfigB::IOBounds::BlockWidth);
-            static_assert(IOConfigB::IOBounds::BlockHeight == IOConfigA::IOBounds::BlockWidth);
-
-            static_assert(IOConfigA::IOTile::BlockM == IOConfigB::IOTile::BlockN);
-            static_assert(IOConfigB::IOTile::BlockM == IOConfigA::IOTile::BlockN);
+            using ApplyXForm = ApplyFragmentTransform<FragB, FragA>;
 
             // Assumptions check
             static_assert(IOConfigA::IOShape::BlockDim == IOConfigB::IOShape::BlockDim,
@@ -161,14 +197,14 @@ namespace rocwmma
                           "Fragment register layouts do not match");
 
         public:
-            // Interface
-            using Type = FragA;
+            // Result type
+            using Type = typename ApplyXForm::Type;
 
             // Because of the expectation that matrix_a data is orthogonal to matrix_b
             // with the same register layout, the transpose comes as a simple re-cast.
             ROCWMMA_DEVICE static inline FragA const& exec(FragB const& frag)
             {
-                return reinterpret_cast<FragA const&>(frag);
+                return ApplyXForm::exec(frag);
             }
         };
 
@@ -200,32 +236,26 @@ namespace rocwmma
         struct ApplyDataLayout<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>,
                                NewDataLayoutT>
         {
-            using Type = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, NewDataLayoutT>;
+        private:
+            using SrcFragT = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>;
+            using DstFragT = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, NewDataLayoutT>;
 
-            template <uint32_t WaveCount = 1, typename FragT>
-            ROCWMMA_DEVICE constexpr static inline decltype(auto) exec(FragT const& frag)
+        public:
+            // Result type
+            using Type = DstFragT;
+
+            template <uint32_t WaveCount = 1>
+            ROCWMMA_DEVICE constexpr static inline decltype(auto) exec(SrcFragT const& frag)
             {
-                static_assert(
-                    is_same_v<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>, FragT>,
-                    "Input fragment types do not match");
-
-                using DstFrag = Type;
-
-                // Make sure to use coop configs to get the right MaxVW!!!
-                using SrcLayout =
-                    typename GetCoopIOConfig_t<FragT, WaveCount>::IOLayout::FragmentLayout;
-                using DstLayout =
-                    typename GetCoopIOConfig_t<DstFrag, WaveCount>::IOLayout::FragmentLayout;
-
-                auto result    = DstFrag{};
-                result.mAccess = register_layout_transform<SrcLayout, DstLayout, WaveCount>::exec(
-                    frag.mAccess);
-                return result;
+                using ApplyXForm = ApplyFragmentTransform<SrcFragT, DstFragT, WaveCount>;
+                return ApplyXForm::exec(frag);
             }
         };
 
+        // Other layout case
         template <typename FragT>
         struct ApplyRegisterFile;
+
         template <typename MatrixT,
                   uint32_t BlockM,
                   uint32_t BlockN,
@@ -235,16 +265,26 @@ namespace rocwmma
         struct ApplyRegisterFile<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>>
         {
         private:
-            using FragT = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
             constexpr static const uint32_t registerFileWidth = Constants::AMDGCN_WAVE_SIZE;
+            using SrcFragT = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayout>;
+            using DstFragT
+                = fragment<matrix_b, registerFileWidth, registerFileWidth, SrcFragT::size(), DataT, DataLayout>;
+
+            static_assert(SrcFragT::size() == DstFragT::size(),
+                          "Registerfile must have same vector size as input");
 
         public:
-            using Type = fragment<matrix_b,
-                                  registerFileWidth,
-                                  registerFileWidth,
-                                  FragT::size(),
-                                  DataT,
-                                  DataLayout>;
+            using Type = DstFragT;
+
+            ROCWMMA_DEVICE constexpr static inline decltype(auto) exec_to(SrcFragT const& frag)
+            {
+                return reinterpret_cast<DstFragT const&>(frag);
+            }
+
+            ROCWMMA_DEVICE constexpr static inline decltype(auto) exec_from(DstFragT const& frag)
+            {
+                return reinterpret_cast<SrcFragT const&>(frag);
+            }
         };
 
     } // namespace detail
@@ -253,16 +293,35 @@ namespace rocwmma
     // arguments above could be references or copy types.
     // @cond
     template <typename FragT>
-    ROCWMMA_DEVICE static inline decltype(auto) applyTranspose(FragT&& frag)
+    ROCWMMA_DEVICE static inline decltype(auto) apply_transpose(FragT&& frag)
     {
         return detail::template ApplyTranspose<decay_t<FragT>>::exec(forward<FragT>(frag));
     }
 
     template <typename DataLayoutT, uint32_t WaveCount /*=1*/, typename FragT>
-    ROCWMMA_DEVICE static inline decltype(auto) applyDataLayout(FragT&& frag)
+    ROCWMMA_DEVICE static inline decltype(auto) apply_data_layout(FragT&& frag)
     {
         return detail::template ApplyDataLayout<decay_t<FragT>, DataLayoutT>::template exec<
             WaveCount>(forward<FragT>(frag));
+    }
+
+    template <typename DstFragT, uint32_t WaveCount /*= 1u*/, typename FragT>
+    ROCWMMA_DEVICE static inline decltype(auto) apply_fragment(FragT&& frag)
+    {
+        return detail::template ApplyFragmentTransform<decay_t<FragT>, DstFragT, WaveCount>::exec(
+            forward<FragT>(frag));
+    }
+
+    template <typename FragT>
+    ROCWMMA_DEVICE static inline decltype(auto) to_register_file(FragT&& frag)
+    {
+        return detail::template ApplyRegisterFile<decay_t<FragT>>::exec_to(forward<FragT>(frag));
+    }
+
+    template <typename DstFragT, typename FragT>
+    ROCWMMA_DEVICE static inline decltype(auto) from_register_file(FragT&& frag)
+    {
+        return detail::template ApplyRegisterFile<DstFragT>::exec_from(forward<FragT>(frag));
     }
     // @endcond
 

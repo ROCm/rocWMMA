@@ -337,9 +337,15 @@ rocWMMA cooperative API functions
 rocWMMA transforms API functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. doxygenfunction:: rocwmma::applyTranspose(FragT &&frag)
+.. doxygenfunction:: rocwmma::apply_transpose(FragT &&frag)
 
-.. doxygenfunction:: rocwmma::applyDataLayout(FragT &&frag)
+.. doxygenfunction:: rocwmma::apply_data_layout(FragT &&frag)
+
+.. doxygenfunction:: apply_fragment(FragT &&frag)
+
+.. doxygenfunction:: to_register_file(FragT &&frag)
+
+.. doxygenfunction:: from_register_file(FragT &&frag)
 
 Sample programs
 ----------------
