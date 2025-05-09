@@ -108,7 +108,8 @@ namespace rocwmma
         // Arch
         auto isGfx908 = deviceArch == DeviceInfo::GFX908;
         auto isGfx11  = (deviceArch == DeviceInfo::GFX1100) || (deviceArch == DeviceInfo::GFX1101)
-                       || (deviceArch == DeviceInfo::GFX1102);
+                       || (deviceArch == DeviceInfo::GFX1102)
+                       || (deviceArch == DeviceInfo::GFX1151);
 
         auto isGfx12 = (deviceArch == DeviceInfo::GFX1200) || (deviceArch == DeviceInfo::GFX1201);
 
