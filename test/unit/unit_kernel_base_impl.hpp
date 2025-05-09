@@ -69,8 +69,8 @@ namespace rocwmma
         }
 
         // There will be a divide by zero error if `BlockM * mTBlockX < DeviceInfo::instance()->warpSize()`
-        return dim3(ceilDiv(mM, BlockM * mTBlockX / DeviceInfo::instance()->warpSize()),
-                    ceilDiv(mN, BlockN * mTBlockY));
+        return dim3(ceil_div(mM, BlockM * mTBlockX / DeviceInfo::instance()->warpSize()),
+                    ceil_div(mN, BlockN * mTBlockY));
     }
 
     template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename Layout>

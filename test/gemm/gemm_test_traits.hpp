@@ -76,16 +76,16 @@ namespace rocwmma
             DWord       = 4u,
 
             TileA
-            = ceilDiv((uint32_t)TileSizes::A_Size * sizeof(InputT), Granularity* WaveSize* DWord)
+            = ceil_div((uint32_t)TileSizes::A_Size * sizeof(InputT), Granularity* WaveSize* DWord)
               * Granularity,
             TileB
-            = ceilDiv((uint32_t)TileSizes::B_Size * sizeof(InputT), Granularity* WaveSize* DWord)
+            = ceil_div((uint32_t)TileSizes::B_Size * sizeof(InputT), Granularity* WaveSize* DWord)
               * Granularity,
             TileC
-            = ceilDiv((uint32_t)TileSizes::C_Size * sizeof(ComputeT), Granularity* WaveSize* DWord)
+            = ceil_div((uint32_t)TileSizes::C_Size * sizeof(ComputeT), Granularity* WaveSize* DWord)
               * Granularity,
             TileD
-            = ceilDiv((uint32_t)TileSizes::D_Size * sizeof(OutputT), Granularity* WaveSize* DWord)
+            = ceil_div((uint32_t)TileSizes::D_Size * sizeof(OutputT), Granularity* WaveSize* DWord)
               * Granularity,
         };
 

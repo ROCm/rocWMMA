@@ -224,8 +224,8 @@ namespace rocwmma
                         LayoutC,
                         LayoutD>::gridDim() const
     {
-        return dim3(ceilDiv(mM, BlockM * mTBlockX / DeviceInfo::instance()->warpSize()),
-                    ceilDiv(mN, BlockN * mTBlockY));
+        return dim3(ceil_div(mM, BlockM * mTBlockX / DeviceInfo::instance()->warpSize()),
+                    ceil_div(mN, BlockN * mTBlockY));
     }
 
     template <uint32_t BlockM,
@@ -726,10 +726,11 @@ namespace rocwmma
 
                         auto& dataInstance = DataStorage::instance();
 
-                        static_assert((!std::is_same_v<InputT, float8_t>
-                                       && !std::is_same_v<InputT, bfloat8_t>)
-                                          || std::is_same_v<ComputeT, float32_t>,
-                                      "f8 types must have f32 compute type");
+                        static_assert(
+                            (!std::is_same_v<InputT,
+                                             float8_t> && !std::is_same_v<InputT, bfloat8_t>)
+                                || std::is_same_v<ComputeT, float32_t>,
+                            "f8 types must have f32 compute type");
 
                         CHECK_ROCBLAS_ERROR(
                             dispatch_rocBLAS(handle,

@@ -75,11 +75,12 @@ namespace rocwmma
     ROCWMMA_DEVICE inline bool isFirstThread()
     {
         return (threadIdx.x == 0) && (threadIdx.y == 0) && (threadIdx.z == 0) && (blockIdx.x == 0)
-                && (blockIdx.y == 0) && (blockIdx.z == 0);
+               && (blockIdx.y == 0) && (blockIdx.z == 0);
     }
 
     template <typename Lhs, typename Rhs>
-    ROCWMMA_DEVICE bool expectEqual(Lhs&& testL, Rhs&& testR, bool debugOnFail, const char* file, uint32_t line)
+    ROCWMMA_DEVICE bool
+        expectEqual(Lhs&& testL, Rhs&& testR, bool debugOnFail, const char* file, uint32_t line)
     {
         bool compare_result = (testL == testR);
         if(!compare_result && debugOnFail && isFirstThread())
@@ -98,7 +99,8 @@ namespace rocwmma
     }
 
     template <typename Lhs, typename Rhs>
-    ROCWMMA_DEVICE bool expectNotEqual(Lhs&& testL, Rhs&& testR, bool debugOnFail, const char* file, uint32_t line)
+    ROCWMMA_DEVICE bool
+        expectNotEqual(Lhs&& testL, Rhs&& testR, bool debugOnFail, const char* file, uint32_t line)
     {
         bool compare_result = (testL != testR);
         if(!compare_result && debugOnFail && isFirstThread())
@@ -243,8 +245,8 @@ namespace rocwmma
                         // Count up in integers, in ascending order for each row.
                         auto value = ((i - padM) * n + (j - padN)) % 5;
                         mat[idx]   = ((value % 3) && std::is_signed<DataT>::value)
-                                         ? -static_cast<DataT>(value)
-                                         : static_cast<DataT>(value);
+                                       ? -static_cast<DataT>(value)
+                                       : static_cast<DataT>(value);
                     }
                 }
             }
@@ -270,7 +272,7 @@ namespace rocwmma
             const auto limitN = n + 2 * padN;
 
             auto blockDim = dim3(1024, 1, 1);
-            auto gridDim  = dim3(ceilDiv(limitM * limitN, blockDim.x), 1, 1);
+            auto gridDim  = dim3(ceil_div(limitM * limitN, blockDim.x), 1, 1);
             hipLaunchKernelGGL((fillWithPaddingKernel<DataT, Layout>),
                                gridDim,
                                blockDim,
@@ -303,8 +305,8 @@ namespace rocwmma
                     auto value = (i * n + j) % 5;
                     auto idx   = index(i, j, ld);
                     mat[idx]   = ((value % 3) && std::is_signed<DataT>::value)
-                                     ? -static_cast<DataT>(value)
-                                     : static_cast<DataT>(value);
+                                   ? -static_cast<DataT>(value)
+                                   : static_cast<DataT>(value);
                 }
             }
         }
@@ -339,7 +341,7 @@ namespace rocwmma
         __host__ static inline void fillLaunchKernel(DataT* d_mat, uint32_t m, uint32_t n)
         {
             auto blockDim = dim3(1024, 1, 1);
-            auto gridDim  = dim3(ceilDiv(m * n, blockDim.x), 1, 1);
+            auto gridDim  = dim3(ceil_div(m * n, blockDim.x), 1, 1);
             hipLaunchKernelGGL((fillKernel<DataT, Layout>), gridDim, blockDim, 0, 0, d_mat, m, n);
         }
 
@@ -349,7 +351,7 @@ namespace rocwmma
             fillLaunchKernel(DataT* d_mat, uint32_t m, uint32_t k, uint32_t b)
         {
             auto blockDim = dim3(1024, 1, 1);
-            auto gridDim  = dim3(ceilDiv(m * k, blockDim.x), 1, b);
+            auto gridDim  = dim3(ceil_div(m * k, blockDim.x), 1, b);
             hipLaunchKernelGGL(
                 (fillKernel<DataT, Layout>), gridDim, blockDim, 0, 0, d_mat, m, k, b);
         }
@@ -360,7 +362,7 @@ namespace rocwmma
             fillValLaunchKernel(DataT* d_mat, uint32_t m, uint32_t n, DataT value)
         {
             auto blockDim = dim3(1024, 1, 1);
-            auto gridDim  = dim3(ceilDiv(m * n, blockDim.x), 1, 1);
+            auto gridDim  = dim3(ceil_div(m * n, blockDim.x), 1, 1);
             hipLaunchKernelGGL(
                 (fillValKernel<DataT, Layout>), gridDim, blockDim, 0, 0, d_mat, m, n, value);
         }
@@ -370,7 +372,7 @@ namespace rocwmma
         __host__ static inline void fillIdxLaunchKernel(DataT* d_mat, uint32_t m, uint32_t n)
         {
             auto blockDim = dim3(1024, 1, 1);
-            auto gridDim  = dim3(ceilDiv(m * n, blockDim.x), 1, 1);
+            auto gridDim  = dim3(ceil_div(m * n, blockDim.x), 1, 1);
             hipLaunchKernelGGL(
                 (fillIdxKernel<DataT, Layout>), gridDim, blockDim, 0, 0, d_mat, m, n);
         }
@@ -609,7 +611,7 @@ namespace rocwmma
         uint32_t ldb = std::is_same<LayoutB, row_major>::value ? n : m;
 
         auto blockDim = dim3(1024, 1, 1);
-        auto gridDim  = dim3(ceilDiv(m * n, blockDim.x), 1, 1);
+        auto gridDim  = dim3(ceil_div(m * n, blockDim.x), 1, 1);
 
         double* d_relativeError;
         double  maxRelativeError;
@@ -639,9 +641,9 @@ namespace rocwmma
         uint32_t maxElements = 1024;
         uint32_t offset      = 1;
 
-        for(uint32_t i = m * n; i > 1; i = ceilDiv(i, maxElements))
+        for(uint32_t i = m * n; i > 1; i = ceil_div(i, maxElements))
         {
-            gridDim       = dim3(ceilDiv(i, maxElements), 1, 1);
+            gridDim       = dim3(ceil_div(i, maxElements), 1, 1);
             auto elements = i > maxElements ? maxElements : i;
 
             hipLaunchKernelGGL((maxReduceKernel),
@@ -691,7 +693,7 @@ namespace rocwmma
         TypeA* matrixA, TypeB* matrixB, uint32_t m, uint32_t k, uint32_t b, double tolerance = 10.0)
     {
         auto blockDim = dim3(1024, 1, 1);
-        auto gridDim  = dim3(ceilDiv(m * k, blockDim.x), 1, b);
+        auto gridDim  = dim3(ceil_div(m * k, blockDim.x), 1, b);
 
         double* d_relativeError;
         double  maxRelativeError;
@@ -720,9 +722,9 @@ namespace rocwmma
         uint32_t maxElements = 1024;
         uint32_t offset      = 1;
 
-        for(uint32_t i = m * k * b; i > 1; i = ceilDiv(i, maxElements))
+        for(uint32_t i = m * k * b; i > 1; i = ceil_div(i, maxElements))
         {
-            gridDim       = dim3(ceilDiv(i, maxElements), 1, 1);
+            gridDim       = dim3(ceil_div(i, maxElements), 1, 1);
             auto elements = i > maxElements ? maxElements : i;
 
             hipLaunchKernelGGL((maxReduceKernel),

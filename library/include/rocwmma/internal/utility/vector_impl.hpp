@@ -27,9 +27,9 @@
 #ifndef ROCWMMA_UTILITY_VECTOR_IMPL_HPP
 #define ROCWMMA_UTILITY_VECTOR_IMPL_HPP
 
-#include <rocwmma/internal/utility/get.hpp>
-#include <rocwmma/internal/utility/type_traits.hpp>
-#include <rocwmma/internal/vector_iterator.hpp>
+#include "../vector_iterator.hpp"
+#include "get.hpp"
+#include "type_traits.hpp"
 
 namespace rocwmma
 {
@@ -184,6 +184,12 @@ namespace rocwmma
     ROCWMMA_HOST_DEVICE constexpr static inline auto vector_reduce_and(VecT&& lhs) noexcept
     {
         return detail::vector_reduce<detail::BitwiseOp::And>(forward<VecT>(lhs));
+    }
+
+    template <typename VecT>
+    ROCWMMA_HOST_DEVICE constexpr static inline auto vector_reduce_or(VecT&& lhs) noexcept
+    {
+        return detail::vector_reduce<detail::BitwiseOp::Or>(forward<VecT>(lhs));
     }
 
     namespace detail
@@ -485,6 +491,21 @@ namespace rocwmma
     ROCWMMA_HOST_DEVICE constexpr static inline auto reduce_mult(VecT&& v0)
     {
         return apply([](auto&&... items) { return (items * ...); }, v0);
+    }
+
+    // Fwd declare
+    template <typename DataT, uint32_t VecSize>
+    struct vector_generator;
+
+    template <typename DataT, uint32_t VecSize, uint32_t Start /*= 0u*/, uint32_t Stride /*= 1u*/>
+    ROCWMMA_HOST_DEVICE constexpr static inline auto make_vector_sequence()
+    {
+        constexpr auto buildSeq = [](auto&& idx) {
+            constexpr auto Index = std::decay_t<decltype(idx)>::value;
+            return static_cast<DataT>(Start + Index * Stride);
+        };
+
+        return vector_generator<DataT, VecSize>()(buildSeq);
     }
 
 } // namespace rocwmma

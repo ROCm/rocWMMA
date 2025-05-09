@@ -60,6 +60,7 @@ namespace rocwmma
     using int64_t  = ::int64_t;
     using uint64_t = ::uint64_t;
     using index_t  = ::int32_t;
+    using size_t   = ::size_t;
 
 #else
 
@@ -72,6 +73,7 @@ namespace rocwmma
     using int64_t  = __hip_internal::int64_t;
     using uint64_t = __hip_internal::uint64_t;
     using index_t  = __hip_internal::int32_t;
+    using size_t   = __hip_internal::size_t;
 
 #endif // !defined(__HIPCC_RTC__)
 

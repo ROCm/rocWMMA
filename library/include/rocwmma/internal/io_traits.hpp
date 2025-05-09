@@ -29,7 +29,7 @@
 #include "constants.hpp"
 #include "pack_util.hpp"
 #include "types.hpp"
-#include "utils.hpp"
+#include "utility/math.hpp"
 
 namespace rocwmma
 {
@@ -52,19 +52,19 @@ namespace rocwmma
             ElementsPerIO = ThreadsPerIO * VectorWidth,
 
             // Number of BlockDim strides per I/O operation
-            KPerIO = ceilDiv(ElementsPerIO, BlockDim),
+            KPerIO = ceil_div(ElementsPerIO, BlockDim),
 
             // Total number of elements per for the entire block
             ElementCount = BlockDim * BlockK,
 
             // Total number of I/O operations needed for the entire block
-            IOCount = ceilDiv(ElementCount, ElementsPerIO),
+            IOCount = ceil_div(ElementCount, ElementsPerIO),
 
             // Per-thread c++ vector storage size required for:
             // Unpacked vector = raw I/O
             // Packed vector = packed raw I/O
-            UnpackedSize = ceilDiv(ElementCount, ThreadsPerIO),
-            PackedSize   = ceilDiv((uint32_t)UnpackedSize, (uint32_t)PackTraits<DataT>::PackRatio),
+            UnpackedSize = ceil_div(ElementCount, ThreadsPerIO),
+            PackedSize   = ceil_div((uint32_t)UnpackedSize, (uint32_t)PackTraits<DataT>::PackRatio),
 
             // Physical number of hardware vregs used to store packed data
             PackedVRegCount = ElementCount * sizeof(DataT) / Constants::AMDGCN_REGISTER_SIZE_BYTES,

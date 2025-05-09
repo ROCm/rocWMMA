@@ -142,13 +142,15 @@ find_package( hip REQUIRED )
 find_package( hiprtc REQUIRED )
 find_package( OpenMP REQUIRED )
 
-find_path(ROCM_SMI_ROOT "include/rocm_smi/rocm_smi.h"
-    PATHS "${ROCM_ROOT}"
-    PATH_SUFFIXES "rocm_smi"
-    )
-
-find_library(ROCM_SMI_LIBRARY rocm_smi64
-    PATHS "${ROCM_SMI_ROOT}/lib")
+## Check for ROCM-smi
+find_package(rocm_smi PATHS ${ROCM_PATH}/lib/cmake/rocm_smi)
+if (rocm_smi_FOUND)
+  message(STATUS "Found rocm_smi at ${ROCM_SMI_INCLUDE_DIR}")
+else()
+  set(ROCM_SMI_INCLUDE_DIR "${ROCM_PATH}/rocm_smi/include")
+  set(ROCM_SMI_LIB_DIR     "${ROCM_PATH}/rocm_smi/lib")
+  set(ROCM_SMI_LIBRARY   rocm_smi64)
+endif()
 
 add_library(rocwmma INTERFACE)
 target_link_libraries(rocwmma INTERFACE hip::device hip::host OpenMP::OpenMP_CXX ${ROCM_SMI_LIBRARY})

@@ -133,10 +133,10 @@ namespace rocwmma
 
         dim3 gridDim() const final
         {
-            return dim3(ceilDiv(Base::mM,
-                                BlockM * BlocksX * Base::mTBlockX
-                                    / Base::DeviceInfo::instance()->warpSize()),
-                        ceilDiv(Base::mN, BlockN * BlocksY * Base::mTBlockY));
+            return dim3(ceil_div(Base::mM,
+                                 BlockM * BlocksX * Base::mTBlockX
+                                     / Base::DeviceInfo::instance()->warpSize()),
+                        ceil_div(Base::mN, BlockN * BlocksY * Base::mTBlockY));
         }
 
         bool checkSizes() const final

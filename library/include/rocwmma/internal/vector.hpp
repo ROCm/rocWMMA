@@ -29,6 +29,7 @@
 
 #include "types.hpp"
 #include "utility/forward.hpp"
+#include "utility/math.hpp"
 #include "utility/type_traits.hpp"
 
 /**
@@ -105,11 +106,6 @@
  *
  */
 
-inline constexpr auto next_pow2(uint32_t x)
-{
-    // Precondition: x > 1.
-    return x > 1u ? (1u << (32u - __builtin_clz(x - 1u))) : x;
-}
 namespace rocwmma
 {
     template <typename T, unsigned int Rank>
@@ -336,7 +332,7 @@ namespace rocwmma
     template <typename T, unsigned int Rank, enable_if_integral_t<T>* = nullptr>
     ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, Rank>
         operator>>(non_native_vector_base<T, Rank> const& x,
-                  non_native_vector_base<T, Rank> const& y) noexcept;
+                   non_native_vector_base<T, Rank> const& y) noexcept;
 
     template <typename T, unsigned int Rank, typename U, enable_if_integral_t<T>* = nullptr>
     ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, Rank>
@@ -349,7 +345,7 @@ namespace rocwmma
     template <typename T, unsigned int Rank, enable_if_integral_t<T>* = nullptr>
     ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, Rank>
         operator<<(non_native_vector_base<T, Rank> const& x,
-                  non_native_vector_base<T, Rank> const& y) noexcept;
+                   non_native_vector_base<T, Rank> const& y) noexcept;
 
     template <typename T, unsigned int Rank, typename U, enable_if_integral_t<T>* = nullptr>
     ROCWMMA_HOST_DEVICE inline constexpr non_native_vector_base<T, Rank>

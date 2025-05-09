@@ -5,6 +5,7 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <rocwmma/rocwmma.hpp>
 #include <rocwmma/rocwmma_coop.hpp>
+#include <rocwmma/rocwmma_transforms.hpp>
 #pragma GCC diagnostic pop
 
 #include <rocwmma/internal/io_config.hpp>
@@ -138,10 +139,8 @@ namespace rocwmma
 
         // Local Write
         // Vertical register file fulfilled by matrix_b with BlockN = 64
-        using LocalWriteFragA
-            = fragment<matrix_b, 1, registerFileWidth, GlobalReadFragA::size(), DataT, LayoutLds>;
-        using LocalWriteFragB
-            = fragment<matrix_b, 1, registerFileWidth, GlobalReadFragB::size(), DataT, LayoutLds>;
+        using LocalWriteFragA = ApplyDataLayout_t<ApplyRegisterFile_t<GlobalReadFragA>, LayoutLds>;
+        using LocalWriteFragB = ApplyDataLayout_t<ApplyRegisterFile_t<GlobalReadFragB>, LayoutLds>;
 
         // Sanity checks
         static_assert(GlobalReadFragA::size() == LocalWriteFragA::size(),

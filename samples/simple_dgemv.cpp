@@ -196,8 +196,8 @@ __host__ void dgemv_test(uint32_t m, uint32_t n, uint32_t k, float64_t alpha, fl
     CHECK_HIP_ERROR(hipMemcpy(d_c, matrixC.data(), bytesC, hipMemcpyHostToDevice));
 
     auto blockDim = dim3(T_BLOCK_X, T_BLOCK_Y);
-    auto gridDim  = dim3(rocwmma::ceilDiv(m, ROCWMMA_M * T_BLOCK_X / WAVE_SIZE),
-                        rocwmma::ceilDiv(n, ROCWMMA_N * T_BLOCK_Y));
+    auto gridDim  = dim3(rocwmma::ceil_div(m, ROCWMMA_M * T_BLOCK_X / WAVE_SIZE),
+                        rocwmma::ceil_div(n, ROCWMMA_N * T_BLOCK_Y));
 
     std::cout << "Launching dgemv kernel..." << std::endl;
     hipEvent_t startEvent, stopEvent;
