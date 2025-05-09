@@ -38,7 +38,7 @@ namespace rocwmma
         template <typename InputT, typename OutputT>
         struct amdgcn_convert
         {
-            template <uint32_t NumRegs>
+            template <template <typename, uint32_t> class VecT, uint32_t NumRegs>
             ROCWMMA_DEVICE static inline auto exec(VecT<InputT, NumRegs> const& regsIn)
                 -> VecT<OutputT, NumRegs>
             {
@@ -57,7 +57,7 @@ namespace rocwmma
         struct amdgcn_convert<T, T>
         {
             template <typename IncomingT>
-            ROCWMMA_DEVICE static inline auto exec(IncomingT&& regsIn) -> IncomingT&&
+            ROCWMMA_DEVICE static inline decltype(auto) exec(IncomingT&& regsIn)
             {
                 return forward<IncomingT>(regsIn);
             }
@@ -67,9 +67,8 @@ namespace rocwmma
         template <>
         struct amdgcn_convert<hfloat16_t, float32_t>
         {
-            template <uint32_t NumRegs>
+            template <template <typename, uint32_t> class VecT, uint32_t NumRegs>
             ROCWMMA_DEVICE static inline auto exec(VecT<hfloat16_t, NumRegs> const& regsIn)
-                -> VecT<float32_t, NumRegs>
             {
                 VecT<float32_t, NumRegs> result;
 
@@ -85,9 +84,8 @@ namespace rocwmma
         template <>
         struct amdgcn_convert<float32_t, hfloat16_t>
         {
-            template <uint32_t NumRegs>
+            template <template <typename, uint32_t> class VecT, uint32_t NumRegs>
             ROCWMMA_DEVICE static inline auto exec(VecT<float32_t, NumRegs> const& regsIn)
-                -> VecT<hfloat16_t, NumRegs>
             {
                 VecT<hfloat16_t, NumRegs> result;
 

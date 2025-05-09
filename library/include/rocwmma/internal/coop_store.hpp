@@ -27,6 +27,7 @@
 #define ROCWMMA_COOP_STORE_HPP
 
 #include "coop_io_bearer.hpp"
+#include "io_bounds_ctrl.hpp"
 #include "layout/matrix_coop_layout_impl.hpp"
 #include "opaque_store.hpp"
 
@@ -36,15 +37,20 @@ namespace rocwmma
     using MatrixLayout::MatrixCoopLayout;
 
     // This class wraps an incoming MatrixLayout into a cooperative one
-    template <class DataLayout, class MatrixLayout, uint32_t WaveCount>
+    template <class DataLayout,
+              class MatrixLayout,
+              uint32_t WaveCount,
+              class BoundsCtrl = IOBoundsCtrl::Default>
     struct CooperativeStore : public CoopIOBearer<DataLayout,
                                                   MatrixCoopLayout<MatrixLayout, WaveCount>,
-                                                  detail::OpaqueStoreBearer>
+                                                  detail::OpaqueStoreBearer,
+                                                  BoundsCtrl>
     {
     private:
         using Base = CoopIOBearer<DataLayout,
                                   MatrixCoopLayout<MatrixLayout, WaveCount>,
-                                  detail::OpaqueStoreBearer>;
+                                  detail::OpaqueStoreBearer,
+                                  BoundsCtrl>;
 
         // Don't expose the base implementation, we change arg forwarding order
         using Base::exec;

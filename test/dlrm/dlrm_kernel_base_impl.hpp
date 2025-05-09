@@ -81,14 +81,14 @@ namespace rocwmma
 
         if(passDirection == DlrmDirection_t::Forward)
         {
-            return dim3(ceilDiv(mMPadded, TileSize * mTBlockX / device->warpSize()),
-                        ceilDiv(mM, TileSize),
+            return dim3(ceil_div(mMPadded, TileSize * mTBlockX / device->warpSize()),
+                        ceil_div(mM, TileSize),
                         mB);
         }
         else
         {
-            return dim3(ceilDiv(mMPadded, TileSize * mTBlockX / device->warpSize()),
-                        ceilDiv(mK, TileSize),
+            return dim3(ceil_div(mMPadded, TileSize * mTBlockX / device->warpSize()),
+                        ceil_div(mK, TileSize),
                         mB);
         }
     }
@@ -251,8 +251,8 @@ namespace rocwmma
                        static_cast<uint32_t const&>(std::get<1>(problem.problemSize)),
                        static_cast<uint32_t const&>(std::get<2>(problem.problemSize)));
 
-        mMPadded = ceilDiv(mM, TileSize) * TileSize;
-        mKPadded = ceilDiv(mK, TileSize) * TileSize;
+        mMPadded = ceil_div(mM, TileSize) * TileSize;
+        mKPadded = ceil_div(mK, TileSize) * TileSize;
 
         // Determine whether to run forward or backward pass
         passDirection = problem.passDirection;
@@ -347,7 +347,7 @@ namespace rocwmma
                     dlrmKernel = [this, inputBatchOffset, upstreamBatchOffset, accBatchOffset]() {
                         auto& dataInstance = DataStorage::instance();
                         auto  trilGridDim
-                            = dim3(ceilDiv(mM * mM, static_cast<uint32_t>(mTBlockX)), 1, mB);
+                            = dim3(ceil_div(mM * mM, static_cast<uint32_t>(mTBlockX)), 1, mB);
 
                         hipEvent_t syncEvent;
                         CHECK_HIP_ERROR(hipEventCreate(&syncEvent));

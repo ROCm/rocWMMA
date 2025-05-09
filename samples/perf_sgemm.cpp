@@ -442,7 +442,6 @@ ROCWMMA_DEVICE static inline void mfma(MfmaFragAcc (&fragsAccOut)[BLOCKS_X][BLOC
     }
 
 #endif // ROCWMMA_ARCH_GFX9
-
 }
 
 // Uniform multiply - add (FMA)
@@ -470,18 +469,18 @@ ROCWMMA_DEVICE static inline void uniformFma(MfmaFragD (&fragsD)[BLOCKS_X][BLOCK
 }
 
 ROCWMMA_KERNEL void __launch_bounds__(256) sgemm_rocwmma_d(uint32_t       m,
-                                                          uint32_t       n,
-                                                          uint32_t       k,
-                                                          InputT const*  a,
-                                                          InputT const*  b,
-                                                          OutputT const* c,
-                                                          OutputT*       d,
-                                                          uint32_t       lda,
-                                                          uint32_t       ldb,
-                                                          uint32_t       ldc,
-                                                          uint32_t       ldd,
-                                                          ComputeT       alpha,
-                                                          ComputeT       beta)
+                                                           uint32_t       n,
+                                                           uint32_t       k,
+                                                           InputT const*  a,
+                                                           InputT const*  b,
+                                                           OutputT const* c,
+                                                           OutputT*       d,
+                                                           uint32_t       lda,
+                                                           uint32_t       ldb,
+                                                           uint32_t       ldc,
+                                                           uint32_t       ldd,
+                                                           ComputeT       alpha,
+                                                           ComputeT       beta)
 {
     ///
     /// 2D matrix coordinate setup
@@ -565,7 +564,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) sgemm_rocwmma_d(uint32_t       m,
     constexpr uint32_t ldsWidth  = ROCWMMA_K;
     constexpr uint32_t ldsHeight = LWBuffAShape::BlockHeight + LWBuffBShape::BlockHeight;
     constexpr uint32_t sizeLds   = ldsHeight * ldsWidth;
-    constexpr uint32_t ldsld = std::is_same_v<DataLayoutLds, row_major> ? ldsWidth : ldsHeight;
+    constexpr uint32_t ldsld     = std::is_same_v<DataLayoutLds, row_major> ? ldsWidth : ldsHeight;
 
     auto* ldsPtrLo = reinterpret_cast<InputT*>(localMemPtr);
     auto* ldsPtrHi = ldsPtrLo + sizeLds;
@@ -578,10 +577,10 @@ ROCWMMA_KERNEL void __launch_bounds__(256) sgemm_rocwmma_d(uint32_t       m,
     // Local read offsets for mfma frags
     auto ldsReadOffsetA
         = ldsWriteOffsetA
-            + LWBuffAMap1d::fromMatrixCoord(make_coord2d(get<0>(localWarpOffset), 0u), ldsld);
+          + LWBuffAMap1d::fromMatrixCoord(make_coord2d(get<0>(localWarpOffset), 0u), ldsld);
     auto ldsReadOffsetB
         = ldsWriteOffsetB
-            + LWBuffBMap1d::fromMatrixCoord(make_coord2d(get<1>(localWarpOffset), 0u), ldsld);
+          + LWBuffBMap1d::fromMatrixCoord(make_coord2d(get<1>(localWarpOffset), 0u), ldsld);
 
     ///
     /// Write prefetch to local
@@ -662,7 +661,6 @@ ROCWMMA_KERNEL void __launch_bounds__(256) sgemm_rocwmma_d(uint32_t       m,
     MfmaFragD fragsD[BLOCKS_X][BLOCKS_Y];
     uniformFma(fragsD, alpha, fragsAcc, beta, fragsC);
     globalWriteD(d + MfmaFragDMap1d::fromMatrixCoord(warpTileCoord, ldd), fragsD, ldd);
-
 }
 
 ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, ComputeT beta)
@@ -742,8 +740,8 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, 
     CHECK_HIP_ERROR(hipMemcpy(d_d, matrixD.data(), bytesD, hipMemcpyHostToDevice));
 
     auto blockDim = dim3(TBLOCK_X, TBLOCK_Y);
-    auto gridDim  = dim3(rocwmma::ceilDiv(m, get<0>(macroTileSize)),
-                        rocwmma::ceilDiv(n, get<1>(macroTileSize)));
+    auto gridDim  = dim3(rocwmma::ceil_div(m, get<0>(macroTileSize)),
+                        rocwmma::ceil_div(n, get<1>(macroTileSize)));
 
     std::cout << "Launching GEMM kernel..." << std::endl;
     std::cout << "gridDim (" << gridDim.x << " " << gridDim.y << ")"

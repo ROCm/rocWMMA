@@ -23,30 +23,30 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_COOP_LOAD_HPP
-#define ROCWMMA_COOP_LOAD_HPP
 
-#include "coop_io_bearer.hpp"
-#include "io_bounds_ctrl.hpp"
-#include "layout/matrix_coop_layout_impl.hpp"
-#include "opaque_load.hpp"
+#ifndef ROCWMMA_UTILITY_STATIC_FOR_HPP
+#define ROCWMMA_UTILITY_STATIC_FOR_HPP
+
+#include "static_for_impl.hpp"
 
 namespace rocwmma
 {
-    using MatrixLayout::MatrixCoopLayout;
-
-    // This class wraps an incoming MatrixLayout into a cooperative one
-    template <class DataLayout,
-              class MatrixLayout,
-              uint32_t WaveCount,
-              class BoundsCtrl = IOBoundsCtrl::Default>
-    struct CooperativeLoad : public CoopIOBearer<DataLayout,
-                                                 MatrixCoopLayout<MatrixLayout, WaveCount>,
-                                                 detail::OpaqueLoadBearer,
-                                                 BoundsCtrl>
+    //! Statically unrolls an iterative for-loop sequence [from i = NBegin; i < NEnd; i += Increment]
+    //! Each iteration will invoke a Functor F with signature: F(I<i> it, args...), where I<i> is a
+    //! compile-time value of the current iterator i. It may be used with constexpr checks, where
+    //! you may access the value by decay_t<decltype(it)>::value
+    //! @param f Functor Functor F with signature: F(I<i> it, args...), where I<i> the iterator
+    //! @param args Additional arguments that are passed to functor
+    //! @tparam NBegin The start iterator value
+    //! @tparam NEnd The end iterator value
+    //! @tparam Increment The space between each iteration
+    //! @tparam F the type of input functor f
+    //! @tparam ArgsT the variadic list of additional input args to functor f.
+    template <index_t NBegin, index_t NEnd, index_t Increment, class F, typename... ArgsT>
+    ROCWMMA_HOST_DEVICE constexpr inline void static_for(F f, ArgsT&&... args)
     {
-    };
+        detail::static_for<NBegin, NEnd, Increment>()(f, forward<ArgsT>(args)...);
+    }
+}
 
-} // namespace rocwmma
-
-#endif // ROCWMMA_COOP_LOAD_HPP
+#endif // ROCWMMA_UTILITY_STATIC_FOR_HPP

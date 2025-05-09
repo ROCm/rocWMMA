@@ -28,8 +28,10 @@
 
 #include "coop_load.hpp"
 #include "coop_store.hpp"
+#include "io_bounds_ctrl.hpp"
 #include "io_layout.hpp"
 #include "io_shape.hpp"
+#include "io_tile.hpp"
 #include "io_traits.hpp"
 #include "layout/register_layout_transforms.hpp"
 #include "pack_util.hpp"
@@ -44,60 +46,84 @@ namespace rocwmma
      * @{
      */
 
-    /*! \struct CoopIOConfig
- *  \brief Definition of cooperative fragment input / output configurations
- *         in specific matrix context.
- *
- * @tparam Matrix fragment context
- * @tparam BlockM/N/K block dimensions
- * @tparam DataT data type
- * @tparam DataLayoutT in-memory layout as col_major or row_major
- * @param IOShape dimensional properties of the fragment
- * @param IOLayout 1d and 2d layouts of the fragment
- * @param IOTraits meta-properties for input and output of the fragment
- * @param PackUtil utility for packing / unpacking fragment data
- * @param MappingUtil global mapping utility for current fragment
- * @param Loader Issues cooperative load instructions for raw fragment data
- * @param Storer Issues cooperative store instructions for raw fragment data
- */
-
+    //! @struct CoopIOConfig
+    //! @brief Definition of cooperative fragment input / output configurations
+    //!         in specific matrix context.
+    //!
+    //! @tparam Matrix fragment context
+    //! @tparam BlockM/N/K block dimensions
+    //! @tparam DataT data type
+    //! @tparam DataLayoutT in-memory layout as col_major or row_major
+    //! @param IOShape dimensional properties of the fragment
+    //! @param IOLayout 1d and 2d layouts of the fragment
+    //! @param IOTraits meta-properties for input and output of the fragment
+    //! @param PackUtil utility for packing / unpacking fragment data
+    //! @param MappingUtil global mapping utility for current fragment
+    //! @param Loader Issues cooperative load instructions for raw fragment data
+    //! @param Storer Issues cooperative store instructions for raw fragment data
     template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
+              uint32_t FragM,
+              uint32_t FragN,
+              uint32_t FragK,
               typename DataT,
               typename DataLayoutT,
               uint32_t WaveCount>
     struct CoopIOConfig
     {
-        using IOShape = IOShape<MatrixT, BlockM, BlockN, BlockK>;
+        // The specific size of the requested fragment
+        using IOBounds = IOShape<MatrixT, FragM, FragN, FragK>;
+
+        // Internally, block-wise decomposition dictates the need for quantized block dimensions.
+        // IOTile will determine ideal block size.
+        using IOTile  = IOTile<FragM, FragN, FragK, DataT>;
+        using IOShape = IOShape<MatrixT, IOTile::BlockM, IOTile::BlockN, IOTile::BlockK>;
+
+        // Bounds control is needed if the original frag size doesn't match block size quantizations.
+        static constexpr bool IOBoundsCtrlRequired
+            = (FragM != IOTile::BlockM) || (FragN != IOTile::BlockN) || (FragK != IOTile::BlockK);
+
+        // Using quantized block dimensions, determine the layout characteristics we will use with
+        // this fragment.
         using IOLayout
-            = IOLayout<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, WaveCount>;
+            = IOLayoutInt<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, WaveCount>;
+
         using IOTraits = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT, IOLayout::VW>;
 
-        using PackUtil = PackUtil<DataT>;
+        // Define functional classes used during fragment IO workflow operations such as loading / storing
         using MappingUtil
             = MappingUtil<IOShape::BlockHeight, IOShape::BlockWidth, DataT, DataLayoutT>;
 
+        using PackUtil = PackUtil<DataT>;
+
+        // When loading for Mma, we need to replace clipped areas with 0's to ensure correctness.
+        using IOBoundsCtrlLoad = conditional_t<
+            IOBoundsCtrlRequired,
+            IOBoundsCtrl::ClipAndReplace2d<IOBounds::BlockHeight, IOBounds::BlockWidth>,
+            IOBoundsCtrl::Default>;
+
         using Loader = CooperativeLoad<typename IOLayout::DataLayout,
                                        typename IOLayout::MatrixLayout,
-                                       WaveCount>;
+                                       WaveCount,
+                                       IOBoundsCtrlLoad>;
 
         using PostLoadXForm = register_layout_transform<typename IOLayout::StorageLayout,
                                                         typename IOLayout::FragmentLayout,
                                                         WaveCount>;
 
-        using PreMmaXForm = register_layout_transform<typename IOLayout::FragmentLayout,
-                                                      typename IOLayout::MmaLayout,
-                                                      WaveCount>;
-
         using PreStoreXForm = register_layout_transform<typename IOLayout::FragmentLayout,
                                                         typename IOLayout::StorageLayout,
                                                         WaveCount>;
 
+        // Storage requires only clipping.
+        using IOBoundsCtrlStore
+            = conditional_t<IOBoundsCtrlRequired,
+                            IOBoundsCtrl::Clip2d<IOBounds::BlockHeight, IOBounds::BlockWidth>,
+                            IOBoundsCtrl::Default>;
+
         using Storer = CooperativeStore<typename IOLayout::DataLayout,
                                         typename IOLayout::MatrixLayout,
-                                        WaveCount>;
+                                        WaveCount,
+                                        IOBoundsCtrlStore>;
     };
 
     /************************************************
@@ -107,10 +133,11 @@ namespace rocwmma
  * general IOShape, PackUtil, Broadcast still available.
  *
  * */
-    template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT, uint32_t WaveCount>
-    struct CoopIOConfig<accumulator, BlockM, BlockN, BlockK, DataT, void, WaveCount>
+    template <uint32_t FragM, uint32_t FragN, uint32_t FragK, typename DataT, uint32_t WaveCount>
+    struct CoopIOConfig<accumulator, FragM, FragN, FragK, DataT, void, WaveCount>
     {
-        using IOShape  = IOShape<accumulator, BlockM, BlockN, BlockK>;
+        using IOTile   = IOTile<FragM, FragN, FragK, DataT>;
+        using IOShape  = IOShape<accumulator, IOTile::BlockM, IOTile::BlockN, IOTile::BlockK>;
         using PackUtil = PackUtil<DataT>;
     };
     /** @}*/

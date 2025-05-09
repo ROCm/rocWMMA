@@ -37,23 +37,12 @@ namespace rocwmma
         return v.data[idx];
     }
 
-    template <typename DataT, uint32_t VecSize, uint32_t Start = 0>
-    ROCWMMA_DEVICE static inline auto generateSeqVec()
-    {
-        auto buildSeq = [](auto&& idx) {
-            constexpr auto Index = std::decay_t<decltype(idx)>::value;
-            return static_cast<DataT>(Index) + static_cast<DataT>(Start);
-        };
-
-        return vector_generator<DataT, VecSize>()(buildSeq);
-    }
-
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline bool vectorGeneratorTestBasic()
     {
         bool err = false;
 
-        auto res = generateSeqVec<DataT, VecSize>();
+        auto res = make_vector_sequence<DataT, VecSize>();
 
         for(uint32_t i = 0; i < VecSize; i++)
         {
@@ -91,7 +80,7 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto v   = generateSeqVec<DataT, VecSize>();
+        auto v   = make_vector_sequence<DataT, VecSize>();
         auto res = extractEven(v);
 
         // Handle the general case
@@ -116,7 +105,7 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto v   = generateSeqVec<DataT, VecSize>();
+        auto v   = make_vector_sequence<DataT, VecSize>();
         auto res = extractOdd(v);
 
         // Handle general case
@@ -143,7 +132,7 @@ namespace rocwmma
         using PackTraits = typename PackUtil::Traits;
         bool err         = false;
 
-        auto v   = generateSeqVec<DataT, VecSize>();
+        auto v   = make_vector_sequence<DataT, VecSize>();
         auto res = reorderEvenOdd(v);
 
         // Handle general case
@@ -177,7 +166,7 @@ namespace rocwmma
         using PackTraits = typename PackUtil::Traits;
         bool err         = false;
 
-        auto v   = generateSeqVec<DataT, VecSize>();
+        auto v   = make_vector_sequence<DataT, VecSize>();
         auto res = reorderOddEven(v);
 
         // Handle general case
@@ -209,7 +198,7 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto v   = generateSeqVec<DataT, VecSize>();
+        auto v   = make_vector_sequence<DataT, VecSize>();
         auto res = extractLo(v);
 
         if constexpr(VecSize > 1)
@@ -232,7 +221,7 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto v   = generateSeqVec<DataT, VecSize>();
+        auto v   = make_vector_sequence<DataT, VecSize>();
         auto res = extractHi(v);
 
         if constexpr(VecSize > 1)
@@ -255,7 +244,7 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto v   = generateSeqVec<DataT, VecSize>();
+        auto v   = make_vector_sequence<DataT, VecSize>();
         auto res = concat(v, v);
 
         for(uint32_t i = 0; i < VecSize * 2; i++)
@@ -273,8 +262,8 @@ namespace rocwmma
         using PackTraits = typename PackUtil::Traits;
         bool err         = false;
 
-        auto v0  = generateSeqVec<DataT, VecSize>();
-        auto v1  = generateSeqVec<DataT, VecSize, VecSize>();
+        auto v0  = make_vector_sequence<DataT, VecSize>();
+        auto v1  = make_vector_sequence<DataT, VecSize, VecSize>();
         auto res = zip(v0, v1);
 
         for(uint32_t i = 0; i < VecSize; i++)
@@ -290,8 +279,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto v0  = generateSeqVec<DataT, VecSize>();
-        auto v1  = generateSeqVec<DataT, VecSize, VecSize>();
+        auto v0  = make_vector_sequence<DataT, VecSize>();
+        auto v1  = make_vector_sequence<DataT, VecSize, VecSize>();
         auto res = unpackLo(v0, v1);
 
         // 0, VecSize , 1, VecSize + 1, ...
@@ -308,8 +297,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        auto v0  = generateSeqVec<DataT, VecSize>();
-        auto v1  = generateSeqVec<DataT, VecSize, VecSize>();
+        auto v0  = make_vector_sequence<DataT, VecSize>();
+        auto v1  = make_vector_sequence<DataT, VecSize, VecSize>();
         auto res = unpackHi(v0, v1);
 
         // VecSize / 2, VecSize / 2 + VecSize , VecSize / 2 + 1, VecSize / 2 + VecSize + 1, ...

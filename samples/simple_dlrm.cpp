@@ -501,8 +501,8 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
     if(passDirection == DlrmDirection_t::Forward)
     {
         dlrmKernel = [d_input, d_output, d_accFwd, m, k, b]() {
-            auto gridDim  = dim3(rocwmma::ceilDiv(m, TILE_DIM * T_BLOCK_X / WAVE_SIZE),
-                                rocwmma::ceilDiv(m, TILE_DIM),
+            auto gridDim  = dim3(rocwmma::ceil_div(m, TILE_DIM * T_BLOCK_X / WAVE_SIZE),
+                                rocwmma::ceil_div(m, TILE_DIM),
                                 b);
             auto blockDim = dim3(T_BLOCK_X);
 
@@ -532,7 +532,7 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
     else
     {
         dlrmKernel = [d_input, d_upstreamGrad, d_grad, d_bottomMlpGrad, d_accBwd, m, k, b]() {
-            auto gridDim  = dim3(rocwmma::ceilDiv(m * m, T_BLOCK_X), 1, b);
+            auto gridDim  = dim3(rocwmma::ceil_div(m * m, T_BLOCK_X), 1, b);
             auto blockDim = dim3(T_BLOCK_X);
 
             uint inputBatchOffset    = m * k;
@@ -559,8 +559,8 @@ __host__ void dlrm_test(uint32_t m, uint32_t k, uint32_t b, DlrmDirection_t pass
             CHECK_HIP_ERROR(hipEventRecord(syncEvent));
             CHECK_HIP_ERROR(hipEventSynchronize(syncEvent));
 
-            gridDim = dim3(rocwmma::ceilDiv(m, TILE_DIM * T_BLOCK_X / WAVE_SIZE),
-                           rocwmma::ceilDiv(k, TILE_DIM),
+            gridDim = dim3(rocwmma::ceil_div(m, TILE_DIM * T_BLOCK_X / WAVE_SIZE),
+                           rocwmma::ceil_div(k, TILE_DIM),
                            b);
 
             hipExtLaunchKernelGGL((dlrmDotBwd),

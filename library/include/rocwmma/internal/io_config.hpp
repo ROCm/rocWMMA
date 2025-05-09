@@ -30,7 +30,9 @@
 #include "broadcast.hpp"
 #include "coop_load.hpp"
 #include "coop_store.hpp"
+#include "io_bounds_ctrl.hpp"
 #include "io_shape.hpp"
+#include "io_tile.hpp"
 #include "opaque_load.hpp"
 #include "opaque_store.hpp"
 #include "pack_util.hpp"
@@ -44,44 +46,70 @@ namespace rocwmma
      * @{
      */
 
-    /*! \struct IOConfig
-  *  \brief Definition of fragment input / output configurations
- *         in specific matrix context.
- *
- * @tparam Matrix fragment context
- * @tparam BlockM/N/K block dimensions
- * @tparam DataT data type
- * @tparam DataLayoutT in-memory layout as col_major or row_major
- * @param IOShape dimensional properties of the fragment
- * @param IOLayout 1d and 2d layouts of the fragment
- * @param IOTraits meta-properties for input and output of the fragment
- * @param PackUtil utility for packing / unpacking fragment data
- * @param Broadcaster utility for assigning a single value to entire fragment
- * @param MappingUtil global mapping utility for current fragment
- * @param Loader Issues load instructions for raw fragment data
- * @param Storer Issues store instructions for raw fragment data
- */
-
+    //! @struct IOConfig
+    //! @brief Definition of fragment input / output configurations in specific matrix context.
+    //!
+    //! @tparam Matrix fragment context
+    //! @tparam BlockM/N/K block dimensions
+    //! @tparam DataT data type
+    //! @tparam DataLayoutT in-memory layout as col_major or row_major
+    //! @param IOBounds Describes the boundaries given by the fragment
+    //! @param IOTile Describes the actual block tiling decomposition used based on the fragment size
+    //! @param IOShape Dimensional properties of the block tile
+    //! @param IOLayout 1d and 2d layouts of the block tile
+    //! @param IOTraits Meta-properties for input and output of the block tile
+    //! @param PackUtil Utility for packing / unpacking block tile data
+    //! @param Broadcaster Utility for broadcasting a single value to entire fragment
+    //! @param MappingUtil Global mapping utility for current fragment
+    //! @param IOBoundsCtrlLoad Bounds control for loading input
+    //! @param PostLoadXForm Register transform immediately after loading
+    //! @param Loader Issues load instructions for raw data
+    //! @param PreStoreXForm Register transform immediately before storing
+    //! @param IOBoundsCtrlStore Bounds control for storing output
+    //! @param Storer Issues store instructions for raw data
     template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
+              uint32_t FragM,
+              uint32_t FragN,
+              uint32_t FragK,
               typename DataT,
               typename DataLayoutT>
     struct IOConfig
     {
-        using IOShape = IOShape<MatrixT, BlockM, BlockN, BlockK>;
+        // The specific size of the requested fragment
+        using IOBounds = IOShape<MatrixT, FragM, FragN, FragK>;
+
+        // Internally, block-wise decomposition dictates the need for quantized block dimensions.
+        // IOTile will determine ideal block size.
+        using IOTile  = IOTile<FragM, FragN, FragK, DataT>;
+        using IOShape = IOShape<MatrixT, IOTile::BlockM, IOTile::BlockN, IOTile::BlockK>;
+
+        // Bounds control is needed if the original frag size doesn't match block size quantizations.
+        static constexpr bool IOBoundsCtrlRequired
+            = (FragM != IOTile::BlockM) || (FragN != IOTile::BlockN) || (FragK != IOTile::BlockK);
+
+        // Using quantized block dimensions, determine the layout characteristics we will use with
+        // this fragment.
         using IOLayout
-            = IOLayout<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, 1u>;
+            = IOLayoutInt<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, 1u>;
+
         using IOTraits = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT, IOLayout::VW>;
+
+        // Define functional classes used during fragment IO workflow operations such as loading / storing
+        using MappingUtil
+            = MappingUtil<IOShape::BlockHeight, IOShape::BlockWidth, DataT, DataLayoutT>;
 
         using PackUtil    = PackUtil<DataT>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
 
-        using MappingUtil
-            = MappingUtil<IOShape::BlockHeight, IOShape::BlockWidth, DataT, DataLayoutT>;
+        // When loading for Mma, we need to replace clipped areas with 0's to ensure correctness.
+        using IOBoundsCtrlLoad = conditional_t<
+            IOBoundsCtrlRequired,
+            IOBoundsCtrl::ClipAndReplace2d<IOBounds::BlockHeight, IOBounds::BlockWidth>,
+            IOBoundsCtrl::Default>;
 
-        using Loader = OpaqueLoad<typename IOLayout::DataLayout, typename IOLayout::MatrixLayout>;
+        using Loader = OpaqueLoad<typename IOLayout::DataLayout,
+                                  typename IOLayout::MatrixLayout,
+                                  IOBoundsCtrlLoad>;
 
         using PostLoadXForm = register_layout_transform<typename IOLayout::StorageLayout,
                                                         typename IOLayout::FragmentLayout,
@@ -91,7 +119,15 @@ namespace rocwmma
                                                         typename IOLayout::StorageLayout,
                                                         1u>;
 
-        using Storer = OpaqueStore<typename IOLayout::DataLayout, typename IOLayout::MatrixLayout>;
+        // Storage requires only clipping.
+        using IOBoundsCtrlStore
+            = conditional_t<IOBoundsCtrlRequired,
+                            IOBoundsCtrl::Clip2d<IOBounds::BlockHeight, IOBounds::BlockWidth>,
+                            IOBoundsCtrl::Default>;
+
+        using Storer = OpaqueStore<typename IOLayout::DataLayout,
+                                   typename IOLayout::MatrixLayout,
+                                   IOBoundsCtrlStore>;
     };
 
     /************************************************
@@ -101,22 +137,16 @@ namespace rocwmma
  * general IOTraits, Pack/Unpack, Broadcast still available.
  *
  * */
-    template <uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
-    struct IOConfig<accumulator, BlockM, BlockN, BlockK, DataT, void>
+    template <uint32_t FragM, uint32_t FragN, uint32_t FragK, typename DataT>
+    struct IOConfig<accumulator, FragM, FragN, FragK, DataT, void>
     {
-        using IOShape  = IOShape<accumulator, BlockM, BlockN, BlockK>;
-        using IOLayout = IOLayout<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, 1u>;
-        using IOTraits = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT>;
-        using PackUtil = PackUtil<DataT>;
+        using IOTile  = IOTile<FragM, FragN, FragK, DataT>;
+        using IOShape = IOShape<accumulator, IOTile::BlockM, IOTile::BlockN, IOTile::BlockK>;
+        using IOLayout
+            = IOLayoutInt<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, 1u>;
+        using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT>;
+        using PackUtil    = PackUtil<DataT>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
-
-        using PreMmaXForm = register_layout_transform<typename IOLayout::FragmentLayout,
-                                                      typename IOLayout::MmaLayout,
-                                                      1u>;
-
-        using PostMmaXForm = register_layout_transform<typename IOLayout::MmaLayout,
-                                                       typename IOLayout::FragmentLayout,
-                                                       1u>;
     };
     /** @}*/
 

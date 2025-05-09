@@ -23,52 +23,52 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_OPAQUE_LOAD_HPP
-#define ROCWMMA_OPAQUE_LOAD_HPP
 
-#include "io_bearer.hpp"
-#include "io_traits.hpp"
-#include "tuple.hpp"
-#include "types.hpp"
-#include "vector_iterator.hpp"
+#ifndef ROCWMMA_UTILITY_STATIC_FOR_IMPL_HPP
+#define ROCWMMA_UTILITY_STATIC_FOR_IMPL_HPP
+
+#include "../types.hpp"
+#include "sequence.hpp"
 
 namespace rocwmma
 {
     namespace detail
     {
 
-        template <typename DataT, uint32_t VectorWidth>
-        struct amdgcn_opaque_load
+        template <index_t NBegin, index_t NEnd, index_t Increment>
+        struct static_for
         {
-            static_assert(VectorWidth > 0, "Vector width must be greater than 0");
-            static_assert(sizeof(DataT[VectorWidth]) == sizeof(VecT<DataT, VectorWidth>),
-                          "Cannot vectorize input");
-
-            using BufferT = VecT<DataT, VectorWidth>;
-
-            ROCWMMA_HOST_DEVICE constexpr static inline uint32_t size()
+            ROCWMMA_HOST_DEVICE constexpr static_for()
             {
-                return VectorWidth;
+                static_assert(Increment != 0 && (NEnd - NBegin) % Increment == 0,
+                              "Sequence length is not divisible by Increment");
+                static_assert((Increment > 0 && NBegin <= NEnd)
+                                  || (Increment < 0 && NBegin >= NEnd),
+                              "Invalid inputs");
             }
 
-            ROCWMMA_DEVICE static inline void
-                exec(BufferT& data, DataT const* dataPtr, index_t offset = 0)
+        private:
+            // F signature: F(I<Iter>)
+            template <class F, size_t... Indices, typename... ArgsT>
+            ROCWMMA_HOST_DEVICE constexpr void
+                impl(F f, index_sequence<Indices...>, ArgsT&&... args) const
             {
-                data = *(BufferT const*)(&(dataPtr[offset]));
+                ((f(I<Indices>{}, forward<ArgsT>(args)...), 0), ...);
+            }
+
+        public:
+            // F signature: F(I<Iter>)
+            template <class F, typename... ArgsT>
+            ROCWMMA_HOST_DEVICE constexpr void operator()(F f, ArgsT&&... args) const
+            {
+                impl(f,
+                     make_offset_index_sequence<(NEnd - NBegin) / Increment, NBegin, Increment>(),
+                     forward<ArgsT>(args)...);
             }
         };
 
-        template <typename DataT, uint32_t VectorWidth>
-        using OpaqueLoadBearer = detail::amdgcn_opaque_load<DataT, VectorWidth>;
-
     } // namespace detail
-
-    template <class DataLayout, class MatrixLayout, class BoundsCtrl = IOBoundsCtrl::Default>
-    struct OpaqueLoad
-        : public IOBearer<DataLayout, MatrixLayout, detail::OpaqueLoadBearer, BoundsCtrl>
-    {
-    };
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_OPAQUE_LOAD_HPP
+#endif // ROCWMMA_UTILITY_STATIC_FOR_IMPL_HPP
