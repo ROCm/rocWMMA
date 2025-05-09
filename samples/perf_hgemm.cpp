@@ -330,8 +330,8 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
                                                           ComputeT       beta)
 {
     // Tile Sizes
-    constexpr auto warpTileSize  = make_coord2d(WARP_TILE_M, WARP_TILE_M);
-    constexpr auto macroTileSize = make_coord2d(MACRO_TILE_M, MACRO_TILE_M);
+    constexpr auto warpTileSize  = make_coord2d(WARP_TILE_M, WARP_TILE_N);
+    constexpr auto macroTileSize = make_coord2d(MACRO_TILE_M, MACRO_TILE_N);
 
     // Local warp coordinate relative to current threadblock (wg).
     constexpr auto warpDims        = make_coord2d(WARPS_M, WARPS_N);
@@ -388,7 +388,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
     using LWFragAMap1d = GetDataLayout_t<LWFragA>;
     using LWFragBMap1d = GetDataLayout_t<LWFragB>;
 
-    constexpr uint32_t ldsWidth  = ROCWMMA_K;
+    constexpr uint32_t ldsWidth  = MACRO_TILE_K;
     constexpr uint32_t ldsHeight = LWFragAShape::BlockHeight + LWFragBShape::BlockHeight;
     constexpr uint32_t sizeLds   = ldsHeight * ldsWidth;
     constexpr uint32_t ldsld     = std::is_same_v<DataLayoutLds, row_major> ? ldsWidth : ldsHeight;
@@ -423,7 +423,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
     synchronize_workgroup();
 
     // Accumulate A * B for all mfma frags in warp tile
-    for(uint32_t currentK = ROCWMMA_K; currentK < k; currentK += ROCWMMA_K)
+    for(uint32_t currentK = MACRO_TILE_K; currentK < k; currentK += MACRO_TILE_K)
     {
         // Local read mma frags from first LDS buffer.
         LRFragA lrFragA;
@@ -668,19 +668,21 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, 
     CHECK_HIP_ERROR(hipEventDestroy(stopEvent));
 
     // Echo performance
-    std::cout << "TBlockX, TBlockY, "
-              << "BlocksX, BlocksY, "
-              << "BlkM, BlkN, BlkK, "
-              << "MatM, MatN, MatK, "
-              << "alpha, lda, ldb, "
-              << "beta, ldc, ldd, "
-              << "elapsedMs, Problem Size(GFlops), TFlops/s" << std::endl;
+    std::cout << std::left << std::setw(8) << "TBlockX" << std::setw(8) << "TBlockY" << std::setw(8)
+              << "BlocksM" << std::setw(8) << "BlocksN" << std::setw(6) << "BlkM" << std::setw(6)
+              << "BlkN" << std::setw(6) << "BlkK" << std::setw(8) << "MatM" << std::setw(8)
+              << "MatN" << std::setw(8) << "MatK" << std::setw(8) << "alpha" << std::setw(8)
+              << "lda" << std::setw(8) << "ldb" << std::setw(8) << "beta" << std::setw(8) << "ldc"
+              << std::setw(8) << "ldd" << std::setw(13) << "elapsedMs" << std::setw(23)
+              << "Problem Size(GFlops)" << std::setw(10) << "TFlops/s" << std::endl;
 
-    std::cout << hTBLOCK_X << ", " << hTBLOCK_Y << ", " << hBLOCKS_M << ", " << hBLOCKS_N << ", "
-              << hROCWMMA_M << ", " << hROCWMMA_N << ", " << hROCWMMA_K << ", " << m << ", " << n
-              << ", " << k << ", " << alpha << ", " << lda << ", " << ldb << ", " << beta << ", "
-              << ldc << ", " << ldd << ", " << elapsedTimeMs << ", " << gFlops << ", "
-              << tFlopsPerSec << std::endl;
+    std::cout << std::left << std::setw(8) << hTBLOCK_X << std::setw(8) << hTBLOCK_Y << std::setw(8)
+              << hBLOCKS_M << std::setw(8) << hBLOCKS_N << std::setw(6) << hROCWMMA_M
+              << std::setw(6) << hROCWMMA_N << std::setw(6) << hROCWMMA_K << std::setw(8) << m
+              << std::setw(8) << n << std::setw(8) << k << std::setw(8) << alpha << std::setw(8)
+              << lda << std::setw(8) << ldb << std::setw(8) << beta << std::setw(8) << ldc
+              << std::setw(8) << ldd << std::setw(13) << elapsedTimeMs << std::setw(23) << gFlops
+              << std::setw(10) << tFlopsPerSec << std::endl;
 
 #if !NDEBUG
 

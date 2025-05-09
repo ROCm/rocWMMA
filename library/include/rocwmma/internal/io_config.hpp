@@ -140,10 +140,9 @@ namespace rocwmma
     template <uint32_t FragM, uint32_t FragN, uint32_t FragK, typename DataT>
     struct IOConfig<accumulator, FragM, FragN, FragK, DataT, void>
     {
-        using IOTile  = IOTile<FragM, FragN, FragK, DataT>;
-        using IOShape = IOShape<accumulator, IOTile::BlockM, IOTile::BlockN, IOTile::BlockK>;
-        using IOLayout
-            = IOLayoutInt<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, 1u>;
+        using IOTile   = IOTile<FragM, FragN, FragK, DataT>;
+        using IOShape  = IOShape<accumulator, IOTile::BlockM, IOTile::BlockN, IOTile::BlockK>;
+        using IOLayout = IOLayoutInt<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, 1u>;
         using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT>;
         using PackUtil    = PackUtil<DataT>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
