@@ -75,7 +75,8 @@ namespace rocwmma
             // gfx11 doesn't support dpp wave shift / rotate, bcast15x16 or bcast31x32
             bool isGfx11 = (deviceArch == Base::DeviceInfo::GFX1100
                             || deviceArch == Base::DeviceInfo::GFX1101
-                            || deviceArch == Base::DeviceInfo::GFX1102);
+                            || deviceArch == Base::DeviceInfo::GFX1102
+                            || deviceArch == Base::DeviceInfo::GFX1151);
 
             bool isGfx12 = (deviceArch == Base::DeviceInfo::GFX1200)
                            || (deviceArch == Base::DeviceInfo::GFX1201);
@@ -253,12 +254,12 @@ namespace rocwmma
             // Map GTest params to Kernel params
             using TestParamsT = std::tuple<Ts...>;
             using KernelT     = DppOpsKernel<
-                std::tuple_element_t<DataT, TestParamsT>, // DataT
-                std::tuple_element_t<CrossLaneOp, TestParamsT>, // CrossLaneOp
-                std::tuple_element_t<WriteRowMask, TestParamsT>::value, // WriteRowMask
-                std::tuple_element_t<WriteBankMask, TestParamsT>::value, // WriteBankMask
-                std::tuple_element_t<BoundCtrl, TestParamsT>::value // BoundCtrl
-                >;
+                    std::tuple_element_t<DataT, TestParamsT>, // DataT
+                    std::tuple_element_t<CrossLaneOp, TestParamsT>, // CrossLaneOp
+                    std::tuple_element_t<WriteRowMask, TestParamsT>::value, // WriteRowMask
+                    std::tuple_element_t<WriteBankMask, TestParamsT>::value, // WriteBankMask
+                    std::tuple_element_t<BoundCtrl, TestParamsT>::value // BoundCtrl
+                    >;
 
             return std::make_shared<KernelT>();
         }

@@ -48,7 +48,8 @@ namespace rocwmma
                                             TargetId,
                                             Constants::AMDGCN_ARCH_ID_GFX1100,
                                             Constants::AMDGCN_ARCH_ID_GFX1101,
-                                            Constants::AMDGCN_ARCH_ID_GFX1102> && Cond>;
+                                            Constants::AMDGCN_ARCH_ID_GFX1102,
+                                            Constants::AMDGCN_ARCH_ID_GFX1151> && Cond>;
 
         // Enabler for all of gfx12
         template <uint32_t TargetId, bool Cond = true>
@@ -66,6 +67,7 @@ namespace rocwmma
                                             Constants::AMDGCN_ARCH_ID_GFX1100,
                                             Constants::AMDGCN_ARCH_ID_GFX1101,
                                             Constants::AMDGCN_ARCH_ID_GFX1102,
+                                            Constants::AMDGCN_ARCH_ID_GFX1151,
                                             Constants::AMDGCN_ARCH_ID_GFX1200,
                                             Constants::AMDGCN_ARCH_ID_GFX1201> && Cond>;
 
