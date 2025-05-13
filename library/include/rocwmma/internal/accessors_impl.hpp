@@ -27,21 +27,11 @@
 #define ROCWMMA_ACCESSORS_IMPL_HPP
 
 #include "accessors.hpp"
+#include "api_fwd.hpp"
 #include "coop_io_config.hpp"
 #include "io_config.hpp"
 #include "io_shape.hpp"
-
-// Fwd decl
-namespace rocwmma
-{
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    class __align__(4) fragment;
-}
+#include "mma_config.hpp"
 
 namespace rocwmma
 {
@@ -49,83 +39,144 @@ namespace rocwmma
     /// DataType access
     ///
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    struct GetDataType<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>>
-    {
-        using type = DataT;
-    };
+    // template <typename MatrixT,
+    //           uint32_t FragM,
+    //           uint32_t FragN,
+    //           uint32_t FragK,
+    //           typename DataT,
+    //           typename DataLayoutT,
+    //           typename ScheduleT>
+    // struct GetDataType<fragment<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, ScheduleT>>
+    // {
+    //     using type = DataT;
+    // };
 
     ///
     /// IOConfig access
     ///
 
+    template <typename FragT>
+    struct GetIOConfig;
+
     template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
+              uint32_t FragM,
+              uint32_t FragN,
+              uint32_t FragK,
               typename DataT,
-              typename DataLayoutT>
-    struct GetIOConfig<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>>
+              typename DataLayoutT,
+              typename ScheduleT>
+    struct GetIOConfig<fragment<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, ScheduleT>>
     {
-        using type = IOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>;
+        using ScheduleTraits = schedule_traits<ScheduleT>;
+
+        using type = conditional_t<
+            ScheduleTraits::is_schedule_constexpr,
+            CoopIOConfig<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, ScheduleT::waveCount()>,
+            CoopIOConfig<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, 1u>>;
+    };
+
+    template <typename FragA, typename FragB, typename FragC, typename FragD>
+    struct GetMmaConfig
+    {
+    private:
+        using FragATraits = fragment_traits<FragA>;
+        using FragBTraits = fragment_traits<FragB>;
+        using FragCTraits = fragment_traits<FragC>;
+        using FragDTraits = fragment_traits<FragD>;
+
+        // sanity checks
+        static_assert((FragATraits::FragM == FragBTraits::FragM)
+                          && (FragBTraits::FragM == FragCTraits::FragM)
+                          && (FragCTraits::FragM == FragDTraits::FragM),
+                      "Mma fragment FragM traits must match");
+        static_assert((FragATraits::FragN == FragBTraits::FragN)
+                          && (FragBTraits::FragN == FragCTraits::FragN)
+                          && (FragCTraits::FragN == FragDTraits::FragN),
+                      "Mma fragment FragN traits must match");
+        static_assert((FragATraits::FragK == FragBTraits::FragK)
+                          && (FragBTraits::FragK == FragCTraits::FragK)
+                          && (FragCTraits::FragK == FragDTraits::FragK),
+                      "Mma fragment FragK traits must match");
+        static_assert(is_same_v<typename FragCTraits::DataT, typename FragDTraits::DataT>,
+                      "Accum fragments C and D must have the same type");
+
+    public:
+        // We've already checked:
+        // - FragMNK for all frags match
+        // - DataT match for C and D
+        using type = MmaConfig<FragATraits::FragM,
+                               FragATraits::FragN,
+                               FragATraits::FragK,
+                               typename FragATraits::DataT,
+                               typename FragBTraits::DataT,
+                               typename FragCTraits::DataT,
+                               typename FragATraits::DataLayoutT,
+                               typename FragBTraits::DataLayoutT,
+                               typename FragCTraits::DataLayoutT,
+                               typename FragDTraits::DataLayoutT>;
     };
 
     ///
     /// CoopConfig access
     ///
 
+    template <typename FragT, uint32_t WaveCount>
+    struct GetCoopIOConfig;
+
     template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
+              uint32_t FragM,
+              uint32_t FragN,
+              uint32_t FragK,
               typename DataT,
               typename DataLayoutT,
+              typename ScheduleT,
               uint32_t WaveCount>
-    struct GetCoopIOConfig<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>, WaveCount>
+    struct GetCoopIOConfig<fragment<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, ScheduleT>,
+                           WaveCount>
     {
-        using type = CoopIOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT, WaveCount>;
+        using type = CoopIOConfig<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, WaveCount>;
     };
 
     ///
     /// IOShape access
     ///
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    struct GetIOShape<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>>
+    template <typename FragT>
+    struct GetIOShape;
+
+    template <typename MatrixT, uint32_t FragM, uint32_t FragN, uint32_t FragK, typename... Ts>
+    struct GetIOShape<fragment<MatrixT, FragM, FragN, FragK, Ts...>>
     {
-        using type = IOShape<MatrixT, BlockM, BlockN, BlockK>;
+        using type = IOShape<MatrixT, FragM, FragN, FragK>;
     };
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    struct GetDataLayout<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>>
-    {
-        using type = DataLayout::template Array1d<DataLayoutT>;
-    };
+    // template <typename MatrixT,
+    //           uint32_t BlockM,
+    //           uint32_t BlockN,
+    //           uint32_t BlockK,
+    //           typename DataT,
+    //           typename DataLayoutT>
+    // struct GetDataLayout<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>>
+    // {
+    //     using type = DataLayout::template Array1d<DataLayoutT>;
+    // };
+
+    template <typename FragT>
+    struct GetMappingUtil;
 
     template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
+              uint32_t FragM,
+              uint32_t FragN,
+              uint32_t FragK,
               typename DataT,
-              typename DataLayoutT>
-    struct GetMappingUtil<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>>
+              typename DataLayoutT,
+              typename... Ts>
+    struct GetMappingUtil<fragment<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, Ts...>>
     {
-        using IOShapeT = IOShape<MatrixT, BlockM, BlockN, BlockK>;
+    private:
+        using IOShapeT = IOShape<MatrixT, FragM, FragN, FragK>;
+
+    public:
         using type = MappingUtil<IOShapeT::BlockHeight, IOShapeT::BlockWidth, DataT, DataLayoutT>;
     };
 

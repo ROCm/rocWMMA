@@ -26,6 +26,7 @@
 #ifndef ROCWMMA_COOP_IO_CONFIG_HPP
 #define ROCWMMA_COOP_IO_CONFIG_HPP
 
+#include "broadcast.hpp"
 #include "coop_load.hpp"
 #include "coop_store.hpp"
 #include "io_bounds_ctrl.hpp"
@@ -89,11 +90,11 @@ namespace rocwmma
 
         using IOTraits = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT, IOLayout::VW>;
 
-        // Define functional classes used during fragment IO workflow operations such as loading / storing
         using MappingUtil
             = MappingUtil<IOShape::BlockHeight, IOShape::BlockWidth, DataT, DataLayoutT>;
 
-        using PackUtil = PackUtil<DataT>;
+        using PackUtil    = PackUtil<DataT>;
+        using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
 
         // When loading for Mma, we need to replace clipped areas with 0's to ensure correctness.
         using IOBoundsCtrlLoad = conditional_t<
@@ -136,9 +137,13 @@ namespace rocwmma
     template <uint32_t FragM, uint32_t FragN, uint32_t FragK, typename DataT, uint32_t WaveCount>
     struct CoopIOConfig<accumulator, FragM, FragN, FragK, DataT, void, WaveCount>
     {
-        using IOTile   = IOTile<FragM, FragN, FragK, DataT>;
-        using IOShape  = IOShape<accumulator, IOTile::BlockM, IOTile::BlockN, IOTile::BlockK>;
-        using PackUtil = PackUtil<DataT>;
+        using IOTile  = IOTile<FragM, FragN, FragK, DataT>;
+        using IOShape = IOShape<accumulator, IOTile::BlockM, IOTile::BlockN, IOTile::BlockK>;
+        using IOLayout
+            = IOLayout<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, WaveCount>;
+        using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT>;
+        using PackUtil    = PackUtil<DataT>;
+        using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;
     };
     /** @}*/
 

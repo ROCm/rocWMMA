@@ -42,6 +42,7 @@ namespace rocwmma
     //! @tparam BoundsCtrl Checks bounding box boundary violations by the BearerPolicy and may apply adjustments to the violating buffer.
     template <class DataLayout,
               class CoopMatrixLayout,
+              class ScheduleT,
               template <typename, uint32_t>
               class BearerPolicy,
               class BoundsCtrl>
@@ -52,31 +53,13 @@ namespace rocwmma
         using Base               = IOBearer<DataLayout, CoopMatrixLayout, BearerPolicy, BoundsCtrl>;
         using MatrixLayoutTraits = layout_traits<CoopMatrixLayout>;
         using DataLayoutTraits   = layout_traits<DataLayout>;
+        using ScheduleTraits     = schedule_Traits<ScheduleT>;
         using DataT              = typename MatrixLayoutTraits::DataT;
 
         // Iterative transaction buffer for unroll decomposition
         static constexpr uint32_t TransactionSize = Base::TransactionSize;
         static constexpr uint32_t WaveCount       = MatrixLayoutTraits::WaveCount;
         using Bearer                              = BearerPolicy<DataT, TransactionSize>;
-
-        //! @brief Loop-unroll to cover all transactions described by MatrixLayout strides
-        //! @tparam Depth The loop recursion depth (Default 0)
-        //! @tparam Iterator a given iterator on a given buffer for the current depth
-        //! @tparam ExternDataT The type of the pointer given by the user
-        //! @tparam StrideSpace The iteration counts of strides at each depth
-        //! @tparam Strides2d The 2d offset strides at each depth
-        //! @note This class is used for both load / store transactions, so the ExternDataT
-        //! is intended to be opaque on the const-ness.
-        template <size_t Depth = 0,
-                  typename Iterator,
-                  typename ExternDataT,
-                  typename StrideSpace,
-                  typename Strides2d>
-        ROCWMMA_DEVICE static inline auto unroll_impl(Iterator&     it,
-                                                      ExternDataT*  dataPtr,
-                                                      uint32_t      ldm,
-                                                      StrideSpace&& strideCounts,
-                                                      Strides2d&&   strides2d);
 
     public:
         //! @brief Interface driver for loop-unroll to cover all transactions described by MatrixLayout strides

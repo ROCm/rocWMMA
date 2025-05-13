@@ -40,12 +40,19 @@ namespace rocwmma
     struct accumulator;
 
     template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
+              uint32_t FragM,
+              uint32_t FragN,
+              uint32_t FragK,
               typename DataT,
-              typename DataLayoutT>
+              typename DataLayoutT,
+              typename ScheduleT>
     class __align__(4) fragment;
+
+    template <typename FragT>
+    struct fragment_traits;
+
+    template <typename ScheduleT>
+    struct schedule_traits;
 
 } // namespace rocwmma
 

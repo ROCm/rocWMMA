@@ -243,7 +243,7 @@ __host__ void gemm_test(uint32_t m, uint32_t n, uint32_t k, float32_t alpha, flo
               << ldc << ", " << ldd << ", " << elapsedTimeMs << ", " << gFlops << ", "
               << tFlopsPerSec << std::endl;
 
-#if !NDEBUG
+#if 1
 
     std::cout << "Validating result with reference..." << std::endl;
 

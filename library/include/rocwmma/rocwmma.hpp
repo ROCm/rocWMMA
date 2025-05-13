@@ -99,6 +99,190 @@ namespace rocwmma
     {
     };
 
+    namespace fragment_schedule
+    {
+        // No thread-block cooperation
+        struct non_cooperative
+        {
+            constexpr static inline auto waveIndex()
+            {
+                return 0u;
+            }
+            constexpr static inline uint32_t waveCount()
+            {
+                return 1u;
+            }
+        };
+
+        // Thread-block schedule is round-robin in row_major; all waves participate.
+        // E.g. (TBlockX, TBlockY) = (128, 2) = 2x2 waves
+        // i0 = (0, 0), i1 = (0, 1),
+        // i2 = (1, 0), i3 = (1, 1)
+        // count = 4
+        template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
+        struct coop_rr_row_major
+        {
+            using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
+            using DataSpace = detail::DataSpace<row_major>;
+
+            constexpr static inline auto waveIndex()
+            {
+                return DataSpace::fromMatrixCoord(WaveSpace::localWaveCoord(),
+                                                  get<1>(WaveSpace::workgroupDim()));
+            }
+            constexpr static inline uint32_t waveCount()
+            {
+                return reduce_mult(WaveSpace::workgroupDim());
+            }
+        };
+
+        // Thread-block schedule is round-robin in col_major; all waves participate.
+        // E.g. (TBlockX, TBlockY) = (128, 2) = 2x2 waves
+        // i0 = (0, 0), i2 = (0, 1),
+        // i1 = (1, 0), i3 = (1, 1),
+        // count = 4
+        template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
+        struct coop_rr_col_major
+        {
+            using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
+            using DataSpace = detail::DataSpace<col_major>;
+
+            constexpr static inline auto waveIndex()
+            {
+                return DataSpace::fromMatrixCoord(WaveSpace::localWaveCoord(),
+                                                  get<0>(WaveSpace::workgroupDim()));
+            }
+            constexpr static inline uint32_t waveCount()
+            {
+                return reduce_mult(WaveSpace::workgroupDim());
+            }
+        };
+
+        // Thread-block schedule is sliced into rows; all waves in the same row participate.
+        // E.g. Wg = (128, 2) = 2x2 waves
+        // Slice0: i0 = (0, 0), i1 = (0, 1) count = 2
+        // Slice1: i0 = (1, 0), i1 = (1, 1) count = 2
+        template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
+        struct coop_slice_row
+        {
+            using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
+
+            constexpr static inline auto waveIndex()
+            {
+                return get<1>(WaveSpace::localWaveCoord());
+            }
+            constexpr static inline uint32_t waveCount()
+            {
+                return get<1>(WaveSpace::workgroupDim());
+            }
+        };
+
+        // Thread-block schedule is sliced into cols; all waves in the same col participate.
+        // E.g. Wg = (128, 2) = 2x2 waves
+        // Slice0:        Slice1:
+        // i0 = (0, 0),   i0 = (0, 1),
+        // i1 = (1, 0)    i1 = (1, 1)
+        // count = 2      count = 2
+        template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
+        struct coop_slice_col
+        {
+            using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
+
+            constexpr static inline auto waveIndex()
+            {
+                return get<0>(WaveSpace::localWaveCoord());
+            }
+            constexpr static inline uint32_t waveCount()
+            {
+                return get<0>(WaveSpace::workgroupDim());
+            }
+        };
+
+    } // namespace fragment_schedule
+
+    namespace ScheduleTraits_impl
+    {
+        using namespace fragment_schedule;
+
+        template <typename ScheduleT>
+        struct is_schedule_valid : false_type
+        {
+        };
+
+        template <>
+        struct is_schedule_valid<non_cooperative> : true_type
+        {
+        };
+
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        struct is_schedule_valid<coop_rr_row_major<TBlockX, TBlockY>> : true_type
+        {
+        };
+
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        struct is_schedule_valid<coop_rr_col_major<TBlockX, TBlockY>> : true_type
+        {
+        };
+
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        struct is_schedule_valid<coop_slice_row<TBlockX, TBlockY>> : true_type
+        {
+        };
+
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        struct is_schedule_valid<coop_slice_col<TBlockX, TBlockY>> : true_type
+        {
+        };
+
+        template <typename ScheduleT>
+        struct is_schedule_constexpr : false_type
+        {
+        };
+
+        template <uint32_t TBlockX, uint32_t TBlockY, template <uint32_t, uint32_t> class Schedule>
+        struct is_schedule_constexpr<Schedule<TBlockX, TBlockY>>
+            : integral_constant<bool, (TBlockX > 0u && TBlockY > 0u)>
+        {
+        };
+
+        template <typename ScheduleT>
+        struct is_schedule_cooperative : false_type
+        {
+        };
+
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        struct is_schedule_cooperative<coop_rr_row_major<TBlockX, TBlockY>> : true_type
+        {
+        };
+
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        struct is_schedule_cooperative<coop_rr_col_major<TBlockX, TBlockY>> : true_type
+        {
+        };
+
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        struct is_schedule_cooperative<coop_slice_row<TBlockX, TBlockY>> : true_type
+        {
+        };
+
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        struct is_schedule_cooperative<coop_slice_col<TBlockX, TBlockY>> : true_type
+        {
+        };
+
+    } // namespace ScheduleTraits_impl
+
+    template <typename ScheduleT>
+    struct schedule_traits
+    {
+        constexpr static bool is_schedule_constexpr
+            = ScheduleTraits_impl::is_schedule_constexpr<ScheduleT>::value;
+        constexpr static bool is_schedule_valid
+            = ScheduleTraits_impl::is_schedule_valid<ScheduleT>::value;
+        constexpr static bool is_schedule_cooperative
+            = ScheduleTraits_impl::is_schedule_cooperative<ScheduleT>::value;
+    };
+
     //! @struct layout_t
     //! @brief Runtime data layout tags
     //! @var mem_row_major
@@ -125,17 +309,19 @@ namespace rocwmma
     //!
     //! @note Fragments are stored in packed registers, however vector elements have no guaranteed order or locality.
     template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
+              uint32_t FragM,
+              uint32_t FragN,
+              uint32_t FragK,
               typename DataT,
-              typename DataLayoutT = void>
+              typename DataLayoutT = void,
+              typename ScheduleT   = fragment_schedule::non_cooperative>
     class __align__(4) fragment
     {
     public:
         //! Input / output traits specific to AMDGCN architecture
         using IOTraits =
-            typename IOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::IOTraits;
+            typename IOConfig<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT>::IOTraits;
+
         struct Traits
         {
         private:
@@ -160,8 +346,8 @@ namespace rocwmma
                           "Unable to pack fragment elements");
         };
 
-        ROCWMMA_DEVICE fragment() = default;
-        ROCWMMA_DEVICE fragment(const fragment& other);
+        ROCWMMA_DEVICE           fragment() = default;
+        ROCWMMA_DEVICE           fragment(const fragment& other);
         ROCWMMA_DEVICE fragment& operator=(const fragment& other);
 
         //! @param index Element index
@@ -201,6 +387,73 @@ namespace rocwmma
         using element_type                     = DataT;
     };
 
+    namespace fragment_traits_impl
+    {
+        using LayoutTraits_impl::is_col_major;
+        using LayoutTraits_impl::is_row_major;
+        template <typename MatrixT>
+        struct is_matrix_a : false_type
+        {
+        };
+
+        template <>
+        struct is_matrix_a<matrix_a> : true_type
+        {
+        };
+
+        template <typename MatrixT>
+        struct is_matrix_b : false_type
+        {
+        };
+
+        template <>
+        struct is_matrix_b<matrix_b> : true_type
+        {
+        };
+
+        template <typename MatrixT>
+        struct is_accumulator : false_type
+        {
+        };
+
+        template <>
+        struct is_accumulator<accumulator> : true_type
+        {
+        };
+
+        template <typename FragT>
+        struct fragment_traits;
+
+    } // namespace fragment_traits_impl
+
+    template <typename _MatrixT,
+              uint32_t _FragM,
+              uint32_t _FragN,
+              uint32_t _FragK,
+              typename _DataT,
+              typename _DataLayoutT,
+              typename _ScheduleT>
+    struct fragment_traits<
+        fragment<_MatrixT, _FragM, _FragN, _FragK, _DataT, _DataLayoutT, _ScheduleT>>
+        : public fragment<_MatrixT, _FragM, _FragN, _FragK, _DataT, _DataLayoutT, _ScheduleT>::
+              Traits,
+          public schedule_traits<_ScheduleT>
+    {
+        using MatrixT                   = _MatrixT;
+        constexpr static uint32_t FragM = _FragM;
+        constexpr static uint32_t FragN = _FragN;
+        constexpr static uint32_t FragK = _FragK;
+        using DataT                     = _DataT;
+        using DataLayoutT               = _DataLayoutT;
+        using ScheduleT                 = _ScheduleT;
+
+        constexpr static bool is_matrix_a    = fragment_traits_impl::is_matrix_a<MatrixT>::value;
+        constexpr static bool is_matrix_b    = fragment_traits_impl::is_matrix_b<MatrixT>::value;
+        constexpr static bool is_accumulator = fragment_traits_impl::is_accumulator<MatrixT>::value;
+        constexpr static bool is_col_major = fragment_traits_impl::is_col_major<DataLayoutT>::value;
+        constexpr static bool is_row_major = fragment_traits_impl::is_row_major<DataLayoutT>::value;
+    };
+
     //! Fills the entire fragment with the desired value.
     //! @param frag Fragment of type MatrixT with its associated block sizes, data type and layout
     //! @param value Fill value of type DataT
@@ -208,15 +461,8 @@ namespace rocwmma
     //! @tparam BlockM/N/K Block dimensions
     //! @tparam DataT Datatype
     //! @tparam DataLayoutT in-memory layout as col_major or row_major
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE void
-        fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag,
-                      DataT                                                          value);
+    template <typename FragT, typename DataT>
+    ROCWMMA_DEVICE void fill_fragment(FragT& frag, DataT value);
 
     //! Loads the entire fragment from the data pointer according to its matrix and data layout contexts. Data pointer may point to either local or global memory.
     //! @param frag Fragment of type MatrixT with its associated block sizes, data type and layout
@@ -226,16 +472,8 @@ namespace rocwmma
     //! @tparam BlockM/N/K Block dimensions
     //! @tparam DataT Datatype
     //! @tparam DataLayoutT In-memory layout as col_major or row_major
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE void
-        load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag,
-                         const DataT*                                                   data,
-                         uint32_t                                                       ldm);
+    template <typename FragT, typename DataT>
+    ROCWMMA_DEVICE void load_matrix_sync(FragT& frag, const DataT* data, uint32_t ldm);
 
     //! Loads the entire fragment from the data pointer according to its matrix layout and data layout contexts.
     //! Data pointer may point to either local or global memory. This overload provides a run-time ability to choose the data layout of the target fragment.
@@ -246,11 +484,9 @@ namespace rocwmma
     //! @tparam MatrixT Fragment context
     //! @tparam BlockM/N/K Block dimensions
     //! @tparam DataT Datatype
-    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
-    ROCWMMA_DEVICE void load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT>& frag,
-                                         const DataT*                                      data,
-                                         uint32_t                                          ldm,
-                                         layout_t                                          layout);
+    template <typename FragT, typename DataT>
+    ROCWMMA_DEVICE void
+        load_matrix_sync(FragT& frag, const DataT* data, uint32_t ldm, layout_t layout);
 
     //! Stores the entire fragment to the data pointer according to its matrix and data layouts. Data pointer may point to either local or global memory.
     //! @param frag Fragment of type MatrixT with its associated block sizes, data type and layout
@@ -260,16 +496,8 @@ namespace rocwmma
     //! @tparam BlockM/N/K Block dimensions
     //! @tparam DataT Datatype
     //! @tparam DataLayoutT in-memory layout as col_major or row_major
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE void
-        store_matrix_sync(DataT*                                                               data,
-                          fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag,
-                          uint32_t                                                             ldm);
+    template <typename FragT, typename DataT>
+    ROCWMMA_DEVICE void store_matrix_sync(DataT* data, FragT const& frag, uint32_t ldm);
 
     //! Stores the entire fragment to the data pointer according to its matrix layout. Data pointer may point to either local or global memory.
     //! This overload provides a run-time ability to choose the data layout of the target fragment.
@@ -280,12 +508,9 @@ namespace rocwmma
     //! @tparam MatrixT Fragment context
     //! @tparam BlockM/N/K Block dimensions
     //! @tparam DataT Datatype
-    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
+    template <typename FragT, typename DataT>
     ROCWMMA_DEVICE void
-        store_matrix_sync(DataT*                                                  data,
-                          fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag,
-                          uint32_t                                                ldm,
-                          layout_t                                                layout);
+        store_matrix_sync(DataT* data, FragT const& frag, uint32_t ldm, layout_t layout);
 
     //! Performs the Multiply-Accumulate operation on the fragments A, B, C and D (D = A * B + C)
     //! @param d Accumulator output D
@@ -297,21 +522,8 @@ namespace rocwmma
     //! @tparam ComputeT Datatype of accumulator fragment C / D
     //! @tparam LayoutA/B/C/D In-memory layout of frag as col_major or row_major
     //! @note Frag c = d is valid
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename InputTA,
-              typename InputTB,
-              typename ComputeT,
-              typename LayoutA,
-              typename LayoutB,
-              typename LayoutC,
-              typename LayoutD>
-    ROCWMMA_DEVICE void
-        mma_sync(fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutD>&       d,
-                 fragment<matrix_a, BlockM, BlockN, BlockK, InputTA, LayoutA> const&     a,
-                 fragment<matrix_b, BlockM, BlockN, BlockK, InputTB, LayoutB> const&     b,
-                 fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutC> const& c);
+    template <typename FragA, typename FragB, typename FragAccumIn, typename FragAccumOut>
+    ROCWMMA_DEVICE void mma_sync(FragAccumOut& d, FragA const& a, FragB const& b, FragAccumIn& c);
 
     //! Synchronization point for all wavefronts in a workgroup. Guarantees pending reads / writes to LDS are flushed.
     ROCWMMA_DEVICE ROCWMMA_INLINE void synchronize_workgroup();

@@ -26,17 +26,19 @@
 #ifndef ROCWMMA_ACCESSORS_HPP
 #define ROCWMMA_ACCESSORS_HPP
 
+#include "accessors_impl.hpp"
+
 namespace rocwmma
 {
     ///
     /// DataType access
     ///
 
-    template <typename FragT>
-    struct GetDataType;
+    // template <typename FragT>
+    // struct GetDataType;
 
-    template <typename FragT>
-    using GetDataType_t = typename GetDataType<FragT>::type;
+    // template <typename FragT>
+    // using GetDataType_t = typename GetDataType<FragT>::type;
 
     ///
     /// IOConfig access
@@ -47,6 +49,12 @@ namespace rocwmma
 
     template <typename FragT>
     using GetIOConfig_t = typename GetIOConfig<FragT>::type;
+
+    template <typename FragA, typename FragB, typename FragC, typename FragD>
+    struct GetMmaConfig;
+
+    template <typename FragA, typename FragB, typename FragC, typename FragD>
+    using GetMmaConfig_t = typename GetMmaConfig<FragA, FragB, FragC, FragD>::type;
 
     ///
     /// CoopConfig access
@@ -72,11 +80,11 @@ namespace rocwmma
     /// DataLayout access
     ///
 
-    template <typename FragT>
-    struct GetDataLayout;
+    // template <typename FragT>
+    // struct GetDataLayout;
 
-    template <typename FragT>
-    using GetDataLayout_t = typename GetDataLayout<FragT>::type;
+    // template <typename FragT>
+    // using GetDataLayout_t = typename GetDataLayout<FragT>::type;
 
     ///
     /// MappingUtil access
@@ -89,7 +97,5 @@ namespace rocwmma
     using GetMappingUtil_t = typename GetMappingUtil<FragT>::type;
 
 } // namespace rocwmma
-
-#include "accessors_impl.hpp"
 
 #endif // ROCWMMA_ACCESSORS_HPP
