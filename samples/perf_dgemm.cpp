@@ -229,12 +229,12 @@ constexpr uint32_t MACRO_TILE_N = WARPS_N * WARP_TILE_N;
 constexpr uint32_t MACRO_TILE_K = ROCWMMA_K;
 
 // Mfma frags (warp tile)
-using MfmaFragA = fragment<matrix_a, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, InputT, DataLayoutA>;
-using MfmaFragB = fragment<matrix_b, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, InputT, DataLayoutB>;
-using MfmaFragC
+using MmaFragA = fragment<matrix_a, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, InputT, DataLayoutA>;
+using MmaFragB = fragment<matrix_b, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, InputT, DataLayoutB>;
+using MmaFragC
     = fragment<accumulator, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, OutputT, DataLayoutC>;
-using MfmaFragD   = MfmaFragC;
-using MfmaFragAcc = fragment<accumulator, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, ComputeT>;
+using MmaFragD   = MmaFragC;
+using MmaFragAcc = fragment<accumulator, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, ComputeT>;
 
 // Global read (macro tile)
 using GRFragA = fragment<matrix_a, MACRO_TILE_M, MACRO_TILE_N, MACRO_TILE_K, InputT, DataLayoutA>;
@@ -243,29 +243,29 @@ using GRFragB = fragment<matrix_b, MACRO_TILE_M, MACRO_TILE_N, MACRO_TILE_K, Inp
 // Local write of global buffers (macro tile)
 // - Must match Lds data layout.
 // - Lds has transposed B frags.
-using LWFragA = ApplyDataLayout_t<GRFragA, DataLayoutLds>;
-using LWFragB = ApplyDataLayout_t<ApplyTranspose_t<GRFragB>, DataLayoutLds>;
+using LWFragA = apply_data_layout_t<GRFragA, DataLayoutLds>;
+using LWFragB = apply_data_layout_t<apply_transpose_t<GRFragB>, DataLayoutLds>;
 
 // Transform helpers
 constexpr auto transformGRFragAToLWFragA
-    = [](GRFragA const& grFragA) { return applyDataLayout<DataLayoutLds, WARP_COUNT>(grFragA); };
+    = [](GRFragA const& grFragA) { return apply_data_layout<DataLayoutLds, WARP_COUNT>(grFragA); };
 
 constexpr auto transformGRFragBToLWFragB = [](GRFragB const& grFragB) {
-    return applyDataLayout<DataLayoutLds, WARP_COUNT>(applyTranspose(grFragB));
+    return apply_data_layout<DataLayoutLds, WARP_COUNT>(apply_transpose(grFragB));
 };
 
 // Local read (mfma frags)
 // - Must match Lds data layout.
 // - Lds has transposed B frags.
-using LRFragA = ApplyDataLayout_t<MfmaFragA, DataLayoutLds>;
-using LRFragB = ApplyDataLayout_t<ApplyTranspose_t<MfmaFragB>, DataLayoutLds>;
+using LRFragA = apply_data_layout_t<MmaFragA, DataLayoutLds>;
+using LRFragB = apply_data_layout_t<apply_transpose_t<MmaFragB>, DataLayoutLds>;
 
 // Transform helpers
-constexpr auto transformLRFragAToMfmaFragA
-    = [](LRFragA const& lrFragA) { return applyDataLayout<DataLayoutA>(lrFragA); };
+constexpr auto transformLRFragAToMmaFragA
+    = [](LRFragA const& lrFragA) { return apply_data_layout<DataLayoutA>(lrFragA); };
 
-constexpr auto transformLRFragBToMfmaFragB
-    = [](LRFragB const& lrFragB) { return applyDataLayout<DataLayoutB>(applyTranspose(lrFragB)); };
+constexpr auto transformLRFragBToMmaFragB
+    = [](LRFragB const& lrFragB) { return apply_data_layout<DataLayoutB>(apply_transpose(lrFragB)); };
 
 ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
                                                           uint32_t       n,
@@ -368,8 +368,8 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         ldsPtrLo + ldsWriteOffsetB, transformGRFragBToLWFragB(grFragB), ldsld, warpIndex);
 
     /// Initialize accumulation frags
-    MfmaFragAcc mfmaFragAcc;
-    fill_fragment(mfmaFragAcc, 0.0);
+    MmaFragAcc mmaFragAcc;
+    fill_fragment(mmaFragAcc, 0.0);
 
     // Synchronize warps and memory
     synchronize_workgroup();
@@ -384,10 +384,10 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         load_matrix_sync(lrFragB, ldsPtrLo + ldsReadOffsetB, ldsld);
 
         // Matrix mult-accum(A * B)
-        mma_sync(mfmaFragAcc,
-                 transformLRFragAToMfmaFragA(lrFragA),
-                 transformLRFragBToMfmaFragB(lrFragB),
-                 mfmaFragAcc);
+        mma_sync(mmaFragAcc,
+                 transformLRFragAToMmaFragA(lrFragA),
+                 transformLRFragBToMmaFragB(lrFragB),
+                 mmaFragAcc);
 
         // Prefetch next round of global frags
         load_matrix_coop_sync<WARP_COUNT>(grFragA, a + globalReadOffsetA, lda, warpIndex);
@@ -413,33 +413,33 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
     }
 
     // Start loading C
-    using MfmaFragCMap1d = GetDataLayout_t<MfmaFragC>;
-    using MfmaFragDMap1d = GetDataLayout_t<MfmaFragD>;
+    using MmaFragCMap1d = GetDataLayout_t<MmaFragC>;
+    using MmaFragDMap1d = GetDataLayout_t<MmaFragD>;
 
-    MfmaFragC mfmaFragC;
-    load_matrix_sync(mfmaFragC, c + MfmaFragCMap1d::fromMatrixCoord(warpTileCoord, ldc), ldc);
+    MmaFragC mmaFragC;
+    load_matrix_sync(mmaFragC, c + MmaFragCMap1d::fromMatrixCoord(warpTileCoord, ldc), ldc);
 
     // Clean up tail A * B
     LRFragA lrFragA;
     LRFragB lrFragB;
     load_matrix_sync(lrFragA, ldsPtrLo + ldsReadOffsetA, ldsld);
     load_matrix_sync(lrFragB, ldsPtrLo + ldsReadOffsetB, ldsld);
-    mma_sync(mfmaFragAcc,
-             transformLRFragAToMfmaFragA(lrFragA),
-             transformLRFragBToMfmaFragB(lrFragB),
-             mfmaFragAcc);
+    mma_sync(mmaFragAcc,
+             transformLRFragAToMmaFragA(lrFragA),
+             transformLRFragBToMmaFragB(lrFragB),
+             mmaFragAcc);
 
     // D = alpha * accum + beta * C
-    MfmaFragD          mfmaFragD;
+    MmaFragD          mmaFragD;
     constexpr uint32_t chunkSize = 8u;
-    constexpr uint32_t chunks    = mfmaFragD.num_elements / chunkSize;
-    constexpr uint32_t remain    = mfmaFragD.num_elements % chunkSize;
+    constexpr uint32_t chunks    = mmaFragD.num_elements / chunkSize;
+    constexpr uint32_t remain    = mmaFragD.num_elements % chunkSize;
 
     auto uniform_fma_unroll_chunk = [&](uint32_t start_idx, uint32_t size) {
         for(int i = start_idx; i < start_idx + size; i++)
         {
-            mfmaFragD.x[i] = static_cast<OutputT>(alpha * mfmaFragAcc.x[i]
-                                                  + beta * static_cast<ComputeT>(mfmaFragC.x[i]));
+            mmaFragD.x[i] = static_cast<OutputT>(alpha * mmaFragAcc.x[i]
+                                                  + beta * static_cast<ComputeT>(mmaFragC.x[i]));
         }
     };
 
@@ -450,7 +450,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
     uniform_fma_unroll_chunk(chunks * chunkSize, remain);
 
     // Final store of completed warp tile
-    store_matrix_sync(d + MfmaFragDMap1d::fromMatrixCoord(warpTileCoord, ldd), mfmaFragD, ldd);
+    store_matrix_sync(d + MmaFragDMap1d::fromMatrixCoord(warpTileCoord, ldd), mmaFragD, ldd);
 }
 
 ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, ComputeT beta)

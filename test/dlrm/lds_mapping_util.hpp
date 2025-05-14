@@ -139,8 +139,10 @@ namespace rocwmma
 
         // Local Write
         // Vertical register file fulfilled by matrix_b with BlockN = 64
-        using LocalWriteFragA = ApplyDataLayout_t<ApplyRegisterFile_t<GlobalReadFragA>, LayoutLds>;
-        using LocalWriteFragB = ApplyDataLayout_t<ApplyRegisterFile_t<GlobalReadFragB>, LayoutLds>;
+        using LocalWriteFragA
+            = apply_data_layout_t<apply_register_file_t<GlobalReadFragA>, LayoutLds>;
+        using LocalWriteFragB
+            = apply_data_layout_t<apply_register_file_t<GlobalReadFragB>, LayoutLds>;
 
         // Sanity checks
         static_assert(GlobalReadFragA::size() == LocalWriteFragA::size(),

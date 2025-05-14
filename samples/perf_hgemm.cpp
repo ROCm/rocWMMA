@@ -291,29 +291,29 @@ using GRFragB = fragment<matrix_b, MACRO_TILE_M, MACRO_TILE_N, MACRO_TILE_K, Inp
 // Local write of global buffers (macro tile)
 // - Must match Lds data layout.
 // - Lds has transposed B frags.
-using LWFragA = ApplyDataLayout_t<GRFragA, DataLayoutLds>;
-using LWFragB = ApplyDataLayout_t<ApplyTranspose_t<GRFragB>, DataLayoutLds>;
+using LWFragA = apply_data_layout_t<GRFragA, DataLayoutLds>;
+using LWFragB = apply_data_layout_t<apply_transpose_t<GRFragB>, DataLayoutLds>;
 
 // Transform helpers
 constexpr auto transformGRFragAToLWFragA
-    = [](GRFragA const& grFragA) { return applyDataLayout<DataLayoutLds, WARP_COUNT>(grFragA); };
+    = [](GRFragA const& grFragA) { return apply_data_layout<DataLayoutLds, WARP_COUNT>(grFragA); };
 
 constexpr auto transformGRFragBToLWFragB = [](GRFragB const& grFragB) {
-    return applyDataLayout<DataLayoutLds, WARP_COUNT>(applyTranspose(grFragB));
+    return apply_data_layout<DataLayoutLds, WARP_COUNT>(apply_transpose(grFragB));
 };
 
 // Local read (mfma frags)
 // - Must match Lds data layout.
 // - Lds has transposed B frags.
-using LRFragA = ApplyDataLayout_t<MmaFragA, DataLayoutLds>;
-using LRFragB = ApplyDataLayout_t<ApplyTranspose_t<MmaFragB>, DataLayoutLds>;
+using LRFragA = apply_data_layout_t<MmaFragA, DataLayoutLds>;
+using LRFragB = apply_data_layout_t<apply_transpose_t<MmaFragB>, DataLayoutLds>;
 
 // Transform helpers
 constexpr auto transformLRFragAToMmaFragA
-    = [](LRFragA const& lrFragA) { return applyDataLayout<DataLayoutA>(lrFragA); };
+    = [](LRFragA const& lrFragA) { return apply_data_layout<DataLayoutA>(lrFragA); };
 
 constexpr auto transformLRFragBToMmaFragB
-    = [](LRFragB const& lrFragB) { return applyDataLayout<DataLayoutB>(applyTranspose(lrFragB)); };
+    = [](LRFragB const& lrFragB) { return apply_data_layout<DataLayoutB>(apply_transpose(lrFragB)); };
 
 ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
                                                           uint32_t       n,
