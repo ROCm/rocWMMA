@@ -70,11 +70,11 @@ namespace rocwmma
     /// DataLayout access
     ///
 
-    // template <typename FragT>
-    // struct GetDataLayout;
+    template <typename FragT>
+    struct GetDataLayout;
 
-    // template <typename FragT>
-    // using GetDataLayout_t = typename GetDataLayout<FragT>::type;
+    template <typename FragT>
+    using GetDataLayout_t = typename GetDataLayout<FragT>::type;
 
     ///
     /// MappingUtil access

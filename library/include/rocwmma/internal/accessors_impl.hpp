@@ -38,7 +38,6 @@ namespace rocwmma
 {
     template <typename FragT>
     struct GetIOConfig;
-
     template <typename MatrixT,
               uint32_t FragM,
               uint32_t FragN,
@@ -57,47 +56,34 @@ namespace rocwmma
         using type = MmaConfig<FragA, FragB, FragC, FragD>;
     };
 
-    ///
-    /// IOShape access
-    ///
-
     template <typename FragT>
-    struct GetIOShape;
-
-    template <typename MatrixT, uint32_t FragM, uint32_t FragN, uint32_t FragK, typename... Ts>
-    struct GetIOShape<fragment<MatrixT, FragM, FragN, FragK, Ts...>>
-    {
-        using type = IOShape<MatrixT, FragM, FragN, FragK>;
-    };
-
-    // template <typename MatrixT,
-    //           uint32_t BlockM,
-    //           uint32_t BlockN,
-    //           uint32_t BlockK,
-    //           typename DataT,
-    //           typename DataLayoutT>
-    // struct GetDataLayout<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>>
-    // {
-    //     using type = DataLayout::template Array1d<DataLayoutT>;
-    // };
-
-    template <typename FragT>
-    struct GetMappingUtil;
-
-    template <typename MatrixT,
-              uint32_t FragM,
-              uint32_t FragN,
-              uint32_t FragK,
-              typename DataT,
-              typename DataLayoutT,
-              typename... Ts>
-    struct GetMappingUtil<fragment<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, Ts...>>
+    struct GetIOShape
     {
     private:
-        using IOShapeT = IOShape<MatrixT, FragM, FragN, FragK>;
+        using IOConfig = typename GetIOConfig<FragT>::type;
 
     public:
-        using type = MappingUtil<IOShapeT::BlockHeight, IOShapeT::BlockWidth, DataT, DataLayoutT>;
+        using type = typename IOConfig::IOShape;
+    };
+
+    template <typename FragT>
+    struct GetDataLayout
+    {
+    private:
+        using IOConfig = typename GetIOConfig<FragT>::type;
+
+    public:
+        using type = typename IOConfig::IOLayout::DataLayout;
+    };
+
+    template <typename FragT>
+    struct GetMappingUtil
+    {
+    private:
+        using IOConfig = typename GetIOConfig<FragT>::type;
+
+    public:
+        using type = typename IOConfig::MappingUtil;
     };
 
 } // namespace rocwmma

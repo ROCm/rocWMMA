@@ -35,7 +35,6 @@
 #include "gemm_config.hpp"
 #include "kernel_predicates.hpp"
 #include <rocwmma/rocwmma.hpp>
-#include <rocwmma/rocwmma_coop.hpp>
 #pragma GCC diagnostic pop
 
 namespace rocwmma

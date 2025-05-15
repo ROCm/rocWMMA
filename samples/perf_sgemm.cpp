@@ -31,7 +31,6 @@
 #include <hip/hip_runtime.h>
 
 #include <rocwmma/rocwmma.hpp>
-#include <rocwmma/rocwmma_coop.hpp>
 #include <rocwmma/rocwmma_transforms.hpp>
 
 #include "common.hpp"
@@ -231,9 +230,8 @@ constexpr uint32_t MACRO_TILE_K = ROCWMMA_K;
 // Mfma frags (warp tile)
 using MmaFragA = fragment<matrix_a, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, InputT, DataLayoutA>;
 using MmaFragB = fragment<matrix_b, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, InputT, DataLayoutB>;
-using MmaFragC
-    = fragment<accumulator, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, OutputT, DataLayoutC>;
-using MmaFragD   = MmaFragC;
+using MmaFragC = fragment<accumulator, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, OutputT, DataLayoutC>;
+using MmaFragD = MmaFragC;
 using MmaFragAcc = fragment<accumulator, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, ComputeT>;
 
 // Global read (macro tile)
@@ -264,8 +262,9 @@ using LRFragB = apply_data_layout_t<apply_transpose_t<MmaFragB>, DataLayoutLds>;
 constexpr auto transformLRFragAToMmaFragA
     = [](LRFragA const& lrFragA) { return apply_data_layout<DataLayoutA>(lrFragA); };
 
-constexpr auto transformLRFragBToMmaFragB
-    = [](LRFragB const& lrFragB) { return apply_data_layout<DataLayoutB>(apply_transpose(lrFragB)); };
+constexpr auto transformLRFragBToMmaFragB = [](LRFragB const& lrFragB) {
+    return apply_data_layout<DataLayoutB>(apply_transpose(lrFragB));
+};
 
 ROCWMMA_KERNEL void __launch_bounds__(256) sgemm_rocwmma_d(uint32_t       m,
                                                            uint32_t       n,
@@ -430,7 +429,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) sgemm_rocwmma_d(uint32_t       m,
              mmaFragAcc);
 
     // D = alpha * accum + beta * C
-    MmaFragD          mmaFragD;
+    MmaFragD           mmaFragD;
     constexpr uint32_t chunkSize = 8u;
     constexpr uint32_t chunks    = mmaFragD.num_elements / chunkSize;
     constexpr uint32_t remain    = mmaFragD.num_elements % chunkSize;
@@ -439,7 +438,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) sgemm_rocwmma_d(uint32_t       m,
         for(int i = start_idx; i < start_idx + size; i++)
         {
             mmaFragD.x[i] = static_cast<OutputT>(alpha * mmaFragAcc.x[i]
-                                                  + beta * static_cast<ComputeT>(mmaFragC.x[i]));
+                                                 + beta * static_cast<ComputeT>(mmaFragC.x[i]));
         }
     };
 

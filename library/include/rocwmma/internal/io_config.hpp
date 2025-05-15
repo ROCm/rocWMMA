@@ -143,7 +143,7 @@ namespace rocwmma
         using IOTile  = IOTile<FragM, FragN, FragK, DataT>;
         using IOShape = IOShape<accumulator, IOTile::BlockM, IOTile::BlockN, IOTile::BlockK>;
         using IOLayout
-            = IOLayout<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, Scheduler>;
+            = IOLayoutInt<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, Scheduler>;
         using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT>;
         using PackUtil    = PackUtil<DataT>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;

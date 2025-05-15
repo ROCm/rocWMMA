@@ -73,7 +73,10 @@ namespace rocwmma
                                 typename BuffTraits::template VecT<DataT, BuffSize> const,
                                 typename BuffTraits::template VecT<DataT, BuffSize>>;
 
-            BaseImpl::exec(forward<ReducedBufferT>(buffer), dataPtr, ldm);
+            // Current offset from wave tile origin (0, 0)
+            auto currentOffset2d = MatrixLayout::baseOffset(Scheduler::waveIndex());
+
+            BaseImpl::unroll_impl((ReducedBufferT&)(buffer), currentOffset2d, dataPtr, ldm);
         }
         // Non-cooperative
         else

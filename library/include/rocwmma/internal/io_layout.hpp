@@ -28,6 +28,7 @@
 
 #include "api_fwd.hpp"
 #include "constants.hpp"
+#include "io_scheduler.hpp"
 #include "layout/layout.hpp"
 #include "layout/matrix_coop_layout.hpp"
 #include "types.hpp"

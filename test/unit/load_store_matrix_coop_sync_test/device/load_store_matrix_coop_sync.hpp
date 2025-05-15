@@ -29,7 +29,6 @@
 
 #include <rocwmma/internal/mapping_util.hpp>
 #include <rocwmma/rocwmma.hpp>
-#include <rocwmma/rocwmma_coop.hpp>
 
 #include "unit_test_traits.hpp"
 

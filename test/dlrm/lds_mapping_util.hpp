@@ -4,7 +4,6 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <rocwmma/rocwmma.hpp>
-#include <rocwmma/rocwmma_coop.hpp>
 #include <rocwmma/rocwmma_transforms.hpp>
 #pragma GCC diagnostic pop
 

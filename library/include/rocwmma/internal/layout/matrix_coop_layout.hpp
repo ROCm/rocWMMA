@@ -98,5 +98,6 @@ namespace rocwmma
 } // namespace rocwmma
 
 #include "matrix_coop_layout_impl.hpp"
+#include "matrix_coop_layout_traits_impl.hpp"
 
 #endif // ROCWMMA_MATRIX_COOP_LAYOUT_HPP
