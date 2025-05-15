@@ -31,18 +31,90 @@ set(MapUtilTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_16.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_32.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_64.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_128.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_128_bf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_128_bf8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_128_bf8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_128_f16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_128_f32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_128_f8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_128_f8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_128_hf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_128_i32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_128_i8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_128_u32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_128_u8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_128_xf32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_256_bf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_256_bf8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_256_bf8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_256_f16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_256_f32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_256_f8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_256_f8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_256_hf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_256_i32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_256_i8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_256_u32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_256_u8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_256_xf32.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_16.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_32.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_64.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_128.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_128_bf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_128_bf8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_128_bf8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_128_f16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_128_f32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_128_f8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_128_f8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_128_hf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_128_i32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_128_i8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_128_u32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_128_u8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_128_xf32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_256_bf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_256_bf8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_256_bf8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_256_f16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_256_f32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_256_f8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_256_f8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_256_hf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_256_i32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_256_i8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_256_u32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_256_u8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_m_256_xf32.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_16.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_32.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_64.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_128.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_128_bf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_128_bf8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_128_bf8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_128_f16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_128_f32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_128_f8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_128_f8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_128_hf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_128_i32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_128_i8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_128_u32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_128_u8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_128_xf32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_256_bf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_256_bf8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_256_bf8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_256_f16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_256_f32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_256_f8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_256_f8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_256_hf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_256_i32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_256_i8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_256_u32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_256_u8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_block_to_matrix_override_n_256_xf32.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_16.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_32.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_64.cpp
@@ -51,13 +123,61 @@ set(MapUtilTestSources ${UnitCommonSources}
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_16.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_32.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_64.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_128.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_128_bf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_128_bf8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_128_bf8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_128_f16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_128_f32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_128_f8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_128_f8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_128_hf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_128_i32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_128_i8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_128_u32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_128_u8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_128_xf32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_256_bf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_256_bf8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_256_bf8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_256_f16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_256_f32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_256_f8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_256_f8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_256_hf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_256_i32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_256_i8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_256_u32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_256_u8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_m_256_xf32.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_16.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_32.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_64.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_128.cpp
-                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_256.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_128_bf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_128_bf8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_128_bf8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_128_f16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_128_f32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_128_f8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_128_f8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_128_hf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_128_i32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_128_i8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_128_u32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_128_u8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_128_xf32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_256_bf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_256_bf8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_256_bf8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_256_f16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_256_f32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_256_f8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_256_f8_fnuz.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_256_hf16.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_256_i32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_256_i8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_256_u32.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_256_u8.cpp
+                       ${CMAKE_CURRENT_SOURCE_DIR}/test/map_matrix_to_data_override_n_256_xf32.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_thread_to_matrix_16.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_thread_to_matrix_32.cpp
                        ${CMAKE_CURRENT_SOURCE_DIR}/test/map_thread_to_matrix_64.cpp
