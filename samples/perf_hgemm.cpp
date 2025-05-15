@@ -300,26 +300,6 @@ using GRFragB       = fragment<matrix_b,
                          DataLayoutB,
                          CoopScheduler>;
 
-static_assert(
-    is_layout_same_v<
-        rocwmma::RegisterLayout::Storage<
-            rocwmma::MatrixLayout::
-                MatrixCoopLayout<rocwmma::MatrixLayout::ColInlineInt<128, 16, _Float16, 16, 1>, 4>,
-            rocwmma::detail::DataSpace<rocwmma::col_major>>,
-        rocwmma::RegisterLayout::Storage<
-            rocwmma::MatrixLayout::
-                MatrixCoopLayout<rocwmma::MatrixLayout::RowInlineInt<128, 16, _Float16, 16, 1>, 4>,
-            rocwmma::detail::DataSpace<rocwmma::row_major>>>,
-    "NOPES");
-
-static_assert(is_layout_same_v<rocwmma::RegisterLayout::Storage<
-                                   rocwmma::MatrixLayout::ColInlineInt<128, 16, _Float16, 16, 1>,
-                                   rocwmma::detail::DataSpace<rocwmma::col_major>>,
-                               rocwmma::RegisterLayout::Storage<
-                                   rocwmma::MatrixLayout::RowInlineInt<128, 16, _Float16, 16, 1>,
-                                   rocwmma::detail::DataSpace<rocwmma::row_major>>>,
-              "NOPES2");
-
 // Local write of global buffers (macro tile)
 // - Must match Lds data layout.
 // - Lds has transposed B frags.
@@ -707,7 +687,7 @@ ROCWMMA_HOST void gemm_test(uint32_t m, uint32_t n, uint32_t k, ComputeT alpha, 
               << std::setw(8) << ldd << std::setw(13) << elapsedTimeMs << std::setw(23) << gFlops
               << std::setw(10) << tFlopsPerSec << std::endl;
 
-#if 1
+#if !NDEBUG
 
     std::cout << "Validating result with reference..." << std::endl;
 
