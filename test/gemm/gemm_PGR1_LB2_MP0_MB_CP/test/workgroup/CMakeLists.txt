@@ -26,19 +26,23 @@
 
 # Add test source files
 set(${ROCWMMA_TARGET_SOURCES} ${${ROCWMMA_TARGET_SOURCES}}
-                              ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_1x1.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_1x1_medium.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_1x1_f64.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_2x2.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nn_4x4.cpp
 
-                              ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nt_1x1.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nt_1x1_medium.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nt_1x1_f64.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nt_2x2.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/16x16_nt_4x4.cpp
 
-                              ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tn_1x1.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tn_1x1_medium.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tn_1x1_f64.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tn_2x2.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tn_4x4.cpp
 
-                              ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_1x1.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_1x1_medium.cpp
+                              ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_1x1_f64.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_2x2.cpp
                               ${CMAKE_CURRENT_SOURCE_DIR}/16x16_tt_4x4.cpp
 
