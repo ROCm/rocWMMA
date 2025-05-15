@@ -36,6 +36,7 @@
 #include "internal/convert.hpp"
 #include "internal/dpp.hpp"
 #include "internal/flow_control.hpp"
+#include "internal/fragment_traits.hpp"
 #include "internal/io_config.hpp"
 #include "internal/io_layout.hpp"
 #include "internal/io_shape.hpp"
@@ -63,8 +64,9 @@ namespace rocwmma
 
 #define FragmentTypesDecl                                                             \
     typename MatrixT, uint32_t FragM, uint32_t FragN, uint32_t FragK, typename DataT, \
-        typename DataLayoutT, typename ScheduleT
-#define FragmentTypesImpl MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, ScheduleT
+        typename DataLayoutT, typename Scheduler
+
+#define FragmentTypesImpl MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, Scheduler
 
     // fragment implementations
     template <FragmentTypesDecl>
@@ -158,12 +160,10 @@ namespace rocwmma
     template <typename FragT, typename DataT>
     ROCWMMA_DEVICE void load_matrix_sync(FragT& frag, const DataT* data, uint32_t ldm)
     {
-        using FragTraits     = fragment_traits<decay_t<FragT>>;
-        using FragSchedule   = typename FragTraits::ScheduleT;
-        using ScheduleTraits = schedule_traits<FragSchedule>;
-        using IOConfig       = GetIOConfig_t<decay_t<FragT>>;
-        using Loader         = typename IOConfig::Loader;
-        using PostLoad       = typename IOConfig::PostLoadXForm;
+        using FragTraits    = fragment_traits<decay_t<FragT>>;
+        using IOConfig      = GetIOConfig_t<decay_t<FragT>>;
+        using Loader        = typename IOConfig::Loader;
+        using PostLoadXForm = typename IOConfig::PostLoadXForm;
 
         // Sanity checks
         static_assert(is_same_v<typename FragTraits::DataT, DataT>,
@@ -174,20 +174,11 @@ namespace rocwmma
         static_assert(is_same_v<typename FragTraits::AccessT, typename Loader::BufferT>,
                       "Fragment access and load buffer types do not match");
 
-        if constexpr(ScheduleTraits::is_schedule_constexpr)
-        {
-            // Load then implicit pack
-            Loader::exec(frag.mAccess, data, ldm, FragSchedule::waveIndex());
-        }
-        else
-        {
-            // Load then implicit pack
-            Loader::exec(
-                frag.mAccess, data, ldm, FragSchedule::waveIndex(), FragSchedule::waveCount());
-        }
+        // Load then implicit pack
+        Loader::exec(frag.mAccess, data, ldm);
 
         // Post-load transformation
-        frag.mAccess = PostLoad::exec(frag.mAccess);
+        frag.mAccess = PostLoadXForm::exec(frag.mAccess);
     }
 
     template <typename FragT, typename DataT>
@@ -199,14 +190,14 @@ namespace rocwmma
         // Dispatch on layout type
         if(layout == layout_t::mem_row_major)
         {
-            // Load as row major, then transform
+            // Load as row major, then transform to fragment layout
             auto tmp = apply_data_layout_t<decay_t<FragT>, row_major>{};
             load_matrix_sync(tmp, data, ldm);
             frag = apply_data_layout<typename FragTraits::DataLayoutT>(tmp);
         }
         else
         {
-            // Load as col major, then transform
+            // Load as col major, then transform to fragment layout
             auto tmp = apply_data_layout_t<decay_t<FragT>, col_major>{};
             load_matrix_sync(tmp, data, ldm);
             frag = apply_data_layout<typename FragTraits::DataLayoutT>(tmp);
@@ -216,12 +207,10 @@ namespace rocwmma
     template <typename FragT, typename DataT>
     ROCWMMA_DEVICE void store_matrix_sync(DataT* data, FragT const& frag, uint32_t ldm)
     {
-        using FragTraits     = fragment_traits<decay_t<FragT>>;
-        using FragSchedule   = typename FragTraits::ScheduleT;
-        using ScheduleTraits = schedule_traits<FragSchedule>;
-        using IOConfig       = GetIOConfig_t<decay_t<FragT>>;
-        using PreStore       = typename IOConfig::PreStoreXForm;
-        using Storer         = typename IOConfig::Storer;
+        using FragTraits    = fragment_traits<decay_t<FragT>>;
+        using IOConfig      = GetIOConfig_t<decay_t<FragT>>;
+        using PreStoreXForm = typename IOConfig::PreStoreXForm;
+        using Storer        = typename IOConfig::Storer;
 
         // Sanity checks
         static_assert(is_same_v<typename FragTraits::DataT, DataT>,
@@ -232,18 +221,7 @@ namespace rocwmma
         static_assert(is_same_v<typename FragTraits::AccessT, typename Storer::BufferT>,
                       "Fragment access and store input types do not match");
 
-        if constexpr(ScheduleTraits::is_schedule_constexpr)
-        {
-            Storer::exec(data, PreStore::exec(frag.mAccess), ldm, FragSchedule::waveIndex());
-        }
-        else
-        {
-            Storer::exec(data,
-                         PreStore::exec(frag.mAccess),
-                         ldm,
-                         FragSchedule::waveIndex(),
-                         FragSchedule::waveCount());
-        }
+        Storer::exec(data, PreStoreXForm::exec(frag.mAccess), ldm);
     }
 
     template <typename FragT, typename DataT>

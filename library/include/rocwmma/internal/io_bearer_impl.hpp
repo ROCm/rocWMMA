@@ -35,11 +35,12 @@
 namespace rocwmma
 {
 
-#define IOBearerTypesDecl                 \
+#define IOBearerBaseTypesDecl             \
     class DataLayout, class MatrixLayout, \
         template <typename, uint32_t>     \
         class BearerPolicy, class BoundsCtrl
-#define IOBearerTypesImpl DataLayout, MatrixLayout, BearerPolicy, BoundsCtrl
+
+#define IOBearerBaseTypesImpl DataLayout, MatrixLayout, BearerPolicy, BoundsCtrl
 
     // Operate on the given vector with expected partial values.
     // Assumption: the original input vector size is a power of 2.
@@ -67,10 +68,10 @@ namespace rocwmma
     // - Xfer v[6]
     // - New PartialCount = 1 - (1 * 1) = 0
     // </Done> v[7] is untouched
-    template <IOBearerTypesDecl>
+    template <IOBearerBaseTypesDecl>
     template <uint32_t PartialCount, typename PBufferT, typename DataPtrT>
-    ROCWMMA_DEVICE inline auto IOBearer<IOBearerTypesImpl>::partial_impl(PBufferT&  buff,
-                                                                         DataPtrT&& dataPtr)
+    ROCWMMA_DEVICE inline auto IOBearerBase<IOBearerBaseTypesImpl>::partial_impl(PBufferT&  buff,
+                                                                                 DataPtrT&& dataPtr)
     {
         using VecTraits = VecTraits<decay_t<decltype(buff)>>;
         static_assert(is_pow2(VecTraits::size()), "Buffer size must be a power of 2");
@@ -155,10 +156,10 @@ namespace rocwmma
     // - ApplyBounds v[1]
     // - New BoundCount = 1 - (1 * 1) = 0
     // </Done> v[0] is untouched
-    template <IOBearerTypesDecl>
+    template <IOBearerBaseTypesDecl>
     template <uint32_t BoundCount, typename BBufferT, typename ScalarT>
-    ROCWMMA_DEVICE inline auto IOBearer<IOBearerTypesImpl>::bounds_impl(BBufferT& buff,
-                                                                        ScalarT&& clipVal)
+    ROCWMMA_DEVICE inline auto IOBearerBase<IOBearerBaseTypesImpl>::bounds_impl(BBufferT& buff,
+                                                                                ScalarT&& clipVal)
     {
         using VecTraits = VecTraits<decay_t<decltype(buff)>>;
         static_assert(is_pow2(VecTraits::size()), "Buffer size must be a power of 2");
@@ -227,12 +228,10 @@ namespace rocwmma
     //   The vector needs to be mutable for loads, but the stores will cast as const reference.
     //   vector_mutate_for_each provides a reference to raw vector data it is operating on, which
     //   will satisfy both loading and storing visitation needs.
-    template <IOBearerTypesDecl>
+    template <IOBearerBaseTypesDecl>
     template <size_t Depth /*= 0*/, typename BufferT, typename Coord2d, typename ExternDataT>
-    ROCWMMA_DEVICE inline auto IOBearer<IOBearerTypesImpl>::unroll_impl(BufferT&&    buff,
-                                                                        Coord2d&&    baseOffset2d,
-                                                                        ExternDataT* dataPtr,
-                                                                        uint32_t     ldm)
+    ROCWMMA_DEVICE inline auto IOBearerBase<IOBearerBaseTypesImpl>::unroll_impl(
+        BufferT&& buff, Coord2d&& baseOffset2d, ExternDataT* dataPtr, uint32_t ldm)
     {
         // Get the layout strides for the current depth
         constexpr auto StrideSpace = pop_front<Depth>(MatrixLayout::strideCounts());
@@ -378,8 +377,8 @@ namespace rocwmma
                             int32_t diffX        = BoundsCtrl::BoundX - get<0>(currentOffset2d);
                             int32_t diffY        = BoundsCtrl::BoundY - get<1>(currentOffset2d);
                             auto    partialCount = DataLayoutTraits::is_col_major
-                                                    ? (diffY > 0u ? diffX : 0u)
-                                                    : (diffX > 0u ? diffY : 0u);
+                                                       ? (diffY > 0u ? diffX : 0u)
+                                                       : (diffX > 0u ? diffY : 0u);
 
                             bool processed = false;
 
@@ -428,10 +427,11 @@ namespace rocwmma
         }
     }
 
-    template <IOBearerTypesDecl>
+    template <IOBearerBaseTypesDecl>
     template <typename BufferT, typename ExternDataT>
-    ROCWMMA_DEVICE inline void
-        IOBearer<IOBearerTypesImpl>::exec(BufferT&& buff, ExternDataT* dataPtr, uint32_t ldm)
+    ROCWMMA_DEVICE inline void IOBearerBase<IOBearerBaseTypesImpl>::exec(BufferT&&    buff,
+                                                                         ExternDataT* dataPtr,
+                                                                         uint32_t     ldm)
     {
         // Current offset from wave tile origin (0, 0)
         auto currentOffset2d = MatrixLayout::baseOffset();
@@ -440,8 +440,8 @@ namespace rocwmma
         unroll_impl(forward<BufferT>(buff), currentOffset2d, dataPtr, ldm);
     }
 
-#undef IOBearerTypesDecl
-#undef IOBearerTypesImpl
+#undef IOBearerBaseTypesDecl
+#undef IOBearerBaseTypesImpl
 
 } // namespace rocwmma
 

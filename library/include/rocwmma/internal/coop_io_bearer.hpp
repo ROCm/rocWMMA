@@ -27,6 +27,7 @@
 #define ROCWMMA_COOP_IO_BEARER_HPP
 
 #include "io_bearer.hpp"
+#include "io_scheduler.hpp"
 #include "layout/matrix_coop_layout.hpp"
 
 namespace rocwmma
@@ -41,27 +42,20 @@ namespace rocwmma
     //! @tparam BearerPolicy Typically represents a memory transaction such as a store or load, described by data type and vector size.
     //! @tparam BoundsCtrl Checks bounding box boundary violations by the BearerPolicy and may apply adjustments to the violating buffer.
     template <class DataLayout,
-              class CoopMatrixLayout,
-              class ScheduleT,
+              class MatrixLayout,
               template <typename, uint32_t>
               class BearerPolicy,
-              class BoundsCtrl>
-    struct CoopIOBearer : public IOBearer<DataLayout, CoopMatrixLayout, BearerPolicy, BoundsCtrl>
+              class BoundsCtrl,
+              class Scheduler>
+    struct IOBearer : protected IOBearerBase<DataLayout, MatrixLayout, BearerPolicy, BoundsCtrl>
     {
-    protected:
-        // Traits
-        using Base               = IOBearer<DataLayout, CoopMatrixLayout, BearerPolicy, BoundsCtrl>;
-        using MatrixLayoutTraits = layout_traits<CoopMatrixLayout>;
-        using DataLayoutTraits   = layout_traits<DataLayout>;
-        using ScheduleTraits     = schedule_Traits<ScheduleT>;
-        using DataT              = typename MatrixLayoutTraits::DataT;
-
-        // Iterative transaction buffer for unroll decomposition
-        static constexpr uint32_t TransactionSize = Base::TransactionSize;
-        static constexpr uint32_t WaveCount       = MatrixLayoutTraits::WaveCount;
-        using Bearer                              = BearerPolicy<DataT, TransactionSize>;
+    private:
+        using SchedulerTraits = scheduler_traits<Scheduler>;
+        using BaseImpl        = IOBearerBase<DataLayout, MatrixLayout, BearerPolicy, BoundsCtrl>;
 
     public:
+        using BufferT = typename BaseImpl::BufferT;
+
         //! @brief Interface driver for loop-unroll to cover all transactions described by MatrixLayout strides
         //! @tparam BufferT The buffer full buffer segment for all transactions
         //! @tparam ExternDataT The type of the pointer given by the user
@@ -69,20 +63,7 @@ namespace rocwmma
         //! is intended to be opaque on the const-ness.
         template <typename BufferT, typename ExternDataT>
         ROCWMMA_DEVICE static inline void
-            exec(BufferT&& buffer, ExternDataT* dataPtr, uint32_t ldm, uint32_t waveIndex);
-
-        //! @brief Interface driver for loop-unroll to cover all transactions described by MatrixLayout strides
-        //! @tparam BufferT The buffer full buffer segment for all transactions
-        //! @tparam ExternDataT The type of the pointer given by the user
-        //! @note This class is used for both load / store transactions, so the ExternDataT
-        //! is intended to be opaque on the const-ness.
-        //! This interface provides a run-time waveCount in case the WaveCount is not known at compile-time.
-        template <typename BufferT, typename ExternDataT>
-        ROCWMMA_DEVICE static inline void exec(BufferT&&    buffer,
-                                               ExternDataT* dataPtr,
-                                               uint32_t     ldm,
-                                               uint32_t     waveIndex,
-                                               uint32_t     waveCount);
+            exec(BufferT&& buffer, ExternDataT* dataPtr, uint32_t ldm);
     };
 
 } // namespace rocwmma

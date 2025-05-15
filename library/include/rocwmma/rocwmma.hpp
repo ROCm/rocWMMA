@@ -27,6 +27,7 @@
 #define ROCWMMA_API_HPP
 
 #include "internal/accessors.hpp"
+#include "internal/io_scheduler.hpp"
 #include "internal/io_traits.hpp"
 #include "internal/pack_util.hpp"
 #include "internal/types.hpp"
@@ -99,190 +100,6 @@ namespace rocwmma
     {
     };
 
-    namespace fragment_schedule
-    {
-        // No thread-block cooperation
-        struct non_cooperative
-        {
-            constexpr static inline auto waveIndex()
-            {
-                return 0u;
-            }
-            constexpr static inline uint32_t waveCount()
-            {
-                return 1u;
-            }
-        };
-
-        // Thread-block schedule is round-robin in row_major; all waves participate.
-        // E.g. (TBlockX, TBlockY) = (128, 2) = 2x2 waves
-        // i0 = (0, 0), i1 = (0, 1),
-        // i2 = (1, 0), i3 = (1, 1)
-        // count = 4
-        template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
-        struct coop_rr_row_major
-        {
-            using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
-            using DataSpace = detail::DataSpace<row_major>;
-
-            constexpr static inline auto waveIndex()
-            {
-                return DataSpace::fromMatrixCoord(WaveSpace::localWaveCoord(),
-                                                  get<1>(WaveSpace::workgroupDim()));
-            }
-            constexpr static inline uint32_t waveCount()
-            {
-                return reduce_mult(WaveSpace::workgroupDim());
-            }
-        };
-
-        // Thread-block schedule is round-robin in col_major; all waves participate.
-        // E.g. (TBlockX, TBlockY) = (128, 2) = 2x2 waves
-        // i0 = (0, 0), i2 = (0, 1),
-        // i1 = (1, 0), i3 = (1, 1),
-        // count = 4
-        template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
-        struct coop_rr_col_major
-        {
-            using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
-            using DataSpace = detail::DataSpace<col_major>;
-
-            constexpr static inline auto waveIndex()
-            {
-                return DataSpace::fromMatrixCoord(WaveSpace::localWaveCoord(),
-                                                  get<0>(WaveSpace::workgroupDim()));
-            }
-            constexpr static inline uint32_t waveCount()
-            {
-                return reduce_mult(WaveSpace::workgroupDim());
-            }
-        };
-
-        // Thread-block schedule is sliced into rows; all waves in the same row participate.
-        // E.g. Wg = (128, 2) = 2x2 waves
-        // Slice0: i0 = (0, 0), i1 = (0, 1) count = 2
-        // Slice1: i0 = (1, 0), i1 = (1, 1) count = 2
-        template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
-        struct coop_slice_row
-        {
-            using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
-
-            constexpr static inline auto waveIndex()
-            {
-                return get<1>(WaveSpace::localWaveCoord());
-            }
-            constexpr static inline uint32_t waveCount()
-            {
-                return get<1>(WaveSpace::workgroupDim());
-            }
-        };
-
-        // Thread-block schedule is sliced into cols; all waves in the same col participate.
-        // E.g. Wg = (128, 2) = 2x2 waves
-        // Slice0:        Slice1:
-        // i0 = (0, 0),   i0 = (0, 1),
-        // i1 = (1, 0)    i1 = (1, 1)
-        // count = 2      count = 2
-        template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
-        struct coop_slice_col
-        {
-            using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
-
-            constexpr static inline auto waveIndex()
-            {
-                return get<0>(WaveSpace::localWaveCoord());
-            }
-            constexpr static inline uint32_t waveCount()
-            {
-                return get<0>(WaveSpace::workgroupDim());
-            }
-        };
-
-    } // namespace fragment_schedule
-
-    namespace ScheduleTraits_impl
-    {
-        using namespace fragment_schedule;
-
-        template <typename ScheduleT>
-        struct is_schedule_valid : false_type
-        {
-        };
-
-        template <>
-        struct is_schedule_valid<non_cooperative> : true_type
-        {
-        };
-
-        template <uint32_t TBlockX, uint32_t TBlockY>
-        struct is_schedule_valid<coop_rr_row_major<TBlockX, TBlockY>> : true_type
-        {
-        };
-
-        template <uint32_t TBlockX, uint32_t TBlockY>
-        struct is_schedule_valid<coop_rr_col_major<TBlockX, TBlockY>> : true_type
-        {
-        };
-
-        template <uint32_t TBlockX, uint32_t TBlockY>
-        struct is_schedule_valid<coop_slice_row<TBlockX, TBlockY>> : true_type
-        {
-        };
-
-        template <uint32_t TBlockX, uint32_t TBlockY>
-        struct is_schedule_valid<coop_slice_col<TBlockX, TBlockY>> : true_type
-        {
-        };
-
-        template <typename ScheduleT>
-        struct is_schedule_constexpr : false_type
-        {
-        };
-
-        template <uint32_t TBlockX, uint32_t TBlockY, template <uint32_t, uint32_t> class Schedule>
-        struct is_schedule_constexpr<Schedule<TBlockX, TBlockY>>
-            : integral_constant<bool, (TBlockX > 0u && TBlockY > 0u)>
-        {
-        };
-
-        template <typename ScheduleT>
-        struct is_schedule_cooperative : false_type
-        {
-        };
-
-        template <uint32_t TBlockX, uint32_t TBlockY>
-        struct is_schedule_cooperative<coop_rr_row_major<TBlockX, TBlockY>> : true_type
-        {
-        };
-
-        template <uint32_t TBlockX, uint32_t TBlockY>
-        struct is_schedule_cooperative<coop_rr_col_major<TBlockX, TBlockY>> : true_type
-        {
-        };
-
-        template <uint32_t TBlockX, uint32_t TBlockY>
-        struct is_schedule_cooperative<coop_slice_row<TBlockX, TBlockY>> : true_type
-        {
-        };
-
-        template <uint32_t TBlockX, uint32_t TBlockY>
-        struct is_schedule_cooperative<coop_slice_col<TBlockX, TBlockY>> : true_type
-        {
-        };
-
-    } // namespace ScheduleTraits_impl
-
-    template <typename ScheduleT>
-    struct schedule_traits
-    {
-        constexpr static bool is_schedule_constexpr
-            = ScheduleTraits_impl::is_schedule_constexpr<ScheduleT>::value;
-        constexpr static bool is_schedule_valid
-            = ScheduleTraits_impl::is_schedule_valid<ScheduleT>::value;
-        constexpr static bool is_schedule_cooperative
-            = ScheduleTraits_impl::is_schedule_cooperative<ScheduleT>::value;
-    };
-
     //! @struct layout_t
     //! @brief Runtime data layout tags
     //! @var mem_row_major
@@ -292,6 +109,61 @@ namespace rocwmma
         mem_row_major,
         mem_col_major
     };
+
+    namespace fragment_scheduler
+    {
+        //! @struct default
+        //! @brief The default fragment scheduler; each wave operates independently.
+        using default_schedule = IOScheduler::Default;
+
+        //! @struct coop_row_major_2d
+        //! @brief  A cooperative scheduling strategy where each wave in the 2d threadblock
+        //! will contribute to the fragment operation in row_major grid order.
+        //! All waves are scheduled in row_major order.
+        //! E.g. (TBlockX, TBlockY) => 2x2 waves
+        //! w0 = (0, 0),  w1 = (0, 1),
+        //! w2 = (1, 0),  w3 = (1, 1)
+        //! @tparam TBlockX the size of the thread-block in the X dimension
+        //! @tparam TBlockY the size of the thread-block in the Y dimension
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        using coop_row_major_2d = IOScheduler::RowMajor2d<TBlockX, TBlockY>;
+
+        //! @struct coop_col_major_2d
+        //! @brief  A cooperative scheduling strategy where each wave in the 2d threadblock
+        //! will contribute to the fragment operation in col_major grid order.
+        //! All waves are scheduled in row_major order.
+        //! E.g. (TBlockX, TBlockY) => 2x2 waves
+        //! w0 = (0, 0),  w2 = (0, 1),
+        //! w1 = (1, 0),  w3 = (1, 1)
+        //! @tparam TBlockX the size of the thread-block in the X dimension
+        //! @tparam TBlockY the size of the thread-block in the Y dimension
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        using coop_col_major_2d = IOScheduler::ColMajor2d<TBlockX, TBlockY>;
+
+        //! @struct coop_row_slice_2d
+        //! @brief  A cooperative scheduling strategy where each row of waves
+        //! in the 2d threadblock will contribute to the fragment operation.
+        //! Waves are partitioned into rows. Only waves in the same row
+        //! participate together.
+        //! E.g. (TBlockX, TBlockY) = 2x2 waves
+        //! RowSlice0: w0 = (0, 0), w1 = (0, 1)
+        //! RowSlice1: w0 = (1, 0), w1 = (1, 1)
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        using coop_row_slice_2d = IOScheduler::RowSlice2d<TBlockX, TBlockY>;
+
+        //! @struct coop_col_slice_2d
+        //! @brief  A cooperative scheduling strategy where each col of waves
+        //! in the 2d threadblock will contribute to the fragment operation.
+        //! Waves are partitioned into cols. Only waves in the same col
+        //! participate together.
+        //! E.g. (TBlockX, TBlockY) = 2x2 waves
+        //! ColSlice0:     ColSlice1:
+        //! w0 = (0, 0),   w0 = (0, 1),
+        //! w1 = (1, 0)    w1 = (1, 1)
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        using coop_col_slice_2d = IOScheduler::ColSlice2d<TBlockX, TBlockY>;
+
+    } // namespace fragment_scheduler
 
     //! @class fragment
     //! @brief rocWMMA fragment class. This is the primary object used in block-wise decomposition of the matrix multiply-accumulate (mma)
@@ -314,7 +186,7 @@ namespace rocwmma
               uint32_t FragK,
               typename DataT,
               typename DataLayoutT = void,
-              typename ScheduleT   = fragment_schedule::non_cooperative>
+              typename Scheduler   = fragment_scheduler::default_schedule>
     class __align__(4) fragment
     {
     public:
@@ -385,73 +257,6 @@ namespace rocwmma
         // For compatibility
         constexpr static uint32_t num_elements = Traits::Size;
         using element_type                     = DataT;
-    };
-
-    namespace fragment_traits_impl
-    {
-        using LayoutTraits_impl::is_col_major;
-        using LayoutTraits_impl::is_row_major;
-        template <typename MatrixT>
-        struct is_matrix_a : false_type
-        {
-        };
-
-        template <>
-        struct is_matrix_a<matrix_a> : true_type
-        {
-        };
-
-        template <typename MatrixT>
-        struct is_matrix_b : false_type
-        {
-        };
-
-        template <>
-        struct is_matrix_b<matrix_b> : true_type
-        {
-        };
-
-        template <typename MatrixT>
-        struct is_accumulator : false_type
-        {
-        };
-
-        template <>
-        struct is_accumulator<accumulator> : true_type
-        {
-        };
-
-        template <typename FragT>
-        struct fragment_traits;
-
-    } // namespace fragment_traits_impl
-
-    template <typename _MatrixT,
-              uint32_t _FragM,
-              uint32_t _FragN,
-              uint32_t _FragK,
-              typename _DataT,
-              typename _DataLayoutT,
-              typename _ScheduleT>
-    struct fragment_traits<
-        fragment<_MatrixT, _FragM, _FragN, _FragK, _DataT, _DataLayoutT, _ScheduleT>>
-        : public fragment<_MatrixT, _FragM, _FragN, _FragK, _DataT, _DataLayoutT, _ScheduleT>::
-              Traits,
-          public schedule_traits<_ScheduleT>
-    {
-        using MatrixT                   = _MatrixT;
-        constexpr static uint32_t FragM = _FragM;
-        constexpr static uint32_t FragN = _FragN;
-        constexpr static uint32_t FragK = _FragK;
-        using DataT                     = _DataT;
-        using DataLayoutT               = _DataLayoutT;
-        using ScheduleT                 = _ScheduleT;
-
-        constexpr static bool is_matrix_a    = fragment_traits_impl::is_matrix_a<MatrixT>::value;
-        constexpr static bool is_matrix_b    = fragment_traits_impl::is_matrix_b<MatrixT>::value;
-        constexpr static bool is_accumulator = fragment_traits_impl::is_accumulator<MatrixT>::value;
-        constexpr static bool is_col_major = fragment_traits_impl::is_col_major<DataLayoutT>::value;
-        constexpr static bool is_row_major = fragment_traits_impl::is_row_major<DataLayoutT>::value;
     };
 
     //! Fills the entire fragment with the desired value.

@@ -27,6 +27,7 @@
 #define ROCWMMA_COOP_IO_BEARER_IMPL_HPP
 
 #include "io_bearer.hpp"
+#include "io_scheduler.hpp"
 #include "layout/matrix_coop_layout.hpp"
 #include "utility/math.hpp"
 #include "vector.hpp"
@@ -34,94 +35,56 @@
 namespace rocwmma
 {
 
-#define CoopIOBearerTypesDecl                 \
-    class DataLayout, class CoopMatrixLayout, \
-        template <typename, uint32_t>         \
-        class BearerPolicy, class BoundsCtrl
-#define CoopIOBearerTypesImpl DataLayout, CoopMatrixLayout, BearerPolicy, BoundsCtrl
+#define IOBearerTypesDecl                 \
+    class DataLayout, class MatrixLayout, \
+        template <typename, uint32_t>     \
+        class BearerPolicy, class BoundsCtrl, class Scheduler
 
-    // Forwards to iterative unroll because waveCount override may not be known at compile time.
-    template <CoopIOBearerTypesDecl>
+#define IOBearerTypesImpl DataLayout, MatrixLayout, BearerPolicy, BoundsCtrl, Scheduler
+
+    template <IOBearerTypesDecl>
     template <typename BufferT, typename ExternDataT>
-    ROCWMMA_DEVICE inline void CoopIOBearer<CoopIOBearerTypesImpl>::exec(BufferT&&    buffer,
-                                                                         ExternDataT* dataPtr,
-                                                                         uint32_t     ldm,
-                                                                         uint32_t     waveIndex,
-                                                                         uint32_t     waveCount)
+    ROCWMMA_DEVICE /* static */ inline void
+        IOBearer<IOBearerTypesImpl>::exec(BufferT&& buffer, ExternDataT* dataPtr, uint32_t ldm)
     {
-        // Filter out waves we don't want participating
-        if(!CoopMatrixLayout::waveEnabler(waveIndex, waveCount))
+        // Traits
+        using SchedulerTraits = scheduler_traits<Scheduler>;
+
+        // Sanity check
+        static_assert(SchedulerTraits::is_valid, "Invalid scheduler");
+
+        // Cooperative
+        if constexpr(SchedulerTraits::is_cooperative)
         {
-            return;
+            // Waves filter
+            if(!MatrixLayout::waveEnabler(Scheduler::waveIndex(), Scheduler::waveCount()))
+            {
+                return;
+            }
+
+            // We need to shrink the buffer for the unroll
+            using BuffTraits = VecTraits<decay_t<BufferT>>;
+            using DataT      = typename BuffTraits::DataT;
+
+            constexpr auto BuffSize
+                = reduce_mult(MatrixLayout::strideCounts(Scheduler::waveCount()))
+                  * BaseImpl::TransactionSize;
+            using ReducedBufferT
+                = conditional_t<is_const_v<BufferT>,
+                                typename BuffTraits::template VecT<DataT, BuffSize> const,
+                                typename BuffTraits::template VecT<DataT, BuffSize>>;
+
+            BaseImpl::exec(forward<ReducedBufferT>(buffer), dataPtr, ldm);
         }
-
-        // The base offset will include the wave offset
-        auto baseOffset = CoopMatrixLayout::baseOffset(waveIndex, waveCount);
-
-        // Dispatch run-time wave count to the IOBearer class
-        static_for<0u, 3u, 1u>(
-            [](auto&& idx,
-               auto   waveCount,
-               auto&& buffer,
-               auto&& baseOffset,
-               auto*  dataPtr,
-               auto   ldm) {
-                // Wave counts only supported as powers of 2
-                constexpr auto Idx       = pow2<decay_t<decltype(idx)>::value>::value;
-                bool           processed = false;
-
-                if(Idx == waveCount && !processed)
-                {
-                    // We need to shrink the buffer for the unroll
-                    constexpr auto BuffSize
-                        = reduce_mult(CoopMatrixLayout::strideCounts(Idx)) * TransactionSize;
-                    using ReducedBufferT = conditional_t<is_const_v<BufferT>,
-                                                         VecT<DataT, BuffSize> const,
-                                                         VecT<DataT, BuffSize>>;
-
-                    // Base can unroll statically
-                    Base::unroll_impl((ReducedBufferT&)(buffer), baseOffset, dataPtr, ldm);
-
-                    processed = true;
-                }
-            },
-            waveCount,
-            forward<BufferT>(buffer),
-            baseOffset,
-            dataPtr,
-            ldm);
+        // Non-cooperative
+        else
+        {
+            BaseImpl::exec(forward<BufferT>(buffer), dataPtr, ldm);
+        }
     }
 
-    // Forwards to base class static unroll using static WaveCount
-    template <CoopIOBearerTypesDecl>
-    template <typename BufferT, typename ExternDataT>
-    ROCWMMA_DEVICE inline void CoopIOBearer<CoopIOBearerTypesImpl>::exec(BufferT&&    buffer,
-                                                                         ExternDataT* dataPtr,
-                                                                         uint32_t     ldm,
-                                                                         uint32_t     waveIndex)
-    {
-        // Filter out waves we don't want participating
-        if(!CoopMatrixLayout::waveEnabler(waveIndex, WaveCount))
-        {
-            return;
-        }
-
-        // The base offset will include the wave offset
-        auto baseOffset = CoopMatrixLayout::baseOffset(waveIndex, WaveCount);
-
-        // We need to shrink the buffer for the unroll
-        constexpr auto BuffSize
-            = reduce_mult(CoopMatrixLayout::strideCounts(WaveCount)) * TransactionSize;
-        using ReducedBufferT = conditional_t<is_const_v<BufferT>,
-                                             VecT<DataT, BuffSize> const,
-                                             VecT<DataT, BuffSize>>;
-
-        // Base can unroll statically
-        Base::unroll_impl((ReducedBufferT&)(buffer), baseOffset, dataPtr, ldm);
-    }
-
-#undef CoopIOBearerTypesDecl
-#undef CoopIOBearerTypesImpl
+#undef IOBearerTypesDecl
+#undef IOBearerTypesImpl
 
 } // namespace rocwmma
 

@@ -33,17 +33,13 @@
 
 namespace rocwmma
 {
-    using MatrixLayout::MatrixCoopLayout;
-
-    // This class wraps an incoming MatrixLayout into a cooperative one
+    // Loading interface
     template <class DataLayout,
               class MatrixLayout,
-              uint32_t WaveCount,
-              class BoundsCtrl = IOBoundsCtrl::Default>
-    struct CooperativeLoad : public CoopIOBearer<DataLayout,
-                                                 MatrixCoopLayout<MatrixLayout, WaveCount>,
-                                                 detail::OpaqueLoadBearer,
-                                                 BoundsCtrl>
+              class BoundsCtrl = IOBoundsCtrl::Default,
+              class Scheduler  = IOScheduler::Default>
+    struct CooperativeLoad
+        : public IOBearer<DataLayout, MatrixLayout, detail::OpaqueLoadBearer, BoundsCtrl, Scheduler>
     {
     };
 

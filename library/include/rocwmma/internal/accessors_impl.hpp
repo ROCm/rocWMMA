@@ -29,32 +29,14 @@
 #include "accessors.hpp"
 #include "api_fwd.hpp"
 #include "coop_io_config.hpp"
+#include "fragment_traits.hpp"
 #include "io_config.hpp"
+#include "io_scheduler.hpp"
 #include "io_shape.hpp"
 #include "mma_config.hpp"
 
 namespace rocwmma
 {
-    ///
-    /// DataType access
-    ///
-
-    // template <typename MatrixT,
-    //           uint32_t FragM,
-    //           uint32_t FragN,
-    //           uint32_t FragK,
-    //           typename DataT,
-    //           typename DataLayoutT,
-    //           typename ScheduleT>
-    // struct GetDataType<fragment<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, ScheduleT>>
-    // {
-    //     using type = DataT;
-    // };
-
-    ///
-    /// IOConfig access
-    ///
-
     template <typename FragT>
     struct GetIOConfig;
 
@@ -64,15 +46,10 @@ namespace rocwmma
               uint32_t FragK,
               typename DataT,
               typename DataLayoutT,
-              typename ScheduleT>
-    struct GetIOConfig<fragment<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, ScheduleT>>
+              typename Scheduler>
+    struct GetIOConfig<fragment<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, Scheduler>>
     {
-        using ScheduleTraits = schedule_traits<ScheduleT>;
-
-        using type = conditional_t<
-            ScheduleTraits::is_schedule_constexpr,
-            CoopIOConfig<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, ScheduleT::waveCount()>,
-            CoopIOConfig<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, 1u>>;
+        using type = CoopIOConfig<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, Scheduler>;
     };
 
     template <typename FragA, typename FragB, typename FragC, typename FragD>
@@ -99,6 +76,16 @@ namespace rocwmma
                       "Mma fragment FragK traits must match");
         static_assert(is_same_v<typename FragCTraits::DataT, typename FragDTraits::DataT>,
                       "Accum fragments C and D must have the same type");
+
+        static_assert(
+            is_same_v<
+                typename FragATraits::Scheduler,
+                typename FragBTraits::
+                    Scheduler> && is_same_v<typename FragBTraits::Scheduler, typename FragCTraits::Scheduler> && is_same_v<typename FragCTraits::Scheduler, typename FragDTraits::Scheduler>,
+            "Mma fragment scheduler traits must match");
+
+        static_assert(!scheduler_traits<typename FragATraits::Scheduler>::is_cooperative,
+                      "Mma does not support cooperative fragments");
 
     public:
         // We've already checked:
@@ -129,12 +116,12 @@ namespace rocwmma
               uint32_t FragK,
               typename DataT,
               typename DataLayoutT,
-              typename ScheduleT,
+              typename Scheduler,
               uint32_t WaveCount>
-    struct GetCoopIOConfig<fragment<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, ScheduleT>,
+    struct GetCoopIOConfig<fragment<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, Scheduler>,
                            WaveCount>
     {
-        using type = CoopIOConfig<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, WaveCount>;
+        using type = CoopIOConfig<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, Scheduler>;
     };
 
     ///

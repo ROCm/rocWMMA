@@ -23,42 +23,60 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_COOP_STORE_HPP
-#define ROCWMMA_COOP_STORE_HPP
+#ifndef ROCWMMA_FRAGMENT_TRAITS_IMPL_HPP
+#define ROCWMMA_FRAGMENT_TRAITS_IMPL_HPP
 
-#include "coop_io_bearer.hpp"
-#include "io_bounds_ctrl.hpp"
-#include "layout/matrix_coop_layout_impl.hpp"
-#include "opaque_store.hpp"
+#include "api_fwd.hpp"
+#include "layout/layout.hpp"
 
 namespace rocwmma
 {
-    // Storing interface
-    template <class DataLayout,
-              class MatrixLayout,
-              class BoundsCtrl = IOBoundsCtrl::Default,
-              class Scheduler  = IOScheduler::Default>
-    struct CooperativeStore : public IOBearer<DataLayout,
-                                              MatrixLayout,
-                                              detail::OpaqueStoreBearer,
-                                              BoundsCtrl,
-                                              Scheduler>
+    namespace FragmentTraits_impl
     {
-    private:
-        using Base
-            = IOBearer<DataLayout, MatrixLayout, detail::OpaqueStoreBearer, BoundsCtrl, Scheduler>;
+        using LayoutTraits_impl::is_col_major;
+        using LayoutTraits_impl::is_row_major;
 
-        // Don't expose the base implementation, we change arg forwarding order
-        using Base::exec;
-
-    public:
-        template <typename DataT, typename BufferT>
-        ROCWMMA_DEVICE static void exec(DataT* dataPtr, BufferT&& buff, uint32_t ldm)
+        template <typename MatrixT>
+        struct is_matrix_a : false_type
         {
-            Base::exec(forward<BufferT>(buff), dataPtr, ldm);
-        }
-    };
+        };
+
+        template <>
+        struct is_matrix_a<matrix_a> : true_type
+        {
+        };
+
+        template <typename MatrixT>
+        static constexpr bool is_matrix_a_v = is_matrix_a<MatrixT>::value;
+
+        template <typename MatrixT>
+        struct is_matrix_b : false_type
+        {
+        };
+
+        template <>
+        struct is_matrix_b<matrix_b> : true_type
+        {
+        };
+
+        template <typename MatrixT>
+        static constexpr bool is_matrix_b_v = is_matrix_b<MatrixT>::value;
+
+        template <typename MatrixT>
+        struct is_accumulator : false_type
+        {
+        };
+
+        template <>
+        struct is_accumulator<accumulator> : true_type
+        {
+        };
+
+        template <typename MatrixT>
+        static constexpr bool is_accumulator_v = is_accumulator<MatrixT>::value;
+
+    } // namespace FragmentTraits_impl
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_COOP_STORE_HPP
+#endif // ROCWMMA_FRAGMENT_TRAITS_IMPL_HPP

@@ -26,6 +26,7 @@
 #ifndef ROCWMMA_OPAQUE_STORE_HPP
 #define ROCWMMA_OPAQUE_STORE_HPP
 
+#include "io_scheduler.hpp"
 #include "io_traits.hpp"
 #include "types.hpp"
 #include "vector_iterator.hpp"
@@ -76,12 +77,19 @@ namespace rocwmma
 
     } // namespace detail
 
-    template <class DataLayout, class MatrixLayout, class BoundsCtrl = IOBoundsCtrl::Default>
-    struct OpaqueStore
-        : public IOBearer<DataLayout, MatrixLayout, detail::OpaqueStoreBearer, BoundsCtrl>
+    template <class DataLayout,
+              class MatrixLayout,
+              class BoundsCtrl = IOBoundsCtrl::Default,
+              class Scheduler  = IOScheduler::Default>
+    struct OpaqueStore : public IOBearer<DataLayout,
+                                         MatrixLayout,
+                                         detail::OpaqueStoreBearer,
+                                         BoundsCtrl,
+                                         Scheduler>
     {
     private:
-        using Base = IOBearer<DataLayout, MatrixLayout, detail::OpaqueStoreBearer, BoundsCtrl>;
+        using Base
+            = IOBearer<DataLayout, MatrixLayout, detail::OpaqueStoreBearer, BoundsCtrl, Scheduler>;
 
         // Don't expose the base implementation, we change arg forwarding order
         using Base::exec;

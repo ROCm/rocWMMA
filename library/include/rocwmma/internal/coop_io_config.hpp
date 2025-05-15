@@ -68,7 +68,7 @@ namespace rocwmma
               uint32_t FragK,
               typename DataT,
               typename DataLayoutT,
-              uint32_t WaveCount>
+              typename Scheduler>
     struct CoopIOConfig
     {
         // The specific size of the requested fragment
@@ -86,7 +86,7 @@ namespace rocwmma
         // Using quantized block dimensions, determine the layout characteristics we will use with
         // this fragment.
         using IOLayout
-            = IOLayoutInt<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, WaveCount>;
+            = IOLayoutInt<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, Scheduler>;
 
         using IOTraits = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT, IOLayout::VW>;
 
@@ -104,16 +104,17 @@ namespace rocwmma
 
         using Loader = CooperativeLoad<typename IOLayout::DataLayout,
                                        typename IOLayout::MatrixLayout,
-                                       WaveCount,
-                                       IOBoundsCtrlLoad>;
+                                       IOBoundsCtrlLoad,
+                                       Scheduler>;
 
+        // TODO: remove the waveCount dependency by adjusting the buffer size statically.
         using PostLoadXForm = register_layout_transform<typename IOLayout::StorageLayout,
                                                         typename IOLayout::FragmentLayout,
-                                                        WaveCount>;
+                                                        Scheduler::waveCount()>;
 
         using PreStoreXForm = register_layout_transform<typename IOLayout::FragmentLayout,
                                                         typename IOLayout::StorageLayout,
-                                                        WaveCount>;
+                                                        Scheduler::waveCount()>;
 
         // Storage requires only clipping.
         using IOBoundsCtrlStore
@@ -123,8 +124,8 @@ namespace rocwmma
 
         using Storer = CooperativeStore<typename IOLayout::DataLayout,
                                         typename IOLayout::MatrixLayout,
-                                        WaveCount,
-                                        IOBoundsCtrlStore>;
+                                        IOBoundsCtrlStore,
+                                        Scheduler>;
     };
 
     /************************************************
@@ -134,13 +135,13 @@ namespace rocwmma
  * general IOShape, PackUtil, Broadcast still available.
  *
  * */
-    template <uint32_t FragM, uint32_t FragN, uint32_t FragK, typename DataT, uint32_t WaveCount>
-    struct CoopIOConfig<accumulator, FragM, FragN, FragK, DataT, void, WaveCount>
+    template <uint32_t FragM, uint32_t FragN, uint32_t FragK, typename DataT, typename Scheduler>
+    struct CoopIOConfig<accumulator, FragM, FragN, FragK, DataT, void, Scheduler>
     {
         using IOTile  = IOTile<FragM, FragN, FragK, DataT>;
         using IOShape = IOShape<accumulator, IOTile::BlockM, IOTile::BlockN, IOTile::BlockK>;
         using IOLayout
-            = IOLayout<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, WaveCount>;
+            = IOLayout<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, Scheduler>;
         using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT>;
         using PackUtil    = PackUtil<DataT>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;

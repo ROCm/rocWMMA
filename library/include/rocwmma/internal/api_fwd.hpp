@@ -45,14 +45,8 @@ namespace rocwmma
               uint32_t FragK,
               typename DataT,
               typename DataLayoutT,
-              typename ScheduleT>
+              typename Scheduler>
     class __align__(4) fragment;
-
-    template <typename FragT>
-    struct fragment_traits;
-
-    template <typename ScheduleT>
-    struct schedule_traits;
 
 } // namespace rocwmma
 

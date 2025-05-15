@@ -45,12 +45,13 @@ namespace rocwmma
         // wave id, where appropriate to calculate proper offsets.
         // Note: We should prefer the templated WaveCount where possible to leverage compile-time
         // optimizations as much as possible.
-        template <typename MatrixLayout, uint32_t WaveCount = 1u>
-        struct MatrixCoopLayout : private MatrixLayoutBase<MatrixCoopLayout<MatrixLayout>>
+        template <typename MatrixLayout, uint32_t WaveCount>
+        struct MatrixCoopLayout
+            : private MatrixLayoutBase<MatrixCoopLayout<MatrixLayout, WaveCount>>
         {
         private:
             using MatrixLayoutTraits = layout_traits<MatrixLayout>;
-            using Base               = MatrixLayoutBase<MatrixCoopLayout<MatrixLayout>>;
+            using Base               = MatrixLayoutBase<MatrixCoopLayout<MatrixLayout, WaveCount>>;
 
             // Note: In a multi-wave context, layout iterative spaces can be split
             // between waves, with some restrictions. Certain types of layouts

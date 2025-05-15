@@ -23,12 +23,13 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_IO_BEARER_HPP
-#define ROCWMMA_IO_BEARER_HPP
+#ifndef ROCWMMA_IO_BEARER_BASE_HPP
+#define ROCWMMA_IO_BEARER_BASE_HPP
 
 #include "layout/layout.hpp"
 #include "layout/layout_traits.hpp"
 #include "utility/forward.hpp"
+
 namespace rocwmma
 {
     //! @struct IOBearer
@@ -43,7 +44,7 @@ namespace rocwmma
               template <typename, uint32_t>
               class BearerPolicy,
               class BoundsCtrl>
-    struct IOBearer
+    struct IOBearerBase
     {
     protected:
         // Access traits from Matrix and DataLayouts
@@ -100,4 +101,4 @@ namespace rocwmma
 
 #include "io_bearer_impl.hpp"
 
-#endif // ROCWMMA_IO_BEARER_HPP
+#endif // ROCWMMA_IO_BEARER_BASE_HPP
