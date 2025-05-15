@@ -192,7 +192,8 @@ namespace rocwmma
     public:
         //! Input / output traits specific to AMDGCN architecture
         using IOTraits =
-            typename IOConfig<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT>::IOTraits;
+            typename IOConfig<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, Scheduler>::
+                IOTraits;
 
         struct Traits
         {

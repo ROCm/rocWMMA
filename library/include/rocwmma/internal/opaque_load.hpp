@@ -27,11 +27,10 @@
 #define ROCWMMA_OPAQUE_LOAD_HPP
 
 #include "io_bearer.hpp"
+#include "io_bounds_ctrl.hpp"
 #include "io_scheduler.hpp"
-#include "io_traits.hpp"
-#include "tuple.hpp"
 #include "types.hpp"
-#include "vector_iterator.hpp"
+#include "vector.hpp"
 
 namespace rocwmma
 {

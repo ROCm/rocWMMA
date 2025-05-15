@@ -59,10 +59,9 @@ namespace rocwmma
     //! Transforms the input fragment to have the desired data layout.
     //! @param frag Fragment of type MatrixT with its associated block sizes, data type and layout
     //! @tparam DataLayoutT The desired fragment data layout to apply
-    //! @tparam WaveCount The number of cooperative waves for cooperative fragments (defaults to 1, or non-cooperative)
     //! @tparam FragT The incoming fragment type
     //! @returns Fragment with transformed data layout
-    template <typename DataLayoutT, uint32_t WaveCount = 1, typename FragT>
+    template <typename DataLayoutT, typename FragT>
     ROCWMMA_DEVICE static inline decltype(auto) apply_data_layout(FragT&& frag);
 
     //! Transforms the input fragment to the target fragment type. This could include changing matrix context
@@ -70,10 +69,9 @@ namespace rocwmma
     //! destination register layout.
     //! @param frag Source fragment of type MatrixT with its associated block sizes, data type and layout
     //! @tparam DstFragT The target fragment type to transform to
-    //! @tparam WaveCount The number of cooperative waves for cooperative fragments (defaults to 1, or non-cooperative)
     //! @tparam FragT The source incoming fragment type
     //! @returns Target fragment after transformation
-    template <typename DstFragT, uint32_t WaveCount = 1u, typename FragT>
+    template <typename DstFragT, typename FragT>
     ROCWMMA_DEVICE static inline decltype(auto) apply_fragment(FragT&& frag);
 
     //! Transforms the input fragment to a "register file" fragment type. Register contents are directly mapped

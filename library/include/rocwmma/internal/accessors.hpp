@@ -57,16 +57,6 @@ namespace rocwmma
     using GetMmaConfig_t = typename GetMmaConfig<FragA, FragB, FragC, FragD>::type;
 
     ///
-    /// CoopConfig access
-    ///
-
-    template <typename FragT, uint32_t WaveCount>
-    struct GetCoopIOConfig;
-
-    template <typename FragT, uint32_t WaveCount>
-    using GetCoopIOConfig_t = typename GetCoopIOConfig<FragT, WaveCount>::type;
-
-    ///
     /// IOShape access
     ///
 
