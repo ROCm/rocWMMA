@@ -35,7 +35,7 @@ namespace rocwmma
             return 0u;
         }
 
-        constexpr /* static */ inline uint32_t NonCooperative::waveCount()
+        constexpr /* static */ inline auto NonCooperative::waveCount()
         {
             return 1u;
         }
@@ -48,7 +48,7 @@ namespace rocwmma
         }
 
         template <uint32_t TBlockX, uint32_t TBlockY>
-        constexpr /* static */ inline uint32_t RowMajor2d<TBlockX, TBlockY>::waveCount()
+        constexpr /* static */ inline auto RowMajor2d<TBlockX, TBlockY>::waveCount()
         {
             return reduce_mult(WaveSpace::workgroupDim());
         }
@@ -61,7 +61,7 @@ namespace rocwmma
         }
 
         template <uint32_t TBlockX, uint32_t TBlockY>
-        constexpr /* static */ inline uint32_t ColMajor2d<TBlockX, TBlockY>::waveCount()
+        constexpr /* static */ inline auto ColMajor2d<TBlockX, TBlockY>::waveCount()
         {
             return reduce_mult(WaveSpace::workgroupDim());
         }
@@ -73,7 +73,7 @@ namespace rocwmma
         }
 
         template <uint32_t TBlockX, uint32_t TBlockY>
-        constexpr /* static */ inline uint32_t RowSlice2d<TBlockX, TBlockY>::waveCount()
+        constexpr /* static */ inline auto RowSlice2d<TBlockX, TBlockY>::waveCount()
         {
             return get<1>(WaveSpace::workgroupDim());
         }
@@ -85,9 +85,33 @@ namespace rocwmma
         }
 
         template <uint32_t TBlockX, uint32_t TBlockY>
-        constexpr /* static */ inline uint32_t ColSlice2d<TBlockX, TBlockY>::waveCount()
+        constexpr /* static */ inline auto ColSlice2d<TBlockX, TBlockY>::waveCount()
         {
             return get<0>(WaveSpace::workgroupDim());
+        }
+
+        template <uint32_t TBlockX, uint32_t TBlockY, uint32_t WaveIdx /*= 0u*/>
+        constexpr /* static */ inline auto Single<TBlockX, TBlockY, WaveIdx>::waveIndex()
+        {
+            // Default as row-major id
+            auto RIdx = DataSpace::fromMatrixCoord(WaveSpace::localWaveCoord(),
+                                                   get<1>(WaveSpace::workgroupDim()));
+
+            uint32_t IDResult = static_cast<uint32_t>(RIdx - WaveIdx);
+
+            if(threadIdx.x == 0 || threadIdx.x == 64)
+            {
+                printf(
+                    "WaveIdx: %d, Current Wave: %d, Calculated Id: %d\n", WaveIdx, RIdx, IDResult);
+            }
+            // Reset the WaveIdx to origin, any waves > 0 will be clipped
+            return IDResult;
+        }
+
+        template <uint32_t TBlockX, uint32_t TBlockY, uint32_t WaveIdx /*= 0u*/>
+        constexpr /* static */ inline auto Single<TBlockX, TBlockY, WaveIdx>::waveCount()
+        {
+            return 1u;
         }
 
     } // namespace IOScheduler
@@ -129,6 +153,11 @@ namespace rocwmma
         {
         };
 
+        template <uint32_t TBlockX, uint32_t TBlockY, uint32_t WaveIdx>
+        struct is_scheduler_valid<Single<TBlockX, TBlockY, WaveIdx>> : true_type
+        {
+        };
+
         template <typename Scheduler>
         static constexpr bool is_scheduler_valid_v = is_scheduler_valid<Scheduler>::value;
 
@@ -155,6 +184,11 @@ namespace rocwmma
 
         template <uint32_t TBlockX, uint32_t TBlockY>
         struct is_scheduler_cooperative<ColSlice2d<TBlockX, TBlockY>> : true_type
+        {
+        };
+
+        template <uint32_t TBlockX, uint32_t TBlockY, uint32_t WaveIdx>
+        struct is_scheduler_cooperative<Single<TBlockX, TBlockY, WaveIdx>> : true_type
         {
         };
 

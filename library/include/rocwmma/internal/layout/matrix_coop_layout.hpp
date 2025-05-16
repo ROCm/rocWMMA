@@ -49,7 +49,7 @@ namespace rocwmma
         struct MatrixCoopLayout
             : private MatrixLayoutBase<MatrixCoopLayout<MatrixLayout, WaveCount>>
         {
-        private:
+        public:
             using MatrixLayoutTraits = layout_traits<MatrixLayout>;
             using Base               = MatrixLayoutBase<MatrixCoopLayout<MatrixLayout, WaveCount>>;
 

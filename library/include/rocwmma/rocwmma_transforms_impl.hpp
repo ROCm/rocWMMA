@@ -286,10 +286,17 @@ namespace rocwmma
             constexpr static const uint32_t registerFileWidth = Constants::AMDGCN_WAVE_SIZE;
             using SrcFragT
                 = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT, Scheduler>;
+
+            // Use geometry size because the incoming fragment may be cooperative
+            // and only have partial data.
+            using SrcIOShape = GetIOShape_t<SrcFragT>;
+            constexpr static auto DstK
+                = SrcIOShape::BlockWidth * SrcIOShape::BlockHeight / registerFileWidth;
+
             using DstFragT = fragment<matrix_b,
                                       registerFileWidth,
                                       registerFileWidth,
-                                      SrcFragT::size(),
+                                      DstK,
                                       DataT,
                                       DataLayoutT,
                                       Scheduler>;

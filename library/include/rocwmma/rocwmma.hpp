@@ -148,6 +148,8 @@ namespace rocwmma
         //! E.g. (TBlockX, TBlockY) = 2x2 waves
         //! RowSlice0: w0 = (0, 0), w1 = (0, 1)
         //! RowSlice1: w0 = (1, 0), w1 = (1, 1)
+        //! @tparam TBlockX the size of the thread-block in the X dimension
+        //! @tparam TBlockY the size of the thread-block in the Y dimension
         template <uint32_t TBlockX, uint32_t TBlockY>
         using coop_row_slice_2d = IOScheduler::RowSlice2d<TBlockX, TBlockY>;
 
@@ -160,8 +162,19 @@ namespace rocwmma
         //! ColSlice0:     ColSlice1:
         //! w0 = (0, 0),   w0 = (0, 1),
         //! w1 = (1, 0)    w1 = (1, 1)
+        //! @tparam TBlockX the size of the thread-block in the X dimension
+        //! @tparam TBlockY the size of the thread-block in the Y dimension
         template <uint32_t TBlockX, uint32_t TBlockY>
         using coop_col_slice_2d = IOScheduler::ColSlice2d<TBlockX, TBlockY>;
+
+        //! @struct single
+        //! @brief  A cooperative scheduling strategy where only one wave in
+        //! the thread block will participate.
+        //! @tparam TBlockX the size of the thread-block in the X dimension
+        //! @tparam TBlockY the size of the thread-block in the Y dimension
+        //! @tparam WaveIdx the index of the wave which will participate
+        template <uint32_t TBlockX, uint32_t TBlockY, uint32_t WaveIdx = 0u>
+        using single = IOScheduler::Single<TBlockX, TBlockY, WaveIdx>;
 
     } // namespace fragment_scheduler
 
@@ -204,14 +217,17 @@ namespace rocwmma
             //! The unpacked type for element data
             using UnpackedElementT = typename PackTraits<DataT>::UnpackedT;
 
+            //! WaveCount sizing factor for cooperative fragments
+            static constexpr uint32_t WaveCount = scheduler_traits<Scheduler>::WaveCount;
+
         public:
+            constexpr static uint32_t Size = IOTraits::UnpackedSize / WaveCount;
+
             //! Unpacked data access view
-            using AccessT = VecT<UnpackedElementT, IOTraits::UnpackedSize>;
+            using AccessT = VecT<UnpackedElementT, Size>;
 
             //! Packed data storage view
-            using StorageT = VecT<PackedElementT, IOTraits::PackedSize>;
-
-            constexpr static uint32_t Size = IOTraits::UnpackedSize;
+            using StorageT = VecT<PackedElementT, IOTraits::PackedSize / WaveCount>;
 
             static_assert(IOTraits::PackedVRegCount >= 1,
                           "Fragments must occupy at least one packed register");

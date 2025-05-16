@@ -61,22 +61,22 @@ namespace rocwmma
                 return;
             }
 
-            // We need to shrink the buffer for the unroll
-            using BuffTraits = VecTraits<decay_t<BufferT>>;
-            using DataT      = typename BuffTraits::DataT;
+            // // We need to shrink the buffer for the unroll
+            // using BuffTraits = VecTraits<decay_t<BufferT>>;
+            // using DataT      = typename BuffTraits::DataT;
 
-            constexpr auto BuffSize
-                = reduce_mult(MatrixLayout::strideCounts(Scheduler::waveCount()))
-                  * BaseImpl::TransactionSize;
-            using ReducedBufferT
-                = conditional_t<is_const_v<BufferT>,
-                                typename BuffTraits::template VecT<DataT, BuffSize> const,
-                                typename BuffTraits::template VecT<DataT, BuffSize>>;
+            // constexpr auto BuffSize
+            //     = reduce_mult(MatrixLayout::strideCounts(Scheduler::waveCount()))
+            //       * BaseImpl::TransactionSize;
+            // using ReducedBufferT
+            //     = conditional_t<is_const_v<BufferT>,
+            //                     typename BuffTraits::template VecT<DataT, BuffSize> const,
+            //                     typename BuffTraits::template VecT<DataT, BuffSize>>;
 
             // Current offset from wave tile origin (0, 0)
             auto currentOffset2d = MatrixLayout::baseOffset(Scheduler::waveIndex());
 
-            BaseImpl::unroll_impl((ReducedBufferT&)(buffer), currentOffset2d, dataPtr, ldm);
+            BaseImpl::unroll_impl(forward<BufferT>(buffer), currentOffset2d, dataPtr, ldm);
         }
         // Non-cooperative
         else

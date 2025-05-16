@@ -77,7 +77,11 @@ namespace rocwmma
         }
     }
 
-    template <typename DataT, uint TILE_DIM, typename LdsMapping>
+    template <typename DataT,
+              uint TILE_DIM,
+              typename LdsMapping,
+              uint32_t TBlockX,
+              uint32_t TBlockY>
     __global__ void __launch_bounds__(128, 1) dlrmDotBwdLds(const DataT* __restrict input,
                                                             const DataT* __restrict upstreamGrad,
                                                             DataT* __restrict grad,
@@ -109,6 +113,8 @@ namespace rocwmma
                                           row_major,
                                           row_major,
                                           LdsMapping,
+                                          TBlockX,
+                                          TBlockY,
                                           1,
                                           1>;
 

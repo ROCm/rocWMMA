@@ -58,6 +58,8 @@ namespace rocwmma
               typename LayoutB,
               typename LayoutLds,
               typename MappingLds,
+              uint32_t TBlockX,
+              uint32_t TBlockY,
               uint32_t BlocksX,
               uint32_t BlocksY>
     struct LdsMappingUtil;
@@ -69,6 +71,8 @@ namespace rocwmma
               typename LayoutA,
               typename LayoutB,
               typename LayoutLds,
+              uint32_t TBlockX,
+              uint32_t TBlockY,
               uint32_t BlocksX,
               uint32_t BlocksY>
     struct LdsMappingUtil<BlockM,
@@ -79,6 +83,8 @@ namespace rocwmma
                           LayoutB,
                           LayoutLds,
                           LdsRF,
+                          TBlockX,
+                          TBlockY,
                           BlocksX,
                           BlocksY>
     {
@@ -132,14 +138,28 @@ namespace rocwmma
 
         static constexpr uint32_t registerFileWidth = Constants::AMDGCN_WAVE_SIZE;
 
-        // Global read - individual block size
-        using GlobalReadFragA = fragment<matrix_a, BlockM, BlockN, BlockK, DataT, LayoutA>;
-        using GlobalReadFragB = fragment<matrix_b, BlockM, BlockN, BlockK, DataT, LayoutB>;
+        // Cooperative fragments
+        using GlobalReadFragA = fragment<matrix_a,
+                                         BlockM,
+                                         BlockN,
+                                         BlockK,
+                                         DataT,
+                                         LayoutA,
+                                         fragment_scheduler::single<TBlockX, TBlockY, 1u>>;
+        using GlobalReadFragB = fragment<matrix_b,
+                                         BlockM,
+                                         BlockN,
+                                         BlockK,
+                                         DataT,
+                                         LayoutB,
+                                         fragment_scheduler::single<TBlockX, TBlockY, 0u>>;
 
         // Local Write
         // Vertical register file fulfilled by matrix_b with BlockN = 64
-        using LocalWriteFragA = ApplyDataLayout_t<ApplyRegisterFile_t<GlobalReadFragA>, LayoutLds>;
-        using LocalWriteFragB = ApplyDataLayout_t<ApplyRegisterFile_t<GlobalReadFragB>, LayoutLds>;
+        using LocalWriteFragA
+            = apply_data_layout_t<apply_register_file_t<GlobalReadFragA>, LayoutLds>;
+        using LocalWriteFragB
+            = apply_data_layout_t<apply_register_file_t<GlobalReadFragB>, LayoutLds>;
 
         // Sanity checks
         static_assert(GlobalReadFragA::size() == LocalWriteFragA::size(),
@@ -151,13 +171,13 @@ namespace rocwmma
         static_assert(LocalWriteFragB::size() * registerFileWidth == BlockN * BlockK,
                       "Incompatible element count");
 
-        // Local read same as write
-        using LocalReadFragA = LocalWriteFragA;
-        using LocalReadFragB = LocalWriteFragB;
-
         // Final fragments are same as global
-        using FragA = GlobalReadFragA;
-        using FragB = GlobalReadFragB;
+        using FragA = fragment<matrix_a, BlockM, BlockN, BlockK, DataT, LayoutA>;
+        using FragB = fragment<matrix_b, BlockM, BlockN, BlockK, DataT, LayoutB>;
+
+        // Local read same as write
+        using LocalReadFragA = apply_data_layout_t<apply_register_file_t<FragA>, LayoutLds>;
+        using LocalReadFragB = apply_data_layout_t<apply_register_file_t<FragB>, LayoutLds>;
 
     private:
         // Calculate offsets based on DataLayout of LDS, A frags and B frags.
@@ -228,64 +248,40 @@ namespace rocwmma
         __device__ static inline void
             prefetchCoopGlobalA(DataT* baseLds, DataT const* baseA, uint32_t lda)
         {
-            // Tricky part: because we may be changing layouts and vector widths,
-            // we need to ensure that splitCounts are the same on both sides of
-            // global fetch and local writes - Otherwise the waves don't have the
-            // same data responsibility.
-            auto workgroupDim = GlobalAOffsets::workgroupDim();
-            auto waveCoord    = GlobalAOffsets::waveCoord();
-            auto waveIndex    = get<1>(waveCoord);
-            auto waveCount    = get<1>(workgroupDim);
-
+            // Cooperative transfer
             for(int32_t i = 0; i < BlocksX; ++i)
             {
                 // Issue global read
                 GlobalReadFragA fetchA;
-                load_matrix_coop_sync(
-                    fetchA,
-                    baseA + GlobalAOffsets::dataOffset(make_coord2d(BlockM * i, 0), lda),
-                    lda,
-                    waveIndex,
-                    waveCount);
+                load_matrix_sync(fetchA,
+                                 baseA
+                                     + GlobalAOffsets::dataOffset(make_coord2d(BlockM * i, 0), lda),
+                                 lda);
 
                 // Issue local store
-                store_matrix_coop_sync(baseLds + baseOffsetA() + waveOffsetA() + blockOffsetA(i),
-                                       reinterpret_cast<LocalWriteFragA&>(fetchA),
-                                       ld(),
-                                       waveIndex,
-                                       waveCount);
+                store_matrix_sync(baseLds + baseOffsetA() + waveOffsetA() + blockOffsetA(i),
+                                  reinterpret_cast<LocalWriteFragA&>(fetchA),
+                                  ld());
             }
         }
 
         __device__ static inline void
             prefetchCoopGlobalB(DataT* baseLds, DataT const* baseB, uint32_t ldb)
         {
-            // Tricky part: because we may be changing layouts and vector widths,
-            // we need to ensure that splitCounts are the same on both sides of
-            // global fetch and local writes - Otherwise the waves don't have the
-            // same data responsibility.
-            auto workgroupDim = GlobalBOffsets::workgroupDim();
-            auto waveCoord    = GlobalBOffsets::waveCoord();
-            auto waveIndex    = get<0>(waveCoord);
-            auto waveCount    = get<0>(workgroupDim);
-
+            // Cooperative transfer
             for(int32_t i = 0; i < BlocksY; ++i)
             {
                 // Issue global read
                 GlobalReadFragB fetchB;
-                load_matrix_coop_sync(
-                    fetchB,
-                    baseB + GlobalBOffsets::dataOffset(make_coord2d(0, BlockN * i), ldb),
-                    ldb,
-                    waveIndex,
-                    waveCount);
+                load_matrix_sync(fetchB,
+                                 baseB
+                                     + GlobalBOffsets::dataOffset(make_coord2d(0, BlockN * i), ldb),
+                                 ldb);
 
                 // Issue local store
-                store_matrix_coop_sync(baseLds + baseOffsetB() + waveOffsetB() + blockOffsetB(i),
-                                       reinterpret_cast<LocalWriteFragB&>(fetchB),
-                                       ld(),
-                                       waveIndex,
-                                       waveCount);
+                store_matrix_sync(baseLds + baseOffsetB() + waveOffsetB() + blockOffsetB(i),
+                                  reinterpret_cast<LocalWriteFragB&>(fetchB),
+                                  ld());
             }
         }
 

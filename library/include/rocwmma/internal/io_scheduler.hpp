@@ -36,8 +36,8 @@ namespace rocwmma
         //! @brief No thread-block cooperation; each wave will execute independently
         struct NonCooperative
         {
-            constexpr static inline auto     waveIndex();
-            constexpr static inline uint32_t waveCount();
+            constexpr static inline auto waveIndex();
+            constexpr static inline auto waveCount();
         };
 
         //! @struct RowMajor2d
@@ -55,8 +55,8 @@ namespace rocwmma
             using DataSpace = detail::DataSpace<row_major>;
 
         public:
-            constexpr static inline auto     waveIndex();
-            constexpr static inline uint32_t waveCount();
+            constexpr static inline auto waveIndex();
+            constexpr static inline auto waveCount();
         };
 
         //! @struct ColMajor2d
@@ -74,8 +74,8 @@ namespace rocwmma
             using DataSpace = detail::DataSpace<col_major>;
 
         public:
-            constexpr static inline auto     waveIndex();
-            constexpr static inline uint32_t waveCount();
+            constexpr static inline auto waveIndex();
+            constexpr static inline auto waveCount();
         };
 
         //! @struct RowSlice2d
@@ -93,8 +93,8 @@ namespace rocwmma
             using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
 
         public:
-            constexpr static inline auto     waveIndex();
-            constexpr static inline uint32_t waveCount();
+            constexpr static inline auto waveIndex();
+            constexpr static inline auto waveCount();
         };
 
         //! @struct ColSlice2d
@@ -113,8 +113,24 @@ namespace rocwmma
             using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
 
         public:
-            constexpr static inline auto     waveIndex();
-            constexpr static inline uint32_t waveCount();
+            constexpr static inline auto waveIndex();
+            constexpr static inline auto waveCount();
+        };
+
+        //! @struct Single
+        //! @brief Only a single wave out of the thread block will act
+        //! @tparam TBlockX the X dimension of the cooperative thread-block
+        //! @tparam TBlockY the Y dimension of the cooperative thread-block
+        template <uint32_t TBlockX, uint32_t TBlockY, uint32_t WaveIdx = 0u>
+        struct Single
+        {
+        private:
+            using WaveSpace = detail::WaveSpace<TBlockX, TBlockY>;
+            using DataSpace = detail::DataSpace<col_major>;
+
+        public:
+            constexpr static inline auto waveIndex();
+            constexpr static inline auto waveCount();
         };
 
         using Default = NonCooperative;

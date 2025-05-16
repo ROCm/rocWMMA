@@ -33,7 +33,11 @@
 namespace rocwmma
 {
 
-    template <typename DataT, uint TILE_DIM, typename LdsMapping>
+    template <typename DataT,
+              uint TILE_DIM,
+              typename LdsMapping,
+              uint32_t TBlockX,
+              uint32_t TBlockY>
     __global__ void __launch_bounds__(128, 1) dlrmDotFwdLds(const DataT* __restrict input,
                                                             DataT* __restrict output,
                                                             float32_t* acc,
@@ -65,6 +69,8 @@ namespace rocwmma
                                           col_major,
                                           row_major,
                                           LdsMapping,
+                                          TBlockX,
+                                          TBlockY,
                                           1,
                                           1>;
 

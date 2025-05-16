@@ -117,10 +117,19 @@ namespace rocwmma
             // Note: MaxWaves is the actual maximum amount of waves that can participate.
             auto maxWaves = calcMaxSplits(waveCount);
 
+            if(threadIdx.x == 0 || threadIdx.x == 64)
+            {
+                printf("Wave(%d), waveCount(%d), maxWaves(%d), waveIndex(%d)\n",
+                       threadIdx.x,
+                       waveCount,
+                       maxWaves,
+                       static_cast<uint32_t>(__builtin_amdgcn_readfirstlane(waveIndex)));
+            }
+
             if(waveCount != maxWaves)
             {
                 // Must branch
-                if(__builtin_amdgcn_readfirstlane(waveIndex) >= maxWaves)
+                if(static_cast<uint32_t>(__builtin_amdgcn_readfirstlane(waveIndex)) >= maxWaves)
                 {
                     return false;
                 }
