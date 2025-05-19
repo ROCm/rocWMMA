@@ -139,20 +139,9 @@ namespace rocwmma
         static constexpr uint32_t registerFileWidth = Constants::AMDGCN_WAVE_SIZE;
 
         // Cooperative fragments
-        using GlobalReadFragA = fragment<matrix_a,
-                                         BlockM,
-                                         BlockN,
-                                         BlockK,
-                                         DataT,
-                                         LayoutA,
-                                         fragment_scheduler::single<TBlockX, TBlockY, 1u>>;
-        using GlobalReadFragB = fragment<matrix_b,
-                                         BlockM,
-                                         BlockN,
-                                         BlockK,
-                                         DataT,
-                                         LayoutB,
-                                         fragment_scheduler::single<TBlockX, TBlockY, 0u>>;
+        using GlobalReadFragA = fragment<matrix_a, BlockM, BlockN, BlockK, DataT, LayoutA>;
+
+        using GlobalReadFragB = fragment<matrix_b, BlockM, BlockN, BlockK, DataT, LayoutB>;
 
         // Local Write
         // Vertical register file fulfilled by matrix_b with BlockN = 64
