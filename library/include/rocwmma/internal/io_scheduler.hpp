@@ -38,6 +38,7 @@ namespace rocwmma
         {
             constexpr static inline auto waveIndex();
             constexpr static inline auto waveCount();
+            constexpr static inline bool RangeCheck = false;
         };
 
         //! @struct RowMajor2d
@@ -57,6 +58,7 @@ namespace rocwmma
         public:
             constexpr static inline auto waveIndex();
             constexpr static inline auto waveCount();
+            constexpr static inline bool RangeCheck = false;
         };
 
         //! @struct ColMajor2d
@@ -76,6 +78,7 @@ namespace rocwmma
         public:
             constexpr static inline auto waveIndex();
             constexpr static inline auto waveCount();
+            constexpr static inline bool RangeCheck = false;
         };
 
         //! @struct RowSlice2d
@@ -95,6 +98,7 @@ namespace rocwmma
         public:
             constexpr static inline auto waveIndex();
             constexpr static inline auto waveCount();
+            constexpr static inline bool RangeCheck = false;
         };
 
         //! @struct ColSlice2d
@@ -115,6 +119,7 @@ namespace rocwmma
         public:
             constexpr static inline auto waveIndex();
             constexpr static inline auto waveCount();
+            constexpr static inline bool RangeCheck = false;
         };
 
         //! @struct Single
@@ -131,6 +136,7 @@ namespace rocwmma
         public:
             constexpr static inline auto waveIndex();
             constexpr static inline auto waveCount();
+            constexpr static inline bool RangeCheck = true;
         };
 
         using Default = NonCooperative;
@@ -152,7 +158,8 @@ namespace rocwmma
         constexpr static bool is_valid = SchedulerTraits_impl::is_scheduler_valid_v<Scheduler>;
         constexpr static bool is_cooperative
             = SchedulerTraits_impl::is_scheduler_cooperative_v<Scheduler>;
-        static constexpr uint32_t WaveCount = Scheduler::waveCount();
+        static constexpr uint32_t WaveCount  = Scheduler::waveCount();
+        static constexpr bool     RangeCheck = Scheduler::RangeCheck;
     };
 
 } // namespace rocwmma

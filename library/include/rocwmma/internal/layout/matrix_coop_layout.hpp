@@ -71,10 +71,6 @@ namespace rocwmma
             ROCWMMA_DEVICE constexpr static auto calcSplitStrides(uint32_t splitCount);
 
         public:
-            // Determines whether a wave should participate or not in the layout
-            ROCWMMA_DEVICE constexpr static inline auto
-                waveEnabler(const uint32_t waveIndex, const uint32_t waveCount = WaveCount);
-
             ROCWMMA_DEVICE constexpr static inline auto strideCounts(const uint32_t waveCount
                                                                      = WaveCount);
 

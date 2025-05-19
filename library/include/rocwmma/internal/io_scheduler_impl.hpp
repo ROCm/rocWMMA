@@ -97,15 +97,8 @@ namespace rocwmma
             auto RIdx = DataSpace::fromMatrixCoord(WaveSpace::localWaveCoord(),
                                                    get<1>(WaveSpace::workgroupDim()));
 
-            uint32_t IDResult = static_cast<uint32_t>(RIdx - WaveIdx);
-
-            if(threadIdx.x == 0 || threadIdx.x == 64)
-            {
-                printf(
-                    "WaveIdx: %d, Current Wave: %d, Calculated Id: %d\n", WaveIdx, RIdx, IDResult);
-            }
             // Reset the WaveIdx to origin, any waves > 0 will be clipped
-            return IDResult;
+            return static_cast<uint32_t>(RIdx - WaveIdx);
         }
 
         template <uint32_t TBlockX, uint32_t TBlockY, uint32_t WaveIdx /*= 0u*/>

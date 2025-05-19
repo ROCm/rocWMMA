@@ -41,6 +41,32 @@ namespace rocwmma
 
 #define IOBearerTypesImpl DataLayout, MatrixLayout, BearerPolicy, BoundsCtrl, Scheduler
 
+    // Determines whether a wave should participate or not in the layout
+    template <IOBearerTypesDecl>
+    ROCWMMA_DEVICE constexpr /* static */ inline auto IOBearer<IOBearerTypesImpl>::waveEnabler()
+    {
+        // Note: MaxWaves is the actual maximum amount of waves that can participate.
+        constexpr auto maxWaves = MatrixLayout::calcMaxSplits(SchedulerTraits::WaveCount);
+
+        if constexpr(SchedulerTraits::WaveCount != maxWaves || SchedulerTraits::RangeCheck)
+        {
+            // Must branch
+            if(static_cast<uint32_t>(__builtin_amdgcn_readfirstlane(Scheduler::waveIndex()))
+               < maxWaves)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        {
+            return true;
+        }
+    }
+
     template <IOBearerTypesDecl>
     template <typename BufferT, typename ExternDataT>
     ROCWMMA_DEVICE /* static */ inline void
@@ -55,23 +81,11 @@ namespace rocwmma
         // Cooperative
         if constexpr(SchedulerTraits::is_cooperative)
         {
-            // Waves filter
-            if(!MatrixLayout::waveEnabler(Scheduler::waveIndex(), Scheduler::waveCount()))
+            // Wave filter
+            if(!waveEnabler())
             {
                 return;
             }
-
-            // // We need to shrink the buffer for the unroll
-            // using BuffTraits = VecTraits<decay_t<BufferT>>;
-            // using DataT      = typename BuffTraits::DataT;
-
-            // constexpr auto BuffSize
-            //     = reduce_mult(MatrixLayout::strideCounts(Scheduler::waveCount()))
-            //       * BaseImpl::TransactionSize;
-            // using ReducedBufferT
-            //     = conditional_t<is_const_v<BufferT>,
-            //                     typename BuffTraits::template VecT<DataT, BuffSize> const,
-            //                     typename BuffTraits::template VecT<DataT, BuffSize>>;
 
             // Current offset from wave tile origin (0, 0)
             auto currentOffset2d = MatrixLayout::baseOffset(Scheduler::waveIndex());

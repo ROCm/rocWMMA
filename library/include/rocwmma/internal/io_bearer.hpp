@@ -52,6 +52,8 @@ namespace rocwmma
         using SchedulerTraits = scheduler_traits<Scheduler>;
         using BaseImpl        = IOBearerBase<DataLayout, MatrixLayout, BearerPolicy, BoundsCtrl>;
 
+        ROCWMMA_DEVICE constexpr static inline auto waveEnabler();
+
     public:
         using BufferT = typename BaseImpl::BufferT;
 
