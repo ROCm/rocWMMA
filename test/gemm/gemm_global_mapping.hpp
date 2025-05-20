@@ -230,14 +230,26 @@ namespace rocwmma
                                              TBlockY>;
 
             // Global wave tile R/W be in sections of MFMA sized fragments
-            using GRFragA = typename Base::MfmaFragA;
-            using GRFragB = typename Base::MfmaFragB;
+            using GRFragA = fragment<matrix_a,
+                                     BlockM,
+                                     BlockN,
+                                     BlockK,
+                                     InputT,
+                                     LayoutA,
+                                     fragment_scheduler::coop_row_slice_2d<TBlockX, TBlockY>>;
+            using GRFragB = fragment<matrix_b,
+                                     BlockM,
+                                     BlockN,
+                                     BlockK,
+                                     InputT,
+                                     LayoutB,
+                                     fragment_scheduler::coop_col_slice_2d<TBlockX, TBlockY>>;
             using GRFragC = typename Base::MfmaFragC;
             using GWFragD = typename Base::MfmaFragD;
 
             // Global wave tile R/W will use MFMA sized fragment buffers
-            using GRBuffA = typename Base::MfmaBuffA;
-            using GRBuffB = typename Base::MfmaBuffB;
+            using GRBuffA = GRFragA[BlocksX];
+            using GRBuffB = GRFragB[BlocksY];
             using GRBuffC = typename Base::MfmaBuffC;
             using GWBuffD = typename Base::MfmaBuffD;
 
@@ -325,8 +337,20 @@ namespace rocwmma
 
             // Global reads for A/B are single fragment of wave tile size
             // Global R/W for C/D are MFMA sized fragments
-            using GRFragA = fragment<matrix_a, BlockM * BlocksX, BlockN, BlockK, InputT, LayoutA>;
-            using GRFragB = fragment<matrix_b, BlockM, BlockN * BlocksY, BlockK, InputT, LayoutB>;
+            using GRFragA = fragment<matrix_a,
+                                     BlockM * BlocksX,
+                                     BlockN,
+                                     BlockK,
+                                     InputT,
+                                     LayoutA,
+                                     fragment_scheduler::coop_row_slice_2d<TBlockX, TBlockY>>;
+            using GRFragB = fragment<matrix_b,
+                                     BlockM,
+                                     BlockN * BlocksY,
+                                     BlockK,
+                                     InputT,
+                                     LayoutB,
+                                     fragment_scheduler::coop_col_slice_2d<TBlockX, TBlockY>>;
             using GRFragC = typename Base::MfmaFragC;
             using GWFragD = typename Base::MfmaFragD;
 
@@ -448,12 +472,6 @@ namespace rocwmma
             static constexpr bool IsInterleaved = layout_traits<
                 typename GetIOConfig_t<WaveTileA>::IOLayout::MatrixLayout>::is_interleaved;
 
-            // Macro-tiles
-            using MacroTileA
-                = fragment<matrix_a, MacroTileM, MacroTileN, MacroTileK, InputT, LayoutA>;
-            using MacroTileB
-                = fragment<matrix_b, MacroTileM, MacroTileN, MacroTileK, InputT, LayoutB>;
-
             // Mma operations
             // Interleaved layouts use wave tile mma inputs
             // Non-interleaved layouts use block tile mma inputs
@@ -478,8 +496,20 @@ namespace rocwmma
             // Global C/D:
             // Interleaved layouts wave tile
             // Non-interleaved layouts block tile
-            using GRFragA = fragment<matrix_a, MacroTileM, MacroTileN, MacroTileK, InputT, LayoutA>;
-            using GRFragB = fragment<matrix_b, MacroTileM, MacroTileN, MacroTileK, InputT, LayoutB>;
+            using GRFragA = fragment<matrix_a,
+                                     MacroTileM,
+                                     MacroTileN,
+                                     MacroTileK,
+                                     InputT,
+                                     LayoutA,
+                                     fragment_scheduler::coop_row_major_2d<TBlockX, TBlockY>>;
+            using GRFragB = fragment<matrix_b,
+                                     MacroTileM,
+                                     MacroTileN,
+                                     MacroTileK,
+                                     InputT,
+                                     LayoutB,
+                                     fragment_scheduler::coop_row_major_2d<TBlockX, TBlockY>>;
             using GRFragC = conditional_t<IsInterleaved, WaveTileC, typename Base::MfmaFragC>;
             using GWFragD = conditional_t<IsInterleaved, WaveTileD, typename Base::MfmaFragD>;
 

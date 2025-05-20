@@ -140,34 +140,30 @@ namespace rocwmma
             // Leading dimension of lds matrix
             __device__ constexpr static inline auto ldLds();
 
-            template <uint32_t WaveCount = 1>
             __device__ constexpr static inline auto
                 formatLWFragA(typename GlobalMapping::GRFragA const& grFragA)
             {
-                return rocwmma::template apply_data_layout<LayoutLds, WaveCount>(
-                    apply_transpose(grFragA));
+                return apply_data_layout<LayoutLds>(apply_transpose(grFragA));
             }
 
-            template <uint32_t WaveCount = 1>
             __device__ constexpr static inline auto
                 formatLWFragB(typename GlobalMapping::GRFragB const& grFragB)
             {
-                return rocwmma::template apply_data_layout<LayoutLds, WaveCount>(grFragB);
+                return apply_data_layout<LayoutLds>(grFragB);
             }
 
             __device__ constexpr static inline auto formatLRFragA(LRFragA const& lrFragA)
             {
                 using MfmaLayout =
                     typename GetDataLayout_t<typename GlobalMapping::MfmaFragA>::Orientation;
-                return rocwmma::template apply_data_layout<MfmaLayout, 1u>(
-                    apply_transpose(lrFragA));
+                return apply_data_layout<MfmaLayout>(apply_transpose(lrFragA));
             }
 
             __device__ constexpr static inline auto formatLRFragB(LRFragB const& lrFragB)
             {
                 using MfmaLayout =
                     typename GetDataLayout_t<typename GlobalMapping::MfmaFragB>::Orientation;
-                return rocwmma::template apply_data_layout<MfmaLayout, 1u>(lrFragB);
+                return apply_data_layout<MfmaLayout>(lrFragB);
             }
         };
 
@@ -286,33 +282,30 @@ namespace rocwmma
             // Leading dimension of shared memory usage
             __device__ constexpr static inline auto ldLds();
 
-            template <uint32_t WaveCount = 1>
             __device__ constexpr static inline auto
                 formatLWFragA(typename GlobalMapping::GRFragA const& grFragA)
             {
-                return apply_data_layout<LayoutLds, WaveCount>(grFragA);
+                return apply_data_layout<LayoutLds>(grFragA);
             }
 
-            template <uint32_t WaveCount = 1>
             __device__ constexpr static inline auto
                 formatLWFragB(typename GlobalMapping::GRFragB const& grFragB)
             {
-                return apply_data_layout<LayoutLds, WaveCount>(apply_transpose(grFragB));
+                return apply_data_layout<LayoutLds>(apply_transpose(grFragB));
             }
 
             __device__ constexpr static inline auto formatLRFragA(LRFragA const& lrFragA)
             {
                 using MfmaLayout =
                     typename GetDataLayout_t<typename GlobalMapping::MfmaFragA>::Orientation;
-                return rocwmma::template apply_data_layout<MfmaLayout, 1u>(lrFragA);
+                return apply_data_layout<MfmaLayout>(lrFragA);
             }
 
             __device__ constexpr static inline auto formatLRFragB(LRFragB const& lrFragB)
             {
                 using MfmaLayout =
                     typename GetDataLayout_t<typename GlobalMapping::MfmaFragB>::Orientation;
-                return rocwmma::template apply_data_layout<MfmaLayout, 1u>(
-                    apply_transpose(lrFragB));
+                return apply_data_layout<MfmaLayout>(apply_transpose(lrFragB));
             }
         };
 
@@ -468,14 +461,14 @@ namespace rocwmma
             {
                 using MfmaLayout =
                     typename GetDataLayout_t<typename GlobalMapping::MfmaFragA>::Orientation;
-                return rocwmma::template apply_data_layout<MfmaLayout, 1u>(lrFragA);
+                return apply_data_layout<MfmaLayout>(lrFragA);
             }
 
             __device__ constexpr static inline auto formatLRFragB(LRFragB const& lrFragB)
             {
                 using MfmaLayout =
                     typename GetDataLayout_t<typename GlobalMapping::MfmaFragB>::Orientation;
-                return rocwmma::template apply_data_layout<MfmaLayout, 1u>(lrFragB);
+                return apply_data_layout<MfmaLayout>(lrFragB);
             }
         };
 

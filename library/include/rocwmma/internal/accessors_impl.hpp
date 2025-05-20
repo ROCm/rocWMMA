@@ -37,7 +37,23 @@
 namespace rocwmma
 {
     template <typename FragT>
+    struct GetDataType;
+
+    template <typename MatrixT,
+              uint32_t FragM,
+              uint32_t FragN,
+              uint32_t FragK,
+              typename DataT,
+              typename DataLayoutT,
+              typename Scheduler>
+    struct GetDataType<fragment<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, Scheduler>>
+    {
+        using type = DataT;
+    };
+
+    template <typename FragT>
     struct GetIOConfig;
+
     template <typename MatrixT,
               uint32_t FragM,
               uint32_t FragN,

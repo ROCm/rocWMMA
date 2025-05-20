@@ -34,11 +34,11 @@ namespace rocwmma
     /// DataType access
     ///
 
-    // template <typename FragT>
-    // struct GetDataType;
+    template <typename FragT>
+    struct GetDataType;
 
-    // template <typename FragT>
-    // using GetDataType_t = typename GetDataType<FragT>::type;
+    template <typename FragT>
+    using GetDataType_t = typename GetDataType<FragT>::type;
 
     ///
     /// IOConfig access

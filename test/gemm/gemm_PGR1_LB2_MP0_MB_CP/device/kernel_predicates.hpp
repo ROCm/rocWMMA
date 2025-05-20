@@ -35,6 +35,122 @@ namespace rocwmma
               uint32_t BlockN,
               uint32_t BlockK,
               typename InputT,
+              typename GemmConfig,
+              uint32_t BlocksX,
+              uint32_t BlocksY,
+              uint32_t TBlockX,
+              uint32_t TBlockY,
+              uint32_t WaveSize,
+              typename Enabler = void>
+    struct CooperativePredicates
+    {
+        static constexpr bool IsBlockLevel
+            = is_same_v<
+                  GemmConfig,
+                  typename CooperativeGemm::BlockLevel::
+                      LdsRF> || is_same_v<GemmConfig, typename CooperativeGemm::BlockLevel::LdsNT> || is_same_v<GemmConfig, typename CooperativeGemm::BlockLevel::LdsTN>;
+
+        static constexpr bool IsWaveLevel
+            = is_same_v<
+                  GemmConfig,
+                  typename CooperativeGemm::WaveLevel::
+                      LdsNT> || is_same_v<GemmConfig, typename CooperativeGemm::WaveLevel::LdsTN>;
+
+        static constexpr bool IsWgLevel
+            = is_same_v<
+                  GemmConfig,
+                  typename CooperativeGemm::WorkgroupLevel::
+                      LdsNT> || is_same_v<GemmConfig, typename CooperativeGemm::WorkgroupLevel::LdsTN>;
+
+        static constexpr uint32_t WavesX     = TBlockX / WaveSize;
+        static constexpr uint32_t WavesY     = TBlockY;
+        static constexpr uint32_t TotalWaves = WavesX * WavesY;
+
+        // Minimum vector elements to get full registers
+        static constexpr uint32_t MinElementsPerReg
+            = max(1u, (uint32_t)(sizeof(float32_t) / sizeof(InputT)));
+
+        // In block-wise cooperation:
+        // - GR/LW FragA/B are mfma tile size
+        // - GR/LW FragA will be cooperative for waves in same ROW
+        // - GR/LW FragB will be cooperative for waves in same COL
+        // Ensure filled registers are divisible by the participating waves
+        static constexpr uint32_t CoopElementsA_blk = BlockM * BlockK;
+        static constexpr uint32_t CoopElementsB_blk = BlockN * BlockK;
+        static constexpr uint32_t CoopRegsA_blk = CoopElementsA_blk / WaveSize / MinElementsPerReg;
+        static constexpr uint32_t CoopRegsB_blk = CoopElementsB_blk / WaveSize / MinElementsPerReg;
+        static constexpr bool     CoopCheckA_blk
+            = (CoopRegsA_blk >= WavesX) && (CoopRegsA_blk % WavesX == 0u);
+        static constexpr bool CoopCheckB_blk
+            = (CoopRegsB_blk >= WavesY) && (CoopRegsB_blk % WavesY == 0u);
+        static constexpr bool CoopCheck_blk = CoopCheckA_blk && CoopCheckB_blk;
+
+        // In wave-wise cooperation:
+        // - GR/LW FragA/B are wave tile size
+        // - GR/LW FragA will be cooperative for waves in same ROW
+        // - GR/LW FragB will be cooperative for waves in same COL
+        // Ensure filled registers are divisible by the participating waves
+        static constexpr uint32_t CoopElementsA_wv = CoopElementsA_blk * BlocksX;
+        static constexpr uint32_t CoopElementsB_wv = CoopElementsB_blk * BlocksY;
+        static constexpr uint32_t CoopRegsA_wv = CoopElementsA_wv / WaveSize / MinElementsPerReg;
+        static constexpr uint32_t CoopRegsB_wv = CoopElementsB_wv / WaveSize / MinElementsPerReg;
+        static constexpr bool     CoopCheckA_wv
+            = (CoopRegsA_wv >= WavesX) && (CoopRegsA_wv % WavesX == 0u);
+        static constexpr bool CoopCheckB_wv
+            = (CoopRegsB_wv >= WavesY) && (CoopRegsB_wv % WavesY == 0u);
+        static constexpr bool CoopCheck_wv = CoopCheckA_wv && CoopCheckB_wv;
+
+        // In wg-wise cooperation:
+        // - GR/LW FragA/B are macro tile size
+        // - GR/LW FragA will be cooperative for all waves
+        // - GR/LW FragB will be cooperative for all waves
+        // Ensure filled registers are divisible by the participating waves
+        static constexpr uint32_t CoopElementsA_wg = CoopElementsA_wv * WavesX;
+        static constexpr uint32_t CoopElementsB_wg = CoopElementsB_wv * WavesY;
+        static constexpr uint32_t CoopRegsA_wg = CoopElementsA_wg / WaveSize / MinElementsPerReg;
+        static constexpr uint32_t CoopRegsB_wg = CoopElementsB_wg / WaveSize / MinElementsPerReg;
+        static constexpr bool     CoopCheckA_wg
+            = (CoopRegsA_wg >= TotalWaves) && (CoopRegsA_wg % TotalWaves == 0u);
+        static constexpr bool CoopCheckB_wg
+            = (CoopRegsB_wg >= TotalWaves) && (CoopRegsB_wg % TotalWaves == 0u);
+        static constexpr bool CoopCheck_wg = CoopCheckA_wg && CoopCheckB_wg;
+
+        static constexpr bool CoopCheck = (IsBlockLevel && CoopCheck_blk)
+                                          || (IsWaveLevel && CoopCheck_wv)
+                                          || (IsWgLevel && CoopCheck_wg);
+    };
+
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename InputT,
+              typename GemmConfig,
+              uint32_t BlocksX,
+              uint32_t BlocksY,
+              uint32_t TBlockX,
+              uint32_t TBlockY,
+              uint32_t WaveSize>
+    struct CooperativePredicates<BlockM,
+                                 BlockN,
+                                 BlockK,
+                                 InputT,
+                                 GemmConfig,
+                                 BlocksX,
+                                 BlocksY,
+                                 TBlockX,
+                                 TBlockY,
+                                 WaveSize,
+                                 enable_if_t<TBlockX % WaveSize != 0u>>
+    {
+        // TBlockX must be a multiple of the WaveSize
+        // E.g., Don't attempt TBlockX = 32 with WaveSize = 64
+        static constexpr bool CoopCheck = false;
+    };
+
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              uint32_t BlockK,
+              typename InputT,
               typename OutputT,
               typename ComputeT,
               typename LayoutA,
@@ -76,8 +192,20 @@ namespace rocwmma
                                         ArchId>;
 
     private:
+        using CooperativePredicates = CooperativePredicates<BlockM,
+                                                            BlockN,
+                                                            BlockK,
+                                                            InputT,
+                                                            GemmConfig,
+                                                            BlocksX,
+                                                            BlocksY,
+                                                            TBlockX,
+                                                            TBlockY,
+                                                            WaveSize>;
+
         enum struct GlobalPredicates : bool
         {
+
             // Quirk for LdsRF is that it requires matching waves in X and Y directions
             // for correctness.
             // Second part is that the ldsRF crosses threshold from 16/32 block sizes to 64, which has different considerations
@@ -85,7 +213,8 @@ namespace rocwmma
             LdsRFTest = !(std::is_same_v<GemmConfig, typename CooperativeGemm::BlockLevel::LdsRF>)
                         || ((BlockM * BlockK / WaveSize > 8u) && (BlockN * BlockK / WaveSize > 8u)),
 
-            Enable = (LdsRFTest)
+            // Need to filter out some coop tests
+            Enable = (LdsRFTest) && CooperativePredicates::CoopCheck
         };
 
         using TestTraits = typename Base::TestTraits;
