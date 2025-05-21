@@ -218,10 +218,10 @@ namespace rocwmma
 
         template <typename MatrixLayout>
         struct is_matrix_layout
-            : public integral_constant<bool,
-                                       is_col_ortho_v<MatrixLayout> || is_col_inline_v<MatrixLayout>
-                                           || is_row_ortho_v<MatrixLayout>
-                                           || is_row_inline_v<MatrixLayout>>
+            : public integral_constant<
+                  bool,
+                  is_col_ortho_v<
+                      MatrixLayout> || is_col_inline_v<MatrixLayout> || is_row_ortho_v<MatrixLayout> || is_row_inline_v<MatrixLayout>>
         {
         };
 
@@ -561,9 +561,10 @@ namespace rocwmma
         {
             using type = ColInlineInt<BlockDim, BlockK, DataT, MmaDim, SplitK>;
         };
-        
+
         template <typename MatrixLayout>
-        struct layout_traits<MatrixLayout, enable_if_t<is_matrix_layout_v<MatrixLayout>>>
+        struct layout_traits<MatrixLayout,
+                             enable_if_t<matrix_layout_traits<MatrixLayout>::is_matrix_layout>>
             : public matrix_layout_traits<MatrixLayout>
         {
         };

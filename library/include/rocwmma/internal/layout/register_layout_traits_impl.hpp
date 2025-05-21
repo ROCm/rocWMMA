@@ -196,12 +196,11 @@ namespace rocwmma
                 else if constexpr(traits::is_interleaved)
                 {
                     return (traits::Format == Format::SOA_INT)
-                        || (traits::Format == Format::AOS_INT);
+                           || (traits::Format == Format::AOS_INT);
                 }
                 else
                 {
-                    return (traits::Format == Format::SOA)
-                        || (traits::Format == Format::AOS);
+                    return (traits::Format == Format::SOA) || (traits::Format == Format::AOS);
                 }
             }
             else if constexpr(traits::is_mma_acc)
@@ -209,29 +208,30 @@ namespace rocwmma
                 if constexpr((bool)ROCWMMA_ARCH_GFX11)
                 {
                     return (traits::Format == Format::WMMA_ACC_GFX11)
-                        || (!traits::is_interleaved && (traits::Format == Format::SOA || traits::Format == Format::AOS))
-                        || (traits::is_interleaved && (traits::Format == Format::ACC_INT_A_MAJOR || traits::Format == Format::ACC_INT_B_MAJOR));
+                           || (!traits::is_interleaved
+                               && (traits::Format == Format::SOA || traits::Format == Format::AOS))
+                           || (traits::is_interleaved
+                               && (traits::Format == Format::ACC_INT_A_MAJOR
+                                   || traits::Format == Format::ACC_INT_B_MAJOR));
                 }
                 else if constexpr(traits::is_interleaved)
                 {
                     // Intermediate accumulation format for interleaved layout
                     return (traits::Format == Format::ACC_INT_A_MAJOR)
-                        || (traits::Format == Format::ACC_INT_B_MAJOR);
+                           || (traits::Format == Format::ACC_INT_B_MAJOR);
                 }
                 else
                 {
                     // Acc with void datalayout will take SOA format
-                    return (traits::Format == Format::SOA)
-                        || (traits::Format == Format::AOS);
+                    return (traits::Format == Format::SOA) || (traits::Format == Format::AOS);
                 }
             }
             else
             {
                 return traits::is_storage
-                    && ((traits::Format == Format::SOA)
-                        || (traits::Format == Format::AOS)
-                        || (traits::Format == Format::SOA_INT)
-                        || (traits::Format == Format::AOS_INT));
+                       && ((traits::Format == Format::SOA) || (traits::Format == Format::AOS)
+                           || (traits::Format == Format::SOA_INT)
+                           || (traits::Format == Format::AOS_INT));
             }
         }
 
@@ -459,7 +459,7 @@ namespace rocwmma
             constexpr bool TestFormatMatch = (traits_lhs::Format == traits_rhs::Format);
 
             if constexpr((traits_lhs::is_interleaved && traits_rhs::is_interleaved)
-                     && ((traits_lhs::is_storage && traits_rhs::is_storage)
+                         && ((traits_lhs::is_storage && traits_rhs::is_storage)
                              || (traits_lhs::is_storage && traits_rhs::is_mma_input)
                              || (traits_lhs::is_mma_input && traits_rhs::is_storage)))
             {
@@ -468,7 +468,7 @@ namespace rocwmma
 
                 // Gfx11 MmaInput requires some additional transforms
                 if constexpr((bool)ROCWMMA_ARCH_GFX11
-                            && (traits_lhs::is_mma_input || traits_rhs::is_mma_input))
+                             && (traits_lhs::is_mma_input || traits_rhs::is_mma_input))
                 {
                     return TestCompatibleParams && TestFormatMatch;
                 }
@@ -477,8 +477,8 @@ namespace rocwmma
                     // Special case: interleaved layouts
                     // Check matching thread dims and if either one is == 1u.
                     // Register contents will be identical, regardless of different formats.
-                    constexpr bool TestIdentityQuirks
-                        = (storage_traits::DimPerThread == 1u) || (storage_traits::KPerThread == 1u);
+                    constexpr bool TestIdentityQuirks = (storage_traits::DimPerThread == 1u)
+                                                        || (storage_traits::KPerThread == 1u);
 
                     return TestCompatibleParams && (TestFormatMatch || TestIdentityQuirks);
                 }
@@ -600,7 +600,9 @@ namespace rocwmma
         };
 
         template <typename RegisterLayout>
-        struct layout_traits<RegisterLayout, enable_if_t<is_register_layout_v<RegisterLayout>>>
+        struct layout_traits<
+            RegisterLayout,
+            enable_if_t<register_layout_traits<RegisterLayout>::is_register_layout>>
             : public register_layout_traits<RegisterLayout>
         {
         };

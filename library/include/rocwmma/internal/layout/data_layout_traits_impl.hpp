@@ -165,7 +165,8 @@ namespace rocwmma
         };
 
         template <typename DataLayout>
-        struct layout_traits<DataLayout, enable_if_t<is_data_layout_v<DataLayout>>>
+        struct layout_traits<DataLayout,
+                             enable_if_t<data_layout_traits<DataLayout>::is_data_layout>>
             : public data_layout_traits<DataLayout>
         {
         };
