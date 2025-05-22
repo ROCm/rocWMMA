@@ -82,7 +82,7 @@ namespace rocwmma
                     errorTolerance);
         }
 
-        bool checkQuirks() const final
+        bool checkQuirks() const
         {
             auto waveSize   = Base::DeviceInfo::instance()->warpSize();
             auto deviceArch = Base::DeviceInfo::instance()->getGcnArch();

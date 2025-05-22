@@ -28,24 +28,35 @@
 #define LOAD_STORE_MATRIX_COOP_SYNC_TEST_PARAMS_HPP
 #include <type_traits>
 
+#include <rocwmma/internal/io_scheduler.hpp>
+
 #include "detail/load_store_matrix_coop_sync.hpp"
 #include "kernel_generator.hpp"
-#include "load_store_matrix_coop_sync_test_params.hpp"
+
 #include "unit_test.hpp"
 
 namespace rocwmma
 {
-
     template <typename Types, typename BlockSizes, typename GeneratorImpl>
     struct LoadStoreMatrixCoopSyncTestParams : public UnitTestParams
     {
         using Base = UnitTestParams;
 
+        using Schedulers = std::tuple<I<IOScheduler_t::ROW_MAJOR_2D>,
+                                      I<IOScheduler_t::ROW_SLICE_2D>
+#if ROCWMMA_EXTENDED_TESTS
+                                      ,
+                                      I<IOScheduler_t::COL_SLICE_2D>,
+                                      I<IOScheduler_t::COL_MAJOR_2D>,
+                                      I<IOScheduler_t::SINGLE>
+#endif // ROCWMMA_EXTENDED_TESTS
+                                      >;
+
         // Types: Base IOC
         // Block Sizes: 32 x BlockK
         // Layouts: N, T
         using Layouts      = typename Base::TestLayoutsAll;
-        using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
+        using KernelParams = typename CombineLists<Types, BlockSizes, Layouts, Schedulers>::Result;
 
         // Assemble the kernel generator
         // Kernel: LoadStoreMatrixCoopSyncB
@@ -58,25 +69,6 @@ namespace rocwmma
         static inline typename KernelGenerator::ResultT kernels()
         {
             return KernelGenerator::generate();
-        }
-
-        static inline std::vector<Base::Param1T> param1s()
-        {
-            return {0.0, 1.0}; // Split by waves in same rol and col
-        }
-
-        static inline std::vector<Base::Param2T> param2s()
-        {
-            return
-            {
-                0.0, 1.0, 2.0,
-                    3.0 // 1 - 4 waves
-#if ROCWMMA_EXTENDED_TESTS
-                    ,
-                    4.0, 5.0, 6.0,
-                    7.0 // 8 waves
-#endif // ROCWMMA_EXTENDED_TESTS
-            };
         }
     };
 } // namespace rocwmma

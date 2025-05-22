@@ -26,19 +26,18 @@
 
 #include <type_traits>
 
+#include "../load_store_matrix_coop_sync_test_params.hpp"
 #include "detail/load_store_matrix_coop_sync.hpp"
 #include "kernel_generator.hpp"
-#include "load_store_matrix_coop_sync_test_emulation_params.hpp"
 #include "unit_test.hpp"
 #include "unit_test_macros.hpp"
 
 namespace rocwmma
 {
 
-    using TestParams
-        = EmulationLoadStoreMatrixCoopSyncTestParams<UnitTestParams::TestAllSizeTypes,
-                                                     UnitTestParams::TestBlockSizes16,
-                                                     LoadStoreMatrixCoopSyncGeneratorB>;
+    using TestParams = LoadStoreMatrixCoopSyncTestParams<UnitTestParams::TestAllSizeTypes,
+                                                         UnitTestParams::TestBlockSizes16,
+                                                         LoadStoreMatrixCoopSyncGeneratorB>;
 
 } // namespace rocwmma
 
