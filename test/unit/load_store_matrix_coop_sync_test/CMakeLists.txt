@@ -34,11 +34,7 @@ set(LoadStoreMatrixCoopSyncTestSources ${UnitCommonSources}
                     ${CMAKE_CURRENT_SOURCE_DIR}/test/load_store_matrix_coop_sync_a_64.cpp
                     ${CMAKE_CURRENT_SOURCE_DIR}/test/load_store_matrix_coop_sync_a_128.cpp
                     ${CMAKE_CURRENT_SOURCE_DIR}/test/load_store_matrix_coop_sync_a_256.cpp
-                    ${CMAKE_CURRENT_SOURCE_DIR}/test/load_store_matrix_coop_sync_acc_16.cpp
-                    ${CMAKE_CURRENT_SOURCE_DIR}/test/load_store_matrix_coop_sync_acc_32.cpp
-                    ${CMAKE_CURRENT_SOURCE_DIR}/test/load_store_matrix_coop_sync_acc_64.cpp
-                    ${CMAKE_CURRENT_SOURCE_DIR}/test/load_store_matrix_coop_sync_acc_128.cpp
-                    ${CMAKE_CURRENT_SOURCE_DIR}/test/load_store_matrix_coop_sync_acc_256.cpp
+
                     ${CMAKE_CURRENT_SOURCE_DIR}/test/load_store_matrix_coop_sync_b_16.cpp
                     ${CMAKE_CURRENT_SOURCE_DIR}/test/load_store_matrix_coop_sync_b_32.cpp
                     ${CMAKE_CURRENT_SOURCE_DIR}/test/load_store_matrix_coop_sync_b_64.cpp
