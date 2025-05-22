@@ -75,6 +75,7 @@ namespace rocwmma
                         SrcFragLayout,
                         DstFragLayout,
                         SrcSchedulerTraits::WaveCount>::exec(frag.mAccess);
+                  
                     return result;
                 }
             }
@@ -340,6 +341,25 @@ namespace rocwmma
     ROCWMMA_DEVICE static inline decltype(auto) apply_fragment(FragT&& frag)
     {
         return detail::template ApplyFragmentTransform<decay_t<FragT>, DstFragT>::exec(
+            forward<FragT>(frag));
+    }
+
+    template <typename FragT>
+    ROCWMMA_DEVICE static inline decltype(auto) to_register_file(FragT&& frag)
+    {
+        return detail::template ApplyRegisterFile<decay_t<FragT>>::exec_to(forward<FragT>(frag));
+    }
+
+    template <typename DstFragT, typename FragT>
+    ROCWMMA_DEVICE static inline decltype(auto) from_register_file(FragT&& frag)
+    {
+        return detail::template ApplyRegisterFile<DstFragT>::exec_from(forward<FragT>(frag));
+    }
+
+    template <typename DstFragT, uint32_t WaveCount /*= 1u*/, typename FragT>
+    ROCWMMA_DEVICE static inline decltype(auto) apply_fragment(FragT&& frag)
+    {
+        return detail::template ApplyFragmentTransform<decay_t<FragT>, DstFragT, WaveCount>::exec(
             forward<FragT>(frag));
     }
 

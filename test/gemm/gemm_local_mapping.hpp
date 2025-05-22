@@ -156,6 +156,7 @@ namespace rocwmma
             {
                 using MfmaLayout =
                     typename GetDataLayout_t<typename GlobalMapping::MfmaFragA>::Orientation;
+              
                 return apply_data_layout<MfmaLayout>(apply_transpose(lrFragA));
             }
 
@@ -163,6 +164,7 @@ namespace rocwmma
             {
                 using MfmaLayout =
                     typename GetDataLayout_t<typename GlobalMapping::MfmaFragB>::Orientation;
+
                 return apply_data_layout<MfmaLayout>(lrFragB);
             }
         };
@@ -298,6 +300,7 @@ namespace rocwmma
             {
                 using MfmaLayout =
                     typename GetDataLayout_t<typename GlobalMapping::MfmaFragA>::Orientation;
+
                 return apply_data_layout<MfmaLayout>(lrFragA);
             }
 
@@ -305,6 +308,7 @@ namespace rocwmma
             {
                 using MfmaLayout =
                     typename GetDataLayout_t<typename GlobalMapping::MfmaFragB>::Orientation;
+
                 return apply_data_layout<MfmaLayout>(apply_transpose(lrFragB));
             }
         };
@@ -461,6 +465,7 @@ namespace rocwmma
             {
                 using MfmaLayout =
                     typename GetDataLayout_t<typename GlobalMapping::MfmaFragA>::Orientation;
+
                 return apply_data_layout<MfmaLayout>(lrFragA);
             }
 
@@ -468,6 +473,7 @@ namespace rocwmma
             {
                 using MfmaLayout =
                     typename GetDataLayout_t<typename GlobalMapping::MfmaFragB>::Orientation;
+
                 return apply_data_layout<MfmaLayout>(lrFragB);
             }
         };

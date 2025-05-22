@@ -501,7 +501,7 @@ namespace rocwmma
     ROCWMMA_HOST_DEVICE constexpr static inline auto make_vector_sequence()
     {
         constexpr auto buildSeq = [](auto&& idx) {
-            constexpr auto Index = std::decay_t<decltype(idx)>::value;
+            constexpr auto Index = decay_t<decltype(idx)>::value;
             return static_cast<DataT>(Start + Index * Stride);
         };
 
