@@ -531,7 +531,7 @@ namespace rocwmma
         using SchedulerTraits = scheduler_traits<Scheduler>;
 
         // SplitK factor for interleaved layouts can be applied to WaveCount
-        constexpr static bool SplitK = SchedulerTraits::WaveCount;
+        constexpr static uint32_t SplitK = SchedulerTraits::WaveCount;
 
         // Select an appropriate MmaDim
         constexpr static uint32_t MmaDim = detail::MmaDimSelector<BlockDim, DataT>::Result;
