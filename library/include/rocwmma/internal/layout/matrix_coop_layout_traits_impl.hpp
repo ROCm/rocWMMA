@@ -58,9 +58,6 @@ namespace rocwmma
             static constexpr uint32_t WaveCount = WaveCountIn;
         };
 
-#undef traits_lhs
-#undef traits_rhs
-
         template <typename MatrixLayout, uint32_t WaveCount>
         struct orthogonal_layout<MatrixCoopLayout<MatrixLayout, WaveCount>>
         {

@@ -48,8 +48,12 @@ namespace rocwmma
         // Note: MaxWaves is the actual maximum amount of waves that can participate.
         constexpr auto maxWaves = MatrixLayout::calcMaxSplits(SchedulerTraits::WaveCount);
 
-        static_assert(maxWaves == SchedulerTraits::WaveCount);
-        if constexpr(SchedulerTraits::WaveCount != maxWaves || SchedulerTraits::RangeCheck)
+        static_assert(maxWaves == SchedulerTraits::WaveCount,
+                      "Cannot accommodate Scheduler WaveCount. Try a bigger block size or "
+                      "scheduler with fewer waves.");
+
+        // RangeCheck indicates the wave indices coming from the Scheduler may be invalid!
+        if constexpr(SchedulerTraits::RangeCheck)
         {
             // Must branch
             if(static_cast<uint32_t>(__builtin_amdgcn_readfirstlane(Scheduler::waveIndex()))
