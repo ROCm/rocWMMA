@@ -156,7 +156,7 @@ namespace rocwmma
             {
                 using MfmaLayout =
                     typename GetDataLayout_t<typename GlobalMapping::MfmaFragA>::Orientation;
-              
+
                 return apply_data_layout<MfmaLayout>(apply_transpose(lrFragA));
             }
 
@@ -389,8 +389,12 @@ namespace rocwmma
 
             /// LOCAL READ -> Mfma frags
             // Same as LWFrags
-            using LRFragA = LWFragA;
-            using LRFragB = LWFragB;
+            using LRFragA
+                = apply_data_layout_t<apply_register_file_t<typename GlobalMapping::MfmaFragA>,
+                                      LayoutLds>;
+            using LRFragB
+                = apply_data_layout_t<apply_register_file_t<typename GlobalMapping::MfmaFragB>,
+                                      LayoutLds>;
 
             /// Sanity checks:
             // All local R/W tiles should have same width
@@ -403,12 +407,18 @@ namespace rocwmma
 
             // This layout is only valid if global reads are MFMA friendly, due to register file transform.
             // In-register layout for MFMA blocks is not the same as wave tile or macro tile.
-            static_assert(std::is_same<typename GlobalMapping::GRFragA,
-                                       typename GlobalMapping::MfmaFragA>::value,
-                          "GR A block must be MFMA size");
-            static_assert(std::is_same<typename GlobalMapping::GRFragB,
-                                       typename GlobalMapping::MfmaFragB>::value,
-                          "GR B block must be MFMA size");
+            static_assert(
+                GetIOShape_t<typename GlobalMapping::GRFragA>::BlockWidth
+                        == GetIOShape_t<typename GlobalMapping::MfmaFragA>::BlockWidth
+                    && GetIOShape_t<typename GlobalMapping::GRFragA>::BlockHeight
+                           == GetIOShape_t<typename GlobalMapping::MfmaFragA>::BlockHeight,
+                "GR A block must be MFMA size");
+            static_assert(
+                GetIOShape_t<typename GlobalMapping::GRFragB>::BlockWidth
+                        == GetIOShape_t<typename GlobalMapping::MfmaFragB>::BlockWidth
+                    && GetIOShape_t<typename GlobalMapping::GRFragB>::BlockHeight
+                           == GetIOShape_t<typename GlobalMapping::MfmaFragB>::BlockHeight,
+                "GR B block must be MFMA size");
 
         private: // Coordinate projection helpers
             constexpr static uint32_t LdsWidth = Constants::AMDGCN_WAVE_SIZE;
