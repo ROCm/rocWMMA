@@ -71,10 +71,8 @@ namespace rocwmma
                                   "WaveCounts for Src and Dst frags don't match");
 
                     auto result    = DstFragT{};
-                    result.mAccess = register_layout_transform<
-                        SrcFragLayout,
-                        DstFragLayout,
-                        SrcSchedulerTraits::WaveCount>::exec(frag.mAccess);
+                    result.mAccess = register_layout_transform<SrcFragLayout, DstFragLayout>::exec(
+                        frag.mAccess);
 
                     return result;
                 }

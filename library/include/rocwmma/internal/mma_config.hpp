@@ -123,21 +123,17 @@ namespace rocwmma
 
         // Input transforms
         using PreMmaXFormA = register_layout_transform<typename IOLayoutA::FragmentLayout,
-                                                       typename IOLayoutA::MmaLayout,
-                                                       1u>;
+                                                       typename IOLayoutA::MmaLayout>;
 
         using PreMmaXFormB = register_layout_transform<typename IOLayoutB::FragmentLayout,
-                                                       typename IOLayoutB::MmaLayout,
-                                                       1u>;
+                                                       typename IOLayoutB::MmaLayout>;
 
         using PreMmaXFormC = register_layout_transform<typename IOLayoutC::FragmentLayout,
-                                                       typename IOLayoutC::MmaLayout,
-                                                       1u>;
+                                                       typename IOLayoutC::MmaLayout>;
 
         // Output accum transform
         using PostMmaXFormD = register_layout_transform<typename IOLayoutD::MmaLayout,
-                                                        typename IOLayoutD::FragmentLayout,
-                                                        1u>;
+                                                        typename IOLayoutD::FragmentLayout>;
 
         // Pack util
         using PackB = typename IOConfigB::PackUtil;

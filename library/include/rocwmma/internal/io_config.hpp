@@ -114,12 +114,10 @@ namespace rocwmma
 
         // TODO: remove the waveCount dependency by adjusting the buffer size statically.
         using PostLoadXForm = register_layout_transform<typename IOLayout::StorageLayout,
-                                                        typename IOLayout::FragmentLayout,
-                                                        Scheduler::waveCount()>;
+                                                        typename IOLayout::FragmentLayout>;
 
         using PreStoreXForm = register_layout_transform<typename IOLayout::FragmentLayout,
-                                                        typename IOLayout::StorageLayout,
-                                                        Scheduler::waveCount()>;
+                                                        typename IOLayout::StorageLayout>;
 
         // Storage requires only clipping.
         using IOBoundsCtrlStore

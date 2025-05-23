@@ -427,19 +427,15 @@ namespace rocwmma
         // the transform or ensure your layout transform mapping is correct.
 
         // Interface to transform from one register layout to another.
-        template <typename RegisterLayoutSrc,
-                  typename RegisterLayoutDst,
-                  uint32_t WaveCount,
-                  typename Enabler = void>
+        template <typename RegisterLayoutSrc, typename RegisterLayoutDst, typename Enabler = void>
         struct register_layout_transform;
 
         // Passthrough transform (NOP):
         // - Layouts are the same
-        template <typename RegisterLayoutLhs, typename RegisterLayoutRhs, uint32_t WaveCount>
+        template <typename RegisterLayoutLhs, typename RegisterLayoutRhs>
         struct register_layout_transform<
             RegisterLayoutLhs,
             RegisterLayoutRhs,
-            WaveCount,
             enable_if_t<is_layout_same_v<RegisterLayoutLhs, RegisterLayoutRhs>>>
         {
             template <typename VecT>
@@ -452,11 +448,10 @@ namespace rocwmma
         // Unsupported transform:
         // - Invalid RegisterLayouts
         // - Non-orthogonal (no transform path)
-        template <typename RegisterLayoutLhs, typename RegisterLayoutRhs, uint32_t WaveCount>
+        template <typename RegisterLayoutLhs, typename RegisterLayoutRhs>
         struct register_layout_transform<
             RegisterLayoutLhs,
             RegisterLayoutRhs,
-            WaveCount,
             enable_if_t<
                 !is_layout_same_v<
                     RegisterLayoutLhs,
@@ -473,11 +468,10 @@ namespace rocwmma
         // Valid transform:
         // - RegisterLayouts are valid
         // - Orthogonal (transform path exists)
-        template <typename RegisterLayoutLhs, typename RegisterLayoutRhs, uint32_t WaveCount>
+        template <typename RegisterLayoutLhs, typename RegisterLayoutRhs>
         struct register_layout_transform<
             RegisterLayoutLhs,
             RegisterLayoutRhs,
-            WaveCount,
             enable_if_t<(traits_lhs::is_register_layout && traits_rhs::is_register_layout)
                         && is_layout_orthogonal_v<RegisterLayoutLhs, RegisterLayoutRhs>>>
         {
