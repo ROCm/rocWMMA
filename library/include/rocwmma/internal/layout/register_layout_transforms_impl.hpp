@@ -466,7 +466,6 @@ namespace rocwmma
             ROCWMMA_UNSUPPORTED_IMPL("Register layout transform is not supported")
             ROCWMMA_DEVICE constexpr static inline decltype(auto) exec(VecT&& v)
             {
-                static_assert(0, "Shouldn't get here!");
                 return forward<VecT>(v);
             }
         };
