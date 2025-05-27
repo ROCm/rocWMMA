@@ -38,7 +38,7 @@ namespace rocwmma
               typename LdsMapping,
               uint32_t TBlockX,
               uint32_t TBlockY>
-    __global__ void __launch_bounds__(128, 1) dlrmDotFwdLds(const DataT* __restrict input,
+    __global__ void __launch_bounds__(TBlockX, TBlockY) dlrmDotFwdLds(const DataT* __restrict input,
                                                             DataT* __restrict output,
                                                             float32_t* acc,
                                                             uint       m,
