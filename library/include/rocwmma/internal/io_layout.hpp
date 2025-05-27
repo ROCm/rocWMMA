@@ -138,7 +138,7 @@ namespace rocwmma
     * @tparam BlockK Block K-dimension
     * @tparam DataT data type
     * @tparam DataLayoutT in-memory layout as col_major or row_major
-    * @tparam WaveCount number of cooperative waves
+    * @tparam Scheduler wave-wise scheduler
     */
     template <typename MatrixT,
               uint32_t BlockDim,
@@ -412,7 +412,7 @@ namespace rocwmma
     * @tparam BlockK Block K-dimension
     * @tparam DataT data type
     * @tparam DataLayoutT in-memory layout as col_major or row_major
-    * @tparam WaveCount number of cooperative waves
+    * @tparam Scheduler wave-wise scheduler
     */
     template <typename MatrixT,
               uint32_t BlockDim,
