@@ -29,11 +29,9 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <rocwmma/rocwmma.hpp>
-#include <rocwmma/rocwmma_coop.hpp>
 #include <rocwmma/rocwmma_transforms.hpp>
 #pragma GCC diagnostic pop
 
-#include "gemm_coop_schedule.hpp"
 #include "gemm_driver.hpp"
 #include "gemm_global_mapping.hpp"
 #include "gemm_local_mapping.hpp"
@@ -95,18 +93,8 @@ namespace rocwmma
                 template <typename GlobalMapping, typename LayoutLds>
                 using LdsMapping = LocalMapping::LdsMappingNT<GlobalMapping, LayoutLds>;
 
-                template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
-                using CoopSchedulerA = typename Schedule::SameRowFwd<TBlockX, TBlockY>;
-
-                template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
-                using CoopSchedulerB = typename Schedule::SameColFwd<TBlockX, TBlockY>;
-
-                template <typename GlobalMapping,
-                          typename LdsMapping,
-                          typename CoopSchedulerA,
-                          typename CoopSchedulerB>
-                using GemmDriver
-                    = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
+                template <typename GlobalMapping, typename LdsMapping>
+                using GemmDriver = GemmDriver<GlobalMapping, LdsMapping>;
             };
 
             struct LdsTN
@@ -143,18 +131,8 @@ namespace rocwmma
                 template <typename GlobalMapping, typename LayoutLds>
                 using LdsMapping = LocalMapping::LdsMappingTN<GlobalMapping, LayoutLds>;
 
-                template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
-                using CoopSchedulerA = typename Schedule::SameRowFwd<TBlockX, TBlockY>;
-
-                template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
-                using CoopSchedulerB = typename Schedule::SameColFwd<TBlockX, TBlockY>;
-
-                template <typename GlobalMapping,
-                          typename LdsMapping,
-                          typename CoopSchedulerA,
-                          typename CoopSchedulerB>
-                using GemmDriver
-                    = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
+                template <typename GlobalMapping, typename LdsMapping>
+                using GemmDriver = GemmDriver<GlobalMapping, LdsMapping>;
             };
 
             struct LdsRF
@@ -191,18 +169,8 @@ namespace rocwmma
                 template <typename GlobalMapping, typename LayoutLds>
                 using LdsMapping = LocalMapping::LdsMappingRF<GlobalMapping, LayoutLds>;
 
-                template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
-                using CoopSchedulerA = typename Schedule::SameRowFwd<TBlockX, TBlockY>;
-
-                template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
-                using CoopSchedulerB = typename Schedule::SameColFwd<TBlockX, TBlockY>;
-
-                template <typename GlobalMapping,
-                          typename LdsMapping,
-                          typename CoopSchedulerA,
-                          typename CoopSchedulerB>
-                using GemmDriver
-                    = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
+                template <typename GlobalMapping, typename LdsMapping>
+                using GemmDriver = GemmDriver<GlobalMapping, LdsMapping>;
             };
 
         } // BlockLevel
@@ -254,18 +222,8 @@ namespace rocwmma
                 template <typename GlobalMapping, typename LayoutLds>
                 using LdsMapping = LocalMapping::LdsMappingNT<GlobalMapping, LayoutLds>;
 
-                template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
-                using CoopSchedulerA = typename Schedule::SameRowFwd<TBlockX, TBlockY>;
-
-                template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
-                using CoopSchedulerB = typename Schedule::SameColFwd<TBlockX, TBlockY>;
-
-                template <typename GlobalMapping,
-                          typename LdsMapping,
-                          typename CoopSchedulerA,
-                          typename CoopSchedulerB>
-                using GemmDriver
-                    = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
+                template <typename GlobalMapping, typename LdsMapping>
+                using GemmDriver = GemmDriver<GlobalMapping, LdsMapping>;
             };
 
             struct LdsTN
@@ -302,18 +260,8 @@ namespace rocwmma
                 template <typename GlobalMapping, typename LayoutLds>
                 using LdsMapping = LocalMapping::LdsMappingTN<GlobalMapping, LayoutLds>;
 
-                template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
-                using CoopSchedulerA = typename Schedule::SameRowFwd<TBlockX, TBlockY>;
-
-                template <uint32_t TBlockX = 0, uint32_t TBlockY = 0>
-                using CoopSchedulerB = typename Schedule::SameColFwd<TBlockX, TBlockY>;
-
-                template <typename GlobalMapping,
-                          typename LdsMapping,
-                          typename CoopSchedulerA,
-                          typename CoopSchedulerB>
-                using GemmDriver
-                    = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
+                template <typename GlobalMapping, typename LdsMapping>
+                using GemmDriver = GemmDriver<GlobalMapping, LdsMapping>;
             };
 
         } // namespace WaveLevel
@@ -366,18 +314,8 @@ namespace rocwmma
                 template <typename GlobalMapping, typename LayoutLds>
                 using LdsMapping = LocalMapping::LdsMappingNT<GlobalMapping, LayoutLds>;
 
-                template <uint32_t TBlockX, uint32_t TBlockY>
-                using CoopSchedulerA = typename Schedule::AllRowMajor<TBlockX, TBlockY>;
-
-                template <uint32_t TBlockX, uint32_t TBlockY>
-                using CoopSchedulerB = typename Schedule::AllRowMajor<TBlockX, TBlockY>;
-
-                template <typename GlobalMapping,
-                          typename LdsMapping,
-                          typename CoopSchedulerA,
-                          typename CoopSchedulerB>
-                using GemmDriver
-                    = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
+                template <typename GlobalMapping, typename LdsMapping>
+                using GemmDriver = GemmDriver<GlobalMapping, LdsMapping>;
             };
 
             struct LdsTN
@@ -414,18 +352,8 @@ namespace rocwmma
                 template <typename GlobalMapping, typename LayoutLds>
                 using LdsMapping = LocalMapping::LdsMappingTN<GlobalMapping, LayoutLds>;
 
-                template <uint32_t TBlockX, uint32_t TBlockY>
-                using CoopSchedulerA = typename Schedule::AllRowMajor<TBlockX, TBlockY>;
-
-                template <uint32_t TBlockX, uint32_t TBlockY>
-                using CoopSchedulerB = typename Schedule::AllRowMajor<TBlockX, TBlockY>;
-
-                template <typename GlobalMapping,
-                          typename LdsMapping,
-                          typename CoopSchedulerA,
-                          typename CoopSchedulerB>
-                using GemmDriver
-                    = GemmDriver<GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB>;
+                template <typename GlobalMapping, typename LdsMapping>
+                using GemmDriver = GemmDriver<GlobalMapping, LdsMapping>;
             };
 
         } // namespace WorkgroupLevel

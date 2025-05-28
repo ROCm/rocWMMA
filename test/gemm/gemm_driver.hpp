@@ -38,10 +38,7 @@ namespace rocwmma
 
     namespace CooperativeGemm
     {
-        template <typename GlobalMapping,
-                  typename LdsMapping,
-                  typename CoopSchedulerA,
-                  typename CoopSchedulerB>
+        template <typename GlobalMapping, typename LdsMapping>
         struct GemmDriver
         {
             // Global fragment types
@@ -65,12 +62,10 @@ namespace rocwmma
             using MappingUtil = GetMappingUtil_t<FragT>;
 
             template <typename FragT>
-            using GetIOTraitsFragA =
-                typename GetCoopIOConfig_t<FragT, CoopSchedulerA::waveCount()>::IOTraits;
+            using GetIOTraitsFragA = typename GetIOConfig_t<FragT>::IOTraits;
 
             template <typename FragT>
-            using GetIOTraitsFragB =
-                typename GetCoopIOConfig_t<FragT, CoopSchedulerB::waveCount()>::IOTraits;
+            using GetIOTraitsFragB = typename GetIOConfig_t<FragT>::IOTraits;
 
             // Ensure that splitCounts are the same on both sides of
             // global fetch and local writes to match fragment data locality.

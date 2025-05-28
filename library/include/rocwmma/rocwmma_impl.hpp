@@ -27,6 +27,7 @@
 #define ROCWMMA_API_IMPL_HPP
 
 #include "rocwmma.hpp"
+#include "rocwmma_transforms.hpp"
 
 #include "internal/accessors.hpp"
 #include "internal/blend.hpp"
@@ -35,6 +36,7 @@
 #include "internal/convert.hpp"
 #include "internal/dpp.hpp"
 #include "internal/flow_control.hpp"
+#include "internal/fragment_traits.hpp"
 #include "internal/io_config.hpp"
 #include "internal/io_layout.hpp"
 #include "internal/io_shape.hpp"
@@ -59,291 +61,192 @@
 
 namespace rocwmma
 {
+
+#define FragmentTypesDecl                                                             \
+    typename MatrixT, uint32_t FragM, uint32_t FragN, uint32_t FragK, typename DataT, \
+        typename DataLayoutT, typename Scheduler
+
+#define FragmentTypesImpl MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, Scheduler
+
     // fragment implementations
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::fragment(
-        const fragment& other)
+    template <FragmentTypesDecl>
+    ROCWMMA_DEVICE fragment<FragmentTypesImpl>::fragment(const fragment& other)
         : mStorage(other.mStorage)
     {
     }
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>&
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::operator=(
-            const fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& other)
+    template <FragmentTypesDecl>
+    ROCWMMA_DEVICE fragment<FragmentTypesImpl>&
+        fragment<FragmentTypesImpl>::operator=(const fragment<FragmentTypesImpl>& other)
     {
         mStorage = other.mStorage;
         return *this;
     }
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE inline DataT&
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::operator[](uint32_t index)
+    template <FragmentTypesDecl>
+    ROCWMMA_DEVICE inline DataT& fragment<FragmentTypesImpl>::operator[](uint32_t index)
     {
         return mAccess.data[index];
     }
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE inline auto
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::operator*() ->
+    template <FragmentTypesDecl>
+    ROCWMMA_DEVICE inline auto fragment<FragmentTypesImpl>::operator*() ->
         typename Traits::StorageT&
     {
         return mStorage;
     }
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE inline DataT const&
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::operator[](
-            uint32_t index) const
+    template <FragmentTypesDecl>
+    ROCWMMA_DEVICE inline DataT const& fragment<FragmentTypesImpl>::operator[](uint32_t index) const
     {
         return mAccess.data[index];
     }
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE inline auto
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::operator*() const ->
+    template <FragmentTypesDecl>
+    ROCWMMA_DEVICE inline auto fragment<FragmentTypesImpl>::operator*() const ->
         typename Traits::StorageT const&
     {
         return mStorage;
     }
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE constexpr inline uint32_t
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::height()
+    template <FragmentTypesDecl>
+    ROCWMMA_DEVICE constexpr inline uint32_t fragment<FragmentTypesImpl>::height()
     {
         return GetIOShape_t<decltype(fragment())>::BlockHeight;
     }
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE constexpr inline uint32_t
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::width()
+    template <FragmentTypesDecl>
+    ROCWMMA_DEVICE constexpr inline uint32_t fragment<FragmentTypesImpl>::width()
     {
         return GetIOShape_t<decltype(fragment())>::BlockWidth;
     }
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE constexpr inline uint32_t
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::blockDim()
+    template <FragmentTypesDecl>
+    ROCWMMA_DEVICE constexpr inline uint32_t fragment<FragmentTypesImpl>::blockDim()
     {
         return GetIOShape_t<decltype(fragment())>::BlockDim;
     }
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE constexpr inline uint32_t
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::kDim()
+    template <FragmentTypesDecl>
+    ROCWMMA_DEVICE constexpr inline uint32_t fragment<FragmentTypesImpl>::kDim()
     {
         return GetIOShape_t<decltype(fragment())>::KDim;
     }
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE constexpr inline uint32_t
-        fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::size()
+    template <FragmentTypesDecl>
+    ROCWMMA_DEVICE constexpr inline uint32_t fragment<FragmentTypesImpl>::size()
     {
         return num_elements;
     }
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE void
-        fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag,
-                      DataT                                                          value)
+#undef FragmentTypesDecl
+#undef FragmentTypesImpl
+
+    template <typename FragT, typename DataT>
+    ROCWMMA_DEVICE void fill_fragment(FragT& frag, DataT value)
     {
-        using FragT       = decay_t<decltype(frag)>;
-        using Broadcaster = typename GetIOConfig_t<FragT>::Broadcaster;
-
-        // Sanity check
-        static_assert(is_same<typename Broadcaster::Traits::BroadcastT,
-                              typename FragT::Traits::AccessT>::value,
-                      "Broadcast input and fragment access types do not match");
-
-        Broadcaster::exec(frag.mAccess, value);
-    }
-
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE void
-        load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag,
-                         const DataT*                                                   data,
-                         uint32_t                                                       ldm)
-    {
-        using FragT    = decay_t<decltype(frag)>;
-        using IOConfig = GetIOConfig_t<FragT>;
-        using Loader   = typename IOConfig::Loader;
-        using PostLoad = typename IOConfig::PostLoadXForm;
+        using FragTraits  = fragment_traits<decay_t<FragT>>;
+        using IOConfig    = GetIOConfig_t<decay_t<FragT>>;
+        using Broadcaster = typename IOConfig::Broadcaster;
 
         // Sanity checks
-        static_assert(!is_same<DataLayoutT, void>::value,
+        static_assert(
+            is_same_v<typename Broadcaster::Traits::BroadcastT, typename FragTraits::AccessT>,
+            "Broadcast input and fragment access types do not match");
+
+        Broadcaster::exec(frag.mAccess, typename FragTraits::DataT{value});
+    }
+
+    template <typename FragT, typename DataT>
+    ROCWMMA_DEVICE void load_matrix_sync(FragT& frag, const DataT* data, uint32_t ldm)
+    {
+        using FragTraits    = fragment_traits<decay_t<FragT>>;
+        using IOConfig      = GetIOConfig_t<decay_t<FragT>>;
+        using Loader        = typename IOConfig::Loader;
+        using PostLoadXForm = typename IOConfig::PostLoadXForm;
+
+        // Sanity checks
+        static_assert(is_same_v<typename FragTraits::DataT, DataT>,
+                      "Fragment DataT doesn't match incoming pointer DataT");
+        static_assert(!is_same_v<typename FragTraits::DataLayoutT, void>,
                       "Must provide layout information. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
-
-        static_assert(is_same<typename FragT::Traits::AccessT, typename Loader::BufferT>::value,
+        static_assert(is_same_v<typename FragTraits::AccessT, typename Loader::BufferT>,
                       "Fragment access and load buffer types do not match");
 
         // Load then implicit pack
         Loader::exec(frag.mAccess, data, ldm);
 
         // Post-load transformation
-        frag.mAccess = PostLoad::exec(frag.mAccess);
+        frag.mAccess = PostLoadXForm::exec(frag.mAccess);
     }
 
-    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
-    ROCWMMA_DEVICE void load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT>& frag,
-                                         const DataT*                                      data,
-                                         uint32_t                                          ldm,
-                                         layout_t                                          layout)
+    template <typename FragT, typename DataT>
+    ROCWMMA_DEVICE void
+        load_matrix_sync(FragT& frag, const DataT* data, uint32_t ldm, layout_t layout)
     {
-        using FragRowMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, row_major>;
-        using FragColMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, col_major>;
+        using FragTraits = fragment_traits<decay_t<FragT>>;
 
         // Dispatch on layout type
         if(layout == layout_t::mem_row_major)
         {
-            load_matrix_sync(reinterpret_cast<FragRowMajor&>(frag), data, ldm);
+            // Load as row major, then transform to fragment layout
+            auto tmp = apply_data_layout_t<decay_t<FragT>, row_major>{};
+            load_matrix_sync(tmp, data, ldm);
+            frag = apply_data_layout<typename FragTraits::DataLayoutT>(tmp);
         }
         else
         {
-            load_matrix_sync(reinterpret_cast<FragColMajor&>(frag), data, ldm);
+            // Load as col major, then transform to fragment layout
+            auto tmp = apply_data_layout_t<decay_t<FragT>, col_major>{};
+            load_matrix_sync(tmp, data, ldm);
+            frag = apply_data_layout<typename FragTraits::DataLayoutT>(tmp);
         }
     }
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE void
-        store_matrix_sync(DataT*                                                               data,
-                          fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag,
-                          uint32_t                                                             ldm)
+    template <typename FragT, typename DataT>
+    ROCWMMA_DEVICE void store_matrix_sync(DataT* data, FragT const& frag, uint32_t ldm)
     {
-        using FragT    = decay_t<decltype(frag)>;
-        using IOConfig = GetIOConfig_t<FragT>;
-        using PreStore = typename IOConfig::PreStoreXForm;
-        using Storer   = typename IOConfig::Storer;
+        using FragTraits    = fragment_traits<decay_t<FragT>>;
+        using IOConfig      = GetIOConfig_t<decay_t<FragT>>;
+        using PreStoreXForm = typename IOConfig::PreStoreXForm;
+        using Storer        = typename IOConfig::Storer;
 
-        // Sanity check
-        static_assert(!is_same<DataLayoutT, void>::value,
+        // Sanity checks
+        static_assert(is_same_v<typename FragTraits::DataT, DataT>,
+                      "Fragment DataT doesn't match outgoing pointer DataT");
+        static_assert(!is_same_v<typename FragTraits::DataLayoutT, void>,
                       "Must provide data layout. Either statically assign data layout in "
                       "fragment declaration or use the run-time function overload.");
-
-        static_assert(is_same<typename FragT::Traits::AccessT, typename Storer::BufferT>::value,
+        static_assert(is_same_v<typename FragTraits::AccessT, typename Storer::BufferT>,
                       "Fragment access and store input types do not match");
 
-        // Implicit unpack and then store
-        Storer::exec(data, PreStore::exec(frag.mAccess), ldm);
+        Storer::exec(data, PreStoreXForm::exec(frag.mAccess), ldm);
     }
 
-    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
+    template <typename FragT, typename DataT>
     ROCWMMA_DEVICE void
-        store_matrix_sync(DataT*                                                  data,
-                          fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag,
-                          uint32_t                                                ldm,
-                          layout_t                                                layout)
+        store_matrix_sync(DataT* data, FragT const& frag, uint32_t ldm, layout_t layout)
     {
-        using FragRowMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, row_major>;
-        using FragColMajor = fragment<MatrixT, BlockM, BlockN, BlockK, DataT, col_major>;
-
         // Dispatch on layout type
         if(layout == layout_t::mem_row_major)
         {
-            store_matrix_sync(data, reinterpret_cast<FragRowMajor const&>(frag), ldm);
+            store_matrix_sync(data, apply_data_layout<row_major>(frag), ldm);
         }
         else
         {
-            store_matrix_sync(data, reinterpret_cast<FragColMajor const&>(frag), ldm);
+            store_matrix_sync(data, apply_data_layout<col_major>(frag), ldm);
         }
     }
 
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename InputTA,
-              typename InputTB,
-              typename ComputeT,
-              typename LayoutA,
-              typename LayoutB,
-              typename LayoutC,
-              typename LayoutD>
-    ROCWMMA_DEVICE void
-        mma_sync(fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutD>&       d,
-                 fragment<matrix_a, BlockM, BlockN, BlockK, InputTA, LayoutA> const&     a,
-                 fragment<matrix_b, BlockM, BlockN, BlockK, InputTB, LayoutB> const&     b,
-                 fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutC> const& c)
+    template <typename FragA, typename FragB, typename FragAccumIn, typename FragAccumOut>
+    ROCWMMA_DEVICE void mma_sync(FragAccumOut& d, FragA const& a, FragB const& b, FragAccumIn& c)
     {
-        using MmaConfig = MmaConfig<BlockM,
-                                    BlockN,
-                                    BlockK,
-                                    InputTA,
-                                    InputTB,
-                                    ComputeT,
-                                    LayoutA,
-                                    LayoutB,
-                                    LayoutC,
-                                    LayoutD>;
+        // Get the MmaConfig
+        using MmaConfig = GetMmaConfig_t<decay_t<FragA>,
+                                         decay_t<FragB>,
+                                         decay_t<FragAccumIn>,
+                                         decay_t<FragAccumOut>>;
 
         // Transforms
         using XA = typename MmaConfig::PreMmaXFormA;

@@ -24,78 +24,21 @@
  *
  *******************************************************************************/
 
-#include <type_traits>
-
 #include "detail/load_store_matrix_coop_sync.hpp"
 #include "kernel_generator.hpp"
+#include "load_store_matrix_coop_sync_test_params.hpp"
 #include "unit_test.hpp"
+#include "unit_test_macros.hpp"
 
 namespace rocwmma
 {
 
-    struct TestParams : public UnitTestParams
-    {
-        using Base = UnitTestParams;
-
-        // Types: Base IOC
-        // Block Sizes: 128 x BlockK
-        // Layouts: N, T
-        using Types        = typename Base::TestTypesIOC;
-        using BlockSizes   = std::tuple<std::tuple<I<128>, I<8>>, std::tuple<I<128>, I<16>>>;
-        using Layouts      = typename Base::TestLayoutsAll;
-        using KernelParams = typename CombineLists<Types, BlockSizes, Layouts>::Result;
-
-        // Assemble the kernel generator
-        // Kernel: LoadStoreMatrixCoopSyncA
-        using GeneratorImpl   = LoadStoreMatrixCoopSyncGeneratorA;
-        using KernelGenerator = KernelGenerator<KernelParams, GeneratorImpl>;
-
-        // Sanity check for kernel generator
-        static_assert(std::is_same<typename GeneratorImpl::ResultT, typename Base::KernelT>::value,
-                      "Kernels from this generator do not match testing interface");
-
-        static inline typename KernelGenerator::ResultT kernels()
-        {
-            return KernelGenerator::generate();
-        }
-
-        static inline std::vector<Base::Param1T> param1s()
-        {
-            return {0.0, 1.0}; // Split by waves in same rol and col
-        }
-
-        static inline std::vector<Base::Param2T> param2s()
-        {
-            return
-            {
-                0.0, 1.0, 2.0,
-                    3.0 // 1 - 4 waves
-#if ROCWMMA_EXTENDED_TESTS
-                    ,
-                    4.0, 5.0, 6.0,
-                    7.0 // 8 waves
-#endif // ROCWMMA_EXTENDED_TESTS
-            };
-        }
-    };
+    using TestParams = LoadStoreMatrixCoopSyncTestParams<
+        UnitTestParams::TestTypesIOC,
+        std::tuple<std::tuple<I<128>, I<8>>, std::tuple<I<128>, I<16>>>,
+        LoadStoreMatrixCoopSyncGeneratorA>;
 
 } // namespace rocwmma
 
 // Test suite for unique parameterization
-class LoadStoreMatrixSyncCoopATest128 : public rocwmma::UnitTest
-{
-};
-
-TEST_P(LoadStoreMatrixSyncCoopATest128, RunKernel)
-{
-    this->RunKernel();
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    KernelTests,
-    LoadStoreMatrixSyncCoopATest128,
-    ::testing::Combine(::testing::ValuesIn(rocwmma::TestParams::kernels()),
-                       ::testing::ValuesIn(rocwmma::TestParams::threadBlocks()),
-                       ::testing::ValuesIn(rocwmma::TestParams::problemSizes()),
-                       ::testing::ValuesIn(rocwmma::TestParams::param1s()),
-                       ::testing::ValuesIn(rocwmma::TestParams::param2s())));
+ROCWMMA_GENERATE_UNIT_GTEST_SUITE(LoadStoreMatrixSyncCoopATest128, TestParams)

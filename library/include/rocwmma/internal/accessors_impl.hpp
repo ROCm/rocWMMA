@@ -27,106 +27,79 @@
 #define ROCWMMA_ACCESSORS_IMPL_HPP
 
 #include "accessors.hpp"
-#include "coop_io_config.hpp"
+#include "api_fwd.hpp"
+#include "fragment_traits.hpp"
 #include "io_config.hpp"
+#include "io_scheduler.hpp"
 #include "io_shape.hpp"
-
-// Fwd decl
-namespace rocwmma
-{
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    class __align__(4) fragment;
-}
+#include "mma_config.hpp"
 
 namespace rocwmma
 {
-    ///
-    /// DataType access
-    ///
+    template <typename FragT>
+    struct GetDataType;
 
     template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
+              uint32_t FragM,
+              uint32_t FragN,
+              uint32_t FragK,
               typename DataT,
-              typename DataLayoutT>
-    struct GetDataType<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>>
+              typename DataLayoutT,
+              typename Scheduler>
+    struct GetDataType<fragment<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, Scheduler>>
     {
         using type = DataT;
     };
 
-    ///
-    /// IOConfig access
-    ///
+    template <typename FragT>
+    struct GetIOConfig;
 
     template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    struct GetIOConfig<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>>
-    {
-        using type = IOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>;
-    };
-
-    ///
-    /// CoopConfig access
-    ///
-
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
+              uint32_t FragM,
+              uint32_t FragN,
+              uint32_t FragK,
               typename DataT,
               typename DataLayoutT,
-              uint32_t WaveCount>
-    struct GetCoopIOConfig<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>, WaveCount>
+              typename Scheduler>
+    struct GetIOConfig<fragment<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, Scheduler>>
     {
-        using type = CoopIOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT, WaveCount>;
+        using type = IOConfig<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, Scheduler>;
     };
 
-    ///
-    /// IOShape access
-    ///
-
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    struct GetIOShape<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>>
+    template <typename FragA, typename FragB, typename FragC, typename FragD>
+    struct GetMmaConfig
     {
-        using type = IOShape<MatrixT, BlockM, BlockN, BlockK>;
+        using type = MmaConfig<FragA, FragB, FragC, FragD>;
     };
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    struct GetDataLayout<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>>
+    template <typename FragT>
+    struct GetIOShape
     {
-        using type = DataLayout::template Array1d<DataLayoutT>;
+    private:
+        using IOConfig = typename GetIOConfig<FragT>::type;
+
+    public:
+        using type = typename IOConfig::IOShape;
     };
 
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    struct GetMappingUtil<fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>>
+    template <typename FragT>
+    struct GetDataLayout
     {
-        using IOShapeT = IOShape<MatrixT, BlockM, BlockN, BlockK>;
-        using type = MappingUtil<IOShapeT::BlockHeight, IOShapeT::BlockWidth, DataT, DataLayoutT>;
+    private:
+        using IOConfig = typename GetIOConfig<FragT>::type;
+
+    public:
+        using type = typename IOConfig::IOLayout::DataLayout;
+    };
+
+    template <typename FragT>
+    struct GetMappingUtil
+    {
+    private:
+        using IOConfig = typename GetIOConfig<FragT>::type;
+
+    public:
+        using type = typename IOConfig::MappingUtil;
     };
 
 } // namespace rocwmma

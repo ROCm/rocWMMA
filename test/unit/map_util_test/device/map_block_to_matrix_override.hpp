@@ -48,7 +48,7 @@ namespace rocwmma
                                     Constants::AMDGCN_WAVE_SIZE,
                                     Constants::AMDGCN_CURRENT_ARCH_ID>::enable())
         {
-            using Frag    = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>;
+            using Frag    = fragment<accumulator, BlockM, BlockN, BlockM, DataT, DataLayout>;
             using Mapping = GetMappingUtil_t<Frag>;
 
             // Override read M coord
@@ -78,7 +78,7 @@ namespace rocwmma
                                     Constants::AMDGCN_WAVE_SIZE,
                                     Constants::AMDGCN_CURRENT_ARCH_ID>::enable())
         {
-            using Frag    = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>;
+            using Frag    = fragment<accumulator, BlockM, BlockN, BlockM, DataT, DataLayout>;
             using Mapping = GetMappingUtil_t<Frag>;
 
             // Override read N coord

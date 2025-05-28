@@ -29,7 +29,6 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <rocwmma/rocwmma.hpp>
-#include <rocwmma/rocwmma_coop.hpp>
 #include <rocwmma/rocwmma_transforms.hpp>
 #pragma GCC diagnostic pop
 
@@ -39,128 +38,9 @@ namespace rocwmma
     namespace CooperativeGemm
     {
 
-        namespace detail
-        {
-            template <typename CoopSchedulerA,
-                      typename CoopSchedulerB,
-                      uint32_t SplitCountA,
-                      uint32_t SplitCountB,
-                      bool     UseCompileTimeConstants
-                      = Schedule::WaveCountIsConstexpr<CoopSchedulerA>::value&&
-                          Schedule::WaveCountIsConstexpr<CoopSchedulerB>::value>
-            struct CoopApiSelector;
+#define GemmDriverT typename GlobalMapping, typename LdsMapping
 
-            template <typename CoopSchedulerA,
-                      typename CoopSchedulerB,
-                      uint32_t SplitCountA,
-                      uint32_t SplitCountB>
-            struct CoopApiSelector<CoopSchedulerA, CoopSchedulerB, SplitCountA, SplitCountB, true>
-            {
-                template <typename GRFragA>
-                __device__ static inline void globalReadCoopA(GRFragA&                      grFragA,
-                                                              GetDataType_t<GRFragA> const* gAddrA,
-                                                              uint32_t                      lda)
-                {
-                    rocwmma::template load_matrix_coop_sync<CoopSchedulerA::waveCount(),
-                                                            SplitCountA>(
-                        grFragA, gAddrA, lda, CoopSchedulerA::waveIndex());
-                }
-
-                template <typename GRFragB>
-                __device__ static inline void globalReadCoopB(GRFragB&                      grFragB,
-                                                              GetDataType_t<GRFragB> const* gAddrB,
-                                                              uint32_t                      ldb)
-                {
-                    rocwmma::template load_matrix_coop_sync<CoopSchedulerB::waveCount(),
-                                                            SplitCountB>(
-                        grFragB, gAddrB, ldb, CoopSchedulerB::waveIndex());
-                }
-
-                template <typename LWFragA>
-                __device__ static inline void localWriteCoopA(GetDataType_t<LWFragA>* ldsAddr,
-                                                              LWFragA const&          lwFragA,
-                                                              uint32_t                ldlds)
-                {
-                    rocwmma::template store_matrix_coop_sync<CoopSchedulerA::waveCount(),
-                                                             SplitCountA>(
-                        ldsAddr, lwFragA, ldlds, CoopSchedulerA::waveIndex());
-                }
-
-                template <typename LWFragB>
-                __device__ static inline void localWriteCoopB(GetDataType_t<LWFragB>* ldsAddr,
-                                                              LWFragB const&          lwFragB,
-                                                              uint32_t                ldlds)
-                {
-                    rocwmma::template store_matrix_coop_sync<CoopSchedulerB::waveCount(),
-                                                             SplitCountB>(
-                        ldsAddr, lwFragB, ldlds, CoopSchedulerB::waveIndex());
-                }
-            };
-
-            template <typename CoopSchedulerA,
-                      typename CoopSchedulerB,
-                      uint32_t SplitCountA,
-                      uint32_t SplitCountB>
-            struct CoopApiSelector<CoopSchedulerA, CoopSchedulerB, SplitCountA, SplitCountB, false>
-            {
-                template <typename GRFragA>
-                __device__ static inline void globalReadCoopA(GRFragA&                      grFragA,
-                                                              GetDataType_t<GRFragA> const* gAddrA,
-                                                              uint32_t                      lda)
-                {
-                    rocwmma::load_matrix_coop_sync(grFragA,
-                                                   gAddrA,
-                                                   lda,
-                                                   CoopSchedulerA::waveIndex(),
-                                                   CoopSchedulerA::waveCount(),
-                                                   SplitCountA);
-                }
-
-                template <typename GRFragB>
-                __device__ static inline void globalReadCoopB(GRFragB&                      grFragB,
-                                                              GetDataType_t<GRFragB> const* gAddrB,
-                                                              uint32_t                      ldb)
-                {
-                    rocwmma::load_matrix_coop_sync(grFragB,
-                                                   gAddrB,
-                                                   ldb,
-                                                   CoopSchedulerB::waveIndex(),
-                                                   CoopSchedulerB::waveCount(),
-                                                   SplitCountB);
-                }
-
-                template <typename LWFragA>
-                __device__ static inline void localWriteCoopA(GetDataType_t<LWFragA>* ldsAddr,
-                                                              LWFragA const&          lwFragA,
-                                                              uint32_t                ldlds)
-                {
-                    rocwmma::store_matrix_coop_sync(ldsAddr,
-                                                    lwFragA,
-                                                    ldlds,
-                                                    CoopSchedulerA::waveIndex(),
-                                                    CoopSchedulerA::waveCount(),
-                                                    SplitCountA);
-                }
-
-                template <typename LWFragB>
-                __device__ static inline void localWriteCoopB(GetDataType_t<LWFragB>* ldsAddr,
-                                                              LWFragB const&          lwFragB,
-                                                              uint32_t                ldlds)
-                {
-                    rocwmma::store_matrix_coop_sync(ldsAddr,
-                                                    lwFragB,
-                                                    ldlds,
-                                                    CoopSchedulerB::waveIndex(),
-                                                    CoopSchedulerB::waveCount(),
-                                                    SplitCountB);
-                }
-            };
-        }
-
-#define GemmDriverT \
-    typename GlobalMapping, typename LdsMapping, typename CoopSchedulerA, typename CoopSchedulerB
-
-#define GemmDriverT_impl GlobalMapping, LdsMapping, CoopSchedulerA, CoopSchedulerB
+#define GemmDriverT_impl GlobalMapping, LdsMapping
 
         template <GemmDriverT>
         template <uint32_t BlocksX>
@@ -179,9 +59,7 @@ namespace rocwmma
         __device__ inline void GemmDriver<GemmDriverT_impl>::globalReadCoopA(
             GRFragA& grFragA, GetDataType_t<GRFragA> const* gAddrA, uint32_t lda)
         {
-            using CoopApiSelector
-                = detail::CoopApiSelector<CoopSchedulerA, CoopSchedulerB, splitCountA, splitCountB>;
-            CoopApiSelector::globalReadCoopA(grFragA, gAddrA, lda);
+            rocwmma::load_matrix_sync(grFragA, gAddrA, lda);
         }
 
         template <GemmDriverT>
@@ -201,9 +79,7 @@ namespace rocwmma
         __device__ inline void GemmDriver<GemmDriverT_impl>::globalReadCoopB(
             GRFragB& grFragB, GetDataType_t<GRFragB> const* gAddrB, uint32_t ldb)
         {
-            using CoopApiSelector
-                = detail::CoopApiSelector<CoopSchedulerA, CoopSchedulerB, splitCountA, splitCountB>;
-            CoopApiSelector::globalReadCoopB(grFragB, gAddrB, ldb);
+            rocwmma::load_matrix_sync(grFragB, gAddrB, ldb);
         }
 
         template <GemmDriverT>
@@ -223,12 +99,7 @@ namespace rocwmma
         __device__ inline void GemmDriver<GemmDriverT_impl>::localWriteCoopA(
             GetDataType_t<GRFragA>* ldsAddr, GRFragA const& grFragA, uint32_t ldlds)
         {
-            using CoopApiSelector
-                = detail::CoopApiSelector<CoopSchedulerA, CoopSchedulerB, splitCountA, splitCountB>;
-            CoopApiSelector::localWriteCoopA(
-                ldsAddr,
-                LdsMapping::template formatLWFragA<CoopSchedulerA::waveCount()>(grFragA),
-                ldlds);
+            rocwmma::store_matrix_sync(ldsAddr, LdsMapping::formatLWFragA(grFragA), ldlds);
         }
 
         template <GemmDriverT>
@@ -248,12 +119,7 @@ namespace rocwmma
         __device__ inline void GemmDriver<GemmDriverT_impl>::localWriteCoopB(
             GetDataType_t<GRFragB>* ldsAddr, GRFragB const& grFragB, uint32_t ldlds)
         {
-            using CoopApiSelector
-                = detail::CoopApiSelector<CoopSchedulerA, CoopSchedulerB, splitCountA, splitCountB>;
-            CoopApiSelector::localWriteCoopB(
-                ldsAddr,
-                LdsMapping::template formatLWFragB<CoopSchedulerB::waveCount()>(grFragB),
-                ldlds);
+            rocwmma::store_matrix_sync(ldsAddr, LdsMapping::formatLWFragB(grFragB), ldlds);
         }
 
         template <GemmDriverT>
@@ -440,7 +306,6 @@ namespace rocwmma
                         alpha * fragAcc.x[idx]
                         + beta * static_cast<GetDataType_t<MfmaFragAcc>>(fragC.x[idx]));
                 }
-
             }
         }
 

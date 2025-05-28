@@ -29,35 +29,99 @@
 
 #include <rocwmma/internal/mapping_util.hpp>
 #include <rocwmma/rocwmma.hpp>
-#include <rocwmma/rocwmma_coop.hpp>
 
 #include "unit_test_traits.hpp"
 
 namespace rocwmma
 {
 
-    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
-    __global__ void LoadStoreMatrixCoopSyncA(uint32_t     m,
-                                             uint32_t     n,
-                                             DataT const* in,
-                                             DataT*       out,
-                                             uint32_t     ld,
-                                             DataT        param1,
-                                             DataT        param2)
+    template <typename Scheduler>
+    struct SchedulerTraits;
+
+    template <uint32_t _TBlockX, uint32_t _TBlockY, template <uint32_t, uint32_t> class Scheduler>
+    struct SchedulerTraits<Scheduler<_TBlockX, _TBlockY>>
+    {
+        static constexpr uint32_t TBlockX = _TBlockX;
+        static constexpr uint32_t TBlockY = _TBlockY;
+    };
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename Scheduler,
+              typename Enabler = void>
+    struct CooperativePredicates
+    {
+        static constexpr uint32_t BlockDim = is_same_v<MatrixT, matrix_a> ? BlockM : BlockN;
+        static constexpr uint32_t BlockK   = is_same_v<MatrixT, matrix_a> ? BlockN : BlockM;
+
+        static constexpr uint32_t TotalWaves = Scheduler::waveCount();
+        static constexpr uint32_t WaveSize   = Constants::AMDGCN_WAVE_SIZE;
+
+        // Minimum vector elements to get full registers
+        static constexpr uint32_t MinElementsPerReg
+            = max(1u, (uint32_t)(sizeof(float32_t) / sizeof(DataT)));
+
+        // Cooperative check: must have a minimum of 1 full reg per wave,
+        // otherwise we get comile errors
+        static constexpr uint32_t Elements = BlockDim * BlockK;
+        static constexpr uint32_t FullRegs = Elements / WaveSize / MinElementsPerReg;
+        static constexpr bool CoopCheck = (FullRegs >= TotalWaves) && (FullRegs % TotalWaves == 0u);
+
+        // Interleaved KPerthread must be > 0, otherwise we get compile errors
+        static constexpr uint32_t MmaDim         = detail::MmaDimSelector<BlockDim, DataT>::Result;
+        static constexpr uint32_t KPerThread_Int = BlockK * MmaDim / (WaveSize * TotalWaves);
+        static constexpr bool     KPTCheck       = KPerThread_Int > 0u;
+
+        static constexpr bool enable()
+        {
+            return CoopCheck && KPTCheck;
+        }
+    };
+
+    template <typename MatrixT,
+              uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename Scheduler>
+    struct CooperativePredicates<
+        MatrixT,
+        BlockM,
+        BlockN,
+        DataT,
+        Scheduler,
+        enable_if_t<SchedulerTraits<Scheduler>::TBlockX % Constants::AMDGCN_WAVE_SIZE != 0u>>
+    {
+        // Don't run tests for TBlockX that are non-multiple of wave size
+        static constexpr bool enable()
+        {
+            return false;
+        }
+    };
+
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename DataLayout,
+              typename Scheduler>
+    __global__ void
+        LoadStoreMatrixCoopSyncA(uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld)
     {
         if constexpr(FragSize_guard<BlockM,
                                     BlockN,
                                     DataT,
                                     DataLayout,
                                     Constants::AMDGCN_WAVE_SIZE,
-                                    Constants::AMDGCN_CURRENT_ARCH_ID>::enable())
+                                    Constants::AMDGCN_CURRENT_ARCH_ID>::enable()
+                     && CooperativePredicates<matrix_a, BlockM, BlockN, DataT, Scheduler>::enable())
         {
             // Mapping:
             // Incoming -> Matrix A (ColNT)
             // BlockM -> BlockM
             // <Dummy> -> BlockN
             // BlockN -> BlockK
-            auto frag = fragment<matrix_a, BlockM, 1, BlockN, DataT, DataLayout>();
+            auto frag = fragment<matrix_a, BlockM, BlockN, BlockN, DataT, DataLayout, Scheduler>();
 
             using Mapping = MappingUtil<BlockM, BlockN, DataT, DataLayout>;
 
@@ -65,71 +129,47 @@ namespace rocwmma
             auto waveCoord         = Mapping::waveCoord();
             auto currentBlockCoord = Mapping::blockCoord();
 
-            // sharingDim (param1):
-            // 0 = waves in same row
-            // 1 = waves in same col
+            // Start at the first block in WG coverage
+            auto startBlockCoord = currentBlockCoord - waveCoord;
 
-            // sharingIndex (param2):
-            // 0 = row/col 0 waves will cooperate
-            // 1 = row/col 1 waves will cooperate
-            // ...
-            auto getFirst = [](typename Mapping::WaveCoordT const& coord) { return get<0>(coord); };
-            auto getSecond
-                = [](typename Mapping::WaveCoordT const& coord) { return get<1>(coord); };
-
-            auto sharingDim   = (uint32_t)param1;
-            auto shareElement = (sharingDim == 0 ? getFirst : getSecond);
-            auto coopElement  = (sharingDim == 0 ? getSecond : getFirst);
-
-            auto sharingIndex = std::min((uint32_t)param2, shareElement(workgroupDim) - 1);
-            if(shareElement(waveCoord) == sharingIndex)
+            // Do cooperative loads for all blocks covered by WG
+            for(int i = 0; i < get<0>(workgroupDim); i++)
             {
-                // Get the slice of work
-                auto workIndex = coopElement(waveCoord);
-                auto workCount = coopElement(workgroupDim);
-
-                // Start at the first block in WG coverage
-                auto startBlockCoord = currentBlockCoord - waveCoord;
-
-                // Do cooperative loads for all blocks covered by WG
-                for(int i = 0; i < get<0>(workgroupDim); i++)
+                for(int j = 0; j < get<1>(workgroupDim); j++)
                 {
-                    for(int j = 0; j < get<1>(workgroupDim); j++)
-                    {
-                        // Map, load and store.
-                        auto  blockCoord = startBlockCoord + make_coord2d(i, j);
-                        auto* read  = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
-                        auto* write = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
-                        load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
-                        store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
-                    }
+                    // Map, load and store.
+                    auto  blockCoord = startBlockCoord + make_coord2d(i, j);
+                    auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
+                    auto* write = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
+                    load_matrix_sync(frag, read, ld);
+                    store_matrix_sync(write, frag, ld);
                 }
             }
         }
     }
 
-    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
-    __global__ void LoadStoreMatrixCoopSyncB(uint32_t     m,
-                                             uint32_t     n,
-                                             DataT const* in,
-                                             DataT*       out,
-                                             uint32_t     ld,
-                                             DataT        param1,
-                                             DataT        param2)
+    template <uint32_t BlockM,
+              uint32_t BlockN,
+              typename DataT,
+              typename DataLayout,
+              typename Scheduler>
+    __global__ void
+        LoadStoreMatrixCoopSyncB(uint32_t m, uint32_t n, DataT const* in, DataT* out, uint32_t ld)
     {
         if constexpr(FragSize_guard<BlockM,
                                     BlockN,
                                     DataT,
                                     DataLayout,
                                     Constants::AMDGCN_WAVE_SIZE,
-                                    Constants::AMDGCN_CURRENT_ARCH_ID>::enable())
+                                    Constants::AMDGCN_CURRENT_ARCH_ID>::enable()
+                     && CooperativePredicates<matrix_b, BlockM, BlockN, DataT, Scheduler>::enable())
         {
             // Mapping:
             // Incoming -> Matrix B (RowNT)
             // <Dummy> -> BlockM
             // BlockN -> BlockN
             // BlockM -> BlockK
-            auto frag = fragment<matrix_b, 1, BlockN, BlockM, DataT, DataLayout>();
+            auto frag = fragment<matrix_b, BlockM, BlockN, BlockM, DataT, DataLayout, Scheduler>();
 
             using Mapping = MappingUtil<BlockM, BlockN, DataT, DataLayout>;
 
@@ -137,116 +177,20 @@ namespace rocwmma
             auto waveCoord         = Mapping::waveCoord();
             auto currentBlockCoord = Mapping::blockCoord();
 
-            // sharingDim (param1):
-            // 0 = waves in same row
-            // 1 = waves in same col
+            // Start at the first block in WG coverage
+            auto startBlockCoord = currentBlockCoord - waveCoord;
 
-            // sharingIndex (param2):
-            // 0 = row/col 0 waves will cooperate
-            // 1 = row/col 1 waves will cooperate
-            // ...
-            auto getFirst = [](typename Mapping::WaveCoordT const& coord) { return get<0>(coord); };
-            auto getSecond
-                = [](typename Mapping::WaveCoordT const& coord) { return get<1>(coord); };
-
-            auto sharingDim   = (uint32_t)param1;
-            auto shareElement = (sharingDim == 0 ? getFirst : getSecond);
-            auto coopElement  = (sharingDim == 0 ? getSecond : getFirst);
-
-            auto sharingIndex = std::min((uint32_t)param2, shareElement(workgroupDim) - 1);
-            if(shareElement(waveCoord) == sharingIndex)
+            // Do cooperative loads for all blocks covered by WG
+            for(int i = 0; i < get<0>(workgroupDim); i++)
             {
-                // Get the slice of work
-                auto workIndex = coopElement(waveCoord);
-                auto workCount = coopElement(workgroupDim);
-
-                // Start at the first block in WG coverage
-                auto startBlockCoord = currentBlockCoord - waveCoord;
-
-                // Do cooperative loads for all blocks covered by WG
-                for(int i = 0; i < get<0>(workgroupDim); i++)
+                for(int j = 0; j < get<1>(workgroupDim); j++)
                 {
-                    for(int j = 0; j < get<1>(workgroupDim); j++)
-                    {
-                        // Map, load and store.
-                        auto  blockCoord = startBlockCoord + make_coord2d(i, j);
-                        auto* read  = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
-                        auto* write = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
-                        load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
-                        store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
-                    }
-                }
-            }
-        }
-    }
-
-    template <uint32_t BlockM, uint32_t BlockN, typename DataT, typename DataLayout>
-    __global__ void LoadStoreMatrixCoopSyncAcc(uint32_t     m,
-                                               uint32_t     n,
-                                               DataT const* in,
-                                               DataT*       out,
-                                               uint32_t     ld,
-                                               DataT        param1,
-                                               DataT        param2)
-    {
-        if constexpr(FragSize_guard<BlockM,
-                                    BlockN,
-                                    DataT,
-                                    DataLayout,
-                                    Constants::AMDGCN_WAVE_SIZE,
-                                    Constants::AMDGCN_CURRENT_ARCH_ID>::enable())
-        {
-            // Mapping:
-            // Incoming -> Matrix C (Row4T)
-            // BlockM -> BlockM
-            // BlockN -> BlockN
-            // <Dummy> -> BlockK
-            auto frag = fragment<accumulator, BlockM, BlockN, 1, DataT, DataLayout>();
-
-            using Mapping = MappingUtil<BlockM, BlockN, DataT, DataLayout>;
-
-            auto workgroupDim      = Mapping::workgroupDim();
-            auto waveCoord         = Mapping::waveCoord();
-            auto currentBlockCoord = Mapping::blockCoord();
-
-            // sharingDim (param1):
-            // 0 = waves in same row
-            // 1 = waves in same col
-
-            // sharingIndex (param2):
-            // 0 = row/col 0 waves will cooperate
-            // 1 = row/col 1 waves will cooperate
-            // ...
-            auto getFirst = [](typename Mapping::WaveCoordT const& coord) { return get<0>(coord); };
-            auto getSecond
-                = [](typename Mapping::WaveCoordT const& coord) { return get<1>(coord); };
-
-            auto sharingDim   = (uint32_t)param1;
-            auto shareElement = (sharingDim == 0 ? getFirst : getSecond);
-            auto coopElement  = (sharingDim == 0 ? getSecond : getFirst);
-
-            auto sharingIndex = std::min((uint32_t)param2, shareElement(workgroupDim) - 1);
-            if(shareElement(waveCoord) == sharingIndex)
-            {
-                // Get the slice of work
-                auto workIndex = coopElement(waveCoord);
-                auto workCount = coopElement(workgroupDim);
-
-                // Start at the first block in WG coverage
-                auto startBlockCoord = currentBlockCoord - waveCoord;
-
-                // Do cooperative loads for all blocks covered by WG
-                for(int i = 0; i < get<0>(workgroupDim); i++)
-                {
-                    for(int j = 0; j < get<1>(workgroupDim); j++)
-                    {
-                        // Map, load and store.
-                        auto  blockCoord = startBlockCoord + make_coord2d(i, j);
-                        auto* read  = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
-                        auto* write = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
-                        load_matrix_coop_sync(frag, read, ld, workIndex, workCount);
-                        store_matrix_coop_sync(write, frag, ld, workIndex, workCount);
-                    }
+                    // Map, load and store.
+                    auto  blockCoord = startBlockCoord + make_coord2d(i, j);
+                    auto* read       = Mapping::dataCoord(in, Mapping::matrixCoord(blockCoord), ld);
+                    auto* write = Mapping::dataCoord(out, Mapping::matrixCoord(blockCoord), ld);
+                    load_matrix_sync(frag, read, ld);
+                    store_matrix_sync(write, frag, ld);
                 }
             }
         }

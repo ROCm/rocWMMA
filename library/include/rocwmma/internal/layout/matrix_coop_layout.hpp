@@ -45,12 +45,13 @@ namespace rocwmma
         // wave id, where appropriate to calculate proper offsets.
         // Note: We should prefer the templated WaveCount where possible to leverage compile-time
         // optimizations as much as possible.
-        template <typename MatrixLayout, uint32_t WaveCount = 1u>
-        struct MatrixCoopLayout : private MatrixLayoutBase<MatrixCoopLayout<MatrixLayout>>
+        template <typename MatrixLayout, uint32_t WaveCount>
+        struct MatrixCoopLayout
+            : private MatrixLayoutBase<MatrixCoopLayout<MatrixLayout, WaveCount>>
         {
         private:
             using MatrixLayoutTraits = layout_traits<MatrixLayout>;
-            using Base               = MatrixLayoutBase<MatrixCoopLayout<MatrixLayout>>;
+            using Base               = MatrixLayoutBase<MatrixCoopLayout<MatrixLayout, WaveCount>>;
 
             // Note: In a multi-wave context, layout iterative spaces can be split
             // between waves, with some restrictions. Certain types of layouts
@@ -63,17 +64,14 @@ namespace rocwmma
 
             ROCWMMA_HOST_DEVICE constexpr static auto splittableSpace();
 
-            // Finds a suitable power of 2 divisor for equal distribution among waves
-            ROCWMMA_HOST_DEVICE constexpr static uint32_t calcMaxSplits(uint32_t splitCount);
-
             // Finds the iterative sub-space for each split
             ROCWMMA_DEVICE constexpr static auto calcSplitStrides(uint32_t splitCount);
 
         public:
-            // Determines whether a wave should participate or not in the layout
-            ROCWMMA_DEVICE constexpr static inline auto
-                waveEnabler(const uint32_t waveIndex, const uint32_t waveCount = WaveCount);
+            // Finds a suitable power of 2 divisor for equal distribution among waves
+            ROCWMMA_HOST_DEVICE constexpr static uint32_t calcMaxSplits(uint32_t splitCount);
 
+            // Overrides for MatrixLayout interface
             ROCWMMA_DEVICE constexpr static inline auto strideCounts(const uint32_t waveCount
                                                                      = WaveCount);
 
@@ -82,6 +80,7 @@ namespace rocwmma
             ROCWMMA_DEVICE constexpr static inline auto baseOffset(const int waveIndex,
                                                                    const int waveCount = WaveCount);
 
+            // Overrides for MatrixLayoutBase interface
             template <typename Coord1d>
             ROCWMMA_DEVICE constexpr static inline decltype(auto)
                 cumulativeOffset(Coord1d&& flatCoord, const int waveCount = WaveCount);
@@ -97,5 +96,6 @@ namespace rocwmma
 } // namespace rocwmma
 
 #include "matrix_coop_layout_impl.hpp"
+#include "matrix_coop_layout_traits_impl.hpp"
 
 #endif // ROCWMMA_MATRIX_COOP_LAYOUT_HPP

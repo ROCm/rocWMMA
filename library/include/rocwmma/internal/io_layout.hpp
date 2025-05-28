@@ -28,7 +28,9 @@
 
 #include "api_fwd.hpp"
 #include "constants.hpp"
+#include "io_scheduler.hpp"
 #include "layout/layout.hpp"
+#include "layout/matrix_coop_layout.hpp"
 #include "types.hpp"
 #include "utility/algorithm.hpp"
 
@@ -136,96 +138,68 @@ namespace rocwmma
     * @tparam BlockK Block K-dimension
     * @tparam DataT data type
     * @tparam DataLayoutT in-memory layout as col_major or row_major
-    * @tparam WaveCount number of cooperative waves
+    * @tparam Scheduler wave-wise scheduler
     */
     template <typename MatrixT,
               uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
               typename DataLayoutT,
-              uint32_t WaveCount>
+              typename Scheduler>
     struct IOLayout;
 
     template <uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
               typename DataLayoutT,
-              uint32_t WaveCount>
-    struct IOLayout<matrix_a, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>
+              typename Scheduler>
+    struct IOLayout<matrix_a, BlockDim, BlockK, DataT, DataLayoutT, Scheduler>
     {
-        // For non-interleaved layouts, MmaDim is given by BlockDim
+        using SchedulerTraits = scheduler_traits<Scheduler>;
+
+        // For non-interleaved layout, MmaDim is given by BlockDim
         constexpr static uint32_t MmaDim = BlockDim;
 
-        // Vector size properties
-        constexpr static uint32_t MaxVW = detail::
-            MaxVWSelector<matrix_a, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>::Result;
+        // Large dim affects our layout choice
+        constexpr static bool LargeBlockDim = BlockDim > 32u;
 
+        // Determine optimal vector width properties
+        constexpr static uint32_t MaxVW = detail::MaxVWSelector<matrix_a,
+                                                                BlockDim,
+                                                                BlockK,
+                                                                DataT,
+                                                                DataLayoutT,
+                                                                SchedulerTraits::WaveCount>::Result;
+
+        // Note: ColOrthoVW in col_major is only valid for VW = 1
         constexpr static uint32_t VW
-            = is_same_v<DataLayoutT, row_major> || BlockDim > 32u ? MaxVW : 1u;
+            = (is_same_v<DataLayoutT, row_major> || LargeBlockDim) ? MaxVW : 1u;
 
-        // DataLayout
+        // DataLayout selection
         using DataLayout = DataLayout::template Array1d<DataLayoutT>;
 
-        // Matrix Layouts
-        // Small dim mma friendly
+        // MatrixLayout selection depends on some factors:
+        // - BlockDim
+        // - Cooperative wave mode
+
+        // Small dim: ensure our layout mma friendly
         using SmallDimMatrixLayout = MatrixLayout::ColOrthoVW<BlockDim, BlockK, DataT, VW, MaxVW>;
 
-        // Large dim not mma friendly
+        // Large dim: we can use higher BW layouts, not mma friendly
         using LargeDimMatrixLayout
             = conditional_t<is_same_v<DataLayoutT, col_major>,
                             MatrixLayout::ColInlineVW<BlockDim, BlockK, DataT, VW, MaxVW>,
                             MatrixLayout::ColOrthoVW<BlockDim, BlockK, DataT, VW, MaxVW>>;
 
-        using MatrixLayout
-            = conditional_t<BlockDim <= 32u, SmallDimMatrixLayout, LargeDimMatrixLayout>;
+        // Select base layout from BlockDim
+        using BaseMatrixLayout
+            = conditional_t<LargeBlockDim, LargeDimMatrixLayout, SmallDimMatrixLayout>;
 
-        // Register layout direct to memory storage (load / store)
-        using StorageLayout = RegisterLayout::Storage<MatrixLayout, DataLayout>;
-
-        // Register layout required for mma. Expect non-interleaved SOA format.
-        // Quirk: gfx11 requires input duplication.
-        using MmaLayout = RegisterLayout::MmaInput<MmaDim,
-                                                   DataT,
-                                                   false,
-                                                   (bool)ROCWMMA_ARCH_GFX11
-                                                       ? RegisterLayout::Format::WMMA_INPUT_GFX11
-                                                       : RegisterLayout::Format::SOA>;
-        // Fragments will keep storage layout
-        using FragmentLayout = StorageLayout;
-    };
-
-    template <uint32_t BlockDim,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT,
-              uint32_t WaveCount>
-    struct IOLayout<matrix_b, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>
-    {
-        // For non-interleaved layouts, MmaDim is given by BlockDim
-        constexpr static uint32_t MmaDim = BlockDim;
-
-        // Vector size properties
-        constexpr static uint32_t MaxVW = detail::
-            MaxVWSelector<matrix_b, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>::Result;
-
-        constexpr static uint32_t VW
-            = is_same_v<DataLayoutT, col_major> || BlockDim > 32 ? MaxVW : 1u;
-
-        // DataLayout
-        using DataLayout = DataLayout::template Array1d<DataLayoutT>;
-
-        // Matrix Layouts
-        // Small dim mma friendly
-        using SmallDimMatrixLayout = MatrixLayout::RowOrthoVW<BlockDim, BlockK, DataT, VW, MaxVW>;
-
-        // Large dim not mma friendly
-        using LargeDimMatrixLayout
-            = conditional_t<is_same_v<DataLayoutT, row_major>,
-                            MatrixLayout::RowInlineVW<BlockDim, BlockK, DataT, VW, MaxVW>,
-                            MatrixLayout::RowOrthoVW<BlockDim, BlockK, DataT, VW, MaxVW>>;
-
-        using MatrixLayout
-            = conditional_t<BlockDim <= 32, SmallDimMatrixLayout, LargeDimMatrixLayout>;
+        // Select final matrix layout from cooperative mode
+        using MatrixLayout = conditional_t<
+            SchedulerTraits::is_cooperative,
+            MatrixLayout::MatrixCoopLayout<BaseMatrixLayout, SchedulerTraits::WaveCount>,
+            BaseMatrixLayout>;
 
         // Register layout direct to memory storage (load / store)
         using StorageLayout = RegisterLayout::Storage<MatrixLayout, DataLayout>;
@@ -247,23 +221,105 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayoutT,
-              uint32_t WaveCount>
-    struct IOLayout<accumulator, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>
+              typename Scheduler>
+    struct IOLayout<matrix_b, BlockDim, BlockK, DataT, DataLayoutT, Scheduler>
     {
-        // For non-interleaved layouts, MmaDim is given by BlockDim
+        using SchedulerTraits = scheduler_traits<Scheduler>;
+
+        // For non-interleaved layout, MmaDim is given by BlockDim
+        constexpr static uint32_t MmaDim = BlockDim;
+
+        // Large dim affects our layout choice
+        constexpr static bool LargeBlockDim = BlockDim > 32u;
+
+        // Determine optimal vector width properties
+        constexpr static uint32_t MaxVW = detail::MaxVWSelector<matrix_b,
+                                                                BlockDim,
+                                                                BlockK,
+                                                                DataT,
+                                                                DataLayoutT,
+                                                                SchedulerTraits::WaveCount>::Result;
+
+        // Note: RowOrthoVW in row_major is only valid for VW = 1
+        constexpr static uint32_t VW
+            = (is_same_v<DataLayoutT, col_major> || LargeBlockDim) ? MaxVW : 1u;
+
+        // DataLayout selection
+        using DataLayout = DataLayout::template Array1d<DataLayoutT>;
+
+        // MatrixLayout selection depends on some factors:
+        // - BlockDim
+        // - Cooperative wave mode
+
+        // Small dim: ensure our layout mma friendly
+        using SmallDimMatrixLayout = MatrixLayout::RowOrthoVW<BlockDim, BlockK, DataT, VW, MaxVW>;
+
+        // Large dim: we can use higher BW layouts, not mma friendly
+        using LargeDimMatrixLayout
+            = conditional_t<is_same_v<DataLayoutT, row_major>,
+                            MatrixLayout::RowInlineVW<BlockDim, BlockK, DataT, VW, MaxVW>,
+                            MatrixLayout::RowOrthoVW<BlockDim, BlockK, DataT, VW, MaxVW>>;
+
+        // Select base layout from BlockDim
+        using BaseMatrixLayout
+            = conditional_t<LargeBlockDim, LargeDimMatrixLayout, SmallDimMatrixLayout>;
+
+        // Select final matrix layout from cooperative mode
+        using MatrixLayout = conditional_t<
+            SchedulerTraits::is_cooperative,
+            MatrixLayout::MatrixCoopLayout<BaseMatrixLayout, SchedulerTraits::WaveCount>,
+            BaseMatrixLayout>;
+
+        // Register layout direct to memory storage (load / store)
+        using StorageLayout = RegisterLayout::Storage<MatrixLayout, DataLayout>;
+
+        // Register layout required for mma. Expect non-interleaved SOA format.
+        // Quirk: gfx11 requires input duplication.
+        using MmaLayout = RegisterLayout::MmaInput<MmaDim,
+                                                   DataT,
+                                                   false,
+                                                   (bool)ROCWMMA_ARCH_GFX11
+                                                       ? RegisterLayout::Format::WMMA_INPUT_GFX11
+                                                       : RegisterLayout::Format::SOA>;
+
+        // Fragments will keep storage register layout.
+        using FragmentLayout = StorageLayout;
+    };
+
+    template <uint32_t BlockDim,
+              uint32_t BlockK,
+              typename DataT,
+              typename DataLayoutT,
+              typename Scheduler>
+    struct IOLayout<accumulator, BlockDim, BlockK, DataT, DataLayoutT, Scheduler>
+    {
+        using SchedulerTraits = scheduler_traits<Scheduler>;
+
+        // For non-interleaved layout, MmaDim is given by BlockDim
         constexpr static uint32_t MmaDim = BlockDim;
 
         // Vector size properties
-        constexpr static uint32_t MaxVW = detail::
-            MaxVWSelector<accumulator, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>::Result;
+        constexpr static uint32_t MaxVW = detail::MaxVWSelector<accumulator,
+                                                                BlockDim,
+                                                                BlockK,
+                                                                DataT,
+                                                                DataLayoutT,
+                                                                SchedulerTraits::WaveCount>::Result;
 
+        // Note: RowOrthoVW in row_major is only valid for VW = 1
         constexpr static uint32_t VW = is_same_v<DataLayoutT, col_major> ? MaxVW : 1u;
 
         // DataLayout
         using DataLayout = DataLayout::template Array1d<DataLayoutT>;
 
         // Always mma friendly
-        using MatrixLayout = MatrixLayout::RowOrthoVW<BlockDim, BlockK, DataT, VW, MaxVW>;
+        using BaseMatrixLayout = MatrixLayout::RowOrthoVW<BlockDim, BlockK, DataT, VW, MaxVW>;
+
+        // Select final matrix layout from cooperative mode
+        using MatrixLayout = conditional_t<
+            SchedulerTraits::is_cooperative,
+            MatrixLayout::MatrixCoopLayout<BaseMatrixLayout, SchedulerTraits::WaveCount>,
+            BaseMatrixLayout>;
 
         // Register layout direct to memory storage (load / store)
         using StorageLayout = RegisterLayout::Storage<MatrixLayout, DataLayout>;
@@ -281,10 +337,10 @@ namespace rocwmma
         using FragmentLayout = StorageLayout;
     };
 
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t WaveCount>
-    struct IOLayout<accumulator, BlockDim, BlockK, DataT, void, WaveCount>
+    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename Scheduler>
+    struct IOLayout<accumulator, BlockDim, BlockK, DataT, void, Scheduler>
     {
-        // For non-interleaved layouts, MmaDim is given by BlockDim
+        // For non-interleaved layout, MmaDim is given by BlockDim
         constexpr static uint32_t MmaDim = BlockDim;
 
         // We don't know which storage is needed: no DataLayout
@@ -356,23 +412,28 @@ namespace rocwmma
     * @tparam BlockK Block K-dimension
     * @tparam DataT data type
     * @tparam DataLayoutT in-memory layout as col_major or row_major
-    * @tparam WaveCount number of cooperative waves
+    * @tparam Scheduler wave-wise scheduler
     */
     template <typename MatrixT,
               uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
               typename DataLayoutT,
-              uint32_t WaveCount>
+              typename Scheduler>
     struct IOLayoutInt;
 
     template <uint32_t BlockDim,
               uint32_t BlockK,
               typename DataT,
               typename DataLayoutT,
-              uint32_t WaveCount>
-    struct IOLayoutInt<matrix_a, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>
+              typename Scheduler>
+    struct IOLayoutInt<matrix_a, BlockDim, BlockK, DataT, DataLayoutT, Scheduler>
     {
+        using SchedulerTraits = scheduler_traits<Scheduler>;
+
+        // SplitK factor for interleaved layouts can be applied to WaveCount
+        constexpr static uint32_t SplitK = SchedulerTraits::WaveCount;
+
         // Select an appropriate MmaDim
         constexpr static uint32_t MmaDim = detail::MmaDimSelector<BlockDim, DataT>::Result;
 
@@ -380,10 +441,16 @@ namespace rocwmma
         using DataLayout = DataLayout::template Array1d<DataLayoutT>;
 
         // Matrix Layouts
-        using MatrixLayout
+        using BaseMatrixLayout
             = conditional_t<is_same_v<DataLayoutT, col_major>,
-                            MatrixLayout::ColInlineInt<BlockDim, BlockK, DataT, MmaDim, WaveCount>,
-                            MatrixLayout::ColOrthoInt<BlockDim, BlockK, DataT, MmaDim, WaveCount>>;
+                            MatrixLayout::ColInlineInt<BlockDim, BlockK, DataT, MmaDim, SplitK>,
+                            MatrixLayout::ColOrthoInt<BlockDim, BlockK, DataT, MmaDim, SplitK>>;
+
+        // Select final matrix layout from cooperative mode
+        using MatrixLayout = conditional_t<
+            SchedulerTraits::is_cooperative,
+            MatrixLayout::MatrixCoopLayout<BaseMatrixLayout, SchedulerTraits::WaveCount>,
+            BaseMatrixLayout>;
 
         // Register layout direct to memory storage (load / store)
         using StorageLayout = RegisterLayout::Storage<MatrixLayout, DataLayout>;
@@ -409,9 +476,14 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayoutT,
-              uint32_t WaveCount>
-    struct IOLayoutInt<matrix_b, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>
+              typename Scheduler>
+    struct IOLayoutInt<matrix_b, BlockDim, BlockK, DataT, DataLayoutT, Scheduler>
     {
+        using SchedulerTraits = scheduler_traits<Scheduler>;
+
+        // SplitK factor for interleaved layouts can be applied to WaveCount
+        constexpr static uint32_t SplitK = SchedulerTraits::WaveCount;
+
         // Select an appropriate MmaDim
         constexpr static uint32_t MmaDim = detail::MmaDimSelector<BlockDim, DataT>::Result;
 
@@ -419,10 +491,16 @@ namespace rocwmma
         using DataLayout = DataLayout::template Array1d<DataLayoutT>;
 
         // Matrix Layouts
-        using MatrixLayout
+        using BaseMatrixLayout
             = conditional_t<is_same_v<DataLayoutT, col_major>,
-                            MatrixLayout::RowOrthoInt<BlockDim, BlockK, DataT, MmaDim, WaveCount>,
-                            MatrixLayout::RowInlineInt<BlockDim, BlockK, DataT, MmaDim, WaveCount>>;
+                            MatrixLayout::RowOrthoInt<BlockDim, BlockK, DataT, MmaDim, SplitK>,
+                            MatrixLayout::RowInlineInt<BlockDim, BlockK, DataT, MmaDim, SplitK>>;
+
+        // Select final matrix layout from cooperative mode
+        using MatrixLayout = conditional_t<
+            SchedulerTraits::is_cooperative,
+            MatrixLayout::MatrixCoopLayout<BaseMatrixLayout, SchedulerTraits::WaveCount>,
+            BaseMatrixLayout>;
 
         // Register layout direct to memory storage (load / store)
         using StorageLayout = RegisterLayout::Storage<MatrixLayout, DataLayout>;
@@ -447,9 +525,14 @@ namespace rocwmma
               uint32_t BlockK,
               typename DataT,
               typename DataLayoutT,
-              uint32_t WaveCount>
-    struct IOLayoutInt<accumulator, BlockDim, BlockK, DataT, DataLayoutT, WaveCount>
+              typename Scheduler>
+    struct IOLayoutInt<accumulator, BlockDim, BlockK, DataT, DataLayoutT, Scheduler>
     {
+        using SchedulerTraits = scheduler_traits<Scheduler>;
+
+        // SplitK factor for interleaved layouts can be applied to WaveCount
+        constexpr static uint32_t SplitK = SchedulerTraits::WaveCount;
+
         // Select an appropriate MmaDim
         constexpr static uint32_t MmaDim = detail::MmaDimSelector<BlockDim, DataT>::Result;
 
@@ -457,10 +540,16 @@ namespace rocwmma
         using DataLayout = DataLayout::template Array1d<DataLayoutT>;
 
         // Matrix Layouts
-        using MatrixLayout
+        using BaseMatrixLayout
             = conditional_t<is_same_v<DataLayoutT, col_major>,
-                            MatrixLayout::RowOrthoInt<BlockDim, BlockK, DataT, MmaDim, WaveCount>,
-                            MatrixLayout::RowInlineInt<BlockDim, BlockK, DataT, MmaDim, WaveCount>>;
+                            MatrixLayout::RowOrthoInt<BlockDim, BlockK, DataT, MmaDim, SplitK>,
+                            MatrixLayout::RowInlineInt<BlockDim, BlockK, DataT, MmaDim, SplitK>>;
+
+        // Select final matrix layout from cooperative mode
+        using MatrixLayout = conditional_t<
+            SchedulerTraits::is_cooperative,
+            MatrixLayout::MatrixCoopLayout<BaseMatrixLayout, SchedulerTraits::WaveCount>,
+            BaseMatrixLayout>;
 
         // Register layout direct to memory storage (load / store)
         using StorageLayout = RegisterLayout::Storage<MatrixLayout, DataLayout>;
@@ -483,8 +572,8 @@ namespace rocwmma
         constexpr static uint32_t VW    = MaxVW;
     };
 
-    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, uint32_t WaveCount>
-    struct IOLayoutInt<accumulator, BlockDim, BlockK, DataT, void, WaveCount>
+    template <uint32_t BlockDim, uint32_t BlockK, typename DataT, typename Scheduler>
+    struct IOLayoutInt<accumulator, BlockDim, BlockK, DataT, void, Scheduler>
     {
         // Select an appropriate MmaDim
         constexpr static uint32_t MmaDim = detail::MmaDimSelector<BlockDim, DataT>::Result;

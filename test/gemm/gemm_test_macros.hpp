@@ -27,6 +27,7 @@
 #ifndef ROCWMMA_GEMM_TEST_MACROS_HPP
 #define ROCWMMA_GEMM_TEST_MACROS_HPP
 
+#include "../helper_macros.hpp"
 #include "gemm_test.hpp"
 #include "kernel_generator.hpp"
 

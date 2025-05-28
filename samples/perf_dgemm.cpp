@@ -31,7 +31,6 @@
 #include <hip/hip_runtime.h>
 
 #include <rocwmma/rocwmma.hpp>
-#include <rocwmma/rocwmma_coop.hpp>
 #include <rocwmma/rocwmma_transforms.hpp>
 
 #include "common.hpp"
@@ -231,14 +230,26 @@ constexpr uint32_t MACRO_TILE_K = ROCWMMA_K;
 // Mfma frags (warp tile)
 using MmaFragA = fragment<matrix_a, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, InputT, DataLayoutA>;
 using MmaFragB = fragment<matrix_b, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, InputT, DataLayoutB>;
-using MmaFragC
-    = fragment<accumulator, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, OutputT, DataLayoutC>;
-using MmaFragD   = MmaFragC;
+using MmaFragC = fragment<accumulator, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, OutputT, DataLayoutC>;
+using MmaFragD = MmaFragC;
 using MmaFragAcc = fragment<accumulator, WARP_TILE_M, WARP_TILE_N, WARP_TILE_K, ComputeT>;
 
 // Global read (macro tile)
-using GRFragA = fragment<matrix_a, MACRO_TILE_M, MACRO_TILE_N, MACRO_TILE_K, InputT, DataLayoutA>;
-using GRFragB = fragment<matrix_b, MACRO_TILE_M, MACRO_TILE_N, MACRO_TILE_K, InputT, DataLayoutB>;
+using CoopScheduler = fragment_scheduler::coop_row_major_2d<TBLOCK_X, TBLOCK_Y>;
+using GRFragA       = fragment<matrix_a,
+                         MACRO_TILE_M,
+                         MACRO_TILE_N,
+                         MACRO_TILE_K,
+                         InputT,
+                         DataLayoutA,
+                         CoopScheduler>;
+using GRFragB       = fragment<matrix_b,
+                         MACRO_TILE_M,
+                         MACRO_TILE_N,
+                         MACRO_TILE_K,
+                         InputT,
+                         DataLayoutB,
+                         CoopScheduler>;
 
 // Local write of global buffers (macro tile)
 // - Must match Lds data layout.
@@ -248,10 +259,10 @@ using LWFragB = apply_data_layout_t<apply_transpose_t<GRFragB>, DataLayoutLds>;
 
 // Transform helpers
 constexpr auto transformGRFragAToLWFragA
-    = [](GRFragA const& grFragA) { return apply_data_layout<DataLayoutLds, WARP_COUNT>(grFragA); };
+    = [](GRFragA const& grFragA) { return apply_data_layout<DataLayoutLds>(grFragA); };
 
 constexpr auto transformGRFragBToLWFragB = [](GRFragB const& grFragB) {
-    return apply_data_layout<DataLayoutLds, WARP_COUNT>(apply_transpose(grFragB));
+    return apply_data_layout<DataLayoutLds>(apply_transpose(grFragB));
 };
 
 // Local read (mfma frags)
@@ -264,8 +275,9 @@ using LRFragB = apply_data_layout_t<apply_transpose_t<MmaFragB>, DataLayoutLds>;
 constexpr auto transformLRFragAToMmaFragA
     = [](LRFragA const& lrFragA) { return apply_data_layout<DataLayoutA>(lrFragA); };
 
-constexpr auto transformLRFragBToMmaFragB
-    = [](LRFragB const& lrFragB) { return apply_data_layout<DataLayoutB>(apply_transpose(lrFragB)); };
+constexpr auto transformLRFragBToMmaFragB = [](LRFragB const& lrFragB) {
+    return apply_data_layout<DataLayoutB>(apply_transpose(lrFragB));
+};
 
 ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
                                                           uint32_t       n,
@@ -315,18 +327,12 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
     auto kStepOffsetA = GRFragAMap1d::fromMatrixCoord(make_coord2d(0u, MACRO_TILE_K), lda);
     auto kStepOffsetB = GRFragBMap1d::fromMatrixCoord(make_coord2d(MACRO_TILE_K, 0u), ldb);
 
-    // Cooperative scheduling warp order is analogous to row major priority.
-    // E.g. Wg = (128, 2) = 2x2 warps
-    // (0, 0)   (0, 1)   Share Schedule: w0 = (0, 0), w1 = (0, 1),
-    // (1, 0)   (1, 1)                   w2 = (1, 0), w3 = (1, 1), count = 4
-    const auto warpIndex = get<0>(localWarpCoord) * get<1>(warpDims) + get<1>(localWarpCoord);
-
     // Perform initial global pre-fetch
     GRFragA grFragA;
     GRFragB grFragB;
 
-    load_matrix_coop_sync<WARP_COUNT>(grFragA, a + globalReadOffsetA, lda, warpIndex);
-    load_matrix_coop_sync<WARP_COUNT>(grFragB, b + globalReadOffsetB, ldb, warpIndex);
+    load_matrix_sync(grFragA, a + globalReadOffsetA, lda);
+    load_matrix_sync(grFragB, b + globalReadOffsetB, ldb);
 
     globalReadOffsetA += kStepOffsetA;
     globalReadOffsetB += kStepOffsetB;
@@ -362,10 +368,8 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
           + LWFragBMap1d::fromMatrixCoord(make_coord2d(get<1>(localWarpOffset), 0u), ldsld);
 
     // Write prefetch to local
-    store_matrix_coop_sync<WARP_COUNT>(
-        ldsPtrLo + ldsWriteOffsetA, transformGRFragAToLWFragA(grFragA), ldsld, warpIndex);
-    store_matrix_coop_sync<WARP_COUNT>(
-        ldsPtrLo + ldsWriteOffsetB, transformGRFragBToLWFragB(grFragB), ldsld, warpIndex);
+    store_matrix_sync(ldsPtrLo + ldsWriteOffsetA, transformGRFragAToLWFragA(grFragA), ldsld);
+    store_matrix_sync(ldsPtrLo + ldsWriteOffsetB, transformGRFragBToLWFragB(grFragB), ldsld);
 
     /// Initialize accumulation frags
     MmaFragAcc mmaFragAcc;
@@ -390,18 +394,16 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
                  mmaFragAcc);
 
         // Prefetch next round of global frags
-        load_matrix_coop_sync<WARP_COUNT>(grFragA, a + globalReadOffsetA, lda, warpIndex);
-        load_matrix_coop_sync<WARP_COUNT>(grFragB, b + globalReadOffsetB, ldb, warpIndex);
+        load_matrix_sync(grFragA, a + globalReadOffsetA, lda);
+        load_matrix_sync(grFragB, b + globalReadOffsetB, ldb);
 
         // Advance offsets to next k step
         globalReadOffsetA += kStepOffsetA;
         globalReadOffsetB += kStepOffsetB;
 
         // Write prefetch to second LDS buffer
-        store_matrix_coop_sync<WARP_COUNT>(
-            ldsPtrHi + ldsWriteOffsetA, transformGRFragAToLWFragA(grFragA), ldsld, warpIndex);
-        store_matrix_coop_sync<WARP_COUNT>(
-            ldsPtrHi + ldsWriteOffsetB, transformGRFragBToLWFragB(grFragB), ldsld, warpIndex);
+        store_matrix_sync(ldsPtrHi + ldsWriteOffsetA, transformGRFragAToLWFragA(grFragA), ldsld);
+        store_matrix_sync(ldsPtrHi + ldsWriteOffsetB, transformGRFragBToLWFragB(grFragB), ldsld);
 
         // Make sure that all waves have finished reading / writing to lds for currentK.
         synchronize_workgroup();
@@ -430,7 +432,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
              mmaFragAcc);
 
     // D = alpha * accum + beta * C
-    MmaFragD          mmaFragD;
+    MmaFragD           mmaFragD;
     constexpr uint32_t chunkSize = 8u;
     constexpr uint32_t chunks    = mmaFragD.num_elements / chunkSize;
     constexpr uint32_t remain    = mmaFragD.num_elements % chunkSize;
@@ -439,7 +441,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
         for(int i = start_idx; i < start_idx + size; i++)
         {
             mmaFragD.x[i] = static_cast<OutputT>(alpha * mmaFragAcc.x[i]
-                                                  + beta * static_cast<ComputeT>(mmaFragC.x[i]));
+                                                 + beta * static_cast<ComputeT>(mmaFragC.x[i]));
         }
     };
 

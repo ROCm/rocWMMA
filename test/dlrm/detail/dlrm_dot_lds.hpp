@@ -27,6 +27,7 @@
 #ifndef DLRM_DOT_LDS_DETAIL_HPP
 #define DLRM_DOT_LDS_DETAIL_HPP
 
+#include "../helper_macros.hpp"
 #include "device/dlrm_dot_bwd_lds.hpp"
 #include "device/dlrm_dot_fwd_lds.hpp"
 #include "dlrm_kernel_base.hpp"
@@ -54,12 +55,72 @@ namespace rocwmma
         }
         typename Base::KernelFwdFunc kernelFwdImpl() const final
         {
-            return typename Base::KernelFwdFunc(dlrmDotFwdLds<DataT, TileSize, MappingLds>);
+// Generate a nested switch case
+// for TBlockX = [32, 64, 128, 256]
+// and TBlockY = [1, 2, 4]
+#define CASE_IMPL_ASSIGN2(TBLOCK_X, TBLOCK_Y) \
+    return typename Base::KernelFwdFunc(      \
+        dlrmDotFwdLds<DataT, TileSize, MappingLds, TBLOCK_X, TBLOCK_Y>);
+
+#define SWITCH_BODY_TBLOCK_X(TBLOCK_Y) \
+    ROCWMMA_SWITCH_BODY3_ARG2(Base::mTBlockX, CASE_IMPL_ASSIGN2, 32u, 64u, 128u, TBLOCK_Y)
+
+#define DISPATCH_BODY ROCWMMA_SWITCH_BODY3_ARG1(Base::mTBlockY, SWITCH_BODY_TBLOCK_X, 1u, 2u, 4u)
+
+            // Invoke dispatch
+            DISPATCH_BODY
+
+// Clean up macro space
+#undef CASE_IMPL_ASSIGN2
+#undef SWITCH_BODY_TBLOCK_X
+#undef DISPATCH_BODY
+
+            // Default case
+            return [](const DataT* __restrict, // input
+                      DataT* __restrict, // output
+                      float*, // acc
+                      uint32_t, // m
+                      uint32_t, // k
+                      uint32_t, // b
+                      uint32_t, // inputBatchOffset
+                      uint32_t, // outputBatchOffset
+                      uint32_t) {};
         }
 
         typename Base::KernelBwdFunc kernelBwdImpl() const final
         {
-            return typename Base::KernelBwdFunc(dlrmDotBwdLds<DataT, TileSize, MappingLds>);
+// Generate a nested switch case
+// for TBlockX = [32, 64, 128, 256]
+// and TBlockY = [1, 2, 4]
+#define CASE_IMPL_ASSIGN2(TBLOCK_X, TBLOCK_Y) \
+    return typename Base::KernelBwdFunc(      \
+        dlrmDotBwdLds<DataT, TileSize, MappingLds, TBLOCK_X, TBLOCK_Y>);
+
+#define SWITCH_BODY_TBLOCK_X(TBLOCK_Y) \
+    ROCWMMA_SWITCH_BODY3_ARG2(Base::mTBlockX, CASE_IMPL_ASSIGN2, 32u, 64u, 128u, TBLOCK_Y)
+
+#define DISPATCH_BODY ROCWMMA_SWITCH_BODY3_ARG1(Base::mTBlockY, SWITCH_BODY_TBLOCK_X, 1u, 2u, 4u)
+
+            // Invoke dispatch
+            DISPATCH_BODY
+
+// Clean up macro space
+#undef CASE_IMPL_ASSIGN2
+#undef SWITCH_BODY_TBLOCK_X
+#undef DISPATCH_BODY
+
+            // Default case
+            return [](const DataT* __restrict, // input
+                      const DataT* __restrict, // upstreamGrad
+                      DataT* __restrict, // grad
+                      DataT* __restrict, // bottomMlpGrad
+                      DataT* __restrict, // acc
+                      uint32_t, // m
+                      uint32_t, // k
+                      uint32_t, // b
+                      uint32_t, // inputBatchOffset
+                      uint32_t, // upstreamBatchOffset
+                      uint32_t) {}; // accBatchOffset
         }
 
         typename Base::KernelTrilFunc kernelTrilImpl() const final

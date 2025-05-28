@@ -31,8 +31,9 @@
 #include "layout_traits_impl.hpp"
 #include "data_layout_traits_impl.hpp"
 #include "matrix_layout_traits_impl.hpp"
-#include "matrix_coop_layout_traits_impl.hpp"
 #include "register_layout_traits_impl.hpp"
+// Must stay last
+#include "matrix_coop_layout_traits_impl.hpp"
 // clang-format on
 
 namespace rocwmma

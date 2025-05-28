@@ -26,6 +26,8 @@
 #ifndef ROCWMMA_ACCESSORS_HPP
 #define ROCWMMA_ACCESSORS_HPP
 
+#include "accessors_impl.hpp"
+
 namespace rocwmma
 {
     ///
@@ -48,15 +50,11 @@ namespace rocwmma
     template <typename FragT>
     using GetIOConfig_t = typename GetIOConfig<FragT>::type;
 
-    ///
-    /// CoopConfig access
-    ///
+    template <typename FragA, typename FragB, typename FragC, typename FragD>
+    struct GetMmaConfig;
 
-    template <typename FragT, uint32_t WaveCount>
-    struct GetCoopIOConfig;
-
-    template <typename FragT, uint32_t WaveCount>
-    using GetCoopIOConfig_t = typename GetCoopIOConfig<FragT, WaveCount>::type;
+    template <typename FragA, typename FragB, typename FragC, typename FragD>
+    using GetMmaConfig_t = typename GetMmaConfig<FragA, FragB, FragC, FragD>::type;
 
     ///
     /// IOShape access
@@ -89,7 +87,5 @@ namespace rocwmma
     using GetMappingUtil_t = typename GetMappingUtil<FragT>::type;
 
 } // namespace rocwmma
-
-#include "accessors_impl.hpp"
 
 #endif // ROCWMMA_ACCESSORS_HPP
