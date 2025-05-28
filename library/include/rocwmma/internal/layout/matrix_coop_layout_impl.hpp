@@ -109,26 +109,6 @@ namespace rocwmma
         }
 
         template <typename MatrixLayout, uint32_t WaveCount>
-        // Determines whether a wave should participate or not in the layout
-        ROCWMMA_DEVICE constexpr /* static */ inline auto
-            MatrixCoopLayout::waveEnabler(const uint32_t waveIndex,
-                                          const uint32_t waveCount /* = WaveCount */)
-        {
-            // Note: MaxWaves is the actual maximum amount of waves that can participate.
-            auto maxWaves = calcMaxSplits(waveCount);
-
-            if(waveCount != maxWaves)
-            {
-                // Must branch
-                if(__builtin_amdgcn_readfirstlane(waveIndex) >= maxWaves)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        template <typename MatrixLayout, uint32_t WaveCount>
         ROCWMMA_DEVICE constexpr /* static */ inline auto
             MatrixCoopLayout::strideCounts(const uint32_t waveCount /* = WaveCount */)
         {

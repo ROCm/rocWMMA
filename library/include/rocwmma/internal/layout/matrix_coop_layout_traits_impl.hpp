@@ -37,51 +37,40 @@ namespace rocwmma
         struct MatrixCoopLayout;
     }
 
-    // Common helpers for supported traits
+    // Traits overloads for matrix and register layouts
     namespace LayoutTraits_impl
     {
         using MatrixLayout::MatrixCoopLayout;
+        using RegisterLayout::Storage;
 
-        // For coop layouts, add the WaveCount property
         template <typename MatrixLayout, uint32_t WaveCountIn>
-        struct layout_traits<MatrixCoopLayout<MatrixLayout, WaveCountIn>,
-                             enable_if_t<is_matrix_layout_v<MatrixLayout>>>
-            : public layout_traits<MatrixLayout>
+        struct matrix_layout_traits<MatrixCoopLayout<MatrixLayout, WaveCountIn>>
+            : public matrix_layout_traits<MatrixLayout>
         {
             static constexpr uint32_t WaveCount = WaveCountIn;
         };
 
-// Tidy access to matrix layout traits.
-#define traits_lhs matrix_layout_traits<MatrixLayoutLhs>
-#define traits_rhs matrix_layout_traits<MatrixLayoutRhs>
-
-        // Implement sameness classifier for matrix layouts
-        template <typename MatrixLayoutLhs, typename MatrixLayoutRhs, uint32_t WaveCount>
-        struct is_layout_same<
-            MatrixCoopLayout<MatrixLayoutLhs, WaveCount>,
-            MatrixCoopLayout<MatrixLayoutRhs, WaveCount>,
-            enable_if_t<traits_lhs::is_matrix_layout && traits_rhs::is_matrix_layout>>
-            : public is_layout_same<MatrixLayoutLhs, MatrixLayoutRhs>
+        template <typename MatrixLayout, typename DataLayout, uint32_t WaveCountIn>
+        struct register_layout_traits<
+            Storage<MatrixCoopLayout<MatrixLayout, WaveCountIn>, DataLayout>>
+            : public register_layout_traits<Storage<MatrixLayout, DataLayout>>
         {
+            static constexpr uint32_t WaveCount = WaveCountIn;
         };
-
-        // Implement orthogonality classifier for matrix layouts
-        template <typename MatrixLayoutLhs, typename MatrixLayoutRhs, uint32_t WaveCount>
-        struct is_layout_orthogonal<
-            MatrixCoopLayout<MatrixLayoutLhs, WaveCount>,
-            MatrixCoopLayout<MatrixLayoutRhs, WaveCount>,
-            enable_if_t<traits_lhs::is_matrix_layout && traits_rhs::is_matrix_layout>>
-            : public is_layout_orthogonal<MatrixLayoutLhs, MatrixLayoutRhs>
-        {
-        };
-
-#undef traits_lhs
-#undef traits_rhs
 
         template <typename MatrixLayout, uint32_t WaveCount>
         struct orthogonal_layout<MatrixCoopLayout<MatrixLayout, WaveCount>>
-            : public orthogonal_layout<MatrixLayout>
         {
+            using type
+                = MatrixCoopLayout<typename orthogonal_layout<MatrixLayout>::type, WaveCount>;
+        };
+
+        template <typename MatrixLayout, typename DataLayout, uint32_t WaveCount>
+        struct orthogonal_layout<Storage<MatrixCoopLayout<MatrixLayout, WaveCount>, DataLayout>>
+        {
+            using type = Storage<
+                MatrixCoopLayout<typename orthogonal_layout<MatrixLayout>::type, WaveCount>,
+                DataLayout>;
         };
 
     } // namespace LayoutTraits_impl

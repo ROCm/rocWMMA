@@ -35,11 +35,11 @@ namespace rocwmma
     *  @tparam RegisterLayoutLhs Source register layout
     *  @tparam RegisterLayoutRhs Target register layout
     */
-    template <typename RegisterLayoutLhs, typename RegisterLayoutRhs, uint32_t WaveCount>
+    template <typename RegisterLayoutLhs, typename RegisterLayoutRhs>
     using register_layout_transform
-        = LayoutTransforms_impl::register_layout_transform<RegisterLayoutLhs, RegisterLayoutRhs, WaveCount>;
+        = LayoutTransforms_impl::register_layout_transform<RegisterLayoutLhs, RegisterLayoutRhs>;
 
-    using register_layout_transform_nop = register_layout_transform<void, void, 0u>;
+    using register_layout_transform_nop = register_layout_transform<void, void>;
 
 } // namespace rocWMMA
 

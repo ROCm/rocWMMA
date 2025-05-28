@@ -26,44 +26,87 @@
 #ifndef ROCWMMA_MMA_CONFIG_HPP
 #define ROCWMMA_MMA_CONFIG_HPP
 
+#include "accessors.hpp"
 #include "io_config.hpp"
 #include "layout/register_layout_transforms.hpp"
 #include "mfma.hpp"
-#include "mma_traits.hpp"
 #include "pack_util.hpp"
 #include "types.hpp"
 #include "wmma.hpp"
 
 namespace rocwmma
 {
+    template <typename FragT>
+    struct GetIOConfig;
 
     // The purpose of this class is to interface from fragment level traits
     // into specific Mma operations.
     // Mma operations can be classified into transforms (e.g., pre / post mma)
     // and mma function hooks.
-    template <uint32_t FragM,
-              uint32_t FragN,
-              uint32_t FragK,
-              typename InputTA,
-              typename InputTB,
-              typename ComputeT,
-              typename DataLayoutA,
-              typename DataLayoutB,
-              typename DataLayoutC,
-              typename DataLayoutD>
+    template <typename FragA, typename FragB, typename FragC, typename FragD>
     struct MmaConfig
     {
-        using IOConfigA = IOConfig<matrix_a, FragM, FragN, FragK, InputTA, DataLayoutA>;
-        using IOConfigB = IOConfig<matrix_b, FragM, FragN, FragK, InputTB, DataLayoutB>;
-        using IOConfigC = IOConfig<accumulator, FragM, FragN, FragK, ComputeT, DataLayoutC>;
-        using IOConfigD = IOConfig<accumulator, FragM, FragN, FragK, ComputeT, DataLayoutD>;
+        using FragATraits = fragment_traits<FragA>;
+        using FragBTraits = fragment_traits<FragB>;
+        using FragCTraits = fragment_traits<FragC>;
+        using FragDTraits = fragment_traits<FragD>;
+
+        // Sanity checks fragment dimensions
+        static_assert((FragATraits::FragM == FragBTraits::FragM)
+                          && (FragBTraits::FragM == FragCTraits::FragM)
+                          && (FragCTraits::FragM == FragDTraits::FragM),
+                      "Mma fragment FragM traits must match");
+        static_assert((FragATraits::FragN == FragBTraits::FragN)
+                          && (FragBTraits::FragN == FragCTraits::FragN)
+                          && (FragCTraits::FragN == FragDTraits::FragN),
+                      "Mma fragment FragN traits must match");
+        static_assert((FragATraits::FragK == FragBTraits::FragK)
+                          && (FragBTraits::FragK == FragCTraits::FragK)
+                          && (FragCTraits::FragK == FragDTraits::FragK),
+                      "Mma fragment FragK traits must match");
+
+        using InputTA  = typename FragATraits::DataT;
+        using InputTB  = typename FragBTraits::DataT;
+        using ComputeT = typename FragCTraits::DataT;
+
+        // Sanity check datatypes
+        static_assert(sizeof(InputTA) == sizeof(InputTB), "Input datatypes must be same size");
+        static_assert(is_same_v<typename FragCTraits::DataT, typename FragDTraits::DataT>,
+                      "Accum fragments C and D must have the same type");
+
+        // Fragment dimensions are constant
+        static constexpr uint32_t FragM = FragATraits::FragM;
+        static constexpr uint32_t FragN = FragATraits::FragN;
+        static constexpr uint32_t FragK = FragATraits::FragK;
+
+        using SchedulerA = typename FragATraits::Scheduler;
+        using SchedulerB = typename FragBTraits::Scheduler;
+        using SchedulerC = typename FragCTraits::Scheduler;
+        using SchedulerD = typename FragDTraits::Scheduler;
+
+        // Sanity check schedulers
+        static_assert(
+            is_same_v<
+                SchedulerA,
+                SchedulerB> && is_same_v<SchedulerB, SchedulerC> && is_same_v<SchedulerC, SchedulerD>,
+            "Mma fragment scheduler traits must match");
+
+        using SchedulerTraits = scheduler_traits<SchedulerA>;
+
+        static_assert(!SchedulerTraits::is_cooperative && SchedulerTraits::WaveCount == 1u,
+                      "Mma does not support cooperative fragments");
+
+        using IOConfigA = typename GetIOConfig<FragA>::type;
+        using IOConfigB = typename GetIOConfig<FragB>::type;
+        using IOConfigC = typename GetIOConfig<FragC>::type;
+        using IOConfigD = typename GetIOConfig<FragD>::type;
 
         using IOLayoutA = typename IOConfigA::IOLayout;
         using IOLayoutB = typename IOConfigB::IOLayout;
         using IOLayoutC = typename IOConfigC::IOLayout;
         using IOLayoutD = typename IOConfigD::IOLayout;
 
-        // Sanity checks
+        // Sanity mma layouts
         static_assert(
             is_layout_same_v<typename IOLayoutA::MmaLayout, typename IOLayoutB::MmaLayout>,
             "Input fragment register layouts do not match");
@@ -80,21 +123,17 @@ namespace rocwmma
 
         // Input transforms
         using PreMmaXFormA = register_layout_transform<typename IOLayoutA::FragmentLayout,
-                                                       typename IOLayoutA::MmaLayout,
-                                                       1u>;
+                                                       typename IOLayoutA::MmaLayout>;
 
         using PreMmaXFormB = register_layout_transform<typename IOLayoutB::FragmentLayout,
-                                                       typename IOLayoutB::MmaLayout,
-                                                       1u>;
+                                                       typename IOLayoutB::MmaLayout>;
 
         using PreMmaXFormC = register_layout_transform<typename IOLayoutC::FragmentLayout,
-                                                       typename IOLayoutC::MmaLayout,
-                                                       1u>;
+                                                       typename IOLayoutC::MmaLayout>;
 
         // Output accum transform
         using PostMmaXFormD = register_layout_transform<typename IOLayoutD::MmaLayout,
-                                                        typename IOLayoutD::FragmentLayout,
-                                                        1u>;
+                                                        typename IOLayoutD::FragmentLayout>;
 
         // Pack util
         using PackB = typename IOConfigB::PackUtil;

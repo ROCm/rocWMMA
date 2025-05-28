@@ -27,6 +27,7 @@
 #define ROCWMMA_API_HPP
 
 #include "internal/accessors.hpp"
+#include "internal/io_scheduler.hpp"
 #include "internal/io_traits.hpp"
 #include "internal/pack_util.hpp"
 #include "internal/types.hpp"
@@ -109,6 +110,74 @@ namespace rocwmma
         mem_col_major
     };
 
+    namespace fragment_scheduler
+    {
+        //! @struct default
+        //! @brief The default fragment scheduler; each wave operates independently.
+        using default_schedule = IOScheduler::Default;
+
+        //! @struct coop_row_major_2d
+        //! @brief  A cooperative scheduling strategy where each wave in the 2d threadblock
+        //! will contribute to the fragment operation in row_major grid order.
+        //! All waves are scheduled in row_major order.
+        //! E.g. (TBlockX, TBlockY) => 2x2 waves
+        //! w0 = (0, 0),  w1 = (0, 1),
+        //! w2 = (1, 0),  w3 = (1, 1)
+        //! @tparam TBlockX the size of the thread-block in the X dimension
+        //! @tparam TBlockY the size of the thread-block in the Y dimension
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        using coop_row_major_2d = IOScheduler::RowMajor2d<TBlockX, TBlockY>;
+
+        //! @struct coop_col_major_2d
+        //! @brief  A cooperative scheduling strategy where each wave in the 2d threadblock
+        //! will contribute to the fragment operation in col_major grid order.
+        //! All waves are scheduled in row_major order.
+        //! E.g. (TBlockX, TBlockY) => 2x2 waves
+        //! w0 = (0, 0),  w2 = (0, 1),
+        //! w1 = (1, 0),  w3 = (1, 1)
+        //! @tparam TBlockX the size of the thread-block in the X dimension
+        //! @tparam TBlockY the size of the thread-block in the Y dimension
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        using coop_col_major_2d = IOScheduler::ColMajor2d<TBlockX, TBlockY>;
+
+        //! @struct coop_row_slice_2d
+        //! @brief  A cooperative scheduling strategy where each row of waves
+        //! in the 2d threadblock will contribute to the fragment operation.
+        //! Waves are partitioned into rows. Only waves in the same row
+        //! participate together.
+        //! E.g. (TBlockX, TBlockY) = 2x2 waves
+        //! RowSlice0: w0 = (0, 0), w1 = (0, 1)
+        //! RowSlice1: w0 = (1, 0), w1 = (1, 1)
+        //! @tparam TBlockX the size of the thread-block in the X dimension
+        //! @tparam TBlockY the size of the thread-block in the Y dimension
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        using coop_row_slice_2d = IOScheduler::RowSlice2d<TBlockX, TBlockY>;
+
+        //! @struct coop_col_slice_2d
+        //! @brief  A cooperative scheduling strategy where each col of waves
+        //! in the 2d threadblock will contribute to the fragment operation.
+        //! Waves are partitioned into cols. Only waves in the same col
+        //! participate together.
+        //! E.g. (TBlockX, TBlockY) = 2x2 waves
+        //! ColSlice0:     ColSlice1:
+        //! w0 = (0, 0),   w0 = (0, 1),
+        //! w1 = (1, 0)    w1 = (1, 1)
+        //! @tparam TBlockX the size of the thread-block in the X dimension
+        //! @tparam TBlockY the size of the thread-block in the Y dimension
+        template <uint32_t TBlockX, uint32_t TBlockY>
+        using coop_col_slice_2d = IOScheduler::ColSlice2d<TBlockX, TBlockY>;
+
+        //! @struct single
+        //! @brief  A cooperative scheduling strategy where only one wave in
+        //! the thread block will participate.
+        //! @tparam TBlockX the size of the thread-block in the X dimension
+        //! @tparam TBlockY the size of the thread-block in the Y dimension
+        //! @tparam WaveIdx the index of the wave which will participate
+        template <uint32_t TBlockX, uint32_t TBlockY, uint32_t WaveIdx = 0u>
+        using single = IOScheduler::Single<TBlockX, TBlockY, WaveIdx>;
+
+    } // namespace fragment_scheduler
+
     //! @class fragment
     //! @brief rocWMMA fragment class. This is the primary object used in block-wise decomposition of the matrix multiply-accumulate (mma)
     //! problem space. In general, fragment data is associated with a matrix context (matrix_a, matrix_b or accumulator), a block size (BlockM/N/K),
@@ -119,23 +188,26 @@ namespace rocwmma
     //! device kernels.
     //!
     //! @tparam MatrixT fragment context
-    //! @tparam BlockM/N/K block dimensions
+    //! @tparam FragM/N/K fragment dimensions
     //! @tparam DataT datatype
     //! @tparam DataLayoutT in-memory layout as col_major or row_major
-    //!
+    //! @tparam Scheduler wave-wise scheduler
     //! @note Fragments are stored in packed registers, however vector elements have no guaranteed order or locality.
     template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
+              uint32_t FragM,
+              uint32_t FragN,
+              uint32_t FragK,
               typename DataT,
-              typename DataLayoutT = void>
+              typename DataLayoutT = void,
+              typename Scheduler   = fragment_scheduler::default_schedule>
     class __align__(4) fragment
     {
     public:
         //! Input / output traits specific to AMDGCN architecture
         using IOTraits =
-            typename IOConfig<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>::IOTraits;
+            typename IOConfig<MatrixT, FragM, FragN, FragK, DataT, DataLayoutT, Scheduler>::
+                IOTraits;
+
         struct Traits
         {
         private:
@@ -145,14 +217,17 @@ namespace rocwmma
             //! The unpacked type for element data
             using UnpackedElementT = typename PackTraits<DataT>::UnpackedT;
 
+            //! WaveCount sizing factor for cooperative fragments
+            static constexpr uint32_t WaveCount = scheduler_traits<Scheduler>::WaveCount;
+
         public:
+            constexpr static uint32_t Size = IOTraits::UnpackedSize / WaveCount;
+
             //! Unpacked data access view
-            using AccessT = VecT<UnpackedElementT, IOTraits::UnpackedSize>;
+            using AccessT = VecT<UnpackedElementT, Size>;
 
             //! Packed data storage view
-            using StorageT = VecT<PackedElementT, IOTraits::PackedSize>;
-
-            constexpr static uint32_t Size = IOTraits::UnpackedSize;
+            using StorageT = VecT<PackedElementT, IOTraits::PackedSize / WaveCount>;
 
             static_assert(IOTraits::PackedVRegCount >= 1,
                           "Fragments must occupy at least one packed register");
@@ -160,8 +235,8 @@ namespace rocwmma
                           "Unable to pack fragment elements");
         };
 
-        ROCWMMA_DEVICE fragment() = default;
-        ROCWMMA_DEVICE fragment(const fragment& other);
+        ROCWMMA_DEVICE           fragment() = default;
+        ROCWMMA_DEVICE           fragment(const fragment& other);
         ROCWMMA_DEVICE fragment& operator=(const fragment& other);
 
         //! @param index Element index
@@ -204,114 +279,67 @@ namespace rocwmma
     //! Fills the entire fragment with the desired value.
     //! @param frag Fragment of type MatrixT with its associated block sizes, data type and layout
     //! @param value Fill value of type DataT
-    //! @tparam Matrix Fragment context
-    //! @tparam BlockM/N/K Block dimensions
+    //! @tparam FragT Opaque fragment type
     //! @tparam DataT Datatype
-    //! @tparam DataLayoutT in-memory layout as col_major or row_major
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE void
-        fill_fragment(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag,
-                      DataT                                                          value);
+    template <typename FragT, typename DataT>
+    ROCWMMA_DEVICE void fill_fragment(FragT& frag, DataT value);
 
     //! Loads the entire fragment from the data pointer according to its matrix and data layout contexts. Data pointer may point to either local or global memory.
     //! @param frag Fragment of type MatrixT with its associated block sizes, data type and layout
     //! @param data Data pointer to global or local memory
     //! @param ldm Leading dimension size
-    //! @tparam MatrixT Fragment context
-    //! @tparam BlockM/N/K Block dimensions
+    //! @tparam FragT Opaque fragment type
     //! @tparam DataT Datatype
-    //! @tparam DataLayoutT In-memory layout as col_major or row_major
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE void
-        load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag,
-                         const DataT*                                                   data,
-                         uint32_t                                                       ldm);
+    template <typename FragT, typename DataT>
+    ROCWMMA_DEVICE void load_matrix_sync(FragT& frag, const DataT* data, uint32_t ldm);
 
     //! Loads the entire fragment from the data pointer according to its matrix layout and data layout contexts.
-    //! Data pointer may point to either local or global memory. This overload provides a run-time ability to choose the data layout of the target fragment.
+    //! Data pointer may point to either local or global memory. This overload provides manual selection of data layout of the incoming memory pointer,
+    //! which will be transformed to conform to the data layout of the fragment.
     //! @param frag Fragment of type MatrixT with its associated block sizes, data type and layout
     //! @param data Data pointer to global/local memory
     //! @param ldm Leading dimension size
     //! @param layout Data layout
-    //! @tparam MatrixT Fragment context
-    //! @tparam BlockM/N/K Block dimensions
+    //! @tparam FragT Opaque fragment type
     //! @tparam DataT Datatype
-    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
-    ROCWMMA_DEVICE void load_matrix_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT>& frag,
-                                         const DataT*                                      data,
-                                         uint32_t                                          ldm,
-                                         layout_t                                          layout);
+    template <typename FragT, typename DataT>
+    ROCWMMA_DEVICE void
+        load_matrix_sync(FragT& frag, const DataT* data, uint32_t ldm, layout_t layout);
 
     //! Stores the entire fragment to the data pointer according to its matrix and data layouts. Data pointer may point to either local or global memory.
     //! @param frag Fragment of type MatrixT with its associated block sizes, data type and layout
     //! @param data Data pointer to global/local memory
     //! @param ldm Leading dimension size
-    //! @tparam MatrixT Fragment context
-    //! @tparam BlockM/N/K Block dimensions
+    //! @tparam FragT Opaque fragment type
     //! @tparam DataT Datatype
-    //! @tparam DataLayoutT in-memory layout as col_major or row_major
-    template <typename MatrixT,
-              uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename DataT,
-              typename DataLayoutT>
-    ROCWMMA_DEVICE void
-        store_matrix_sync(DataT*                                                               data,
-                          fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag,
-                          uint32_t                                                             ldm);
+    template <typename FragT, typename DataT>
+    ROCWMMA_DEVICE void store_matrix_sync(DataT* data, FragT const& frag, uint32_t ldm);
 
-    //! Stores the entire fragment to the data pointer according to its matrix layout. Data pointer may point to either local or global memory.
-    //! This overload provides a run-time ability to choose the data layout of the target fragment.
+    //! Stores the entire fragment to the data pointer according to its matrix layout and data layout contexts.
+    //! Data pointer may point to either local or global memory. This overload provides manual selection of data layout of the outgoing memory pointer,
+    //! which the data layout of the fragment will be transformed to.
     //! @param frag Fragment of type MatrixT with its associated block sizes, data type and layout
     //! @param data Data pointer to global/local memory
     //! @param ldm Leading dimension size
     //! @param layout Data layout
-    //! @tparam MatrixT Fragment context
-    //! @tparam BlockM/N/K Block dimensions
+    //! @tparam FragT Opaque fragment type
     //! @tparam DataT Datatype
-    template <typename MatrixT, uint32_t BlockM, uint32_t BlockN, uint32_t BlockK, typename DataT>
+    template <typename FragT, typename DataT>
     ROCWMMA_DEVICE void
-        store_matrix_sync(DataT*                                                  data,
-                          fragment<MatrixT, BlockM, BlockN, BlockK, DataT> const& frag,
-                          uint32_t                                                ldm,
-                          layout_t                                                layout);
+        store_matrix_sync(DataT* data, FragT const& frag, uint32_t ldm, layout_t layout);
 
     //! Performs the Multiply-Accumulate operation on the fragments A, B, C and D (D = A * B + C)
     //! @param d Accumulator output D
     //! @param a Input fragment A
     //! @param b Input fragment B
     //! @param c Input accumulator fragment C
-    //! @tparam BlockM/N/K block dimensions
-    //! @tparam InputT A/B Datatype of input frags A and B
-    //! @tparam ComputeT Datatype of accumulator fragment C / D
-    //! @tparam LayoutA/B/C/D In-memory layout of frag as col_major or row_major
+    //! @tparam FragA Opaque fragment type for matrix A data
+    //! @tparam FragB Opaque fragment type for matrix A data
+    //! @tparam FragAccumIn Opaque fragment type for input accumulation data
+    //! @tparam FragAccumOut Opaque fragment type for output accumulation data
     //! @note Frag c = d is valid
-    template <uint32_t BlockM,
-              uint32_t BlockN,
-              uint32_t BlockK,
-              typename InputTA,
-              typename InputTB,
-              typename ComputeT,
-              typename LayoutA,
-              typename LayoutB,
-              typename LayoutC,
-              typename LayoutD>
-    ROCWMMA_DEVICE void
-        mma_sync(fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutD>&       d,
-                 fragment<matrix_a, BlockM, BlockN, BlockK, InputTA, LayoutA> const&     a,
-                 fragment<matrix_b, BlockM, BlockN, BlockK, InputTB, LayoutB> const&     b,
-                 fragment<accumulator, BlockM, BlockN, BlockK, ComputeT, LayoutC> const& c);
+    template <typename FragA, typename FragB, typename FragAccumIn, typename FragAccumOut>
+    ROCWMMA_DEVICE void mma_sync(FragAccumOut& d, FragA const& a, FragB const& b, FragAccumIn& c);
 
     //! Synchronization point for all wavefronts in a workgroup. Guarantees pending reads / writes to LDS are flushed.
     ROCWMMA_DEVICE ROCWMMA_INLINE void synchronize_workgroup();

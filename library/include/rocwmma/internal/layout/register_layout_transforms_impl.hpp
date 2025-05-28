@@ -36,23 +36,24 @@ namespace rocwmma
     {
         using RegisterLayout::Format;
 
-        template<typename LayoutTraits>
+        template <typename LayoutTraits>
         struct InterleavedParamHelper : public LayoutTraits
         {
             // Additional input traits for layout
-            static constexpr uint32_t InputBlockSize = LayoutTraits::MmaDim * LayoutTraits::KDim / Constants::AMDGCN_WAVE_SIZE;
+            static constexpr uint32_t InputBlockSize
+                = LayoutTraits::MmaDim * LayoutTraits::KDim / Constants::AMDGCN_WAVE_SIZE;
 
             // Additional acc traits for layout
-            static constexpr uint32_t AccVecSize = LayoutTraits::MmaDim * LayoutTraits::MmaDim / Constants::AMDGCN_WAVE_SIZE;
+            static constexpr uint32_t AccVecSize
+                = LayoutTraits::MmaDim * LayoutTraits::MmaDim / Constants::AMDGCN_WAVE_SIZE;
             static constexpr uint32_t MmaBlocksA = LayoutTraits::KDim / LayoutTraits::MmaDim;
             static constexpr uint32_t MmaBlocksB = LayoutTraits::BlockDim / LayoutTraits::MmaDim;
-            static constexpr uint32_t AccMaxVW = detail::MaxVWSelector<accumulator,
-                                                                        LayoutTraits::BlockDim,
-                                                                        LayoutTraits::KDim,
-                                                                        typename LayoutTraits::DataT,
-                                                                        void>::Result;
+            static constexpr uint32_t AccMaxVW   = detail::MaxVWSelector<accumulator,
+                                                                       LayoutTraits::BlockDim,
+                                                                       LayoutTraits::KDim,
+                                                                       typename LayoutTraits::DataT,
+                                                                       void>::Result;
         };
-
 
         // Specific transform from one format to another
         template <RegisterLayout::Format Src, RegisterLayout::Format Dst, typename... Traits>
@@ -66,8 +67,8 @@ namespace rocwmma
             template <typename VecT>
             ROCWMMA_DEVICE constexpr static inline decltype(auto) exec(VecT&& v)
             {
-                return Transforms::soa_to_aos<LayoutTraits::BlockDim,
-                                              LayoutTraits::MaxVectorWidth>(forward<VecT>(v));
+                return Transforms::soa_to_aos<LayoutTraits::BlockDim, LayoutTraits::MaxVectorWidth>(
+                    forward<VecT>(v));
             }
         };
 
@@ -77,8 +78,8 @@ namespace rocwmma
             template <typename VecT>
             ROCWMMA_DEVICE constexpr static inline decltype(auto) exec(VecT&& v)
             {
-                return Transforms::aos_to_soa<LayoutTraits::BlockDim,
-                                              LayoutTraits::MaxVectorWidth>(forward<VecT>(v));
+                return Transforms::aos_to_soa<LayoutTraits::BlockDim, LayoutTraits::MaxVectorWidth>(
+                    forward<VecT>(v));
             }
         };
 
@@ -102,7 +103,8 @@ namespace rocwmma
             ROCWMMA_DEVICE constexpr static inline decltype(auto) exec(VecT&& v)
             {
                 return Transforms::aos_to_wmma_input_gfx11<LayoutTraits::BlockDim,
-                                                           LayoutTraits::MaxVectorWidth>(forward<VecT>(v));
+                                                           LayoutTraits::MaxVectorWidth>(
+                    forward<VecT>(v));
             }
         };
 
@@ -123,7 +125,8 @@ namespace rocwmma
             ROCWMMA_DEVICE constexpr static inline decltype(auto) exec(VecT&& v)
             {
                 return Transforms::wmma_input_gfx11_to_aos<LayoutTraits::BlockDim,
-                                                           LayoutTraits::MaxVectorWidth>(forward<VecT>(v));
+                                                           LayoutTraits::MaxVectorWidth>(
+                    forward<VecT>(v));
             }
         };
 
@@ -144,7 +147,8 @@ namespace rocwmma
             ROCWMMA_DEVICE constexpr static inline decltype(auto) exec(VecT&& v)
             {
                 return Transforms::aos_to_wmma_acc_gfx11<LayoutTraits::BlockDim,
-                                                         LayoutTraits::MaxVectorWidth>(forward<VecT>(v));
+                                                         LayoutTraits::MaxVectorWidth>(
+                    forward<VecT>(v));
             }
         };
 
@@ -165,7 +169,8 @@ namespace rocwmma
             ROCWMMA_DEVICE constexpr static inline decltype(auto) exec(VecT&& v)
             {
                 return Transforms::wmma_acc_gfx11_to_aos<LayoutTraits::BlockDim,
-                                                         LayoutTraits::MaxVectorWidth>(forward<VecT>(v));
+                                                         LayoutTraits::MaxVectorWidth>(
+                    forward<VecT>(v));
             }
         };
 
@@ -203,11 +208,10 @@ namespace rocwmma
             {
                 using Helper = InterleavedParamHelper<LayoutTraits>;
 
-                return Transforms::soa_int_to_mma_acc_int_a_major<
-                    Helper::AccVecSize,
-                    Helper::MmaBlocksA,
-                    Helper::AccMaxVW,
-                    Helper::MmaDim>(forward<VecT>(v));
+                return Transforms::soa_int_to_mma_acc_int_a_major<Helper::AccVecSize,
+                                                                  Helper::MmaBlocksA,
+                                                                  Helper::AccMaxVW,
+                                                                  Helper::MmaDim>(forward<VecT>(v));
             }
         };
 
@@ -221,12 +225,11 @@ namespace rocwmma
             {
                 using Helper = InterleavedParamHelper<LayoutTraits>;
 
-                return Transforms::aos_int_to_mma_acc_int_a_major<
-                    Helper::AccVecSize,
-                    Helper::MmaBlocksA,
-                    Helper::MmaBlocksB,
-                    Helper::AccMaxVW,
-                    Helper::MmaDim>(forward<VecT>(v));
+                return Transforms::aos_int_to_mma_acc_int_a_major<Helper::AccVecSize,
+                                                                  Helper::MmaBlocksA,
+                                                                  Helper::MmaBlocksB,
+                                                                  Helper::AccMaxVW,
+                                                                  Helper::MmaDim>(forward<VecT>(v));
             }
         };
 
@@ -240,11 +243,10 @@ namespace rocwmma
             {
                 using Helper = InterleavedParamHelper<LayoutTraits>;
 
-                return Transforms::mma_acc_int_a_major_to_soa_int<
-                    Helper::AccVecSize,
-                    Helper::MmaBlocksB,
-                    Helper::AccMaxVW,
-                    Helper::MmaDim>(forward<VecT>(v));
+                return Transforms::mma_acc_int_a_major_to_soa_int<Helper::AccVecSize,
+                                                                  Helper::MmaBlocksB,
+                                                                  Helper::AccMaxVW,
+                                                                  Helper::MmaDim>(forward<VecT>(v));
             }
         };
 
@@ -258,10 +260,9 @@ namespace rocwmma
             {
                 using Helper = InterleavedParamHelper<LayoutTraits>;
 
-                return Transforms::mma_acc_int_a_major_to_aos_int<
-                    Helper::AccVecSize,
-                    Helper::AccMaxVW,
-                    Helper::MmaDim>(forward<VecT>(v));
+                return Transforms::mma_acc_int_a_major_to_aos_int<Helper::AccVecSize,
+                                                                  Helper::AccMaxVW,
+                                                                  Helper::MmaDim>(forward<VecT>(v));
             }
         };
 
@@ -280,7 +281,8 @@ namespace rocwmma
             {
                 using Helper = InterleavedParamHelper<LayoutTraits>;
 
-                return Transforms::soa_int_to_wmma_input_gfx11<Helper::InputBlockSize>(forward<VecT>(v));
+                return Transforms::soa_int_to_wmma_input_gfx11<Helper::InputBlockSize>(
+                    forward<VecT>(v));
             }
         };
 
@@ -294,9 +296,9 @@ namespace rocwmma
             {
                 using Helper = InterleavedParamHelper<LayoutTraits>;
 
-                return Transforms::aos_int_to_wmma_input_gfx11<
-                    Helper::DimPerThread,
-                    Helper::InputBlockSize>(forward<VecT>(v));
+                return Transforms::aos_int_to_wmma_input_gfx11<Helper::DimPerThread,
+                                                               Helper::InputBlockSize>(
+                    forward<VecT>(v));
             }
         };
 
@@ -310,7 +312,8 @@ namespace rocwmma
             {
                 using Helper = InterleavedParamHelper<LayoutTraits>;
 
-                return Transforms::wmma_input_gfx11_to_soa_int<Helper::InputBlockSize>(forward<VecT>(v));
+                return Transforms::wmma_input_gfx11_to_soa_int<Helper::InputBlockSize>(
+                    forward<VecT>(v));
             }
         };
 
@@ -324,9 +327,9 @@ namespace rocwmma
             {
                 using Helper = InterleavedParamHelper<LayoutTraits>;
 
-                return Transforms::wmma_input_gfx11_to_aos_int<
-                    Helper::KPerThread,
-                    Helper::InputBlockSize>(forward<VecT>(v));
+                return Transforms::wmma_input_gfx11_to_aos_int<Helper::KPerThread,
+                                                               Helper::InputBlockSize>(
+                    forward<VecT>(v));
             }
         };
 
@@ -338,11 +341,10 @@ namespace rocwmma
             {
                 using Helper = InterleavedParamHelper<LayoutTraits>;
 
-                return Transforms::soa_int_to_wmma_acc_gfx11<
-                    Helper::AccVecSize,
-                    Helper::MmaBlocksA,
-                    Helper::AccMaxVW,
-                    Helper::MmaDim>(forward<VecT>(v));
+                return Transforms::soa_int_to_wmma_acc_gfx11<Helper::AccVecSize,
+                                                             Helper::MmaBlocksA,
+                                                             Helper::AccMaxVW,
+                                                             Helper::MmaDim>(forward<VecT>(v));
             }
         };
 
@@ -354,12 +356,11 @@ namespace rocwmma
             {
                 using Helper = InterleavedParamHelper<LayoutTraits>;
 
-                return Transforms::aos_int_to_wmma_acc_gfx11<
-                    Helper::AccVecSize,
-                    Helper::MmaBlocksA,
-                    Helper::MmaBlocksB,
-                    Helper::AccMaxVW,
-                    Helper::MmaDim>(forward<VecT>(v));
+                return Transforms::aos_int_to_wmma_acc_gfx11<Helper::AccVecSize,
+                                                             Helper::MmaBlocksA,
+                                                             Helper::MmaBlocksB,
+                                                             Helper::AccMaxVW,
+                                                             Helper::MmaDim>(forward<VecT>(v));
             }
         };
 
@@ -371,11 +372,10 @@ namespace rocwmma
             {
                 using Helper = InterleavedParamHelper<LayoutTraits>;
 
-                return Transforms::wmma_acc_gfx11_to_aos_int<
-                    Helper::AccVecSize,
-                    Helper::MmaBlocksB,
-                    Helper::AccMaxVW,
-                    Helper::MmaDim>(forward<VecT>(v));
+                return Transforms::wmma_acc_gfx11_to_aos_int<Helper::AccVecSize,
+                                                             Helper::MmaBlocksB,
+                                                             Helper::AccMaxVW,
+                                                             Helper::MmaDim>(forward<VecT>(v));
             }
         };
 
@@ -387,10 +387,9 @@ namespace rocwmma
             {
                 using Helper = InterleavedParamHelper<LayoutTraits>;
 
-                return Transforms::wmma_acc_gfx11_to_aos_int<
-                    Helper::AccVecSize,
-                    Helper::AccMaxVW,
-                    Helper::MmaDim>(forward<VecT>(v));
+                return Transforms::wmma_acc_gfx11_to_aos_int<Helper::AccVecSize,
+                                                             Helper::AccMaxVW,
+                                                             Helper::MmaDim>(forward<VecT>(v));
             }
         };
 
@@ -428,22 +427,20 @@ namespace rocwmma
         // the transform or ensure your layout transform mapping is correct.
 
         // Interface to transform from one register layout to another.
-        template <typename RegisterLayoutSrc, typename RegisterLayoutDst, uint32_t WaveCount, typename Enabler = void>
+        template <typename RegisterLayoutSrc, typename RegisterLayoutDst, typename Enabler = void>
         struct register_layout_transform;
 
         // Passthrough transform (NOP):
         // - Layouts are the same
-        template <typename RegisterLayoutLhs, typename RegisterLayoutRhs, uint32_t WaveCount>
+        template <typename RegisterLayoutLhs, typename RegisterLayoutRhs>
         struct register_layout_transform<
             RegisterLayoutLhs,
             RegisterLayoutRhs,
-            WaveCount,
             enable_if_t<is_layout_same_v<RegisterLayoutLhs, RegisterLayoutRhs>>>
         {
             template <typename VecT>
             ROCWMMA_DEVICE constexpr static inline decltype(auto) exec(VecT&& v)
             {
-                // NOP
                 return v;
             }
         };
@@ -451,20 +448,19 @@ namespace rocwmma
         // Unsupported transform:
         // - Invalid RegisterLayouts
         // - Non-orthogonal (no transform path)
-        template <typename RegisterLayoutLhs, typename RegisterLayoutRhs, uint32_t WaveCount>
+        template <typename RegisterLayoutLhs, typename RegisterLayoutRhs>
         struct register_layout_transform<
             RegisterLayoutLhs,
             RegisterLayoutRhs,
-            WaveCount,
-            enable_if_t<!is_layout_same_v<RegisterLayoutLhs, RegisterLayoutRhs>
-                        && (!traits_lhs::is_register_layout || !traits_rhs::is_register_layout
-                            || !is_layout_orthogonal_v<RegisterLayoutLhs, RegisterLayoutRhs>)>>
+            enable_if_t<
+                !is_layout_same_v<
+                    RegisterLayoutLhs,
+                    RegisterLayoutRhs> && (!traits_lhs::is_register_layout || !traits_rhs::is_register_layout || !is_layout_orthogonal_v<RegisterLayoutLhs, RegisterLayoutRhs>)>>
         {
             template <typename VecT>
             ROCWMMA_UNSUPPORTED_IMPL("Register layout transform is not supported")
             ROCWMMA_DEVICE constexpr static inline decltype(auto) exec(VecT&& v)
             {
-                // TODO: remove impl to catch unsupported transforms
                 return forward<VecT>(v);
             }
         };
@@ -472,11 +468,10 @@ namespace rocwmma
         // Valid transform:
         // - RegisterLayouts are valid
         // - Orthogonal (transform path exists)
-        template <typename RegisterLayoutLhs, typename RegisterLayoutRhs, uint32_t WaveCount>
+        template <typename RegisterLayoutLhs, typename RegisterLayoutRhs>
         struct register_layout_transform<
             RegisterLayoutLhs,
             RegisterLayoutRhs,
-            WaveCount,
             enable_if_t<(traits_lhs::is_register_layout && traits_rhs::is_register_layout)
                         && is_layout_orthogonal_v<RegisterLayoutLhs, RegisterLayoutRhs>>>
         {
@@ -492,21 +487,7 @@ namespace rocwmma
                                                                       traits_rhs::Format,
                                                                       storage_traits>;
 
-                if constexpr(WaveCount > 1 && storage_traits::is_interleaved)
-                {
-                    // Functionally, cooperative fragments have a reduced register footprint
-                    auto res = decay_t<VecT>{};
-                    using VecTraits = VecTraits<decay_t<VecT>>;
-                    using VecFwdT = typename VecTraits::template VecT<typename VecTraits::DataT, VecTraits::size() / WaveCount>;
-
-                    (VecFwdT&)res = transform_impl::exec((VecFwdT&)v);
-                    // Forward to functional implementation
-                    return res;
-                }
-                else
-                {
-                    return transform_impl::exec(forward<VecT>(v));
-                }
+                return transform_impl::exec(forward<VecT>(v));
             }
         };
 

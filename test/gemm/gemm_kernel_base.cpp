@@ -1027,5 +1027,4 @@ namespace rocwmma
     ROCWMMA_INSTANTIATE_GEMM_KERNEL_BASE(hfloat16_t, hfloat16_t, float32_t);
 #endif // !ROCWMMA_TESTS_NO_HALF
 #endif // ROCWMMA_EXTENDED_TESTS
-
 } // namespace rocwmma

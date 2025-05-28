@@ -26,74 +26,45 @@
 #ifndef ROCWMMA_IO_BEARER_HPP
 #define ROCWMMA_IO_BEARER_HPP
 
-#include "layout/layout.hpp"
-#include "layout/layout_traits.hpp"
-#include "utility/forward.hpp"
+#include "io_bearer_base.hpp"
+#include "io_scheduler.hpp"
+
 namespace rocwmma
 {
-    //! @struct IOBearer
-    //! @brief IOBearer is the vehicle that executes BearerPolicy transactions iteratively through the coordinate space
-    //! offsets given by the MatrixLayout, while checking and applying bounds controls.
+    //! @struct CoopIOBearer
+    //! @brief CoopIOBearer is the vehicle that executes BearerPolicy transactions iteratively through the coordinate space
+    //! offsets given by the MatrixLayout, while checking and applying bounds controls. Additional logic is present to manage
+    //! splitting load between waves.
     //! @tparam DataLayout The class that handles the configuration of the 1d data layout.
-    //! @tparam MatrixLayout The class that handles the configuration of the 2d iterative space in which the BearerPolicy is applied.
+    //! @tparam CoopMatrixLayout The class that handles the configuration of the 2d iterative space in which the BearerPolicy is applied.
+    //! It is a basic MatrixLayout wrapped in the MatrixCoopLayout class to get access to WaveCount and splitting properties.
     //! @tparam BearerPolicy Typically represents a memory transaction such as a store or load, described by data type and vector size.
     //! @tparam BoundsCtrl Checks bounding box boundary violations by the BearerPolicy and may apply adjustments to the violating buffer.
     template <class DataLayout,
               class MatrixLayout,
               template <typename, uint32_t>
               class BearerPolicy,
-              class BoundsCtrl>
-    struct IOBearer
+              class BoundsCtrl,
+              class Scheduler>
+    struct IOBearer : protected IOBearerBase<DataLayout, MatrixLayout, BearerPolicy, BoundsCtrl>
     {
-    protected:
-        // Access traits from Matrix and DataLayouts
-        using MatrixLayoutTraits = layout_traits<MatrixLayout>;
-        using DataLayoutTraits   = layout_traits<DataLayout>;
-        using DataT              = typename MatrixLayoutTraits::DataT;
+    private:
+        using SchedulerTraits = scheduler_traits<Scheduler>;
+        using BaseImpl        = IOBearerBase<DataLayout, MatrixLayout, BearerPolicy, BoundsCtrl>;
 
-        // Iterative BearerPolicy traits
-        static constexpr uint32_t TransactionSize = MatrixLayoutTraits::VectorWidth;
-        static constexpr uint32_t IterationCount  = reduce_mult(MatrixLayout::strideCounts());
-        static constexpr uint32_t BuffSize        = TransactionSize * IterationCount;
+        ROCWMMA_DEVICE constexpr static inline auto waveEnabler();
 
     public:
-        // Full sized buffer for the whole operation
-        using BufferT = typename BearerPolicy<DataT, BuffSize>::BufferT;
+        using BufferT = typename BaseImpl::BufferT;
 
-    protected:
-        //! @brief Handle partial transactions from front-to-back.
-        //! @tparam PartialCount The number of partial elements in the transaction
-        //! @tparam PBufferT The buffer partial transactions will apply to
-        //! @tparam DataPtrT The base memory data pointer
-        template <uint32_t PartialCount, typename PBufferT, typename DataPtrT>
-        ROCWMMA_DEVICE static inline auto partial_impl(PBufferT& buff, DataPtrT&& dataPtr);
-
-        //! @brief Handle bounds violations from back-to-front.
-        //! @tparam CoundCount The number of boundary violations in the transaction
-        //! @tparam BBufferT The buffer boundary control will apply to
-        //! @tparam ScalarT The datatype of a scalar value to apply in the bounds control
-        template <uint32_t BoundCount, typename BBufferT, typename ScalarT>
-        ROCWMMA_DEVICE static inline auto bounds_impl(BBufferT& buff, ScalarT&& clipVal);
-
-        //! @brief Loop-unroll to cover all transactions described by MatrixLayout strides
-        //! @tparam Depth The loop recursion depth (Default 0)
-        //! @tparam BufferT The buffer segment for the current recursion depth
-        //! @tparam Coord2d The type of the given 2d coordinate object
-        //! @tparam ExternDataT The type of the pointer given by the user
-        //! @note This class is used for both load / store transactions, so the ExternDataT
-        //! is intended to be opaque on the const-ness.
-        template <size_t Depth = 0, typename BufferT, typename Coord2d, typename ExternDataT>
-        ROCWMMA_DEVICE static inline auto
-            unroll_impl(BufferT&& buff, Coord2d&& baseOffset2d, ExternDataT* dataPtr, uint32_t ldm);
-
-    public:
         //! @brief Interface driver for loop-unroll to cover all transactions described by MatrixLayout strides
         //! @tparam BufferT The buffer full buffer segment for all transactions
         //! @tparam ExternDataT The type of the pointer given by the user
         //! @note This class is used for both load / store transactions, so the ExternDataT
         //! is intended to be opaque on the const-ness.
         template <typename BufferT, typename ExternDataT>
-        ROCWMMA_DEVICE static inline void exec(BufferT&& buff, ExternDataT* dataPtr, uint32_t ldm);
+        ROCWMMA_DEVICE static inline void
+            exec(BufferT&& buffer, ExternDataT* dataPtr, uint32_t ldm);
     };
 
 } // namespace rocwmma

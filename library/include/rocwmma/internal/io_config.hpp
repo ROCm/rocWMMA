@@ -26,13 +26,13 @@
 #ifndef ROCWMMA_IO_CONFIG_HPP
 #define ROCWMMA_IO_CONFIG_HPP
 
-#include "./layout/register_layout_transforms.hpp"
 #include "broadcast.hpp"
-#include "coop_load.hpp"
-#include "coop_store.hpp"
 #include "io_bounds_ctrl.hpp"
+#include "io_layout.hpp"
 #include "io_shape.hpp"
 #include "io_tile.hpp"
+#include "io_traits.hpp"
+#include "layout/register_layout_transforms.hpp"
 #include "opaque_load.hpp"
 #include "opaque_store.hpp"
 #include "pack_util.hpp"
@@ -40,39 +40,40 @@
 
 namespace rocwmma
 {
+
     /**
      * \defgroup Rocwmma_ioconf ROCWMMA IOConfig
-     * @brief ROCWMMA fragment input and output configurations
+     * @brief ROCWMMA cooperative fragment input and output configurations
      * @{
      */
 
     //! @struct IOConfig
-    //! @brief Definition of fragment input / output configurations in specific matrix context.
-    //!
-    //! @tparam Matrix fragment context
+    //! @brief Definition of fragment input / output configurations
+    //!         in specific matrix context.
+    //! @tparam MatrixT Matrix fragment context
     //! @tparam BlockM/N/K block dimensions
     //! @tparam DataT data type
     //! @tparam DataLayoutT in-memory layout as col_major or row_major
-    //! @param IOBounds Describes the boundaries given by the fragment
-    //! @param IOTile Describes the actual block tiling decomposition used based on the fragment size
-    //! @param IOShape Dimensional properties of the block tile
-    //! @param IOLayout 1d and 2d layouts of the block tile
-    //! @param IOTraits Meta-properties for input and output of the block tile
-    //! @param PackUtil Utility for packing / unpacking block tile data
-    //! @param Broadcaster Utility for broadcasting a single value to entire fragment
-    //! @param MappingUtil Global mapping utility for current fragment
-    //! @param IOBoundsCtrlLoad Bounds control for loading input
-    //! @param PostLoadXForm Register transform immediately after loading
-    //! @param Loader Issues load instructions for raw data
-    //! @param PreStoreXForm Register transform immediately before storing
-    //! @param IOBoundsCtrlStore Bounds control for storing output
-    //! @param Storer Issues store instructions for raw data
+    //! @tparam Scheduler wave-wise scheduler
+    //! @param IOBounds a rectangular bounds condition handler
+    //! @param IOTile a handler to pad FragMNK dimensions as needed for block-wise decomp
+    //! @param IOShape dimensional properties of the fragment
+    //! @param IOLayout 1d and 2d layouts of the fragment
+    //! @param IOTraits meta-properties for input and output of the fragment
+    //! @param MappingUtil global mapping utility for current fragment
+    //! @param PackUtil utility for packing / unpacking fragment data
+    //! @param Broadcaster utility for broadcasting a scalar element to the entire vector
+    //! @param Loader issues load instructions for raw fragment data
+    //! @param PostLoadXForm handler to transform from memory to register layout
+    //! @param PreStoreXForm handler to transform from register to memory layout
+    //! @param Storer Issues store instructions for raw fragment data
     template <typename MatrixT,
               uint32_t FragM,
               uint32_t FragN,
               uint32_t FragK,
               typename DataT,
-              typename DataLayoutT>
+              typename DataLayoutT,
+              typename Scheduler>
     struct IOConfig
     {
         // The specific size of the requested fragment
@@ -90,11 +91,10 @@ namespace rocwmma
         // Using quantized block dimensions, determine the layout characteristics we will use with
         // this fragment.
         using IOLayout
-            = IOLayoutInt<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, 1u>;
+            = IOLayoutInt<MatrixT, IOShape::BlockDim, IOShape::KDim, DataT, DataLayoutT, Scheduler>;
 
         using IOTraits = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT, IOLayout::VW>;
 
-        // Define functional classes used during fragment IO workflow operations such as loading / storing
         using MappingUtil
             = MappingUtil<IOShape::BlockHeight, IOShape::BlockWidth, DataT, DataLayoutT>;
 
@@ -109,15 +109,15 @@ namespace rocwmma
 
         using Loader = OpaqueLoad<typename IOLayout::DataLayout,
                                   typename IOLayout::MatrixLayout,
-                                  IOBoundsCtrlLoad>;
+                                  IOBoundsCtrlLoad,
+                                  Scheduler>;
 
+        // TODO: remove the waveCount dependency by adjusting the buffer size statically.
         using PostLoadXForm = register_layout_transform<typename IOLayout::StorageLayout,
-                                                        typename IOLayout::FragmentLayout,
-                                                        1u>;
+                                                        typename IOLayout::FragmentLayout>;
 
         using PreStoreXForm = register_layout_transform<typename IOLayout::FragmentLayout,
-                                                        typename IOLayout::StorageLayout,
-                                                        1u>;
+                                                        typename IOLayout::StorageLayout>;
 
         // Storage requires only clipping.
         using IOBoundsCtrlStore
@@ -127,22 +127,21 @@ namespace rocwmma
 
         using Storer = OpaqueStore<typename IOLayout::DataLayout,
                                    typename IOLayout::MatrixLayout,
-                                   IOBoundsCtrlStore>;
+                                   IOBoundsCtrlStore,
+                                   Scheduler>;
     };
 
-    /************************************************
- * Matrix C/D (accumulator) with undetermined DataLayout
- *
- * Fewer specific indications for matrix data geometry I/O, however
- * general IOTraits, Pack/Unpack, Broadcast still available.
- *
- * */
-    template <uint32_t FragM, uint32_t FragN, uint32_t FragK, typename DataT>
-    struct IOConfig<accumulator, FragM, FragN, FragK, DataT, void>
+    //! @note Matrix C/D (accumulator) with undetermined DataLayout
+    //!
+    //! Fewer specific indications for matrix data geometry I/O, however
+    //! general IOShape, PackUtil, Broadcast still available.
+    template <uint32_t FragM, uint32_t FragN, uint32_t FragK, typename DataT, typename Scheduler>
+    struct IOConfig<accumulator, FragM, FragN, FragK, DataT, void, Scheduler>
     {
-        using IOTile   = IOTile<FragM, FragN, FragK, DataT>;
-        using IOShape  = IOShape<accumulator, IOTile::BlockM, IOTile::BlockN, IOTile::BlockK>;
-        using IOLayout = IOLayoutInt<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, 1u>;
+        using IOTile  = IOTile<FragM, FragN, FragK, DataT>;
+        using IOShape = IOShape<accumulator, IOTile::BlockM, IOTile::BlockN, IOTile::BlockK>;
+        using IOLayout
+            = IOLayoutInt<accumulator, IOShape::BlockDim, IOShape::KDim, DataT, void, Scheduler>;
         using IOTraits    = IOTraits<IOShape::BlockDim, IOShape::KDim, DataT>;
         using PackUtil    = PackUtil<DataT>;
         using Broadcaster = Broadcast<DataT, IOTraits::UnpackedSize>;

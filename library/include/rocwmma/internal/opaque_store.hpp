@@ -26,9 +26,11 @@
 #ifndef ROCWMMA_OPAQUE_STORE_HPP
 #define ROCWMMA_OPAQUE_STORE_HPP
 
-#include "io_traits.hpp"
+#include "io_bearer.hpp"
+#include "io_bounds_ctrl.hpp"
+#include "io_scheduler.hpp"
 #include "types.hpp"
-#include "vector_iterator.hpp"
+#include "vector.hpp"
 
 namespace rocwmma
 {
@@ -37,7 +39,7 @@ namespace rocwmma
         template <typename DataT, uint32_t VectorWidth>
         struct amdgcn_opaque_store
         {
-            static_assert(VectorWidth > 0, "Vector width must be greater than 0");
+            static_assert(VectorWidth > 0u, "Vector width must be greater than 0");
             static_assert(sizeof(DataT[VectorWidth]) == sizeof(VecT<DataT, VectorWidth>),
                           "Cannot vectorize output");
 
@@ -76,12 +78,19 @@ namespace rocwmma
 
     } // namespace detail
 
-    template <class DataLayout, class MatrixLayout, class BoundsCtrl = IOBoundsCtrl::Default>
-    struct OpaqueStore
-        : public IOBearer<DataLayout, MatrixLayout, detail::OpaqueStoreBearer, BoundsCtrl>
+    template <class DataLayout,
+              class MatrixLayout,
+              class BoundsCtrl = IOBoundsCtrl::Default,
+              class Scheduler  = IOScheduler::Default>
+    struct OpaqueStore : public IOBearer<DataLayout,
+                                         MatrixLayout,
+                                         detail::OpaqueStoreBearer,
+                                         BoundsCtrl,
+                                         Scheduler>
     {
     private:
-        using Base = IOBearer<DataLayout, MatrixLayout, detail::OpaqueStoreBearer, BoundsCtrl>;
+        using Base
+            = IOBearer<DataLayout, MatrixLayout, detail::OpaqueStoreBearer, BoundsCtrl, Scheduler>;
 
         // Don't expose the base implementation, we change arg forwarding order
         using Base::exec;

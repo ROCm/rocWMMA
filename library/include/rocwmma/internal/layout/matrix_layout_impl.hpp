@@ -390,10 +390,12 @@ namespace rocwmma
 
                 // Check KPerThread validity
                 static_assert(BlockK >= KPerThread, "Invalid KPerThread");
+                static_assert(KPerThread > 0, "Invalid KPerThread - try a larger block size");
                 static_assert(BlockK % KPerThread == 0, "BlockK is not a multiple of KPerThread");
 
                 // Check SplitK validity
                 static_assert(BlockK >= SplitK, "Invalid SplitK");
+                static_assert(SplitK > 0, "Invalid SplitK");
                 static_assert(BlockK % SplitK == 0, "BlockK is not a multiple of SplitK");
 
                 // Check MmaDim validity
@@ -460,10 +462,12 @@ namespace rocwmma
 
                 // Check KPerThread validity
                 static_assert(BlockK >= KPerThread, "Invalid KPerThread");
+                static_assert(KPerThread > 0, "Invalid KPerThread - try a larger block size");
                 static_assert(BlockK % KPerThread == 0, "BlockK is not a multiple of KPerThread");
 
                 // Check SplitK validity
                 static_assert(BlockK >= SplitK, "Invalid SplitK");
+                static_assert(SplitK > 0, "Invalid SplitK");
                 static_assert(BlockK % SplitK == 0, "BlockK is not a multiple of SplitK");
 
                 // Check MmaDim validity

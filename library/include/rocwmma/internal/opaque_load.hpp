@@ -27,10 +27,10 @@
 #define ROCWMMA_OPAQUE_LOAD_HPP
 
 #include "io_bearer.hpp"
-#include "io_traits.hpp"
-#include "tuple.hpp"
+#include "io_bounds_ctrl.hpp"
+#include "io_scheduler.hpp"
 #include "types.hpp"
-#include "vector_iterator.hpp"
+#include "vector.hpp"
 
 namespace rocwmma
 {
@@ -63,9 +63,12 @@ namespace rocwmma
 
     } // namespace detail
 
-    template <class DataLayout, class MatrixLayout, class BoundsCtrl = IOBoundsCtrl::Default>
+    template <class DataLayout,
+              class MatrixLayout,
+              class BoundsCtrl = IOBoundsCtrl::Default,
+              class Scheduler  = IOScheduler::Default>
     struct OpaqueLoad
-        : public IOBearer<DataLayout, MatrixLayout, detail::OpaqueLoadBearer, BoundsCtrl>
+        : public IOBearer<DataLayout, MatrixLayout, detail::OpaqueLoadBearer, BoundsCtrl, Scheduler>
     {
     };
 

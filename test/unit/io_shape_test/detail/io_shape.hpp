@@ -56,6 +56,19 @@ namespace rocwmma
         }
 
         template <uint32_t WaveCount>
+        struct DummyCoopScheduler
+        {
+            static constexpr uint32_t waveCount()
+            {
+                return WaveCount;
+            }
+            static constexpr uint32_t waveIndex()
+            {
+                return 0u;
+            }
+        };
+
+        template <uint32_t WaveCount>
         bool waveTest()
         {
             bool err = false;
@@ -68,6 +81,7 @@ namespace rocwmma
 
                 using detail::MaxVWSelector;
                 using detail::MmaDimSelector;
+                using Scheduler = DummyCoopScheduler<WaveCount>;
 
                 constexpr auto ExpectMaxVW
                     = MaxVWSelector<MatrixT, BlockDim, KDim, DataT, DataLayoutT, WaveCount>::Result;
@@ -85,9 +99,9 @@ namespace rocwmma
 
                 constexpr auto ExpectMmaDim = MmaDimSelector<BlockDim, DataT>::Result;
 
-                using IOLayout = IOLayout<MatrixT, BlockDim, KDim, DataT, DataLayoutT, WaveCount>;
+                using IOLayout = IOLayout<MatrixT, BlockDim, KDim, DataT, DataLayoutT, Scheduler>;
                 using IOLayoutInt
-                    = IOLayoutInt<MatrixT, BlockDim, KDim, DataT, DataLayoutT, WaveCount>;
+                    = IOLayoutInt<MatrixT, BlockDim, KDim, DataT, DataLayoutT, Scheduler>;
                 using ExpectDataLayout = DataLayout::template Array1d<DataLayoutT>;
 
                 err |= (IOLayout::MaxVW != ExpectMaxVW);
