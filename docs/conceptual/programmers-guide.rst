@@ -44,21 +44,24 @@ integrate rocWMMA API calls directly within their own kernels. An important feat
 to the compiler's optimization passes where there is higher potential to generate more efficient device code. Moreover, no expensive host-device transfers or
 external kernel invokations are imposed by the API.
 
-The programming model that is the most useful with the rocWMMA API is wavefront-centric. In a more general
-sense, loading and storing data or mma calls are assumed to involve the entire wavefront (or, warp). In the collaborative API, we can assume that other wavefronts in the
-same threadblock may collaborate moving data from one location to another.
+The programming model that is the most useful with the rocWMMA API is wavefront-centric. In a more general sense, loading and storing data or mma functions are assumed to involve the entire wavefront (or, warp).
+Undefined behaviour is expected if not all threads in each wavefront are active while using rocWMMA.
+
+Collaborative fragments can be described as fragments whose data is distributed across participating waves in the same threadblock. These fragments may optimize the movement of data from between memory locations collectively
+to balance shared data responsibilities across wavefronts in a threadblock (e.g., movement from global memory to LDS), but are not supported in MMA functions. Collaborative fragments are expressed by imbuing fragment instances with a fragment scheduler which is collaborative.
 
 The rocWMMA API can eliminate a very large amount of boiler-plate code as it provides tools to decompose matrix multiply-accumulate based problems into
 blocks, or fragments of data that may be efficiently processed by individual wavefronts. Wavefronts will abstract blocks of data into ``fragments``, which are designed to encapsulate meta-data properties about the blocks in different contexts, along with the data itself:
 
-- a general geometric shape (e.g. BlockM/N/K dimensions)
-- a context of the provenance of the data (e.g. ``matrix_a`` or ``matrix_b``)
-- a context of how the data was stored (e.g. row or column major)
-- a datatype (e.g. single or half-precision floating point)
+- a general geometric shape (e.g., BlockM/N/K dimensions)
+- a context of the provenance of the data (e.g., ``matrix_a`` or ``matrix_b``)
+- a context of how the data was stored (e.g., row or column major)
+- a datatype (e.g., single or half-precision floating point)
+- a fragment scheduler (e.g., a class that specifies threadblock collaboration, how many waves participate and in what order)
 
 These basic traits are then used to decide things like how much storage is needed, and how rocWMMA will organize individual threads in a layout to fetch or store the data.
 ``Fragments`` are powerful objects because they are versatile in configuring and representing data, and their meta-properties propagate easily via Argument
-Dependent Lookup (ADL) and other deduction techniques. In practice, the user must simply configure the fragments correctly for their problem and rocWMMA conveniently takes care of the rest.
+Dependent Lookup (ADL) and other deduction techniques. In practice, the user must simply configure the fragments according for their problem and rocWMMA conveniently takes care of the rest.
 
 The implementation code is generally encapsulated into different layers of objects, fulfilling specific interface communications (from low level functions to API level):
 
@@ -168,7 +171,6 @@ The ``library`` directory contains the following structure:
 The API currently has three API contexts:
 
   - ``rocwmma.hpp``: The main API for rocWMMA, defining fragment data abstractions, wave-wise storing, loading, matrix multiply-accumulate (mma) and threadblock synchronization. This API's function signatures are portable from nvcuda::wmma.
-  - ``rocwmma_coop.hpp``: A complimentary API for rocWMMA, defining functionality that allows GPU wavefronts to collaborate in the loading / storing of fragment data. These are unique to rocWMMA.
   - ``rocwmma_transforms.hpp``: A complimentary API for rocWMMA, defining functionality to manipulate fragment data (e.g. transpose and data layout changes). These are unique to rocWMMA.
 
 - ``library/include/internal``: Internal include files define the main infrastructure driving the rocWMMA API:
@@ -179,7 +181,7 @@ The API currently has three API contexts:
   - Loading and storing utilities
   - Layouts of memory and registers
   - Mapping utilities
-  - Intrinsic wrappers
+  - Intrinsic wrappers and hardware abstraction
   - Vector class implementations
   - Vector conversion, permutation and transform utilities
   - Vector packing and unpacking
