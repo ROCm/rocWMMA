@@ -11,10 +11,6 @@ Migration guide for rocWMMA 2.0
 
 This document outlines the key API changes and new features introduced in rocWMMA 2.0, with examples to help you migrate from earlier versions.
 
---------------------------
-API changes in rocWMMA 2.0
---------------------------
-
 Starting with version 2.0, rocWMMA introduces significant changes to its API, including:
 
 - Removed cooperative API
@@ -42,7 +38,7 @@ Previous releases began deprecating cooperative API functions such as those defi
                                              uint32_t                                                             ldm,
                                              uint32_t                                                             waveIndex);
 
-These functions previously required users to provide ``WaveCount`` as a template parameter and pass ``waveIndex`` as an argument to the API calls. This information was used to distribute data responsibilities across participating waves, aiming to balance and optimize data transactions within a thread block. Cooperation between wavefronts in a threadblock requires the use of a separate cooperative API, along with propagation of wave count and wave index values.
+These functions previously required ``WaveCount`` as a template parameter and pass ``waveIndex`` as an argument to the API calls. This information was used to distribute data responsibilities across participating waves, aiming to balance and optimize data transactions within a thread block. Cooperation between wavefronts in a threadblock requires the use of a separate cooperative API, along with propagation of wave count and wave index values.
 
 Example:
 
