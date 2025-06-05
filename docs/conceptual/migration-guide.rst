@@ -166,8 +166,8 @@ In summary, partial tiles are padded to the minimum MMA block dimensions to acco
 
 .. note::
 
-   Padded fragment internals always use padded sized resources instead of fragment sized resources.
-   However, fragment element-wise accesses, such as uniform FMA, should continue to use fragment.num_elements, assuming that any padded elements will be zero.
+   Padded fragment internals always use padded-sized resources instead of fragment-sized resources.
+   However, fragment element-wise accesses, such as uniform FMA, should continue to use `fragment.num_elements`, assuming that any padded elements will be zero.
 
    Example:
 
