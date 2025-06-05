@@ -16,7 +16,6 @@ subtrees:
   entries:
   - file: conceptual/programmers-guide
     title: Programming guide
-  entries:
   - file: conceptual/migration-guide
     title: Migration guide
 
