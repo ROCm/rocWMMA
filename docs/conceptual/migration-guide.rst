@@ -38,7 +38,7 @@ Previous releases began deprecating cooperative API functions such as those defi
                                              uint32_t                                                             ldm,
                                              uint32_t                                                             waveIndex);
 
-These functions previously required ``WaveCount`` as a template parameter and pass ``waveIndex`` as an argument to the API calls. This information was used to distribute data responsibilities across participating waves, aiming to balance and optimize data transactions within a thread block. Cooperation between wavefronts in a threadblock requires the use of a separate cooperative API, along with propagation of wave count and wave index values.
+These functions previously required ``WaveCount`` as a template parameter and passed ``waveIndex`` as an argument to the API calls. This information was used to distribute data responsibilities across participating waves, aiming to balance and optimize data transactions within a thread block. Cooperation between wavefronts in a threadblock requires the use of a separate cooperative API, along with propagation of wave count and wave index values.
 
 Example:
 
