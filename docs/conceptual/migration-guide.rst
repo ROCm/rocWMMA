@@ -66,7 +66,7 @@ Example:
    load_matrix_coop_sync<warpCount>(grBuffA, gAddrA, lda, warpIndex);
    store_matrix_coop_sync<warpCount>(ldsAddr, applyDataLayout<DataLayoutLds, warpCount>(applyTranspose(grBuffA)), ldsld, warpIndex);
 
-Calculating the warp count and warp index requires extra boilerplate code. It is important to supply the same warp count and warp index values to matching pairs of load, store and transform APIs. Providing mismatched values to APIs that depend on matching warp count and index poses a risk of incorrect behavior. Embedding the warp count and index into the fragment object helps mitigate the risk.
+Calculating the warp count and warp index requires extra boilerplate code. It is important to supply the same warp count and warp index values to matching pairs of load, store, and transform APIs. Providing mismatched values to APIs that depend on matching warp count and index poses a risk of incorrect behavior. Embedding the warp count and index into the fragment object helps mitigate the risk.
 
 As a result, fragments are augmented with an additional fragment scheduler template parameter. Fragment schedulers are classes that represent threadblock scheduling models. These models provide static values for both the wave count and wave order (wave index). Fragment schedulers are classified as either non-cooperative (the default, where waves act independently) or cooperative (where waves collaborate within a threadblock). Their names reflect their ordering scheme.
 
