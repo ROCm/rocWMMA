@@ -114,7 +114,7 @@ To summarize, the ``CoopScheduler`` template parameter allows you to express the
 
 .. note::
 
-   Cooperative fragment schedulers require template parameters for ``TBLOCK_X`` and ``TBLOCK_Y`` dimensions. This design enables various optimizations by allowing the schedulers to provide a static wave count at compile time. As a result rocWMMA no longer supports run-time wave count calculations in favor of better performance.
+   Cooperative fragment schedulers require template parameters for ``TBLOCK_X`` and ``TBLOCK_Y`` dimensions. This design enables various optimizations by allowing the schedulers to provide a static wave count at compile time. As a result, rocWMMA no longer supports run-time wave count calculations in favor of better performance.
 
 ------------------------
 Partial fragment support
