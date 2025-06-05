@@ -13,7 +13,7 @@ This document outlines the key API changes and new features introduced in rocWMM
 
 Starting with version 2.0, rocWMMA introduces significant changes to its API, including:
 
-- Removed cooperative API
+- Removal of the cooperative API
 - Transforms API no longer requires wave count template parameters
 - rocWMMA fragments now have a fragment scheduler template argument
 - rocWMMA fragments now support partial fragment sizes
