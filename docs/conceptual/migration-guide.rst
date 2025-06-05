@@ -95,7 +95,7 @@ Example:
       ...
    }
 
-Simplified usage with new cooperative fragment changes:
+Here is the simplified usage with new cooperative fragment changes:
 
 .. code-block:: c++
 
