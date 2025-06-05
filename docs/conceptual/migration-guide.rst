@@ -110,7 +110,7 @@ Here is the simplified usage with new cooperative fragment changes:
    load_matrix_sync(grBuffA, gAddrA, lda);
    store_matrix_sync(ldsAddr, applyDataLayout<DataLayoutLds>(applyTranspose(grBuffA)), ldsld);
 
-To summarize, the ``CoopScheduler`` template parameter allows you to express the required cooperative behavior with the fragment class declaration. Boilerplate code for calculating wave count and wave indices are wrapped into the ``CoopScheduler`` class. You can use fragments with the standard rocWMMA API without the need to externally propagate matching wave counts or wave indices, making rocWMMA more compact and expressive than previous versions.
+To summarize, the ``CoopScheduler`` template parameter allows you to express the required cooperative behavior with the fragment class declaration. Boilerplate code for calculating wave count and wave indices is wrapped into the ``CoopScheduler`` class. You can use fragments with the standard rocWMMA API without the need to externally propagate matching wave counts or wave indices, making rocWMMA more compact and expressive than previous versions.
 
 .. note::
 
