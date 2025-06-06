@@ -38,7 +38,7 @@ Previous releases began deprecating cooperative API functions such as those defi
                                              uint32_t                                                             ldm,
                                              uint32_t                                                             waveIndex);
 
-These functions previously required ``WaveCount`` as a template parameter and passed ``waveIndex`` as an argument to the API calls. This information was used to distribute data responsibilities across participating waves, aiming to balance and optimize data transactions within a thread block. Cooperation between wavefronts in a threadblock requires the use of a separate cooperative API, along with propagation of wave count and wave index values.
+These functions previously required ``WaveCount`` as a template parameter and passed ``waveIndex`` as an argument to the API calls. This information was used to distribute data responsibilities across participating waves, aiming to balance and optimize data transactions within a thread block. Cooperation between wavefronts in a thread block requires the use of a separate cooperative API, along with propagation of wave count and wave index values.
 
 Example:
 
@@ -47,7 +47,7 @@ Example:
    // Global read (macro tile)
    using GRBuffA = fragment<matrix_a, MACRO_TILE_X, ROCWMMA_N, ROCWMMA_K, InputT, DataLayoutA>;
 
-   // Local warp coordinate relative to current threadblock (wg).
+   // Local warp coordinate relative to current thread block (wg).
    constexpr auto warpDims        = make_coord2d(WARPS_X, WARPS_Y);
    auto           localWarpCoord  = make_coord2d(threadIdx.x / WARP_SIZE, threadIdx.y);
 
@@ -68,7 +68,7 @@ Example:
 
 Calculating the warp count and warp index requires extra boilerplate code. It is important to supply the same warp count and warp index values to matching pairs of load, store, and transform APIs. Providing mismatched values to APIs that depend on matching warp count and index poses a risk of incorrect behavior. Embedding the warp count and index into the fragment object helps mitigate the risk.
 
-As a result, fragments are augmented with an additional fragment scheduler template parameter. Fragment schedulers are classes that represent threadblock scheduling models. These models provide static values for both the wave count and wave order (wave index). Fragment schedulers are classified as either non-cooperative (the default, where waves act independently) or cooperative (where waves collaborate within a threadblock). Their names reflect their ordering scheme.
+As a result, fragments are augmented with an additional fragment scheduler template parameter. Fragment schedulers are classes that represent thread block scheduling models. These models provide static values for both the wave count and wave order (wave index). Fragment schedulers are classified as either non-cooperative (the default, where waves act independently) or cooperative (where waves collaborate within a thread block). Their names reflect their ordering scheme.
 
 Example:
 
@@ -81,7 +81,7 @@ Example:
       using default_schedule = IOScheduler::Default;
 
       //! @struct coop_row_major_2d
-      //! @brief  A cooperative scheduling strategy where each wave in the 2d threadblock
+      //! @brief  A cooperative scheduling strategy where each wave in the 2d thread block
       //! will contribute to the fragment operation in row_major grid order.
       //! All waves are scheduled in row_major order.
       //! E.g. (TBlockX, TBlockY) => 2x2 waves
@@ -100,7 +100,7 @@ Here is the simplified usage with new cooperative fragment changes:
 .. code-block:: c++
 
    // Global read (macro tile)
-   // Distribute segments of macro tile data between waves of the threadblock in
+   // Distribute segments of macro tile data between waves of the thread block in
    // row major order.
    using CoopScheduler = fragment_scheduler::coop_row_major_2d<TBLOCK_X, TBLOCK_Y>;
    using GRBuffA = fragment<matrix_a, MACRO_TILE_X, ROCWMMA_N, ROCWMMA_K, InputT, DataLayoutA, CoopScheduler>;
