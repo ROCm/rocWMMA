@@ -44,24 +44,24 @@ integrate rocWMMA API calls directly within their own kernels. An important feat
 to the compiler's optimization passes where there is higher potential to generate more efficient device code. Moreover, no expensive host-device transfers or
 external kernel invokations are imposed by the API.
 
-The programming model that is the most useful with the rocWMMA API is wavefront-centric. In a more general sense, loading and storing data or mma functions are assumed to involve the entire wavefront (or, warp).
+The programming model best suited for the rocWMMA API is wavefront-centric. More generally, data loading, storing, and MMA functions are assumed to involve the entire wavefront (or warp).
 Undefined behaviour is expected if not all threads in each wavefront are active while using rocWMMA.
 
-Collaborative fragments can be described as fragments whose data is distributed across participating waves in the same threadblock. These fragments may optimize the movement of data from between memory locations collectively
-to balance shared data responsibilities across wavefronts in a threadblock (e.g., movement from global memory to LDS), but are not supported in MMA functions. Collaborative fragments are expressed by imbuing fragment instances with a fragment scheduler which is collaborative.
+The data of collaborative fragments is distributed across participating waves in the same threadblock.
+Collaborative fragments optimize collective data movement between memory locations, such as data movement from global memory to LDS, to balance shared data responsibilities across wavefronts. However, collaborative fragments are not supported in MMA functions. These fragments are expressed by imbuing fragment instances with a collaborative fragment scheduler.
 
 The rocWMMA API can eliminate a very large amount of boiler-plate code as it provides tools to decompose matrix multiply-accumulate based problems into
 blocks, or fragments of data that may be efficiently processed by individual wavefronts. Wavefronts will abstract blocks of data into ``fragments``, which are designed to encapsulate meta-data properties about the blocks in different contexts, along with the data itself:
 
-- a general geometric shape (e.g., BlockM/N/K dimensions)
-- a context of the provenance of the data (e.g., ``matrix_a`` or ``matrix_b``)
-- a context of how the data was stored (e.g., row or column major)
-- a datatype (e.g., single or half-precision floating point)
-- a fragment scheduler (e.g., a class that specifies threadblock collaboration, how many waves participate and in what order)
+- a general geometric shape, for example, the BlockM/N/K dimensions
+- a context of the provenance of the data, for example, ``matrix_a`` or ``matrix_b``
+- a context of how the data is stored, for example, row-major or column-major
+- a datatype, for example, single or half-precision floating point
+- a fragment scheduler, for example, a class that specifies thread block collaboration, the number of participating waves, and their execution order
 
 These basic traits are then used to decide things like how much storage is needed, and how rocWMMA will organize individual threads in a layout to fetch or store the data.
 ``Fragments`` are powerful objects because they are versatile in configuring and representing data, and their meta-properties propagate easily via Argument
-Dependent Lookup (ADL) and other deduction techniques. In practice, the user must simply configure the fragments according for their problem and rocWMMA conveniently takes care of the rest.
+Dependent Lookup (ADL) and other deduction techniques. In practice, users configure the fragments to fit their problem and rocWMMA handles the rest.
 
 The implementation code is generally encapsulated into different layers of objects, fulfilling specific interface communications (from low level functions to API level):
 

@@ -10,27 +10,27 @@ Documentation for rocWMMA is available at
 * Added internal register layout transforms to support interleaved MMA layouts
 * Added support for the gfx950 target
 * Added mixed input `bf8` / `fp8` types for MMA support
-* Fragment scheduler API objects have been added to embed threadblock cooperation properties in fragments
+* Added fragment scheduler API objects to embed threadblock cooperation properties in fragments
 
 ### Changed
 
 * Augmented load / store / MMA internals with static loop unrolling
 * rocWMMA mma_sync API now supports `wave tile` fragment sizes
-* rocWMMA cooperative fragments are now expressed with fragment scheduler template args
+* rocWMMA cooperative fragments are now expressed with fragment scheduler template arguments
 * rocWMMA cooperative fragments now use the same base API as non-cooperative fragments
 * rocWMMA cooperative fragments register usage footprint has been reduced
 * rocWMMA fragments now support partial tile sizes with padding
 
 ### Optimized
 
-* Added internal flow control barriers to improve asm code generation and improve overall performance
-* Using interleaved layouts by default in MMA to improve overall performance
+* Added internal flow control barriers to improve assembly code generation and overall performance
+* Enabled interleaved layouts by default in MMA to improve overall performance
 
 ### Removed
 
 * Removed support for the gfx940 and gfx941 targets
-* Removed rocWMMA cooperative API
-* Wave count template parameters are removed from transforms APIs
+* Removed the rocWMMA cooperative API
+* Removed wave count template parameters from transforms APIs
 
 ### Resolved issues
 

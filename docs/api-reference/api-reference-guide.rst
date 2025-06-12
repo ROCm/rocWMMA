@@ -190,7 +190,7 @@ Data Types **<Ti / To / Tc>** = <Input type / Output Type / Compute Type>, where
     \*\* = CDNA architectures matrix unit accumulation is natively 32-bit precision and is converted to the desired type.
 
 .. note::
-    rocWMMA does support partial fragment sizes where FragMNK may be smaller than the BlockMNK sizes listed in the table above. These fragments are internally padded to nearest supported BlockMNK sizes.
+    rocWMMA supports partial fragment sizes where ``FragMNK`` may be smaller than the ``BlockMNK`` sizes listed in the table above. These fragments are internally padded to nearest supported ``BlockMNK`` sizes.
 
 
 Supported matrix layouts
