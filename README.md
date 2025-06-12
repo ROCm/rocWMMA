@@ -41,7 +41,7 @@ Dependencies:
 
 ## Build with CMake
 
-For more detailed information, please refer to the [rocWMMA installation guide](https://rocm.docs.amd.com/projects/rocWMMA/en/latest/installation.html).
+For more detailed information, please refer to the [rocWMMA installation guide](https://rocm.docs.amd.com/projects/rocWMMA/en/latest/install/installation.html).
 
 ### Project options
 
@@ -116,4 +116,4 @@ The latest official documentation for rocWMMA is available at:
 
 ## Contributing to the rocWMMA Library
 
-Community collaboration is encouraged! If you are considering contributing, please follow the [rocWMMA Contribution Guide](https://github.com/ROCm/rocWMMA/CONTRIBUTING.md) to get started.
+Community collaboration is encouraged! If you are considering contributing, please follow the [rocWMMA Contribution Guide](https://github.com/ROCm/rocWMMA/blob/develop/CONTRIBUTING.md) to get started.
