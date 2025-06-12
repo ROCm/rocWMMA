@@ -24,6 +24,7 @@ The rocWMMA public repository is located at `<https://github.com/ROCm/rocWMMA>`_
   .. grid-item-card:: Conceptual
 
     * :doc:`Programming guide <./conceptual/programmers-guide>`
+    * :doc:`Migration guide <./conceptual/migration-guide>`
 
   .. grid-item-card:: Examples
 

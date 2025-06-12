@@ -168,9 +168,9 @@ The ``library`` directory contains the following structure:
 
 - ``library/include/rocwmma/``: C++ include files for the rocWMMA API. These files also contain Doxygen content that documents the API.
 
-The API currently has three API contexts:
+The API currently has two API contexts:
 
-  - ``rocwmma.hpp``: The main API for rocWMMA, defining fragment data abstractions, wave-wise storing, loading, matrix multiply-accumulate (mma) and threadblock synchronization. This API's function signatures are portable from nvcuda::wmma.
+  - ``rocwmma.hpp``: The main API for rocWMMA, defining fragment data abstractions, wave-wise storing, loading, matrix multiply-accumulate (mma) and threadblock synchronization. This API offers function signatures highly compatible with common CUDA WMMA interfaces.
   - ``rocwmma_transforms.hpp``: A complimentary API for rocWMMA, defining functionality to manipulate fragment data (e.g. transpose and data layout changes). These are unique to rocWMMA.
 
 - ``library/include/internal``: Internal include files define the main infrastructure driving the rocWMMA API:
@@ -187,7 +187,7 @@ The API currently has three API contexts:
   - Vector packing and unpacking
   - Matrix multiply-accumulate
   - Cooperative loading and storing
-  - Threadblock synchronization and flow control
+  - Thread block synchronization and flow control
   - Utility code
   - Data layout transformation utilities
 
