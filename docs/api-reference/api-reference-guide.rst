@@ -221,7 +221,7 @@ Supported matrix layouts
 Supported thread block sizes
 ----------------------------
 
-rocWMMA generally supports and tests up to 4 wavefronts per threadblock. The X dimension is expected to be a multiple of the wave size and will be scaled as such.
+rocWMMA generally supports and tests up to 4 wavefronts per thread block. The X dimension is expected to be a multiple of the wave size and will be scaled as such.
 
 .. tabularcolumns::
    |C|C|
