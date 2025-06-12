@@ -189,6 +189,9 @@ Data Types **<Ti / To / Tc>** = <Input type / Output Type / Compute Type>, where
 
     \*\* = CDNA architectures matrix unit accumulation is natively 32-bit precision and is converted to the desired type.
 
+.. note::
+    rocWMMA supports partial fragment sizes where ``FragMNK`` may be smaller than the ``BlockMNK`` sizes listed in the table above. These fragments are internally padded to nearest supported ``BlockMNK`` sizes.
+
 
 Supported matrix layouts
 ------------------------
@@ -286,6 +289,42 @@ col_major
 .. doxygenstruct:: rocwmma::col_major
 
 
+default_schedule
+^^^^^^^^^
+
+.. doxygenstruct:: rocwmma::fragment_scheduler::default_schedule
+
+
+coop_row_major_2d
+^^^^^^^^^
+
+.. doxygenstruct:: rocwmma::fragment_scheduler::coop_row_major_2d
+
+
+coop_col_major_2d
+^^^^^^^^^
+
+.. doxygenstruct:: rocwmma::fragment_scheduler::coop_col_major_2d
+
+
+coop_row_slice_2d
+^^^^^^^^^
+
+.. doxygenstruct:: rocwmma::fragment_scheduler::coop_row_slice_2d
+
+
+coop_col_slice_2d
+^^^^^^^^^
+
+.. doxygenstruct:: rocwmma::fragment_scheduler::coop_col_slice_2d
+
+
+single
+^^^^^^^^^
+
+.. doxygenstruct:: rocwmma::fragment_scheduler::single
+
+
 fragment
 ^^^^^^^^
 
@@ -319,20 +358,6 @@ rocWMMA API functions
 
 .. doxygenfunction:: rocwmma::synchronize_workgroup
 
-rocWMMA cooperative API functions
----------------------------------
-
-.. doxygenfunction:: rocwmma::load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag, const DataT* data, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount)
-
-.. doxygenfunction:: rocwmma::load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag, const DataT* data, uint32_t ldm)
-
-.. doxygenfunction:: rocwmma::load_matrix_coop_sync(fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT>& frag, const DataT* data, uint32_t ldm, uint32_t waveIndex)
-
-.. doxygenfunction:: rocwmma::store_matrix_coop_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag, uint32_t ldm, uint32_t waveIndex, uint32_t waveCount)
-
-.. doxygenfunction:: rocwmma::store_matrix_coop_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag, uint32_t ldm)
-
-.. doxygenfunction:: rocwmma::store_matrix_coop_sync(DataT* data, fragment<MatrixT, BlockM, BlockN, BlockK, DataT, DataLayoutT> const& frag, uint32_t ldm, uint32_t waveIndex)
 
 rocWMMA transforms API functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -341,11 +366,11 @@ rocWMMA transforms API functions
 
 .. doxygenfunction:: rocwmma::apply_data_layout(FragT &&frag)
 
-.. doxygenfunction:: apply_fragment(FragT &&frag)
+.. doxygenfunction:: rocwmma::apply_fragment(FragT &&frag)
 
-.. doxygenfunction:: to_register_file(FragT &&frag)
+.. doxygenfunction:: rocwmma::to_register_file(FragT &&frag)
 
-.. doxygenfunction:: from_register_file(FragT &&frag)
+.. doxygenfunction:: rocwmma::from_register_file(FragT &&frag)
 
 Sample programs
 ----------------
