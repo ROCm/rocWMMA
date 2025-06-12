@@ -40,7 +40,7 @@ Previous releases began deprecating cooperative API functions such as those defi
 
 These functions previously required ``WaveCount`` as a template parameter and passed ``waveIndex`` as an argument to the API calls. This information was used to distribute data responsibilities across participating waves, aiming to balance and optimize data transactions within a thread block. Cooperation between wavefronts in a thread block requires the use of a separate cooperative API, along with propagation of wave count and wave index values.
 
-Example:
+Example of deprecated cooperative API:
 
 .. code-block:: c++
 
@@ -68,7 +68,7 @@ Example:
 
 Calculating the warp count and warp index requires extra boilerplate code. It is important to supply the same warp count and warp index values to matching pairs of load, store, and transform APIs. Providing mismatched values to APIs that depend on matching warp count and index poses a risk of incorrect behavior. Embedding the warp count and index into the fragment object helps mitigate the risk.
 
-As a result, fragments are augmented with an additional fragment scheduler template parameter. Fragment schedulers are classes that represent thread block scheduling models. These models provide static values for both the wave count and wave order (wave index). Fragment schedulers are classified as either non-cooperative (the default, where waves act independently) or cooperative (where waves collaborate within a thread block). Their names reflect their ordering scheme.
+As a result, fragments in rocWMMA 2.0 are augmented with an additional fragment scheduler template parameter. Fragment schedulers are classes that represent thread block scheduling models. These models provide static values for both the wave count and wave order (wave index). Fragment schedulers are classified as either non-cooperative (the default, where waves act independently) or cooperative (where waves collaborate within a thread block). Their names reflect their ordering scheme.
 
 Example:
 
@@ -108,7 +108,7 @@ Here is the simplified usage with new cooperative fragment changes:
    // Transfer data from global memory to local memory
    GRBuffA grBuffA;
    load_matrix_sync(grBuffA, gAddrA, lda);
-   store_matrix_sync(ldsAddr, applyDataLayout<DataLayoutLds>(applyTranspose(grBuffA)), ldsld);
+   store_matrix_sync(ldsAddr, apply_data_layout<DataLayoutLds>(apply_transpose(grBuffA)), ldsld);
 
 To summarize, the ``CoopScheduler`` template parameter allows you to express the required cooperative behavior with the fragment class declaration. Boilerplate code for calculating wave count and wave indices is wrapped into the ``CoopScheduler`` class. You can use fragments with the standard rocWMMA API without the need to externally propagate matching wave counts or wave indices, making rocWMMA more compact and expressive than previous versions.
 
