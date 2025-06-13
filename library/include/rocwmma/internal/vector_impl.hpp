@@ -773,7 +773,7 @@ namespace rocwmma
 #define ROCWMMA_HIP_NON_NATIVE_VECTOR_STORAGE_IMPL(TYPE, RANK)       \
     using Native_vec_ = rocwmma::non_native_vector_base<TYPE, RANK>; \
                                                                      \
-    union alignas(rocwmma::next_pow2(RANK * sizeof(TYPE)))           \
+    union                                                            \
     {                                                                \
         Native_vec_ data;                                            \
         ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK##RANK(TYPE);            \

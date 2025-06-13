@@ -42,7 +42,7 @@ namespace rocwmma
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline DataT get(VecT<DataT, VecSize> const& v, uint32_t idx)
     {
-        return v.data[idx];
+        return v[idx];
     }
 
     template <typename DataT, uint32_t VecSize>
@@ -162,7 +162,7 @@ namespace rocwmma
             auto res = VecT<PackedT, VecSize>(0);
             for(uint32_t i = 0; i < VecSize; i++)
             {
-                *reinterpret_cast<UnpackedT*>(reinterpret_cast<PackedT*>(&res.data) + i)
+                *reinterpret_cast<UnpackedT*>(reinterpret_cast<PackedT*>(&HIPVEC_ACCESS(res)) + i)
                     = static_cast<UnpackedT>((float)i);
             }
 
@@ -200,7 +200,7 @@ namespace rocwmma
             auto res = VecT<PackedT, VecSize>(0);
             for(uint32_t i = 0; i < VecSize; i++)
             {
-                *(reinterpret_cast<UnpackedT*>(reinterpret_cast<PackedT*>(&res.data) + i) + 1)
+                *(reinterpret_cast<UnpackedT*>(reinterpret_cast<PackedT*>(&HIPVEC_ACCESS(res)) + i) + 1)
                     = static_cast<UnpackedT>((float)i);
             }
 
@@ -357,7 +357,7 @@ namespace rocwmma
             auto expectedData       = make_vector_sequence<UnpackedT, VecSize>();
             for(uint32_t i = 0; i < VecSize; i++)
             {
-                *(reinterpret_cast<VecT<UnpackedT, VecSize>*>(&res.data) + i) = expectedData;
+                *(reinterpret_cast<VecT<UnpackedT, VecSize>*>(&HIPVEC_ACCESS(res)) + i) = expectedData;
             }
             err |= !PACK_UTIL_EXPECT_EQ(PackUtil::template paddedUnpack<VecSize>(res),
                                         expectedData);
@@ -378,8 +378,8 @@ namespace rocwmma
         {
             auto res          = VecT<PackedT, 1>(0);
             auto expectedData = VecT<UnpackedT, 1>(static_cast<UnpackedT>(1.0F));
-            (*(reinterpret_cast<VecT<UnpackedT, VecSize>*>(&res.data))).data[0]
-                = expectedData.data[0];
+            HIPVEC_ACCESS((*(reinterpret_cast<VecT<UnpackedT, VecSize>*>(&HIPVEC_ACCESS(res)))))[0]
+                = expectedData[0];
             err |= !PACK_UTIL_EXPECT_EQ(PackUtil::template paddedUnpack<VecSize>(res),
                                         expectedData);
         }

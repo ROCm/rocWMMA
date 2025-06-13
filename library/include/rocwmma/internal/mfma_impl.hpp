@@ -249,8 +249,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_f32_16x16x16f16(
-                    regsA.data, regsB.data, regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_f32_16x16x16f16(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -279,8 +280,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_f32_16x16x32_f16(
-                    regsA.data, regsB.data, regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_f32_16x16x32_f16(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -340,8 +342,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_f32_32x32x8f16(
-                    regsA.data, regsB.data, regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_f32_32x32x8f16(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -370,8 +373,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_f32_32x32x16_f16(
-                    regsA.data, regsB.data, regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_f32_32x32x16_f16(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -451,12 +455,13 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_f32_16x16x8bf16(((TypeIn const&)(regsA)).data,
-                                                                     ((TypeIn const&)(regsB)).data,
-                                                                     regsC.data,
+                auto native = __builtin_amdgcn_mfma_f32_16x16x8bf16(HIPVEC_ACCESS(((TypeIn const&)(regsA))),
+                                                                     HIPVEC_ACCESS(((TypeIn const&)(regsB))),
+                                                                     HIPVEC_ACCESS(regsC),
                                                                      (int)Cbsz,
                                                                      (int)Abid,
-                                                                     (int)Blgp)};
+                                                                     (int)Blgp);
+                                                                     HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -521,8 +526,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_f32_16x16x16bf16_1k(
-                    regsA.data, regsB.data, regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_f32_16x16x16bf16_1k(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -551,8 +557,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_f32_16x16x32_bf16(
-                    regsA.data, regsB.data, regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_f32_16x16x32_bf16(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -592,12 +599,13 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_f32_32x32x4bf16(((TypeIn const&)(regsA)).data,
-                                                                     ((TypeIn const&)(regsB)).data,
-                                                                     regsC.data,
+                auto native = __builtin_amdgcn_mfma_f32_32x32x4bf16(HIPVEC_ACCESS(((TypeIn const&)(regsA))),
+                                                                     HIPVEC_ACCESS(((TypeIn const&)(regsB))),
+                                                                     HIPVEC_ACCESS(regsC),
                                                                      (int)Cbsz,
                                                                      (int)Abid,
-                                                                     (int)Blgp)};
+                                                                     (int)Blgp);
+                                                                     HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -662,8 +670,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_f32_32x32x8bf16_1k(
-                    regsA.data, regsB.data, regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_f32_32x32x8bf16_1k(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -692,8 +701,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_f32_32x32x16_bf16(
-                    regsA.data, regsB.data, regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_f32_32x32x16_bf16(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -723,8 +733,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_f32_16x16x4f32(
-                    regsA.data[0], regsB.data[0], regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_f32_16x16x4f32(
+                    regsA[0], regsB[0], HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -753,8 +764,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_f32_32x32x2f32(
-                    regsA.data[0], regsB.data[0], regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_f32_32x32x2f32(
+                    regsA[0], regsB[0], HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -787,8 +799,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_f64_16x16x4f64(
-                    regsA.data[0], regsB.data[0], regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_f64_16x16x4f64(
+                    regsA[0], regsB[0], HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -820,8 +833,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_i32_16x16x16i8(
-                    regsA.data[0], regsB.data[0], regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_i32_16x16x16i8(
+                    regsA[0], regsB[0], HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -891,13 +905,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_i32_16x16x32_i8(((TypeIn const&)(regsA)).data[0],
-                                                             ((TypeIn const&)(regsB)).data[0],
-                                                             regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_i32_16x16x32_i8(((TypeIn const&)(regsA))[0],
+                                                            ((TypeIn const&)(regsB))[0],
+                                                             HIPVEC_ACCESS(regsC),
                                                              (int)Cbsz,
                                                              (int)Abid,
-                                                             (int)Blgp)};
+                                                             (int)Blgp);
+                                                             HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -927,8 +942,9 @@ namespace rocwmma
             {
 
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_i32_16x16x64_i8(
-                    regsA.data, regsB.data, regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_i32_16x16x64_i8(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -959,8 +975,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_i32_32x32x8i8(
-                    regsA.data[0], regsB.data[0], regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_i32_32x32x8i8(
+                    regsA[0], regsB[0], HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1030,13 +1047,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_i32_32x32x16_i8(((TypeIn const&)(regsA)).data[0],
-                                                             ((TypeIn const&)(regsB)).data[0],
-                                                             regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_i32_32x32x16_i8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                             HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                             HIPVEC_ACCESS(regsC),
                                                              (int)Cbsz,
                                                              (int)Abid,
-                                                             (int)Blgp)};
+                                                             (int)Blgp);
+                                                             HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1065,8 +1083,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_i32_32x32x32_i8(
-                    regsA.data, regsB.data, regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_i32_32x32x32_i8(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1138,13 +1157,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_16x16x32_fp8_fp8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_16x16x32_fp8_fp8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1215,13 +1235,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_32x32x16_fp8_fp8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_32x32x16_fp8_fp8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1293,13 +1314,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_16x16x32_bf8_bf8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_16x16x32_bf8_bf8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1370,13 +1392,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_32x32x16_bf8_bf8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_32x32x16_bf8_bf8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1448,13 +1471,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_16x16x32_fp8_bf8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_16x16x32_fp8_bf8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1525,13 +1549,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_32x32x16_fp8_bf8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_32x32x16_fp8_bf8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1602,13 +1627,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_16x16x32_bf8_fp8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_16x16x32_bf8_fp8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1679,13 +1705,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_32x32x16_bf8_fp8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_32x32x16_bf8_fp8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1752,13 +1779,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_16x16x32_fp8_fp8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_16x16x32_fp8_fp8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1824,13 +1852,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_32x32x16_fp8_fp8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_32x32x16_fp8_fp8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1897,13 +1926,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_16x16x32_bf8_bf8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_16x16x32_bf8_bf8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1969,13 +1999,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_32x32x16_bf8_bf8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_32x32x16_bf8_bf8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -2042,13 +2073,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_16x16x32_fp8_bf8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_16x16x32_fp8_bf8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -2114,13 +2146,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_32x32x16_fp8_bf8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_32x32x16_fp8_bf8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -2186,13 +2219,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_16x16x32_bf8_fp8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_16x16x32_bf8_fp8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -2258,13 +2292,14 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data
-                    = {__builtin_amdgcn_mfma_f32_32x32x16_bf8_fp8(((TypeIn const&)(regsA)).data[0],
-                                                                  ((TypeIn const&)(regsB)).data[0],
-                                                                  regsC.data,
+                auto native
+                    = __builtin_amdgcn_mfma_f32_32x32x16_bf8_fp8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                                  HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
+                                                                  HIPVEC_ACCESS(regsC),
                                                                   (int)Cbsz,
                                                                   (int)Abid,
-                                                                  (int)Blgp)};
+                                                                  (int)Blgp);
+                                                                  HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -2325,8 +2360,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_f32_16x16x8_xf32(
-                    regsA.data, regsB.data, regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_f32_16x16x8_xf32(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -2386,8 +2422,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_mfma_f32_32x32x4_xf32(
-                    regsA.data, regsB.data, regsC.data, (int)Cbsz, (int)Abid, (int)Blgp)};
+                auto native = __builtin_amdgcn_mfma_f32_32x32x4_xf32(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };

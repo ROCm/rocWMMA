@@ -643,4 +643,19 @@ namespace rocwmma
 
 } // namespace rocwmma
 
+#if defined(__HIP_PLATFORM_AMD__)
+    #if HIP_VERSION_MAJOR < 7
+        #define HIPVEC_ACCESS(x) x.data
+    #else
+        #define HIPVEC_ACCESS(x) get_native_vector(x)
+    #endif
+    #if HIP_VERSION_MAJOR < 7
+        #define HIPVEC_ASSIGN_NATIVE_VEC(native, res) \
+            res.data = native
+    #else
+        #define HIPVEC_ASSIGN_NATIVE_VEC(native, res)  \
+            res = *reinterpret_cast<DRegsT*>(&native)
+    #endif
+#endif
+
 #endif // ROCWMMA_VECTOR_HPP

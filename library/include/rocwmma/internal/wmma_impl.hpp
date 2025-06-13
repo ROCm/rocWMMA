@@ -213,8 +213,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {
-                    __builtin_amdgcn_wmma_f32_16x16x16_f16_w32(regsA.data, regsB.data, regsC.data)};
+                auto native = 
+                    __builtin_amdgcn_wmma_f32_16x16x16_f16_w32(HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC));
+                HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -303,8 +304,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f16_16x16x16_f16_w32(
-                    regsA.data, regsB.data, regsC.data, (bool)AccumBits)};
+                auto native = __builtin_amdgcn_wmma_f16_16x16x16_f16_w32(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC), (bool)AccumBits);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -393,8 +395,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f32_16x16x16_bf16_w32(
-                    regsA.data, regsB.data, regsC.data)};
+                auto native = __builtin_amdgcn_wmma_f32_16x16x16_bf16_w32(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC));
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -483,8 +486,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32(
-                    regsA.data, regsB.data, regsC.data, (bool)AccumBits)};
+                auto native = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC), (bool)AccumBits);
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -543,12 +547,13 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32((bool)InputSign,
-                                                                          regsA.data,
+                auto native = __builtin_amdgcn_wmma_i32_16x16x16_iu8_w32((bool)InputSign,
+                                                                          HIPVEC_ACCESS(regsA),
                                                                           (bool)InputSign,
-                                                                          regsB.data,
-                                                                          regsC.data,
-                                                                          (bool)AccumSign)};
+                                                                          HIPVEC_ACCESS(regsB),
+                                                                          HIPVEC_ACCESS(regsC),
+                                                                          (bool)AccumSign);
+                                                                          HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -638,8 +643,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f32_16x16x16_f16_w32_gfx12(
-                    regsA.data, regsB.data, regsC.data)};
+                auto native = __builtin_amdgcn_wmma_f32_16x16x16_f16_w32_gfx12(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC));
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -728,8 +734,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f16_16x16x16_f16_w32_gfx12(
-                    regsA.data, regsB.data, regsC.data)};
+                auto native = __builtin_amdgcn_wmma_f16_16x16x16_f16_w32_gfx12(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC));
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -818,8 +825,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f32_16x16x16_bf16_w32_gfx12(
-                    regsA.data, regsB.data, regsC.data)};
+                auto native = __builtin_amdgcn_wmma_f32_16x16x16_bf16_w32_gfx12(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC));
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -908,8 +916,9 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32_gfx12(
-                    regsA.data, regsB.data, regsC.data)};
+                auto native = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32_gfx12(
+                    HIPVEC_ACCESS(regsA), HIPVEC_ACCESS(regsB), HIPVEC_ACCESS(regsC));
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -968,12 +977,13 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32_gfx12((bool)InputSign,
-                                                                                regsA.data,
+                auto native = __builtin_amdgcn_wmma_i32_16x16x16_iu8_w32_gfx12((bool)InputSign,
+                                                                                HIPVEC_ACCESS(regsA),
                                                                                 (bool)InputSign,
-                                                                                regsB.data,
-                                                                                regsC.data,
-                                                                                (bool)AccumSign)};
+                                                                                HIPVEC_ACCESS(regsB),
+                                                                                HIPVEC_ACCESS(regsC),
+                                                                                (bool)AccumSign);
+                                                                                HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1040,10 +1050,11 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f32_16x16x16_fp8_fp8_w32_gfx12(
-                    reinterpret_cast<TypeIn const&>(regsA).data,
-                    reinterpret_cast<TypeIn const&>(regsB).data,
-                    regsC.data)};
+                auto native = __builtin_amdgcn_wmma_f32_16x16x16_fp8_fp8_w32_gfx12(
+                    HIPVEC_ACCESS(reinterpret_cast<TypeIn const&>(regsA)),
+                    HIPVEC_ACCESS(reinterpret_cast<TypeIn const&>(regsB)),
+                    HIPVEC_ACCESS(regsC));
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };
@@ -1110,10 +1121,11 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f32_16x16x16_bf8_bf8_w32_gfx12(
-                    reinterpret_cast<TypeIn const&>(regsA).data,
-                    reinterpret_cast<TypeIn const&>(regsB).data,
-                    regsC.data)};
+                auto native = __builtin_amdgcn_wmma_f32_16x16x16_bf8_bf8_w32_gfx12(
+                    HIPVEC_ACCESS(reinterpret_cast<TypeIn const&>(regsA)),
+                    HIPVEC_ACCESS(reinterpret_cast<TypeIn const&>(regsB)),
+                    HIPVEC_ACCESS(regsC));
+                    HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
         };

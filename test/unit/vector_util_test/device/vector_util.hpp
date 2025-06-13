@@ -34,7 +34,7 @@ namespace rocwmma
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline DataT get(VecT<DataT, VecSize> const& v, uint32_t idx)
     {
-        return v.data[idx];
+        return v[idx];
     }
 
     template <typename DataT, uint32_t VecSize>

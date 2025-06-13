@@ -44,7 +44,7 @@ namespace rocwmma
         for(int i = 0; i < VecSize; i++)
         {
             //err |= (vec.d[i] != static_cast<DataT>(5.0f));
-            err |= (vec.data[i] != static_cast<DataT>(5.0f));
+            err |= (vec[i] != static_cast<DataT>(5.0f));
         }
 
         return err;
@@ -136,7 +136,7 @@ namespace rocwmma
         VecT<DataT, VecSize> vec;
         for(uint32_t i = 0; i < VecSize; i++)
         {
-            vec.data[i] = static_cast<DataT>(i);
+            vec[i] = static_cast<DataT>(i);
         }
 
         // Iterate over vector
@@ -146,7 +146,7 @@ namespace rocwmma
         for(uint32_t i = 0; i < it.range(); i++, it++)
         {
             // 0th element check as the iterator stride = 1
-            err = err || (vec.data[i] != (*it).data[0]);
+            err = err || (vec[i] != (*it)[0]);
         }
 
         return err;
@@ -169,7 +169,7 @@ namespace rocwmma
         {
             for(uint32_t j = 0; j < StrideSize; j++)
             {
-                err = err || (vec.data[i * StrideSize + j] != (*it).data[j]);
+                err = err || (vec[i * StrideSize + j] != (*it)[j]);
             }
         }
         return err;
@@ -193,10 +193,10 @@ namespace rocwmma
         VecT<DataT, VecSize> vec;
         for(uint32_t i = 0; i < VecSize; i++)
         {
-            vec.data[i] = static_cast<DataT>(i);
+            vec[i] = static_cast<DataT>(i);
         }
 
-        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize>(vec);
+        err = err || iteratorStrideValueTest<DataT, VecSize, VecSize>(vec);err = err || iteratorStrideValueTest<DataT, VecSize, VecSize>(vec);
         err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 2>(vec);
         err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 4>(vec);
         err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 8>(vec);

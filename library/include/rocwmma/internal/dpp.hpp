@@ -196,8 +196,8 @@ namespace rocwmma
                 auto op = [](auto&& idx, auto&& v0, auto&& v1) {
                     // Pair up the b32 vector elements with the appropriate b32 scalar elements.
                     constexpr auto i = decay_t<decltype(idx)>::value;
-                    return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(v0.data[i],
-                                                                                        v1.data[i]);
+                    return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(v0[i],
+                                                                                        v1[i]);
                 };
 
                 auto result = vector_generator<uint32_t, B32VecSize>()(
