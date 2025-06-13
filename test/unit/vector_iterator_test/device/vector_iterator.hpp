@@ -44,7 +44,7 @@ namespace rocwmma
         for(int i = 0; i < VecSize; i++)
         {
             //err |= (vec.d[i] != static_cast<DataT>(5.0f));
-            err |= (vec[i] != static_cast<DataT>(5.0f));
+            err |= (HIPVEC_ACCESS(vec)[i] != static_cast<DataT>(5.0f));
         }
 
         return err;
@@ -169,7 +169,7 @@ namespace rocwmma
         {
             for(uint32_t j = 0; j < StrideSize; j++)
             {
-                err = err || (vec[i * StrideSize + j] != (*it)[j]);
+                err = err || (HIPVEC_ACCESS(vec)[i * StrideSize + j] != HIPVEC_ACCESS((*it))[j]);
             }
         }
         return err;
@@ -193,7 +193,7 @@ namespace rocwmma
         VecT<DataT, VecSize> vec;
         for(uint32_t i = 0; i < VecSize; i++)
         {
-            vec[i] = static_cast<DataT>(i);
+            HIPVEC_ACCESS(vec)[i] = static_cast<DataT>(i);
         }
 
         err = err || iteratorStrideValueTest<DataT, VecSize, VecSize>(vec);err = err || iteratorStrideValueTest<DataT, VecSize, VecSize>(vec);

@@ -734,7 +734,7 @@ namespace rocwmma
             {
                 DRegsT result;
                 auto native = __builtin_amdgcn_mfma_f32_16x16x4f32(
-                    regsA[0], regsB[0], HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ACCESS(regsA)[0], HIPVEC_ACCESS(regsB)[0], HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
                     HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
@@ -765,7 +765,7 @@ namespace rocwmma
             {
                 DRegsT result;
                 auto native = __builtin_amdgcn_mfma_f32_32x32x2f32(
-                    regsA[0], regsB[0], HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ACCESS(regsA)[0], HIPVEC_ACCESS(regsB)[0], HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
                     HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
@@ -800,7 +800,7 @@ namespace rocwmma
             {
                 DRegsT result;
                 auto native = __builtin_amdgcn_mfma_f64_16x16x4f64(
-                    regsA[0], regsB[0], HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ACCESS(regsA)[0], HIPVEC_ACCESS(regsB)[0], HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
                     HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
@@ -834,7 +834,7 @@ namespace rocwmma
             {
                 DRegsT result;
                 auto native = __builtin_amdgcn_mfma_i32_16x16x16i8(
-                    regsA[0], regsB[0], HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ACCESS(regsA)[0], HIPVEC_ACCESS(regsB)[0], HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
                     HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }
@@ -906,8 +906,8 @@ namespace rocwmma
 
                 DRegsT result;
                 auto native
-                    = __builtin_amdgcn_mfma_i32_16x16x32_i8(((TypeIn const&)(regsA))[0],
-                                                            ((TypeIn const&)(regsB))[0],
+                    = __builtin_amdgcn_mfma_i32_16x16x32_i8(HIPVEC_ACCESS(((TypeIn const&)(regsA)))[0],
+                                                            HIPVEC_ACCESS(((TypeIn const&)(regsB)))[0],
                                                              HIPVEC_ACCESS(regsC),
                                                              (int)Cbsz,
                                                              (int)Abid,
@@ -976,7 +976,7 @@ namespace rocwmma
             {
                 DRegsT result;
                 auto native = __builtin_amdgcn_mfma_i32_32x32x8i8(
-                    regsA[0], regsB[0], HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
+                    HIPVEC_ACCESS(regsA)[0], HIPVEC_ACCESS(regsB)[0], HIPVEC_ACCESS(regsC), (int)Cbsz, (int)Abid, (int)Blgp);
                     HIPVEC_ASSIGN_NATIVE_VEC(native, result);
                 return result;
             }

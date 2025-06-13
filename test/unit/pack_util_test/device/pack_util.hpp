@@ -42,7 +42,7 @@ namespace rocwmma
     template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline DataT get(VecT<DataT, VecSize> const& v, uint32_t idx)
     {
-        return v[idx];
+        return HIPVEC_ACCESS(v)[idx];
     }
 
     template <typename DataT, uint32_t VecSize>
@@ -379,7 +379,7 @@ namespace rocwmma
             auto res          = VecT<PackedT, 1>(0);
             auto expectedData = VecT<UnpackedT, 1>(static_cast<UnpackedT>(1.0F));
             HIPVEC_ACCESS((*(reinterpret_cast<VecT<UnpackedT, VecSize>*>(&HIPVEC_ACCESS(res)))))[0]
-                = expectedData[0];
+                = HIPVEC_ACCESS(expectedData)[0];
             err |= !PACK_UTIL_EXPECT_EQ(PackUtil::template paddedUnpack<VecSize>(res),
                                         expectedData);
         }

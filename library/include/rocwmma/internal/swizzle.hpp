@@ -113,7 +113,7 @@ namespace rocwmma
 
                 auto op = [](auto&& idx, auto&& v) {
                     constexpr auto i = decay_t<decltype(idx)>::value;
-                    return SwizzleOp::exec(v[i]);
+                    return SwizzleOp::exec(HIPVEC_ACCESS(v)[i]);
                 };
 
                 auto swizzle_result = vector_generator<uint32_t, B32VecSize>()(
