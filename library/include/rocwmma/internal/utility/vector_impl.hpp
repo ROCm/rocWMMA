@@ -508,6 +508,12 @@ namespace rocwmma
         return vector_generator<DataT, VecSize>()(buildSeq);
     }
 
+    template <typename VecT>
+    ROCWMMA_HOST_DEVICE static inline decltype(auto) to_native_vector(VecT&& v)
+    {
+        return get_native_vector(v);
+    }
+
 } // namespace rocwmma
 
 #endif // ROCWMMA_UTILITY_VECTOR_IMPL_HPP

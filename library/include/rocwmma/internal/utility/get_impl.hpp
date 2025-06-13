@@ -37,19 +37,19 @@ namespace rocwmma
         template <uint32_t Idx, typename DataT, uint32_t VecSize>
         ROCWMMA_HOST_DEVICE constexpr inline DataT get(HIP_vector_type<DataT, VecSize>&& v)
         {
-            return v.data[Idx];
+            return v[Idx];
         }
 
         template <uint32_t Idx, typename DataT, uint32_t VecSize>
         ROCWMMA_HOST_DEVICE constexpr inline DataT& get(HIP_vector_type<DataT, VecSize>& v)
         {
-            return reinterpret_cast<DataT*>(&v.data)[Idx];
+            return v[Idx];
         }
 
         template <uint32_t Idx, typename DataT, uint32_t VecSize>
         ROCWMMA_HOST_DEVICE constexpr inline DataT get(HIP_vector_type<DataT, VecSize> const& v)
         {
-            return v.data[Idx];
+            return v[Idx];
         }
 
         // non_native_vector_base overloads
@@ -75,7 +75,7 @@ namespace rocwmma
         }
 
         // Wrapper for Number<I>
-        template<typename Idx, typename VecT>
+        template <typename Idx, typename VecT>
         ROCWMMA_HOST_DEVICE constexpr inline decltype(auto) get(VecT&& v)
         {
             return get<Idx::value>(forward<VecT>(v));

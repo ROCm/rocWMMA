@@ -212,6 +212,12 @@ namespace rocwmma
     template <typename DataT, uint32_t VecSize, uint32_t Start = 0u, uint32_t Stride = 1u>
     ROCWMMA_HOST_DEVICE constexpr static inline auto make_vector_sequence();
 
+    /*! \brief Transforms the vector object to it's raw storage type (e.g., when using builtin wrappers)
+    * @tparam VecT API vector type
+    */
+    template <typename VecT>
+    ROCWMMA_HOST_DEVICE static inline decltype(auto) to_native_vector(VecT&& v);
+
 } // namespace rocwmma
 
 #endif // ROCWMMA_UTILITY_VECTOR_HPP

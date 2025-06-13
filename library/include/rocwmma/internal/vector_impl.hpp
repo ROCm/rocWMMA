@@ -773,7 +773,7 @@ namespace rocwmma
 #define ROCWMMA_HIP_NON_NATIVE_VECTOR_STORAGE_IMPL(TYPE, RANK)       \
     using Native_vec_ = rocwmma::non_native_vector_base<TYPE, RANK>; \
                                                                      \
-    union alignas(rocwmma::next_pow2(RANK * sizeof(TYPE)))           \
+    union                                                            \
     {                                                                \
         Native_vec_ data;                                            \
         ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK##RANK(TYPE);            \
@@ -782,7 +782,7 @@ namespace rocwmma
 #define ROCWMMA_HIP_NATIVE_VECTOR_STORAGE_IMPL(TYPE, RANK)           \
     using Native_vec_ = TYPE __attribute__((ext_vector_type(RANK))); \
                                                                      \
-    union                                                            \
+    union alignas(RANK * sizeof(TYPE))                               \
     {                                                                \
         Native_vec_ data;                                            \
         ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK##RANK(TYPE);            \
@@ -796,13 +796,32 @@ namespace rocwmma
 /// Why is this needed again here? Because STORAGE_IMPL may be either non_native_vector_type ///
 /// OR native vector extension. The latter doesn't have the required built-in broadcast.     ///
 ////////////////////////////////////////////////////////////////////////////////////////////////
+namespace rocwmma::detail
+{
+    template <typename T, unsigned int Rank>
+    struct storage_impl;
+
+} // namespace rocwmma::detail
 
 #define ROCWMMA_REGISTER_HIP_VECTOR_BASE(TYPE, RANK, STORAGE_IMPL)                              \
-    template <>                                                                                 \
-    struct HIP_vector_base<TYPE, RANK>                                                          \
+    namespace rocwmma::detail                                                                   \
     {                                                                                           \
-        STORAGE_IMPL(TYPE, RANK);                                                               \
+        template <>                                                                             \
+        struct storage_impl<TYPE, RANK>                                                         \
+        {                                                                                       \
+            STORAGE_IMPL(TYPE, RANK);                                                           \
+        };                                                                                      \
+    }                                                                                           \
                                                                                                 \
+    template <>                                                                                 \
+    struct HIP_vector_base<TYPE, RANK> : public rocwmma::detail::storage_impl<TYPE, RANK>       \
+    {                                                                                           \
+        /* Disallow public access to data member, following ROCm 7.0 changes in HIP */          \
+    private:                                                                                    \
+        using StorageImpl = rocwmma::detail::storage_impl<TYPE, RANK>;                          \
+        using StorageImpl::data;                                                                \
+                                                                                                \
+    public:                                                                                     \
         using value_type = TYPE;                                                                \
                                                                                                 \
         ROCWMMA_HOST_DEVICE                                                                     \
@@ -811,8 +830,8 @@ namespace rocwmma
                   typename U                                        = TYPE,                     \
                   rocwmma::enable_if_t<(sizeof...(ArgsT) == RANK)>* = nullptr>                  \
         ROCWMMA_HOST_DEVICE constexpr HIP_vector_base(ArgsT... args) noexcept                   \
-            : data{args...}                                                                     \
         {                                                                                       \
+            data = {args...};                                                                   \
         }                                                                                       \
                                                                                                 \
         template <typename U                                                         = TYPE,    \
