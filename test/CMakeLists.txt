@@ -32,6 +32,10 @@ cmake_dependent_option( ROCWMMA_BUILD_EXTENDED_TESTS "Build extended test parame
 cmake_dependent_option( ROCWMMA_USE_SYSTEM_GOOGLETEST "Use system Google Test library instead of downloading and building it" OFF "ROCWMMA_BUILD_TESTS" OFF )
 
 add_compile_options(-mcmodel=large)
+if(ROCWMMA_CODE_COVERAGE)
+    add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+    add_link_options(-fprofile-instr-generate)
+endif()
 add_link_options(-mcmodel=large)
 
 # Test/benchmark requires additional dependencies

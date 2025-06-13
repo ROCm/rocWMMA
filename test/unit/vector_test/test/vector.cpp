@@ -79,6 +79,14 @@ namespace rocwmma
 
 } // namespace rocwmma
 
+TEST(VectorTest, VectorHostTest)
+{
+    auto result = rocwmma::vectorHostTest<float, 8>();
+    EXPECT_TRUE(result);
+    result = rocwmma::vectorHostTest<int, 8>();
+    EXPECT_TRUE(result);
+}
+
 // Test suite for unique parameterization
 class VectorTest : public rocwmma::UnitTest
 {

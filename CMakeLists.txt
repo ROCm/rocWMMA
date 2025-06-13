@@ -53,6 +53,7 @@ if( CMAKE_PROJECT_NAME STREQUAL "rocwmma" )
   option( ROCWMMA_BUILD_SAMPLES "Build rocWMMA samples" ON )
   option( ROCWMMA_BUILD_ASSEMBLY "Output assembly files" OFF )
   option( BUILD_OFFLOAD_COMPRESS "Build rocWMMA with offload compression" ON )
+  option( ROCWMMA_CODE_COVERAGE "Build with code coverage flags (clang only)" OFF)
 endif()
 
 if( CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT )
