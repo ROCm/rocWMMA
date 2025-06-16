@@ -512,7 +512,8 @@ namespace rocwmma
     ROCWMMA_HOST_DEVICE static inline decltype(auto) to_native_vector(VecT&& v)
     {
 #if defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
-        return v.data;
+        using NativeT = typename remove_cv_t<decay_t<VecT>>::Native_vec_;
+        return reinterpret_cast<NativeT&>(v.data);
 #else
         return get_native_vector(v);
 #endif // defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
