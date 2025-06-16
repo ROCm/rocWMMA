@@ -803,6 +803,7 @@ namespace rocwmma::detail
 
 } // namespace rocwmma::detail
 
+// clang-format off
 #define ROCWMMA_REGISTER_HIP_VECTOR_BASE(TYPE, RANK, STORAGE_IMPL)                              \
     namespace rocwmma::detail                                                                   \
     {                                                                                           \
@@ -817,8 +818,10 @@ namespace rocwmma::detail
     struct HIP_vector_base<TYPE, RANK> : public rocwmma::detail::storage_impl<TYPE, RANK>       \
     {                                                                                           \
         /* Disallow public access to data member, following ROCm 7.0 changes in HIP */          \
-    private:                                                                                    \
-        using StorageImpl = rocwmma::detail::storage_impl<TYPE, RANK>;                          \
+#if defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR >= 7)                                   \
+        private:                                                                                \
+#endif /* defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR >= 7) */                          \
+        using StorageImpl = rocwmma::detail::storage_impl <TYPE, RANK>;                         \
         using StorageImpl::data;                                                                \
                                                                                                 \
     public:                                                                                     \
@@ -854,6 +857,7 @@ namespace rocwmma::detail
         ROCWMMA_HOST_DEVICE                                                                     \
         HIP_vector_base& operator=(const HIP_vector_base& x_) noexcept = default;               \
     };
+// clang-format on
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /// Setup macros to implement HIP_vector_type for any T and Rank, specifying if platform native ///
