@@ -804,6 +804,48 @@ namespace rocwmma::detail
 } // namespace rocwmma::detail
 
 // clang-format off
+#if defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
+#define ROCWMMA_REGISTER_HIP_VECTOR_BASE(TYPE, RANK, STORAGE_IMPL)                              \
+    template <>                                                                                 \
+    struct HIP_vector_base<TYPE, RANK>                                                          \
+    {                                                                                           \
+        STORAGE_IMPL(TYPE, RANK);                                                               \
+                                                                                                \
+        using value_type = TYPE;                                                                \
+                                                                                                \
+        ROCWMMA_HOST_DEVICE                                                                     \
+        HIP_vector_base() = default;                                                            \
+        template <typename... ArgsT,                                                            \
+                  typename U                                        = TYPE,                     \
+                  rocwmma::enable_if_t<(sizeof...(ArgsT) == RANK)>* = nullptr>                  \
+        ROCWMMA_HOST_DEVICE constexpr HIP_vector_base(ArgsT... args) noexcept                   \
+            : data{args...}                                                                     \
+        {                                                                                       \
+        }                                                                                       \
+                                                                                                \
+        template <typename U                                                         = TYPE,    \
+                  rocwmma::enable_if_t<(rocwmma::is_same<U, TYPE>{}) && (RANK > 1)>* = nullptr> \
+        ROCWMMA_HOST_DEVICE constexpr explicit HIP_vector_base(TYPE val) noexcept               \
+            : HIP_vector_base(rocwmma::detail::template bCast<HIP_vector_base>(                 \
+                val, rocwmma::detail::Seq<RANK>{}))                                             \
+        {                                                                                       \
+        }                                                                                       \
+                                                                                                \
+        ROCWMMA_HOST_DEVICE                                                                     \
+        constexpr HIP_vector_base(const HIP_vector_base&) = default;                            \
+                                                                                                \
+        ROCWMMA_HOST_DEVICE                                                                     \
+        constexpr HIP_vector_base(HIP_vector_base&&) = default;                                 \
+                                                                                                \
+        ROCWMMA_HOST_DEVICE                                                                     \
+        ~HIP_vector_base() = default;                                                           \
+                                                                                                \
+        ROCWMMA_HOST_DEVICE                                                                     \
+        HIP_vector_base& operator=(const HIP_vector_base& x_) noexcept = default;               \
+    };
+
+#else
+
 #define ROCWMMA_REGISTER_HIP_VECTOR_BASE(TYPE, RANK, STORAGE_IMPL)                              \
     namespace rocwmma::detail                                                                   \
     {                                                                                           \
@@ -818,9 +860,7 @@ namespace rocwmma::detail
     struct HIP_vector_base<TYPE, RANK> : public rocwmma::detail::storage_impl<TYPE, RANK>       \
     {                                                                                           \
         /* Disallow public access to data member, following ROCm 7.0 changes in HIP */          \
-#if defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR >= 7)                                   \
         private:                                                                                \
-#endif /* defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR >= 7) */                          \
         using StorageImpl = rocwmma::detail::storage_impl <TYPE, RANK>;                         \
         using StorageImpl::data;                                                                \
                                                                                                 \
@@ -857,6 +897,8 @@ namespace rocwmma::detail
         ROCWMMA_HOST_DEVICE                                                                     \
         HIP_vector_base& operator=(const HIP_vector_base& x_) noexcept = default;               \
     };
+
+#endif /* defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7) */
 // clang-format on
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
