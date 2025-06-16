@@ -143,6 +143,7 @@ namespace rocwmma
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
             // 0th element check as the iterator stride = 1
             err = err || (get<i>(vec) != get<0>(*it));
+            it++;
         });
 
         return err;
