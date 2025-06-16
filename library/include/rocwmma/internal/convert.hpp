@@ -47,7 +47,7 @@ namespace rocwmma
 #pragma unroll
                 for(unsigned i = 0; i < NumRegs; i++)
                 {
-                    result.data[i] = static_cast<OutputT>(regsIn.data[i]);
+                    get<i>(result) = static_cast<OutputT>(get<i>(regsIn));
                 }
                 return result;
             }
@@ -75,7 +75,7 @@ namespace rocwmma
 #pragma unroll
                 for(unsigned i = 0; i < NumRegs; i++)
                 {
-                    result.data[i] = __half2float(regsIn.data[i]);
+                    get<i>(result) = __half2float(get<i>(regsIn));
                 }
                 return result;
             }
@@ -92,7 +92,7 @@ namespace rocwmma
 #pragma unroll
                 for(unsigned i = 0; i < NumRegs; i++)
                 {
-                    result.data[i] = __float2half(regsIn.data[i]);
+                    get<i>(result) = __float2half(get<i>(regsIn));
                 }
                 return result;
             }
