@@ -216,7 +216,13 @@ namespace rocwmma
     * @tparam VecT API vector type
     */
     template <typename VecT>
-    ROCWMMA_HOST_DEVICE static inline decltype(auto) to_native_vector(VecT&& v);
+    ROCWMMA_HOST_DEVICE static inline decltype(auto) to_native_vector(VecT const& v);
+
+    /*! \brief Transforms the vector object to it's raw storage type (e.g., when using builtin wrappers)
+    * @tparam VecT API vector type
+    */
+    template <typename VecT>
+    ROCWMMA_HOST_DEVICE static inline decltype(auto) to_native_vector(VecT& v);
 
 } // namespace rocwmma
 
