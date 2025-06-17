@@ -96,7 +96,7 @@ namespace rocwmma
             {
                 // Fill the buffer with clipVal
                 using BuffTraits = VecTraits<BuffT>;
-                buff             = BuffT{static_cast<typename BuffTraits::DataT>(clipVal)};
+                buff = make_vector<typename BuffTraits::DataT, BuffTraits::size()>(clipVal);
             }
         };
 

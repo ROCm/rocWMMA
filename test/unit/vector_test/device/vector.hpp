@@ -38,7 +38,7 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec{static_cast<DataT>(5.0f)};
+        auto vec = make_vector<DataT, VecSize>(5.0f);
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -53,7 +53,7 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(5.0f)};
+        auto                 vec0 = make_vector<DataT, VecSize>(5.0f);
         VecT<DataT, VecSize> vec1{vec0};
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
@@ -70,7 +70,7 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(5.0f)};
+        auto                 vec0 = make_vector<DataT, VecSize>(5.0f);
         VecT<DataT, VecSize> vec1{std::move(vec0)};
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
@@ -86,7 +86,7 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(5.0f)};
+        auto                 vec0 = make_vector<DataT, VecSize>(5.0f);
         VecT<DataT, VecSize> vec1;
 
         vec1 = vec0;
@@ -105,7 +105,7 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(5.0f)};
+        auto                 vec0 = make_vector<DataT, VecSize>(5.0f);
         VecT<DataT, VecSize> vec1;
 
         vec1 = std::move(vec0);
@@ -123,8 +123,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(5.0f)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(3.0f)};
+        auto vec0 = make_vector<DataT, VecSize>(5.0f);
+        auto vec1 = make_vector<DataT, VecSize>(3.0f);
         vec0 += vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
@@ -143,9 +143,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(5.0f)};
-        auto                 vec1 = vec0 + static_cast<DataT>(3.0f);
-        auto                 vec2 = static_cast<DataT>(3.0f) + vec0;
+        auto vec0 = make_vector<DataT, VecSize>(5.0f);
+        auto vec1 = vec0 + static_cast<DataT>(3.0f);
+        auto vec2 = static_cast<DataT>(3.0f) + vec0;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -164,9 +164,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(5.0f)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(3.0f)};
-        auto                 vec2 = vec0 + vec1;
+        auto vec0 = make_vector<DataT, VecSize>(5.0f);
+        auto vec1 = make_vector<DataT, VecSize>(3.0f);
+        auto vec2 = vec0 + vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -186,8 +186,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(5.0f)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(3.0f)};
+        auto vec0 = make_vector<DataT, VecSize>(5.0f);
+        auto vec1 = make_vector<DataT, VecSize>(3.0f);
         vec0 -= vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
@@ -206,9 +206,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(5.0f)};
-        auto                 vec1 = vec0 - static_cast<DataT>(3.0f);
-        auto                 vec2 = static_cast<DataT>(3.0f) - vec0;
+        auto vec0 = make_vector<DataT, VecSize>(5.0f);
+        auto vec1 = vec0 - static_cast<DataT>(3.0f);
+        auto vec2 = static_cast<DataT>(3.0f) - vec0;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -227,9 +227,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(5.0f)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(3.0f)};
-        auto                 vec2 = vec0 - vec1;
+        auto vec0 = make_vector<DataT, VecSize>(5.0f);
+        auto vec1 = make_vector<DataT, VecSize>(3.0f);
+        auto vec2 = vec0 - vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -249,8 +249,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(5.0f)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(3.0f)};
+        auto vec0 = make_vector<DataT, VecSize>(5.0f);
+        auto vec1 = make_vector<DataT, VecSize>(3.0f);
         vec0 *= vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
@@ -269,9 +269,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(5.0f)};
-        auto                 vec1 = vec0 * static_cast<DataT>(3.0f);
-        auto                 vec2 = static_cast<DataT>(3.0f) * vec0;
+        auto vec0 = make_vector<DataT, VecSize>(5.0f);
+        auto vec1 = vec0 * static_cast<DataT>(3.0f);
+        auto vec2 = static_cast<DataT>(3.0f) * vec0;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -290,9 +290,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(5.0f)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(3.0f)};
-        auto                 vec2 = vec0 * vec1;
+        auto vec0 = make_vector<DataT, VecSize>(5.0f);
+        auto vec1 = make_vector<DataT, VecSize>(3.0f);
+        auto vec2 = vec0 * vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -312,8 +312,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(6.0f)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(3.0f)};
+        auto vec0 = make_vector<DataT, VecSize>(6.0f);
+        auto vec1 = make_vector<DataT, VecSize>(3.0f);
         vec0 /= vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
@@ -332,9 +332,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(6.0f)};
-        auto                 vec1 = vec0 / static_cast<DataT>(3.0f);
-        auto                 vec2 = static_cast<DataT>(3.0f) / vec0;
+        auto vec0 = make_vector<DataT, VecSize>(6.0f);
+        auto vec1 = vec0 / static_cast<DataT>(3.0f);
+        auto vec2 = static_cast<DataT>(3.0f) / vec0;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -353,9 +353,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(6.0f)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(3.0f)};
-        auto                 vec2 = vec0 / vec1;
+        auto vec0 = make_vector<DataT, VecSize>(6.0f);
+        auto vec1 = make_vector<DataT, VecSize>(3.0f);
+        auto vec2 = vec0 / vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -375,9 +375,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(5.0f)};
-        auto                 vec1 = vec0++;
-        auto                 vec2 = ++vec0;
+        auto vec0 = make_vector<DataT, VecSize>(5.0f);
+        auto vec1 = vec0++;
+        auto vec2 = ++vec0;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -394,9 +394,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(5.0f)};
-        auto                 vec1 = vec0--;
-        auto                 vec2 = --vec0;
+        auto vec0 = make_vector<DataT, VecSize>(5.0f);
+        auto vec1 = vec0--;
+        auto vec2 = --vec0;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -415,8 +415,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(6u)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(4u)};
+        auto vec0 = make_vector<DataT, VecSize>(6.0f);
+        auto vec1 = make_vector<DataT, VecSize>(4.0f);
         vec0 %= vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
@@ -437,8 +437,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(6u)};
-        auto                 vec1 = vec0 % static_cast<DataT>(4u);
+        auto vec0 = make_vector<DataT, VecSize>(6u);
+        auto vec1 = vec0 % static_cast<DataT>(4u);
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -457,9 +457,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(6u)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(4u)};
-        auto                 vec2 = vec0 % vec1;
+        auto vec0 = make_vector<DataT, VecSize>(6u);
+        auto vec1 = make_vector<DataT, VecSize>(4u);
+        auto vec2 = vec0 % vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -511,8 +511,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(0xF0)};
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = make_vector<DataT, VecSize>(0xF0);
         vec0 &= vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
@@ -533,8 +533,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        auto                 vec1 = vec0 & static_cast<DataT>(0xF0);
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = vec0 & static_cast<DataT>(0xF0);
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -553,9 +553,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(0xF0)};
-        auto                 vec2 = vec0 & vec1;
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = make_vector<DataT, VecSize>(0xF0);
+        auto vec2 = vec0 & vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -607,8 +607,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(0xF0)};
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = make_vector<DataT, VecSize>(0xF0);
         vec0 |= vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
@@ -629,8 +629,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        auto                 vec1 = vec0 | static_cast<DataT>(0xF0);
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = vec0 | static_cast<DataT>(0xF0);
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -649,9 +649,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(0xF0)};
-        auto                 vec2 = vec0 | vec1;
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = make_vector<DataT, VecSize>(0xF0);
+        auto vec2 = vec0 | vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -703,8 +703,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(0xF0)};
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = make_vector<DataT, VecSize>(0xF0);
         vec0 ^= vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
@@ -725,8 +725,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        auto                 vec1 = vec0 ^ static_cast<DataT>(0xF0);
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = vec0 ^ static_cast<DataT>(0xF0);
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -745,9 +745,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(0xF0)};
-        auto                 vec2 = vec0 ^ vec1;
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = make_vector<DataT, VecSize>(0xF0);
+        auto vec2 = vec0 ^ vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -799,8 +799,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(0x03)};
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = make_vector<DataT, VecSize>(0x03);
         vec0 >>= vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
@@ -821,8 +821,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        auto                 vec1 = vec0 >> static_cast<DataT>(0x03);
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = vec0 >> static_cast<DataT>(0x03);
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -841,9 +841,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(0x03)};
-        auto                 vec2 = vec0 >> vec1;
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = make_vector<DataT, VecSize>(0x03);
+        auto vec2 = vec0 >> vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -895,8 +895,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(0x03)};
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = make_vector<DataT, VecSize>(0x03);
         vec0 <<= vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
@@ -917,8 +917,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        auto                 vec1 = vec0 << static_cast<DataT>(0x03);
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = vec0 << static_cast<DataT>(0x03);
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -937,9 +937,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(0x03)};
-        auto                 vec2 = vec0 << vec1;
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = make_vector<DataT, VecSize>(0x03);
+        auto vec2 = vec0 << vec1;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -991,8 +991,8 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(0x0F)};
-        auto                 vec1 = ~vec0;
+        auto vec0 = make_vector<DataT, VecSize>(0x0F);
+        auto vec1 = ~vec0;
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -1019,9 +1019,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(3.0f)};
-        auto                 res1 = (vec0 == static_cast<DataT>(3.0f));
-        auto                 res2 = (static_cast<DataT>(11.0f) == vec0);
+        auto vec0 = make_vector<DataT, VecSize>(3.0f);
+        auto res1 = (vec0 == static_cast<DataT>(3.0f));
+        auto res2 = (static_cast<DataT>(11.0f) == vec0);
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -1039,11 +1039,11 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(3.0f)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(3.0f)};
-        VecT<DataT, VecSize> vec2{static_cast<DataT>(5.0f)};
-        auto                 res1 = (vec0 == vec1);
-        auto                 res2 = (vec1 == vec2);
+        auto vec0 = make_vector<DataT, VecSize>(3.0f);
+        auto vec1 = make_vector<DataT, VecSize>(3.0f);
+        auto vec2 = make_vector<DataT, VecSize>(5.0f);
+        auto res1 = (vec0 == vec1);
+        auto res2 = (vec1 == vec2);
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -1063,9 +1063,9 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(3.0f)};
-        auto                 res1 = (vec0 != static_cast<DataT>(3.0f));
-        auto                 res2 = (static_cast<DataT>(11.0f) != vec0);
+        auto vec0 = make_vector<DataT, VecSize>(3.0f);
+        auto res1 = (vec0 != static_cast<DataT>(3.0f));
+        auto res2 = (static_cast<DataT>(11.0f) != vec0);
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -1083,11 +1083,11 @@ namespace rocwmma
     {
         bool err = false;
 
-        VecT<DataT, VecSize> vec0{static_cast<DataT>(3.0f)};
-        VecT<DataT, VecSize> vec1{static_cast<DataT>(3.0f)};
-        VecT<DataT, VecSize> vec2{static_cast<DataT>(5.0f)};
-        auto                 res1 = (vec0 != vec1);
-        auto                 res2 = (vec1 != vec2);
+        auto vec0 = make_vector<DataT, VecSize>(3.0f);
+        auto vec1 = make_vector<DataT, VecSize>(3.0f);
+        auto vec2 = make_vector<DataT, VecSize>(5.0f);
+        auto res1 = (vec0 != vec1);
+        auto res2 = (vec1 != vec2);
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;

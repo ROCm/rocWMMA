@@ -56,8 +56,8 @@ namespace rocwmma
             return get<Index>(v0) + get<Index>(v1);
         };
 
-        auto v0 = VecT<DataT, VecSize>{static_cast<DataT>(1.0f)};
-        auto v1 = VecT<DataT, VecSize>{static_cast<DataT>(2.0f)};
+        auto v0 = make_vector<DataT, VecSize>(static_cast<DataT>(1.0f));
+        auto v1 = make_vector<DataT, VecSize>(static_cast<DataT>(2.0f));
 
         auto res = vector_generator<DataT, VecSize>()(sum, v0, v1);
 

@@ -156,7 +156,7 @@ namespace rocwmma
         }
         else
         {
-            auto res = VecT<PackedT, VecSize>(0);
+            auto res = make_vector<PackedT, VecSize>(0);
 
             static_for<0, VecSize, 1>([&](auto&& Idx) {
                 constexpr uint32_t i                          = decay_t<decltype(Idx)>::value;
@@ -194,7 +194,7 @@ namespace rocwmma
         }
         else
         {
-            auto res = VecT<PackedT, VecSize>(0);
+            auto res = make_vector<PackedT, VecSize>(0);
 
             static_for<0, VecSize, 1>([&](auto&& Idx) {
                 constexpr uint32_t i = decay_t<decltype(Idx)>::value;
@@ -353,7 +353,7 @@ namespace rocwmma
         if constexpr(VecSize * 2 == PackUtil::Traits::PackRatio)
         {
             auto constexpr packSize = std::max(1u, VecSize / PackUtil::Traits::PackRatio);
-            auto res                = VecT<PackedT, packSize>(0);
+            auto res                = make_vector<PackedT, packSize>(0);
             auto expectedData       = make_vector_sequence<UnpackedT, VecSize>();
             for(uint32_t i = 0; i < VecSize; i++)
             {
@@ -376,8 +376,8 @@ namespace rocwmma
 
         if constexpr(VecSize == 1)
         {
-            auto res          = VecT<PackedT, 1>(0);
-            auto expectedData = VecT<UnpackedT, 1>(static_cast<UnpackedT>(1.0F));
+            auto res          = make_vector<PackedT, 1>(0);
+            auto expectedData = make_vector<UnpackedT, 1>(1.0f);
             get<0>(*(reinterpret_cast<VecT<UnpackedT, VecSize>*>(&res))) = get<0>(expectedData);
             err |= !PACK_UTIL_EXPECT_EQ(PackUtil::template paddedUnpack<VecSize>(res),
                                         expectedData);

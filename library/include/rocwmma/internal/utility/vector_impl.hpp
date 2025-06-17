@@ -508,6 +508,17 @@ namespace rocwmma
         return vector_generator<DataT, VecSize>()(buildSeq);
     }
 
+    template <typename DataT, uint32_t VecSize, typename ArgT>
+    ROCWMMA_HOST_DEVICE constexpr static inline auto make_vector(ArgT&& value)
+    {
+#if defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
+        return VecT{static_cast<DataT>(value)};
+#else
+        // Uses HIP_vector_type
+        return make_vector_type<DataT, VecSize>(static_cast<DataT>(value));
+#endif // defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
+    }
+
     template <typename VecT>
     ROCWMMA_HOST_DEVICE static inline decltype(auto) to_native_vector(VecT& v)
     {

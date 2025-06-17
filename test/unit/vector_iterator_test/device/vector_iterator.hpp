@@ -38,8 +38,7 @@ namespace rocwmma
         bool err = false;
 
         // Vector data unused
-        //non_native_vector_base<DataT, VecSize> vec{static_cast<DataT>(5.0f)};
-        HIP_vector_type<DataT, VecSize> vec{static_cast<DataT>(5.0f)};
+        auto vec = make_vector<DataT, VecSize>(static_cast<DataT>(5.0f));
 
         static_for<0, VecSize, 1>([&](auto&& Idx) {
             constexpr uint32_t i = decay_t<decltype(Idx)>::value;
