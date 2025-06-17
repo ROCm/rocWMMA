@@ -34,13 +34,13 @@
 namespace rocwmma
 {
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline DataT get(VecT<DataT, VecSize> const& v, uint32_t idx)
+    __host__ __device__ static inline DataT get(VecT<DataT, VecSize> const& v, uint32_t idx)
     {
         return v.data[idx];
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool bcastCtorTest()
+    __host__ __device__ static inline bool bcastCtorTest()
     {
         bool err = false;
 
@@ -55,7 +55,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool copyCtorTest()
+    __host__ __device__ static inline bool copyCtorTest()
     {
         bool err = false;
 
@@ -72,7 +72,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool moveCtorTest()
+    __host__ __device__ static inline bool moveCtorTest()
     {
         bool err = false;
 
@@ -88,7 +88,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool assignmentTest()
+    __host__ __device__ static inline bool assignmentTest()
     {
         bool err = false;
 
@@ -107,7 +107,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool assignmentMoveTest()
+    __host__ __device__ static inline bool assignmentMoveTest()
     {
         bool err = false;
 
@@ -125,7 +125,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorPlusEqV()
+    __host__ __device__ static inline bool operatorPlusEqV()
     {
         bool err = false;
 
@@ -145,7 +145,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorPlusS()
+    __host__ __device__ static inline bool operatorPlusS()
     {
         bool err = false;
 
@@ -166,7 +166,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorPlusV()
+    __host__ __device__ static inline bool operatorPlusV()
     {
         bool err = false;
 
@@ -188,7 +188,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorMinusEqV()
+    __host__ __device__ static inline bool operatorMinusEqV()
     {
         bool err = false;
 
@@ -208,7 +208,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorMinusS()
+    __host__ __device__ static inline bool operatorMinusS()
     {
         bool err = false;
 
@@ -229,7 +229,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorMinusV()
+    __host__ __device__ static inline bool operatorMinusV()
     {
         bool err = false;
 
@@ -251,7 +251,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorMultEqV()
+    __host__ __device__ static inline bool operatorMultEqV()
     {
         bool err = false;
 
@@ -271,7 +271,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorMultS()
+    __host__ __device__ static inline bool operatorMultS()
     {
         bool err = false;
 
@@ -292,7 +292,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorMultV()
+    __host__ __device__ static inline bool operatorMultV()
     {
         bool err = false;
 
@@ -314,7 +314,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorDivEqV()
+    __host__ __device__ static inline bool operatorDivEqV()
     {
         bool err = false;
 
@@ -334,7 +334,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorDivS()
+    __host__ __device__ static inline bool operatorDivS()
     {
         bool err = false;
 
@@ -355,7 +355,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorDivV()
+    __host__ __device__ static inline bool operatorDivV()
     {
         bool err = false;
 
@@ -377,7 +377,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorInc()
+    __host__ __device__ static inline bool operatorInc()
     {
         bool err = false;
 
@@ -396,7 +396,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorDec()
+    __host__ __device__ static inline bool operatorDec()
     {
         bool err = false;
 
@@ -417,7 +417,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorModEqV()
+    __host__ __device__ static inline bool operatorModEqV()
     {
         bool err = false;
 
@@ -439,7 +439,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorModS()
+    __host__ __device__ static inline bool operatorModS()
     {
         bool err = false;
 
@@ -459,7 +459,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorModV()
+    __host__ __device__ static inline bool operatorModV()
     {
         bool err = false;
 
@@ -483,7 +483,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorModEqV()
+    __host__ __device__ static inline bool operatorModEqV()
     {
         // Non-integral
         bool err = false;
@@ -493,7 +493,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorModS()
+    __host__ __device__ static inline bool operatorModS()
     {
         // Non-integral
         bool err = false;
@@ -503,7 +503,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorModV()
+    __host__ __device__ static inline bool operatorModV()
     {
         // Non-integral
         bool err = false;
@@ -513,7 +513,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitAndEqV()
+    __host__ __device__ static inline bool operatorBitAndEqV()
     {
         bool err = false;
 
@@ -535,7 +535,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitAndS()
+    __host__ __device__ static inline bool operatorBitAndS()
     {
         bool err = false;
 
@@ -555,7 +555,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitAndV()
+    __host__ __device__ static inline bool operatorBitAndV()
     {
         bool err = false;
 
@@ -579,7 +579,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitAndEqV()
+    __host__ __device__ static inline bool operatorBitAndEqV()
     {
         // Non-integral
         bool err = false;
@@ -589,7 +589,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitAndS()
+    __host__ __device__ static inline bool operatorBitAndS()
     {
         // Non-integral
         bool err = false;
@@ -599,7 +599,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitAndV()
+    __host__ __device__ static inline bool operatorBitAndV()
     {
         // Non-integral
         bool err = false;
@@ -609,7 +609,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitOrEqV()
+    __host__ __device__ static inline bool operatorBitOrEqV()
     {
         bool err = false;
 
@@ -631,7 +631,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitOrS()
+    __host__ __device__ static inline bool operatorBitOrS()
     {
         bool err = false;
 
@@ -651,7 +651,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitOrV()
+    __host__ __device__ static inline bool operatorBitOrV()
     {
         bool err = false;
 
@@ -675,7 +675,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitOrEqV()
+    __host__ __device__ static inline bool operatorBitOrEqV()
     {
         // Non-integral
         bool err = false;
@@ -685,7 +685,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitOrS()
+    __host__ __device__ static inline bool operatorBitOrS()
     {
         // Non-integral
         bool err = false;
@@ -695,7 +695,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitOrV()
+    __host__ __device__ static inline bool operatorBitOrV()
     {
         // Non-integral
         bool err = false;
@@ -705,7 +705,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitXorEqV()
+    __host__ __device__ static inline bool operatorBitXorEqV()
     {
         bool err = false;
 
@@ -727,7 +727,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitXorS()
+    __host__ __device__ static inline bool operatorBitXorS()
     {
         bool err = false;
 
@@ -747,7 +747,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitXorV()
+    __host__ __device__ static inline bool operatorBitXorV()
     {
         bool err = false;
 
@@ -771,7 +771,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitXorEqV()
+    __host__ __device__ static inline bool operatorBitXorEqV()
     {
         // Non-integral
         bool err = false;
@@ -781,7 +781,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitXorS()
+    __host__ __device__ static inline bool operatorBitXorS()
     {
         // Non-integral
         bool err = false;
@@ -791,7 +791,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitXorV()
+    __host__ __device__ static inline bool operatorBitXorV()
     {
         // Non-integral
         bool err = false;
@@ -801,7 +801,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitShrEqV()
+    __host__ __device__ static inline bool operatorBitShrEqV()
     {
         bool err = false;
 
@@ -823,7 +823,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitShrS()
+    __host__ __device__ static inline bool operatorBitShrS()
     {
         bool err = false;
 
@@ -843,7 +843,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitShrV()
+    __host__ __device__ static inline bool operatorBitShrV()
     {
         bool err = false;
 
@@ -867,7 +867,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitShrEqV()
+    __host__ __device__ static inline bool operatorBitShrEqV()
     {
         // Non-integral
         bool err = false;
@@ -877,7 +877,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitShrS()
+    __host__ __device__ static inline bool operatorBitShrS()
     {
         // Non-integral
         bool err = false;
@@ -887,7 +887,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitShrV()
+    __host__ __device__ static inline bool operatorBitShrV()
     {
         // Non-integral
         bool err = false;
@@ -897,7 +897,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitShlEqV()
+    __host__ __device__ static inline bool operatorBitShlEqV()
     {
         bool err = false;
 
@@ -919,7 +919,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitShlS()
+    __host__ __device__ static inline bool operatorBitShlS()
     {
         bool err = false;
 
@@ -939,7 +939,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitShlV()
+    __host__ __device__ static inline bool operatorBitShlV()
     {
         bool err = false;
 
@@ -963,7 +963,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitShlEqV()
+    __host__ __device__ static inline bool operatorBitShlEqV()
     {
         // Non-integral
         bool err = false;
@@ -973,7 +973,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitShlS()
+    __host__ __device__ static inline bool operatorBitShlS()
     {
         // Non-integral
         bool err = false;
@@ -983,7 +983,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitShlV()
+    __host__ __device__ static inline bool operatorBitShlV()
     {
         // Non-integral
         bool err = false;
@@ -993,7 +993,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitInv()
+    __host__ __device__ static inline bool operatorBitInv()
     {
         bool err = false;
 
@@ -1013,7 +1013,7 @@ namespace rocwmma
     template <typename DataT,
               uint32_t VecSize,
               typename std::enable_if_t<!std::is_integral<DataT>{}>* = nullptr>
-    __device__ static inline bool operatorBitInv()
+    __host__ __device__ static inline bool operatorBitInv()
     {
         // Non-integral
         bool err = false;
@@ -1021,7 +1021,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorBoolEqS()
+    __host__ __device__ static inline bool operatorBoolEqS()
     {
         bool err = false;
 
@@ -1041,7 +1041,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorBoolEqV()
+    __host__ __device__ static inline bool operatorBoolEqV()
     {
         bool err = false;
 
@@ -1065,7 +1065,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorBoolNeqS()
+    __host__ __device__ static inline bool operatorBoolNeqS()
     {
         bool err = false;
 
@@ -1085,7 +1085,7 @@ namespace rocwmma
     }
 
     template <typename DataT, uint32_t VecSize>
-    __device__ static inline bool operatorBoolNeqV()
+    __host__ __device__ static inline bool operatorBoolNeqV()
     {
         bool err = false;
 
@@ -1219,6 +1219,98 @@ namespace rocwmma
         {
             out[0] = static_cast<DataT>(result == 0 ? SUCCESS_VALUE : ERROR_VALUE);
         }
+    }
+
+    template <typename DataT, uint32_t VecSize>
+    auto inline vectorHostTest()
+    {
+        bool err = true;
+
+        bcastCtorTest<DataT, VecSize>();
+
+        copyCtorTest<DataT, VecSize>();
+
+        moveCtorTest<DataT, VecSize>();
+
+        assignmentTest<DataT, VecSize>();
+
+        assignmentMoveTest<DataT, VecSize>();
+
+        operatorPlusEqV<DataT, VecSize>();
+
+        operatorPlusS<DataT, VecSize>();
+
+        operatorPlusV<DataT, VecSize>();
+
+        operatorMinusEqV<DataT, VecSize>();
+
+        operatorMinusS<DataT, VecSize>();
+
+        operatorMinusV<DataT, VecSize>();
+
+        operatorMultEqV<DataT, VecSize>();
+
+        operatorMultS<DataT, VecSize>();
+
+        operatorMultV<DataT, VecSize>();
+
+        operatorDivEqV<DataT, VecSize>();
+
+        operatorDivS<DataT, VecSize>();
+
+        operatorDivV<DataT, VecSize>();
+
+        operatorModEqV<DataT, VecSize>();
+
+        operatorModS<DataT, VecSize>();
+
+        operatorModV<DataT, VecSize>();
+
+        operatorBitAndEqV<DataT, VecSize>();
+
+        operatorBitAndS<DataT, VecSize>();
+
+        operatorBitAndV<DataT, VecSize>();
+
+        operatorBitOrEqV<DataT, VecSize>();
+
+        operatorBitOrS<DataT, VecSize>();
+
+        operatorBitOrV<DataT, VecSize>();
+
+        operatorBitXorEqV<DataT, VecSize>();
+
+        operatorBitXorS<DataT, VecSize>();
+
+        operatorBitXorV<DataT, VecSize>();
+
+        operatorBitShrEqV<DataT, VecSize>();
+
+        operatorBitShrS<DataT, VecSize>();
+
+        operatorBitShrV<DataT, VecSize>();
+
+        operatorBitShlEqV<DataT, VecSize>();
+
+        operatorBitShlS<DataT, VecSize>();
+
+        operatorBitShlV<DataT, VecSize>();
+
+        operatorBitInv<DataT, VecSize>();
+
+        operatorBoolEqS<DataT, VecSize>();
+
+        operatorBoolEqV<DataT, VecSize>();
+
+        operatorBoolNeqS<DataT, VecSize>();
+
+        operatorBoolNeqV<DataT, VecSize>();
+
+        operatorInc<DataT, VecSize>();
+
+        operatorDec<DataT, VecSize>();
+
+        return err;
     }
 
 } // namespace rocwmma
