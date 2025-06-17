@@ -237,11 +237,6 @@ namespace rocwmma
         } // namespace RelationalOp
 
         // Helpers for expression expansion, specific to non_native_vector_base
-        template <uint32_t... ns>
-        using SeqT = integer_sequence<uint32_t, ns...>;
-
-        template <uint32_t Rank>
-        using Seq = make_integer_sequence<uint32_t, Rank>;
 
         // Use with operations that have 2 operands
         template <class BinOp, typename VecT, uint32_t... indices>

@@ -29,6 +29,7 @@
 
 #include "../vector_iterator.hpp"
 #include "get.hpp"
+#include "sequence.hpp"
 #include "type_traits.hpp"
 
 namespace rocwmma
@@ -178,7 +179,15 @@ namespace rocwmma
                 forward<VecT>(lhs),
                 detail::make_index_sequence<VecTraits<decay_t<VecT>>::size()>{});
         }
-    }
+
+        // Fwd declare bitwise ops from vector class
+        namespace BitwiseOp
+        {
+            struct And;
+            struct Or;
+        } // namespace BitwiseOp
+
+    } // namespace detail
 
     template <typename VecT>
     ROCWMMA_HOST_DEVICE constexpr static inline auto vector_reduce_and(VecT&& lhs) noexcept
