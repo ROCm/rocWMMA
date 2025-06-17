@@ -521,7 +521,7 @@ namespace rocwmma
     ROCWMMA_HOST_DEVICE constexpr static inline auto make_vector(ArgT&& value)
     {
 #if defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
-        return VecT{static_cast<DataT>(value)};
+        return VecT<DataT, VecSize>{static_cast<DataT>(value)};
 #else
         // Uses HIP_vector_type
         return make_vector_type<DataT, VecSize>(static_cast<DataT>(value));
