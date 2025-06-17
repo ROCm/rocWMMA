@@ -27,7 +27,7 @@
 #ifndef ROCWMMA_UTILITY_VECTOR_HPP
 #define ROCWMMA_UTILITY_VECTOR_HPP
 
-#include "../types.hpp"
+#include "../vector_types.hpp"
 #include "vector_impl.hpp"
 
 namespace rocwmma
@@ -211,6 +211,25 @@ namespace rocwmma
     */
     template <typename DataT, uint32_t VecSize, uint32_t Start = 0u, uint32_t Stride = 1u>
     ROCWMMA_HOST_DEVICE constexpr static inline auto make_vector_sequence();
+
+    /*! \brief Creates a vector that broadcasts the input value to all elements
+    * @tparam DataT Data type
+    * @tparam VecSize The size of the result vector
+    */
+    template <typename DataT, uint32_t VecSize, typename ArgT>
+    ROCWMMA_HOST_DEVICE constexpr static inline auto make_vector(ArgT&& value);
+
+    /*! \brief Transforms the vector object to it's raw storage type (e.g., when using builtin wrappers)
+    * @tparam VecT API vector type
+    */
+    template <typename VecT>
+    ROCWMMA_HOST_DEVICE static inline decltype(auto) to_native_vector(VecT const& v);
+
+    /*! \brief Transforms the vector object to it's raw storage type (e.g., when using builtin wrappers)
+    * @tparam VecT API vector type
+    */
+    template <typename VecT>
+    ROCWMMA_HOST_DEVICE static inline decltype(auto) to_native_vector(VecT& v);
 
 } // namespace rocwmma
 

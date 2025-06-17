@@ -213,8 +213,8 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {
-                    __builtin_amdgcn_wmma_f32_16x16x16_f16_w32(regsA.data, regsB.data, regsC.data)};
+                to_native_vector(result) = {__builtin_amdgcn_wmma_f32_16x16x16_f16_w32(
+                    to_native_vector(regsA), to_native_vector(regsB), to_native_vector(regsC))};
                 return result;
             }
         };
@@ -303,8 +303,11 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f16_16x16x16_f16_w32(
-                    regsA.data, regsB.data, regsC.data, (bool)AccumBits)};
+                to_native_vector(result)
+                    = {__builtin_amdgcn_wmma_f16_16x16x16_f16_w32(to_native_vector(regsA),
+                                                                  to_native_vector(regsB),
+                                                                  to_native_vector(regsC),
+                                                                  (bool)AccumBits)};
                 return result;
             }
         };
@@ -393,8 +396,8 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f32_16x16x16_bf16_w32(
-                    regsA.data, regsB.data, regsC.data)};
+                to_native_vector(result) = {__builtin_amdgcn_wmma_f32_16x16x16_bf16_w32(
+                    to_native_vector(regsA), to_native_vector(regsB), to_native_vector(regsC))};
                 return result;
             }
         };
@@ -483,8 +486,11 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32(
-                    regsA.data, regsB.data, regsC.data, (bool)AccumBits)};
+                to_native_vector(result)
+                    = {__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32(to_native_vector(regsA),
+                                                                    to_native_vector(regsB),
+                                                                    to_native_vector(regsC),
+                                                                    (bool)AccumBits)};
                 return result;
             }
         };
@@ -543,12 +549,13 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32((bool)InputSign,
-                                                                          regsA.data,
-                                                                          (bool)InputSign,
-                                                                          regsB.data,
-                                                                          regsC.data,
-                                                                          (bool)AccumSign)};
+                to_native_vector(result)
+                    = {__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32((bool)InputSign,
+                                                                  to_native_vector(regsA),
+                                                                  (bool)InputSign,
+                                                                  to_native_vector(regsB),
+                                                                  to_native_vector(regsC),
+                                                                  (bool)AccumSign)};
                 return result;
             }
         };
@@ -638,8 +645,8 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f32_16x16x16_f16_w32_gfx12(
-                    regsA.data, regsB.data, regsC.data)};
+                to_native_vector(result) = {__builtin_amdgcn_wmma_f32_16x16x16_f16_w32_gfx12(
+                    to_native_vector(regsA), to_native_vector(regsB), to_native_vector(regsC))};
                 return result;
             }
         };
@@ -728,8 +735,8 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f16_16x16x16_f16_w32_gfx12(
-                    regsA.data, regsB.data, regsC.data)};
+                to_native_vector(result) = {__builtin_amdgcn_wmma_f16_16x16x16_f16_w32_gfx12(
+                    to_native_vector(regsA), to_native_vector(regsB), to_native_vector(regsC))};
                 return result;
             }
         };
@@ -818,8 +825,8 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f32_16x16x16_bf16_w32_gfx12(
-                    regsA.data, regsB.data, regsC.data)};
+                to_native_vector(result) = {__builtin_amdgcn_wmma_f32_16x16x16_bf16_w32_gfx12(
+                    to_native_vector(regsA), to_native_vector(regsB), to_native_vector(regsC))};
                 return result;
             }
         };
@@ -908,8 +915,8 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32_gfx12(
-                    regsA.data, regsB.data, regsC.data)};
+                to_native_vector(result) = {__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32_gfx12(
+                    to_native_vector(regsA), to_native_vector(regsB), to_native_vector(regsC))};
                 return result;
             }
         };
@@ -968,12 +975,13 @@ namespace rocwmma
                 exec(ARegsT const& regsA, BRegsT const& regsB, CRegsT const& regsC) -> DRegsT
             {
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32_gfx12((bool)InputSign,
-                                                                                regsA.data,
-                                                                                (bool)InputSign,
-                                                                                regsB.data,
-                                                                                regsC.data,
-                                                                                (bool)AccumSign)};
+                to_native_vector(result)
+                    = {__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32_gfx12((bool)InputSign,
+                                                                        to_native_vector(regsA),
+                                                                        (bool)InputSign,
+                                                                        to_native_vector(regsB),
+                                                                        to_native_vector(regsC),
+                                                                        (bool)AccumSign)};
                 return result;
             }
         };
@@ -1040,10 +1048,10 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f32_16x16x16_fp8_fp8_w32_gfx12(
-                    reinterpret_cast<TypeIn const&>(regsA).data,
-                    reinterpret_cast<TypeIn const&>(regsB).data,
-                    regsC.data)};
+                to_native_vector(result) = {__builtin_amdgcn_wmma_f32_16x16x16_fp8_fp8_w32_gfx12(
+                    to_native_vector(reinterpret_cast<TypeIn const&>(regsA)),
+                    to_native_vector(reinterpret_cast<TypeIn const&>(regsB)),
+                    to_native_vector(regsC))};
                 return result;
             }
         };
@@ -1110,10 +1118,10 @@ namespace rocwmma
                               "Inconsistent data formats");
 
                 DRegsT result;
-                result.data = {__builtin_amdgcn_wmma_f32_16x16x16_bf8_bf8_w32_gfx12(
-                    reinterpret_cast<TypeIn const&>(regsA).data,
-                    reinterpret_cast<TypeIn const&>(regsB).data,
-                    regsC.data)};
+                to_native_vector(result) = {__builtin_amdgcn_wmma_f32_16x16x16_bf8_bf8_w32_gfx12(
+                    to_native_vector(reinterpret_cast<TypeIn const&>(regsA)),
+                    to_native_vector(reinterpret_cast<TypeIn const&>(regsB)),
+                    to_native_vector(regsC))};
                 return result;
             }
         };

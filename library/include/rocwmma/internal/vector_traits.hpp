@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (C) 2021-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,31 +23,32 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef ROCWMMA_BROADCAST_HPP
-#define ROCWMMA_BROADCAST_HPP
 
-#include "types.hpp"
-#include "utility/vector.hpp"
-#include "vector.hpp"
+#ifndef ROCWMMA_VECTOR_TRAITS_HPP
+#define ROCWMMA_VECTOR_TRAITS_HPP
 
 namespace rocwmma
 {
-
-    // Broadcast generates vectors of desired values
-    template <typename DataT, uint32_t VectorSize>
-    struct Broadcast
+    // Vector traits expected
+    template <typename VecT>
+    struct VecTraits
     {
-        struct Traits
-        {
-            using BroadcastT = VecT<DataT, VectorSize>;
-        };
+        // Blueprint
+        // template <typename DataT, uint32_t VecSize>
+        // using VecT = ...
 
-        ROCWMMA_DEVICE static inline void exec(typename Traits::BroadcastT& vec, DataT val)
-        {
-            vec = make_vector<DataT, VectorSize>(val);
-        }
+        // Current data type
+        // using DataT = ...;
+
+        // static constexpr uint32_t VecSize = ...;
+
+        // Current vector size
+        // constexpr static inline uint32_t size()
+        // {
+        //     return VecSize;
+        // }
     };
 
 } // namespace rocwmma
 
-#endif // ROCWMMA_BROADCAST_HPP
+#endif // ROCWMMA_VECTOR_TRAITS_HPP
