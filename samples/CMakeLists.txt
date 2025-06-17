@@ -26,6 +26,11 @@
 
 set(ROCWMMA_SAMPLES_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
+if(ROCWMMA_CODE_COVERAGE)
+    add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+    add_link_options(-fprofile-instr-generate)
+endif()
+
 # Custom target to build all rocWMMA samples
 add_custom_target(rocwmma_samples)
 

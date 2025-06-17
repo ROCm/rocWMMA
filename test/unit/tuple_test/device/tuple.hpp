@@ -34,7 +34,7 @@
 
 namespace rocwmma
 {
-    __device__ static inline bool operatorMultTest()
+    __host__ __device__ static inline bool operatorMultTest()
     {
         bool err = false;
 
@@ -56,7 +56,7 @@ namespace rocwmma
         return err;
     }
 
-    __device__ static inline bool copyTest()
+    __host__ __device__ static inline bool copyTest()
     {
         bool err = false;
 
@@ -69,7 +69,7 @@ namespace rocwmma
         return err;
     }
 
-    __device__ static inline bool popRightTest()
+    __host__ __device__ static inline bool popRightTest()
     {
         bool err = false;
 
@@ -82,7 +82,7 @@ namespace rocwmma
         return err;
     }
 
-    __device__ static inline bool popLeftTest()
+    __host__ __device__ static inline bool popLeftTest()
     {
         bool err = false;
 
@@ -95,7 +95,7 @@ namespace rocwmma
         return err;
     }
 
-    __device__ static inline bool getFirstTest()
+    __host__ __device__ static inline bool getFirstTest()
     {
         bool err = false;
 
@@ -108,7 +108,7 @@ namespace rocwmma
         return err;
     }
 
-    __device__ static inline bool getLastTest()
+    __host__ __device__ static inline bool getLastTest()
     {
         bool err = false;
 
@@ -121,7 +121,7 @@ namespace rocwmma
         return err;
     }
 
-    __device__ static inline bool reverseTest()
+    __host__ __device__ static inline bool reverseTest()
     {
         bool err = false;
 
@@ -138,7 +138,7 @@ namespace rocwmma
      * More Details about flatten and inflate
      * https://coderwall.com/p/fzni3g/bidirectional-translation-between-1d-and-3d-arrays
      */
-    __device__ static inline bool flattenCoordRightTest()
+    __host__ __device__ static inline bool flattenCoordRightTest()
     {
         bool err = false;
 
@@ -158,7 +158,7 @@ namespace rocwmma
         return err;
     }
 
-    __device__ static inline bool flattenCoordRightWith1DimTest()
+    __host__ __device__ static inline bool flattenCoordRightWith1DimTest()
     {
         bool err = false;
 
@@ -178,7 +178,7 @@ namespace rocwmma
         return err;
     }
 
-    __device__ static inline bool flattenCoordLeftTest()
+    __host__ __device__ static inline bool flattenCoordLeftTest()
     {
         bool err = false;
 
@@ -198,7 +198,7 @@ namespace rocwmma
         return err;
     }
 
-    __device__ static inline bool flattenCoordLeftWith1DimTest()
+    __host__ __device__ static inline bool flattenCoordLeftWith1DimTest()
     {
         bool err = false;
 
@@ -218,7 +218,7 @@ namespace rocwmma
         return err;
     }
 
-    __device__ static inline bool inflateCoordRightTest()
+    __host__ __device__ static inline bool inflateCoordRightTest()
     {
         bool err = false;
 
@@ -238,7 +238,7 @@ namespace rocwmma
         return err;
     }
 
-    __device__ static inline bool inflateCoordRightWith1DimTest()
+    __host__ __device__ static inline bool inflateCoordRightWith1DimTest()
     {
         bool err = false;
 
@@ -258,7 +258,7 @@ namespace rocwmma
         return err;
     }
 
-    __device__ static inline bool inflateCoordLeftTest()
+    __host__ __device__ static inline bool inflateCoordLeftTest()
     {
         bool err = false;
 
@@ -279,7 +279,7 @@ namespace rocwmma
         return err;
     }
 
-    __device__ static inline bool inflateCoordLeftWith1DimTest()
+    __host__ __device__ static inline bool inflateCoordLeftWith1DimTest()
     {
         bool err = false;
 
@@ -300,7 +300,7 @@ namespace rocwmma
         return err;
     }
 
-    __device__ static inline bool toMatrixSpaceTest()
+    __host__ __device__ static inline bool toMatrixSpaceTest()
     {
         bool err = false;
 
@@ -363,6 +363,30 @@ namespace rocwmma
         {
             out[0] = static_cast<DataT>(result == 0 ? SUCCESS_VALUE : ERROR_VALUE);
         }
+    }
+
+    auto inline tupleHostTest()
+    {
+        bool err = true;
+
+        operatorMultTest();
+        copyTest();
+        popLeftTest();
+        popRightTest();
+        getFirstTest();
+        getLastTest();
+        reverseTest();
+        flattenCoordRightTest();
+        flattenCoordRightWith1DimTest();
+        flattenCoordLeftTest();
+        flattenCoordLeftWith1DimTest();
+        inflateCoordRightTest();
+        inflateCoordRightWith1DimTest();
+        inflateCoordLeftTest();
+        inflateCoordLeftWith1DimTest();
+        toMatrixSpaceTest();
+
+        return err;
     }
 
 } // namespace rocwmma

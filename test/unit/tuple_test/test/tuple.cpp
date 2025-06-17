@@ -73,6 +73,11 @@ namespace rocwmma
 
 } // namespace rocwmma
 
+TEST(TupleTest, TupleHostTest)
+{
+    EXPECT_TRUE(rocwmma::tupleHostTest());
+}
+
 // Test suite for unique parameterization
 class TupleTest : public rocwmma::UnitTest
 {

@@ -15,8 +15,9 @@ component belonging to the ROCm ecosystem, while WMMA stands for Wavefront Mixed
 rocWMMA leverages modern C++ techniques, is templated for modularity,
 and uses meta-programming paradigms to provide opportunities for customization
 and compile-time inferences and optimizations. The API is seamless across the
-supported CDNA and RDNA architectures. It's also portable with the NVIDIA CUDA
-nvcuda::wmma library, allowing CUDA users to easily migrate to the AMD platform.
+supported CDNA and RDNA architectures. The API also offers a high degree of
+compatibility with common CUDA WMMA library interfaces, simplifying the migration
+of existing code to the AMD platform.
 
 The API is implemented as GPU device code which empowers you to directly use GPU matrix cores
 right from your kernel code.
@@ -39,4 +40,5 @@ functionality supports mixed-precision inputs and outputs with native fixed-prec
 
 Supporting code is required for GPU device management and kernel invocation.
 The kernel code samples and tests provided are built and launched using
-the :doc:`HIP <hip:index>` (Heterogeneous-Compute Interface for Portability) ecosystem within ROCm.
+:doc:`HIP <hip:index>` as part of the ROCm ecosystem.
+
