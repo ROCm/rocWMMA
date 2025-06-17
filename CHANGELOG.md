@@ -10,7 +10,7 @@ Documentation for rocWMMA is available at
 * Added internal register layout transforms to support interleaved MMA layouts
 * Added support for the gfx950 target
 * Added mixed input `bf8` / `fp8` types for MMA support
-* Added fragment scheduler API objects to embed threadblock cooperation properties in fragments
+* Added fragment scheduler API objects to embed thread block cooperation properties in fragments
 
 ### Changed
 
