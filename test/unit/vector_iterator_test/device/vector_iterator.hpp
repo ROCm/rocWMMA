@@ -38,14 +38,12 @@ namespace rocwmma
         bool err = false;
 
         // Vector data unused
-        //non_native_vector_base<DataT, VecSize> vec{static_cast<DataT>(5.0f)};
-        HIP_vector_type<DataT, VecSize> vec{static_cast<DataT>(5.0f)};
+        auto vec = make_vector<DataT, VecSize>(static_cast<DataT>(5.0f));
 
-        for(int i = 0; i < VecSize; i++)
-        {
-            //err |= (vec.d[i] != static_cast<DataT>(5.0f));
-            err |= (vec.data[i] != static_cast<DataT>(5.0f));
-        }
+        static_for<0, VecSize, 1>([&](auto&& Idx) {
+            constexpr uint32_t i = decay_t<decltype(Idx)>::value;
+            err |= (get<i>(vec) != static_cast<DataT>(5.0f));
+        });
 
         return err;
     }
@@ -133,21 +131,19 @@ namespace rocwmma
         bool err = false;
 
         // Init data as linear values
-        VecT<DataT, VecSize> vec;
-        for(uint32_t i = 0; i < VecSize; i++)
-        {
-            vec.data[i] = static_cast<DataT>(i);
-        }
+        auto vec = make_vector_sequence<DataT, VecSize>();
 
         // Iterate over vector
         auto it = makeVectorIterator(vec).begin();
 
         err = err || (VecSize != it.range());
-        for(uint32_t i = 0; i < it.range(); i++, it++)
-        {
+
+        static_for<0, it.range(), 1>([&](auto&& Idx) {
+            constexpr uint32_t i = decay_t<decltype(Idx)>::value;
             // 0th element check as the iterator stride = 1
-            err = err || (vec.data[i] != (*it).data[0]);
-        }
+            err = err || (get<i>(vec) != get<0>(*it));
+            it++;
+        });
 
         return err;
     }
@@ -165,13 +161,16 @@ namespace rocwmma
         err = err || (VecSize != (it.range() * StrideSize));
 
         // Check values over iteration
-        for(uint32_t i = 0; i < it.range(); i++, it++)
-        {
-            for(uint32_t j = 0; j < StrideSize; j++)
-            {
-                err = err || (vec.data[i * StrideSize + j] != (*it).data[j]);
-            }
-        }
+        static_for<0, it.range(), 1>([&](auto&& Idx_i) {
+            constexpr uint32_t i = decay_t<decltype(Idx_i)>::value;
+            static_for<0, StrideSize, 1>([&](auto&& Idx_j) {
+                constexpr uint32_t j = decay_t<decltype(Idx_j)>::value;
+                err                  = err || (get<i * StrideSize + j>(vec) != get<j>(*it));
+            });
+
+            it++;
+        });
+
         return err;
     }
 
@@ -190,11 +189,7 @@ namespace rocwmma
         bool err = false;
 
         // Init data as linear values
-        VecT<DataT, VecSize> vec;
-        for(uint32_t i = 0; i < VecSize; i++)
-        {
-            vec.data[i] = static_cast<DataT>(i);
-        }
+        auto vec = make_vector_sequence<DataT, VecSize>();
 
         err = err || iteratorStrideValueTest<DataT, VecSize, VecSize>(vec);
         err = err || iteratorStrideValueTest<DataT, VecSize, VecSize / 2>(vec);

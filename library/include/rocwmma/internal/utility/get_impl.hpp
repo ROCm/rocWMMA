@@ -29,60 +29,68 @@
 
 #include "../vector.hpp"
 
-namespace rocwmma
+namespace rocwmma::detail
 {
-    namespace detail
+    // HIP_vector_type overloads
+    template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    ROCWMMA_HOST_DEVICE constexpr inline DataT get(HIP_vector_type<DataT, VecSize>&& v)
     {
-        // HIP_vector_type overloads
-        template <uint32_t Idx, typename DataT, uint32_t VecSize>
-        ROCWMMA_HOST_DEVICE constexpr inline DataT get(HIP_vector_type<DataT, VecSize>&& v)
-        {
-            return v.data[Idx];
-        }
+#if defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
+        return v.data[Idx];
+#else
+        return v[Idx];
+#endif // defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
+    }
 
-        template <uint32_t Idx, typename DataT, uint32_t VecSize>
-        ROCWMMA_HOST_DEVICE constexpr inline DataT& get(HIP_vector_type<DataT, VecSize>& v)
-        {
-            return reinterpret_cast<DataT*>(&v.data)[Idx];
-        }
+    template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    ROCWMMA_HOST_DEVICE constexpr inline DataT& get(HIP_vector_type<DataT, VecSize>& v)
+    {
+#if defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
+        return reinterpret_cast<DataT*>(&v.data)[Idx];
+#else
+        return v[Idx];
+#endif // defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
+    }
 
-        template <uint32_t Idx, typename DataT, uint32_t VecSize>
-        ROCWMMA_HOST_DEVICE constexpr inline DataT get(HIP_vector_type<DataT, VecSize> const& v)
-        {
-            return v.data[Idx];
-        }
+    template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    ROCWMMA_HOST_DEVICE constexpr inline DataT get(HIP_vector_type<DataT, VecSize> const& v)
+    {
+#if defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
+        return v.data[Idx];
+#else
+        return v[Idx];
+#endif // defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
+    }
 
-        // non_native_vector_base overloads
-        template <uint32_t Idx, typename DataT, uint32_t VecSize>
-        ROCWMMA_HOST_DEVICE constexpr static inline DataT
-            get(non_native_vector_base<DataT, VecSize>&& v)
-        {
-            return v[Idx];
-        }
+    // non_native_vector_base overloads
+    template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    ROCWMMA_HOST_DEVICE constexpr static inline DataT
+        get(non_native_vector_base<DataT, VecSize>&& v)
+    {
+        return v[Idx];
+    }
 
-        template <uint32_t Idx, typename DataT, uint32_t VecSize>
-        ROCWMMA_HOST_DEVICE constexpr static inline DataT&
-            get(non_native_vector_base<DataT, VecSize>& v)
-        {
-            return v[Idx];
-        }
+    template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    ROCWMMA_HOST_DEVICE constexpr static inline DataT&
+        get(non_native_vector_base<DataT, VecSize>& v)
+    {
+        return v[Idx];
+    }
 
-        template <uint32_t Idx, typename DataT, uint32_t VecSize>
-        ROCWMMA_HOST_DEVICE constexpr static inline DataT
-            get(non_native_vector_base<DataT, VecSize> const& v)
-        {
-            return v[Idx];
-        }
+    template <uint32_t Idx, typename DataT, uint32_t VecSize>
+    ROCWMMA_HOST_DEVICE constexpr static inline DataT
+        get(non_native_vector_base<DataT, VecSize> const& v)
+    {
+        return v[Idx];
+    }
 
-        // Wrapper for Number<I>
-        template<typename Idx, typename VecT>
-        ROCWMMA_HOST_DEVICE constexpr inline decltype(auto) get(VecT&& v)
-        {
-            return get<Idx::value>(forward<VecT>(v));
-        }
+    // Wrapper for Number<I>
+    template <typename Idx, typename VecT>
+    ROCWMMA_HOST_DEVICE constexpr inline decltype(auto) get(VecT&& v)
+    {
+        return get<Idx::value>(forward<VecT>(v));
+    }
 
-    } // namespace detail
-
-} // namespace rocwmma
+} // namespace rocwmma::detail
 
 #endif // ROCWMMA_UTILITY_GET_IMPL_HPP

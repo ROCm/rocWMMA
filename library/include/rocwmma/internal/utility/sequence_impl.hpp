@@ -128,6 +128,12 @@ namespace rocwmma
         template <typename T, typename... Ts>
         static constexpr bool contains_type_v = contains_type<T, Ts...>::value;
 
+        template <uint32_t... ns>
+        using SeqT = integer_sequence<uint32_t, ns...>;
+
+        template <uint32_t Rank>
+        using Seq = make_integer_sequence<uint32_t, Rank>;
+
     } // namespace detail
 
 } // namespace rocwmma

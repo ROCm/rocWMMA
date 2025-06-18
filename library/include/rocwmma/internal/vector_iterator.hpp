@@ -10,13 +10,16 @@ inline constexpr unsigned int next_pot(unsigned int x)
 }
 namespace rocwmma
 {
+    // Fwd declare
+    template <typename VecT>
+    struct VecTraits;
 
     // Vector iterator class: handles for const and non-const vectors
     template <class VecT, uint32_t SubVecSize = 1>
     struct VectorIterator
     {
-        using VecTraits = VecTraits<VecT>;
-        using DataT = typename VecTraits::DataT;
+        using VecTraits                = VecTraits<VecT>;
+        using DataT                    = typename VecTraits::DataT;
         constexpr static uint32_t Rank = VecTraits::size();
 
         template <typename VDataT, uint32_t VRank>
@@ -41,7 +44,8 @@ namespace rocwmma
             static_assert(Rank % SubVecSize == 0, "VecSize not iterable by SubVecSize");
             static_assert(sizeof(RefVecT) == sizeof(VecT), "Cannot alias subvector");
             static_assert(sizeof(ItVecT) == SubVecSize * sizeof(DataT), "Cannot alias subvector");
-            static_assert(sizeof(RefVecT) == sizeof(ItVecT) * Traits::Range, "Cannot alias subvector");
+            static_assert(sizeof(RefVecT) == sizeof(ItVecT) * Traits::Range,
+                          "Cannot alias subvector");
 
             ROCWMMA_HOST_DEVICE constexpr iterator() noexcept = delete;
 
@@ -174,7 +178,7 @@ namespace rocwmma
     template <uint32_t SubVecSize = 1, typename VecT>
     constexpr auto makeVectorIterator(VecT&& vec)
     {
-        return VectorIterator<decay_t<VecT>, SubVecSize>{ forward<VecT>(vec) };
+        return VectorIterator<decay_t<VecT>, SubVecSize>{forward<VecT>(vec)};
     }
 
 } // namespace rocwmma

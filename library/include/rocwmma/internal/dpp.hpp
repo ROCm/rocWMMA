@@ -169,7 +169,7 @@ namespace rocwmma
                     constexpr auto v1InB32VecSize = sizeof(v1) / sizeof(uint32_t);
                     auto v1InB32Vec = reinterpret_cast<VecT<uint32_t, v1InB32VecSize> const&>(v1);
                     return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(
-                        v0.data[i], v1InB32Vec.data[i % v1InB32VecSize]);
+                        get<i>(v0), get<i % v1InB32VecSize>(v1InB32Vec));
                 };
 
                 auto result = vector_generator<uint32_t, B32VecSize>()(
@@ -196,8 +196,8 @@ namespace rocwmma
                 auto op = [](auto&& idx, auto&& v0, auto&& v1) {
                     // Pair up the b32 vector elements with the appropriate b32 scalar elements.
                     constexpr auto i = decay_t<decltype(idx)>::value;
-                    return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(v0.data[i],
-                                                                                        v1.data[i]);
+                    return DppOp::template exec<WriteRowMask, WriteBankMask, BoundCtrl>(get<i>(v0),
+                                                                                        get<i>(v1));
                 };
 
                 auto result = vector_generator<uint32_t, B32VecSize>()(

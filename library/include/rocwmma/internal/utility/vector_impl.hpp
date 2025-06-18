@@ -29,6 +29,7 @@
 
 #include "../vector_iterator.hpp"
 #include "get.hpp"
+#include "sequence.hpp"
 #include "type_traits.hpp"
 
 namespace rocwmma
@@ -178,7 +179,15 @@ namespace rocwmma
                 forward<VecT>(lhs),
                 detail::make_index_sequence<VecTraits<decay_t<VecT>>::size()>{});
         }
-    }
+
+        // Fwd declare bitwise ops from vector class
+        namespace BitwiseOp
+        {
+            struct And;
+            struct Or;
+        } // namespace BitwiseOp
+
+    } // namespace detail
 
     template <typename VecT>
     ROCWMMA_HOST_DEVICE constexpr static inline auto vector_reduce_and(VecT&& lhs) noexcept
@@ -506,6 +515,41 @@ namespace rocwmma
         };
 
         return vector_generator<DataT, VecSize>()(buildSeq);
+    }
+
+    template <typename DataT, uint32_t VecSize, typename ArgT>
+    ROCWMMA_HOST_DEVICE constexpr static inline auto make_vector(ArgT&& value)
+    {
+#if defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
+        return VecT<DataT, VecSize>{static_cast<DataT>(value)};
+#else
+        // Uses HIP_vector_type
+        return make_vector_type<DataT, VecSize>(static_cast<DataT>(value));
+#endif // defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
+    }
+
+    template <typename VecT>
+    ROCWMMA_HOST_DEVICE static inline decltype(auto) to_native_vector(VecT& v)
+    {
+#if defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
+        using NativeT = typename decay_t<VecT>::Native_vec_;
+
+        return reinterpret_cast<NativeT&>(v.data);
+#else
+        return get_native_vector(v);
+#endif // defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
+    }
+
+    template <typename VecT>
+    ROCWMMA_HOST_DEVICE static inline decltype(auto) to_native_vector(VecT const& v)
+    {
+#if defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
+        using NativeT = typename decay_t<VecT>::Native_vec_;
+
+        return reinterpret_cast<NativeT const&>(v.data);
+#else
+        return get_native_vector(v);
+#endif // defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
     }
 
 } // namespace rocwmma

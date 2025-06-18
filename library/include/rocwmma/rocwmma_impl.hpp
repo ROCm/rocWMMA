@@ -86,7 +86,11 @@ namespace rocwmma
     template <FragmentTypesDecl>
     ROCWMMA_DEVICE inline DataT& fragment<FragmentTypesImpl>::operator[](uint32_t index)
     {
+#if defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
         return mAccess.data[index];
+#else
+        return mAccess[index];
+#endif // defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
     }
 
     template <FragmentTypesDecl>
@@ -99,7 +103,11 @@ namespace rocwmma
     template <FragmentTypesDecl>
     ROCWMMA_DEVICE inline DataT const& fragment<FragmentTypesImpl>::operator[](uint32_t index) const
     {
+#if defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
         return mAccess.data[index];
+#else
+        return mAccess[index];
+#endif // defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
     }
 
     template <FragmentTypesDecl>

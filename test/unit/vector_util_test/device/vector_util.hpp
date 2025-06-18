@@ -32,22 +32,16 @@
 namespace rocwmma
 {
     template <typename DataT, uint32_t VecSize>
-    ROCWMMA_DEVICE static inline DataT get(VecT<DataT, VecSize> const& v, uint32_t idx)
-    {
-        return v.data[idx];
-    }
-
-    template <typename DataT, uint32_t VecSize>
     ROCWMMA_DEVICE static inline bool vectorGeneratorTestBasic()
     {
         bool err = false;
 
         auto res = make_vector_sequence<DataT, VecSize>();
 
-        for(uint32_t i = 0; i < VecSize; i++)
-        {
-            err |= (get(res, i) != static_cast<DataT>(i));
-        }
+        static_for<0, VecSize, 1>([&](auto&& Idx) {
+            constexpr uint32_t i = decay_t<decltype(Idx)>::value;
+            err |= (get<i>(res) != static_cast<DataT>(i));
+        });
 
         return err;
     }
@@ -62,15 +56,15 @@ namespace rocwmma
             return get<Index>(v0) + get<Index>(v1);
         };
 
-        auto v0 = VecT<DataT, VecSize>{static_cast<DataT>(1.0f)};
-        auto v1 = VecT<DataT, VecSize>{static_cast<DataT>(2.0f)};
+        auto v0 = make_vector<DataT, VecSize>(static_cast<DataT>(1.0f));
+        auto v1 = make_vector<DataT, VecSize>(static_cast<DataT>(2.0f));
 
         auto res = vector_generator<DataT, VecSize>()(sum, v0, v1);
 
-        for(uint32_t i = 0; i < VecSize; i++)
-        {
-            err |= (get(res, i) != (static_cast<DataT>(1.0f) + static_cast<DataT>(2.0f)));
-        }
+        static_for<0, VecSize, 1>([&](auto&& Idx) {
+            constexpr uint32_t i = decay_t<decltype(Idx)>::value;
+            err |= (get<i>(res) != (static_cast<DataT>(1.0f) + static_cast<DataT>(2.0f)));
+        });
 
         return err;
     }
@@ -86,10 +80,10 @@ namespace rocwmma
         // Handle the general case
         if constexpr(VecSize > 1)
         {
-            for(uint32_t i = 0; i < VecSize / 2; i++)
-            {
-                err |= (get(res, i) != static_cast<DataT>(i * 2));
-            }
+            static_for<0, VecSize / 2, 1>([&](auto&& Idx) {
+                constexpr uint32_t i = decay_t<decltype(Idx)>::value;
+                err |= (get<i>(res) != static_cast<DataT>(i * 2));
+            });
         }
         // Handle case where VecSize == 1
         else
@@ -111,10 +105,10 @@ namespace rocwmma
         // Handle general case
         if constexpr(VecSize > 1)
         {
-            for(uint32_t i = 0; i < VecSize / 2; i++)
-            {
-                err |= (get(res, i) != static_cast<DataT>(i * 2 + 1));
-            }
+            static_for<0, VecSize / 2, 1>([&](auto&& Idx) {
+                constexpr uint32_t i = decay_t<decltype(Idx)>::value;
+                err |= (get<i>(res) != static_cast<DataT>(i * 2 + 1));
+            });
         }
         // Handle case where VecSize == 1
         else
@@ -138,17 +132,17 @@ namespace rocwmma
         // Handle general case
         if constexpr(VecSize > 1)
         {
-            for(uint32_t i = 0; i < VecSize; i++)
-            {
-                if(i < VecSize / 2)
+            static_for<0, VecSize, 1>([&](auto&& Idx) {
+                constexpr uint32_t i = decay_t<decltype(Idx)>::value;
+                if constexpr(i < VecSize / 2)
                 {
-                    err |= (get(res, i) != static_cast<DataT>(i * 2));
+                    err |= (get<i>(res) != static_cast<DataT>(i * 2));
                 }
                 else
                 {
-                    err |= (get(res, i) != static_cast<DataT>((i - VecSize / 2) * 2 + 1));
+                    err |= (get<i>(res) != static_cast<DataT>((i - VecSize / 2) * 2 + 1));
                 }
-            }
+            });
         }
         // Handle case where VecSize == 1
         else
@@ -172,17 +166,17 @@ namespace rocwmma
         // Handle general case
         if constexpr(VecSize > 1)
         {
-            for(uint32_t i = 0; i < VecSize; i++)
-            {
-                if(i < VecSize / 2)
+            static_for<0, VecSize, 1>([&](auto&& Idx) {
+                constexpr uint32_t i = decay_t<decltype(Idx)>::value;
+                if constexpr(i < VecSize / 2)
                 {
-                    err |= (get(res, i) != static_cast<DataT>(i * 2 + 1));
+                    err |= (get<i>(res) != static_cast<DataT>(i * 2 + 1));
                 }
                 else
                 {
-                    err |= (get(res, i) != static_cast<DataT>((i - VecSize / 2) * 2));
+                    err |= (get<i>(res) != static_cast<DataT>((i - VecSize / 2) * 2));
                 }
-            }
+            });
         }
         // Handle case where VecSize == 1
         else
@@ -203,10 +197,10 @@ namespace rocwmma
 
         if constexpr(VecSize > 1)
         {
-            for(uint32_t i = 0; i < VecSize / 2; i++)
-            {
-                err |= (get(res, i) != static_cast<DataT>(i));
-            }
+            static_for<0, VecSize / 2, 1>([&](auto&& Idx) {
+                constexpr uint32_t i = decay_t<decltype(Idx)>::value;
+                err |= (get<i>(res) != static_cast<DataT>(i));
+            });
         }
         else
         {
@@ -226,10 +220,10 @@ namespace rocwmma
 
         if constexpr(VecSize > 1)
         {
-            for(uint32_t i = 0; i < VecSize / 2; i++)
-            {
-                err |= (get(res, i) != static_cast<DataT>(i + VecSize / 2));
-            }
+            static_for<0, VecSize / 2, 1>([&](auto&& Idx) {
+                constexpr uint32_t i = decay_t<decltype(Idx)>::value;
+                err |= (get<i>(res) != static_cast<DataT>(i + VecSize / 2));
+            });
         }
         else
         {
@@ -247,10 +241,10 @@ namespace rocwmma
         auto v   = make_vector_sequence<DataT, VecSize>();
         auto res = concat(v, v);
 
-        for(uint32_t i = 0; i < VecSize * 2; i++)
-        {
-            err |= (get(res, i) != static_cast<DataT>(i % VecSize));
-        }
+        static_for<0, VecSize * 2, 1>([&](auto&& Idx) {
+            constexpr uint32_t i = decay_t<decltype(Idx)>::value;
+            err |= (get<i>(res) != static_cast<DataT>(i % VecSize));
+        });
 
         return err;
     }
@@ -266,10 +260,10 @@ namespace rocwmma
         auto v1  = make_vector_sequence<DataT, VecSize, VecSize>();
         auto res = zip(v0, v1);
 
-        for(uint32_t i = 0; i < VecSize; i++)
-        {
-            err |= (get(res, i) != static_cast<DataT>(i + VecSize * (i & 1)));
-        }
+        static_for<0, VecSize, 1>([&](auto&& Idx) {
+            constexpr uint32_t i = decay_t<decltype(Idx)>::value;
+            err |= (get<i>(res) != static_cast<DataT>(i + VecSize * (i & 1)));
+        });
 
         return err;
     }
@@ -284,10 +278,10 @@ namespace rocwmma
         auto res = unpackLo(v0, v1);
 
         // 0, VecSize , 1, VecSize + 1, ...
-        for(uint32_t i = 0; i < VecSize; i++)
-        {
-            err |= (get(res, i) != static_cast<DataT>(i / 2 + VecSize * (i & 1)));
-        }
+        static_for<0, VecSize, 1>([&](auto&& Idx) {
+            constexpr uint32_t i = decay_t<decltype(Idx)>::value;
+            err |= (get<i>(res) != static_cast<DataT>(i / 2 + VecSize * (i & 1)));
+        });
 
         return err;
     }
@@ -302,10 +296,10 @@ namespace rocwmma
         auto res = unpackHi(v0, v1);
 
         // VecSize / 2, VecSize / 2 + VecSize , VecSize / 2 + 1, VecSize / 2 + VecSize + 1, ...
-        for(uint32_t i = 0; i < VecSize; i++)
-        {
-            err |= (get(res, i) != static_cast<DataT>(VecSize / 2 + i / 2 + VecSize * (i & 1)));
-        }
+        static_for<0, VecSize, 1>([&](auto&& Idx) {
+            constexpr uint32_t i = decay_t<decltype(Idx)>::value;
+            err |= (get<i>(res) != static_cast<DataT>(VecSize / 2 + i / 2 + VecSize * (i & 1)));
+        });
 
         return err;
     }

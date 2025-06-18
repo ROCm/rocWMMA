@@ -53,6 +53,7 @@ if( CMAKE_PROJECT_NAME STREQUAL "rocwmma" )
   option( ROCWMMA_BUILD_SAMPLES "Build rocWMMA samples" ON )
   option( ROCWMMA_BUILD_ASSEMBLY "Output assembly files" OFF )
   option( BUILD_OFFLOAD_COMPRESS "Build rocWMMA with offload compression" ON )
+  option( ROCWMMA_CODE_COVERAGE "Build with code coverage flags (clang only)" OFF)
 endif()
 
 if( CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT )
@@ -78,7 +79,7 @@ include(ROCMCheckTargetIds)
 include(ROCMClients)
 
 # Versioning via rocm-cmake
-set ( VERSION_STRING "1.8.0" )
+set ( VERSION_STRING "2.0.0" )
 rocm_setup_version( VERSION ${VERSION_STRING} )
 
 # configure a header file to pass the CMake version settings to the source

@@ -237,11 +237,6 @@ namespace rocwmma
         } // namespace RelationalOp
 
         // Helpers for expression expansion, specific to non_native_vector_base
-        template <uint32_t... ns>
-        using SeqT = integer_sequence<uint32_t, ns...>;
-
-        template <uint32_t Rank>
-        using Seq = make_integer_sequence<uint32_t, Rank>;
 
         // Use with operations that have 2 operands
         template <class BinOp, typename VecT, uint32_t... indices>
@@ -773,7 +768,7 @@ namespace rocwmma
 #define ROCWMMA_HIP_NON_NATIVE_VECTOR_STORAGE_IMPL(TYPE, RANK)       \
     using Native_vec_ = rocwmma::non_native_vector_base<TYPE, RANK>; \
                                                                      \
-    union alignas(rocwmma::next_pow2(RANK * sizeof(TYPE)))           \
+    union                                                            \
     {                                                                \
         Native_vec_ data;                                            \
         ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK##RANK(TYPE);            \
@@ -782,7 +777,7 @@ namespace rocwmma
 #define ROCWMMA_HIP_NATIVE_VECTOR_STORAGE_IMPL(TYPE, RANK)           \
     using Native_vec_ = TYPE __attribute__((ext_vector_type(RANK))); \
                                                                      \
-    union                                                            \
+    union alignas(RANK * sizeof(TYPE))                               \
     {                                                                \
         Native_vec_ data;                                            \
         ROCWMMA_HIP_ACCESSOR_ALIAS_IMPL_RANK##RANK(TYPE);            \
@@ -796,7 +791,17 @@ namespace rocwmma
 /// Why is this needed again here? Because STORAGE_IMPL may be either non_native_vector_type ///
 /// OR native vector extension. The latter doesn't have the required built-in broadcast.     ///
 ////////////////////////////////////////////////////////////////////////////////////////////////
+// Fwd declare some items that are needed
+namespace rocwmma::detail
+{
 
+    template <typename T, unsigned int Rank>
+    struct storage_impl;
+
+} // namespace rocwmma::detail
+
+// clang-format off
+#if defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7)
 #define ROCWMMA_REGISTER_HIP_VECTOR_BASE(TYPE, RANK, STORAGE_IMPL)                              \
     template <>                                                                                 \
     struct HIP_vector_base<TYPE, RANK>                                                          \
@@ -815,6 +820,7 @@ namespace rocwmma
         {                                                                                       \
         }                                                                                       \
                                                                                                 \
+        /* HIP < 7 treats this ctor as a broadcast ctor, writes val to all elements */          \
         template <typename U                                                         = TYPE,    \
                   rocwmma::enable_if_t<(rocwmma::is_same<U, TYPE>{}) && (RANK > 1)>* = nullptr> \
         ROCWMMA_HOST_DEVICE constexpr explicit HIP_vector_base(TYPE val) noexcept               \
@@ -835,6 +841,65 @@ namespace rocwmma
         ROCWMMA_HOST_DEVICE                                                                     \
         HIP_vector_base& operator=(const HIP_vector_base& x_) noexcept = default;               \
     };
+
+#else
+
+#define ROCWMMA_REGISTER_HIP_VECTOR_BASE(TYPE, RANK, STORAGE_IMPL)                              \
+    namespace rocwmma::detail                                                                   \
+    {                                                                                           \
+        template <>                                                                             \
+        struct storage_impl<TYPE, RANK>                                                         \
+        {                                                                                       \
+            STORAGE_IMPL(TYPE, RANK);                                                           \
+        };                                                                                      \
+    }                                                                                           \
+                                                                                                \
+    template <>                                                                                 \
+    struct HIP_vector_base<TYPE, RANK> : public rocwmma::detail::storage_impl<TYPE, RANK>       \
+    {                                                                                           \
+        /* Disallow public access to data member, following ROCm 7.0 changes in HIP */          \
+        private:                                                                                \
+        using StorageImpl = rocwmma::detail::storage_impl <TYPE, RANK>;                         \
+        using StorageImpl::data;                                                                \
+                                                                                                \
+    public:                                                                                     \
+        using value_type = TYPE;                                                                \
+                                                                                                \
+        ROCWMMA_HOST_DEVICE                                                                     \
+        HIP_vector_base() = default;                                                            \
+        template <typename... ArgsT,                                                            \
+                  typename U                                        = TYPE,                     \
+                  rocwmma::enable_if_t<(sizeof...(ArgsT) == RANK)>* = nullptr>                  \
+        ROCWMMA_HOST_DEVICE constexpr HIP_vector_base(ArgsT... args) noexcept                   \
+        {                                                                                       \
+            data = {args...};                                                                   \
+        }                                                                                       \
+                                                                                                \
+        template <typename U                                                         = TYPE,    \
+                  rocwmma::enable_if_t<(rocwmma::is_same<U, TYPE>{}) && (RANK > 1)>* = nullptr> \
+        ROCWMMA_HOST_DEVICE constexpr explicit HIP_vector_base(TYPE val) noexcept               \
+        : HIP_vector_base(rocwmma::detail::template bCast<HIP_vector_base>(                     \
+                static_cast<TYPE>(0.0f), rocwmma::detail::Seq<RANK>{}))                         \
+        {                                                                                       \
+            /* New behavior in HIP 7 only writes first element with val and rest is 0*/         \
+            data[0] = val;                                                                      \
+        }                                                                                       \
+                                                                                                \
+        ROCWMMA_HOST_DEVICE                                                                     \
+        constexpr HIP_vector_base(const HIP_vector_base&) = default;                            \
+                                                                                                \
+        ROCWMMA_HOST_DEVICE                                                                     \
+        constexpr HIP_vector_base(HIP_vector_base&&) = default;                                 \
+                                                                                                \
+        ROCWMMA_HOST_DEVICE                                                                     \
+        ~HIP_vector_base() = default;                                                           \
+                                                                                                \
+        ROCWMMA_HOST_DEVICE                                                                     \
+        HIP_vector_base& operator=(const HIP_vector_base& x_) noexcept = default;               \
+    };
+
+#endif /* defined(__HIP_PLATFORM_AMD__) && (HIP_VERSION_MAJOR < 7) */
+// clang-format on
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /// Setup macros to implement HIP_vector_type for any T and Rank, specifying if platform native ///
@@ -864,19 +929,19 @@ namespace rocwmma
 // Quirk: explicit specialization for ++ / -- operators in HIP_vector_type<bfloat16_t, N>.
 // Why? bfloat16_t doesn't have automatic conversion from integers so we must override the default implementation;
 // Override such that in(de)crement operators use 1.f instead of 1(int)
-#define ROCWMMA_IMPL_VECTOR_INC_DEC_OPS_AS_FLOAT(FLOAT_TYPE, RANK)                        \
-    template <>                                                                           \
-    ROCWMMA_VEC_OPERATOR inline HIP_vector_type<FLOAT_TYPE, RANK>&                        \
-        HIP_vector_type<FLOAT_TYPE, RANK>::operator++() noexcept                          \
-    {                                                                                     \
-        return *this += HIP_vector_type<FLOAT_TYPE, RANK>{static_cast<FLOAT_TYPE>(1.0f)}; \
-    }                                                                                     \
-                                                                                          \
-    template <>                                                                           \
-    ROCWMMA_VEC_OPERATOR inline HIP_vector_type<FLOAT_TYPE, RANK>&                        \
-        HIP_vector_type<FLOAT_TYPE, RANK>::operator--() noexcept                          \
-    {                                                                                     \
-        return *this -= HIP_vector_type<FLOAT_TYPE, RANK>{static_cast<FLOAT_TYPE>(1.0f)}; \
+#define ROCWMMA_IMPL_VECTOR_INC_DEC_OPS_AS_FLOAT(FLOAT_TYPE, RANK)                             \
+    template <>                                                                                \
+    ROCWMMA_VEC_OPERATOR inline HIP_vector_type<FLOAT_TYPE, RANK>&                             \
+        HIP_vector_type<FLOAT_TYPE, RANK>::operator++() noexcept                               \
+    {                                                                                          \
+        return *this += rocwmma::make_vector<FLOAT_TYPE, RANK>(static_cast<FLOAT_TYPE>(1.0f)); \
+    }                                                                                          \
+                                                                                               \
+    template <>                                                                                \
+    ROCWMMA_VEC_OPERATOR inline HIP_vector_type<FLOAT_TYPE, RANK>&                             \
+        HIP_vector_type<FLOAT_TYPE, RANK>::operator--() noexcept                               \
+    {                                                                                          \
+        return *this -= rocwmma::make_vector<FLOAT_TYPE, RANK>(static_cast<FLOAT_TYPE>(1.0f)); \
     }
 
 // Roll the quirk into the registration macro
