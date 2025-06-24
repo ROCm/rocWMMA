@@ -78,6 +78,7 @@ using rocwmma::float16_t;
 using rocwmma::float32_t;
 using rocwmma::float64_t;
 using rocwmma::bfloat16_t;
+using rocwmma::uint32_t;
 
 
 using InputT   = bfloat16_t;
