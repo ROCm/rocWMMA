@@ -40,9 +40,9 @@ namespace rocwmma
     struct accumulator;
 
     template <typename MatrixT,
-              uint32_t FragM,
-              uint32_t FragN,
-              uint32_t FragK,
+              unsigned int FragM,
+              unsigned int FragN,
+              unsigned int FragK,
               typename DataT,
               typename DataLayoutT,
               typename Scheduler>

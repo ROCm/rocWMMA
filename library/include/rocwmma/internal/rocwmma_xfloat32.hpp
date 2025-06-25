@@ -118,7 +118,7 @@ struct rocwmma_xfloat32
     }
 
     // Factory for assignment without casting
-    constexpr static ROCWMMA_HOST_DEVICE rocwmma_xfloat32 from_bits(uint32_t bits)
+    constexpr static ROCWMMA_HOST_DEVICE rocwmma_xfloat32 from_bits(unsigned int bits)
     {
         auto result = rocwmma_xfloat32{0.0f};
         result.data = rocwmma::detail::Bits32{bits}.fp32;
@@ -137,9 +137,9 @@ struct rocwmma_xfloat32
         return u.u32 & 0x7fffe000;
     }
 
-    constexpr explicit ROCWMMA_HOST_DEVICE operator uint32_t() const
+    constexpr explicit ROCWMMA_HOST_DEVICE operator unsigned int() const
     {
-        return uint32_t(float(*this));
+        return (unsigned int)(float(*this));
     }
 
     constexpr explicit ROCWMMA_HOST_DEVICE operator long() const
