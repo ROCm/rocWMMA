@@ -837,7 +837,7 @@ ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(hip_fp8_e4m3_fnuz a, float b)
     return (float(a) * b);
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(int32_t a, hip_fp8_e4m3_fnuz b)
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(signed int a, hip_fp8_e4m3_fnuz b)
 {
     return ((float)a * float(b));
 }
@@ -862,7 +862,7 @@ ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(hip_fp8_e5m2_fnuz a, float b)
     return (float(a) * b);
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(int32_t a, hip_fp8_e5m2_fnuz b)
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator*(signed int a, hip_fp8_e5m2_fnuz b)
 {
     return ((float)a * float(b));
 }
@@ -899,7 +899,7 @@ ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(hip_fp8_e4m3_fnuz a, float b)
     return (float(a) / b);
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(int32_t a, hip_fp8_e4m3_fnuz b)
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(signed int a, hip_fp8_e4m3_fnuz b)
 {
     return ((float)a / float(b));
 }
@@ -924,7 +924,7 @@ ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(hip_fp8_e5m2_fnuz a, float b)
     return (float(a) / b);
 }
 
-ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(int32_t a, hip_fp8_e5m2_fnuz b)
+ROCWMMA_FP8_FNUZ_VISIBILITY inline float operator/(signed int a, hip_fp8_e5m2_fnuz b)
 {
     return ((float)a / float(b));
 }
