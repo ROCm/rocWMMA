@@ -121,12 +121,12 @@ Validation tests are postfixed with ``-validate``. Benchmark tests are postfixed
 
 Sample kernels are built with minimal infrastructure as possible and use more approachable names to appeal to a broader audience.
 
-* ``simple_sgemm``: a simple GEMM kernel with ``s`` denoting single-precision floating point datatype.
-* ``simple_dgemm``: a simple GEMM kernel with ``d`` denoting double-precision floating point datatype.
-* ``simple_hgemm``: a simple GEMM kernel with ``h`` denoting half-precision floating point datatype.
-* ``perf_sgemm``: a performant GEMM kernel with ``s`` denoting single-precision floating point datatype.
-* ``perf_dgemm``: a performant GEMM kernel with ``d`` denoting double-precision floating point datatype.
-* ``perf_hgemm``: a performant GEMM kernel with ``h`` denoting half-precision floating point datatype.
+* ``simple_sgemm``: a simple GEMM kernel with ``s`` denoting single-precision floating-point data type.
+* ``simple_dgemm``: a simple GEMM kernel with ``d`` denoting double-precision floating-point data type.
+* ``simple_hgemm``: a simple GEMM kernel with ``h`` denoting half-precision floating-point data type.
+* ``perf_sgemm``: a performant GEMM kernel with ``s`` denoting single-precision floating-point data type.
+* ``perf_dgemm``: a performant GEMM kernel with ``d`` denoting double-precision floating-point data type.
+* ``perf_hgemm``: a performant GEMM kernel with ``h`` denoting half-precision floating-point data type.
 
 GEMV
 ^^^^^
@@ -136,15 +136,15 @@ Generalized Matrix-Vector multiplication (GEMV) is another application for rocWM
 
 rocWMMA implements the following simple GEMV demonstration samples:
 
-* ``simple_sgemv``: Simple GEMV kernel with ``s`` denoting single-precision floating point datatype.
-* ``simple_dgemv``: Simple GEMV kernel with ``d`` denoting double-precision floating point datatype.
+* ``simple_sgemv``: Simple GEMV kernel with ``s`` denoting single-precision floating-point data type.
+* ``simple_dgemv``: Simple GEMV kernel with ``d`` denoting double-precision floating-point data type.
 
 DLRM
 ^^^^
 
 rocWMMA implements a simple component of Deep Learning Recommendation Model (DLRM) for machine learning. Both forward and backward passes using half-precision inputs and outputs are demonstrated.
 
-* ``simple_dlrm``: Simple GEMV kernel with ``s`` denoting single-precision floating point datatype.
+* ``simple_dlrm``: Simple GEMV kernel with ``s`` denoting single-precision floating-point data type.
 
 --------------------------------
 Library source code organization
@@ -163,8 +163,6 @@ The rocWMMA code consists of four major parts:
 The ``library`` directory is structured as follows:
 
 - ``library/include/rocwmma/``: C++ include files for the rocWMMA API. These files also contain Doxygen content that documents the API.
-
-The API has two API contexts:
 
   - ``rocwmma.hpp``: The main API for rocWMMA, defining fragment data abstractions, wave-wise storing, loading, matrix multiply-accumulate (mma) and thread block synchronization. This API offers function signatures highly compatible with common CUDA WMMA interfaces.
   - ``rocwmma_transforms.hpp``: A complimentary API for rocWMMA, defining functionality to manipulate fragment data, for example, transpose and data layout changes. These are unique to rocWMMA.
@@ -193,14 +191,14 @@ The API has two API contexts:
 The ``samples`` directory contains the sample codes for the following use cases:
 
 - ``samples/hipRTC_gemm.cpp``: Simple General Matrix Multiply (GEMM) algorithm demonstration without LDS memory usage or transposition, running within the hipRTC environment.
-- ``samples/simple_sgemv.cpp``: Simple matrix multiply-accumulate with a vector demonstration without LDS or transposition for single-precision floating point types.
-- ``samples/simple_dgemv.cpp``: Simple matrix multiply-accumulate with a vector demonstration without LDS or transposition for double-precision floating point types.
-- ``samples/simple_sgemm.cpp``: Simple GEMM algorithm demonstration without LDS memory usage or transposition for single-precision floating point types.
-- ``samples/simple_dgemm.cpp``: Simple GEMM algorithm demonstration without LDS memory usage or transposition for double-precision floating point types.
-- ``samples/simple_hgemm.cpp``: Simple GEMM algorithm demonstration without LDS memory usage or transposition for half-precision floating point types.
-- ``samples/perf_sgemm.cpp``: High performing multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and optimized pipeline for single-precision floating point types.
-- ``samples/perf_dgemm.cpp``: High performing multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and optimized pipeline for double-precision floating point types.
-- ``samples/perf_hgemm.cpp``: High performant multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and optimized pipeline for half-precision floating point types.
+- ``samples/simple_sgemv.cpp``: Simple matrix multiply-accumulate with a vector demonstration without LDS or transposition for single-precision floating-point types.
+- ``samples/simple_dgemv.cpp``: Simple matrix multiply-accumulate with a vector demonstration without LDS or transposition for double-precision floating-point types.
+- ``samples/simple_sgemm.cpp``: Simple GEMM algorithm demonstration without LDS memory usage or transposition for single-precision floating-point types.
+- ``samples/simple_dgemm.cpp``: Simple GEMM algorithm demonstration without LDS memory usage or transposition for double-precision floating-point types.
+- ``samples/simple_hgemm.cpp``: Simple GEMM algorithm demonstration without LDS memory usage or transposition for half-precision floating-point types.
+- ``samples/perf_sgemm.cpp``: High performing multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and optimized pipeline for single-precision floating-point types.
+- ``samples/perf_dgemm.cpp``: High performing multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and optimized pipeline for double-precision floating-point types.
+- ``samples/perf_hgemm.cpp``: High performant multi-block GEMM algorithm demonstration with LDS memory, macro tile collaboration, data reuse and optimized pipeline for half-precision floating-point types.
 - ``samples/simple_dlrm.cpp``: Simple Deep Learning Recommendation Model (DLRM) for machine learning.
 - ``samples/common.hpp``: Common code used by all the above rocWMMA sample files.
 
