@@ -44,7 +44,9 @@ The integrated code is more visible to compiler optimizations for generating eff
 The programming model best suited for the rocWMMA API is wavefront-centric. Data loading, storing, and MMA functions are assumed to involve the entire wavefront (or warp). Undefined behaviour is expected if not all threads in each wavefront are active while using rocWMMA. Small block sizes representing edge cases will be automatically padded and will not affect thread masking.
 
 The data of collaborative fragments is distributed across participating waves in the same thread block.
-Collaborative fragments optimize collective data movement between memory locations, such as data movement from global memory to LDS, to balance shared data responsibilities across wavefronts. However, collaborative fragments are not supported in MMA functions. These fragments are expressed by imbuing fragment instances with a collaborative fragment scheduler.
+Collaborative fragments optimize collective data movement between memory locations, such as data movement from global memory to LDS, to balance shared data responsibilities across wavefronts. However, collaborative fragments are not supported in MMA functions. Fragment instances express wavefront collaboration with fragment scheduler meta-data which is specified by the developer.
+
+In general, larger fragment sizes are better able to maximize memory bandwidth when transferring data between memory spaces, as well as ordering MMA functions. Beginning with rocWMMA 2.0.0 for ROCm 7.0, the mma_sync API can handle partial or large tiles in a piece-wise manner automatically. This enhanced functionality is demonstrated in the performance samples, which feature simplified workflow with larger tile sizes and good performance.
 
 The rocWMMA API reduces the boiler-plate code by providing tools to decompose matrix multiply-accumulate based problems into blocks, or fragments of data that individual wavefronts can efficiently process. Wavefronts abstract blocks of data into ``fragments``, which encapsulate meta-data properties about the blocks in different contexts and the data itself, including:
 
