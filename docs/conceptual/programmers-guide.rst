@@ -41,7 +41,7 @@ rocWMMA is a header-only library written in C++17 and contained in the ``rocwmma
 rocWMMA offers full implementation visibility, allowing developers to integrate rocWMMA API calls directly into their own kernels. 
 The integrated code is more visible to compiler optimizations for generating efficient device code. The API also avoids expensive host-device transfers or external kernel invokations.
 
-The programming model best suited for the rocWMMA API is wavefront-centric. Data loading, storing, and MMA functions are assumed to involve the entire wavefront (or warp). Undefined behaviour is expected if not all threads in each wavefront are active while using rocWMMA.
+The programming model best suited for the rocWMMA API is wavefront-centric. Data loading, storing, and MMA functions are assumed to involve the entire wavefront (or warp). Undefined behaviour is expected if not all threads in each wavefront are active while using rocWMMA. Small block sizes representing edge cases will be automatically padded and will not affect thread masking.
 
 The data of collaborative fragments is distributed across participating waves in the same thread block.
 Collaborative fragments optimize collective data movement between memory locations, such as data movement from global memory to LDS, to balance shared data responsibilities across wavefronts. However, collaborative fragments are not supported in MMA functions. These fragments are expressed by imbuing fragment instances with a collaborative fragment scheduler.
