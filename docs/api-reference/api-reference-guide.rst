@@ -185,7 +185,9 @@ Supported data types:
 +------------------------------+------------+-----------+---------------+----------------------------+--------------------+
 
 .. note::
-    \* BlockK range specifies the minimum valid value. Other values in the range are powers of 2 greater than the minimum. In practice, BlockK values are typically 32 or less.
+    BlockM/N values are minimum recommended values. Below these values padding is used which may impact performance. Above this value powers of 2 are acceptable.
+    
+    \* BlockK range specifies the minimum recommended value. Below this value padding is used which may impact performance. Above this value powers of 2 are acceptable. In practice, BlockK values are typically 32 or less.
 
     \*\* On CDNA architectures, matrix unit accumulation is performed in natively 32-bit precision and then converted to the target data type.
 
