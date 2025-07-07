@@ -72,7 +72,7 @@ Supported data types:
 .. note::
     f16 includes support for both _Float16 and __half types.
 
-    f8 is supported in the NANOO (optimized) format.
+    f8 NANOO (optimized) format is only supported on gfx942, otherwise f8 OCP is assumed on targets that support f8 datatypes.
 
 .. tabularcolumns::
    |C|C|C|C|C|
