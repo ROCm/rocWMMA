@@ -12,7 +12,7 @@ def runCI =
     prj.paths.build_command = './install -c'
     prj.libraryDependencies = ['hipBLAS-common', 'hipBLASLt', 'rocBLAS']
     prj.defaults.ccache = true
-    prj.timeout.compile = 600
+    prj.timeout.compile = 1200
 
     def nodes = new dockerNodes(nodeDetails, jobName, prj)
 
@@ -66,18 +66,16 @@ ci: {
     jobNameList.each
     {
         jobName, nodeDetails->
-        if (urlJobName == jobName)
-            stage(jobName) {
-                runCI(nodeDetails, jobName)
-            }
+        if (urlJobName == jobName){
+            runCI(nodeDetails, jobName)
+        }
+        
     }
 
     // For url job names that are not listed by the jobNameList i.e. compute-rocm-dkms-no-npi-1901
     if(!jobNameList.keySet().contains(urlJobName))
     {
-        properties(auxiliary.addCommonProperties([pipelineTriggers([cron('0 1 * * *')])]))
-        stage(urlJobName) {
-            runCI([ubuntu16:['gfx906']], urlJobName)
-        }
+
+        runCI([ubuntu22:['gfx90a']], urlJobName)
     }
 }
