@@ -220,6 +220,17 @@ namespace rocwmma
             //! WaveCount sizing factor for cooperative fragments
             static constexpr uint32_t WaveCount = scheduler_traits<Scheduler>::WaveCount;
 
+            //! Assert the fragment occupies at least one packed register
+            static_assert(IOTraits::PackedVRegCount >= 1,
+                          "Fragments must occupy at least one packed register");
+
+            //! Assert the fragment is equally splittable among the wave count
+            static_assert(WaveCount >= 1, "WaveCount must be at least 1 for a valid fragment");
+            static_assert(IOTraits::PackedVRegCount >= WaveCount,
+                          "Packed register count must be equal to or greater than WaveCount");
+            static_assert(IOTraits::PackedVRegCount % WaveCount == 0,
+                          "Packed register count must be divisible by WaveCount");
+
         public:
             constexpr static uint32_t Size = IOTraits::UnpackedSize / WaveCount;
 
@@ -229,8 +240,6 @@ namespace rocwmma
             //! Packed data storage view
             using StorageT = VecT<PackedElementT, IOTraits::PackedSize / WaveCount>;
 
-            static_assert(IOTraits::PackedVRegCount >= 1,
-                          "Fragments must occupy at least one packed register");
             static_assert(IOTraits::UnpackedSize % IOTraits::PackedSize == 0,
                           "Unable to pack fragment elements");
         };

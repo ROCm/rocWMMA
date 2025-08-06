@@ -80,9 +80,9 @@ namespace rocwmma
         static constexpr uint32_t CoopRegsA_blk = CoopElementsA_blk / WaveSize / MinElementsPerReg;
         static constexpr uint32_t CoopRegsB_blk = CoopElementsB_blk / WaveSize / MinElementsPerReg;
         static constexpr bool     CoopCheckA_blk
-            = (CoopRegsA_blk >= WavesX) && (CoopRegsA_blk % WavesX == 0u);
+            = (CoopRegsA_blk >= WavesY) && (CoopRegsA_blk % WavesY == 0u);
         static constexpr bool CoopCheckB_blk
-            = (CoopRegsB_blk >= WavesY) && (CoopRegsB_blk % WavesY == 0u);
+            = (CoopRegsB_blk >= WavesX) && (CoopRegsB_blk % WavesX == 0u);
         static constexpr bool CoopCheck_blk = CoopCheckA_blk && CoopCheckB_blk;
 
         // In wave-wise cooperation:
@@ -95,9 +95,9 @@ namespace rocwmma
         static constexpr uint32_t CoopRegsA_wv = CoopElementsA_wv / WaveSize / MinElementsPerReg;
         static constexpr uint32_t CoopRegsB_wv = CoopElementsB_wv / WaveSize / MinElementsPerReg;
         static constexpr bool     CoopCheckA_wv
-            = (CoopRegsA_wv >= WavesX) && (CoopRegsA_wv % WavesX == 0u);
+            = (CoopRegsA_wv >= WavesY) && (CoopRegsA_wv % WavesY == 0u);
         static constexpr bool CoopCheckB_wv
-            = (CoopRegsB_wv >= WavesY) && (CoopRegsB_wv % WavesY == 0u);
+            = (CoopRegsB_wv >= WavesX) && (CoopRegsB_wv % WavesX == 0u);
         static constexpr bool CoopCheck_wv = CoopCheckA_wv && CoopCheckB_wv;
 
         // In wg-wise cooperation:
