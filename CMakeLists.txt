@@ -190,7 +190,7 @@ set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 
 rocm_create_package(
   NAME rocwmma
-  DESCRIPTION "AMD C++ library for facilitating GEMM, or GEMM-like 2D matrix multiplications on GPU leveraging MFMA instructions executing on matrix cores."
+  DESCRIPTION "AMD C++ library for GEMM, GEMM-like 2D matrix multiplication on GPU using MFMA"
   MAINTAINER "rocWMMA Maintainer <rocwmma-maintainer@amd.com>"
   HEADER_ONLY
 )
