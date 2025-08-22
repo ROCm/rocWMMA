@@ -112,11 +112,11 @@ namespace rocwmma
 
     namespace fragment_scheduler
     {
-        //! @struct default
+        //! @typedef default_schedule
         //! @brief The default fragment scheduler; each wave operates independently.
         using default_schedule = IOScheduler::Default;
 
-        //! @struct coop_row_major_2d
+        //! @typedef coop_row_major_2d
         //! @brief  A cooperative scheduling strategy where each wave in the 2d threadblock
         //! will contribute to the fragment operation in row_major grid order.
         //! All waves are scheduled in row_major order.
@@ -128,7 +128,7 @@ namespace rocwmma
         template <uint32_t TBlockX, uint32_t TBlockY>
         using coop_row_major_2d = IOScheduler::RowMajor2d<TBlockX, TBlockY>;
 
-        //! @struct coop_col_major_2d
+        //! @typedef coop_col_major_2d
         //! @brief  A cooperative scheduling strategy where each wave in the 2d threadblock
         //! will contribute to the fragment operation in col_major grid order.
         //! All waves are scheduled in row_major order.
@@ -140,7 +140,7 @@ namespace rocwmma
         template <uint32_t TBlockX, uint32_t TBlockY>
         using coop_col_major_2d = IOScheduler::ColMajor2d<TBlockX, TBlockY>;
 
-        //! @struct coop_row_slice_2d
+        //! @typedef coop_row_slice_2d
         //! @brief  A cooperative scheduling strategy where each row of waves
         //! in the 2d threadblock will contribute to the fragment operation.
         //! Waves are partitioned into rows. Only waves in the same row
@@ -153,7 +153,7 @@ namespace rocwmma
         template <uint32_t TBlockX, uint32_t TBlockY>
         using coop_row_slice_2d = IOScheduler::RowSlice2d<TBlockX, TBlockY>;
 
-        //! @struct coop_col_slice_2d
+        //! @typedef coop_col_slice_2d
         //! @brief  A cooperative scheduling strategy where each col of waves
         //! in the 2d threadblock will contribute to the fragment operation.
         //! Waves are partitioned into cols. Only waves in the same col
@@ -167,7 +167,7 @@ namespace rocwmma
         template <uint32_t TBlockX, uint32_t TBlockY>
         using coop_col_slice_2d = IOScheduler::ColSlice2d<TBlockX, TBlockY>;
 
-        //! @struct single
+        //! @typedef single
         //! @brief  A cooperative scheduling strategy where only one wave in
         //! the thread block will participate.
         //! @tparam TBlockX the size of the thread-block in the X dimension
