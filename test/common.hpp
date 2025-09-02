@@ -664,6 +664,8 @@ namespace rocwmma
         CHECK_HIP_ERROR(
             hipMemcpy(&maxRelativeError, d_relativeError, sizeof(double), hipMemcpyDeviceToHost));
 
+        CHECK_HIP_ERROR(hipEventDestroy(syncEvent));
+
         // Free allocated device memory
         CHECK_HIP_ERROR(hipFree(d_relativeError));
 
@@ -744,6 +746,8 @@ namespace rocwmma
 
         CHECK_HIP_ERROR(
             hipMemcpy(&maxRelativeError, d_relativeError, sizeof(double), hipMemcpyDeviceToHost));
+
+        CHECK_HIP_ERROR(hipEventDestroy(syncEvent));
 
         // Free allocated device memory
         CHECK_HIP_ERROR(hipFree(d_relativeError));
