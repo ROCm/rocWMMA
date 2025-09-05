@@ -253,9 +253,9 @@ using namespace gfx11Params;
 #endif // defined(ROCWMMA_ARCH_GFX9)
 
 // Types and Data Layouts
-using InputT   = float8_fnuz_t;
-using OutputT  = float32_t;
-using ComputeT = float32_t;
+using InputT   = int8_t;
+using OutputT  = int32_t;
+using ComputeT = int32_t;
 
 using DataLayoutA   = col_major;
 using DataLayoutB   = row_major;
