@@ -373,3 +373,4 @@ Documentation for rocWMMA is available at
 * `rocBLASReference.h` to invoke the rocBLAS GEMM function
 * Unit tests to validate WMMA APIs (`load`, `store`, `fill`, and `mma`)
 * Makefile support to build library and tests
+* Makefile support to build library and tests
