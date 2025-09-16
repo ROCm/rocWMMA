@@ -422,7 +422,7 @@ ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
 
     // Initialize accumulation frags
     MmaFragAcc mmaFragAcc;
-    fill_fragment(mmaFragAcc, 0.0f);
+    fill_fragment(mmaFragAcc, 0);
 
     // Synchronize states
     synchronize_workgroup();

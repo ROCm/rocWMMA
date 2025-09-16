@@ -113,7 +113,7 @@ __host__ void dlrmDotBwdCPU(float16_t* input,
         }
 
         // Remake tril
-        float16_t temp[m * m];
+        std::vector<float16_t> temp(m*m);
         uint32_t  tempIdx = t * trilSize + k;
         for(int i = 0; i < m; i++)
         {
