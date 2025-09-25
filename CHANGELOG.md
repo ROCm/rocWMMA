@@ -16,11 +16,13 @@ Documentation for rocWMMA is available at
 
 ### Removed
 
-* Removed absolute paths from the RPATH of sample and test binary files.
+* Removed absolute paths from the `RPATH` of sample and test binary files.
 
 ### Resolved issues
 
-* Fixed issues caused by HIP changes: removed the .data member from HIP_vector_type, and broadcast constructor now only writes to the first vector element.
+* Fixed issues caused by HIP changes:
+    * Removed the .data member from HIP_vector_type.
+    * Broadcast constructor now only writes to the first vector element.
 * Fixed a bug related to `int32_t` usage in `hipRTC_gemm` for gfx942, caused by breaking changes in HIP.
 * Replaced `#pragma unroll` with `static for` to fix a bug caused by the upgraded compiler which no longer supports using `#pragma unroll` with template parameter indices.
 * Corrected test predicates for `BLK` and `VW` cooperative kernels.
