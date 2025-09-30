@@ -81,7 +81,7 @@ namespace rocwmma
         waveSize, SWITCH_BODY_TBLOCK_Y, HipDevice::Wave32, HipDevice::Wave64, ARCH_ID)
 
 #define DISPATCH_GUARD_BODY                           \
-    ROCWMMA_SWITCH_BODY10_ARG1(deviceArch,            \
+    ROCWMMA_SWITCH_BODY11_ARG1(deviceArch,            \
                                SWITCH_BODY_WAVE_SIZE, \
                                HipDevice::GFX908,     \
                                HipDevice::GFX90A,     \
@@ -90,6 +90,7 @@ namespace rocwmma
                                HipDevice::GFX1100,    \
                                HipDevice::GFX1101,    \
                                HipDevice::GFX1102,    \
+                               HipDevice::GFX1150,    \
                                HipDevice::GFX1151,    \
                                HipDevice::GFX1200,    \
                                HipDevice::GFX1201)
@@ -158,7 +159,7 @@ namespace rocwmma
         waveSize, SWITCH_BODY_TBLOCK_Y, HipDevice::Wave32, HipDevice::Wave64, ARCH_ID)
 
 #define DISPATCH_KERNEL_FUNC_BODY                     \
-    ROCWMMA_SWITCH_BODY10_ARG1(deviceArch,            \
+    ROCWMMA_SWITCH_BODY11_ARG1(deviceArch,            \
                                SWITCH_BODY_WAVE_SIZE, \
                                HipDevice::GFX908,     \
                                HipDevice::GFX90A,     \
@@ -167,6 +168,7 @@ namespace rocwmma
                                HipDevice::GFX1100,    \
                                HipDevice::GFX1101,    \
                                HipDevice::GFX1102,    \
+                               HipDevice::GFX1150,    \
                                HipDevice::GFX1151,    \
                                HipDevice::GFX1200,    \
                                HipDevice::GFX1201)
