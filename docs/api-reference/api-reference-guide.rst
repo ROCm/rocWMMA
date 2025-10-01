@@ -46,6 +46,8 @@ Supported RDNA architectures (wave32):
     gfx12 refers to gfx1200 and gfx1201.
 
 
+.. _rocwmma-supported-data-types:
+
 Supported data types
 --------------------
 
