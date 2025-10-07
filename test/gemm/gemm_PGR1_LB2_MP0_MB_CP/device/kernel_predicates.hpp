@@ -213,8 +213,12 @@ namespace rocwmma
             LdsRFTest = !(std::is_same_v<GemmConfig, typename CooperativeGemm::BlockLevel::LdsRF>)
                         || ((BlockM * BlockK / WaveSize > 8u) && (BlockN * BlockK / WaveSize > 8u)),
 
+            // The register file mapping is only valid when A and B have the same layout.
+            LdsRFLayoutTest = !(std::is_same_v<GemmConfig, typename CooperativeGemm::BlockLevel::LdsRF>)
+                              || (std::is_same_v<LayoutA, LayoutB>),
+
             // Need to filter out some coop tests
-            Enable = (LdsRFTest) && CooperativePredicates::CoopCheck
+            Enable = (LdsRFTest && LdsRFLayoutTest) && CooperativePredicates::CoopCheck
         };
 
         using TestTraits = typename Base::TestTraits;

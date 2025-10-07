@@ -49,6 +49,7 @@ namespace rocwmma
                                             Constants::AMDGCN_ARCH_ID_GFX1100,
                                             Constants::AMDGCN_ARCH_ID_GFX1101,
                                             Constants::AMDGCN_ARCH_ID_GFX1102,
+                                            Constants::AMDGCN_ARCH_ID_GFX1150,
                                             Constants::AMDGCN_ARCH_ID_GFX1151> && Cond>;
 
         // Enabler for all of gfx12
@@ -67,6 +68,7 @@ namespace rocwmma
                                             Constants::AMDGCN_ARCH_ID_GFX1100,
                                             Constants::AMDGCN_ARCH_ID_GFX1101,
                                             Constants::AMDGCN_ARCH_ID_GFX1102,
+                                            Constants::AMDGCN_ARCH_ID_GFX1150,
                                             Constants::AMDGCN_ARCH_ID_GFX1151,
                                             Constants::AMDGCN_ARCH_ID_GFX1200,
                                             Constants::AMDGCN_ARCH_ID_GFX1201> && Cond>;
