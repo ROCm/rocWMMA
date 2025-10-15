@@ -31,6 +31,18 @@ cmake_dependent_option( ROCWMMA_BUILD_BENCHMARK_TESTS "Build benchmarking tests"
 cmake_dependent_option( ROCWMMA_BUILD_EXTENDED_TESTS "Build extended test parameter coverage" OFF "ROCWMMA_BUILD_TESTS" OFF )
 cmake_dependent_option( ROCWMMA_USE_SYSTEM_GOOGLETEST "Use system Google Test library instead of downloading and building it" OFF "ROCWMMA_BUILD_TESTS" OFF )
 
+if (ROCWMMA_BUILD_BENCHMARK_TESTS)
+    ## Check for ROCM-smi
+    find_package(rocm_smi PATHS ${ROCM_PATH}/lib/cmake/rocm_smi)
+    if (rocm_smi_FOUND)
+      message(STATUS "Found rocm_smi at ${ROCM_SMI_INCLUDE_DIR}")
+    else()
+      set(ROCM_SMI_INCLUDE_DIR "${ROCM_PATH}/rocm_smi/include")
+      set(ROCM_SMI_LIB_DIR     "${ROCM_PATH}/rocm_smi/lib")
+      set(ROCM_SMI_LIBRARY   rocm_smi64)
+    endif()
+endif()
+
 add_compile_options(-mcmodel=large)
 if(ROCWMMA_CODE_COVERAGE)
     add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
