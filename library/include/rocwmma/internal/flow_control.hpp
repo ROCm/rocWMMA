@@ -66,7 +66,7 @@ namespace rocwmma
         template <int32_t priority = 0>
         struct amdgcn_setprio
         {
-            enum : const int16_t
+            enum : int16_t
             {
                 priority16 = priority
             };
@@ -82,7 +82,7 @@ namespace rocwmma
         template <int32_t vmcnt, int32_t lgkmcnt>
         struct amdgcn_s_waitcnt
         {
-            enum : const int16_t
+            enum : int16_t
             {
                 vmcnt16   = (((0xF) & vmcnt) | (((0x30) & vmcnt) << 10)),
                 lgkmcnt16 = (((0xF) & lgkmcnt) << 8),
