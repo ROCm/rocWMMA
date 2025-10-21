@@ -22,7 +22,7 @@ The test suite includes validation and benchmarking projects that focus on unit 
 rocWMMA currently supports the following AMD GPU architectures:
 
 * CDNA class GPU featuring matrix core support: gfx908, gfx90a, gfx942, gfx950 as 'gfx9'
-* RDNA class GPU featuring AI acceleration support: gfx1100, gfx1101, gfx1102 as 'gfx11'; gfx1200, gfx1201 as 'gfx12'
+* RDNA class GPU featuring AI acceleration support: gfx1100, gfx1101, gfx1102, gfx1151 as 'gfx11'; gfx1200, gfx1201 as 'gfx12'
 
 Dependencies:
 
@@ -30,11 +30,13 @@ Dependencies:
 * Minimum cmake version support is 3.14.
 * Minimum ROCm-cmake version support is 0.8.0.
 * Minimum rocBLAS version support is rocBLAS 4.0.0 for ROCm 6.0* (or ROCm packages rocblas and rocblas-dev).
-* Minimum HIP runtime version support is 4.3.0 (or ROCm package ROCm hip-runtime-amd).
+* Minimum ROCm SMI version support is 7.6.0** (or ROCm packages rocm-smi-lib and librocm-smi-dev).
+* Minimum HIP runtime version support is 4.3.0 (or ROCm package hip-runtime-amd).
 * Minimum LLVM OpenMP runtime dev package version support is 10.0 (available as ROCm package rocm-llvm-dev).
 
 ```note::
     * = if using rocBLAS for validation.
+    ** = if building benchmark tests (configuring with ROCWMMA_BUILD_BENCHMARK_TESTS=ON).
 
     It is best to use available ROCm packages from the same release where applicable.
 ```
@@ -47,8 +49,8 @@ For more detailed information, please refer to the [rocWMMA installation guide](
 
 |Option|Description|Default value|
 |---|---|---|
-|GPU_TARGETS|Build code for specific GPU target(s)|gfx908;gfx90a;gfx942;gfx950;gfx1100;gfx1101;gfx1102;gfx1200;gfx1201|
-|AMDGPU_TARGETS|(Deprecated) Build code for specific GPU target(s)|gfx908;gfx90a;gfx942;gfx950;gfx1100;gfx1101;gfx1102;gfx1200;gfx1201|
+|GPU_TARGETS|Build code for specific GPU target(s)|gfx908;gfx90a;gfx942;gfx950;gfx1100;gfx1101;gfx1102;gfx1151;gfx1200;gfx1201|
+|AMDGPU_TARGETS|(Deprecated) Build code for specific GPU target(s)|gfx908;gfx90a;gfx942;gfx950;gfx1100;gfx1101;gfx1102;gfx1151;gfx1200;gfx1201|
 |ROCWMMA_BUILD_TESTS|Build Tests|ON|
 |ROCWMMA_BUILD_SAMPLES|Build Samples|ON|
 |ROCWMMA_BUILD_DOCS|Build doxygen documentation from code|OFF|
