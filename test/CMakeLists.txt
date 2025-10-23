@@ -44,6 +44,14 @@ if(ROCWMMA_USE_SYSTEM_GOOGLETEST)
 else()
   include( FetchContent )
 
+  # Suppress ROCMChecks WARNING on GoogleTest
+  set(ROCM_DISABLE_CHECKS FALSE)
+  macro(rocm_check_toolchain_var var access value list_file)
+      if(NOT ROCM_DISABLE_CHECKS)
+          _rocm_check_toolchain_var("${var}" "${access}" "${value}" "${list_file}")
+      endif()
+  endmacro()
+
   FetchContent_Declare(
     googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
@@ -58,7 +66,9 @@ else()
   set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "Build SHARED libraries" FORCE)
 
   # Fetch the content using default details
+  set(ROCM_DISABLE_CHECKS TRUE)
   FetchContent_MakeAvailable(googletest)
+  set(ROCM_DISABLE_CHECKS FALSE)
 
   # Restore shared libs setting
   set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_OLD} CACHE INTERNAL "Build SHARED libraries" FORCE)
