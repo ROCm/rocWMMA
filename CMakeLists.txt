@@ -198,6 +198,12 @@ rocm_package_add_deb_dependencies("libomp-dev")
 rocm_package_add_rpm_dependencies("libomp-devel")
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 
+rocm_export_targets(
+  TARGETS roc::rocwmma
+  NAMESPACE roc::
+  INCLUDE "${CMAKE_CURRENT_BINARY_DIR}/rocWMMA-config.cmake"
+)
+
 rocm_create_package(
   NAME rocwmma
   DESCRIPTION "AMD GPU C++ library for GEMM primitives using MFMA and WMMA matrix instructions"
