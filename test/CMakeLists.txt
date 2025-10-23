@@ -40,33 +40,28 @@ add_link_options(-mcmodel=large)
 
 # Test/benchmark requires additional dependencies
 if(ROCWMMA_USE_SYSTEM_GOOGLETEST)
-  find_package(GTest 1.12.1 REQUIRED)
+  find_package(GTest 1.16.0 REQUIRED)
 else()
   include( FetchContent )
 
   FetchContent_Declare(
     googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG release-1.12.1
+    GIT_TAG v1.16.0
   )
-  FetchContent_GetProperties(googletest)
-  if(NOT googletest_POPULATED)
 
-    # Fetch the content using default details
-    FetchContent_Populate(googletest)
-    # Save the shared libs setting, then force to static libs
-    set(BUILD_SHARED_LIBS_OLD ${BUILD_SHARED_LIBS})
-    set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "Build SHARED libraries" FORCE)
+  # Turn off gtest installation
+  set(INSTALL_GTEST OFF)
 
-    # Turn off gtest installation
-    set(INSTALL_GTEST OFF)
+  # Save the shared libs setting, then force to static libs
+  set(BUILD_SHARED_LIBS_OLD ${BUILD_SHARED_LIBS})
+  set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "Build SHARED libraries" FORCE)
 
-    # Add gtest targets as static libs
-    add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
+  # Fetch the content using default details
+  FetchContent_MakeAvailable(googletest)
 
-    # Restore shared libs setting
-    set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_OLD} CACHE INTERNAL "Build SHARED libraries" FORCE)
-  endif()
+  # Restore shared libs setting
+  set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_OLD} CACHE INTERNAL "Build SHARED libraries" FORCE)
 endif()
 
 set(ROCWMMA_TEST_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
@@ -87,10 +82,10 @@ function(add_rocwmma_test TEST_TARGET TEST_SOURCE)
 
   list(APPEND TEST_SOURCE ${ARGN})
   add_executable(${TEST_TARGET} ${TEST_SOURCE})
-  target_link_libraries(${TEST_TARGET} rocwmma gtest)
+  target_link_libraries(${TEST_TARGET} rocwmma GTest::gtest)
   target_link_libraries(${TEST_TARGET} OpenMP::OpenMP_CXX "-L${HIP_CLANG_ROOT}/lib")
   if(UNIX)
-    target_link_libraries(${TEST_TARGET} "-Wl,-rpath=$ORIGIN/../llvm/lib" "-fno-rtlib-add-rpath")
+    target_link_libraries(${TEST_TARGET} "-Wl,-rpath='\$$ORIGIN/../llvm/lib'" "-fno-rtlib-add-rpath")
   endif()
   target_include_directories(${TEST_TARGET} PRIVATE
                              ${CMAKE_CURRENT_SOURCE_DIR}
