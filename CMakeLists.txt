@@ -201,7 +201,6 @@ set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 rocm_export_targets(
   TARGETS roc::rocwmma
   NAMESPACE roc::
-  INCLUDE "${CMAKE_CURRENT_BINARY_DIR}/rocWMMA-config.cmake"
 )
 
 rocm_create_package(
