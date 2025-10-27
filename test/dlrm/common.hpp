@@ -31,7 +31,6 @@
 #include <cstdlib>
 #include <fcntl.h>
 #include <fstream>
-#include <getopt.h>
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -42,7 +41,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <type_traits>
-#include <unistd.h>
 #include <vector>
 
 #include <hip/hip_fp16.h>

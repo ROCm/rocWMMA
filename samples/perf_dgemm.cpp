@@ -258,12 +258,13 @@ using LWFragA = apply_data_layout_t<GRFragA, DataLayoutLds>;
 using LWFragB = apply_data_layout_t<apply_transpose_t<GRFragB>, DataLayoutLds>;
 
 // Transform helpers
-constexpr auto transformGRFragAToLWFragA
-    = [](GRFragA const& grFragA) { return apply_data_layout<DataLayoutLds>(grFragA); };
+ROCWMMA_DEVICE auto transformGRFragAToLWFragA(GRFragA const& grFragA) {
+    return apply_data_layout<DataLayoutLds>(grFragA);
+}
 
-constexpr auto transformGRFragBToLWFragB = [](GRFragB const& grFragB) {
+ROCWMMA_DEVICE auto transformGRFragBToLWFragB(GRFragB const& grFragB) {
     return apply_data_layout<DataLayoutLds>(apply_transpose(grFragB));
-};
+}
 
 // Local read (mfma frags)
 // - Must match Lds data layout.
@@ -272,12 +273,13 @@ using LRFragA = apply_data_layout_t<MmaFragA, DataLayoutLds>;
 using LRFragB = apply_data_layout_t<apply_transpose_t<MmaFragB>, DataLayoutLds>;
 
 // Transform helpers
-constexpr auto transformLRFragAToMmaFragA
-    = [](LRFragA const& lrFragA) { return apply_data_layout<DataLayoutA>(lrFragA); };
+ROCWMMA_DEVICE auto transformLRFragAToMmaFragA(LRFragA const& lrFragA) {
+    return apply_data_layout<DataLayoutA>(lrFragA);
+}
 
-constexpr auto transformLRFragBToMmaFragB = [](LRFragB const& lrFragB) {
+ROCWMMA_DEVICE auto transformLRFragBToMmaFragB(LRFragB const& lrFragB) {
     return apply_data_layout<DataLayoutB>(apply_transpose(lrFragB));
-};
+}
 
 ROCWMMA_KERNEL void __launch_bounds__(256) gemm_rocwmma_d(uint32_t       m,
                                                           uint32_t       n,
