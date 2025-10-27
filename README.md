@@ -1,4 +1,6 @@
 # rocWMMA
+> [!CAUTION]
+> The rocWMMA repository is retired, please use the [ROCm/rocm-libraries](https://github.com/ROCm/rocm-libraries) repository
 
 Welcome! rocWMMA is a C++ library for accelerating mixed-precision matrix multiply-accumulate (MMA)
 operations leveraging AMD GPU hardware. rocWMMA makes it easier to break down MMA problems
