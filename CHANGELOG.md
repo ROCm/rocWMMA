@@ -3,7 +3,32 @@
 Documentation for rocWMMA is available at
 [https://rocm.docs.amd.com/projects/rocWMMA/en/latest](https://rocm.docs.amd.com/projects/rocWMMA/en/latest).
 
-## (Unreleased) rocWMMA 2.0.0 for ROCm 7.0.0
+## (Unreleased) rocWMMA 2.1.0 for ROCm 7.1.0
+
+### Added
+
+* Added more unit tests to increase the code coverage.
+* Added sample `perf_i8gemm` to demonstrate `int8_t` as matrix input data type.
+
+### Changed
+
+* Increased compile timeout and improved visualization in `math-ci`.
+
+### Removed
+
+* Removed absolute paths from the `RPATH` of sample and test binary files.
+
+### Resolved issues
+
+* Fixed issues caused by HIP changes:
+    * Removed the .data member from HIP_vector_type.
+    * Broadcast constructor now only writes to the first vector element.
+* Fixed a bug related to `int32_t` usage in `hipRTC_gemm` for gfx942, caused by breaking changes in HIP.
+* Replaced `#pragma unroll` with `static for` to fix a bug caused by the upgraded compiler which no longer supports using `#pragma unroll` with template parameter indices.
+* Corrected test predicates for `BLK` and `VW` cooperative kernels.
+* Modified `compute_utils.sh` in `build-infra` to ensure rocWMMA is built with gfx1151 target for ROCm 7.0 and beyond.
+
+## rocWMMA 2.0.0 for ROCm 7.0.0
 
 ### Added
 
