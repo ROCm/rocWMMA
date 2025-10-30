@@ -28,6 +28,8 @@
 
 #include "types.hpp"
 #include "utility/forward.hpp"
+#include "utility/get.hpp"
+#include "utility/static_for.hpp"
 
 namespace rocwmma
 {
@@ -44,11 +46,9 @@ namespace rocwmma
             {
                 VecT<OutputT, NumRegs> result;
 
-#pragma unroll
-                for(unsigned i = 0; i < NumRegs; i++)
-                {
-                    get<i>(result) = static_cast<OutputT>(get<i>(regsIn));
-                }
+                rocwmma::static_for<0u, NumRegs, 1u>(
+                    [&](auto i) { get<i>(result) = static_cast<OutputT>(get<i>(regsIn)); });
+
                 return result;
             }
         };
@@ -72,11 +72,9 @@ namespace rocwmma
             {
                 VecT<float32_t, NumRegs> result;
 
-#pragma unroll
-                for(unsigned i = 0; i < NumRegs; i++)
-                {
-                    get<i>(result) = __half2float(get<i>(regsIn));
-                }
+                rocwmma::static_for<0u, NumRegs, 1u>(
+                    [&](auto i) { get<i>(result) = __half2float(get<i>(regsIn)); });
+
                 return result;
             }
         };
@@ -89,11 +87,9 @@ namespace rocwmma
             {
                 VecT<hfloat16_t, NumRegs> result;
 
-#pragma unroll
-                for(unsigned i = 0; i < NumRegs; i++)
-                {
-                    get<i>(result) = __float2half(get<i>(regsIn));
-                }
+                rocwmma::static_for<0u, NumRegs, 1u>(
+                    [&](auto i) { get<i>(result) = __float2half(get<i>(regsIn)); });
+
                 return result;
             }
         };

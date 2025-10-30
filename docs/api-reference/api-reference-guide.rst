@@ -14,17 +14,15 @@ This document provides information about rocWMMA functions, data types, and othe
 Synchronous API
 ---------------
 
-In general, rocWMMA API functions ( ``load_matrix_sync``, ``store_matrix_sync``, ``mma_sync`` ) are assumed to be synchronous when
-used in the context of global memory.
-
-When using these functions in the context of shared memory (e.g. LDS memory), additional explicit workgroup synchronization (``synchronize_workgroup``)
-may be required due to the nature of this memory usage.
+rocWMMA API functions such as ``load_matrix_sync``, ``store_matrix_sync``, and ``mma_sync`` are synchronous when
+used with global memory. However, when you use these functions with shared memory, for example, LDS memory, 
+explicit workgroup synchronization (``synchronize_workgroup``) might be required.
 
 
 Supported GPU architectures
 ----------------------------
 
-List of supported CDNA architectures (wave64):
+Supported CDNA architectures (wave64):
 
 * gfx908
 * gfx90a
@@ -32,10 +30,10 @@ List of supported CDNA architectures (wave64):
 * gfx950
 
 .. note::
-    gfx9 = gfx908, gfx90a, gfx942, gfx950
+    gfx9 refers to gfx908, gfx90a, gfx942, and gfx950.
 
 
-List of supported RDNA architectures (wave32):
+Supported RDNA architectures (wave32):
 
 * gfx1100
 * gfx1101
@@ -44,8 +42,8 @@ List of supported RDNA architectures (wave32):
 * gfx1201
 
 .. note::
-    gfx11 = gfx1100, gfx1101, gfx1102
-    gfx12 = gfx1200, gfx1201
+    gfx11 refers to gfx1100, gfx1101, and gfx1102.
+    gfx12 refers to gfx1200 and gfx1201.
 
 
 Supported data types
@@ -57,22 +55,24 @@ Data Types **<Ti / To / Tc>** = <Input type / Output Type / Compute Type>, where
 
 * Input Type = Matrix A / B
 * Output Type = Matrix C / D
-* Compute Type = Math / accumulation type
+* Compute Type = Math / Accumulation type
 
-* i8 = 8-bit precision integer
-* f8 = 8-bit precision floating point
-* bf8 = 8-bit precision brain floating point
-* f16 = half-precision floating point
-* bf16 = half-precision brain floating point
-* f32 = single-precision floating point
-* i32 = 32-bit precision integer
-* xf32 = single-precision tensor floating point
-* f64 = double-precision floating point
+Supported data types:
+
+* i8: 8-bit precision integer
+* f8: 8-bit precision floating point
+* bf8: 8-bit precision brain floating point
+* f16: half-precision floating point
+* bf16: half-precision brain floating point
+* f32: single-precision floating point
+* i32: 32-bit precision integer
+* xf32: single-precision tensor floating point
+* f64: double-precision floating point
 
 .. note::
-    f16 represents equivalent support for both _Float16 and __half types.
+    f16 includes support for both _Float16 and __half types.
 
-    Current f8 support is NANOO (optimized) format.
+    f8 NANOO (optimized) format is only supported on gfx942, otherwise f8 OCP is assumed on targets that support f8 datatypes.
 
 .. tabularcolumns::
    |C|C|C|C|C|
@@ -185,9 +185,11 @@ Data Types **<Ti / To / Tc>** = <Input type / Output Type / Compute Type>, where
 +------------------------------+------------+-----------+---------------+----------------------------+--------------------+
 
 .. note::
-    \* = BlockK range lists the minimum possible value. Other values in the range are powers of 2 larger than the minimum. Practical BlockK values are usually 32 and smaller.
+    BlockM/N values are minimum recommended values. Below these values padding is used which may impact performance. Above this value powers of 2 are acceptable.
+    
+    \* BlockK range specifies the minimum recommended value. Below this value padding is used which may impact performance. Above this value powers of 2 are acceptable. In practice, BlockK values are typically 32 or less.
 
-    \*\* = CDNA architectures matrix unit accumulation is natively 32-bit precision and is converted to the desired type.
+    \*\* On CDNA architectures, matrix unit accumulation is performed in natively 32-bit precision and then converted to the target data type.
 
 .. note::
     rocWMMA supports partial fragment sizes where ``FragMNK`` may be smaller than the ``BlockMNK`` sizes listed in the table above. These fragments are internally padded to nearest supported ``BlockMNK`` sizes.
@@ -224,7 +226,7 @@ Supported matrix layouts
 Supported thread block sizes
 ----------------------------
 
-rocWMMA generally supports and tests up to 4 wavefronts per thread block. The X dimension is expected to be a multiple of the wave size and will be scaled as such.
+rocWMMA supports up to four wavefronts per thread block. The X dimension should be a multiple of the wave size and is scaled accordingly.
 
 .. tabularcolumns::
    |C|C|
@@ -375,15 +377,15 @@ rocWMMA transforms API functions
 Sample programs
 ----------------
 
-See a sample code for calling rocWMMA functions ``load_matrix_sync``, ``store_matrix_sync``, ``fill_fragment``, and ``mma_sync`` `here <https://github.com/ROCm/rocWMMA/blob/develop/samples/simple_hgemm.cpp>`_.
-For more such sample programs, refer to the `Samples directory <https://github.com/ROCm/rocWMMA/tree/develop/samples>`_.
+A sample demonstrating the use of rocWMMA functions ``load_matrix_sync``, ``store_matrix_sync``, ``fill_fragment``, and ``mma_sync`` is available `here <https://github.com/ROCm/rocWMMA/blob/develop/samples/simple_hgemm.cpp>`_.
+For more sample programs, refer to the `samples directory <https://github.com/ROCm/rocWMMA/tree/develop/samples>`_.
 
 Emulation tests
 ---------------
 
-The emulation test is a smaller test suite specifically designed for emulators. It comprises a selection of test cases from the full ROCWMM test set, allowing for significantly faster execution on emulated platforms. Despite its concise nature, the emulation test supports ``smoke``, ``regression``, and ``extended`` modes.
+The emulation test is a smaller test suite designed for emulators. It includes a subset of ROCWMMA test cases for faster execution on emulated platforms. It supports ``smoke``, ``regression``, and ``extended`` modes.
 
-For example, run a smoke test.
+For example, to run a smoke test:
 
 .. code-block:: bash
 
