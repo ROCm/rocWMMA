@@ -171,7 +171,6 @@ struct ChainPipeline {
         return OPS_PER_CYCLE * 2.0 * num_cus * gpu_clock_ghz / 1000.0;
     }
 };
-};
 
 // ============================================================================
 // StaggeredPipeline<NCHAINS, TILES, Backend> — atomic wave-staggered pipeline
