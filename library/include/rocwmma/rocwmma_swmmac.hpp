@@ -280,6 +280,39 @@ struct SwmmacBf16 {
     }
 };
 
+// ============================================================================
+// MXFp4 — 软件 MXFP4 SWMMAC backend (INT4 HW + FP32 accum + scale 后处理)
+// A/B 复用 SwmmacI4 的寄存器布局 (<2xi32>/<4xi32>)
+// 累加器 <8xf32> = FP32. exec() 内部做 INT4 SWMMAC → FP32 转换.
+// apply_scale() 在 K-block 累加后乘上 scale_A × scale_B.
+// ============================================================================
+struct MXFp4 {
+    using ARegsT = SwmmacARegsT;        // <2 x i32>
+    using BRegsT = SwmmacBRegsT;        // <4 x i32>
+    using CRegsT = SwmmacFpAccumT;      // <8 x f32>
+    using DRegsT = SwmmacFpAccumT;
+    static constexpr uint32_t BlockM = SwmmacConstants::BlockM;
+    static constexpr uint32_t BlockN = SwmmacConstants::BlockN;
+    static constexpr uint32_t BlockK = SwmmacConstants::BlockK;
+
+    __device__ static inline DRegsT exec(
+        ARegsT const& a, BRegsT const& b,
+        CRegsT const& c, int32_t sparse_idx = 0)
+    {
+        // INT4 SWMMAC → INT32 → FP32 累加
+        using I4 = SwmmacInt4<true, true, true>;
+        typename I4::CRegsT ci;
+        for(int j=0;j<8;j++) ((int32_t*)&ci)[j] = (int32_t)((float*)&c)[j];
+        ci = I4::exec(a, b, ci, sparse_idx);
+        DRegsT r;
+        for(int j=0;j<8;j++) ((float*)&r)[j] = (float)((int32_t*)&ci)[j];
+        return r;
+    }
+    __device__ static inline DRegsT apply_scale(
+        DRegsT const& accum, float sA, float sB)
+    { DRegsT r; float s=sA*sB; for(int j=0;j<8;j++) ((float*)&r)[j]=((float*)&accum)[j]*s; return r; }
+};
+
 } // namespace rocwmma
 
 // ============================================================================
@@ -296,6 +329,9 @@ struct is_swmmac<SwmmacInt4<ASign, BSign, CSign>> : true_type {};
 
 template <bool ASign, bool BSign, bool CSign>
 struct is_swmmac<SwmmacInt8<ASign, BSign, CSign>> : true_type {};
+
+template <>
+struct is_swmmac<MXFp4> : true_type {};
 
 template <typename SwmmacOp>
 constexpr static bool is_swmmac_v = is_swmmac<SwmmacOp>::value;

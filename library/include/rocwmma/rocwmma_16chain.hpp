@@ -287,6 +287,7 @@ struct StaggeredPipeline {
                 }
             }
         }
+    }
 
         // ---- 26-cycle model: predicted throughput (HW-validated 2026-05-16) ----
         // Constants from gfx1200 measurement + LLVM SISchedule.td + rocprofv3:
@@ -320,8 +321,8 @@ using Chain16           = ChainPipeline<16, SwmmacI4>;
 using Chain14           = ChainPipeline<14, SwmmacI4>;
 
 // INT8
-template <uint32_t NCHAINS = 16>
-using ChainPipelineInt8 = ChainPipeline<NCHAINS, SwmmacI8>;
+template <uint32_t NC = 16>
+using ChainPipelineInt8 = ChainPipeline<NC, SwmmacI8>;
 using Chain16Int8       = ChainPipeline<16, SwmmacI8>;
 
 // FP8/BF8 — same A/B layout as INT, f32 accum
@@ -366,14 +367,14 @@ using ChainBf16 = ChainPipeline<16, SwmmacBf16>;
 // ============================================================================
 
 // INT4 (default, 1 tile)
-template <uint32_t NCHAINS = 16, uint32_t TILES = 1>
-using StagPipeI4 = StaggeredPipeline<NCHAINS, TILES, SwmmacI4>;
+template <uint32_t NC = 16, uint32_t TL = 1>
+using StagPipeI4 = StaggeredPipeline<NC, TL, SwmmacI4>;
 using Stag16      = StaggeredPipeline<16, 1, SwmmacI4>;
 using Stag14      = StaggeredPipeline<14, 1, SwmmacI4>;
 
 // INT8
-template <uint32_t NCHAINS = 16, uint32_t TILES = 1>
-using StagPipeI8 = StaggeredPipeline<NCHAINS, TILES, SwmmacI8>;
+template <uint32_t NC = 16, uint32_t TL = 1>
+using StagPipeI8 = StaggeredPipeline<NC, TL, SwmmacI8>;
 using Stag16I8   = StaggeredPipeline<16, 1, SwmmacI8>;
 
 // FP8/BF8
