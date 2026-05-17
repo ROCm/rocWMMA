@@ -311,6 +311,13 @@ struct MXFp4 {
     __device__ static inline DRegsT apply_scale(
         DRegsT const& accum, float sA, float sB)
     { DRegsT r; float s=sA*sB; for(int j=0;j<8;j++) ((float*)&r)[j]=((float*)&accum)[j]*s; return r; }
+    // UE8M0 scale (OCP MX shared exponent)
+    __device__ static inline DRegsT apply_scale_ue8m0(
+        DRegsT const& accum, uint8_t sA, uint8_t sB) {
+        auto u2f = [](uint8_t v)->float{
+            uint32_t b=static_cast<uint32_t>(v)<<23; float r;
+            __builtin_memcpy(&r,&b,sizeof(r)); return r; };
+        return apply_scale(accum, u2f(sA), u2f(sB)); }
 };
 
 } // namespace rocwmma
@@ -364,6 +371,13 @@ struct swmmac_traits_base {
     static constexpr bool is_mfma      = false;
     static constexpr bool is_swmmac    = true;
     static constexpr bool is_supported = true;
+    // UE8M0 scale (OCP MX shared exponent)
+    __device__ static inline DRegsT apply_scale_ue8m0(
+        DRegsT const& accum, uint8_t sA, uint8_t sB) {
+        auto u2f = [](uint8_t v)->float{
+            uint32_t b=static_cast<uint32_t>(v)<<23; float r;
+            __builtin_memcpy(&r,&b,sizeof(r)); return r; };
+        return apply_scale(accum, u2f(sA), u2f(sB)); }
 };
 
 template <bool ASign, bool BSign, bool CSign>
