@@ -30,5 +30,34 @@ docs_core.setup()
 
 external_projects_current_project = "rocwmma"
 
+# Apply ROCmDocs sphinx variables
 for sphinx_var in ROCmDocs.SPHINX_VARS:
     globals()[sphinx_var] = getattr(docs_core, sphinx_var)
+
+# Breathe configuration - CRITICAL: Set after ROCmDocs to override defaults
+# ROCmDocs may set breathe_projects but NOT breathe_default_project
+breathe_projects = {"rocwmma": "doxygen/xml"}
+breathe_default_project = "rocwmma"
+
+# Force into globals to ensure Sphinx sees them
+globals()['breathe_projects'] = breathe_projects
+globals()['breathe_default_project'] = breathe_default_project
+
+# Debug: Print to verify (remove this in production)
+print(f"[DEBUG] breathe_projects = {breathe_projects}")
+print(f"[DEBUG] breathe_default_project = {breathe_default_project}")
+
+# Chinese localization (active)
+breathe_projects = {"rocwmma": "doxygen/xml_zh"}
+breathe_default_project = "rocwmma"
+language = "zh_CN"
+globals()['breathe_projects'] = breathe_projects
+globals()['breathe_default_project'] = breathe_default_project
+globals()['language'] = language
+
+# Uncomment for Japanese localization:
+# breathe_projects = {"rocwmma": "doxygen/xml_ja"}
+# breathe_default_project = "rocwmma"
+# language = "ja"
+# globals()['breathe_projects'] = breathe_projects
+# globals()['language'] = language
